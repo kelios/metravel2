@@ -277,7 +277,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
         handleInputFocus,
         handleInputBlur,
         handleAnswerFeedback,
-    } = useQuestKeyboardReveal(contentScrollRef, dockReservePx);
+    } = useQuestKeyboardReveal(contentScrollRef, dockReservePx, stepCardVisible ? currentStep?.id : null);
 
     useEffect(() => {
         setDesktopNavExpanded(false);

@@ -12,6 +12,7 @@ import type { Travel } from "@/types/types";
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { buildVersionedImageUrl, getOptimalImageWidth, optimizeImageUrl } from "@/utils/imageOptimization";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { createTravelTmlRoundStyles, TRAVEL_TML_ROUND_IMAGE_HEIGHT } from './TravelTmlRound.styles';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -24,9 +25,6 @@ import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 
 
 type Props = { travel: Travel };
-
-const CARD_HEIGHT = 250;
-const CARD_IMAGE_HEIGHT = 170;
 
 const resolveTravelYear = (travel: Travel): string => {
     const value = String((travel as any)?.year ?? '').trim();
@@ -87,7 +85,7 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
     }, [travel, travel_image_thumb_small_url, travel_image_thumb_url]);
 
     // Фиксированная высота карточки и изображения
-    const imageHeight = CARD_IMAGE_HEIGHT;
+    const imageHeight = TRAVEL_TML_ROUND_IMAGE_HEIGHT;
 
     // ✅ УЛУЧШЕНИЕ: Оптимизация URL изображения
     const optimizedImageUrl = useMemo(() => {
@@ -255,7 +253,7 @@ export default memo(TravelTmlRound);
 
 /**
  * Каркас этой карточки (#2253): та же обёртка фиксированной высоты и та же
- * рамка карточки, медиа — тот же `CARD_IMAGE_HEIGHT`. Список занимает место
+ * рамка карточки, медиа — тот же `TRAVEL_TML_ROUND_IMAGE_HEIGHT`. Список занимает место
  * карточек, которые его заменят.
  */
 export const TravelTmlRoundSkeleton = memo(function TravelTmlRoundSkeleton() {
@@ -264,40 +262,14 @@ export const TravelTmlRoundSkeleton = memo(function TravelTmlRoundSkeleton() {
     return (
         <View style={styles.container} testID="travel-tml-round-skeleton" aria-hidden>
             <View style={[styles.card, styles.skeletonCard]}>
-                <SkeletonLoader width="100%" height={CARD_IMAGE_HEIGHT} borderRadius={0} />
+                <SkeletonLoader width="100%" height={TRAVEL_TML_ROUND_IMAGE_HEIGHT} borderRadius={0} />
             </View>
         </View>
     );
 });
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
-    container: {
-        width: '100%',
-        height: CARD_HEIGHT,
-        padding: 0,
-        overflow: 'hidden',
-    },
-
-    // ✅ УЛУЧШЕНИЕ: Современная матовая карточка без границ, только тени
-    card: {
-        borderRadius: DESIGN_TOKENS.radii.md,
-        backgroundColor: colors.surface,
-        width: '100%',
-        borderWidth: 1,
-        borderColor: colors.borderLight,
-        overflow: 'hidden',
-        ...Platform.select({
-            web: {
-                alignItems: "center" as any,
-                height: '100%' as any,
-                cursor: "pointer" as any,
-                transition: 'border-color 0.2s ease' as any,
-            },
-        }),
-    },
-    skeletonCard: {
-        height: '100%',
-    },
+    ...createTravelTmlRoundStyles(colors),
     cardPressed: { 
         opacity: 0.92,
     },

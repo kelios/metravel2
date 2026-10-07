@@ -5,7 +5,7 @@ import EmptyState from '@/components/ui/EmptyState'
 import { RecommendationsPlaceholder } from '@/components/listTravel/RightColumn.parts'
 import type { RightColumnProps } from '@/components/listTravel/RightColumn'
 import TravelListItemSkeleton from '@/components/listTravel/TravelListItemSkeleton'
-import type { useRightColumnStyles } from '@/components/listTravel/useRightColumnStyles'
+import type { createTravelListRowLayout } from './travelListRowLayout'
 import { translate as i18nT } from '@/i18n'
 
 /**
@@ -35,7 +35,7 @@ type RightColumnListStatusProps = Pick<
   isOffline: boolean
   initialSkeletonCount: number
   recommendationsSkeletonStyle: StyleProp<ViewStyle>
-  rowLayout: ReturnType<typeof useRightColumnStyles>['rowLayout']
+  rowLayout: ReturnType<typeof createTravelListRowLayout>
 }
 
 function RightColumnListStatus({

@@ -4,9 +4,12 @@
 
 import React from 'react'
 import { act } from 'react-test-renderer'
-import { render } from '@testing-library/react-native'
+import { fireEvent, render } from '@testing-library/react-native'
 import { Helmet, HelmetProvider, type HelmetServerState } from 'expo-router/vendor/react-helmet-async/lib'
 import LazyInstantSEO from '@/components/seo/LazyInstantSEO'
+import { beginPrint } from '@/utils/printHtml.web'
+import * as QuestPrintable from '@/components/quests/QuestPrintable'
+import { translate as i18nT } from '@/i18n'
 
 const mockUseIsFocused = jest.fn(() => true)
 const mockUseLocalSearchParams = jest.fn(() => ({ city: '4', questId: 'minsk-cmok' }))
@@ -215,6 +218,7 @@ describe('Quest screen title sync', () => {
 
   beforeEach(() => {
     jest.useFakeTimers()
+    document.documentElement.removeAttribute('data-metravel-print-document')
     mockUseIsFocused.mockReturnValue(true)
     mockUseLocalSearchParams.mockReturnValue({ city: '4', questId: 'minsk-cmok' })
     mockRouterPush.mockClear()
@@ -272,6 +276,52 @@ describe('Quest screen title sync', () => {
       jest.runOnlyPendingTimers()
     })
     jest.useRealTimers()
+    jest.restoreAllMocks()
+  })
+
+  it('an actual in-place print document survives already scheduled route patches after 3 seconds', async () => {
+    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
+    render(<QuestScreen />)
+    await act(async () => { jest.advanceTimersByTime(0) })
+    expect(document.title).toContain('Цмока')
+    await beginPrint({ inPlace: true }).print('<!doctype html><html><head><title>Минск в кадре — Книга квеста</title></head><body><h1>Минск в кадре</h1></body></html>')
+    expect(document.title).toBe('Минск в кадре — Книга квеста')
+    for (const delay of [120, 280, 2600]) {
+      await act(async () => { jest.advanceTimersByTime(delay) })
+      expect(document.title).toBe('Минск в кадре — Книга квеста')
+    }
+    expect(document.querySelector('h1')?.textContent).toBe('Минск в кадре')
+  })
+
+  it('print bundle error recovers through the ordinary Retry consumer and writes exactly one print document', async () => {
+    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
+    mockUseLocalSearchParams.mockReturnValue({ city: '4', questId: 'minsk-cmok', print: '1' } as any)
+    const loaded = mockUseQuestBundle()
+    const printTitle = `${loaded.bundle.title} — ${i18nT('quests:components.quests.QuestPrintable.bookTitle')}`
+    const refetch = jest.fn()
+    const generate = jest.spyOn(QuestPrintable, 'generatePrintableQuest').mockImplementation(async (props, options) =>
+      beginPrint({ inPlace: options?.inPlace, signal: options?.signal }).print(
+        `<!doctype html><html><head><title>${props.title} — ${i18nT('quests:components.quests.QuestPrintable.bookTitle')}</title></head><body><h1>${props.title}</h1></body></html>`,
+      ),
+    )
+    mockUseQuestBundle.mockReturnValue({ ...loaded, bundle: null, error: 'Не удалось загрузить квест', refetch } as any)
+    const screen = render(<QuestScreen />)
+    expect(screen.UNSAFE_root.findAllByType(LazyInstantSEO)).toHaveLength(0)
+    expect(generate).not.toHaveBeenCalled()
+    fireEvent.press(screen.getByText('Повторить'))
+    expect(refetch).toHaveBeenCalledTimes(1)
+
+    mockUseQuestBundle.mockReturnValue({ ...loaded, bundle: null, loading: true, refetch } as any)
+    screen.rerender(<QuestScreen />)
+    expect(generate).not.toHaveBeenCalled()
+    mockUseQuestBundle.mockReturnValue({ ...loaded, bundle: { ...loaded.bundle, tags: [] }, refetch } as any)
+    await act(async () => { screen.rerender(<QuestScreen />); await Promise.resolve() })
+    expect(generate).toHaveBeenCalledTimes(1)
+    expect(generate.mock.calls[0][1]?.inPlace).toBe(true)
+    expect(screen.UNSAFE_root.findAllByType(LazyInstantSEO)).toHaveLength(0)
+    await act(async () => { jest.advanceTimersByTime(3000) })
+    expect(document.title).toBe(printTitle)
+    expect(document.querySelector('h1')?.textContent).toBe(loaded.bundle.title)
   })
 
   it('updates document title and canonical when quest screen becomes active', async () => {

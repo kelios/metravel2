@@ -3,8 +3,6 @@ import React from 'react';
 import { View, StyleSheet, Platform, type ViewStyle } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 import { webViewStyle } from '@/utils/webProps';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { TRAVEL_CARD_IMAGE_HEIGHT } from '@/components/listTravel/utils/listTravelConstants';
 
 interface SkeletonLoaderProps {
   testID?: string;
@@ -71,36 +69,6 @@ export const MapSkeleton: React.FC<MapSkeletonProps> = () => {
   );
 };
 
-export const TravelCardSkeleton: React.FC = () => {
-  return (
-    <View testID="travel-card-skeleton" style={styles.travelCardSkeleton}>
-      <SkeletonLoader
-        testID="travel-card-skeleton-image"
-        width="100%"
-        height={TRAVEL_CARD_IMAGE_HEIGHT}
-        borderRadius={DESIGN_TOKENS.radii.lg}
-      />
-      <View style={styles.travelCardContent}>
-        <SkeletonLoader width="70%" height={16} />
-        <SkeletonLoader width="55%" height={14} style={{ marginTop: 8 }} />
-        <SkeletonLoader width="85%" height={12} style={{ marginTop: 8 }} />
-      </View>
-    </View>
-  );
-};
-
-export const TravelListSkeleton: React.FC<MapSkeletonProps> = ({ count = 3 }) => {
-  if (count <= 0) {
-    return null;
-  }
-  return (
-    <View style={styles.listSkeletonContainer}>
-      {Array.from({ length: count }).map((_, index) => (
-        <TravelCardSkeleton key={index} />
-      ))}
-    </View>
-  );
-};
 
 export const FiltersSkeleton: React.FC = () => {
   return (
@@ -152,16 +120,6 @@ const styles = StyleSheet.create({
   },
   travelItemContent: {
     flex: 1,
-  },
-  travelCardSkeleton: {
-    width: '100%',
-    borderRadius: DESIGN_TOKENS.radii.lg,
-    padding: 12,
-    marginBottom: 12,
-    backgroundColor: 'transparent',
-  },
-  travelCardContent: {
-    marginTop: 12,
   },
   filtersSkeletonContainer: {
     padding: 16,

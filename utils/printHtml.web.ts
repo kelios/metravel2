@@ -45,6 +45,9 @@ function beginInPlacePrint(signal?: AbortSignal): PrintSession {
         doc.open()
         doc.write(withPrintActionHandler(html))
         doc.close()
+        // The replaced document owns its title. Still-mounted route callbacks
+        // must check this DOM ownership at execution, not rely on a timeout.
+        doc.documentElement?.setAttribute('data-metravel-print-document', 'true')
         return 'printed'
       } catch {
         return 'unavailable'

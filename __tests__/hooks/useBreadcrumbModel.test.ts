@@ -5,6 +5,8 @@ import { Platform } from 'react-native';
 
 import { useBreadcrumbModel } from '@/hooks/useBreadcrumbModel';
 import { queryKeys } from '@/queryKeys';
+import { questsListQueryOptions } from '@/hooks/questsListQuery';
+import { i18n } from '@/i18n';
 
 jest.mock('expo-router', () => ({
   usePathname: jest.fn(),
@@ -390,8 +392,8 @@ describe('useBreadcrumbModel', () => {
     seen.push(result.current.currentTitle);
     expect(result.current.items).toEqual([
       { label: 'Квесты', path: '/quests' },
-      { label: '', path: '/quests/paphos' },
     ]);
+    expect(result.current.currentTitle).toBe('Квесты');
 
     await act(async () => {
       resolveCatalog([{ quest_id: 'paphos-ktima', city_id: '170', city_name: 'Пафос', title: 'Квест' }]);
@@ -400,7 +402,7 @@ describe('useBreadcrumbModel', () => {
     expect(seen).not.toContain('Paphos');
   });
 
-  it('falls back to the segment once the loaded catalog has no such city', async () => {
+  it('omits an unknown city instead of exposing a slug or an empty segment', async () => {
     const { fetchQuestsList } = jest.requireMock('@/api/quests') as { fetchQuestsList: jest.Mock };
     fetchQuestsList.mockResolvedValue([]);
     usePathname.mockReturnValue('/quests/minsk');
@@ -409,8 +411,51 @@ describe('useBreadcrumbModel', () => {
     const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
 
     await waitFor(() => {
-      expect(result.current.currentTitle).toBe('Minsk');
+      expect(result.current.currentTitle).toBe('Квесты');
     });
+    expect(result.current.items).toEqual([{ label: 'Квесты', path: '/quests' }]);
+    expect(result.current.items.every(item => item.label.trim().length > 0)).toBe(true);
+  });
+
+  it('offline without cache omits the city; real cached names survive a rejected refresh', async () => {
+    const { fetchQuestsList } = jest.requireMock('@/api/quests') as { fetchQuestsList: jest.Mock };
+    fetchQuestsList.mockRejectedValue(new Error('offline'));
+    queryClient.setDefaultOptions({ queries: { retry: false } });
+    usePathname.mockReturnValue('/quests/minsk');
+    useLocalSearchParams.mockReturnValue({});
+    const screen = renderHook(() => useBreadcrumbModel(), { wrapper });
+    await waitFor(() => expect(queryClient.getQueryState(questsListQueryOptions().queryKey)?.status).toBe('error'));
+    expect(screen.result.current.items).toEqual([{ label: 'Квесты', path: '/quests' }]);
+
+    act(() => queryClient.setQueryData(questsListQueryOptions().queryKey, [
+      { quest_id: 'minsk-center', city_id: '4', city_name: 'Мінск', title: 'Квест' },
+    ]));
+    await waitFor(() => expect(screen.result.current.currentTitle).toBe('Мінск'));
+    await act(async () => { await queryClient.refetchQueries({ queryKey: questsListQueryOptions().queryKey }) });
+    expect(screen.result.current.items.at(-1)).toEqual({ label: 'Мінск', path: '/quests/minsk' });
+    expect(screen.result.current.items.every(item => item.label.trim().length > 0)).toBe(true);
+  });
+
+  it.each([
+    ['ru', 'Минск'], ['be', 'Мінск'], ['uk', 'Мінськ'], ['pl', 'Mińsk'], ['en', 'Minsk'],
+  ])('preserves the actual %s catalog city name without slug fallback', async (locale, name) => {
+    const previousLocale = i18n.language;
+    const { fetchQuestsList } = jest.requireMock('@/api/quests') as { fetchQuestsList: jest.Mock };
+    let unmount: (() => void) | undefined;
+    try {
+      await i18n.changeLanguage(locale);
+      fetchQuestsList.mockResolvedValue([{ quest_id: 'minsk-center', city_id: '4', city_name: name, title: 'Quest' }]);
+      usePathname.mockReturnValue('/quests/minsk');
+      useLocalSearchParams.mockReturnValue({});
+      const screen = renderHook(() => useBreadcrumbModel(), { wrapper });
+      unmount = screen.unmount;
+      await waitFor(() => expect(screen.result.current.currentTitle).toBe(name));
+      expect(screen.result.current.items.at(-1)).toEqual({ label: name, path: '/quests/minsk' });
+      expect(fetchQuestsList).toHaveBeenCalledWith(expect.objectContaining({ locale }));
+    } finally {
+      unmount?.();
+      await i18n.changeLanguage(previousLocale);
+    }
   });
 
   it('uses planned trip title for /trips/plan detail breadcrumbs', async () => {

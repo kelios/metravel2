@@ -102,6 +102,16 @@ const pillProps = {
 afterEach(cleanup)
 
 describe('QuestWizard — граница состояния «отложена» в навигации (#1633)', () => {
+  it('actual sidebar keeps an authored optional marker once in text and accessible label', async () => {
+    const optionalSteps = [{ ...makeStep('optional', 'Башня (по желанию)'), pointRole: 'optional' as const }]
+    const view = render(<QuestWizard title="Роли" steps={optionalSteps} intro={intro} finale={{ story: 'Финал' } as any}
+      storageKey="optional_nav_once" questId="optional-nav" cityId="minsk" />)
+    await act(async () => { await Promise.resolve() })
+    expect(view.getByText('Башня (по желанию)')).toBeTruthy()
+    const button = view.getByLabelText(/Башня \(по желанию\).*Точка 1 из 1/)
+    expect(button.props.accessibilityLabel).not.toContain('Точка по желанию')
+  })
+
   it('метит только точку позади: текущая и ещё не пройденная долгом не считаются', async () => {
     const view = render(
       <QuestWizard

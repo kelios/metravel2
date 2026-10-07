@@ -44,6 +44,21 @@ const build = (overrides: Partial<Parameters<typeof buildQuestRouteModel>[0]> = 
 afterEach(cleanup)
 
 describe('buildQuestRouteModel (#2149)', () => {
+  it('authored optional titles remain single in actual route rows, details and a11y', () => {
+    const titledPoints = points.map((point, index) => index === 6
+      ? { ...point, title: 'Башня (по желанию)' }
+      : point)
+    const model = build({ allSteps: [intro, ...titledPoints] })
+    const row = model.rows[7]
+    expect(row.title).toBe('Башня (по желанию)')
+    expect(row.detail).toBe('доступна')
+    expect(row.accessibilityLabel).toBe('Башня (по желанию): Точка 7 из 14, доступна')
+    expect(model.segments[6].role).toBe('optional')
+    const screen = render(<QuestRouteStrip model={model} onGoToStep={jest.fn()} onShowFinale={jest.fn()} />)
+    fireEvent.press(screen.getByTestId('quest-route-strip'))
+    expect(screen.getByLabelText(row.accessibilityLabel)).toBeTruthy()
+  })
+
   it('позиция и задания — из одной модели: «Точка 12 из 14 · Задания: 10 / 11»', () => {
     const model = build()
     expect(model.position).toEqual({ kind: 'point', index: 12, total: 14 })

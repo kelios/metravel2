@@ -104,6 +104,34 @@ describe('useQuestKeyboardReveal (#1072)', () => {
     expect(scrollTo).toHaveBeenLastCalledWith({ y: 100 + INPUT_HEIGHT + GAP, animated: true })
   })
 
+  it('смена шага без TextInput отменяет старые refs и незавершённый замер', async () => {
+    const scrollTo = jest.fn()
+    const scrollRef = { current: { scrollTo, ...measurable(VIEWPORT_TOP, windowHeight - VIEWPORT_TOP) } as unknown as ScrollView }
+    let finishInputMeasure!: (x: number, y: number, width: number, height: number) => void
+    const input = { measureInWindow: jest.fn((callback: typeof finishInputMeasure) => { finishInputMeasure = callback }) }
+    const { result, rerender } = renderHook(({ step }) => useQuestKeyboardReveal(scrollRef, 0, step), {
+      initialProps: { step: 'answer' },
+    })
+    act(() => result.current.handleInputFocus(input))
+    await openKeyboard()
+    expect(input.measureInWindow).toHaveBeenCalledTimes(1)
+    rerender({ step: 'no-input' })
+    await act(async () => { finishInputMeasure(0, visibleBottom + 100, 300, INPUT_HEIGHT) })
+    expect(scrollTo).not.toHaveBeenCalled()
+
+    act(() => result.current.handleAnswerFeedback(measurable(windowHeight + 100), null, true))
+    await act(async () => { await jest.advanceTimersByTimeAsync(SETTLE_MS) })
+    expect(input.measureInWindow).toHaveBeenCalledTimes(1)
+    expect(scrollTo).not.toHaveBeenCalled()
+
+    act(() => {
+      result.current.handleAnswerFeedback(null)
+      result.current.handleInputFocus(measurable(visibleBottom + 50, INPUT_HEIGHT))
+    })
+    await act(async () => { await Promise.resolve() })
+    expect(scrollTo).toHaveBeenLastCalledWith({ y: 50 + INPUT_HEIGHT + GAP, animated: true })
+  })
+
   it('после неверного ответа при открытой клавиатуре раскрывает блок ошибки и действия под полем', async () => {
     const { result } = setup()
     // Поле уже стоит над клавиатурой — фокусный автоскролл ничего не делает.
@@ -343,6 +371,16 @@ describe('QuestStepCard отдаёт обратную связь по ответ
     expect(onAnswerFeedback.mock.calls[0][2]).toBe(false)
   })
 
+  it('тот же серверный feedback и новый callback не запускают свежий scroll, новая попытка запускает', () => {
+    const screen = renderCard({ attempts: 3, hintVisible: true })
+    const onAnswerFeedback = jest.fn()
+    screen.rerender(<QuestStepCard {...screen.props} onAnswerFeedback={onAnswerFeedback} />)
+    expect(onAnswerFeedback).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), false)
+    onAnswerFeedback.mockClear()
+    screen.rerender(<QuestStepCard {...screen.props} onAnswerFeedback={onAnswerFeedback} attempts={4} />)
+    expect(onAnswerFeedback).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), true)
+  })
+
   it('раскрытая подсказка — тоже обратная связь: метка переезжает за неё', () => {
     const screen = renderCard()
     const onAnswerFeedback = screen.props.onAnswerFeedback as jest.Mock
@@ -352,5 +390,6 @@ describe('QuestStepCard отдаёт обратную связь по ответ
 
     expect(onAnswerFeedback).toHaveBeenCalledTimes(1)
     expect(onAnswerFeedback.mock.calls[0][0]).toBeTruthy()
+    expect(onAnswerFeedback.mock.calls[0][2]).toBe(true)
   })
 })

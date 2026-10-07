@@ -49,15 +49,17 @@ describe('useQuestWizardProgress', () => {
       expect(result.current.showMap).toBe(false)
     })
 
-    const saved = await AsyncStorage.getItem('quest_progress_test')
-    expect(saved).not.toBeNull()
-    expect(JSON.parse(saved!)).toMatchObject({
-      index: 1,
-      unlocked: 2,
-      answers: { 'step-1': 'dragon' },
-      attempts: { 'step-1': 1 },
-      hints: { 'step-1': true },
-      showMap: false,
+    await waitFor(async () => {
+      const saved = await AsyncStorage.getItem('quest_progress_test')
+      expect(saved).not.toBeNull()
+      expect(JSON.parse(saved!)).toMatchObject({
+        index: 1,
+        unlocked: 2,
+        answers: { 'step-1': 'dragon' },
+        attempts: { 'step-1': 1 },
+        hints: { 'step-1': true },
+        showMap: false,
+      })
     })
 
     expect(onProgressChange).not.toHaveBeenCalled()

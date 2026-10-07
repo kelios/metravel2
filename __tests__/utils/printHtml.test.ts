@@ -359,11 +359,12 @@ describe('printHtml.web', () => {
   })
 
   describe('#2318 inPlace', () => {
-    const doc = { open: jest.fn(), write: jest.fn(), close: jest.fn() }
+    const doc = { open: jest.fn(), write: jest.fn(), close: jest.fn(), documentElement: { setAttribute: jest.fn() } }
     beforeEach(() => {
       doc.open.mockReset()
       doc.write.mockReset()
       doc.close.mockReset()
+      doc.documentElement.setAttribute.mockReset()
       ;(global as unknown as { window: unknown }).window = { open: jest.fn(), document: doc }
     })
 
@@ -375,6 +376,7 @@ describe('printHtml.web', () => {
       await expect(session.print(realHtml())).resolves.toBe('printed')
       expect(doc.open).toHaveBeenCalledTimes(1)
       expect(doc.close).toHaveBeenCalledTimes(1)
+      expect(doc.documentElement.setAttribute).toHaveBeenCalledWith('data-metravel-print-document', 'true')
       const [written] = doc.write.mock.calls[0]
       expect(written).toContain('Кольцо вокруг озера')
       expect(written).toContain('window.print()')
@@ -389,6 +391,7 @@ describe('printHtml.web', () => {
       await expect(session.print('<p>x</p>')).resolves.toBe('cancelled')
       expect(doc.open).not.toHaveBeenCalled()
       expect(discardWindow).not.toHaveBeenCalled()
+      expect(doc.documentElement.setAttribute).not.toHaveBeenCalled()
     })
 
     it('отменённый signal (ушли с экрана) — документ страницы не трогается', async () => {
@@ -405,6 +408,7 @@ describe('printHtml.web', () => {
       })
       await expect(web().beginPrint({ inPlace: true }).print('<p>x</p>')).resolves.toBe('unavailable')
       expect(openWindow).not.toHaveBeenCalled()
+      expect(doc.documentElement.setAttribute).not.toHaveBeenCalled()
     })
   })
 

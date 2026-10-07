@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Platform, StyleSheet, View, type LayoutChangeEvent } from 'react-native'
 
 import {
@@ -11,8 +11,9 @@ import {
 } from '@/components/travel/TravelDetailSkeletons'
 
 // Shared by every reserved deferred section (footer #1604, sidebar and comments
-// #1642): a full viewport of reserve keeps whatever follows the section below
-// the fold, so releasing the reserve cannot move anything the user can see.
+// #1642). Resolving a short frame can still move a visible following section
+// when the user has reached the bottom. Release uses its measured viewport
+// anchor and the actual inner scroll owner, before paint (#2329).
 export const TRAVEL_DETAILS_FOOTER_RESERVE_HEIGHT = '100vh' as const
 
 // A deferred section is "settled" once its real frame stops resizing, not when
@@ -81,6 +82,57 @@ export function useDeferredSectionRuntimeSettle({
   return { onRuntimeFrameLayout, settled: settled && active }
 }
 
+type ReserveReleaseAnchor = {
+  anchor: HTMLElement
+  owner: HTMLElement
+  beforeTop: number
+}
+
+type ReserveReleaseState = 'reserved' | 'released' | 'anchored' | 'clamped'
+
+function findReserveReleaseAnchor(node: HTMLElement): ReserveReleaseAnchor | null {
+  if (!node.isConnected) return null
+  const view = node.ownerDocument.defaultView
+  if (!view) return null
+  let owner = node.parentElement
+  while (owner) {
+    const overflowY = view.getComputedStyle(owner).overflowY
+    if (/^(auto|scroll)$/.test(overflowY) && owner.scrollHeight > owner.clientHeight) break
+    owner = owner.parentElement
+  }
+  if (!owner || owner.clientHeight <= 0) return null
+
+  // The transition sits inside a section wrapper. Walk only within this owner
+  // to the first genuine following flow frame, never to the window/body.
+  let frame: HTMLElement | null = node
+  let anchor: HTMLElement | null = null
+  while (frame && frame !== owner) {
+    let sibling = frame.nextElementSibling
+    while (sibling) {
+      if (sibling instanceof view.HTMLElement) {
+        const rect = sibling.getBoundingClientRect()
+        const position = view.getComputedStyle(sibling).position
+        if (!/^(absolute|fixed|sticky)$/.test(position) && rect.width > 0 && rect.height > 0) {
+          anchor = sibling
+          break
+        }
+      }
+      sibling = sibling.nextElementSibling
+    }
+    if (anchor) break
+    frame = frame.parentElement
+  }
+  if (!anchor || !owner.contains(anchor)) return null
+  const ownerRect = owner.getBoundingClientRect()
+  const rect = anchor.getBoundingClientRect()
+  const top = Math.max(0, ownerRect.top + owner.clientTop)
+  const bottom = Math.min(view.innerHeight, ownerRect.top + owner.clientTop + owner.clientHeight)
+  const left = Math.max(0, ownerRect.left + owner.clientLeft)
+  const right = Math.min(view.innerWidth, ownerRect.left + owner.clientLeft + owner.clientWidth)
+  if (bottom <= top || right <= left || rect.bottom <= top || rect.top >= bottom || rect.right <= left || rect.left >= right) return null
+  return { anchor, owner, beforeTop: rect.top }
+}
+
 type TravelDetailsDeferredTransitionProps = {
   children: React.ReactNode
   isMobile: boolean
@@ -101,6 +153,9 @@ export function TravelDetailsDeferredTransition({
   testID,
 }: TravelDetailsDeferredTransitionProps) {
   const [internalRuntimeFrameReady, setInternalRuntimeFrameReady] = useState(false)
+  const [reserveReleaseState, setReserveReleaseState] = useState<ReserveReleaseState>('reserved')
+  const transitionRef = useRef<View>(null)
+  const releaseAnchorRef = useRef<ReserveReleaseAnchor | null>(null)
 
   useEffect(() => {
     if (pending) setInternalRuntimeFrameReady(false)
@@ -116,6 +171,36 @@ export function TravelDetailsDeferredTransition({
   )
 
   const runtimeFrameReady = controlledRuntimeFrameReady ?? internalRuntimeFrameReady
+
+  // Both state commits and the measured correction flush in layout effects,
+  // before the browser can paint the shortened flow. Readiness/timers are not
+  // changed; only the removal of an already existing reserve is ordered here.
+  useLayoutEffect(() => {
+    if (Platform.OS !== 'web' || reserveHeight == null) return
+    if (pending || !runtimeFrameReady) {
+      releaseAnchorRef.current = null
+      if (reserveReleaseState !== 'reserved') setReserveReleaseState('reserved')
+      return
+    }
+    const node = transitionRef.current as unknown as HTMLElement | null
+    if (reserveReleaseState === 'reserved') {
+      releaseAnchorRef.current = node ? findReserveReleaseAnchor(node) : null
+      setReserveReleaseState('released')
+      return
+    }
+    const capture = releaseAnchorRef.current
+    releaseAnchorRef.current = null
+    if (!capture || !node?.isConnected || !capture.anchor.isConnected || !capture.owner.isConnected || !capture.owner.contains(node) || !capture.owner.contains(capture.anchor)) return
+    const { anchor, owner, beforeTop } = capture
+    const delta = anchor.getBoundingClientRect().top - beforeTop
+    // Browser anchoring/clamping may already have corrected part or all of the
+    // shrink. Use its CURRENT offset, never the stale pre-release scrollTop.
+    const currentTop = owner.scrollTop
+    const targetTop = Math.max(0, Math.min(owner.scrollHeight - owner.clientHeight, currentTop + delta))
+    if (targetTop !== currentTop) owner.scrollTop = targetTop
+    const residual = Math.abs(anchor.getBoundingClientRect().top - beforeTop)
+    setReserveReleaseState(residual <= RUNTIME_SETTLE_HEIGHT_EPSILON_PX ? 'anchored' : 'clamped')
+  }, [pending, reserveHeight, reserveReleaseState, runtimeFrameReady])
 
   if (Platform.OS !== 'web') {
     return <>{pending ? placeholder : children}</>
@@ -135,15 +220,17 @@ export function TravelDetailsDeferredTransition({
           ? 'runtime'
           : 'measuring-runtime',
       deferredTransitionMobile: String(isMobile),
+      reserveReleaseState: reserveHeight == null ? 'not-reserved' : reserveReleaseState,
     },
   }
 
   return (
     <View
       testID={testID}
+      ref={transitionRef}
       style={[
         styles.webTransition,
-        reserveHeight == null || runtimeFrameReady
+        reserveHeight == null || (runtimeFrameReady && !pending && reserveReleaseState !== 'reserved')
           ? null
           : ({ minHeight: reserveHeight } as never),
       ]}

@@ -5882,3 +5882,18 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   включая ненулевой overlay origin; unit не является hardware пиксельным замером.
 - **Done gate:** scoped source/units и согласованная mobile web проверка;
   native physical spotlight alignment остаётся runtime-unverified в этом проходе.
+
+### QUEST-STEP-RELOAD-CLS-001 — известный прогресс задаёт первый кадр
+
+- **Инвариант:** если route уже прочитал backend progress, визард синхронно
+  начинает с известного шага, без промежуточного intro и последующего скачка.
+- **Surface/owner:** useQuestWizardProgress; #2270, related #2326. Начальная
+  гидрация прогресса не является новой попыткой/подсказкой игрока и не должна
+  запускать раскрытие feedback без клавиатуры.
+- **Корректирующий слой:** synchronous initialProgress seed (#2270); сравнение
+  состояния feedback внутри одного step.id и сброс input/feedback refs на смене
+  шага (#2326). Не переносить seed в поздний effect и не лечить скачок таймером.
+- **Regression control:** actual first-render currentIndex, отсутствие index=0,
+  awaited persisted payload без увеличения timeout; unchanged feedback echo не
+  запускает fresh reveal, новая попытка/подсказка запускает. Runtime mobile
+  320/390 после reviewed deploy проверяется отдельно; native physical deferred.

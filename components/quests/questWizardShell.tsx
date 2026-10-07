@@ -13,7 +13,7 @@ import ActionTooltip from '@/components/ui/ActionTooltip'
 import { useQuestFontScaleControls } from '@/stores/questFontScaleStore'
 import { translate as i18nT, translatePlural } from '@/i18n'
 import type { QuestCountModel, QuestPointRole } from '@/utils/questCountModel'
-import { getQuestPointRoleLabel } from './questMapPoints'
+import { getQuestPointRoleAnnotation } from './questMapPoints'
 import { describeOfflineQuestAction, type OfflineQuestDownloadState } from './questScreenHeaderModel'
 
 
@@ -31,11 +31,9 @@ const getNavigationStepLabel = (step: QuestNavigationStep): string => {
   if (step.id === 'intro' || step.pointRole === 'start') {
     return i18nT('quests:components.quests.questWizardShell.start_225f7a82')
   }
-  if (step.pointRole === 'optional') {
-    return `${step.title} · ${getQuestPointRoleLabel(step.pointRole)}`
-  }
-  if (step.pointRole === 'final') {
-    return `${step.title} · ${getQuestPointRoleLabel(step.pointRole)}`
+  if (step.pointRole === 'optional' || step.pointRole === 'final') {
+    const annotation = getQuestPointRoleAnnotation(step.title, step.pointRole)
+    return annotation ? `${step.title} · ${annotation}` : step.title
   }
   return step.title
 }

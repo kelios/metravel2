@@ -73,8 +73,17 @@ export function formatQuestMapPointTitle(
     point: QuestStepPoint,
 ): string | undefined {
     if (!point.title) return undefined;
-    const roleLabel = point.pointRole ? getQuestPointRoleLabel(point.pointRole) : undefined;
+    const roleLabel = getQuestPointRoleAnnotation(point.title, point.pointRole);
     return roleLabel ? `${point.title} · ${roleLabel}` : point.title;
+}
+
+// Authored optional markers remain content authority. Suppress only their
+// duplicate UI annotation, including translated markers and RU content fallback.
+const OPTIONAL_TITLE_MARKER = /по\s+желанию|опционально|па\s+жаданні|за\s+бажанням|\boptional\b|\bopcjonaln(?:ie|y|a|e)\b|nieobowiązkow[aye]/iu;
+
+export function getQuestPointRoleAnnotation(title: string, role?: QuestPointRole): string | null {
+    if (!role || (role === 'optional' && OPTIONAL_TITLE_MARKER.test(title))) return null;
+    return getQuestPointRoleLabel(role);
 }
 
 export function getQuestPointRoleLabel(role: QuestPointRole): string {

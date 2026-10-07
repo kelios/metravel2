@@ -1,10 +1,14 @@
+import TravelListItemSkeleton from '@/components/listTravel/TravelListItemSkeleton'
 import React, { useMemo } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { Platform, StyleSheet, View } from 'react-native'
 
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
+import { useResponsiveWidth } from '@/hooks/useResponsive'
+import { METRICS } from '@/constants/layout'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import ReservedSpace from '@/components/ui/ReservedSpace'
+import { createTravelTmlRoundStyles, TRAVEL_TML_ROUND_IMAGE_HEIGHT } from './TravelTmlRound.styles'
 
 const LINE_HEIGHT = 18
 const LINE_GAP = 8
@@ -36,20 +40,6 @@ const themedCardStyles = (colors: ReturnType<typeof useThemedColors>) =>
       marginBottom: 12,
     },
     pointContent: { paddingTop: 8 },
-    travelListContainer: {
-      width: '100%',
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: DESIGN_TOKENS.spacing.md,
-    },
-    travelCard: {
-      width: '100%',
-      maxWidth: 300,
-      backgroundColor: colors.surface,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      padding: DESIGN_TOKENS.spacing.md,
-      marginBottom: 12,
-    },
   })
 
 const staticStyles = StyleSheet.create({
@@ -238,31 +228,6 @@ export const PointListSkeleton: React.FC = () => {
   )
 }
 
-export const TravelListSkeleton: React.FC<{ count?: number }> = ({ count = 3 }) => {
-  const styles = useThemedCardStyles()
-  return (
-    <View style={styles.travelListContainer}>
-      {Array.from({ length: count }, (_, i) => (
-        <View key={i} style={styles.travelCard}>
-          <SkeletonLoader
-            width="100%"
-            height={160}
-            borderRadius={DESIGN_TOKENS.radii.md}
-            style={staticStyles.spacedBottom}
-          />
-          <SkeletonLoader
-            width="85%"
-            height={18}
-            borderRadius={4}
-            style={staticStyles.spacedBottom}
-          />
-          <SkeletonLoader width="60%" height={14} borderRadius={4} />
-        </View>
-      ))}
-    </View>
-  )
-}
-
 export const CommentsSkeleton: React.FC = () => (
   <View style={staticStyles.commentsContainer}>
     {Array.from({ length: 3 }, (_, i) => (
@@ -320,20 +285,40 @@ export const RatingSectionSkeleton: React.FC = () => (
   </View>
 )
 
-export const SidebarSectionSkeleton: React.FC = () => (
-  <View style={staticStyles.sidebarContainer}>
-    <View style={staticStyles.sidebarSection}>
-      <SkeletonLoader width={220} height={26} borderRadius={8} />
-      <SkeletonLoader width="52%" height={18} borderRadius={6} />
-      <TravelListSkeleton count={2} />
+// Mobile Near and native Popular use the actual lightweight TravelTmlRound frame.
+// The critical skeleton does not import the loaded card's actions/share graph.
+const RoundSidebarCardSkeleton: React.FC = () => {
+  const colors = useThemedColors()
+  const styles = useMemo(() => createTravelTmlRoundStyles(colors), [colors])
+  return (
+    <View style={styles.container} testID="travel-sidebar-round-card-skeleton" aria-hidden>
+      <View style={[styles.card, styles.skeletonCard]}>
+        <SkeletonLoader width="100%" height={TRAVEL_TML_ROUND_IMAGE_HEIGHT} borderRadius={0} />
+      </View>
     </View>
-    <View style={staticStyles.sidebarSection}>
-      <SkeletonLoader width={210} height={26} borderRadius={8} />
-      <SkeletonLoader width="58%" height={18} borderRadius={6} />
-      <TravelListSkeleton count={2} />
+  )
+}
+
+export const SidebarSectionSkeleton: React.FC = () => {
+  const width = useResponsiveWidth()
+  // Exactly the NearTravelList branch: embedded mobile renders TravelTmlRound,
+  // while its wider grid and every web Popular card use TravelListItem.
+  const isNearMobile = width < METRICS.breakpoints.tablet
+  return (
+    <View style={staticStyles.sidebarContainer}>
+      <View style={staticStyles.sidebarSection} testID="travel-sidebar-near-skeleton">
+        <SkeletonLoader width={220} height={26} borderRadius={8} />
+        <SkeletonLoader width="52%" height={18} borderRadius={6} />
+        {isNearMobile ? <RoundSidebarCardSkeleton /> : <TravelListItemSkeleton />}
+      </View>
+      <View style={staticStyles.sidebarSection} testID="travel-sidebar-popular-skeleton">
+        <SkeletonLoader width={210} height={26} borderRadius={8} />
+        <SkeletonLoader width="58%" height={18} borderRadius={6} />
+        {Platform.OS === 'web' ? <TravelListItemSkeleton /> : <RoundSidebarCardSkeleton />}
+      </View>
     </View>
-  </View>
-)
+  )
+}
 
 export const FooterSectionSkeleton: React.FC<{ isMobile?: boolean }> = ({
   isMobile = false,

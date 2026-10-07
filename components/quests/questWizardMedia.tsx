@@ -1,6 +1,8 @@
 import React, { lazy, memo } from 'react'
+import { StyleSheet, View } from 'react-native'
 
 import QuestFullMapLazy from '@/components/quests/QuestFullMapLazy'
+import ImageCardMedia from '@/components/ui/ImageCardMedia'
 
 export const BelkrajWidgetLazy = lazy(() => import('@/components/belkraj/BelkrajWidget'))
 
@@ -23,6 +25,12 @@ export const NativeQuestVideoLazy = lazy(() =>
       onError?: () => void
     }) {
       const uri = typeof props.source === 'string' ? props.source : props.source?.uri ?? null
+      const sourceVisitRef = React.useRef({ uri, revision: 0 })
+      if (sourceVisitRef.current.uri !== uri) {
+        sourceVisitRef.current = { uri, revision: sourceVisitRef.current.revision + 1 }
+      }
+      const sourceRevision = sourceVisitRef.current.revision
+      const [firstFrameRevision, setFirstFrameRevision] = React.useState<number | null>(null)
       const player = module.useVideoPlayer(uri, (p: any) => {
         p.loop = !!props.isLooping
         if (props.shouldPlay) p.play()
@@ -40,12 +48,29 @@ export const NativeQuestVideoLazy = lazy(() =>
       // VideoView типизирован пересечением web+native плееров — для кросс-платформенного вызова ослабляем тип
       const VideoView = module.VideoView as unknown as React.ComponentType<any>
       return (
-        <VideoView
-          player={player}
-          style={props.style}
-          contentFit="contain"
-          nativeControls={props.useNativeControls !== false}
-        />
+        <View style={props.style}>
+          <VideoView
+            player={player}
+            style={StyleSheet.absoluteFillObject}
+            contentFit="contain"
+            nativeControls={props.useNativeControls !== false}
+            onFirstFrameRender={() => {
+              if (sourceVisitRef.current.revision === sourceRevision) setFirstFrameRevision(sourceRevision)
+            }}
+          />
+          {props.usePoster && props.posterSource && firstFrameRevision !== sourceRevision ? (
+            <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+              <ImageCardMedia
+                source={props.posterSource}
+                fit="contain"
+                width="100%"
+                style={StyleSheet.absoluteFillObject}
+                showImmediately
+                testID="quest-video-poster"
+              />
+            </View>
+          ) : null}
+        </View>
       )
     }),
   }))

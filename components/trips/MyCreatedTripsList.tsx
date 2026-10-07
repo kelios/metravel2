@@ -13,7 +13,7 @@ import Feather from '@expo/vector-icons/Feather';
 import type { PlannedTrip, TripPlanStatus, TripTransport } from '@/api/plannedTrips';
 import TripPlanCard from '@/components/trips/planning/TripPlanCard';
 import EmptyState from '@/components/ui/EmptyState';
-import { TravelListSkeleton } from '@/components/ui/SkeletonLoader';
+import TripPlanCardSkeleton from '@/components/trips/planning/TripPlanCardSkeleton';
 import {
   PLAN_STATUS_LABEL,
   TRANSPORT_LABEL,
@@ -150,15 +150,8 @@ function MyCreatedTripsList({ role = 'organized' }: Props) {
     setFilters(EMPTY_FILTERS);
   }, []);
 
-  if (isLoading) {
-    return (
-      <View style={styles.state} testID="my-created-trips-loading">
-        <TravelListSkeleton count={2} />
-      </View>
-    );
-  }
 
-  if (isError) {
+  if (isError && !isLoading) {
     return (
       <View testID="my-created-trips-error">
         <EmptyState
@@ -173,7 +166,7 @@ function MyCreatedTripsList({ role = 'organized' }: Props) {
     );
   }
 
-  if (matchingTrips.length === 0) {
+  if (!isLoading && matchingTrips.length === 0) {
     return (
       <View testID="my-created-trips-empty" {...SCREEN_CONTENT_FIRST_PROPS}>
         <EmptyState
@@ -204,7 +197,8 @@ function MyCreatedTripsList({ role = 'organized' }: Props) {
     <View style={styles.searchBox} testID="my-created-trips-search">
       <Feather name="search" size={18} color={colors.textMuted} />
       <TextInput
-            {...searchInputAccessibilityProps()}
+        {...searchInputAccessibilityProps()}
+        editable={!isLoading}
         value={searchQuery}
         onChangeText={setSearchQuery}
         placeholder={role === 'organized' ? i18nT('trips:components.trips.MyCreatedTripsList.poisk_po_moim_poezdkam_22d7088e') : i18nT('trips:components.trips.MyCreatedTripsList.poisk_sredi_poezdok_b0279567')}
@@ -284,6 +278,7 @@ function MyCreatedTripsList({ role = 'organized' }: Props) {
         <View style={styles.mobileControls}>
           <View style={styles.mobileSearch}>{search}</View>
           <Pressable
+            disabled={isLoading}
             onPress={() => setMobileFiltersOpen((current) => !current)}
             accessibilityRole="button"
             accessibilityLabel={i18nT('trips:components.trips.MyCreatedTripsList.filtry_poezdok_644757e4')}
@@ -312,7 +307,15 @@ function MyCreatedTripsList({ role = 'organized' }: Props) {
         ) : null}
 
         <View style={styles.results}>
-          {visibleTrips.length === 0 ? (
+          {isLoading ? (
+            <View style={styles.grid} testID="my-created-trips-loading">
+              {[0, 1].map((index) => (
+                <View key={index} style={isDesktop ? styles.gridItemDesktop : styles.gridItemMobile}>
+                  <TripPlanCardSkeleton />
+                </View>
+              ))}
+            </View>
+          ) : visibleTrips.length === 0 ? (
             <View style={styles.filteredEmpty} testID="my-created-trips-filtered-empty" {...SCREEN_CONTENT_FIRST_PROPS}>
               <Text style={styles.empty}>{i18nT('trips:components.trips.MyCreatedTripsList.po_zadannym_usloviyam_poezdok_ne_naydeno_3fa7da64')}</Text>
               <Pressable

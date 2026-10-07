@@ -396,10 +396,14 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
   // сохранённого прогресса), а не реакция игрока: без клавиатуры оно экран не
   // двигает (#2271).
   const hasAnswerFeedback = !!error || hintVisible || showSkipPrompt || isCoolingDown
-  const feedbackStepIdRef = useRef<string | null>(null)
+  const feedbackStateRef = useRef<{ stepId: string; verdict: string } | null>(null)
   useEffect(() => {
-    const fresh = feedbackStepIdRef.current === step.id
-    feedbackStepIdRef.current = step.id
+    // A server echo or a rebound callback reports the same saved verdict again;
+    // only a changed verdict on the current step is new feedback to reveal.
+    const verdict = JSON.stringify([attempts, error, hintVisible, showSkipPrompt])
+    const previous = feedbackStateRef.current
+    const fresh = previous !== null && previous.stepId === step.id && previous.verdict !== verdict
+    feedbackStateRef.current = { stepId: step.id, verdict }
     if (hasAnswerFeedback) onAnswerFeedback?.(feedbackEndRef.current, answerInputRef.current, fresh)
     else onAnswerFeedback?.(null)
   }, [attempts, error, hasAnswerFeedback, hintVisible, onAnswerFeedback, showSkipPrompt, step.id])

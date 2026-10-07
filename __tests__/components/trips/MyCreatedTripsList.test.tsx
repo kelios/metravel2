@@ -22,6 +22,7 @@ jest.mock('@/hooks/useTheme', () => ({
 
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => ({ isDesktop: true }),
+  useBreakpoints: () => ({ width: 1280, isPhone: false, isLargePhone: false }),
 }));
 
 jest.mock('@/components/trips/planning/TripPlanCard', () => {
@@ -116,6 +117,16 @@ describe('MyCreatedTripsList', () => {
       isLoading: false,
       isError: false,
     });
+  });
+
+  it('keeps the actual search/filter shell and two planned-trip slots while auth/query is pending', () => {
+    mockUseMyPlannedTrips.mockReturnValue({ data: undefined, isPending: true, isError: false });
+    const screen = render(<MyCreatedTripsList />);
+    expect(screen.getByTestId('my-created-trips-search-input').props.editable).toBe(false);
+    expect(screen.getByTestId('my-created-trips-filters')).toBeTruthy();
+    expect(screen.getAllByTestId('trip-plan-card-skeleton', { includeHiddenElements: true })).toHaveLength(2);
+    expect(screen.queryByTestId('my-created-trips-empty')).toBeNull();
+    expect(screen.queryByTestId('my-created-trips-filtered-empty')).toBeNull();
   });
 
   it('announces exactly one native search field', () => {

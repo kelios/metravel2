@@ -162,6 +162,7 @@ const removeMeta = (selector: string) => {
 };
 
 const patchQuestHead = (seo: QuestSeoModel, canonical: string, image: string) => {
+  if (document.documentElement.getAttribute('data-metravel-print-document') === 'true') return;
   document.title = seo.title;
   upsertMetaContent('meta[name="description"]', seo.description);
   upsertMetaContent('meta[property="og:title"]', seo.title);
@@ -192,6 +193,10 @@ const useQuestHeadSync = (enabled: boolean, seo: QuestSeoModel, canonical: strin
     let bootstrapObserver: MutationObserver | undefined;
     if (document.head.querySelector(bootstrapSelector)) {
       const handOverStructuredData = () => {
+        if (document.documentElement.getAttribute('data-metravel-print-document') === 'true') {
+          bootstrapObserver?.disconnect();
+          return;
+        }
         const managedScript = document.head.querySelector<HTMLScriptElement>(
           `script#${QUEST_STRUCTURED_DATA_ID}[type="application/ld+json"][data-rh="true"]`,
         );
@@ -518,6 +523,7 @@ export default function QuestByIdScreen() {
     bundle,
     questUrl: canonical,
   });
+  const showQuestSeo = isFocused && !isQuestPrintRequested(params[QUEST_PRINT_PARAM]);
   const seo = useMemo(() => getQuestSeo(bundle, questId, isLoading), [bundle, isLoading, questId]);
   const countModel = bundle ? resolveBundleCountModel(bundle) : null;
   // SSG/Expo Head and the delayed head patches must agree on the derivative URL.
@@ -620,7 +626,7 @@ export default function QuestByIdScreen() {
   // ветках свой InstantSEO (со своим robots/canonical), и отложенный патч его перетирал.
   // Keep image ownership during SSG/Expo reconciliation, using the same normalized
   // image as InstantSEO and JSON-LD so delayed writes cannot restore the master.
-  useQuestHeadSync(isFocused && !isLoading && Boolean(bundle), seo, canonical, seoImage);
+  useQuestHeadSync(showQuestSeo && !isLoading && Boolean(bundle), seo, canonical, seoImage);
 
   // Generated quest HTML owns the no-JS H1 until the real bundle is ready.
   // Its section lives outside #root and therefore survives hydration unless the
@@ -643,18 +649,18 @@ export default function QuestByIdScreen() {
   );
 
   if (isLoading) {
-    return <LoadingState canonical={canonical} colors={colors} isFocused={isFocused} styles={styles} />;
+    return <LoadingState canonical={canonical} colors={colors} isFocused={showQuestSeo} styles={styles} />;
   }
 
   if (!bundle) {
-    return <ErrorState bundleError={bundleError} colors={colors} isFocused={isFocused} onRetry={refetch} styles={styles} />;
+    return <ErrorState bundleError={bundleError} colors={colors} isFocused={showQuestSeo} onRetry={refetch} styles={styles} />;
   }
 
   if (!isAuthenticated) {
     const guestStorageKey = buildQuestProgressStorageKey(bundle.storageKey ?? questId, { isAuthenticated: false });
     return (
       <View style={styles.page}>
-        {isFocused ? (
+        {showQuestSeo ? (
           <InstantSEO
             headKey={seo.headKey}
             title={seo.title}
@@ -732,7 +738,7 @@ export default function QuestByIdScreen() {
   if (questConsent.hydrated && !questConsent.granted) {
     return (
       <View style={styles.page}>
-        {isFocused ? (
+        {showQuestSeo ? (
           <InstantSEO
             headKey={seo.headKey}
             title={seo.title}
@@ -762,7 +768,7 @@ export default function QuestByIdScreen() {
 
   return (
     <View style={styles.page}>
-      {isFocused ? (
+      {showQuestSeo ? (
         <InstantSEO
           headKey={seo.headKey}
           title={seo.title}

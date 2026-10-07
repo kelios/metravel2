@@ -1,7 +1,7 @@
 import { translate as i18nT } from '@/i18n'
 import type { QuestCountModel, QuestPointRole } from '@/utils/questCountModel'
 
-import { getQuestPointRoleLabel } from './questMapPoints'
+import { getQuestPointRoleAnnotation } from './questMapPoints'
 import {
   type QuestStepNavKind,
   type QuestStepNavState,
@@ -131,7 +131,7 @@ export function buildQuestRouteModel(input: BuildQuestRouteModelInput): QuestRou
     // Роль — отдельной строкой в листе, поэтому в подписи модели её нет.
     const baseLabel = resolveQuestStepVisualState({ state, kind, role: null, index: number, total, colors })
       .accessibilityLabel
-    const roleLabel = kind === 'point' && role ? getQuestPointRoleLabel(role) : null
+    const roleLabel = kind === 'point' ? getQuestPointRoleAnnotation(step.title, role ?? undefined) : null
     rows.push(
       buildRow({
         key: step.id,

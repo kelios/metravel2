@@ -311,7 +311,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
   //
   // Ключ, queryFn и времена кеша совпадают с `useQuestsList`, поэтому экран
   // квестов и крошка по-прежнему дедуплицируются в один запрос `/quests/`.
-  const { data: questsForLocationCrumb, isPending: questsCrumbPending } = useQuery<ApiQuestMeta[]>({
+  const { data: questsForLocationCrumb } = useQuery<ApiQuestMeta[]>({
     ...questsListQueryOptions(),
     enabled: !!questCitySegment || !!questCountryAlias,
   });
@@ -703,18 +703,19 @@ export function useBreadcrumbModel(): BreadcrumbModel {
 
     const isQuestCityLanding = p.startsWith('/quests/') && parts.length === 2;
     if (isQuestCityLanding) {
-      // Пока каталог в пути, имени города нет: подпись из сегмента адреса —
-      // латиница («Paphos») на любой локали, поэтому место остаётся пустым (#2167).
-      const cityLabel = truncateLabel(questCityName || (questsCrumbPending ? '' : toTitleFromSegment(parts[1])));
+      // No real city name yet (SSG, pending or uncached offline): omit the whole
+      // city segment instead of rendering an empty crumb or a raw URL alias.
+      const cityLabel = truncateLabel(questCityName);
+      const questsLabel = i18nT('shared:hooks.useBreadcrumbModel.kvesty_91edef10');
       const items = [
-        { label: i18nT('shared:hooks.useBreadcrumbModel.kvesty_91edef10'), path: '/quests' },
-        { label: cityLabel, path: p },
+        { label: questsLabel, path: '/quests' },
+        ...(cityLabel ? [{ label: cityLabel, path: p }] : []),
       ];
 
       return {
         items,
         depth: items.length + 1,
-        currentTitle: cityLabel,
+        currentTitle: cityLabel || questsLabel,
         pageContextTitle: i18nT('shared:hooks.useBreadcrumbModel.kvesty_91edef10'),
         backToPath: '/quests',
         showBreadcrumbs: true,
@@ -793,7 +794,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       backToPath,
       showBreadcrumbs: computed.length >= 1,
     };
-  }, [resolvedPathname, hasFilterQuery, normalizedReturnToParam, travelData, travelSlug, questApiTitle, questCityName, questsCrumbPending, questCountryName, userProfileName, articleTitle, plannedTripData, publicTripData]);
+  }, [resolvedPathname, hasFilterQuery, normalizedReturnToParam, travelData, travelSlug, questApiTitle, questCityName, questCountryName, userProfileName, articleTitle, plannedTripData, publicTripData]);
 }
 
 export default useBreadcrumbModel;

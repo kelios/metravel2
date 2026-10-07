@@ -87,6 +87,20 @@ describe('useQuestPrintLanding', () => {
     expect(mockGeneratePrintableQuest.mock.calls[0][0].closeLoop).toBe(true);
   });
 
+  it('bundle failure never starts print; a later ordinary retry result remains eligible without auto-retry', async () => {
+    const { rerender } = renderHook(
+      ({ current }: { current: FrontendQuestBundle | null }) =>
+        useQuestPrintLanding({ enabled: true, bundle: current, questUrl: QUEST_URL }),
+      { initialProps: { current: null as FrontendQuestBundle | null } },
+    );
+    rerender({ current: null });
+    await waitFor(() => expect(mockGeneratePrintableQuest).not.toHaveBeenCalled());
+    expect(mockNotifyQuest).not.toHaveBeenCalled();
+    rerender({ current: bundle });
+    await waitFor(() => expect(mockGeneratePrintableQuest).toHaveBeenCalledTimes(1));
+    expect(mockGeneratePrintableQuest.mock.calls[0][1].signal.aborted).toBe(false);
+  });
+
   it('уход с экрана во время сборки отменяет запись печатной версии', async () => {
     mockGeneratePrintableQuest.mockReturnValue(new Promise(() => {}));
     const { rerender, unmount } = renderHook(

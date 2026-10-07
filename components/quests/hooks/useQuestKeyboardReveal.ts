@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   Keyboard,
   Platform,
@@ -61,7 +61,7 @@ function measureWindowRect(node: MeasurableInput): Promise<WindowRect | null> {
  * прокрутки (на телефоне ScrollView уходит под неё): её полоса тоже не видна,
  * и вердикт под ней игрок не прочтёт (замер Android, #2271).
  */
-export function useQuestKeyboardReveal(scrollRef: React.RefObject<ScrollView | null>, bottomChromePx = 0) {
+export function useQuestKeyboardReveal(scrollRef: React.RefObject<ScrollView | null>, bottomChromePx = 0, stepKey?: string | null) {
   const insets = useSafeAreaInsets()
   const { height: windowHeight } = useWindowDimensions()
   const webKeyboardInset = useWebKeyboardInset()
@@ -88,6 +88,20 @@ export function useQuestKeyboardReveal(scrollRef: React.RefObject<ScrollView | n
   const answerInputRef = useRef<MeasurableInput | null>(null)
   const feedbackEndRef = useRef<MeasurableInput | null>(null)
   const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const measurementGeneration = useRef(0)
+  // Reset before the new card's passive feedback report, including steps without
+  // a text input. SSR has no layout work; native/web commits use a layout effect.
+  const useStepResetEffect = Platform.OS === 'web' && typeof window === 'undefined' ? useEffect : useLayoutEffect
+  useStepResetEffect(() => {
+    const generation = measurementGeneration
+    generation.current += 1
+    focusedInputRef.current = null
+    answerInputRef.current = null
+    feedbackEndRef.current = null
+    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current)
+    feedbackTimerRef.current = null
+    return () => { generation.current += 1 }
+  }, [stepKey])
 
   const handleContentScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     scrollOffsetRef.current = event.nativeEvent?.contentOffset?.y ?? 0
@@ -98,6 +112,7 @@ export function useQuestKeyboardReveal(scrollRef: React.RefObject<ScrollView | n
   // состояние шага (подсказка/попытки из сохранённого прогресса) без клавиатуры
   // экран не двигает — иначе он уезжал вниз сразу после входа на шаг.
   const revealAnswerArea = useCallback((freshFeedback = false) => {
+    const generation = measurementGeneration.current
     const feedbackEnd = feedbackEndRef.current
     const input = focusedInputRef.current ?? (feedbackEnd ? answerInputRef.current : null)
     const scroll = scrollRef.current
@@ -112,7 +127,7 @@ export function useQuestKeyboardReveal(scrollRef: React.RefObject<ScrollView | n
       measureWindowRect(scroll as unknown as MeasurableInput),
       feedbackEnd ? measureWindowRect(feedbackEnd) : null,
     ]).then(([inputRect, viewportRect, feedbackRect]) => {
-      if (!inputRect) return
+      if (!inputRect || generation !== measurementGeneration.current || scrollRef.current !== scroll) return
       // Видимый низ — самый высокий из: верха клавиатуры, верха нижней панели
       // поверх области прокрутки и низа самой области (под ней футер на desktop).
       const aboveChrome = windowHeightRef.current - Math.max(keyboardInsetRef.current, bottomChromeRef.current)
@@ -138,6 +153,7 @@ export function useQuestKeyboardReveal(scrollRef: React.RefObject<ScrollView | n
 
   const handleInputFocus = useCallback(
     (node: MeasurableInput | null) => {
+      measurementGeneration.current += 1
       focusedInputRef.current = node
       if (node) answerInputRef.current = node
       // Клавиатура ещё выезжает — меряем после её появления (эффект ниже), а этот
@@ -148,6 +164,7 @@ export function useQuestKeyboardReveal(scrollRef: React.RefObject<ScrollView | n
   )
 
   const handleInputBlur = useCallback(() => {
+    measurementGeneration.current += 1
     focusedInputRef.current = null
   }, [])
 
@@ -159,6 +176,7 @@ export function useQuestKeyboardReveal(scrollRef: React.RefObject<ScrollView | n
    */
   const handleAnswerFeedback = useCallback(
     (node: MeasurableInput | null, input?: MeasurableInput | null, fresh = true) => {
+      measurementGeneration.current += 1
       feedbackEndRef.current = node
       if (input) answerInputRef.current = input
       if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current)
