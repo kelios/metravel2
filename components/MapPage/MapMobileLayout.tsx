@@ -19,6 +19,7 @@ import {
 } from './MapMobileLayout.styles'
 import { MapEmptyStateToast } from './MapMobile/MapEmptyStateToast'
 import { MapMobileSheetBody } from './MapMobile/MapMobileSheetBody'
+import { MapMobileSheetHeader } from './MapMobile/nativeFiltersPanelAdapter'
 import { MapMobileTopOverlay } from './MapMobile/MapMobileTopOverlay'
 import MapPlaceBottomCard from './MapPlaceBottomCard'
 import { getNextRadiusOption, shouldShowMapEmptyState } from './mapEmptyState'
@@ -680,7 +681,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   const sheetContentNode = (
     <View style={styles.sheetRoot}>
-      <View style={styles.sheetSheetHeader}>
+      <MapMobileSheetHeader style={styles.sheetSheetHeader}>
         {showListHeaderSummary ? (
           <View
             style={styles.sheetListHeaderContent}
@@ -730,7 +731,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         >
           <Feather name="x" size={20} color={colors.text} />
         </Pressable>
-      </View>
+      </MapMobileSheetHeader>
 
       <View style={styles.sheetBody}>
         <MapMobileSheetBody
@@ -891,7 +892,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         ref={bottomSheetRef}
         onStateChange={handleSheetStateChange}
         bottomInset={bottomSheetInset}
-        scrollableContent={sheetContent !== 'list'}
+        scrollableContent={IS_WEB && sheetContent !== 'list'}
       >
         {sheetContentNode}
       </MapBottomSheet>

@@ -19,6 +19,7 @@ const MOBILE_QUICK_CHIPS_LIMIT = 2
 const RECOMMENDATIONS_MAX_ITEMS = 3
 
 interface FiltersPanelBodyProps {
+  ScrollComponent?: React.ElementType
   colors: ThemedColors
   styles: any
   mode: 'radius' | 'route'
@@ -73,6 +74,7 @@ interface FiltersPanelBodyProps {
 }
 
 const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
+  ScrollComponent = ScrollView,
   colors,
   styles,
   mode,
@@ -145,7 +147,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
   const showRecommendations = mode === 'radius' && userLocation && onPlaceSelect
 
   return (
-    <ScrollView
+    <ScrollComponent
       testID="filters-panel-scroll"
       style={styles.content}
       showsVerticalScrollIndicator={Platform.OS !== 'web'}
@@ -271,7 +273,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
           />
         </View>
       )}
-    </ScrollView>
+    </ScrollComponent>
   )
 }
 

@@ -13,18 +13,21 @@ import React, {
   useRef,
   useState,
 } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import BottomSheet, {
   BottomSheetBackdrop,
   BottomSheetScrollView,
+  BottomSheetFooter,
+  useBottomSheetInternal,
+  type BottomSheetFooterProps,
 } from '@gorhom/bottom-sheet'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { translate as i18nT } from '@/i18n'
-import { useAnimatedReaction, useSharedValue, runOnJS } from 'react-native-reanimated'
+import Animated, { useAnimatedReaction, useAnimatedStyle, useSharedValue, runOnJS, type SharedValue } from 'react-native-reanimated'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
+import { NativeMapSheetFooterContext, NativeMapSheetFlowContext } from './MapMobile/nativeFiltersPanelAdapter.native'
 
 
 type SheetState = 'collapsed' | 'quarter' | 'half' | 'seventy' | 'full'
@@ -38,6 +41,33 @@ const SNAP_INDEX_HALF = 1
 const SNAP_INDEX_SEVENTY = 2
 const SNAP_INDEX_FULL = 3
 const CONTENT_BOTTOM_PADDING = 40
+
+function MapSheetFooter({ animatedFooterPosition, position, surfaceHeight, children }: BottomSheetFooterProps & {
+  position: SharedValue<number>; surfaceHeight: SharedValue<number>; children: React.ReactNode
+}) {
+  const { animatedLayoutState } = useBottomSheetInternal()
+  // The official position accounts for the current detent, measured footer and
+  // handle, and keyboard. The body ends at precisely this same boundary.
+  useAnimatedReaction(() => ({ position: animatedFooterPosition.value, footer: animatedLayoutState.value.footerHeight }),
+    (next) => {
+      position.value = next.position
+      surfaceHeight.value = next.position + Math.max(0, next.footer)
+    }, [position, surfaceHeight])
+  return <BottomSheetFooter animatedFooterPosition={animatedFooterPosition}>{children}</BottomSheetFooter>
+}
+
+function MapSheetViewport({ children, footerPosition, hasFooter, flow }: {
+  children: React.ReactNode; footerPosition: SharedValue<number>; hasFooter: boolean; flow: boolean
+}) {
+  const { animatedLayoutState, animatedPosition } = useBottomSheetInternal()
+  const style = useAnimatedStyle(() => {
+    const { containerHeight, handleHeight, footerHeight } = animatedLayoutState.value
+    const height = hasFooter ? footerPosition.value + (flow ? Math.max(0, footerHeight) : 0)
+      : containerHeight - animatedPosition.value - Math.max(0, handleHeight)
+    return { height: Number.isFinite(height) ? Math.max(0, height) : 0 }
+  }, [hasFooter, flow])
+  return <Animated.View testID="map-sheet-active-viewport" style={style}>{children}</Animated.View>
+}
 
 interface MapBottomSheetProps {
   children: React.ReactNode
@@ -90,7 +120,34 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     useEffect(() => () => publishHeight(0), [publishHeight])
     const colors = useThemedColors()
     const styles = useMemo(() => getStyles(colors), [colors])
-    const insets = useSafeAreaInsets()
+    const [header, setHeader] = useState<React.ReactNode>(null)
+    const [footer, setFooter] = useState<React.ReactNode>(null)
+    const headerHeight = useSharedValue(0)
+    const footerHeight = useSharedValue(0)
+    const surfaceHeight = useSharedValue(0)
+    const footerPosition = useSharedValue(0)
+    const [flow, setFlow] = useState(false)
+    const hasFooter = !!footer
+    const minimumControl = Platform.OS === 'android' ? 48 : 44
+    useAnimatedReaction(
+      () => hasFooter && surfaceHeight.value > 0
+        && headerHeight.value + footerHeight.value + minimumControl > surfaceHeight.value,
+      (next, previous) => { if (next !== previous) runOnJS(setFlow)(next) },
+      [hasFooter, minimumControl],
+    )
+    const footerContext = useMemo(() => ({
+      publishHeader: setHeader, publishFooter: setFooter,
+      measureHeader: (height: number) => { headerHeight.value = height },
+      measureFooter: (height: number) => { footerHeight.value = height },
+    }), [headerHeight, footerHeight])
+    const flowContext = useMemo(() => ({ header, footer, flow }), [header, footer, flow])
+    useEffect(() => { if (!footer) footerHeight.value = 0 }, [footer, footerHeight])
+    const renderFooter = useCallback((props: BottomSheetFooterProps) => (
+      <MapSheetFooter {...props} position={footerPosition} surfaceHeight={surfaceHeight}>
+        {flow ? <View style={{ height: 0 }} /> : <View style={{ paddingHorizontal: 16 }}
+          onLayout={(event) => { footerHeight.value = event.nativeEvent.layout.height }}>{footer}</View>}
+      </MapSheetFooter>
+    ), [footer, footerPosition, footerHeight, surfaceHeight, flow])
     const bottomSheetRef = useRef<BottomSheet>(null)
     const lastProgrammaticOpenTsRef = useRef(0)
 
@@ -176,12 +233,13 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     )
 
     const hasHeaderText = !!(title || subtitle)
-    // bottomInset уже учитывает глобальный таб-бар; добавляем системную
-    // навигацию (gesture-bar/кнопки), чтобы нижние карточки не заезжали под неё.
-    const contentBottomPadding =
-      CONTENT_BOTTOM_PADDING + bottomInset + insets.bottom
+    // The hosting viewport already excludes bottomInset (dock + safe area).
+    // Only list/content breathing belongs inside it; filters end at their footer.
+    const contentBottomPadding = footer ? 0 : CONTENT_BOTTOM_PADDING
 
     return (
+      <NativeMapSheetFooterContext.Provider value={footerContext}>
+      <NativeMapSheetFlowContext.Provider value={flowContext}>
       <BottomSheet
         ref={bottomSheetRef}
         index={-1}
@@ -197,6 +255,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         bottomInset={bottomInset}
         onChange={handleSheetChanges}
         backdropComponent={renderBackdrop}
+        footerComponent={footer ? renderFooter : undefined}
         // Keep scroll gestures inside BottomSheetFlatList/ScrollView from
         // resizing the map sheet. Height changes should happen via the handle
         // or explicit snapTo* commands, not while the user scrolls list cards.
@@ -216,6 +275,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         backgroundStyle={styles.background}
         style={styles.sheet}
       >
+        <MapSheetViewport footerPosition={footerPosition} hasFooter={!!footer} flow={flow}>
         {hasHeaderText && (
           <View style={styles.header}>
             <View style={styles.headerContent}>
@@ -246,7 +306,10 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
             {children}
           </View>
         )}
+        </MapSheetViewport>
       </BottomSheet>
+      </NativeMapSheetFlowContext.Provider>
+      </NativeMapSheetFooterContext.Provider>
     )
   },
 )

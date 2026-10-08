@@ -4,11 +4,12 @@ import { renderLocalizedText } from '@/i18n/richText'
 // те же поля `BookSettings`, что у окна сайта (`BookSettingsModal.tsx`, DOM-разметка);
 // логика формы — общий `useBookSettingsForm`. Макет и решения —
 // docs/design/book-settings-native.md.
-import { useState } from 'react'
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { useEffect, useState } from 'react'
+import { Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import ModalSafeArea from '@/components/ui/ModalSafeArea'
+import NativeModalFormShell from '@/components/ui/NativeModalFormShell.native'
 import { translate as i18nT, translatePlural } from '@/i18n'
 
 import GalleryLayoutSelector from './GalleryLayoutSelector'
@@ -64,6 +65,8 @@ export default function BookSettingsModal({
   const form = useBookSettingsForm({ visible, defaultSettings, onSave, onPreview, onClose })
   const { settings } = form
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [editing, setEditing] = useState(false)
+  useEffect(() => { if (!visible) setEditing(false) }, [visible])
   const { colors, styles: partStyles } = useNativePartStyles()
   const styles = createStyles(colors)
   const subtitleLength = settings.subtitle?.length ?? 0
@@ -76,28 +79,58 @@ export default function BookSettingsModal({
       onRequestClose={onClose}
     >
       <ModalSafeArea edges={Platform.OS === 'ios' ? ['bottom', 'left', 'right'] : undefined} testID="book-settings-native">
-        <View style={styles.header}>
-          <View style={styles.headerTitleRow}>
-            <Text style={styles.title} accessibilityRole="header">
-              {i18nT('profile:components.export.BookSettingsModal.nastroyki_fotoalboma_e7ea523f')}
-            </Text>
-            {form.hasUnsavedChanges ? (
-              <Text style={styles.unsaved} accessibilityLabel={i18nT('profile:components.export.BookSettingsModal.u_vas_est_nesohranennye_izmeneniya_503e03aa')}>
-                {i18nT('profile:components.export.BookSettingsModal.ne_sohraneno_de358955')}
+        <NativeModalFormShell
+          active={visible}
+          editing={editing}
+          backgroundColor={colors.background}
+          contentContainerStyle={styles.content}
+          testID="book-settings-form"
+          header={(
+            <View style={styles.header}>
+              <View style={styles.headerTitleRow}>
+                <Text style={styles.title} accessibilityRole="header">
+                  {i18nT('profile:components.export.BookSettingsModal.nastroyki_fotoalboma_e7ea523f')}
+                </Text>
+                {form.hasUnsavedChanges ? (
+                  <Text style={styles.unsaved} accessibilityLabel={i18nT('profile:components.export.BookSettingsModal.u_vas_est_nesohranennye_izmeneniya_503e03aa')}>
+                    {i18nT('profile:components.export.BookSettingsModal.ne_sohraneno_de358955')}
+                  </Text>
+                ) : null}
+              </View>
+              <Text style={partStyles.hint}>
+                {renderLocalizedText(i18nT('profile:components.export.BookSettingsModal.vybrano_puteshestviy_nbsp_4b4623d9'), { value1: <Text style={styles.count}>{travelCount}</Text> })}</Text>
+              <Text style={partStyles.hint}>
+                {translatePlural(
+                  'profile:components.export.BookSettingsModal.budet_sozdana_kniga_s_value1_puteshestviyami_a78b68c9',
+                  travelCount,
+                )}
               </Text>
-            ) : null}
-          </View>
-          <Text style={partStyles.hint}>
-            {renderLocalizedText(i18nT('profile:components.export.BookSettingsModal.vybrano_puteshestviy_nbsp_4b4623d9'), { value1: <Text style={styles.count}>{travelCount}</Text> })}</Text>
-          <Text style={partStyles.hint}>
-            {translatePlural(
-              'profile:components.export.BookSettingsModal.budet_sozdana_kniga_s_value1_puteshestviyami_a78b68c9',
-              travelCount,
-            )}
-          </Text>
-        </View>
+            </View>
+          )}
+          footer={(
+            <>
+              {form.validationErrors.length > 0 ? (
+                <View style={styles.errors} accessibilityRole="alert" testID="book-settings-errors">
+                  <Text style={styles.errorTitle}>{i18nT('profile:components.export.BookSettingsModal.ispravte_oshibki_76b3c61b')}</Text>
+                  {form.validationErrors.map((error) => (
+                    <Text key={error} style={styles.errorText}>
+                      {error}
+                    </Text>
+                  ))}
+                </View>
+              ) : null}
 
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+              <NativeModalFooter
+                isSaving={form.isSaving}
+                hasErrors={form.validationErrors.length > 0}
+                showPreview={Boolean(onPreview)}
+                onClose={onClose}
+                onSave={() => void form.save()}
+                onPreview={() => void form.preview()}
+              />
+            </>
+          )}
+        >
           <RadioList
             label={i18nT('profile:components.export.BookSettingsModal.poryadok_puteshestviy_v_knige_3740cd72')}
             options={sortOptions()}
@@ -155,6 +188,8 @@ export default function BookSettingsModal({
                   <Text style={styles.required}> *</Text>
                 </Text>
                 <TextInput
+                  onFocus={() => setEditing(true)}
+                  onBlur={() => setEditing(false)}
                   value={settings.title}
                   onChangeText={(title) => form.updateSettings({ title })}
                   placeholder={i18nT('profile:components.export.BookSettingsModal.moi_puteshestviya_1e06ca97')}
@@ -168,6 +203,8 @@ export default function BookSettingsModal({
               <View style={partStyles.block}>
                 <Text style={partStyles.label}>{i18nT('profile:components.export.BookSettingsModal.podzagolovok_optsionalno_de116b87')}</Text>
                 <TextInput
+                  onFocus={() => setEditing(true)}
+                  onBlur={() => setEditing(false)}
                   value={settings.subtitle || ''}
                   onChangeText={(subtitle) => form.updateSettings({ subtitle: subtitle || undefined })}
                   placeholder={i18nT('profile:components.export.BookSettingsModal.vospominaniya_2024_26790f52')}
@@ -204,27 +241,7 @@ export default function BookSettingsModal({
             onToggleChecklists={form.toggleChecklists}
             onToggleSection={form.toggleChecklistSection}
           />
-        </ScrollView>
-
-        {form.validationErrors.length > 0 ? (
-          <View style={styles.errors} accessibilityRole="alert" testID="book-settings-errors">
-            <Text style={styles.errorTitle}>{i18nT('profile:components.export.BookSettingsModal.ispravte_oshibki_76b3c61b')}</Text>
-            {form.validationErrors.map((error) => (
-              <Text key={error} style={styles.errorText}>
-                {error}
-              </Text>
-            ))}
-          </View>
-        ) : null}
-
-        <NativeModalFooter
-          isSaving={form.isSaving}
-          hasErrors={form.validationErrors.length > 0}
-          showPreview={Boolean(onPreview)}
-          onClose={onClose}
-          onSave={() => void form.save()}
-          onPreview={() => void form.preview()}
-        />
+        </NativeModalFormShell>
       </ModalSafeArea>
     </Modal>
   )
@@ -244,7 +261,6 @@ const createStyles = (colors: ReturnType<typeof useNativePartStyles>['colors']) 
     title: { fontSize: 20, fontWeight: '700', color: colors.text, flexShrink: 1 },
     unsaved: { fontSize: 12, fontWeight: '600', color: colors.warning },
     count: { fontWeight: '700', color: colors.primary },
-    scroll: { flex: 1 },
     content: { padding: 16, gap: 24 },
     advancedToggle: {
       minHeight: 44,

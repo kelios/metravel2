@@ -151,6 +151,43 @@ describe.each(['ios', 'android'] as const)('BookSettingsModal на %s (#2229)', 
     expect(view.onSave).not.toHaveBeenCalled()
   })
 
+  it('editing keeps the same input and validation while moving actions into the form scroll', async () => {
+    const onPreview = jest.fn(async (_settings: BookSettings) => undefined)
+    const view = renderModal({ onPreview })
+    openAdvanced(view)
+    const title = view.getByTestId('book-settings-title')
+    fireEvent.changeText(title, 'Keyboard title')
+    fireEvent(title, 'focus')
+    expect(view.getByTestId('book-settings-title')).toBe(title)
+    expect(title.props.value).toBe('Keyboard title')
+    expect(within(view.getByTestId('book-settings-form-scroll')).getByTestId('book-settings-save')).toBeTruthy()
+    fireEvent.changeText(view.getByTestId('book-settings-subtitle'), 'я'.repeat(151))
+    expect(within(view.getByTestId('book-settings-form-scroll')).getByTestId('book-settings-errors')).toBeTruthy()
+    const user = userEvent.setup()
+    await user.press(view.getByTestId('book-settings-preview'))
+    expect(onPreview).not.toHaveBeenCalled()
+    fireEvent.changeText(view.getByTestId('book-settings-subtitle'), 'valid')
+    await act(async () => fireEvent.press(view.getByTestId('book-settings-preview')))
+    expect(onPreview).toHaveBeenCalledTimes(1)
+    expect(onPreview).toHaveBeenCalledWith(expect.objectContaining({ title: 'Keyboard title', subtitle: 'valid' }))
+  })
+
+  it('flow chrome retains busy state and one Cancel handler during a real pending save', async () => {
+    let finish!: () => void
+    const onSave = jest.fn(() => new Promise<void>((resolve) => { finish = resolve }))
+    const view = renderModal({ onSave, onPreview: jest.fn() })
+    openAdvanced(view)
+    fireEvent(view.getByTestId('book-settings-title'), 'focus')
+    await act(async () => { fireEvent.press(view.getByTestId('book-settings-save')) })
+    expect(onSave).toHaveBeenCalledTimes(1)
+    expect(view.getByTestId('book-settings-save').props.accessibilityState).toMatchObject({ busy: true, disabled: true })
+    fireEvent(view.getByTestId('book-settings-title'), 'blur')
+    expect(view.getByTestId('book-settings-preview').props.accessibilityState.disabled).toBe(true)
+    fireEvent.press(view.getByTestId('book-settings-cancel'))
+    expect(view.onClose).toHaveBeenCalledTimes(1)
+    await act(async () => finish())
+  })
+
   it('«Превью» есть только с onPreview и отдаёт настройки в него', async () => {
     expect(renderModal().queryByTestId('book-settings-preview')).toBeNull()
 

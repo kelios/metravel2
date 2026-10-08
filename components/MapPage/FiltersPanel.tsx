@@ -27,11 +27,16 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 interface FiltersPanelProps {
   hideTopControls?: boolean;
   hideFooterCta?: boolean;
+  /** Technical slots for the native bottom-sheet engine; product content stays shared. */
+  ScrollComponent?: React.ElementType;
+  renderFooter?: (footer: React.ReactNode) => React.ReactNode;
 }
 
 const FiltersPanel: React.FC<FiltersPanelProps> = ({
   hideTopControls = false,
   hideFooterCta = false,
+  ScrollComponent,
+  renderFooter,
 }) => {
   // Get all state from context (instead of props)
   const {
@@ -111,6 +116,24 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
     onResetOverlays?.();
   }, [safeResetFilters, onResetOverlays]);
 
+  const footer = hideFooterCta ? null : (
+    <FiltersPanelFooter
+      styles={styles}
+      isMobile={isMobile}
+      mode={mode}
+      canBuildRoute={canBuildRoute}
+      routePointsLength={routePoints.length}
+      routingLoading={routingLoading}
+      ctaLabel={ctaLabel}
+      onReset={handleResetAll}
+      onBuildRoute={onBuildRoute}
+      totalPoints={totalPoints}
+      onOpenList={onOpenList}
+      startAddress={startAddress}
+      endAddress={endAddress}
+    />
+  );
+
   return (
     <View style={styles.card} testID="filters-panel">
       {/* ✅ УЛУЧШЕНИЕ: Компактный header */}
@@ -128,6 +151,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
       )}
 
       <FiltersPanelBody
+        ScrollComponent={ScrollComponent}
         colors={colors}
         styles={styles}
         mode={mode}
@@ -171,23 +195,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
       />
 
       {/* Sticky footer CTA */}
-      {!hideFooterCta && (
-        <FiltersPanelFooter
-          styles={styles}
-          isMobile={isMobile}
-          mode={mode}
-          canBuildRoute={canBuildRoute}
-          routePointsLength={routePoints.length}
-          routingLoading={routingLoading}
-          ctaLabel={ctaLabel}
-          onReset={handleResetAll}
-          onBuildRoute={onBuildRoute}
-          totalPoints={totalPoints}
-          onOpenList={onOpenList}
-          startAddress={startAddress}
-          endAddress={endAddress}
-        />
-      )}
+      {footer && (renderFooter ? renderFooter(footer) : footer)}
     </View>
   );
 };

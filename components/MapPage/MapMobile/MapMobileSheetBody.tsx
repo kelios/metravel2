@@ -5,6 +5,7 @@
 import React, { Suspense } from 'react'
 
 import TravelListPanel from '@/components/MapPage/TravelListPanel'
+import { renderMobileFiltersPanel } from './nativeFiltersPanelAdapter'
 
 type UiTab = 'search' | 'route' | 'list'
 type SheetState = 'collapsed' | 'quarter' | 'half' | 'seventy' | 'full'
@@ -109,7 +110,7 @@ const MapMobileSheetBodyInner: React.FC<MapMobileSheetBodyProps> = ({
   return (
     <Suspense fallback={filtersLoadingFallback}>
       <ProviderComponent {...mergedProviderProps}>
-        <PanelComponent hideTopControls={true} />
+        {renderMobileFiltersPanel(PanelComponent)}
       </ProviderComponent>
     </Suspense>
   )
