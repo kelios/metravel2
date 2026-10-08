@@ -240,6 +240,22 @@ background firewall, #603). Поэтому `utils/nativeQueryOnlineListener.nati
 `EXPO_PUBLIC_NETWORK_DIAGNOSTICS=1` (release: `logcat` уровня `E`, тег
 `ReactNativeJS`); без флага прод-сборка молчит. Web этот слой не грузит.
 
+Приёмка AND-USB-16b (#2110, 08.10.2026) прошла на физическом Pixel 10 Pro,
+Android 17, диагностическом APK из `main a72dee47e`, гость, production API.
+При metered Wi-Fi и фоновом UID 10746 система показала
+`effective=APP_BACKGROUND|METERED_USER_RESTRICTED`, сеть оставалась `VALIDATED`.
+После восстановления исходного override и возврата в foreground —
+`effective=NONE`, `refresh-result isConnected:true`, каталог с карточками без
+баннера; PID 7362 сохранился. `online:true` пришёл ещё в background до снятия
+блока (16:16:53.996, время устройства), поэтому этот переход не доказывает
+разблокировку; её подтверждают системные readback и foreground refresh
+(16:17:00.056). Повторный `online-manager` после refresh не требуется: listener
+не логирует одинаковое online-состояние. Исходные сетевые политики восстановлены;
+залипание `false` после разблокировки не воспроизвелось. Цикл подтверждает
+снятие реального блока и исправный foreground refresh, но не восстановление
+из принудительно сохранённого stale-NetInfo `false`. Команды, временные метки
+и доказательства — в приёмке карточки #2110.
+
 ### Content adapters
 
 | Тип | Snapshot/API | Durable assets | Особенности |
