@@ -10,6 +10,7 @@ const SMOKE_CRITICAL_TESTS = [
   '__tests__/utils/questAdapters.test.ts',
   '__tests__/utils/placesCatalog.test.ts',
   '__tests__/utils/filterQuery.test.ts',
+  '__tests__/utils/metravelMediaHostname.test.ts',
   '__tests__/hooks/useTheme.test.tsx',
 ]
 

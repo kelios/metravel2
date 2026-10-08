@@ -6008,9 +6008,11 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   CLS 0 на 390/1024/1280. Это сохранённая приёмка, не новый runtime PASS.
 - **Regression control:** `__tests__/scripts/generate-seo-pages.test.ts`
   проверяет sibling/скрытие/ссылки; `e2e/first-frame-before-hydration.spec.ts`
-  контролирует первый кадр. Последний e2e не объявляется выполненным этой
-  записью: обязательный повтор остаётся #2332 g. Мобильная раскладка скелета
-  `/` и `/search` (#2332 b) — отдельный остаток, не закрытый этим переносом.
+  контролирует первый кадр. **Контроль 08.10.2026 (#2332, source/prod
+  `a39ccfb9e`):** named e2e 23/23 PASS, включая 16 HTML-first cases; реальные
+  `/` и `/search` на 390 в light/dark без hydration — одна колонка,
+  visible sidebar 0, overflow false. Исторический перенос сам по себе не
+  заменяет эту новую приёмку мобильного скелета.
 
 ### HTML-RESOURCE-HINT-DEAD-ORIGIN-001 — подсказка браузеру имеет живого владельца
 
@@ -6032,8 +6034,13 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
 - **Regression control:** `__tests__/app/html.resourceHints.test.ts`
   запрещает ручные hints, требует bare HTTPS origins/уникальность/реальный
   loader и общий origin-owner. Runtime DNS остаётся отдельным доказательством.
-  Копии списка «своих» хостов/`api.metravel.by` в rich-text/print/transform
-  ещё относятся к #2332 c: этот HTML-head control их не закрывает.
+  HTML-head control не закрывает классификацию media-hosts. **Контроль
+  08.10.2026 (#2332):** три потребителя используют `isMetravelMediaHostname`
+  из `webResourceHints`; real construction/allow-deny/AST ownership guard —
+  `__tests__/utils/metravelMediaHostname.test.ts`. Suite входит в
+  `scripts/smoke-critical-tests.js` для main/PR CI; локальный штатный
+  `test:smoke:critical:ci` — 11 suites/304 tests PASS. Caller host:port,
+  private/PDF/manifest порядок сохраняются; media aliases не становятся hints.
 - **Правило recurrence:** мёртвый или неиспользуемый hint того же head —
   reopen #2269; иной владелец списка — связанная карточка после диагностики.
 
@@ -6059,10 +6066,12 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
 - **Regression control:** `__tests__/components/ui/ShimmerOverlay.staticMarkup.dom.web.test.tsx`,
   `__tests__/scripts/guard-web-style-channels.test.ts`,
   `npm run guard:web-style-channels` в lint/check:fast. Двусторонние
-  `npm run verify:slider` и `npm run verify:slider-perf` остаются обязательными
-  (#2215/#2332 f): они исторически не выполнены, SKIPPED не pass. Бесконечный
-  перелив каталогов нельзя считать принятой нормой: ImageCardMedia не рисует
-  его на web-карточках по замыслу, цена/решение остаются #2332 f.
+  `npm run verify:slider` и `npm run verify:slider-perf` обязательны.
+  **Контроль 08.10.2026 (#2332, unchanged app source `a7af0ccf` → `2053be953` → `a39ccfb9e`):**
+  slider 2/2 и perf 37/37 PASS, без skips/flaky/retries. На реальном GalleryGrid
+  прод-сборки `a7af0ccf`, собственного QA draft786/9 overlays, paired median дополнительных
+  133,499 ms/3 s main-thread, LayoutDuration 0, frame p95 ≤17,2 ms;
+  GPU time не измерен. На catalog web shimmer намеренно отсутствует.
 - **Правило recurrence:** возврат мёртвых keyframes в том же chokepoint —
   reopen #2215; иной канал RNW/CSS — create-linked с собственным control.
 
@@ -6088,13 +6097,18 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   полного исходного 10 reload gate или остальных потребителей.
 - **Regression control:** `__tests__/utils/ensureLeafletCss.test.ts`,
   `e2e/quest-map-leaflet-css-first-frame.spec.ts`, CLS-проба реальные узлы
-  карты при задержке CSS. Новый e2e ещё требует запуска (#2332 g), unit не
-  заменяет его. Атрибуция #2332 a и fallback #2332 h остаются открытыми.
-- **Открытый остаток:** нынешний 3000 ms CSS-ready timeout и неполная fallback
-  геометрия контролов не объявлены разрешённым исключением Timeout policy.
-  Поздний настоящий CSS может сдвигать контролы до 10 px; заранее упавшие два
-  stylesheet URL могут всё равно ждать 3000 ms. Это #2332 h, не accepted-pass
-  #2324 и не повод легализовать таймер записью в RULES.
+  карты при задержке CSS; unit не заменяет runtime.
+- **Контроль 08.10.2026 (#2332, source/prod `a39ccfb9e`):** полная fallback CSS,
+  readiness ≤1000 ms и пропуск уже failed link; 3000 ms не легализованы.
+  Шесть named CSS/viewport variants — 12 start/cold observations: first tile
+  absolute, одна relative control geometry, map CLS 0; все raw errors сохранены,
+  разрешены только точные намеренные CSS aborts. Реальная production карта:
+  13 CSS/locale/width cases на `a7af0ccf`, два normal cases 390/1280 на `a39ccfb9e`;
+  прежние delayed/failed и дополнительные locales/widths переиспользованы
+  по неизменным app source pins. В этих пробах
+  attribution 220×33,6875 и parent/control geometry неизменны. Реальный SSR
+  footer владеет естественной высотой до первого кадра; поздняя вставка footer
+  больше не переносит map. Глобальный header CLS около0,000009 не назван нулём.
 - **Правило recurrence:** прежний тайл/SVG-before-CSS shift — reopen #2324;
   иной control/fallback/атрибуция owner — связанный дефект после измерения.
 

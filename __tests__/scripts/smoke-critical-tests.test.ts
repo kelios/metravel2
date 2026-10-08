@@ -5,7 +5,7 @@ const { SMOKE_CRITICAL_TESTS } = require('@/scripts/smoke-critical-tests')
 
 describe('smoke-critical-tests', () => {
   it('keeps a compact product-facing critical matrix', () => {
-    expect(SMOKE_CRITICAL_TESTS).toHaveLength(10)
+    expect(SMOKE_CRITICAL_TESTS).toHaveLength(11)
     expect(SMOKE_CRITICAL_TESTS.every((file: string) => !file.startsWith('__tests__/scripts/'))).toBe(true)
   })
 
@@ -20,6 +20,7 @@ describe('smoke-critical-tests', () => {
       '__tests__/utils/questAdapters.test.ts',
       '__tests__/utils/placesCatalog.test.ts',
       '__tests__/utils/filterQuery.test.ts',
+      '__tests__/utils/metravelMediaHostname.test.ts',
       '__tests__/hooks/useTheme.test.tsx',
     ]))
   })
