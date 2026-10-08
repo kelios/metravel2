@@ -156,11 +156,12 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
       }
     } catch {
       pendingUploadRef.current = file;
+      reportClientError(i18nT('shared:hooks.usePhotoUpload.proizoshla_oshibka_pri_zagruzke_cc3f9675'));
     } finally {
       uploadingRef.current = false;
       if (mountedRef.current) setLoading(false);
     }
-  }, [collection, idTravel, lastPreviewUrl, onUpload]);
+  }, [collection, idTravel, lastPreviewUrl, onUpload, reportClientError]);
 
   // Auto-upload pending
   useEffect(() => { void uploadPendingIfPossible(); }, [uploadPendingIfPossible]);

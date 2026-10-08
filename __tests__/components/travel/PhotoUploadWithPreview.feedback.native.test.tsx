@@ -52,3 +52,20 @@ it('notifies on every identical validation failure from a new picker attempt', a
   expect(jest.mocked(showToast).mock.calls[0][0].text1).toBe(jest.mocked(showToast).mock.calls[1][0].text1);
   expect(uploadImage).not.toHaveBeenCalled();
 });
+
+it('notifies when a deferred cover upload fails after the draft receives its id', async () => {
+  jest.mocked(ImagePicker.requestMediaLibraryPermissionsAsync).mockResolvedValueOnce({ granted: true } as ImagePicker.MediaLibraryPermissionResponse);
+  jest.mocked(ImagePicker.launchImageLibraryAsync).mockResolvedValueOnce({ canceled: false, assets: [{ uri: 'file:///photo.jpg', width: 10, height: 10 }] });
+  jest.mocked(uploadImage).mockRejectedValueOnce(new Error('Network failure'));
+  const screen = render(<PhotoUploadWithPreview collection="travelMainImage" />);
+
+  await act(async () => fireEvent.press(screen.getByTestId('photo-upload-gallery-button')));
+  expect(uploadImage).not.toHaveBeenCalled();
+
+  screen.rerender(<PhotoUploadWithPreview collection="travelMainImage" idTravel="42" />);
+  await waitFor(() => expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ text1: 'Произошла ошибка при загрузке', position: 'bottom' })));
+  await act(async () => screen.rerender(<PhotoUploadWithPreview collection="travelMainImage" idTravel="42" />));
+  expect(uploadImage).toHaveBeenCalledTimes(1);
+  expect(showToast).toHaveBeenCalledTimes(1);
+  expect(screen.queryByText('Произошла ошибка при загрузке')).toBeNull();
+});
