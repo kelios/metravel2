@@ -5,5 +5,6 @@ import ToastHost from '@/components/ui/ToastHost'
 export const SyncIndicatorComponent = SyncIndicator
 export const ToastComponent = ToastHost
 export const NativeFooterComponent = Footer
+export const RootWebFooterComponent = null
 export const ReactQueryDevtoolsComponent = null
 export const RootWebDeferredChromeComponent = null

@@ -3,6 +3,10 @@ import Footer from '@/components/layout/Footer'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { SITE_OWNER_LEGAL_NAME } from '@/constants/legal'
 
+// Jest Expo prefers .native; these web ownership cases need the actual shared
+// Footer used by RootWebDeferredChrome in the browser.
+jest.mock('@/components/layout/Footer', () => jest.requireActual('@/components/layout/Footer.tsx'))
+
 // Док читает роль для ролевых пунктов листа «Ещё» (#2152).
 jest.mock('@/context/AuthContext', () => ({
   useAuth: () => ({ isSuperuser: false, logout: jest.fn() }),
@@ -196,6 +200,20 @@ describe('Footer', () => {
         configurable: true,
         value: prevOS,
       })
+    }
+  })
+
+  it.each([false, true])('leaves visible web footer ownership to the root (desktop=%s)', isDesktop => {
+    const { Platform } = require('react-native')
+    const prevOS = Platform.OS
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
+    ;(global as any).__mockResponsive = { isDesktop }
+    try {
+      const { queryByTestId } = render(<Footer webDockManagedByRoot />)
+      expect(queryByTestId('footer-desktop')).toBeNull()
+      expect(queryByTestId('footer-dock-wrapper')).toBeNull()
+    } finally {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: prevOS })
     }
   })
 })

@@ -87,7 +87,7 @@ describe('RootWebDeferredChrome', () => {
     expect(getByTestId('runtime-effects')).toBeTruthy()
   })
 
-  it('keeps the desktop map footer available', async () => {
+  it('loads the map footer controller with visible chrome managed by the root', async () => {
     const { getByTestId } = render(
       <RootWebDeferredChrome
         isMobile={false}

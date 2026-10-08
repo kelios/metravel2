@@ -2,7 +2,7 @@ import { Platform, StyleSheet } from 'react-native'
 
 import { getThemedColors } from '@/constants/designSystem'
 import { createStyles } from '@/screens/tabs/PlacesScreen.styles'
-import { WEB_MOBILE_DOCK_LAYOUT } from '@/components/layout/webMobileDockLayout'
+import { WEB_DESKTOP_FOOTER_LAYOUT, WEB_MOBILE_DOCK_LAYOUT } from '@/components/layout/webMobileDockLayout'
 import { buildCriticalCSS } from '@/utils/criticalCSSBuilder'
 
 // Регресс #1: широкое правило `[data-testid="travel-details-hero"] img{max-width:720px}`
@@ -394,6 +394,12 @@ describe('eager mobile dock critical geometry', () => {
     expect(WEB_MOBILE_DOCK_LAYOUT.blocks.shell.narrow).toEqual({ display: 'flex' })
     expect(css).toContain('@media (min-width:391px)')
     expect(css).toContain('padding-left:4px !important;padding-right:4px !important')
+  })
+  it('selects the intrinsic desktop footer at the same SSR breakpoint as the dock', () => {
+    expect(WEB_DESKTOP_FOOTER_LAYOUT.minWidth).toBe(WEB_MOBILE_DOCK_LAYOUT.minWidth)
+    expect(WEB_DESKTOP_FOOTER_LAYOUT.blocks.shell.narrow).toEqual({ display: 'none' })
+    expect(WEB_DESKTOP_FOOTER_LAYOUT.blocks.shell.wide).toEqual({ display: 'flex' })
+    expect(css).toContain('[data-bp-layout="web-desktop-footer-shell"]{display:flex !important}')
   })
   it('keeps hidden phone brand rows hidden and fallback burger conditional on actual loaded control', () => {
     expect(css).toContain('[data-header-brand="phone-hidden"] [data-header-inner="true"]{display:none !important}')

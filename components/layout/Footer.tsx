@@ -10,6 +10,7 @@ export { BOTTOM_DOCK_HEIGHT };
 type FooterProps = {
   /** Высота горизонтального «дока» с иконками на мобайле. На десктопе = 0. */
   onDockHeight?: (h: number) => void;
+  /** Root owns both visible web variants; this instance only runs dock effects. */
   webDockManagedByRoot?: boolean;
 };
 
@@ -23,7 +24,8 @@ const BottomDockComp = isFooterTestEnv
 const WEB_MOBILE_DOCK_RESERVE_HEIGHT = BOTTOM_DOCK_HEIGHT;
 
 const Footer: React.FC<FooterProps> = ({ onDockHeight, webDockManagedByRoot = false }) => {
-  const { isDesktop } = useResponsive();
+  // Root-managed instances mount in the client-only deferred chrome.
+  const { isDesktop } = useResponsive({ clientOnly: Platform.OS === 'web' && webDockManagedByRoot });
   const shouldRenderMobileDock = Platform.OS !== "web" ? true : !isDesktop;
 
   if (shouldRenderMobileDock) {
@@ -37,6 +39,8 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight, webDockManagedByRoot = fa
       </Suspense>
     );
   }
+
+  if (Platform.OS === 'web' && webDockManagedByRoot) return null;
 
   return (
     <View style={{ paddingVertical: 0 }}>

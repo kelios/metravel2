@@ -7,6 +7,11 @@ export const WEB_MOBILE_DOCK_LAYOUT = defineBreakpointLayout({
   minWidth: METRICS.breakpoints.desktop,
   blocks: { shell: { narrow: { display: 'flex' }, wide: { display: 'none' } } },
 })
+export const WEB_DESKTOP_FOOTER_LAYOUT = defineBreakpointLayout({
+  scope: 'web-desktop-footer',
+  minWidth: WEB_MOBILE_DOCK_LAYOUT.minWidth,
+  blocks: { shell: { narrow: { display: 'none' }, wide: { display: 'flex' } } },
+})
 export const WEB_MOBILE_DOCK_LABEL_LAYOUT = defineBreakpointLayout({
   scope: 'web-mobile-dock-label',
   minWidth: 391,

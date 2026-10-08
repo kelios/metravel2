@@ -14,6 +14,7 @@ import {
   NativeFooterComponent,
   ReactQueryDevtoolsComponent,
   RootWebDeferredChromeComponent,
+  RootWebFooterComponent,
   SyncIndicatorComponent,
   ToastComponent,
 } from "@/components/layout/rootRuntimeComponents";
@@ -36,7 +37,6 @@ import { setActiveQueryClient } from "@/api/activeQueryClient";
 import { patchWebShadowStyles } from "@/utils/patchWebShadowStyles";
 import { installChunkErrorReloadHandler } from "@/utils/chunkReload";
 import { ThemeProvider, useThemedColors, useTheme } from "@/hooks/useTheme";
-import WebMobileDockShell from '@/components/layout/WebMobileDockShell';
 import { navigationThemeColors } from "@/components/layout/navigationTheme";
 import SkipLinks from '@/components/layout/SkipLinks';
 import { shouldRunRuntimeConfigDiagnostics } from '@/utils/runtimeConfigDiagnostics';
@@ -478,7 +478,7 @@ function ThemedContent({
                                 </React.Suspense>
                               ) : null}
 
-                              {isWeb && showFooter && <WebMobileDockShell />}
+                              {isWeb && showFooter && RootWebFooterComponent && <RootWebFooterComponent />}
 
                               {isWeb && isMounted && showRootWebDeferredChrome && RootWebDeferredChromeComponent && (
                                 <React.Suspense fallback={null}>

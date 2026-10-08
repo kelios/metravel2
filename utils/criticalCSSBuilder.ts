@@ -8,7 +8,7 @@ import { ABOUT_LAYOUT } from '@/components/about/aboutLayout';
 import { EMPTY_STATE_LAYOUT } from '@/components/ui/emptyStateLayout';
 import { CHIP_LAYOUT } from '@/components/ui/chipLayout';
 import { HEADING_LAYOUTS } from '@/components/ui/headingLayout';
-import { WEB_MOBILE_DOCK_LAYOUT, WEB_MOBILE_DOCK_LABEL_LAYOUT, WEB_MOBILE_DOCK_SIDE_PADDING_CSS } from '@/components/layout/webMobileDockLayout';
+import { WEB_DESKTOP_FOOTER_LAYOUT, WEB_MOBILE_DOCK_LAYOUT, WEB_MOBILE_DOCK_LABEL_LAYOUT, WEB_MOBILE_DOCK_SIDE_PADDING_CSS } from '@/components/layout/webMobileDockLayout';
 import { APP_DOWNLOAD_LAYOUT } from '@/components/appDownload/appDownloadLayout';
 import { buildBreakpointLayoutCss } from '@/utils/breakpointLayout';
 import { getIconFontGuardCss } from '@/utils/iconFontShell';
@@ -257,6 +257,7 @@ export function buildCriticalCSS(): string {
     // #2258: /app — карточки возможностей в две колонки от 900 px с первого кадра.
     buildBreakpointLayoutCss(APP_DOWNLOAD_LAYOUT),
     buildBreakpointLayoutCss(WEB_MOBILE_DOCK_LAYOUT),
+    buildBreakpointLayoutCss(WEB_DESKTOP_FOOTER_LAYOUT),
     buildBreakpointLayoutCss(WEB_MOBILE_DOCK_LABEL_LAYOUT),
     WEB_MOBILE_DOCK_SIDE_PADDING_CSS,
     '[data-testid="web-mobile-dock-shell"]{-webkit-user-select:none;-webkit-touch-callout:none}',

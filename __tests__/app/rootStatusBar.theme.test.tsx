@@ -31,7 +31,14 @@ jest.mock('@/components/profile/BlockedAuthorsRuntime', () => ({ __esModule: tru
 jest.mock('@/components/ui/ErrorBoundary', () => ({ __esModule: true, default: ({ children }: any) => children }))
 jest.mock('@/components/ui/ConfirmDialogHost', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/auth/TermsReacceptGate', () => ({ __esModule: true, default: () => null }))
-jest.mock('@/components/layout/rootRuntimeComponents', () => ({ NativeFooterComponent: null, RootWebDeferredChromeComponent: null, ToastComponent: null, SyncIndicatorComponent: null, ReactQueryDevtoolsComponent: null }))
+jest.mock('@/components/layout/rootRuntimeComponents', () => ({
+  NativeFooterComponent: null,
+  RootWebDeferredChromeComponent: null,
+  RootWebFooterComponent: mockPlatform === 'web' ? require('@/components/layout/RootWebFooter.web').default : null,
+  ToastComponent: null,
+  SyncIndicatorComponent: null,
+  ReactQueryDevtoolsComponent: null,
+}))
 jest.mock('@/components/layout/SkipLinks', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/hooks/useLaunchSplash', () => ({ useLaunchSplash: () => false }))
 jest.mock('@/hooks/useAriaHiddenFocusGuard', () => ({ useAriaHiddenFocusGuard: () => {} }))
@@ -84,11 +91,14 @@ describe.each(['web', 'android', 'ios'])('actual root theme consumer on %s', pla
       const html = renderToString(ReactModule.createElement(RootLayout)), doc = new DOMParser().parseFromString(html, 'text/html')
       expect([...doc.querySelectorAll('[data-testid="footer-dock-row"] a')].map(a => a.getAttribute('href'))).toEqual(['/search', '/map', '/quests', '/profile', '/more'])
       expect(doc.querySelectorAll('[data-testid="footer-dock-wrapper"]')).toHaveLength(1)
+      expect(doc.querySelectorAll('[data-testid="footer-desktop"]')).toHaveLength(1)
+      expect(doc.querySelector('[data-bp-layout="web-desktop-footer-shell"] [data-testid="footer-item-about"]')).toBeTruthy()
     })
     it.each(['/login', '/registration', '/register', '/messages', '/travel/new', '/travel/123'])('actual root SSR exclusion %s has no eager row', path => {
       mockPath = path
       const html = renderToString(ReactModule.createElement(RootLayout))
       expect(html).not.toContain('data-testid="footer-dock-wrapper"')
+      expect(html).not.toContain('data-testid="footer-desktop"')
     })
   }
 })

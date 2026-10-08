@@ -1,6 +1,7 @@
 import React from 'react'
 
 import ToastHost from '@/components/ui/ToastHost'
+export { default as RootWebFooterComponent } from '@/components/layout/RootWebFooter.web'
 
 const EmptyFallback = () => null
 
