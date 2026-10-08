@@ -15,9 +15,9 @@ import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries'
 import { queryKeys } from '@/api/queryKeys'
 import { useProgressiveLoad, type ProgressiveLoadConfig } from '@/hooks/useProgressiveLoading'
 import { useHomeViewport } from './useHomeViewport'
-import EmailSubscriptionForm from '@/components/common/EmailSubscriptionForm'
 import { buildCanonicalUrl } from '@/utils/seo'
 import {
+  EmailSubscriptionForm,
   HomeAppPromoSection,
   HomeBottomCtaSection,
   HomeFAQSection,

@@ -27,6 +27,7 @@ jest.mock('@/components/home/HomeHero', () => () => null)
 jest.mock('@/components/home/HomeQuickActions', () => () => null)
 jest.mock('@/components/common/EmailSubscriptionForm', () => () => null)
 jest.mock('@/components/home/homeDeferredSections', () => ({
+  EmailSubscriptionForm: jest.requireMock('@/components/common/EmailSubscriptionForm'),
   HomeBottomCtaSection: jest.requireActual('@/components/home/HomeBottomCtaSection').default,
   HomeAppPromoSection: () => null,
   HomeFAQSection: () => null,

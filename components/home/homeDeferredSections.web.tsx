@@ -1,5 +1,6 @@
 import { lazy } from 'react'
 
+export const EmailSubscriptionForm = lazy(() => import('@/components/common/EmailSubscriptionForm'))
 export const HomeAppPromoSection = lazy(() => import('./HomeAppPromoSection'))
 export const HomeFAQSection = lazy(() => import('./HomeFAQSection'))
 export const HomeInspirationSections = lazy(() => import('./HomeInspirationSections'))
