@@ -112,6 +112,13 @@ export function createQuestFixture(options: QuestFixtureOptions): QuestFixture {
 
     await ensureAuthedStorageFallback(page, { userId: '1', userName: 'Quest E2E User' })
     await mockFakeAuthApis(page)
+    // Гео-рекомендации не входят в фикстуру визарда: живые карточки зависят от
+    // каталога и медиа локального S3. Пустой ответ оставляет сеть и геометрию
+    // детерминированными, не скрывая ошибки других запросов.
+    await page.route((url) => url.pathname === '/api/travels/near-location/', (route) => {
+      if (route.request().method() !== 'GET') return route.fallback()
+      return fulfillJson(route, { results: [], count: 0 })
+    })
     await page.route(`**/api/quests/by-quest-id/${questId}/**`, (route) => fulfillJson(route, questBundle))
     await page.route(`**/api/quest-progress/quest/${questId}/**`, (route) => fulfillJson(route, serverRow))
     // Строка прогресса живая: PATCH её обновляет, чтобы следующий писатель
