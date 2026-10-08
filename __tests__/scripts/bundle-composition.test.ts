@@ -70,6 +70,7 @@ const LAZY_ONLY_VENDORS: Array<{ pkg: string; allowedSyncImporters: string[]; ti
     pkg: '@gorhom/bottom-sheet',
     allowedSyncImporters: [
       'components/MapPage/MapBottomSheet.tsx',
+      'components/MapPage/MapMobile/nativeFiltersPanelAdapter.native.tsx',
       'components/MapPage/TravelListPanel/nativeSheetList.ts',
       'components/layout/BottomDock.tsx',
     ],
@@ -648,6 +649,26 @@ describe('состав eager-бандла (#1148)', () => {
       expect({ pkg, offenders }).toEqual({ pkg, offenders: [] })
     },
   )
+
+  it('native map filter sheet stays behind its web platform adapters (#1148)', () => {
+    const nativeAdapter = 'components/MapPage/MapMobile/nativeFiltersPanelAdapter.native.tsx'
+    const target = join(ROOT, nativeAdapter)
+    const body = join(ROOT, 'components/MapPage/MapMobile/MapMobileSheetBody.tsx')
+    const layout = join(ROOT, 'components/MapPage/MapMobileLayout.tsx')
+    expect(resolveImport('./nativeFiltersPanelAdapter', body)).toBe(
+      join(ROOT, 'components/MapPage/MapMobile/nativeFiltersPanelAdapter.tsx'),
+    )
+    expect(resolveImport('./MapBottomSheet', layout)).toBe(join(ROOT, 'components/MapPage/MapBottomSheet.web.tsx'))
+
+    const webFiles = sourceFiles.filter((file) =>
+      !NATIVE_ONLY_FILE.test(file) && webResolvesToItself(relative(ROOT, file)),
+    )
+    expect(webFiles.filter((file) => syncDeps(file).includes(target)).map((file) => relative(ROOT, file))).toEqual([])
+    expect(dynamicImportersOf(nativeAdapter, webFiles)).toEqual([])
+    // An explicit native import bypasses the neutral platform pair and must be
+    // visible to this control, even if introduced into an otherwise shared file.
+    expect(syncDepsOfSource(body, "import { renderMobileFiltersPanel } from './nativeFiltersPanelAdapter.native'")).toContain(target)
+  })
 
   it.each(LAZY_ONLY_MODULES)(
     'модуль $file синхронно импортируется только из своего async-чанка ($ticket)',

@@ -81,7 +81,7 @@
 
 Холодный `/trips` рендерит настоящий `PublicTripsCatalog` синхронно:
 `app/(tabs)/trips/index.tsx:4` импортирует каталог, чей query-loading branch
-находится в `components/trips/PublicTripsCatalog.tsx:174`. Немедленный
+находится в `components/trips/PublicTripsCatalog.tsx:176`. Немедленный
 `React.lazy` раньше оставлял pending boundary для синхронного Expo
 `renderToString`; начальный HTML не содержал каталога, а клиент восстанавливал
 прерванный серверный блок (#864). SEO и владельцы loading/content/error
@@ -93,6 +93,21 @@
 light/dark × RU/BE/UK/PL/EN, все состояния каталога и обязательный реальный
 A-create/B-view/apply/cancel/my flow. Исторические #938/#864 gates сохранены;
 перенос стоимости cold chunks измеряется после rollout.
+
+Отдельный начальный state (#864, повторная production-проба): реальный
+`components/layout/AppProviders.tsx:136` использует
+`PersistQueryClientProvider` с `queryPersistenceOptions`, а клиент создаётся
+`createOptimizedQueryClient`. Пока идёт restore (на SSR effects ещё не
+выполнялись), запрос имеет `status=pending`, `fetchStatus=idle`,
+`data=undefined`; `isLoading` тогда false. Каталог проверяет `isPending`
+(`PublicTripsCatalog.tsx:61,79,176`), поэтому restore и новый paused-offline
+ключ сохраняют loading без ложного empty/старых карточек/контролов.
+Подтверждённые пустые данные, populated/error и cached offline данные
+сохраняют прежние ветки. Fixture использует настоящий persisted provider,
+production client factory/options и удерживает только empty-cache чтение
+AsyncStorage: до его завершения нет API-запросов. RED исходного `isLoading`
+и GREEN `isPending` сохраняются отдельно от предыдущего lazy-regression;
+простой `QueryClientProvider` не доказывает production restore-контракт.
 
 `e2e/trips-cold-hydration.spec.ts` входит только в production-smoke,
 а холодный unit-fixture остаётся в обычном regression. На production

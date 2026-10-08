@@ -39,6 +39,13 @@ jest.mock('react-native-gesture-handler', () => {
   }
 })
 
+jest.mock('react-native-reanimated', () => ({
+  ...require('react-native-reanimated/mock'),
+  // Native shared values retain their identity across renders. The vendor mock
+  // recreates them, invalidating the sheet/header context on every publication.
+  useSharedValue: (value: unknown) => require('react').useRef({ value }).current,
+}))
+
 // Шторка рендерится сквозной: дети и backdrop — настоящие узлы MapBottomSheet.
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = require('react')
@@ -65,6 +72,11 @@ jest.mock('@gorhom/bottom-sheet', () => {
     BottomSheetBackdrop: (props: any) => React.createElement(View, props),
     BottomSheetView: ({ children, ...props }: any) => React.createElement(View, props, children),
     BottomSheetScrollView: ({ children, ...props }: any) => React.createElement(View, props, children),
+    BottomSheetFooter: ({ children, ...props }: any) => React.createElement(View, props, children),
+    useBottomSheetInternal: () => ({
+      animatedLayoutState: { value: { containerHeight: 844, handleHeight: 24, footerHeight: 0 } },
+      animatedPosition: { value: 500 },
+    }),
   }
 })
 

@@ -26,3 +26,9 @@
 ## 5. Final specification verification
 
 - [ ] 5.1 Run openspec validate fix-public-trip-cold-ssr --type change --strict and openspec validate --all before any separately requested archive. Archive only after implementation and the full current acceptance are complete; planning status alone is not implementation completion.
+
+## 6. Production restore-state follow-up (#864 H2)
+
+- [x] 6.1 Preserve the healthy source-pinned rollout's failing initial empty/catalog HTML and reproduce it before changing the consumer with actual PersistQueryClientProvider, production client factory/options, pending+idle/no-data readiness and zero server HTTP.
+- [x] 6.2 Make the existing catalog initial-state/control owner use isPending, preserving global persistence/query/API contracts and confirmed empty/populated/error behavior. Prove bounded held restore, offline cold/new-key pending/recovery and five-locale light/dark hydration without cache seed, preawait or raw-error filtering.
+- [ ] 6.3 Run final focused/static checks, independent review and code-review-gate; publish the exact reviewed repair and rerun full ExpoRoot static output plus every live historical acceptance gate before done.

@@ -54,6 +54,7 @@ jest.mock('@/components/quests/questWizardMedia', () => {
 
 jest.mock('@/utils/analytics', () => ({ queueAnalyticsEvent: jest.fn() }))
 jest.mock('@/components/quests/hooks/useQuestWizardResponsiveModel', () => ({
+  ...jest.requireActual('@/components/quests/hooks/useQuestWizardResponsiveModel'),
   useQuestWizardResponsiveModel: () => ({
     screenW: 390,
     screenH: 844,

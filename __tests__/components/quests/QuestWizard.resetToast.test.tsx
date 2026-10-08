@@ -20,6 +20,7 @@ jest.mock('@/utils/consent', () => ({
 }))
 jest.mock('@/utils/analytics', () => ({ queueAnalyticsEvent: jest.fn() }))
 jest.mock('@/components/quests/hooks/useQuestWizardResponsiveModel', () => ({
+  ...jest.requireActual('@/components/quests/hooks/useQuestWizardResponsiveModel'),
   useQuestWizardResponsiveModel: () => ({
     screenW: 1280,
     screenH: 900,

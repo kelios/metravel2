@@ -94,6 +94,9 @@ type QuestHeaderPanelProps = NavigationSharedProps & {
    * статусы. Тот же предикат, что у строки (`useQuestWizardResponsiveModel`).
    */
   headerInScreenRow: boolean
+  headerInContentFlow?: boolean
+  onRouteSheetChange?: (open: boolean) => void
+  routeTriggerRef?: React.Ref<View>
   screenW: number
   compactNav: boolean
   onReset: () => void
@@ -563,7 +566,8 @@ function QuestStepsNavigation({
   onShowFinale,
   wideDesktop,
   isMobile,
-}: NavigationSharedProps & { wideDesktop: boolean; isMobile: boolean }) {
+  routeTriggerRef,
+}: NavigationSharedProps & { wideDesktop: boolean; isMobile: boolean; routeTriggerRef?: React.Ref<View> }) {
   const pointsTotal = countRoutePoints(allSteps)
   const pills = allSteps.map((step, index) => {
     const { active: isActive, done: isDone, pending: isPostponed, unlocked: isUnlocked } = resolveQuestStepNavFlags({
@@ -573,6 +577,7 @@ function QuestStepsNavigation({
     return (
       <QuestStepPill
         key={step.id}
+        focusRef={isActive ? routeTriggerRef : undefined}
         colors={colors}
         styles={styles}
         narrow={!wideDesktop}
@@ -596,6 +601,7 @@ function QuestStepsNavigation({
     <QuestFinalePill
       colors={colors}
       styles={styles}
+      focusRef={showFinaleOnly ? routeTriggerRef : undefined}
       active={showFinaleOnly}
       onPress={onShowFinale}
     />
@@ -641,6 +647,9 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
     goToStep,
     onShowFinale,
     headerInScreenRow,
+    headerInContentFlow,
+    onRouteSheetChange,
+    routeTriggerRef,
     screenW,
     compactNav,
     onReset,
@@ -673,144 +682,132 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
     colors,
   })
 
-  // #2148: на телефоне название (h1 строки), мета (лист (i)) и действия («⋯»,
-  // офлайн) — в строке экрана. В закреплённой части остаются статусы, которые
-  // требуют внимания, и навигация по маршруту: полоса < 600 px (#2149), от 600
-  // до 767 px — полоса прогресса со счётчиком и пилюли.
-  if (headerInScreenRow) {
-    return (
-      <View style={styles.header}>
-        {statusSlot || (!compactNav && contentLocaleSlot) ? (
-          <View style={styles.headerStatusRow} testID="quest-header-status">
-            {!compactNav ? contentLocaleSlot : null}
-            {statusSlot}
-          </View>
-        ) : null}
-        {compactNav && routeModel ? (
-          <QuestRouteStrip model={routeModel} contentLocaleSlot={contentLocaleSlot} onGoToStep={goToStep} onShowFinale={onShowFinale} />
-        ) : (
-          <>
-            <QuestProgressSummary
-              styles={styles}
-              progress={progress}
-              completedCount={completedCount}
-              stepsCount={stepsCount}
-              countModel={countModel}
-              isMobile
-              showBreakdown={false}
-            />
-            <QuestStepsNavigation
-              {...props}
-              wideDesktop={false}
-              isMobile
-            />
-          </>
-        )}
-      </View>
-    )
-  }
-
   // Native не на телефоне (планшет, ландшафт) показывает подписи у кнопок.
   const showActionLabels = Platform.OS !== 'web'
 
   return (
-    <View style={styles.header}>
-      <View style={styles.headerRow}>
-        <View style={styles.headerIdentity}>
-          <Text
-            style={styles.title}
-            numberOfLines={1}
-            accessibilityRole="header"
-            {...({ 'aria-level': 1 } as Record<string, unknown>)}
-          >
-            {title}
-          </Text>
-          {ratingSlot ?? null}
-          {completionSlot ?? null}
-        </View>
-        <View testID="quest-header-actions" style={styles.headerActionRow}>
-          <QuestFontScaleControl
-            styles={styles}
-            colors={colors}
-            showLabel={showActionLabels}
-          />
-          {isPrintAvailable() && (
+    <View style={[styles.header, headerInContentFlow && styles.headerInContentFlow]}>
+      {/* Identity follows the live screen-row owner; route placement waits for interaction idle. */}
+      {!headerInScreenRow ? <React.Fragment key="quest-header-identity">
+        <View style={styles.headerRow}>
+          <View style={styles.headerIdentity}>
+            <Text
+              style={styles.title}
+              numberOfLines={1}
+              accessibilityRole="header"
+              {...({ 'aria-level': 1 } as Record<string, unknown>)}
+            >
+              {title}
+            </Text>
+            {ratingSlot ?? null}
+            {completionSlot ?? null}
+          </View>
+          <View testID="quest-header-actions" style={styles.headerActionRow}>
+            <QuestFontScaleControl
+              styles={styles}
+              colors={colors}
+              showLabel={showActionLabels}
+            />
+            {isPrintAvailable() && (
+              <QuestActionButton
+                styles={styles}
+                label={i18nT('quests:components.quests.questWizardShell.pechat_76bdeffe')}
+                accessibilityLabel={i18nT('quests:components.quests.questWizardShell.pechat_kvesta_f66c15e3')}
+                iconName="printer"
+                iconColor={colors.textMuted}
+                onPress={onPrintDownload}
+                baseStyle={styles.actionLabelButton}
+                showLabel={showActionLabels}
+                textStyle={styles.actionLabelText}
+              />
+            )}
             <QuestActionButton
               styles={styles}
-              label={i18nT('quests:components.quests.questWizardShell.pechat_76bdeffe')}
-              accessibilityLabel={i18nT('quests:components.quests.questWizardShell.pechat_kvesta_f66c15e3')}
-              iconName="printer"
-              iconColor={colors.textMuted}
-              onPress={onPrintDownload}
+              label={i18nT('quests:components.quests.questWizardShell.skachat_gpx_a032dca6')}
+              accessibilityLabel={translatePlural('quests:components.quests.questWizardShell.skachat_gpx_s_value1_tochkami_kvesta_83ac2431', offlineMapPointsCount)}
+              iconName="download"
+              iconColor={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted}
+              onPress={onOfflineMapDownload}
+              disabled={offlineMapPointsCount === 0}
               baseStyle={styles.actionLabelButton}
               showLabel={showActionLabels}
-              textStyle={styles.actionLabelText}
+              textStyle={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}
             />
-          )}
-          <QuestActionButton
-            styles={styles}
-            label={i18nT('quests:components.quests.questWizardShell.skachat_gpx_a032dca6')}
-            accessibilityLabel={translatePlural('quests:components.quests.questWizardShell.skachat_gpx_s_value1_tochkami_kvesta_83ac2431', offlineMapPointsCount)}
-            iconName="download"
-            iconColor={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted}
-            onPress={onOfflineMapDownload}
-            disabled={offlineMapPointsCount === 0}
-            baseStyle={styles.actionLabelButton}
-            showLabel={showActionLabels}
-            textStyle={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}
-          />
-          <QuestActionButton
-            styles={styles}
-            label={i18nT('quests:components.quests.questWizardShell.otkryt_v_prilozhenii_818b6173')}
-            accessibilityLabel={i18nT('quests:components.quests.questWizardShell.otkryt_tochki_kvesta_v_prilozhenii_kart_acb9e920')}
-            iconName="external-link"
-            iconColor={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted}
-            onPress={onOfflineMapOpenInApp}
-            disabled={offlineMapPointsCount === 0}
-            baseStyle={styles.actionLabelButton}
-            showLabel={showActionLabels}
-            textStyle={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}
-          />
-          <QuestOfflineDownloadButton
-            styles={styles}
-            colors={colors}
-            state={offlineQuestState}
-            onPress={onOfflineQuestDownload}
-            showLabel={showActionLabels}
-          />
-          <QuestActionButton
-            styles={styles}
-            label={i18nT('quests:components.quests.questWizardShell.sbrosit_dd613b60')}
-            accessibilityLabel={i18nT('quests:components.quests.questWizardShell.sbrosit_progress_5f45dc36')}
-            iconName="rotate-ccw"
-            iconColor={colors.textMuted}
-            onPress={onReset}
-            baseStyle={styles.resetButton}
-            showLabel={showActionLabels}
-            textStyle={styles.resetText}
-            hitSlop={12}
-            iconSize={13}
-          />
+            <QuestActionButton
+              styles={styles}
+              label={i18nT('quests:components.quests.questWizardShell.otkryt_v_prilozhenii_818b6173')}
+              accessibilityLabel={i18nT('quests:components.quests.questWizardShell.otkryt_tochki_kvesta_v_prilozhenii_kart_acb9e920')}
+              iconName="external-link"
+              iconColor={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted}
+              onPress={onOfflineMapOpenInApp}
+              disabled={offlineMapPointsCount === 0}
+              baseStyle={styles.actionLabelButton}
+              showLabel={showActionLabels}
+              textStyle={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}
+            />
+            <QuestOfflineDownloadButton
+              styles={styles}
+              colors={colors}
+              state={offlineQuestState}
+              onPress={onOfflineQuestDownload}
+              showLabel={showActionLabels}
+            />
+            <QuestActionButton
+              styles={styles}
+              label={i18nT('quests:components.quests.questWizardShell.sbrosit_dd613b60')}
+              accessibilityLabel={i18nT('quests:components.quests.questWizardShell.sbrosit_progress_5f45dc36')}
+              iconName="rotate-ccw"
+              iconColor={colors.textMuted}
+              onPress={onReset}
+              baseStyle={styles.resetButton}
+              showLabel={showActionLabels}
+              textStyle={styles.resetText}
+              hitSlop={12}
+              iconSize={13}
+            />
+          </View>
         </View>
-      </View>
 
-      {offlineMapPointsCount > 0 && (
-        <Text style={styles.exportHint}>
-          {Platform.OS === 'web'
-            ? i18nT('quests:components.quests.questWizardShell.skachaetsya_gpx_fayl_s_tochkami_otkroyte_ego_3208522f')
-            : i18nT('quests:components.quests.questWizardShell.otkroetsya_sistemnoe_podelitsya_s_gpx_faylom_e29381e2')}
-        </Text>
+        {offlineMapPointsCount > 0 && (
+          <Text style={styles.exportHint}>
+            {Platform.OS === 'web'
+              ? i18nT('quests:components.quests.questWizardShell.skachaetsya_gpx_fayl_s_tochkami_otkroyte_ego_3208522f')
+              : i18nT('quests:components.quests.questWizardShell.otkroetsya_sistemnoe_podelitsya_s_gpx_faylom_e29381e2')}
+          </Text>
+        )}
+
+      </React.Fragment> : null}
+
+      {(headerInScreenRow || compactNav) && (statusSlot || (!compactNav && contentLocaleSlot)) ? (
+        <View key="quest-header-status" style={styles.headerStatusRow} testID="quest-header-status">
+          {!compactNav ? contentLocaleSlot : null}
+          {statusSlot}
+        </View>
+      ) : null}
+      {compactNav && routeModel ? (
+        <QuestRouteStrip
+          key="quest-header-navigation"
+          model={routeModel}
+          contentLocaleSlot={contentLocaleSlot}
+          onGoToStep={goToStep}
+          onShowFinale={onShowFinale}
+          onSheetOpenChange={onRouteSheetChange}
+          triggerRef={routeTriggerRef}
+        />
+      ) : (
+        <React.Fragment key="quest-header-navigation">
+          <QuestProgressSummary
+            styles={styles}
+            progress={progress}
+            completedCount={completedCount}
+            stepsCount={stepsCount}
+            countModel={countModel}
+            isMobile={headerInScreenRow}
+            showBreakdown={!headerInScreenRow}
+          />
+          <QuestStepsNavigation {...props} wideDesktop={!headerInScreenRow && wideDesktop} isMobile={headerInScreenRow} />
+        </React.Fragment>
       )}
-
-      <QuestProgressSummary
-        styles={styles}
-        progress={progress}
-        completedCount={completedCount}
-        stepsCount={stepsCount}
-        countModel={countModel}
-      />
-
-      <QuestStepsNavigation {...props} wideDesktop={wideDesktop} isMobile={false} />
     </View>
   )
 }

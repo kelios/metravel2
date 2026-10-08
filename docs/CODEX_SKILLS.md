@@ -12,7 +12,7 @@ catalog по frontmatter `description`.
 - UI/content/assets: `ui-guardrails`, `i18n-guardrails`, `design-auditor`,
   `visual-asset-designer`, `child-quest-visuals`, `article-editor-agent`,
   `quest-writer`, `quest-editor`, `quest-geo-verifier`,
-  `quest-playthrough-reviewer`.
+  `quest-playthrough-reviewer`, `instagram-editor`, `instagram-visuals`.
 - Validation/review: `test-runner`, `test-writer`, `e2e-runner`,
   `browser-reviewer`, `mobile-tester`, `qa-agent`, `quality-fixer`,
   `code-reviewer`, `security-reviewer`, `release-checks`,
@@ -50,7 +50,8 @@ triggers и ограничения принадлежат frontmatter/`SKILL.md`
 `$metravel-evidence-editor`,
 `$metravel-feature-builder`, `$metravel-google-play-operator`,
 `$metravel-growth-analyst`, `$metravel-hook-builder`,
-`$metravel-i18n-guardrails`, `$metravel-ios-analyst`,
+`$metravel-i18n-guardrails`, `$metravel-instagram-editor`,
+`$metravel-instagram-visuals`, `$metravel-ios-analyst`,
 `$metravel-ios-architect`, `$metravel-ios-designer`,
 `$metravel-ios-developer`, `$metravel-ios-release-operator`,
 `$metravel-ios-reviewer`, `$metravel-ios-tester`, `$metravel-map-expert`,

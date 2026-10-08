@@ -151,6 +151,7 @@
       'quest-cover': 800,
       'address-image': 960,
       'quest-step-image': 800,
+      'quest-review-photo': 800,
       'quest-poster': 800,
       'trip-cover': 960,
       'travel-image': 1280,

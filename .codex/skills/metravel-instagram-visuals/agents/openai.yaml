@@ -1,0 +1,4 @@
+interface:
+  display_name: "Instagram Visuals"
+  short_description: "Remake quest and route images with real place anchors"
+  default_prompt: "Use $metravel-instagram-visuals to remake this carousel with verified landmarks and clearly identified illustrations."

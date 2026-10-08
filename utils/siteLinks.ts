@@ -86,6 +86,7 @@ export const APP_ROUTE_ROOTS: ReadonlySet<string> = new Set([
   'map',
   'messages',
   'metravel',
+  'more',
   'offline',
   'places',
   'privacy',

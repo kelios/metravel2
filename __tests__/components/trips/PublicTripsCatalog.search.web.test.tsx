@@ -6,7 +6,7 @@ let ReactActual: typeof import('react')
 let createRoot: typeof import('react-dom/client').createRoot
 let Catalog: typeof import('@/components/trips/PublicTripsCatalog').default
 let budgetHelpers: typeof import('../../../e2e/helpers/mobileScreenBudget')
-let mockResult: { data: PublicTrip[]; isLoading: boolean; isError: boolean }
+let mockResult: { data: PublicTrip[] | undefined; isPending: boolean; isLoading: boolean; isError: boolean }
 
 beforeAll(() => {
   jest.resetModules()
@@ -40,7 +40,7 @@ const trip = { id: 1, title: 'Minsk', description: '', region: 'Minsk', tripType
 let container: HTMLDivElement
 let root: Root
 beforeEach(() => {
-  mockResult = { data: [trip], isLoading: false, isError: false }
+  mockResult = { data: [trip], isPending: false, isLoading: false, isError: false }
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
@@ -82,9 +82,14 @@ it('actual resolved unfiltered empty catalog omits controls and proves the zero-
   expect(budgetHelpers.assertWithinBudget(metrics(), budgetHelpers.MOBILE_SCREEN_BUDGET.trips)).toEqual([])
 })
 
-it.each(['isLoading', 'isError'] as const)('does not exempt the actual %s catalog', async (state) => {
-  mockResult = { data: [], isLoading: false, isError: false, [state]: true }
+it.each([
+  ['fetching pending', { data: undefined, isPending: true, isLoading: true, isError: false }],
+  ['idle pending', { data: undefined, isPending: true, isLoading: false, isError: false }],
+  ['error', { data: undefined, isPending: false, isLoading: false, isError: true }],
+] as const)('does not exempt the actual %s catalog', async (_state, result) => {
+  mockResult = result
   await ReactActual.act(async () => root.render(ReactActual.createElement(Catalog)))
+  expect(container.querySelector('[data-testid="public-trips-loading"]') !== null).toBe(result.isPending)
   expect(metrics().publicTripsUnfilteredEmpty).toBe(false)
   expect(budgetHelpers.assertWithinBudget(metrics(), budgetHelpers.MOBILE_SCREEN_BUDGET.trips).join()).toContain('searchboxCount ожидалось 1, стало 0')
 })

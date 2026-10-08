@@ -6,6 +6,7 @@ import { TravelFormData } from '@/types/types';
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
+  useFocusEffect: require('react').useEffect,
 }));
 
 jest.mock('react-native-safe-area-context', () => ({

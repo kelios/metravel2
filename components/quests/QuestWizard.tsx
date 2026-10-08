@@ -51,7 +51,7 @@ import { addPageHideListener, addVisibilityChangeListener } from '@/utils/before
 import { flushQuestAnswerAttempts } from '@/utils/questAnswerTelemetry';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useQuestFontScaleStore } from '@/stores/questFontScaleStore';
-import { useQuestWizardResponsiveModel } from './hooks/useQuestWizardResponsiveModel';
+import { useQuestHeaderPlacement, useQuestWizardResponsiveModel } from './hooks/useQuestWizardResponsiveModel';
 import { useQuestKeyboardReveal } from './hooks/useQuestKeyboardReveal';
 import { useDockReservePx } from '@/components/layout/bottomChromeInset';
 import { useQuestWizardAnalytics } from './hooks/useQuestWizardAnalytics';
@@ -164,8 +164,8 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
 
     const wizardModel = useQuestWizardResponsiveModel();
     const {
-        screenW, screenH, isMobile, headerInScreenRow,
-        compactNav, compactDesktopLayout,
+        screenW, screenH, isMobile,
+        compactDesktopLayout,
         useWideInlineLayout, useWideExcursionsSidebar,
     } = wizardModel;
 
@@ -270,6 +270,29 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
         handleInputBlur,
         handleAnswerFeedback,
     } = useQuestKeyboardReveal(contentScrollRef, dockReservePx, stepCardVisible ? currentStep?.id : null);
+    const headerPlacement = useQuestHeaderPlacement(wizardModel, contentScrollRef, keyboardInset, stepCardVisible ? currentStep?.id : null);
+    const {
+        onAnswerFocusChange,
+        onContentScroll: onPlacementContentScroll,
+        onScrollBegin: onPlacementScrollBegin,
+    } = headerPlacement;
+    const handleAnswerFocus = useCallback((node: Parameters<typeof handleInputFocus>[0]) => {
+        onAnswerFocusChange(true);
+        handleInputFocus(node);
+    }, [handleInputFocus, onAnswerFocusChange]);
+    const handleAnswerBlur = useCallback(() => {
+        onAnswerFocusChange(false);
+        handleInputBlur();
+    }, [handleInputBlur, onAnswerFocusChange]);
+    const handleReadingScroll = useCallback((event: Parameters<typeof handleContentScroll>[0]) => {
+        onPlacementContentScroll(event);
+        handleContentScroll(event);
+    }, [handleContentScroll, onPlacementContentScroll]);
+    const beginReadingScroll = useCallback(() => {
+        onPlacementScrollBegin();
+        Keyboard.dismiss();
+    }, [onPlacementScrollBegin]);
+
 
     useEffect(() => {
         setDesktopNavExpanded(false);
@@ -662,7 +685,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
         />
     ), [cityId, questId, resolvedCountModel, title]);
     const mainContent = (
-        <View style={useWideExcursionsSidebar && city && Platform.OS === 'web' ? styles.pageRow : undefined}>
+        <View key="quest-main-content" ref={headerPlacement.mainContentRef} collapsable={false} testID="quest-main-content-anchor" style={useWideExcursionsSidebar && city && Platform.OS === 'web' ? styles.pageRow : undefined}>
             {/* Левая колонка: шаги + карта + финал */}
             <View style={useWideExcursionsSidebar && city && Platform.OS === 'web' ? styles.pageMain : undefined}>
                 {/* Гостевой мягкий гейт после лимита бесплатных точек */}
@@ -710,8 +733,8 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                                 showLocationControls={!useWideInlineLayout}
                                 questNumericId={questNumericId}
                                 onAnswerAttempt={trackAnswerSubmitted}
-                                onAnswerFocus={handleInputFocus}
-                                onAnswerBlur={handleInputBlur}
+                                onAnswerFocus={handleAnswerFocus}
+                                onAnswerBlur={handleAnswerBlur}
                                 onAnswerFeedback={handleAnswerFeedback}
                                 introSlot={introTrustBar}
                             />
@@ -804,6 +827,44 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
         </View>
     );
 
+    const questHeader = (
+        <QuestHeaderPanel
+            colors={colors}
+            styles={styles}
+            title={title}
+            progress={progress}
+            completedCount={completedSteps.length}
+            stepsCount={requiredCount}
+            countModel={resolvedCountModel}
+            allSteps={allSteps}
+            answers={answers}
+            postponedStepIds={postponedStepIds}
+            currentIndex={currentIndex}
+            unlockedIndex={unlockedIndex}
+            questFinished={questFinished}
+            showFinaleOnly={showFinaleOnly}
+            goToStep={goToStep}
+            onShowFinale={showFinale}
+            headerInScreenRow={wizardModel.headerInScreenRow}
+            headerInContentFlow={headerPlacement.headerInContentFlow}
+            onRouteSheetChange={headerPlacement.onRouteSheetChange}
+            routeTriggerRef={headerPlacement.routeTriggerRef}
+            screenW={screenW}
+            compactNav={headerPlacement.compactNav}
+            onReset={resetQuest}
+            onPrintDownload={handlePrintDownload}
+            onOfflineMapDownload={handleOfflineMapDownload}
+            onOfflineMapOpenInApp={handleOfflineMapOpenInApp}
+            offlineMapPointsCount={offlineMapPointsCount}
+            onOfflineQuestDownload={handleOfflineQuestDownload}
+            offlineQuestState={offlineQuestState}
+            ratingSlot={ratingSlot}
+            completionSlot={completionSlot}
+            contentLocaleSlot={contentLocaleSlot}
+            statusSlot={statusSlot}
+        />
+    );
+
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
@@ -846,8 +907,14 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                                 style={[styles.content, styles.compactMainContent]}
                                 showsVerticalScrollIndicator={false}
                                 keyboardShouldPersistTaps="handled"
-                                onScrollBeginDrag={Keyboard.dismiss}
-                                onScroll={handleContentScroll}
+                                onTouchStart={headerPlacement.onTouchBegin}
+                                onTouchEnd={headerPlacement.onTouchEnd}
+                                onTouchCancel={headerPlacement.onTouchEnd}
+                                onScrollBeginDrag={beginReadingScroll}
+                                onScrollEndDrag={headerPlacement.onScrollEnd}
+                                onMomentumScrollBegin={headerPlacement.onScrollBegin}
+                                onMomentumScrollEnd={headerPlacement.onScrollEnd}
+                                onScroll={handleReadingScroll}
                                 scrollEventThrottle={16}
                                 contentContainerStyle={{ paddingBottom: SPACING.xl + 96 + keyboardInset }}
                             >
@@ -857,50 +924,26 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                         </View>
                     ) : (
                         <>
-                            <QuestHeaderPanel
-                                colors={colors}
-                                styles={styles}
-                                title={title}
-                                progress={progress}
-                                completedCount={completedSteps.length}
-                                stepsCount={requiredCount}
-                                countModel={resolvedCountModel}
-                                allSteps={allSteps}
-                                answers={answers}
-                                postponedStepIds={postponedStepIds}
-                                currentIndex={currentIndex}
-                                unlockedIndex={unlockedIndex}
-                                questFinished={questFinished}
-                                showFinaleOnly={showFinaleOnly}
-                                goToStep={goToStep}
-                                onShowFinale={showFinale}
-                                headerInScreenRow={headerInScreenRow}
-                                screenW={screenW}
-                                compactNav={compactNav}
-                                onReset={resetQuest}
-                                onPrintDownload={handlePrintDownload}
-                                onOfflineMapDownload={handleOfflineMapDownload}
-                                onOfflineMapOpenInApp={handleOfflineMapOpenInApp}
-                                offlineMapPointsCount={offlineMapPointsCount}
-                                onOfflineQuestDownload={handleOfflineQuestDownload}
-                                offlineQuestState={offlineQuestState}
-                                ratingSlot={ratingSlot}
-                                completionSlot={completionSlot}
-                                contentLocaleSlot={contentLocaleSlot}
-                                statusSlot={statusSlot}
-                            />
+                            {!headerPlacement.headerInContentFlow ? questHeader : null}
 
                             {/* Контент */}
                             <ScrollView
                                 ref={contentScrollRef}
-                                style={styles.content}
+                                style={[styles.content, headerPlacement.headerInContentFlow && styles.contentWithFlowHeader]}
                                 showsVerticalScrollIndicator={false}
                                 keyboardShouldPersistTaps="handled"
-                                onScrollBeginDrag={Keyboard.dismiss}
-                                onScroll={handleContentScroll}
+                                onTouchStart={headerPlacement.onTouchBegin}
+                                onTouchEnd={headerPlacement.onTouchEnd}
+                                onTouchCancel={headerPlacement.onTouchEnd}
+                                onScrollBeginDrag={beginReadingScroll}
+                                onScrollEndDrag={headerPlacement.onScrollEnd}
+                                onMomentumScrollBegin={headerPlacement.onScrollBegin}
+                                onMomentumScrollEnd={headerPlacement.onScrollEnd}
+                                onScroll={handleReadingScroll}
                                 scrollEventThrottle={16}
                                 contentContainerStyle={[{ paddingBottom: SPACING.xl + 96 + keyboardInset }, useWideExcursionsSidebar && styles.contentInner]}
                             >
+                                {headerPlacement.headerInContentFlow ? questHeader : null}
                                 {mainContent}
                                 <View style={{ height: SPACING.xl }} />
                             </ScrollView>

@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 // Mock dependencies
 jest.mock('expo-router', () => ({
     useRouter: jest.fn(),
+    useFocusEffect: require('react').useEffect,
 }));
 
 jest.mock('@/hooks/useStepTransition', () => ({

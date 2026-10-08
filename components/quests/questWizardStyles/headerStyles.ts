@@ -18,6 +18,11 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
             } as any,
         }),
     },
+    headerInContentFlow: {
+        paddingHorizontal: 0,
+        paddingTop: 0,
+        paddingBottom: 0,
+    },
     headerRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',

@@ -35,6 +35,7 @@ jest.mock('@/utils/analytics', () => ({
   queueAnalyticsEvent: (...args: any[]) => mockQueueAnalyticsEvent(...args),
 }))
 jest.mock('@/components/quests/hooks/useQuestWizardResponsiveModel', () => ({
+  ...jest.requireActual('@/components/quests/hooks/useQuestWizardResponsiveModel'),
   useQuestWizardResponsiveModel: () => mockQuestWizardResponsiveModel,
 }))
 

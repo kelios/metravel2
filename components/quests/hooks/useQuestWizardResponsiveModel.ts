@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { Platform } from 'react-native'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { Platform, type NativeScrollEvent, type NativeSyntheticEvent, type ScrollView, type View } from 'react-native'
 import { useResponsive } from '@/hooks/useResponsive'
 import { resolveHeaderContextBarIsMobile } from '@/components/layout/headerContextBarModel'
 
@@ -13,6 +13,8 @@ export type QuestWizardResponsiveModel = {
    * самой строки, — иначе на какой-то ширине пропали бы и кнопки, и строка.
    */
   headerInScreenRow: boolean
+  /** Short layout window: navigation is the first child of the reading scroll. */
+  headerInContentFlow: boolean
   isSmallScreen: boolean
   compactNav: boolean
   wideDesktop: boolean
@@ -65,6 +67,7 @@ export function useQuestWizardResponsiveModel() {
   return useMemo<QuestWizardResponsiveModel>(() => {
     const isSmallScreen = width < 360
     const compactNav = width < 600
+    const headerInScreenRow = resolveHeaderContextBarIsMobile({ width, isPhone, isLargePhone })
     const wideDesktop = width >= 1100
     const compactDesktopLayout = Platform.OS === 'web' && width >= 1280
     const useWideInlineLayout = wideDesktop
@@ -78,7 +81,8 @@ export function useQuestWizardResponsiveModel() {
       screenW: width,
       screenH: height,
       isMobile,
-      headerInScreenRow: resolveHeaderContextBarIsMobile({ width, isPhone, isLargePhone }),
+      headerInScreenRow,
+      headerInContentFlow: compactNav && headerInScreenRow && height < 840,
       isSmallScreen,
       compactNav,
       wideDesktop,
@@ -90,4 +94,151 @@ export function useQuestWizardResponsiveModel() {
       answerPaneWidth,
     }
   }, [width, height, isMobile, isPhone, isLargePhone])
+}
+
+
+type HeaderPlacement = Pick<QuestWizardResponsiveModel, 'headerInContentFlow' | 'compactNav'>
+const samePlacement = (a: HeaderPlacement, b: HeaderPlacement) =>
+  a.headerInContentFlow === b.headerInContentFlow && a.compactNav === b.compactNav
+
+/** Wait until the gesture/scroll momentum settles, including browser-toolbar resizing. */
+const SCROLL_IDLE_MS = 120
+
+/**
+ * Relocating a header remounts its route strip. Keep its composition until an
+ * open sheet/input/keyboard/scroll ends, then apply only the latest layout.
+ * mainContent and its ScrollView stay mounted; compensate their reading anchor.
+ */
+export function useQuestHeaderPlacement(
+  desired: HeaderPlacement,
+  scrollRef: RefObject<ScrollView | null>,
+  keyboardInset: number,
+  stepKey?: string | null,
+) {
+  const [applied, setApplied] = useState<HeaderPlacement>(() => ({
+    headerInContentFlow: desired.headerInContentFlow,
+    compactNav: desired.compactNav,
+  }))
+  const [busy, setBusy] = useState({ sheet: false, input: false, scroll: false })
+  const busyRef = useRef(busy)
+  const desiredRef = useRef(desired)
+  desiredRef.current = desired
+  const keyboardRef = useRef(keyboardInset)
+  keyboardRef.current = keyboardInset
+  const mainContentRef = useRef<View>(null)
+  const routeTriggerRef = useRef<View>(null)
+  const restoreRouteFocus = useRef(false)
+  const scrollOffset = useRef(0)
+  const dragging = useRef(false)
+  const touching = useRef(false)
+  const scrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const anchor = useRef<{ y: number; offset: number } | null>(null)
+  const previousStepKey = useRef(stepKey)
+  const stepGeneration = useRef(0)
+  const stepChanged = previousStepKey.current !== stepKey
+
+  const updateBusy = useCallback((kind: keyof typeof busy, value: boolean) => {
+    if (busyRef.current[kind] === value) return
+    busyRef.current = { ...busyRef.current, [kind]: value }
+    setBusy(busyRef.current)
+  }, [])
+  const onRouteSheetChange = useCallback((open: boolean) => {
+    if (busyRef.current.sheet && !open) restoreRouteFocus.current = true
+    updateBusy('sheet', open)
+  }, [updateBusy])
+  const onAnswerFocusChange = useCallback((focused: boolean) => updateBusy('input', focused), [updateBusy])
+  const settleScroll = useCallback(() => {
+    if (scrollTimer.current) clearTimeout(scrollTimer.current)
+    scrollTimer.current = setTimeout(() => {
+      scrollTimer.current = null
+      if (!dragging.current && !touching.current) updateBusy('scroll', false)
+    }, SCROLL_IDLE_MS)
+  }, [updateBusy])
+  const onContentScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    scrollOffset.current = event.nativeEvent?.contentOffset?.y ?? 0
+    updateBusy('scroll', true)
+    settleScroll()
+  }, [settleScroll, updateBusy])
+  const onScrollBegin = useCallback(() => {
+    dragging.current = true
+    updateBusy('scroll', true)
+    if (scrollTimer.current) clearTimeout(scrollTimer.current)
+  }, [updateBusy])
+  const onScrollEnd = useCallback(() => {
+    dragging.current = false
+    settleScroll()
+  }, [settleScroll])
+  // RNW emits scroll ticks, not native drag events. A paused finger is still
+  // an active gesture even after the scroll-tick idle timer has expired.
+  const onTouchBegin = useCallback(() => {
+    touching.current = true
+    updateBusy('scroll', true)
+    if (scrollTimer.current) clearTimeout(scrollTimer.current)
+  }, [updateBusy])
+  const onTouchEnd = useCallback(() => {
+    touching.current = false
+    settleScroll()
+  }, [settleScroll])
+  useEffect(() => () => {
+    if (scrollTimer.current) clearTimeout(scrollTimer.current)
+  }, [])
+  const usePlacementEffect = Platform.OS === 'web' && typeof window === 'undefined' ? useEffect : useLayoutEffect
+  // Intentional point changes own the scroll-to-top reset. No old-point
+  // measurement or pending compensation may restore its reading coordinate.
+  usePlacementEffect(() => {
+    previousStepKey.current = stepKey
+    stepGeneration.current += 1
+    anchor.current = null
+    onAnswerFocusChange(false)
+    scrollOffset.current = 0
+  }, [stepKey, onAnswerFocusChange])
+
+  usePlacementEffect(() => {
+    let cancelled = false
+    const generation = stepGeneration.current
+    const isCurrent = () => !cancelled && generation === stepGeneration.current
+    const isBusy = () => busyRef.current.sheet || busyRef.current.input || busyRef.current.scroll || keyboardRef.current > 0
+    if (isBusy()) return
+    const focusRoute = () => {
+      if (!restoreRouteFocus.current) return
+      restoreRouteFocus.current = false
+      const target = routeTriggerRef.current as unknown as { focus?: (options?: { preventScroll: boolean }) => void } | null
+      target?.focus?.(Platform.OS === 'web' ? { preventScroll: true } : undefined)
+    }
+    const previous = anchor.current
+    if (previous) {
+      const finish = () => {
+        anchor.current = null
+        if (!samePlacement(applied, desiredRef.current)) setApplied((current) => ({ ...current }))
+        else focusRoute()
+      }
+      if (mainContentRef.current?.measureInWindow) {
+        mainContentRef.current.measureInWindow((_x, y) => {
+          if (!isCurrent() || isBusy() || !Number.isFinite(y)) return
+          // A touch/scroll can begin while an asynchronous native measurement
+          // is pending. Keep that movement and compensate only the layout shift.
+          const offset = scrollOffset.current
+          const layoutDelta = y - previous.y + offset - previous.offset
+          const nextOffset = Math.max(0, offset + layoutDelta)
+          scrollOffset.current = nextOffset
+          scrollRef.current?.scrollTo({ y: nextOffset, animated: false })
+          finish()
+        })
+      } else finish()
+    } else if (samePlacement(applied, desired)) {
+      focusRoute()
+    } else {
+      const next = { headerInContentFlow: desired.headerInContentFlow, compactNav: desired.compactNav }
+      const apply = (y?: number) => {
+        if (!isCurrent() || isBusy() || !samePlacement(next, desiredRef.current)) return
+        anchor.current = !stepChanged && typeof y === 'number' && Number.isFinite(y) ? { y, offset: scrollOffset.current } : null
+        setApplied(next)
+      }
+      if (mainContentRef.current?.measureInWindow) mainContentRef.current.measureInWindow((_x, y) => apply(y))
+      else apply()
+    }
+    return () => { cancelled = true }
+  }, [applied, desired.headerInContentFlow, desired.compactNav, busy, keyboardInset, scrollRef, stepKey, stepChanged])
+
+  return { ...applied, mainContentRef, routeTriggerRef, onRouteSheetChange, onAnswerFocusChange, onContentScroll, onScrollBegin, onScrollEnd, onTouchBegin, onTouchEnd }
 }

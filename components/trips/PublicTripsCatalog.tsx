@@ -56,7 +56,9 @@ function PublicTripsCatalog() {
   const [searchQuery, setSearchQuery] = useState('');
   const hasActiveFilters = hasActivePublicTripFilters(filters);
   const hasActiveSearch = searchQuery.trim().length > 0;
-  const { data, isLoading, isError } = usePublicTrips(filters);
+  // Pending means no confirmed data, including persisted-cache restoration and
+  // offline-paused reads. isLoading only covers pending requests already fetching.
+  const { data, isPending, isError } = usePublicTrips(filters);
   const { data: allTripsData } = usePublicTrips(EMPTY_FILTERS);
 
   const trips = useMemo(
@@ -74,7 +76,7 @@ function PublicTripsCatalog() {
   const cols = columnsFor(contentWidth);
   const cardWidth = cols === 1 ? undefined : (contentWidth - GUTTER * (cols - 1)) / cols;
   const showControls =
-    !isLoading &&
+    !isPending &&
     !isError &&
     ((filterOptionTrips.length > 0) || hasActiveFilters || hasActiveSearch);
 
@@ -171,7 +173,7 @@ function PublicTripsCatalog() {
           )
         ) : null}
 
-        {isLoading ? (
+        {isPending ? (
           <View style={styles.center} testID="public-trips-loading">
             <ActivityIndicator color={colors.primaryDark} />
           </View>

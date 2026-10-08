@@ -46,14 +46,15 @@ const MANGLED = CLEAN.replace('озёра', 'оз��ра')
  *
  * `failRollback` breaks the second PUT — the rollback — either by dropping the
  * socket ('socket') or by answering 500 ('http'); those are two different code
- * paths in restoreFromBackup(). `failGet` refuses every read with 401, the way
- * a stale service token does. `regress` keeps the text intact but never moves
+ * paths in restoreFromBackup(). `failGet` refuses every read with a given status:
+ * 401 is terminal authentication failure; 503 is a recoverable entry failure.
+ * `regress` keeps the text intact but never moves
  * the slug, which is the OTHER rollback caller — detectRegression(), not
  * detectCorruption().
  */
-type StubOptions = { failRollback?: false | 'socket' | 'http'; failGet?: boolean; regress?: boolean }
+type StubOptions = { failRollback?: false | 'socket' | 'http'; failGet?: number; regress?: boolean }
 
-const serverSource = ({ failRollback = false, failGet = false, regress = false }: StubOptions) => `
+const serverSource = ({ failRollback = false, failGet = 0, regress = false }: StubOptions) => `
 const http = require('http')
 
 const CLEAN = ${JSON.stringify(CLEAN)}
@@ -62,6 +63,7 @@ const FAIL_ROLLBACK = ${JSON.stringify(failRollback)}
 const FAIL_GET = ${failGet}
 const REGRESS = ${regress}
 const writes = []
+const failedReads = []
 let reads = 0
 
 const article = (id, name, slug) => ({
@@ -93,6 +95,7 @@ const json = (res, payload) => {
 
 const server = http.createServer(async (req, res) => {
   if (req.url === '/__writes') return json(res, writes)
+  if (req.url === '/__failedReads') return json(res, failedReads)
 
   if (req.method === 'PUT' && req.url === '/api/travels/upsert/') {
     const payload = await readBody(req)
@@ -114,8 +117,9 @@ const server = http.createServer(async (req, res) => {
 
   const match = /^\\/api\\/travels\\/(\\d+)\\/$/.exec(req.url || '')
   if (req.method === 'GET' && FAIL_GET) {
-    res.writeHead(401, { 'Content-Type': 'application/json' })
-    return res.end(JSON.stringify({ detail: 'Invalid token.' }))
+    failedReads.push(req.url)
+    res.writeHead(FAIL_GET, { 'Content-Type': 'application/json' })
+    return res.end(JSON.stringify({ detail: FAIL_GET === 401 ? 'Invalid token.' : 'Unavailable.' }))
   }
   if (req.method === 'GET' && match && state[match[1]]) {
     reads += 1
@@ -152,7 +156,7 @@ const getJson = (url: string): Promise<unknown> =>
       .on('error', reject)
   })
 
-type Run = { result: ReturnType<typeof runCli>; writes: Array<{ id: number; name: string }> }
+type Run = { result: ReturnType<typeof runCli>; writes: Array<{ id: number; name: string }>; failedReads: string[] }
 
 describe('#1649 — a mangled re-read stops the batch and fails the run', () => {
   let backupsBefore: string[] = []
@@ -180,7 +184,8 @@ describe('#1649 — a mangled re-read stops the batch and fails the run', () => 
           env: { METRAVEL_API: stub.origin, METRAVEL_TOKEN: 'stub-token' },
         })
         const writes = (await getJson(`${stub.origin}/__writes`)) as Run['writes']
-        return { result, writes }
+        const failedReads = (await getJson(`${stub.origin}/__failedReads`)) as string[]
+        return { result, writes, failedReads }
       } finally {
         stub.stop()
       }
@@ -193,6 +198,7 @@ describe('#1649 — a mangled re-read stops the batch and fails the run', () => 
   let brokenSocketRollback: Run
   let brokenHttpRollback: Run
   let deadReads: Run
+  let rejectedAuth: Run
   let regressedRollback: Run
 
   beforeAll(async () => {
@@ -201,7 +207,8 @@ describe('#1649 — a mangled re-read stops the batch and fails the run', () => 
     clean = await renameBatch({})
     brokenSocketRollback = await renameBatch({ failRollback: 'socket' })
     brokenHttpRollback = await renameBatch({ failRollback: 'http' })
-    deadReads = await renameBatch({ failGet: true })
+    deadReads = await renameBatch({ failGet: 503 })
+    rejectedAuth = await renameBatch({ failGet: 401 })
     regressedRollback = await renameBatch({ regress: true, failRollback: 'http' })
   }, 60000)
 
@@ -258,18 +265,26 @@ describe('#1649 — a mangled re-read stops the batch and fails the run', () => 
   })
 
   it('exits 1 when every entry fails its GET, instead of "Done: 0 renamed"', () => {
-    // The original report: a stale token answered 401 to every read and the run
-    // still reported success. renameOne() returned `null` for «failed» exactly
-    // as it did for «skipped», so nothing counted.
+    // Recoverable request failures still need a failed batch summary. Terminal
+    // authentication errors abort immediately and are covered separately.
     expect(deadReads.result.status).toBe(1)
-    expect(deadReads.result.stderr).toContain('HTTP 401')
+    expect(deadReads.result.stderr).toContain('HTTP 503')
     expect(deadReads.result.stderr).toContain('2 of 2 entries failed')
     // The summary still prints — and now names the failures instead of reading
     // as a clean empty batch.
     expect(deadReads.result.stdout).toContain('Done: 0 renamed + redirected, 2 failed.')
     // Nothing was written, and the failure is not a corruption abort.
     expect(deadReads.writes).toEqual([])
+    expect(deadReads.failedReads).toEqual([`/api/travels/${FIRST}/`, `/api/travels/${SECOND}/`])
     expect(deadReads.result.stderr).not.toContain('TEXT CORRUPTION')
+  })
+
+  it('stops at the first terminal authentication error without reporting a clean batch', () => {
+    expect(rejectedAuth.result.status).toBe(1)
+    expect(rejectedAuth.result.stderr).toContain('HTTP 401')
+    expect(rejectedAuth.result.stdout).not.toContain('Done:')
+    expect(rejectedAuth.failedReads).toEqual([`/api/travels/${FIRST}/`])
+    expect(rejectedAuth.writes).toEqual([])
   })
 
   it('reports, not process.exit()s, when the rollback after a REGRESSION fails', () => {

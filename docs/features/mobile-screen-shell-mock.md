@@ -540,3 +540,19 @@ useTheme().isDark. Системная тема влияет через auto-ре
 смены темы: consumer units и AST guard PASS; возврат системного source даёт
 raw FAIL9, byte-exact restore проходит. Native runtime не выполнен, на web
 native bar не монтируется.
+
+
+## Принятая короткая quest-компоновка #2198
+
+При compactNav <600 и layout-высоте без клавиатуры <840 единственная панель
+маршрута, полного языка и отдельных pending/photo статусов располагается
+в начале существующего ScrollView; на 840+ сохраняется прежнее размещение.
+Общая политика web/native не меняет глобальную строку, док, 44px цель,
+горизонтальные 16px и внутренние отступы задания. Sheet, фокус, клавиатура,
+touch и scroll откладывают перенос; после idle сохраняется читаемая позиция.
+Прежние ScrollView/ref и поддерево ответа остаются смонтированы.
+
+Парный макет: [quest-short-viewport-shell-design.md](quest-short-viewport-shell-design.md).
+Оценка 98/110px не является измерением; исходные отрицательные 122/162px
+и пределы .155/.197 сохраняются. Production PASS требует собственного выката
+и повторения исходных 14cases/56rows вместе с boundary/interaction/offline controls.

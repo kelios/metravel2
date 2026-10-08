@@ -705,7 +705,12 @@ it('different timezone and locale children identify the same live owner and pres
     const fs=require('node:fs'),{withRefreshLock,processIdentity}=require(process.argv[2]);let raw='';
     const wait=async file=>{const deadline=Date.now()+6000;while(!fs.existsSync(file)){if(Date.now()>deadline)throw new Error('fixture barrier');await new Promise(r=>setTimeout(r,5));}};
     process.stdin.on('data',c=>raw+=c);process.stdin.on('end',async()=>{try{const cfg=JSON.parse(raw);
-      if(cfg.ownerPid)fs.writeFileSync(cfg.observed,processIdentity(cfg.ownerPid));
+      if(cfg.ownerPid){
+        // Publish the barrier only after its identity bytes exist: an existence
+        // poll may otherwise observe writeFileSync's newly opened empty file.
+        fs.writeFileSync(cfg.observed+'.tmp',processIdentity(cfg.ownerPid));
+        fs.renameSync(cfg.observed+'.tmp',cfg.observed);
+      }
       await withRefreshLock(cfg.lock,Date.now()+7000,async()=>{
         if(cfg.hold){fs.writeFileSync(cfg.held,'held');await wait(cfg.release);}
         else fs.writeFileSync(cfg.entered,'entered');

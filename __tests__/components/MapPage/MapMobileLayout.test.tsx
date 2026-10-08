@@ -923,8 +923,8 @@ describe('MapMobileLayout', () => {
     })
   })
 
-  it('keeps the places list static but makes filters sheet content scrollable', async () => {
-    render(
+  it('keeps native list and filters free of an outer scroll wrapper', async () => {
+    const screen = render(
       <MapMobileLayout
         mapComponent={<View testID="mock-map" />}
         travelsData={[]}
@@ -947,7 +947,10 @@ describe('MapMobileLayout', () => {
     })
 
     await waitFor(() => {
-      expect(mockMapBottomSheet.mock.calls.at(-1)?.[0]?.scrollableContent).toBe(true)
+      expect(screen.getByTestId('map-mobile-filters-loading')).toBeTruthy()
+      // Native filters own their Gorhom scroll through nativeFiltersPanelAdapter;
+      // a second sheet wrapper would nest scrolling and steal its gestures.
+      expect(mockMapBottomSheet.mock.calls.at(-1)?.[0]?.scrollableContent).toBe(false)
     })
   })
 })

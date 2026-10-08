@@ -1,3 +1,4 @@
+import type { Ref } from 'react'
 import { Pressable, type StyleProp, Text, type TextStyle, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { translate as i18nT } from '@/i18n'
@@ -16,6 +17,7 @@ type NavigationProps = {
   colors: QuestStepVisualColors
   styles: any
   onPress: () => void
+  focusRef?: Ref<View>
   active?: boolean
   done?: boolean
   /**
@@ -73,6 +75,7 @@ function StepGlyph({ visual, text, size, textStyle }: { visual: QuestStepVisual;
 export function QuestStepPill(props: StepPillProps) {
   const {
     styles,
+    focusRef,
     onPress,
     active = false,
     unlocked = true,
@@ -100,6 +103,7 @@ export function QuestStepPill(props: StepPillProps) {
       : visual.accessibilityLabel
   return (
     <Pressable
+      ref={focusRef}
       testID={testID}
       onPress={onPress}
       disabled={!unlocked}

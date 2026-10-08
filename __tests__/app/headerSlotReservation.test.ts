@@ -34,8 +34,11 @@ describe('резервирование высоты шапки', () => {
     expect(criticalCss).toContain(
       `@media (max-width:${HEADER_MEDIA_MAX_WIDTHS.compact}px){\n  [data-header-slot=""]{height:var(--mt-header-slot-compact,64px)}`,
     );
-    expect(criticalCss).toContain(
-      `@media (max-width:${HEADER_MEDIA_MAX_WIDTHS.mobile}px){\n  [data-header-slot=""]{height:var(--mt-header-slot-mobile,64px)}`,
+    const mobileRules = criticalCss
+      .split(`@media (max-width:${HEADER_MEDIA_MAX_WIDTHS.mobile}px){`)[1]
+      ?.split('\n}')[0];
+    expect(mobileRules).toContain(
+      '[data-header-slot=""]{height:var(--mt-header-slot-mobile,64px)}',
     );
     // `CustomHeader` also owns `data-header-slot="nav|account"`; a presence-only
     // selector would leak the outer reservation into those inner flex items.

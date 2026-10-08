@@ -328,3 +328,31 @@ describe('один порог «телефон» у панели и строки
     }
   })
 })
+
+describe('quest short-height policy (#2198)', () => {
+  const cases = [
+    [320, 640, true], [390, 640, true], [390, 839, true],
+    [390, 840, false], [390, 844, false],
+    [599, 640, true], [600, 640, false], [1440, 640, false],
+  ] as const
+
+  function PlacementProbe({ out }: { out: { flow?: boolean } }) {
+    out.flow = useQuestWizardResponsiveModel().headerInContentFlow
+    return null
+  }
+
+  it.each(['web', 'android', 'ios'] as const)('%s uses the same layout-height boundary', (os) => {
+    const platform = jest.replaceProperty(Platform, 'OS', os)
+    try {
+      for (const [width, height, expected] of cases) {
+        ;(global as any).__mockResponsive = { ...responsiveFor(width), height }
+        const out: { flow?: boolean } = {}
+        const view = render(<PlacementProbe out={out} />)
+        expect([width, height, out.flow]).toEqual([width, height, expected])
+        view.unmount()
+      }
+    } finally {
+      platform.restore()
+    }
+  })
+})

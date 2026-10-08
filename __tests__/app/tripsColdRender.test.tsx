@@ -38,8 +38,11 @@ it('renders a cold real catalog and hydrates its states without recovery', () =>
     expect(report.console.filter((event: { level: string }) => event.level === 'error')).toEqual([])
     if (environment === 'jsdom') {
       expect(report.hydrationErrors).toEqual([])
-      expect(report.states).toEqual(['loading', 'populated', 'filtered-empty', 'reset', 'empty', 'error', 'recovery'])
+      expect(report.states).toEqual(['loading', 'populated', 'filtered-empty', 'reset', 'empty', 'error', 'recovery',
+        'offline-new-key-pending', 'offline-new-key-recovery', 'offline-cold-pending', 'offline-cold-recovery'])
       expect(report.locales).toEqual(['ru', 'be', 'uk', 'pl', 'en'])
+      expect(report.restoreChecks).toHaveLength(12)
+      expect(report.restoreChecks.every((state: { held: boolean; requests: number }) => state.held && state.requests === 0)).toBe(true)
     }
   }
 }, 100_000)

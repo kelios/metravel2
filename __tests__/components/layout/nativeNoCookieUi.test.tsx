@@ -5,7 +5,7 @@ import { router } from 'expo-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 // #2135 / App Review 5.1.2(i): в native-приложении нет cookie-UI. Сцена
-// `no-cookie-ui` — iPad в ландшафте (ширина ≥1024 pt), где шапка показывает
+// `no-cookie-ui` — широкий iPad в ландшафте (ширина ≥1280 pt), где шапка показывает
 // меню аккаунта вместо мобильного меню.
 
 const mockAuth = {
@@ -136,10 +136,12 @@ describe('native app has no cookie UI (#2135)', () => {
   })
 
   describe('account menu on iPad landscape', () => {
-    it('is the header account surface on native at width ≥1024', () => {
+    it('uses the shared compact header boundary on native', () => {
       setPlatform('ios')
-      expect(getIsHeaderMobile(1180, 1180)).toBe(false)
-      expect(getIsHeaderMobile(1024, 1024)).toBe(false)
+      expect(getIsHeaderMobile(1024, 1024)).toBe(true)
+      expect(getIsHeaderMobile(1180, 1180)).toBe(true)
+      expect(getIsHeaderMobile(1279, 1279)).toBe(true)
+      expect(getIsHeaderMobile(1280, 1280)).toBe(false)
     })
 
     it('guest menu lists the privacy policy but no cookie settings', () => {

@@ -1,0 +1,220 @@
+{
+  "contractVersion": 1,
+  "entries": [
+    {
+      "path": "components/MapPage/Map/fallbackCenter.ts",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "map-expert"
+    },
+    {
+      "path": "components/MapPage/Map/styles.ts",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "map-expert"
+    },
+    {
+      "path": "components/MapPage/Map/useRouteBuilding.ts",
+      "reason": "Unreachable route-building hook; tracked cleanup belongs to MAP-ROUTING-001/#2014.",
+      "owner": "map-expert"
+    },
+    {
+      "path": "components/MapPage/MapLegend.tsx",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "map-expert"
+    },
+    {
+      "path": "components/filters/CategoryChips.tsx",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "metravel-feature-builder (shared UI, forms and utilities)"
+    },
+    {
+      "path": "components/forms/NumberInputComponent.tsx",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "metravel-feature-builder (shared UI, forms and utilities)"
+    },
+    {
+      "path": "components/forms/PasswordStrengthIndicator.tsx",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "metravel-feature-builder (shared UI, forms and utilities)"
+    },
+    {
+      "path": "components/forms/SearchAutocomplete.tsx",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "metravel-feature-builder (shared UI, forms and utilities)"
+    },
+    {
+      "path": "components/forms/SelectComponent.tsx",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "metravel-feature-builder (shared UI, forms and utilities)"
+    },
+    {
+      "path": "components/layout/RenderRightMenu.tsx",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "metravel-feature-builder (shared UI, forms and utilities)"
+    },
+    {
+      "path": "components/listTravel/ExportBar.tsx",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "travel-expert"
+    },
+    {
+      "path": "components/listTravel/hooks/useListTravelVisibility.ts",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "travel-expert"
+    },
+    {
+      "path": "components/map-core/MapMarkerLayer.tsx",
+      "reason": "Disconnected module family; importers components/map-core/index.ts have no supported entry dependency path.",
+      "owner": "map-expert"
+    },
+    {
+      "path": "components/map-core/index.ts",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "map-expert"
+    },
+    {
+      "path": "components/map-core/mapPopupStyles.ts",
+      "reason": "Disconnected module family; importers components/map-core/index.ts have no supported entry dependency path.",
+      "owner": "map-expert"
+    },
+    {
+      "path": "components/map-core/useMapLifecycle.ts",
+      "reason": "Disconnected module family; importers components/map-core/index.ts have no supported entry dependency path.",
+      "owner": "map-expert"
+    },
+    {
+      "path": "components/navigation/OpenInMapsSheet.tsx",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "map-expert"
+    },
+    {
+      "path": "components/profile/ProfileQuickActions.tsx",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "profile-expert"
+    },
+    {
+      "path": "components/seo/InstantSEO.tsx",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "metravel-feature-builder (shared UI, forms and utilities)"
+    },
+    {
+      "path": "components/travel/RecentViews.tsx",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "travel-expert"
+    },
+    {
+      "path": "components/travel/details/TravelDetailsBackButton.native.tsx",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "travel-expert"
+    },
+    {
+      "path": "components/travel/details/TravelDetailsBackButton.tsx",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "travel-expert"
+    },
+    {
+      "path": "components/trips/planning/TripPlanningEmptyState.tsx",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "travel-expert"
+    },
+    {
+      "path": "components/ui/AnimatedCard.tsx",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "metravel-feature-builder (shared UI, forms and utilities)"
+    },
+    {
+      "path": "components/ui/ExternalLink.tsx",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "metravel-feature-builder (shared UI, forms and utilities)"
+    },
+    {
+      "path": "components/ui/SortSelector.tsx",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "metravel-feature-builder (shared UI, forms and utilities)"
+    },
+    {
+      "path": "constants/theme.ts",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "metravel-feature-builder (shared UI, forms and utilities)"
+    },
+    {
+      "path": "hooks/useKeyboardNavigation.ts",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "metravel-feature-builder (shared UI, forms and utilities)"
+    },
+    {
+      "path": "hooks/useKeyboardShortcuts.ts",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "metravel-feature-builder (shared UI, forms and utilities)"
+    },
+    {
+      "path": "hooks/useTravelDetailsUtils.ts",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "travel-expert"
+    },
+    {
+      "path": "screens/tabs/questLocationSelection.ts",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "quest-expert"
+    },
+    {
+      "path": "services/pdf-export/generators/v2/runtime/legacyGalleryLayouts.ts",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "travel-expert (PDF export)"
+    },
+    {
+      "path": "services/performanceMonitoring.ts",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "metravel-feature-builder (shared UI, forms and utilities)"
+    },
+    {
+      "path": "styles/criticalCSS.ts",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "metravel-feature-builder (shared UI, forms and utilities)"
+    },
+    {
+      "path": "types/book.ts",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "travel-expert (PDF export)"
+    },
+    {
+      "path": "types/travel.ts",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "travel-expert"
+    },
+    {
+      "path": "utils/guestTrialState.ts",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "quest-expert (Android review support)"
+    },
+    {
+      "path": "utils/instagramOAuth.ts",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "profile-expert"
+    },
+    {
+      "path": "utils/questImagePrefetch.ts",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "quest-expert"
+    },
+    {
+      "path": "utils/storage.ts",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "metravel-feature-builder (shared UI, forms and utilities)"
+    },
+    {
+      "path": "utils/travelFaq.ts",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "travel-expert"
+    },
+    {
+      "path": "utils/validation/index.ts",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "metravel-feature-builder (shared UI, forms and utilities)"
+    },
+    {
+      "path": "utils/webVitalsMonitoring.ts",
+      "reason": "No non-test source importer or supported application/configuration/tooling entry contract in the frozen initial inventory.",
+      "owner": "metravel-feature-builder (shared UI, forms and utilities)"
+    }
+  ]
+}

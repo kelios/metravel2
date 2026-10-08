@@ -19,6 +19,8 @@ type Props = {
   onShowFinale: () => void
   /** Пассивная пометка языка, отдельный сосед кнопки маршрута в строке 44 px. */
   contentLocaleSlot?: React.ReactNode
+  onSheetOpenChange?: (open: boolean) => void
+  triggerRef?: React.Ref<View>
 }
 
 /**
@@ -26,12 +28,16 @@ type Props = {
  * кружков. Одна кнопка: «Точка 12 из 14 · Задания 10/11» и шкала из сегментов,
  * по нажатию — лист «Маршрут» со всеми точками. Вид и подписи — `buildQuestRouteModel`.
  */
-export default function QuestRouteStrip({ model, onGoToStep, onShowFinale, contentLocaleSlot }: Props) {
+export default function QuestRouteStrip({ model, onGoToStep, onShowFinale, contentLocaleSlot, onSheetOpenChange, triggerRef }: Props) {
   const { t } = useTranslation()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const [sheetOpen, setSheetOpen] = useState(false)
-  const close = useCallback(() => setSheetOpen(false), [])
+  const changeSheetOpen = useCallback((open: boolean) => {
+    setSheetOpen(open)
+    onSheetOpenChange?.(open)
+  }, [onSheetOpenChange])
+  const close = useCallback(() => changeSheetOpen(false), [changeSheetOpen])
   const sheetScrollRef = useRef<ScrollView>(null)
   // Лист открывается на текущей точке, а не на старте: на 12-й из 14 её строка
   // иначе ниже края листа (≈ 11 строк на 390×844, ≈ 8 на 320×640). Строки
@@ -43,11 +49,11 @@ export default function QuestRouteStrip({ model, onGoToStep, onShowFinale, conte
     (row: QuestRouteRow) => {
       // Закрытая точка не открывается, даже если платформа доставила нажатие.
       if (row.disabled) return
-      setSheetOpen(false)
+      changeSheetOpen(false)
       if (row.kind === 'finale') onShowFinale()
       else onGoToStep(row.stepIndex)
     },
-    [onGoToStep, onShowFinale],
+    [changeSheetOpen, onGoToStep, onShowFinale],
   )
 
   const hasLocaleSlot = Boolean(contentLocaleSlot)
@@ -59,11 +65,12 @@ export default function QuestRouteStrip({ model, onGoToStep, onShowFinale, conte
 
   const routeButton = (
     <Pressable
+        ref={triggerRef}
         testID="quest-route-strip"
         accessibilityRole="button"
         accessibilityLabel={model.stripAccessibilityLabel}
         accessibilityHint={t('quests:components.quests.questRoute.stripHint')}
-        onPress={() => setSheetOpen(true)}
+        onPress={() => changeSheetOpen(true)}
         style={({ pressed }) => [styles.strip, hasLocaleSlot && styles.stripWithLocale, pressed && styles.pressed]}
       >
         <View style={styles.stripTextRow}>

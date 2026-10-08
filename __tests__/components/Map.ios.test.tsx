@@ -358,10 +358,15 @@ describe('Map.ios Component', () => {
     act(() => {
       api.fitToResults();
     });
-    expect(mockInjectJavaScript).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'window.__metravelMapFitCoords && window.__metravelMapFitCoords([[53.9,27.5],[53.8,27.6]], 14)',
-      ),
+    expect(mockInjectJavaScript).toHaveBeenCalledTimes(1);
+    const fitCoords = jest.fn();
+    // Execute the bridge command against its destination function: coordinates,
+    // zoom and viewport padding matter, rather than incidental JS formatting.
+    new Function('window', mockInjectJavaScript.mock.calls[0][0])({ __metravelMapFitCoords: fitCoords });
+    expect(fitCoords).toHaveBeenCalledWith(
+      [[53.9, 27.5], [53.8, 27.6]],
+      14,
+      { topLeft: [50, 50], bottomRight: [50, 50], maxShare: 1 },
     );
   });
 

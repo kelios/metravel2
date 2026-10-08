@@ -39,6 +39,7 @@ jest.mock('@/utils/questAnswerTelemetry', () => ({
   flushQuestAnswerAttempts: jest.fn(() => Promise.resolve()),
 }))
 jest.mock('@/components/quests/hooks/useQuestWizardResponsiveModel', () => ({
+  ...jest.requireActual('@/components/quests/hooks/useQuestWizardResponsiveModel'),
   useQuestWizardResponsiveModel: () => mockQuestWizardResponsiveModel,
 }))
 
