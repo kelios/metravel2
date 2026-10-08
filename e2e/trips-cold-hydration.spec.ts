@@ -10,7 +10,7 @@ test.use({ storageState: { cookies: [], origins: [] }, viewport: { width: 390, h
 
 for (const locale of ['ru', 'be', 'uk', 'pl', 'en'] as const) {
   for (const theme of ['light', 'dark'] as const) {
-    test(`cold trips retains its static catalog: ${locale}/${theme}`, async ({ page }, testInfo) => {
+    test(`cold trips retains its committed catalog: ${locale}/${theme}`, async ({ page }, testInfo) => {
       const targets = resolveE2ETargets({ ...process.env, BASE_URL: testInfo.project.use.baseURL || process.env.BASE_URL })
       const expected = process.env.TRIPS_EXPECTED_SOURCE_SHA
       if (targets.productionTarget) {
@@ -20,12 +20,15 @@ for (const locale of ['ru', 'be', 'uk', 'pl', 'en'] as const) {
       const pageErrors: string[] = []
       const failures: { url: string; error: string | null }[] = []
       const apiWrites: string[] = []
+      const catalogReads: string[] = []
       const routeErrors: string[] = []
       page.on('console', (message) => { if (message.type() === 'error') consoleErrors.push(message.text()) })
       page.on('pageerror', (error) => pageErrors.push(error.stack ?? error.message))
       page.on('requestfailed', (request) => failures.push({ url: request.url(), error: request.failure()?.errorText ?? null }))
       page.on('request', (request) => {
-        if (new URL(request.url()).pathname.startsWith('/api/') && !['GET', 'HEAD', 'OPTIONS'].includes(request.method())) apiWrites.push(request.method())
+        const pathname = new URL(request.url()).pathname
+        if (pathname.startsWith('/api/') && !['GET', 'HEAD', 'OPTIONS'].includes(request.method())) apiWrites.push(request.method())
+        if (pathname === '/api/public-trips/' && request.method() === 'GET') catalogReads.push(request.url())
       })
       let releaseScripts!: () => void
       let releaseCatalog!: () => void
@@ -70,6 +73,17 @@ for (const locale of ['ru', 'be', 'uk', 'pl', 'en'] as const) {
         await expect(page.locator('html')).toHaveAttribute('lang', locale)
         await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
         await expect(page.getByTestId('public-trips-loading')).toBeVisible()
+        // LocaleProvider.web releases the hidden RU shell only after committing
+        // its final boot locale. For non-RU, its keyed boundary replaces the
+        // unhydrated RU tree before the first screen mount (#2239/#2327).
+        // The held API guarantees this visible committed catalog is still pending.
+        const bootCatalog = await page.evaluate(() => {
+          const catalog = document.querySelector('[data-testid="public-trips-catalog"]')
+          ;(window as any).__bootTripCatalog = catalog
+          return { attached: catalog !== null, retainedStatic: catalog === (window as any).__coldTripCatalog }
+        })
+        expect(bootCatalog.attached).toBe(true)
+        if (locale === 'ru') expect(bootCatalog.retainedStatic, 'RU hydration replaced the static catalog node').toBe(true)
         await page.screenshot({ path: testInfo.outputPath('loading.png'), fullPage: false })
         const catalogResponse = page.waitForResponse((response) =>
           new URL(response.url()).pathname === '/api/public-trips/' && response.request().method() === 'GET',
@@ -84,9 +98,9 @@ for (const locale of ['ru', 'be', 'uk', 'pl', 'en'] as const) {
         if (trips.length) await expect(page.getByTestId(`trip-card-${trips[0].id}`)).toBeVisible()
         else await expect(page.getByTestId('public-trips-empty')).toBeVisible()
         const sameCatalog = await page.evaluate(() =>
-          (window as any).__coldTripCatalog === document.querySelector('[data-testid="public-trips-catalog"]'),
+          (window as any).__bootTripCatalog === document.querySelector('[data-testid="public-trips-catalog"]'),
         )
-        expect(sameCatalog, 'hydration replaced the static catalog node').toBe(true)
+        expect(sameCatalog, 'the committed catalog remounted while its live GET resolved').toBe(true)
         await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/trips\/?$/)
         await expect(page).toHaveTitle(/Metravel$/)
         await page.screenshot({ path: testInfo.outputPath('content.png'), fullPage: false })
@@ -99,7 +113,7 @@ for (const locale of ['ru', 'be', 'uk', 'pl', 'en'] as const) {
         await testInfo.attach('cold-server-html', { body: staticHtml, contentType: 'text/html' })
         await testInfo.attach('raw-runtime', {
           body: JSON.stringify({ sourceBefore, sourceAfter, sourceAfterStatus: after.status(), locale, theme,
-            consoleErrors, pageErrors, failures, apiWrites, routeErrors,
+            consoleErrors, pageErrors, failures, apiWrites, routeErrors, catalogReads,
             resources: await page.evaluate(() => performance.getEntriesByType('resource').map((entry) => {
               const resource = entry as PerformanceResourceTiming
               return { name: resource.name, initiatorType: resource.initiatorType, transferSize: resource.transferSize, encodedBodySize: resource.encodedBodySize }
@@ -114,6 +128,7 @@ for (const locale of ['ru', 'be', 'uk', 'pl', 'en'] as const) {
         expect(pageErrors).toEqual([])
         expect(failures).toEqual([])
         expect(apiWrites).toEqual([])
+        expect(catalogReads, 'cold boot must issue exactly one public catalog GET').toHaveLength(1)
       }
     })
   }
