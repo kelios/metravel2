@@ -99,7 +99,7 @@ const SHORTCUT_LABELS = {
   pl: {
     search: { short: 'Szukaj', long: 'Szukaj tras' },
     map: { short: 'Mapa', long: 'Mapa tras' },
-    favorites: { short: 'Chcę iść', long: 'Trasy, którymi chcesz się udać' },
+    favorites: { short: 'Chcę pojechać', long: 'Trasy, na które chcesz pojechać' },
   },
   en: {
     search: { short: 'Search', long: 'Search routes' },
