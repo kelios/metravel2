@@ -10,9 +10,8 @@
  * compose-выкат бэка даёт окно 5xx в несколько секунд без предупреждения.
  */
 
-const fs = require('fs')
-const os = require('os')
-const path = require('path')
+const { createTokenSession, qaTokenSources, readTokenCandidate, TokenError, formatTokenError } = require('../metravel-token')
+const { targetPolicy, trustedRequest, snapshotBody } = require('../metravel-token-transport')
 
 const { ExpectedFailureError, UsageError } = require('../cli-contract')
 
@@ -20,33 +19,49 @@ const RETRYABLE_STATUS = new Set([429, 502, 503, 504])
 const RETRY_DELAYS_MS = [2000, 12000]
 const USER_AGENT = 'metravel-quest-translate/1.0 (+https://metravel.by)'
 
-function resolveToken(explicit, { env = process.env, homeDir = os.homedir() } = {}) {
-  if (explicit) return explicit
-  if (env.METRAVEL_TOKEN) return env.METRAVEL_TOKEN
-  const tokenFile = path.join(homeDir, '.metravel_token')
-  return fs.existsSync(tokenFile) ? fs.readFileSync(tokenFile, 'utf8').trim() || null : null
+function resolveToken(explicit, options) {
+  return readTokenCandidate(qaTokenSources({ explicit, ...options }))
 }
 
 const defaultSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-function createApi({ apiUrl, token, fetchImpl = fetch, sleep = defaultSleep }) {
-  const base = apiUrl.replace(/\/+$/, '')
+function createApi({ apiUrl, token, sleep = defaultSleep, tokenSession, testFixture }) {
+  const target = targetPolicy(apiUrl, testFixture)
+  const base = target.origin
+  // Public reads and authenticated operations must share the declared target
+  // and QA104 identity, including when a caller reuses an existing session.
+  if (tokenSession != null && (tokenSession.origin !== base || tokenSession.profile !== 'qa104' ||
+      tokenSession.expectedUserId !== 104 || typeof tokenSession.request !== 'function')) {
+    throw new TokenError('configuration', { operation: 'configure' })
+  }
+  let session = tokenSession
+  const getSession = () => {
+    if (!session) session = createTokenSession({
+      origin: base, profile: 'qa104', expectedUserId: 104,
+      sources: [{ kind: 'value', value: token }], refreshPolicy: target.production ? 'primary-qa' : 'never',
+      ...(testFixture ? { fixture: testFixture, homeDir: testFixture.homeDir } : {}),
+    })
+    return session
+  }
 
   async function request(method, endpoint, { body, admin = false } = {}) {
-    if (admin && !token) {
-      throw new UsageError('Нужен токен администратора: --token, METRAVEL_TOKEN или ~/.metravel_token')
+    if (admin && !token && testFixture && !tokenSession) {
+      throw new UsageError('Нужен токен администратора: используйте общий resolver QA104')
     }
-    const url = endpoint.startsWith('http') ? endpoint : `${base}${endpoint}`
+    let frozen
+    try { frozen = await snapshotBody(body === undefined ? undefined : JSON.stringify(body)) }
+    catch (error) { throw new ExpectedFailureError(formatTokenError(error)) }
     const headers = { Accept: 'application/json', 'User-Agent': USER_AGENT }
-    if (admin) headers.Authorization = `Token ${token}`
     if (body !== undefined) headers['Content-Type'] = 'application/json'
-
     for (let attempt = 0; ; attempt += 1) {
       let response
       try {
-        response = await fetchImpl(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) })
+        response = admin
+          ? await getSession().request(endpoint, { method, headers, body: frozen.bytes })
+          : await trustedRequest(base, endpoint, { method, headers, body: frozen.bytes }, { fixture: testFixture })
       } catch (error) {
-        if (attempt >= RETRY_DELAYS_MS.length) throw new ExpectedFailureError(`${method} ${url}: ${error.message}`)
+        const retryNetwork = error instanceof TokenError && ['network', 'timeout'].includes(error.reason)
+        if (!retryNetwork || attempt >= RETRY_DELAYS_MS.length) throw new ExpectedFailureError(`${formatTokenError(error)}${error instanceof TokenError && error.reason === 'authentication' ? '; prepare session: node scripts/get-quest-token.js' : ''}`)
         await sleep(RETRY_DELAYS_MS[attempt])
         continue
       }
@@ -54,13 +69,10 @@ function createApi({ apiUrl, token, fetchImpl = fetch, sleep = defaultSleep }) {
         await sleep(RETRY_DELAYS_MS[attempt])
         continue
       }
-      const text = await response.text()
+      let text
+      try { text = await response.text() } catch { throw new ExpectedFailureError('metravel-auth: request/response') }
       let json = null
-      try {
-        json = text ? JSON.parse(text) : null
-      } catch {
-        json = null
-      }
+      try { json = text ? JSON.parse(text) : null } catch { json = null }
       return { status: response.status, json, text }
     }
   }
@@ -68,10 +80,10 @@ function createApi({ apiUrl, token, fetchImpl = fetch, sleep = defaultSleep }) {
   async function expectOk(method, endpoint, options) {
     const result = await request(method, endpoint, options)
     if (result.status === 401 || result.status === 403) {
-      throw new ExpectedFailureError(`${method} ${endpoint}: HTTP ${result.status} — токен не принят или не администратор; свежий токен: METRAVEL_TOKEN=$(node scripts/get-quest-token.js)`)
+      throw new ExpectedFailureError(formatTokenError(new TokenError('authentication', { status: result.status })))
     }
     if (result.status < 200 || result.status >= 300) {
-      throw new ExpectedFailureError(`${method} ${endpoint}: HTTP ${result.status} ${result.text.slice(0, 300)}`)
+      throw new ExpectedFailureError(formatTokenError(new TokenError('response', { status: result.status })))
     }
     return result.json
   }
@@ -113,7 +125,7 @@ function createApi({ apiUrl, token, fetchImpl = fetch, sleep = defaultSleep }) {
       const endpoint = `/api/quests/${questPk}/translations/${locale}/`
       const result = await request('GET', endpoint, { admin: true })
       if (result.status === 404) return null
-      if (result.status !== 200) throw new ExpectedFailureError(`GET ${endpoint}: HTTP ${result.status} ${result.text.slice(0, 300)}`)
+      if (result.status !== 200) throw new ExpectedFailureError(formatTokenError(new TokenError('response', { status: result.status })))
       return result.json
     },
 

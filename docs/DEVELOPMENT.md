@@ -317,3 +317,36 @@ export default function MyPage() {
 - Унікальний `headKey` для кожної сторінки
 - `robots="noindex,nofollow"` для auth/приватних сторінок
 - Production `sitemap.xml` генерируется backend-ом. Не добавляй генерацию sitemap во frontend build/deploy pipeline; фронт отвечает за page-level meta, canonical, OG/Twitter и JSON-LD.
+## Operator token sessions
+
+Authenticated operator scripts import `createToolSession` from
+`scripts/lib/metravel-tool-session.js`. Declare the exact identity: quest/staff
+maintenance uses QA104, article creation uses owner1, editorial comments use
+editor120 (or the existing explicitly selected user ID). Every authenticated
+request verifies strict numeric `GET /api/user/me/` identity before a write.
+Author/editor channels never substitute the QA account or log in automatically.
+
+QA104 alone can renew an absent/401 credential from primary `.env.e2e` credentials.
+`node scripts/get-quest-token.js` outputs status only; never capture its stdout as
+a token. Existing home, editor, JSON, MCP and browser caches remain readonly
+candidates. A renewed verified QA104 token is atomically published at mode0600
+to its dedicated cache; conflicting identities fail before login or mutation.
+No logout, token printing, Authorization argv, disabled TLS or auth redirects.
+The single401 replay preserves the exact original method, URL and payload bytes.
+
+Body maintenance defaults to owner1; an explicit `METRAVEL_ACTOR_ID=104` selects
+QA104 without changing article author. Supply an already valid author/editor
+credential through the corresponding existing env/home source. The legacy
+`--token` flag is compatibility only (already visible in caller argv); do not
+generate it. Python publishers obtain verified owner1 credentials via bounded
+private pipes and upload with TLS validation and disabled redirects.
+
+Ordinary `apply-quest-patches --dry-run` is offline. Readonly auth recovery uses
+`--dry-run --auth-check --token-file <expired-fixture> --cache-dir <private-temp-dir>`
+and a patch file. Both paths must be contained in the same isolated private OS
+temporary directory. Never poison a working cache; the fixture's unknown expired
+alias stays unchanged while the dedicated verified QA104 cache is repaired.
+
+`npm run guard:metravel-token` is part of lint/precommit and covers JS readers,
+Python publishers, issuer stdout capture and generated credential argv. Historical
+logs remain evidence; active operational examples must use this shared boundary.

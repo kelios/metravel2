@@ -14,7 +14,42 @@ export const runNodeCli = (
   env: Record<string, string> = {},
   options: { cwd?: string; input?: string } = {},
 ): CliRunResult => {
-  return runCli(process.execPath, args, { env, ...options });
+  // Legacy CLI regression servers use ephemeral loopback ports. Inject the
+  // explicit isolated token fixture through a test-only preload; production
+  // binaries keep their exact origin allowlist and never consume this hook.
+  const target = args.map((arg, index) => arg.startsWith('--api-url=') ? arg.slice(10) : arg === '--api-url' ? args[index + 1] : '').find(Boolean) || env.METRAVEL_API;
+  if (!target || !/^http:\/\/(?:127\.0\.0\.1|localhost):\d+(?:\/api)?\/?$/.test(target)) {
+    return runCli(process.execPath, args, { env, ...options });
+  }
+  const homeDir = makeTempDir('metravel-cli-auth-fixture-');
+  const preload = path.join(homeDir, 'token-fixture.cjs');
+  const helper = path.resolve(process.cwd(), 'scripts/lib/metravel-tool-session.js');
+  const kernel = path.resolve(process.cwd(), 'scripts/lib/metravel-token.js');
+  const transport = path.resolve(process.cwd(), 'scripts/lib/metravel-token-transport.js');
+  writeTextFile(preload, `
+    process.env.NODE_ENV = 'test';
+    const helper = require(${JSON.stringify(helper)});
+    const {createTokenSession} = require(${JSON.stringify(kernel)});
+    const {trustedRequest} = require(${JSON.stringify(transport)});
+    const homeDir = ${JSON.stringify(homeDir)};
+    const declared = new URL(${JSON.stringify(target)}).origin;
+    helper.createToolSession = (options = {}) => {
+      const origin = new URL(options.origin || declared).origin;
+      if (origin !== declared) throw new Error('fixture target mismatch');
+      const profile = options.profile || 'qa104', expectedUserId = options.expectedUserId || 104;
+      const fixture = {origin, homeDir, fetchImpl: async (url, init) =>
+        new URL(url).pathname === '/api/user/me/'
+          ? new Response(JSON.stringify({id: expectedUserId}), {status: 200})
+          : fetch(url, init)};
+      return createTokenSession({...options, origin, profile, expectedUserId, homeDir, fixture,
+        sources: [{kind:'value', value: options.explicit || process.env.METRAVEL_TOKEN || 'test'}], refreshPolicy: 'never'});
+    };
+    helper.bodyMaintenanceSession = (options = {}) => helper.createToolSession({...options, profile:'owner', expectedUserId:1});
+    helper.publicRequest = (base, endpoint, init) => trustedRequest(declared, endpoint, init, {fixture: {origin:declared, homeDir, fetchImpl:fetch}, allowRedirectStatus:true});
+  `);
+  try {
+    return runCli(process.execPath, ['--require', preload, ...args], { env, ...options });
+  } finally { removeDir(homeDir); }
 };
 
 export const runCli = (
@@ -22,6 +57,9 @@ export const runCli = (
   args: string[],
   options: { cwd?: string; env?: Record<string, string>; input?: string } = {},
 ): CliRunResult => {
+  if (command === process.execPath && !args.includes('--require') && options.env?.METRAVEL_API && /^http:\/\/(?:127\.0\.0\.1|localhost):\d+/.test(options.env.METRAVEL_API)) {
+    return runNodeCli(args, options.env, { cwd: options.cwd, input: options.input });
+  }
   try {
     const stdout = execFileSync(command, args, {
       encoding: 'utf8',

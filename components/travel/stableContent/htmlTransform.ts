@@ -27,6 +27,7 @@ import {
 import { pickWidthCandidate } from '@/utils/travelMediaVariants'
 import { isWeservImageUrl, unwrapWeservImageUrl } from '@/utils/weservImageUrl'
 import { translate as i18nT } from '@/i18n'
+import { isMetravelMediaHostname } from '@/utils/webResourceHints'
 
 
 const OPTIMIZATION_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'blur', 'dpr']
@@ -64,7 +65,7 @@ const normalizeMetravelOwnImageUrl = (urlStr: string): string => {
   try {
     const parsed = new URL(urlStr, 'https://metravel.by')
     const host = parsed.hostname.toLowerCase()
-    if (host !== 'metravel.by' && host !== 'cdn.metravel.by' && host !== 'api.metravel.by') {
+    if (!isMetravelMediaHostname(host)) {
       return urlStr
     }
     if (parsed.protocol === 'http:') {
@@ -135,7 +136,7 @@ export const buildExternalImageUrl = (src: string) => {
       if (isPrivateOrLocalHost(host)) {
         return decoded
       }
-      if (host === 'metravel.by' || host === 'cdn.metravel.by' || host === 'api.metravel.by') {
+      if (isMetravelMediaHostname(host)) {
         return normalizeMetravelOwnImageUrl(stripOptimizationParams(normalized))
       }
       // Протокол апгрейдим: раньше https появлялся сам собой, потому что обёртка
@@ -326,11 +327,6 @@ const clampLadderToFamily = (
   return kept.length ? kept : [ceiling]
 }
 
-const isFirstPartyMetravelHost = (host: string): boolean => {
-  const value = String(host || '').toLowerCase()
-  return value === 'metravel.by' || value === 'cdn.metravel.by' || value === 'api.metravel.by'
-}
-
 /**
  * `q`/`fit` понимает только legacy-роут — он один режет в момент запроса.
  *
@@ -372,7 +368,7 @@ const parseFirstPartyArticleImage = (src: string): URL | null => {
     // его нормализовать, и итоговый <img> остаётся без w/srcset (#1176).
     const normalized = buildExternalImageUrl(trimmed) ?? trimmed
     const parsed = new URL(normalized.replace(/&amp;/g, '&'), 'https://metravel.by')
-    if (!isFirstPartyMetravelHost(parsed.hostname)) return null
+    if (!isMetravelMediaHostname(parsed.hostname)) return null
     if (parsed.protocol === 'http:') parsed.protocol = 'https:'
     // сбрасываем ранее заданные размеры, сохраняя cache-buster `v`
     for (const param of OPTIMIZATION_PARAMS) parsed.searchParams.delete(param)

@@ -323,8 +323,7 @@ scope, осознанные исключения — с обоснованием
 Правки на прод — только через существующий тулинг, батчем:
 
 ```bash
-METRAVEL_TOKEN=$(node scripts/get-quest-token.js) \
-  node scripts/apply-quest-patches.js .codex-temp/quest-audit/patches-*.json
+node scripts/apply-quest-patches.js --apply .codex-temp/quest-audit/patches-*.json
 ```
 
 Токен из `~/.metravel_token`, при 401 перевыпуск `node scripts/get-quest-token.js`.
@@ -432,3 +431,5 @@ METRAVEL_TOKEN=$(node scripts/get-quest-token.js) \
 
 Приватность: `progress_id` вместо email (в базе он Fernet-шифротекст), никаких
 ключей сессии и токенов в отчёте. Рабочие файлы — `.codex-temp/quest-audit/`.
+
+Токены операторских инструментов: `docs/DEVELOPMENT.md` → «Operator token sessions».

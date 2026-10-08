@@ -1,3 +1,8 @@
+import fs from 'fs'
+import path from 'path'
+import { LEAFLET_CSS } from '@/utils/leafletCssAsset'
+import { LEAFLET_CSS as nativeLeafletCss } from '@/utils/leafletInlineAsset'
+import { buildMapHeadBootstrapScript } from '@/utils/mapHeadBootstrap'
 import { ensureLeafletCss, isLeafletCoreCssApplied, whenLeafletCssReady } from '@/utils/ensureLeafletCss'
 
 describe('ensureLeafletCss', () => {
@@ -142,9 +147,9 @@ describe('whenLeafletCssReady', () => {
     expect(document.querySelector('style[data-leaflet-fallback="true"]')).toBeNull()
   })
 
-  it('falls back to the minimal pane/tile layout when leaflet.css never applies', async () => {
+  it('caps visual readiness at 1000 ms even if a caller requests 3000 ms', async () => {
     const state = settledFlag(whenLeafletCssReady({ waitInTestEnv: true, timeoutMs: 3000 }))
-    jest.advanceTimersByTime(2999)
+    jest.advanceTimersByTime(999)
     await Promise.resolve()
     expect(state.settled).toBe(false)
 
@@ -153,7 +158,7 @@ describe('whenLeafletCssReady', () => {
     expect(state.settled).toBe(true)
     const fallback = document.querySelector('style[data-leaflet-fallback="true"]')?.textContent
     expect(fallback).toContain('.leaflet-tile')
-    expect(fallback).toContain('position:absolute')
+    expect(fallback).toMatch(/position:\s*absolute/)
     expect(isLeafletCoreCssApplied()).toBe(true)
   })
 
@@ -170,6 +175,93 @@ describe('whenLeafletCssReady', () => {
     await Promise.resolve()
     expect(state.settled).toBe(true)
     expect(document.querySelector('style[data-leaflet-fallback="true"]')).toBeTruthy()
+  })
+
+  it('uses the complete installed vendor geometry, keeping the native CSS asset byte-identical', async () => {
+    const vendor = fs.readFileSync(path.resolve(process.cwd(), 'node_modules/leaflet/dist/leaflet.css'), 'utf8')
+    expect(LEAFLET_CSS).toBe(vendor)
+    expect(nativeLeafletCss).toBe(vendor)
+    await whenLeafletCssReady()
+    const fallback = document.querySelector<HTMLStyleElement>('style[data-leaflet-fallback="true"]')!
+    expect(fallback.textContent).toBe(vendor.replace(/url\(images\//g, 'url(/vendor/images/'))
+    // Full vendor equality holds font, box, border, zoom/layer dimensions and
+    // specificity (including attribution's margin:0), not only pane z-index.
+    expect(fallback.sheet!.cssRules.length).toBeGreaterThan(80)
+    const source = fs.readFileSync(path.resolve(process.cwd(), 'utils/ensureLeafletCss.ts'), 'utf8')
+    expect(source).not.toContain('leafletInlineAsset')
+  })
+
+  it('remembers failures that occurred before a readiness consumer subscribed', async () => {
+    ensureLeafletCss()
+    const link = document.getElementById('metravel-leaflet-css') as HTMLLinkElement
+    link.dispatchEvent(new Event('error'))
+    link.dispatchEvent(new Event('error'))
+    const state = settledFlag(whenLeafletCssReady({ waitInTestEnv: true }))
+    await Promise.resolve()
+    expect(state.settled).toBe(true)
+    expect(jest.getTimerCount()).toBe(0)
+    expect(isLeafletCoreCssApplied()).toBe(true)
+  })
+
+  it('remembers both failed HTML-preload requests before the map module attaches', async () => {
+    window.history.replaceState({}, '', '/map')
+    try {
+      new Function(buildMapHeadBootstrapScript())()
+      const link = document.getElementById('metravel-leaflet-css') as HTMLLinkElement
+      link.dispatchEvent(new Event('error'))
+      link.dispatchEvent(new Event('error'))
+      const state = settledFlag(whenLeafletCssReady({ waitInTestEnv: true }))
+      await Promise.resolve()
+      expect(state.settled).toBe(true)
+      expect(jest.getTimerCount()).toBe(0)
+      expect(document.querySelectorAll('link#metravel-leaflet-css')).toHaveLength(1)
+      expect(document.querySelectorAll('style[data-leaflet-fallback="true"]')).toHaveLength(1)
+    } finally {
+      window.history.replaceState({}, '', '/')
+    }
+  })
+
+  it('uses one readiness subscription and cleans listeners and timer after both consumers settle', async () => {
+    ensureLeafletCss()
+    const link = document.getElementById('metravel-leaflet-css') as HTMLLinkElement
+    const add = jest.spyOn(link, 'addEventListener')
+    const remove = jest.spyOn(link, 'removeEventListener')
+    const first = whenLeafletCssReady({ waitInTestEnv: true })
+    const second = whenLeafletCssReady({ waitInTestEnv: true })
+    expect(first).toBe(second)
+    expect(add.mock.calls.map(([type]) => type)).toEqual(['load', 'error'])
+    expect(jest.getTimerCount()).toBe(1)
+    link.dispatchEvent(new Event('error'))
+    link.dispatchEvent(new Event('error'))
+    await Promise.all([first, second])
+    expect(remove.mock.calls.map(([type]) => type)).toEqual(['load', 'error'])
+    expect(jest.getTimerCount()).toBe(0)
+    add.mockRestore()
+    remove.mockRestore()
+  })
+
+  it('finishes a successful link event with missing core rules using the full fallback immediately', async () => {
+    const state = settledFlag(whenLeafletCssReady({ waitInTestEnv: true }))
+    document.getElementById('metravel-leaflet-css')!.dispatchEvent(new Event('load'))
+    await Promise.resolve()
+    expect(state.settled).toBe(true)
+    expect(isLeafletCoreCssApplied()).toBe(true)
+    expect(jest.getTimerCount()).toBe(0)
+  })
+
+  it('reserves the whole default credit without truncation inside the map control corner', () => {
+    ensureLeafletCss()
+    const rules = Array.from((document.getElementById('metravel-leaflet-overrides') as HTMLStyleElement).sheet!.cssRules)
+      .filter((rule): rule is CSSStyleRule => 'selectorText' in rule)
+    const corner = rules.find((rule) => rule.selectorText === '.leaflet-container .leaflet-bottom')!
+    const credit = rules.find((rule) => rule.selectorText === '.leaflet-container .leaflet-control-attribution')!
+    expect(corner.style.getPropertyValue('max-width')).toBe('100%')
+    expect(credit.style.getPropertyValue('max-width')).toBe('100%')
+    expect(credit.style.getPropertyValue('min-height')).toBe('calc(2.7em + 4px)')
+    expect(credit.style.getPropertyValue('white-space')).toBe('normal')
+    expect(credit.style.getPropertyValue('overflow')).toBe('visible')
+    expect(credit.style.getPropertyValue('text-overflow')).toBe('clip')
+    // CSS declarations are a regression control; JSDOM is not pixel/CLS evidence.
   })
 
   it('resolves immediately when Leaflet core CSS is already applied', async () => {

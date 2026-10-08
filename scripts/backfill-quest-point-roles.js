@@ -27,12 +27,11 @@
  * расхождений и не сделает ни одного запроса.
  */
 
-const fs = require('fs')
-const os = require('os')
-const path = require('path')
 
 const { fetchQuestBundles, parseSteps } = require('./lib/questBundles')
 const { findRoleMismatches, endsWithOptional } = require('./lib/questPointRoles')
+
+const { rethrowTerminalAuthError, createToolSession, TokenError  } = require('./lib/metravel-tool-session');
 
 const args = process.argv.slice(2)
 const apply = args.includes('--apply')
@@ -44,31 +43,21 @@ const get = (key, fallback) => {
 const API_BASE = get('api-url', process.env.METRAVEL_API_URL || 'https://metravel.by')
 const QUEST_ID = get('quest-id')
 
-function resolveToken() {
-  const fromArg = get('token')
-  if (fromArg) return fromArg
-  if (process.env.METRAVEL_TOKEN) return process.env.METRAVEL_TOKEN
-  const secret = path.resolve(__dirname, '..', '.secrets', 'metravel-token.json')
-  if (fs.existsSync(secret)) return JSON.parse(fs.readFileSync(secret, 'utf8')).token
-  const home = path.join(os.homedir(), '.metravel_token')
-  if (fs.existsSync(home)) return fs.readFileSync(home, 'utf8').trim()
-  return null
+function createSession() {
+  return createToolSession({ origin: API_BASE, explicit: get('token'), order: ['env', 'json', 'home'] })
 }
 
-const TOKEN = resolveToken()
-if (apply && !TOKEN) {
-  console.error('❌ нет токена, а --apply требует записи на прод')
-  process.exit(1)
-}
+const SESSION = createSession()
+
 
 async function patchRole(stepDbId, role) {
-  const response = await fetch(`${API_BASE}/api/quest-steps/${stepDbId}/`, {
+  const response = await SESSION.request(`${API_BASE}/api/quest-steps/${stepDbId}/`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', Authorization: `Token ${TOKEN}` },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ point_role: role }),
   })
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${(await response.text()).slice(0, 200)}`)
+    throw new TokenError('response', { status: response.status })
   }
   return response.json()
 }
@@ -109,6 +98,7 @@ async function main() {
       ok += 1
       if (ok % 25 === 0) console.log(`  … ${ok}/${planned.length}`)
     } catch (error) {
+      rethrowTerminalAuthError(error);
       // Один отказ не должен ронять весь прогон: остальные точки исправимы, а
       // список неудач нужен целиком, чтобы не гадать, что осталось.
       failed.push({ ...row, error: error.message })

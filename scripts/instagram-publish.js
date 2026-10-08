@@ -20,12 +20,12 @@
 //   node scripts/instagram-publish.js --only 638 --live     # write one article
 //   node scripts/instagram-publish.js --live                # write all
 //   flags: --min-confidence high|medium|low  --limit N
+const { rethrowTerminalAuthError, createToolSession, TokenError, formatTokenError  } = require('./lib/metravel-tool-session');
 const fs = require('fs')
 const path = require('path')
 
 const DIR = path.join(process.cwd(), '.cache', 'instagram')
 const BACKUP_DIR = path.join(DIR, 'backups')
-const SECRET = path.join(process.cwd(), '.secrets', 'metravel-token.json')
 const API_BASE = (process.env.EXPO_PUBLIC_API_URL || 'https://metravel.by').replace(/\/+$/, '') + '/api'
 const MARKER = '<!-- metravel:instagram-embeds -->'
 const CONF_RANK = { high: 0, medium: 1, low: 2 }
@@ -45,21 +45,8 @@ const MAX_RANK = CONF_RANK[MIN_CONF] ?? 1
 function readJson(p) {
   return JSON.parse(fs.readFileSync(p, 'utf8'))
 }
-function token() {
-  if (!fs.existsSync(SECRET)) {
-    console.error(`Missing ${SECRET} — put { "token": "<userToken>" } there (see scripts/INSTAGRAM_SETUP.md, ключ 2).`)
-    process.exit(1)
-  }
-  const t = readJson(SECRET).token
-  if (!t) {
-    console.error('metravel-token.json has no "token" field.')
-    process.exit(1)
-  }
-  return t
-}
-function authHeaders(t) {
-  return { Authorization: `Token ${t}`, 'Content-Type': 'application/json', Accept: 'application/json' }
-}
+
+
 
 // Instagram permalink → canonical post shortcode (works for /p/ and /reel/).
 function shortcode(permalink) {
@@ -159,16 +146,18 @@ async function getArticle(id) {
   if (!r.ok) throw new Error(`GET ${id} → ${r.status}`)
   return r.json()
 }
-async function putArticle(t, body) {
-  const r = await fetch(`${API_BASE}/travels/upsert/`, { method: 'PUT', headers: authHeaders(t), body: JSON.stringify(body) })
-  const text = await r.text()
-  if (!r.ok) throw new Error(`PUT upsert ${body.id} → ${r.status}: ${text.slice(0, 300)}`)
-  return text
+async function putArticle(article, body) {
+ const owners = Array.isArray(article.userIds) ? article.userIds : String(article.userIds || '').split(',');
+ const ids = owners.map((id) => Number(typeof id === 'object' ? id.id : id)).filter((id) => Number.isSafeInteger(id) && id > 0);
+ if (ids.length !== 1) throw new TokenError('identity');
+ const session = createToolSession({ origin: API_BASE, profile: 'owner', expectedUserId: ids[0], order: ['json'] });
+ const r = await session.request(`${API_BASE}/travels/upsert/`, { method: 'PUT', json: body });
+ if (!r.ok) throw new TokenError('response', { status: r.status });
+ return r.text();
 }
 
 async function main() {
   const data = readJson(path.join(DIR, 'matches.json'))
-  const t = LIVE ? token() : ''
   fs.mkdirSync(BACKUP_DIR, { recursive: true })
 
   // Group selected matches by article.
@@ -191,7 +180,8 @@ async function main() {
     try {
       art = await getArticle(id)
     } catch (e) {
-      console.log(`  [${id}] GET failed: ${e.message}`)
+      rethrowTerminalAuthError(e);
+      console.log(`  [${id}] GET failed: ${formatTokenError(e)}`)
       continue
     }
     fs.writeFileSync(path.join(BACKUP_DIR, `${id}.json`), JSON.stringify(art, null, 2))
@@ -211,7 +201,7 @@ async function main() {
       continue
     }
     try {
-      await putArticle(t, body)
+      await putArticle(art, body)
       const after = await getArticle(id)
       const ptsAfter = (after.coordsMeTravel || []).length
       const galAfter = (after.gallery || []).length
@@ -224,7 +214,8 @@ async function main() {
       touched++
       totalAdded += added
     } catch (e) {
-      console.log(`    ✗ PUT failed: ${e.message}`)
+      rethrowTerminalAuthError(e);
+      console.log(`    ✗ PUT failed: ${formatTokenError(e)}`)
     }
   }
   console.log(`\n${LIVE ? 'Wrote' : 'Would write'} ${totalAdded} embeds across ${touched} articles.`)
@@ -232,6 +223,6 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error(e)
+  console.error(formatTokenError(e))
   process.exit(1)
 })

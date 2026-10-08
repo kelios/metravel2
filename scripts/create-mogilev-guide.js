@@ -13,8 +13,9 @@
  * Токен: --token=, env METRAVEL_TOKEN или ~/.metravel_token.
  */
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
+
+const { createToolSession, TokenError, formatTokenError, parseResponseJson } = require('./lib/metravel-tool-session');
 
 const args = process.argv.slice(2);
 const isDryRun = args.includes('--dry-run');
@@ -24,14 +25,9 @@ const idArg = args.find(a => a.startsWith('--id='));
 const tokenArg = args.find(a => a.startsWith('--token='));
 const API_BASE = 'https://metravel.by/api';
 
-function resolveToken() {
-    if (tokenArg) return tokenArg.split('=').slice(1).join('=');
-    if (process.env.METRAVEL_TOKEN) return process.env.METRAVEL_TOKEN;
-    try { const p = path.join(os.homedir(), '.metravel_token'); if (fs.existsSync(p)) return fs.readFileSync(p, 'utf8').trim(); } catch { return null; }
-    return null;
-}
-const TOKEN = resolveToken();
-if (!TOKEN && !isDryRun) { console.error('❌ Нужен токен'); process.exit(1); }
+function createSession() { return createToolSession({ origin: API_BASE, profile: 'owner', expectedUserId: 1, explicit: tokenArg ? tokenArg.split('=').slice(1).join('=') : undefined }); }
+const SESSION = createSession();
+
 
 const description = fs.readFileSync(path.join(__dirname, 'mogilev-guide-content.html'), 'utf8').trim();
 
@@ -89,15 +85,15 @@ const payload = {
 async function main() {
     console.log(`🚀 Могилёв-путеводитель → ${API_BASE} (${isDryRun ? 'DRY' : 'LIVE'}, ${doPublish ? 'PUBLISH' : 'DRAFT'}, points=${coordsMeTravel.length}, id=${payload.id})`);
     if (isDryRun) { console.log('DRY RUN — ничего не отправлено.'); return; }
-    const res = await fetch(`${API_BASE}/travels/upsert/`, {
+    const res = await SESSION.request(`${API_BASE}/travels/upsert/`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Token ${TOKEN}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
     });
     const text = await res.text();
-    if (!res.ok) { console.error(`❌ HTTP ${res.status}: ${text.slice(0, 800)}`); process.exit(1); }
-    let data; try { data = JSON.parse(text); } catch { data = {}; }
+    if (!res.ok) { console.error(formatTokenError(new TokenError('response', { status: res.status }))); process.exit(1); }
+    let data; try { data = parseResponseJson(text); } catch { data = {}; }
     console.log(`✅ HTTP ${res.status} | id=${data.id} | slug=${data.slug} | points=${(data.travelAddress||data.coordsMeTravel||[]).length}`);
     console.log(`   URL: https://metravel.by/travels/${data.slug || data.id}`);
 }
-main().catch(e => { console.error('Fatal:', e); process.exit(1); });
+main().catch(e => { console.error('Fatal:', formatTokenError(e)); process.exit(1); });

@@ -122,9 +122,7 @@ bool ОБЯЗАТЕЛЕН, opening_hours?, ticket_price?, website?}` — стр�
 - Правки — `PATCH /api/quest-steps/<id>/` (Token из `~/.metravel_token`,
   никогда не логируй токен). Если токен протух (HTTP 401) — взять свежий
   программным логином e2e-аккаунта: `node scripts/get-quest-token.js`
-  (печатает только токен; пароль из `.env.e2e`, в логи не попадает). Применять
-  env-ом, не `--token=`: `METRAVEL_TOKEN=$(node scripts/get-quest-token.js)
-  node scripts/apply-quest-patches.js .codex-temp/quest-audit/patches-*.json`
+  (печатает только статус; скрипты используют общий resolver QA104). Применять: `node scripts/apply-quest-patches.js --apply .codex-temp/quest-audit/patches-*.json`
 
 ## Аудит координат (всегда при работе с точками)
 
@@ -348,4 +346,6 @@ bool ОБЯЗАТЕЛЕН, opening_hours?, ticket_price?, website?}` — стр�
   квестов — да).
 
 Рабочие файлы и патчи — в `.codex-temp/quest-audit/` (gitignored). Токены не печатать:
-только `METRAVEL_TOKEN=$(node scripts/get-quest-token.js) …`.
+использовать общий resolver; get-quest-token печатает только статус.
+
+Токены операторских инструментов: `docs/DEVELOPMENT.md` → «Operator token sessions».

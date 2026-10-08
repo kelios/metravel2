@@ -44,6 +44,7 @@ const {
   runCli,
 } = require('./lib/cli-contract')
 const { createApi, resolveToken } = require('./lib/questTranslation/api')
+const { targetPolicy, TokenError, formatTokenError } = require('./lib/metravel-token')
 const {
   mergeReview,
   reviewState,
@@ -472,6 +473,37 @@ function buildDocument({ translation, existing, publish, force }) {
  * черновика, PUT и разбор отказа сервера. Общее ядро `upload` и `sweep`.
  * `existing` — перевод с сервера, если вызывающий его уже прочитал.
  */
+const TRANSLATION_ERROR_CODES = new Set([
+  'source_locale', 'unsupported_locale', 'unknown_step_id', 'duplicate_step_id', 'missing_steps',
+  'missing_finale', 'unknown_finale', 'required', 'invalid', 'null', 'blank', 'empty',
+  'max_length', 'min_length', 'max_value', 'min_value', 'invalid_choice', 'does_not_exist',
+  'incorrect_type', 'not_a_list',
+])
+const TRANSLATION_ERROR_FIELDS = new Set([
+  'locale', 'status', 'steps', 'finale', 'step_id', 'title', 'location', 'story', 'task', 'hint',
+  'answer_variants', 'answer_pattern', 'description', 'text', 'non_field_errors',
+])
+
+// Server error strings can reflect Authorization or secret-bearing URLs. Only
+// known structural codes/field names and bounded numeric ids may reach output.
+function safeTranslationRejection(document) {
+  const errors = document && Array.isArray(document.errors) ? document.errors.slice(0, 20) : []
+  const shown = errors.flatMap((error) => {
+    if (!error || typeof error !== 'object' || !TRANSLATION_ERROR_CODES.has(error.code)) return []
+    const step = Number.isSafeInteger(error.step_id) && error.step_id > 0 ? ` step ${error.step_id}` : ''
+    let field = TRANSLATION_ERROR_FIELDS.has(error.field) ? error.field : ''
+    if (!field && typeof error.field === 'string') {
+      const match = /^steps\.[0-9]{1,6}\.([a-z_]+)$/.exec(error.field)
+      if (match && TRANSLATION_ERROR_FIELDS.has(match[1])) field = error.field
+    }
+    return [`${error.code}${step}${field ? ` (${field})` : ''}`]
+  })
+  if (!shown.length) return formatTokenError(new TokenError('response', { status: 400 }))
+  const missing = document && Array.isArray(document.missing_step_ids)
+    ? document.missing_step_ids.filter((id) => Number.isSafeInteger(id) && id > 0).slice(0, 50) : []
+  return `сервер отклонил перевод: ${shown.join('; ')}` + (missing.length ? `; missing_step_ids: ${missing.join(', ')}` : '')
+}
+
 async function uploadEvaluated({ api, result, quest, locale, publish, unpublish = false, force = false, existing }) {
   const blockers = uploadBlockers(result.checks, { publish })
   if (blockers.length) {
@@ -489,18 +521,11 @@ async function uploadEvaluated({ api, result, quest, locale, publish, unpublish 
   }
   const { document, keptHuman } = buildDocument({ translation: result.translation, existing: server, publish, force })
   const response = await api.putTranslation(questPk, locale, document)
-  if (response.status === 400) {
-    const errors = ((response.json && response.json.errors) || []).map(
-      (error) => `${error.code}${error.step_id ? ` step ${error.step_id}` : ''}${error.field ? ` (${error.field})` : ''}`,
-    )
-    const missing = (response.json && response.json.missing_step_ids) || []
-    throw new ExpectedFailureError(
-      `сервер отклонил перевод: ${errors.join('; ') || response.text.slice(0, 300)}` +
-        (missing.length ? `; missing_step_ids: ${missing.join(', ')}` : ''),
-    )
-  }
+  if (response.status === 400) throw new ExpectedFailureError(safeTranslationRejection(response.json))
   if (response.status !== 200) {
-    throw new ExpectedFailureError(`PUT перевода: HTTP ${response.status} ${response.text.slice(0, 300)}`)
+    throw new ExpectedFailureError(formatTokenError(new TokenError(
+      response.status === 401 || response.status === 403 ? 'authentication' : 'response', { status: response.status },
+    )))
   }
   return { document, keptHuman }
 }
@@ -701,9 +726,11 @@ async function commandCityName(args, api) {
   console.log(`Город ${args.city} → ${args.locale}: «${saved.name}»`)
 }
 
-async function run(args, { fetchImpl, tokenSources } = {}) {
+async function run(args, { tokenSources, testFixture } = {}) {
   const command = resolveInvocation(args)
-  const api = createApi({ apiUrl: args.apiUrl, token: resolveToken(args.token, tokenSources), fetchImpl })
+  const target = targetPolicy(args.apiUrl, testFixture)
+  const token = target.local ? args.token || null : resolveToken(args.token, tokenSources)
+  const api = createApi({ apiUrl: target.origin, token, testFixture })
   if (command === 'next') return commandNext(args, api)
   if (command === 'prepare') return commandPrepare(args, api)
   if (command === 'check') return commandCheck(args)

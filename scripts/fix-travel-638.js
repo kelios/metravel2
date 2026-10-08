@@ -20,11 +20,9 @@
  * Token: METRAVEL_TOKEN env or ~/.metravel_token (same as seo-edit.js).
  */
 
+const { bodyMaintenanceSession, publicRequest, TokenError, parseResponseJson  } = require('./lib/metravel-tool-session');
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
-const https = require('https')
-const http = require('http')
 
 const seoEdit = require('./seo-edit')
 
@@ -43,39 +41,20 @@ const BACKUP_DIR = getArg('backup-dir', DEFAULT_BACKUP_DIR)
 if (!DRY && !APPLY) { console.error('ERROR: pass --dry-run or --apply'); process.exit(1) }
 
 // ---------- token ----------
-function loadToken() {
-  if (process.env.METRAVEL_TOKEN) return process.env.METRAVEL_TOKEN.trim()
-  const p = path.join(os.homedir(), '.metravel_token')
-  if (fs.existsSync(p)) return fs.readFileSync(p, 'utf8').trim()
-  return null
-}
+function loadToken() { return bodyMaintenanceSession({ origin: API }); }
 
 // ---------- io ----------
-function rawRequest(method, url, { token: tok, body } = {}) {
-  return new Promise((resolve, reject) => {
-    const mod = url.startsWith('https') ? https : http
-    const buf = body != null ? Buffer.from(JSON.stringify(body)) : null
-    const opts = { method, timeout: 60000, headers: { 'Cache-Control': 'no-cache' } }
-    if (mod === https) opts.rejectUnauthorized = false
-    if (tok) opts.headers.Authorization = `Token ${tok}`
-    if (buf) { opts.headers['Content-Type'] = 'application/json'; opts.headers['Content-Length'] = buf.length }
-    const req = mod.request(url, opts, (res) => {
-      let acc = ''
-      res.setEncoding('utf8')
-      res.on('data', (c) => (acc += c))
-      res.on('end', () => resolve({ status: res.statusCode, text: acc }))
-    })
-    req.on('error', reject)
-    req.on('timeout', () => { req.destroy(); reject(new Error(`Timeout ${url}`)) })
-    if (buf) req.write(buf)
-    req.end()
-  })
+async function rawRequest(method, url, { token: session, body } = {}) {
+ const init = { method, ...(body != null ? { json: body } : {}) };
+ if (init.json !== undefined) { init.body = JSON.stringify(init.json); init.headers = { 'Content-Type': 'application/json' }; delete init.json; }
+ const response = await (session ? session.request(url, init) : publicRequest(API, url, init));
+ return { status: response.status, text: await response.text() };
 }
 
 async function getTravel(id, tok) {
   const { status, text } = await rawRequest('GET', `${API}/travels/${id}/`, { token: tok })
-  if (status !== 200) throw new Error(`GET travel ${id} → HTTP ${status}: ${text.slice(0, 200)}`)
-  return JSON.parse(text)
+  if (status !== 200) throw new TokenError('response', { status: status })
+  return parseResponseJson(text)
 }
 
 async function putTravel(payload, tok) {
@@ -89,7 +68,7 @@ async function searchByName(name) {
   const { status, text } = await rawRequest('GET', url)
   if (status !== 200) { searchCache.set(name, []); return [] }
   let parsed
-  try { parsed = JSON.parse(text) } catch { parsed = {} }
+  try { parsed = parseResponseJson(text) } catch { parsed = {} }
   const items = parsed.data || parsed.results || parsed.items || []
   searchCache.set(name, items)
   return items

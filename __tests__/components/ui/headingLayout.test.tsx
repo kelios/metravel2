@@ -104,3 +104,46 @@ describe('Heading: типографика по ступеням ширины (#2
     expect(css).toContain('[data-bp-layout="app-download-featureCard"]{width:46% !important}')
   })
 })
+
+describe.each(['android', 'ios'] as const)('Heading native width tiers on %s (#2332)', (platform) => {
+  const originalOS = Platform.OS
+  beforeEach(() => {
+    Object.defineProperty(Platform, 'OS', { value: platform, configurable: true })
+  })
+  afterEach(() => {
+    Object.defineProperty(Platform, 'OS', { value: originalOS, configurable: true })
+  })
+
+  it.each([1, 2, 3, 4] as const)('h%d follows the existing registered tiers at every boundary', (level) => {
+    for (const width of [0, 320, 390, 767, 768, 1023, 1024, 1279, 1280]) {
+      expect({ width, ...renderHeading(level, width).typography }).toEqual({ width, ...cssTypography(level, width) })
+    }
+  })
+
+  it('updates the mounted heading on live portrait/landscape/tablet width changes', () => {
+    mockWidth = 390
+    const { getByText, rerender } = render(<Heading level={1}>Native resize</Heading>)
+    for (const [width, fontSize] of [[390, 22], [844, 29], [1024, 26], [1280, 32], [390, 22]]) {
+      mockWidth = width
+      rerender(<Heading level={1}>Native resize</Heading>)
+      expect(StyleSheet.flatten(getByText('Native resize').props.style).fontSize).toBe(fontSize)
+    }
+  })
+
+  it.each(['fontSize', 'lineHeight', 'letterSpacing'] as const)('keeps composed caller-owned %s and heading semantics', (property) => {
+    const override = { [property]: 41 }
+    const registered = StyleSheet.create({ override }).override
+    const { node } = renderHeading(3, 1280, {
+      style: [{ textAlign: 'right' }, registered],
+      color: 'custom-color',
+      dataSet: { caller: 'native' },
+    })
+    const style = StyleSheet.flatten(node.props.style)
+    expect(style[property]).toBe(41)
+    expect(style.color).toBe('custom-color')
+    expect(style.textAlign).toBe('right')
+    expect(node.props.accessibilityRole).toBe('header')
+    expect(node.props['aria-level']).toBe(3)
+    expect(node.props.dataSet).toEqual({ caller: 'native' })
+  })
+})

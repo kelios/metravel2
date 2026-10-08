@@ -18,31 +18,73 @@ CLI:
   # справочники id категорий/стран
   python metravel_publish.py facets
 """
-import os, sys, json, re, glob, math, subprocess, urllib.request, urllib.error
+import os, sys, json, re, glob, math, subprocess, urllib.request, urllib.error, pathlib
 
 BASE = os.environ.get("METRAVEL_API", "https://metravel.by/api")
 
+class _NoAuthRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise RuntimeError("metravel-auth: request/redirect")
+
+
+def _origin():
+    import urllib.parse
+    parsed = urllib.parse.urlsplit(BASE)
+    if (parsed.scheme, parsed.netloc) != ("https", "metravel.by") or parsed.path not in ("", "/", "/api", "/api/") or parsed.query or parsed.fragment:
+        raise RuntimeError("metravel-auth: configure/origin")
+    return "https://metravel.by"
+
+
 def token():
-    t = os.environ.get("METRAVEL_TOKEN")
-    if not t:
-        p = os.path.expanduser("~/.metravel_token")
-        if os.path.exists(p):
-            t = open(p).read().strip()
-    if not t:
-        sys.exit("ERROR: set METRAVEL_TOKEN env var or ~/.metravel_token file")
-    return t
+    import struct
+    root = pathlib.Path(__file__).resolve().parents[4]
+    reader, writer = os.pipe()
+    child = None
+    try:
+        frame = json.dumps({"v": 1, "op": "token", "profile": "owner", "expectedUserId": 1, "origin": _origin()}).encode()
+        child = subprocess.Popen(["node", str(root / "scripts/lib/metravel-token-bridge.js"), str(writer)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, pass_fds=(writer,))
+        os.close(writer); writer = -1
+        out, err = child.communicate(struct.pack(">I", len(frame)) + frame, timeout=45)
+        if child.returncode or out:
+            raise RuntimeError("metravel-auth: request/authentication")
+        raw = os.read(reader, 16389)
+        if len(raw) < 4 or struct.unpack(">I", raw[:4])[0] != len(raw) - 4 or len(raw) > 16388:
+            raise RuntimeError("metravel-auth: request/response")
+        result = json.loads(raw[4:])
+        value = result.get("token")
+        if result.get("v") != 1 or result.get("userId") != 1 or not isinstance(value, str) or not value or len(value) > 4096 or any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in value):
+            raise RuntimeError("metravel-auth: request/response")
+        return value
+    except Exception:
+        if child is not None and child.poll() is None:
+            child.kill(); child.communicate()
+        raise RuntimeError("metravel-auth: request/authentication") from None
+    finally:
+        os.close(reader)
+        if writer >= 0: os.close(writer)
+
+
+def _authenticated(method, endpoint, body=None, content_type=None):
+    _origin()
+    if not isinstance(endpoint, str) or not endpoint.startswith("/") or endpoint.startswith("//") or any(ord(c) <= 32 or ord(c) == 127 for c in endpoint) or "\\" in endpoint:
+        raise RuntimeError("metravel-auth: request/origin")
+    request = urllib.request.Request(BASE.rstrip("/") + endpoint, data=body, method=method)
+    request.add_header("Authorization", "Token " + token())
+    if content_type: request.add_header("Content-Type", content_type)
+    try:
+        with urllib.request.build_opener(_NoAuthRedirect()).open(request, timeout=15) as response:
+            result = response.read(16777217)
+            if len(result) > 16777216: raise RuntimeError("metravel-auth: request/response")
+            return response.status, result.decode()
+    except urllib.error.HTTPError as error:
+        # Error bodies can reflect credentials; downstream callers get safe data.
+        return error.code, "metravel-auth: request/response"
+    except Exception:
+        raise RuntimeError("metravel-auth: request/network") from None
+
 
 def req(method, path, data=None):
-    body = json.dumps(data).encode() if data is not None else None
-    r = urllib.request.Request(BASE + path, data=body, method=method)
-    r.add_header("Authorization", "Token " + token())
-    if body is not None:
-        r.add_header("Content-Type", "application/json")
-    try:
-        with urllib.request.urlopen(r, timeout=60) as resp:
-            return resp.status, resp.read().decode()
-    except urllib.error.HTTPError as e:
-        return e.code, e.read().decode()
+    return _authenticated(method, path, json.dumps(data).encode() if data is not None else None, "application/json" if data is not None else None)
 
 # ---- category / country maps (fetch live via `facets`) ----
 CAT = {"Поход":2,"Хайкинг":21,"Треккинг":22,"Тур выходного дня":19,
@@ -370,16 +412,21 @@ def _resize(src):
     return dst if os.path.exists(dst) else src
 
 def upload_image(file, collection, id_):
-    dst=_resize(file)
-    out=subprocess.run(["curl","-s","-w","\n%{http_code}","--max-time","120",
-        "-H","Authorization: Token "+token(),
-        "-F","file=@"+dst+";type=image/jpeg","-F","collection="+collection,"-F","id="+str(id_),
-        BASE+"/upload"],capture_output=True,text=True).stdout
-    p=out.rsplit("\n",1); body=p[0]; code=p[1] if len(p)>1 else "?"
-    url=None
-    try: url=json.loads(body).get("url")
-    except: pass
-    return code,url
+    import secrets
+    dst = _resize(file)
+    boundary = "metravel-" + secrets.token_hex(18)
+    filename = os.path.basename(dst).replace('"', '%22').replace('\r', '%0D').replace('\n', '%0A')
+    fields = [("collection", collection), ("id", str(id_))]
+    parts = []
+    for name, value in fields:
+        parts.append(("--" + boundary + '\r\nContent-Disposition: form-data; name="' + name + '"\r\n\r\n' + str(value) + '\r\n').encode())
+    parts.append(("--" + boundary + '\r\nContent-Disposition: form-data; name="file"; filename="' + filename + '"\r\nContent-Type: image/jpeg\r\n\r\n').encode())
+    with open(dst, 'rb') as source: parts.append(source.read())
+    parts.append(('\r\n--' + boundary + '--\r\n').encode())
+    code, body = _authenticated("POST", "/upload", b''.join(parts), "multipart/form-data; boundary=" + boundary)
+    try: url = json.loads(body).get("url")
+    except Exception: url = None
+    return str(code), url
 
 def _hav(a,b):
     (la1,lo1),(la2,lo2)=a,b; R=6371000; p=math.pi/180

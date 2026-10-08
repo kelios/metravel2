@@ -1,4 +1,13 @@
 /**
+ * Exact media hostname compatibility, independent of connection hints below.
+ * Callers retain their own configured/current host:port and manifest rules.
+ */
+export const METRAVEL_MEDIA_HOSTS: readonly string[] = ['metravel.by', 'cdn.metravel.by']
+
+export const isMetravelMediaHostname = (hostname: string): boolean =>
+  METRAVEL_MEDIA_HOSTS.includes(String(hostname || '').toLowerCase())
+
+/**
  * #2269: единый список подсказок браузеру (`preconnect` / `dns-prefetch`) в
  * голове web-страницы и источники, ради которых они стоят.
  *

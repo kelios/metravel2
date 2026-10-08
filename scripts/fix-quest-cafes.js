@@ -21,9 +21,8 @@
  * Токен: --token=, env METRAVEL_TOKEN или ~/.metravel_token
  */
 
-const fs = require('fs')
-const os = require('os')
-const path = require('path')
+
+const { rethrowTerminalAuthError, createToolSession, TokenError  } = require('./lib/metravel-tool-session');
 
 const args = process.argv.slice(2)
 const isDryRun = args.includes('--dry-run')
@@ -31,36 +30,24 @@ const apiUrlArg = args.find((a) => a.startsWith('--api-url='))
 const tokenArg = args.find((a) => a.startsWith('--token='))
 const API = apiUrlArg ? apiUrlArg.split('=')[1] : 'https://metravel.by'
 
-function resolveToken() {
-  if (tokenArg) return tokenArg.split('=').slice(1).join('=')
-  if (process.env.METRAVEL_TOKEN) return process.env.METRAVEL_TOKEN
-  try {
-    const p = path.join(os.homedir(), '.metravel_token')
-    if (fs.existsSync(p)) return fs.readFileSync(p, 'utf8').trim()
-  } catch {
-    /* ignore */
-  }
-  return null
+function createSession() {
+  return createToolSession({ origin: API, explicit: tokenArg ? tokenArg.split('=').slice(1).join('=') : undefined })
 }
-const TOKEN = resolveToken()
-if (!TOKEN && !isDryRun) {
-  console.error('Нужен токен: --token=, env METRAVEL_TOKEN или ~/.metravel_token')
-  process.exit(1)
-}
+const SESSION = createSession()
+
 
 async function apiPatch(endpoint, payload) {
   if (isDryRun) {
     console.log(`  [DRY] PATCH ${endpoint}`, JSON.stringify(payload).slice(0, 160))
     return {}
   }
-  const r = await fetch(`${API}${endpoint}`, {
+  const r = await SESSION.request(`${API}${endpoint}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', Authorization: `Token ${TOKEN}` },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
   if (!r.ok) {
-    const t = await r.text()
-    throw new Error(`PATCH ${endpoint}: HTTP ${r.status} ${t.slice(0, 300)}`)
+    throw new TokenError('response', { status: r.status })
   }
   return r.json()
 }
@@ -195,6 +182,7 @@ async function main() {
       console.log(`  OK pk ${pk} → «${payload.title}»` + (payload.lat ? ` @ ${payload.lat},${payload.lng}` : ' (только текст)'))
       ok++
     } catch (e) {
+      rethrowTerminalAuthError(e);
       console.error(`  ❌ pk ${pk}: ${e.message}`)
     }
   }

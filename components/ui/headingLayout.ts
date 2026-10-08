@@ -10,7 +10,8 @@ import { defineBreakpointLayout, type BreakpointLayout } from '@/utils/breakpoin
  * объект: React берёт их через `headingTypography(level, tier)`, critical CSS
  * выпускает ступени `tablet`/`largeTablet`/`desktop` как `@media (min-width)` по
  * возрастанию (позднее правило побеждает), а узкая ступень — то, что рисует
- * статический HTML, — совпадает с телефоном и с native.
+ * статический HTML, — совпадает с телефоном. Native выбирает те же ступени
+ * по живой ширине окна.
  *
  * Ступени повторяют прежнюю логику `fluidSize` из `Typography.tsx` один в один,
  * включая `largeTablet` (1024–1279) с долей 0,35: вид страниц не меняется.

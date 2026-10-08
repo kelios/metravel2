@@ -337,3 +337,15 @@ Meaning: runtime config diagnostics report failed/missing while lint+smoke are o
 | suiteBaselineRecommendation | INVALID_GH_COMMAND_EMPTY | SUITE_INVALID_GH_COMMAND_EMPTY |
 | suiteBaselineRecommendation | INVALID_GH_COMMAND_CONTENT | SUITE_INVALID_GH_COMMAND_CONTENT |
 <!-- validator-error-codes-table:end -->
+
+### Operator token governance (#2280)
+
+`npm run guard:metravel-token` runs in lint/precommit; the JS/Python consumers and
+active guidance may not read token caches directly or capture issuer stdout.
+Focused checks: `metravelToken`, `guard-metravel-token`, `questTranslateCli`,
+`update-quest-content-finale`, `report-travel-404` and token bridge tests. CLI
+regressions use an explicit isolated test preload for ephemeral loopback servers;
+this does not relax operational origin/TLS/redirect rules. Production acceptance
+uses `apply-quest-patches --dry-run --auth-check` with an expired readonly fixture
+and separate private OS temporary cache directory. Never invalidate, log out or
+poison a working operator/browser/MCP cache; content writes must remain zero.

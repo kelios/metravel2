@@ -118,8 +118,7 @@ NODE_TLS_REJECT_UNAUTHORIZED=0 node scripts/quest-geocheck.js
      (скилл `metravel-quest`);
    - квест на проде → `scripts/apply-quest-patches.js` (`PATCH /api/quest-steps/<id>/`).
      Токен из `~/.metravel_token`; если он невалиден (HTTP 401) — взять свежий
-     логином e2e: `METRAVEL_TOKEN=$(node scripts/get-quest-token.js)
-     node scripts/apply-quest-patches.js .quest-audit/patches-geo-<id>.json`
+     логином e2e: `node scripts/apply-quest-patches.js --apply .quest-audit/patches-geo-<id>.json`
      (сначала `--dry-run`). Токен/пароль не логировать. Применяют
      `quest-editor`/владелец, либо тикет на борде при необходимости полевой
      проверки координат.
@@ -133,3 +132,5 @@ NODE_TLS_REJECT_UNAUTHORIZED=0 node scripts/quest-geocheck.js
 - `metravel-quest` — создание квеста; вызывай geocheck перед заливкой (шаг 4).
 - `scripts/audit-quest-coordinates.js` — более старый forward-only аудит
   (geocheck его расширяет reverse-геокодом и подсказками координат).
+
+Токены операторских инструментов: `docs/DEVELOPMENT.md` → «Operator token sessions».

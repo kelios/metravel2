@@ -726,7 +726,7 @@ prod→data-file обязан это учитывать, иначе всё пр�
 6. **При явно разрешённой публикации залей выбранные квесты на прод:**
    `node scripts/migrate-quest-from-file.js --source-file=… --api-url=https://metravel.by`
    (токен из `~/.metravel_token` или `--token=`; если протух (HTTP 401) — свежий
-   логином e2e: `METRAVEL_TOKEN=$(node scripts/get-quest-token.js) node scripts/…`).
+   логином e2e: `node scripts/…`: QA104 resolver восстанавливает свою сессию автоматически).
 7. **Проверь GET-ом** `GET /api/quests/by-quest-id/<quest_id>/`: на месте
    `intro`, все `steps`, `finale`, корректные типы `answer_pattern`, координаты,
    `mapsUrl`, `poi_info` на музеях/опциональных, теги (детские — возрастной тир).
@@ -799,3 +799,5 @@ prod→data-file обязан это учитывать, иначе всё пр�
   `quest_id`. Проверка ответов — `utils/questAdapters.ts` (`buildAnswerChecker`);
   посетительская информация шага — `poiInfo` (`adaptPoiInfo`) в
   `components/quests/questWizardStepCard.tsx`.
+
+Токены операторских инструментов: `docs/DEVELOPMENT.md` → «Operator token sessions».

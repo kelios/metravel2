@@ -4,29 +4,20 @@
  * A caught detail GET used to print a warning and continue without incrementing
  * the final failure count, so an entirely unreadable batch exited 0.
  */
-import http from 'http'
+jest.mock('@/scripts/lib/metravel-tool-session', () => ({
+  ...jest.requireActual('@/scripts/lib/metravel-tool-session'),
+  publicRequest: jest.fn(),
+}))
+const { publicRequest } = require('@/scripts/lib/metravel-tool-session')
 
 const { getJson, listTravels, main } = require('@/scripts/seo-fix-links')
 
 describe('seo-fix-links batch exit contract', () => {
   it('rejects a JSON error response instead of treating it as a travel detail', async () => {
-    const server = http.createServer((_request, response) => {
-      response.writeHead(503, { 'Content-Type': 'application/json' })
-      response.end(JSON.stringify({ detail: 'upstream unavailable' }))
-    })
-    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
-    const address = server.address()
-    if (!address || typeof address === 'string') throw new Error('test server did not bind to TCP')
-
-    try {
-      await expect(getJson('/travels/41/', `http://127.0.0.1:${address.port}/api`)).rejects.toThrow(
-        'HTTP 503',
-      )
-    } finally {
-      await new Promise<void>((resolve, reject) =>
-        server.close((error) => (error ? reject(error) : resolve())),
-      )
-    }
+    const base = 'https://metravel.by/api'
+    publicRequest.mockResolvedValueOnce({ ok: false, status: 503 })
+    await expect(getJson('/travels/41/', base)).rejects.toThrow('HTTP 503')
+    expect(publicRequest).toHaveBeenCalledWith(base, `${base}/travels/41/`)
   })
 
   it('counts caught detail GET failures and prints the summary before failing', async () => {

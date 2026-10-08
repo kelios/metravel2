@@ -15,9 +15,8 @@
  * Токен: --token=, env METRAVEL_TOKEN или ~/.metravel_token (нужен для --apply)
  */
 
+const { rethrowTerminalAuthError, createToolSession, TokenError, formatTokenError  } = require('./lib/metravel-tool-session');
 const fs = require('fs')
-const os = require('os')
-const path = require('path')
 
 const {
   UsageError,
@@ -52,6 +51,9 @@ const CLI_SPEC = {
   selection: 'patch files',
   flags: {
     'dry-run': { type: 'boolean' },
+    'auth-check': { type: 'boolean' },
+    'token-file': { type: 'string' },
+    'cache-dir': { type: 'string' },
     apply: { type: 'boolean' },
     'api-url': { type: 'string', default: 'https://metravel.by', stripTrailingSlash: true },
     token: { type: 'string', valueName: 'a token' },
@@ -104,17 +106,7 @@ const TYPES = new Set(['any', 'exact', 'exact_any', 'range', 'any_text', 'any_nu
 // рассогласование input_type и типа паттерна), поэтому её тоже надо уметь чинить.
 const INPUT_TYPES = new Set(['text', 'number'])
 
-function resolveToken(tokenArg) {
-  if (tokenArg) return tokenArg
-  if (process.env.METRAVEL_TOKEN) return process.env.METRAVEL_TOKEN
-  try {
-    const p = path.join(os.homedir(), '.metravel_token')
-    if (fs.existsSync(p)) return fs.readFileSync(p, 'utf8').trim()
-  } catch {
-    /* ignore */
-  }
-  return null
-}
+
 
 /** Патч уровня квеста: только разрешённые поля и непустой текст. */
 function validateQuest(p, file) {
@@ -169,21 +161,11 @@ function validate(p, file) {
   throw new Error(`${file} ${p.quest_id}: нет ни step_db_id, ни quest_db_id`)
 }
 
-async function apiPatch(endpoint, payload, { api, token, dryRun }) {
-  if (dryRun) {
-    console.log(`  [DRY] PATCH ${endpoint}`, Object.keys(payload).join(','))
-    return {}
-  }
-  const r = await fetch(`${api}${endpoint}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', Authorization: `Token ${token}` },
-    body: JSON.stringify(payload),
-  })
-  if (!r.ok) {
-    const t = await r.text()
-    throw new Error(`PATCH ${endpoint}: HTTP ${r.status} ${t.slice(0, 300)}`)
-  }
-  return r.json()
+async function apiPatch(endpoint, payload, { api, session, token, dryRun }) {
+ if (dryRun) { console.log('[DRY] PATCH', endpoint, Object.keys(payload).join(',')); return {}; }
+ const r = await (session || createToolSession({ origin: api, explicit: token })).request(endpoint, { method: 'PATCH', json: payload });
+ if (!r.ok) throw new TokenError('response', { status: r.status });
+ return r.json();
 }
 
 async function main() {
@@ -195,13 +177,20 @@ async function main() {
   })
 
   const dryRun = args.mode === 'dry-run'
-  const token = resolveToken(args.token)
+  let sessionOptions = { origin: args.apiUrl, explicit: args.token }
+  if (args.tokenFile || args.cacheDir) {
+    if (!args.authCheck || !args.tokenFile || !args.cacheDir) throw new UsageError('Isolated token-file/cache-dir require --auth-check')
+    const { fixtureHome, assertContained } = require('./lib/metravel-token-cache')
+    const homeDir = fixtureHome(args.cacheDir)
+    const tokenFile = assertContained(args.tokenFile, homeDir)
+    sessionOptions = { origin: args.apiUrl, homeDir, sources: [{ kind: 'file', path: tokenFile, format: 'plain' }] }
+  }
+  if (args.authCheck && !dryRun) throw new UsageError('--auth-check requires --dry-run')
+  const session = createToolSession(sessionOptions)
+  if (args.authCheck) { await session.ensureToken(); console.log('metravel-auth: ready (userId=104); content writes=0') }
   // Репетиция не ходит в сеть и токена не требует, а боевой прогон без него
   // получил бы 401 на каждом патче — это ошибка вызова, а не результат замера.
-  if (!token && !dryRun) {
-    throw new UsageError('Нужен токен: --token=, env METRAVEL_TOKEN или ~/.metravel_token')
-  }
-  const transport = { api: args.apiUrl, token, dryRun }
+  const transport = { api: args.apiUrl, session, dryRun }
 
   let ok = 0
   let failed = 0
@@ -215,7 +204,8 @@ async function main() {
         console.log(`  OK ${label}: ${Object.keys(payload).join(', ')}`)
         ok++
       } catch (e) {
-        console.error(`  FAIL ${p.quest_id}/${p.step_id ?? 'quest'}: ${e.message}`)
+        rethrowTerminalAuthError(e);
+        console.error(`  FAIL ${p.quest_id}/${p.step_id ?? 'quest'}: ${formatTokenError(e)}`)
         failed++
       }
     }
@@ -236,7 +226,6 @@ module.exports = {
   apiPatch,
   main,
   parseArgs,
-  resolveToken,
   validate,
   validateQuest,
   validateStep,

@@ -14,18 +14,11 @@
  *   [--api-url=https://metravel.by] [--token=…] [--reorder]
  */
 
-const fs = require('fs');
-const os = require('os');
+const { createToolSession, publicRequest, TokenError } = require('./lib/metravel-tool-session');
+
 const path = require('path');
 
-const {
-    UsageError,
-    parseCliArgs,
-    parseCliTokens,
-    requireNoBatchFailures,
-    requireNonEmptySelection,
-    runCli,
-} = require('./lib/cli-contract');
+const { parseCliArgs, parseCliTokens, requireNoBatchFailures, requireNonEmptySelection, runCli } = require('./lib/cli-contract');
 
 const USAGE = `Синк контента квеста из локального data-файла на прод
 
@@ -74,12 +67,7 @@ const CLI_SPEC = {
  */
 const parseArgs = (tokens) => parseCliTokens(tokens, CLI_SPEC);
 
-function resolveToken(explicit) {
-    if (explicit) return explicit;
-    if (process.env.METRAVEL_TOKEN) return process.env.METRAVEL_TOKEN;
-    try { const p = path.join(os.homedir(), '.metravel_token'); if (fs.existsSync(p)) return fs.readFileSync(p, 'utf8').trim(); } catch { /* ignore */ }
-    return null;
-}
+
 
 function dec(v) { const n = Number(v); return Number.isFinite(n) ? Number(n.toFixed(6)).toString() : '0'; }
 function serAnswer(s) { return JSON.stringify(s.answer_pattern || { type: 'any', value: '' }); }
@@ -91,21 +79,11 @@ function serAnswer(s) { return JSON.stringify(s.answer_pattern || { type: 'any',
  * падал раньше, чем кто-либо проверял, что именно попросили сделать.
  */
 function createApi({ apiBase, token, dryRun }) {
-    const authHeaders = token ? { Authorization: `Token ${token}` } : {};
-    return {
-        async get(endpoint) {
-            const r = await fetch(`${apiBase}${endpoint}`, { headers: { ...authHeaders } });
-            if (!r.ok) throw new Error(`HTTP ${r.status} GET ${endpoint}: ${await r.text()}`);
-            return r.json();
-        },
-        async patch(endpoint, payload) {
-            if (dryRun) { console.log(`  [DRY] PATCH ${endpoint}`, JSON.stringify(payload).slice(0, 120)); return {}; }
-            const headers = { 'Content-Type': 'application/json', ...authHeaders };
-            const r = await fetch(`${apiBase}${endpoint}`, { method: 'PATCH', headers, body: JSON.stringify(payload) });
-            if (!r.ok) throw new Error(`HTTP ${r.status} PATCH ${endpoint}: ${await r.text()}`);
-            return r.json();
-        },
-    };
+ const session = createToolSession({ origin: apiBase, explicit: token });
+ return {
+  async get(endpoint) { const r = await (dryRun ? publicRequest(apiBase, `${apiBase}${endpoint}`) : session.request(endpoint)); if (!r.ok) throw new TokenError('response', { status: r.status }); return r.json(); },
+  async patch(endpoint, payload) { if (dryRun) { console.log('[DRY] PATCH', endpoint, JSON.stringify(payload).slice(0,120)); return {}; } const r = await session.request(endpoint, { method: 'PATCH', json: payload }); if (!r.ok) throw new TokenError('response', { status: r.status }); return r.json(); }
+ };
 }
 
 function stepPayload(s, order) {
@@ -136,12 +114,11 @@ async function main() {
     // Поэтому order переносим ТОЛЬКО по явному --reorder (иначе затрём правильный прод-порядок).
     const doReorder = args.reorder;
 
-    const token = resolveToken(args.token);
+    const token = args.token;
     // Токен нужен только боевой записи: репетиция ничего не отправляет и обязана
     // запускаться без секрета. Проверка живёт внутри main() — на верхнем уровне
     // модуля она отрабатывала бы раньше разбора аргументов, и «нет токена»
     // отвечало бы даже на `--help`.
-    if (!token && !isDryRun) throw new UsageError('Нужен токен: --token=…, METRAVEL_TOKEN или ~/.metravel_token');
 
     // Файл читается здесь, а не при загрузке модуля: иначе опечатка в пути
     // роняла бы прогон стеком require раньше, чем кто-то проверил остальные
@@ -220,7 +197,7 @@ async function main() {
     });
 }
 
-module.exports = { CLI_SPEC, USAGE, parseArgs, createApi, resolveToken, stepPayload, main };
+module.exports = { CLI_SPEC, USAGE, parseArgs, createApi, stepPayload, main };
 
 if (require.main === module) {
     runCli(main, { name: CLI_SPEC.name, usage: USAGE });

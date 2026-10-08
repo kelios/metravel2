@@ -40,8 +40,8 @@ New travel records: Julia credentials from `.env.e2e` (`E2E_EMAIL2`), verify aut
 Never print, echo, screenshot, or commit tokens. Logs may say `token: present` or `token: missing`.
 
 - Author-bearing writes (new travel, editorial comment, gallery captions under Julia): Julia token.
-  `METRAVEL_TOKEN=$(E2E_EMAIL=$E2E_EMAIL2 E2E_PASSWORD=$E2E_PASSWORD2 node scripts/get-quest-token.js | tail -1)`
-- Body-only `seo-edit` on Julia's article preserves author; default `.secrets/metravel-token.json` / `~/.metravel_token` is Sergey (id 104) and must not create articles or post the editorial comment.
+  Use an existing valid owner1 token via METRAVEL_TOKEN/home; resolver verifies owner1 and never logs in as QA.
+- Body-only `seo-edit` on Julia's article preserves author; explicit `METRAVEL_ACTOR_ID=104` selects QA104; an unknown cache identity is never assumed and must not create articles or post the editorial comment.
 
 ## Editing Workflow
 
@@ -91,3 +91,5 @@ Return an `Article Edit Report`:
 - images generated/uploaded, if any
 - verification performed
 - unresolved blockers or rollback notes
+
+Токены операторских инструментов: `docs/DEVELOPMENT.md` → «Operator token sessions».

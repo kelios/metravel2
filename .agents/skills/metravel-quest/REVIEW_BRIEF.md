@@ -66,7 +66,7 @@ lat/lng. Задание должно быть выполнимо, стоя на 
 
 ## Шаг 5 — применить на прод
 `node scripts/update-quest-content.js --quest-id=<QUEST_ID> --data=scripts/.quest-review/<QUEST_ID>.json --dry-run`
-затем без `--dry-run`. (токен в `.secrets/metravel-token.json` уже есть.)
+затем без `--dry-run`. (QA104 resolver проверяет личность и обновляет только свой кеш.)
 После LIVE-прогона снимок переезжает в `scripts/.quest-review/applied/` — так и
 задумано, восстанавливать его на прежнее место не нужно.
 

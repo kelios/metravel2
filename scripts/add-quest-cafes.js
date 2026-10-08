@@ -26,9 +26,8 @@
  * Токен: --token=, env METRAVEL_TOKEN или ~/.metravel_token
  */
 
-const fs = require('fs')
-const os = require('os')
-const path = require('path')
+
+const { rethrowTerminalAuthError, createToolSession, publicRequest, TokenError  } = require('./lib/metravel-tool-session');
 
 const args = process.argv.slice(2)
 const isDryRun = args.includes('--dry-run')
@@ -36,28 +35,16 @@ const apiUrlArg = args.find((a) => a.startsWith('--api-url='))
 const tokenArg = args.find((a) => a.startsWith('--token='))
 const API = apiUrlArg ? apiUrlArg.split('=')[1] : 'https://metravel.by'
 
-function resolveToken() {
-  if (tokenArg) return tokenArg.split('=').slice(1).join('=')
-  if (process.env.METRAVEL_TOKEN) return process.env.METRAVEL_TOKEN
-  try {
-    const p = path.join(os.homedir(), '.metravel_token')
-    if (fs.existsSync(p)) return fs.readFileSync(p, 'utf8').trim()
-  } catch {
-    /* ignore */
-  }
-  return null
+function createSession() {
+  return createToolSession({ origin: API, explicit: tokenArg ? tokenArg.split('=').slice(1).join('=') : undefined })
 }
-const TOKEN = resolveToken()
-if (!TOKEN && !isDryRun) {
-  console.error('Нужен токен: --token=, env METRAVEL_TOKEN или ~/.metravel_token')
-  process.exit(1)
-}
+const SESSION = createSession()
+
 
 async function apiGet(endpoint) {
   const headers = { 'Content-Type': 'application/json' }
-  if (TOKEN) headers['Authorization'] = `Token ${TOKEN}`
-  const r = await fetch(`${API}${endpoint}`, { headers })
-  if (!r.ok) throw new Error(`GET ${endpoint}: HTTP ${r.status}`)
+  const r = await (isDryRun ? publicRequest(API, `${API}${endpoint}`, { headers }) : SESSION.request(`${API}${endpoint}`, { headers }))
+  if (!r.ok) throw new TokenError('response', { status: r.status })
   return r.json()
 }
 
@@ -66,14 +53,13 @@ async function apiPost(endpoint, payload) {
     console.log(`  [DRY] POST ${endpoint}`, JSON.stringify(payload).slice(0, 180))
     return { id: 0 }
   }
-  const r = await fetch(`${API}${endpoint}`, {
+  const r = await SESSION.request(`${API}${endpoint}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Token ${TOKEN}` },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
   if (!r.ok) {
-    const t = await r.text()
-    throw new Error(`POST ${endpoint}: HTTP ${r.status} ${t.slice(0, 300)}`)
+    throw new TokenError('response', { status: r.status })
   }
   return r.json()
 }
@@ -228,6 +214,7 @@ async function main() {
       console.log(`  ✅ ${questId} (pk ${questDbId}): «${cafe.title}» @ ${dec(cafe.lat)},${dec(cafe.lng)} order ${order}`)
       ok++
     } catch (e) {
+      rethrowTerminalAuthError(e);
       console.error(`  ❌ ${questId}: ${e.message}`)
     }
   }

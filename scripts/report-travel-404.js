@@ -49,11 +49,11 @@
 // Это сигнал для крона; всё остальное — код 0.
 //
 // Прод читается строго read-only: `docker logs` без записи на хост.
+const { rethrowTerminalAuthError, createToolSession, publicRequest, toolTokenSources, readTokenCandidate, TokenError, formatTokenError  } = require('./lib/metravel-tool-session');
 const fs = require('fs')
 const path = require('path')
 const https = require('https')
 const { execFileSync } = require('child_process')
-const { readResponseText, withAcceptEncoding } = require('./lib/httpText')
 
 const DEFAULT_ORIGIN = 'https://metravel.by'
 // 'auto' = резолвить имя на проде. Compose v2 при пересоздании переименовал
@@ -64,8 +64,6 @@ const DEFAULT_CONTAINER = 'auto'
 const DEFAULT_SINCE = '24h'
 const MANIFEST_FILE = path.join(__dirname, 'seo-redirects.json')
 const KNOWN_FILE = path.join(__dirname, 'seo-404-known.json')
-const SECRETS_TOKEN_FILE = path.join(__dirname, '..', '.secrets', 'mcp_token.json')
-const HOME_TOKEN_FILE = path.join(process.env.HOME || '', '.metravel_token')
 
 // Аргументы контейнера и окна уходят в удалённый shell, поэтому допускаем
 // только заведомо безопасный алфавит вместо экранирования.
@@ -419,23 +417,9 @@ async function verifyLive(report, { origin, probe = probeStatus } = {}) {
  * .secrets/mcp_token.json — там лежит рабочий staff-токен этой машины.
  * Значение никогда не печатается: наружу уходит только источник.
  */
-function readToken({ env = process.env, readFile = (p) => fs.readFileSync(p, 'utf8') } = {}) {
-  const fromEnv = String(env.METRAVEL_TOKEN || '').trim()
-  if (fromEnv) return { token: fromEnv, source: 'env METRAVEL_TOKEN' }
-  try {
-    const parsed = JSON.parse(readFile(SECRETS_TOKEN_FILE))
-    const token = String(parsed.token || '').trim()
-    if (token) return { token, source: '.secrets/mcp_token.json' }
-  } catch {
-    /* нет файла или он не JSON — пробуем следующий источник */
-  }
-  try {
-    const token = String(readFile(HOME_TOKEN_FILE)).trim()
-    if (token) return { token, source: '~/.metravel_token' }
-  } catch {
-    /* источников больше нет */
-  }
-  return null
+function readToken(options = {}) {
+ const token = readTokenCandidate(toolTokenSources({ ...options, order: ['env', 'mcp', 'home'] }));
+ return token ? { token, source: 'configured readonly token source' } : null;
 }
 
 /** Слаги неопубликованных статей из ответа `/api/travels/?where={"publish":0}`. */
@@ -449,25 +433,11 @@ function collectDraftSlugs(payload) {
   return drafts
 }
 
-function getJson(url, { token, timeout = 20000 } = {}) {
-  return new Promise((resolve, reject) => {
-    const headers = withAcceptEncoding({ 'User-Agent': 'metravel-404-report', Accept: 'application/json' })
-    if (token) headers.Authorization = `Token ${token}`
-    const req = https.request(url, { method: 'GET', timeout, headers }, (res) => {
-      // #1649: whole body buffered, then decoded once.
-      readResponseText(res).then((body) => {
-        if (res.statusCode !== 200) return reject(new Error(`HTTP ${res.statusCode}`))
-        try {
-          resolve(JSON.parse(body))
-        } catch (e) {
-          reject(new Error(`ответ не JSON: ${e.message}`))
-        }
-      }, reject)
-    })
-    req.on('timeout', () => req.destroy(new Error('timeout')))
-    req.on('error', reject)
-    req.end()
-  })
+async function getJson(url, { token, timeout = 15000 } = {}) {
+ const origin = new URL(url).origin;
+ const response = await (token ? createToolSession({ origin, profile: 'staff-readonly', expectedUserId: 104, sources: [{ kind: 'value', value: token }], timeoutMs: timeout }).request(url) : publicRequest(origin, url));
+ if (!response.ok) throw new TokenError('response', { status: response.status });
+ try { return await response.json(); } catch { throw new TokenError('response'); }
 }
 
 /**
@@ -778,7 +748,8 @@ async function main() {
         annotateDrafts(report, await fetchDrafts({ origin: args.origin, token: auth.token }))
         report.draftCheck = { ok: true, source: auth.source }
       } catch (e) {
-        report.draftCheck = { ok: false, reason: `API не ответил: ${e.message}` }
+        rethrowTerminalAuthError(e);
+        report.draftCheck = { ok: false, reason: `API не ответил: ${formatTokenError(e)}` }
       }
     }
   }

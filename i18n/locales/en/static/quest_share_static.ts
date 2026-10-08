@@ -20,4 +20,5 @@ export const questShareStaticResources = {
   "finaleShare.imageSaved": "Image saved",
   "finaleShare.instagramHint": "Image saved — add it to your story",
   "finaleShare.close": "Close",
+  "finaleMedia.completedCaption": "Quest complete!",
 } as const

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Platform, StyleSheet, Text, type TextProps, type TextStyle } from 'react-native';
+import { StyleSheet, Text, type TextProps, type TextStyle } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -38,14 +38,11 @@ const HEADING_A11Y_ROLES: Record<HeadingLevel, 'header'> = { 1: 'header', 2: 'he
 
 /**
  * Ступень типографики по живому брейкпоинту (#2258). Нулевой кадр до гидратации
- * (`width = 0`) и native — `narrow`: так статический HTML совпадает с телефоном,
+ * (`width = 0`) — `narrow`: так статический HTML совпадает с телефоном,
  * а более широкие ступени первому кадру отдаёт critical CSS из `HEADING_LAYOUTS`.
  *
- * Native всегда `narrow` независимо от ширины — наследственный долг #1788
- * («платформа решает режим»), прежде записанный в `LEGACY_ALLOWLIST`
- * `__tests__/config/layout-mode-governance.test.ts` (форма строки сменилась,
- * регэксп стража его больше не видит). Оставлен ради паритета с прежним
- * `minFontSize` на native; перевод native на ширину — отдельная задача.
+ * Native получает живую ширину из useResponsive и использует те же ступени,
+ * включая поворот телефона и планшета (#1788, #2332).
  */
 function resolveHeadingTier(r: {
   width?: number;
@@ -54,7 +51,6 @@ function resolveHeadingTier(r: {
   isTablet?: boolean;
   isDesktop?: boolean;
 }): HeadingTier {
-  if (Platform.OS !== 'web') return 'narrow';
   if (r.isDesktop) return 'desktop';
   const isMobile = isPhoneLayout(r);
   if (r.isTablet && !isMobile) return 'tablet';
@@ -208,6 +204,5 @@ export function Eyebrow({ color, align, style, ...props }: EyebrowProps) {
 
 // Named exports: Heading, Body, Caption, Label, Eyebrow
 // Пример импорта: import { Heading, Body } from '@/components/ui/Typography';
-
 
 

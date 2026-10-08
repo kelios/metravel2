@@ -50,9 +50,9 @@ pbpaste | node scripts/instagram-insights.js --exchange-code
 ## MeTravel API token
 
 Не копируйте token из browser localStorage: web auth может использовать
-HttpOnly-cookie, а ручное извлечение создаёт утечку. Получите token
-программным login helper из разрешённого test/author account в `.env.e2e` и
-запишите только в:
+HttpOnly-cookie, а ручное извлечение создаёт утечку. Используйте существующий валидный авторский credential (id1) через общий resolver
+(`docs/DEVELOPMENT.md` → «Operator token sessions»); author не входит через QA
+и `get-quest-token.js` выдаёт только статус QA104. Формат readonly авторского файла:
 
 ```json
 { "token": "..." }

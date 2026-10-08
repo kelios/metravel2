@@ -3,16 +3,28 @@
 // /vendor/leaflet.css, so the browser refuses the stylesheet and Leaflet popups
 // render unstyled/mispositioned. CSP `style-src` already allows unpkg.com.
 import { getOsmTileUrl } from '@/config/mapWebLayers'
+import { LEAFLET_CSS } from '@/utils/leafletCssAsset'
 
 const LEAFLET_CSS_CDN = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
 const MARKERCLUSTER_CSS_CDN = 'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css'
 
-// Attaches an onerror handler that swaps the href to a CDN copy once, so a
-// missing/misserved self-hosted file degrades to the CDN instead of breaking the map.
+// Persist state on the DOM link: the HTML bootstrap can finish both requests
+// before this module (or a readiness subscriber) is loaded.
+const observedLinks = new WeakSet<HTMLLinkElement>()
 function withCdnFallback(link: HTMLLinkElement, cdnHref: string): void {
+  if (observedLinks.has(link)) return
+  observedLinks.add(link)
+  if (!link.hasAttribute('data-css-state')) {
+    link.setAttribute('data-css-state', link.sheet ? 'loaded' : 'loading')
+  }
+  link.onload = () => link.setAttribute('data-css-state', 'loaded')
   link.onerror = () => {
-    if (link.getAttribute('data-css-fallback') === 'cdn') return
+    if (link.getAttribute('data-css-fallback') === 'cdn') {
+      link.setAttribute('data-css-state', 'failed')
+      return
+    }
     link.setAttribute('data-css-fallback', 'cdn')
+    link.setAttribute('data-css-state', 'loading')
     link.href = cdnHref
   }
 }
@@ -22,7 +34,9 @@ export function ensureLeafletCss(): boolean {
 
   try {
     const id = LEAFLET_CSS_LINK_ID
-    if (document.getElementById(id)) {
+    const existing = document.getElementById(id) as HTMLLinkElement | null
+    if (existing) {
+      withCdnFallback(existing, LEAFLET_CSS_CDN)
       ensureMarkerClusterCss()
       ensureLeafletOverrides()
       ensureTilePreconnect()
@@ -54,9 +68,9 @@ export function ensureLeafletCss(): boolean {
 
 const LEAFLET_CSS_LINK_ID = 'metravel-leaflet-css'
 const LEAFLET_FALLBACK_STYLE_SELECTOR = 'style[data-leaflet-fallback="true"]'
-const LEAFLET_CSS_READY_TIMEOUT_MS = 3000
+const LEAFLET_CSS_READY_TIMEOUT_MS = 1000
 
-let leafletCssReadyPromise: Promise<void> | null = null
+const leafletCssReadyPromises = new WeakMap<HTMLLinkElement, Promise<void>>()
 
 /**
  * Leaflet core CSS реально применён к документу (а не только вставлен `<link>`):
@@ -81,39 +95,21 @@ export function isLeafletCoreCssApplied(): boolean {
 }
 
 /**
- * Минимальная раскладка панелей/тайлов Leaflet, если leaflet.css не пришёл ни
- * с self-hosted, ни с CDN: без неё тайлы и SVG-слой лежат в обычном потоке.
+ * Use the exact pinned vendor stylesheet, rather than a second partial layout.
+ * Late vendor CSS therefore cannot add missing margins, control dimensions,
+ * typography, borders or popup geometry. Inline URLs resolve from the page, so
+ * adapt their base to the same /vendor/ directory as the self-hosted stylesheet.
  */
 function injectLeafletLayoutFallback(): void {
   if (document.querySelector(LEAFLET_FALLBACK_STYLE_SELECTOR)) return
   const style = document.createElement('style')
   style.setAttribute('data-leaflet-fallback', 'true')
-  style.textContent = [
-    '.leaflet-container{position:relative;overflow:hidden;outline:0}',
-    '.leaflet-pane,.leaflet-map-pane,.leaflet-tile-pane,.leaflet-overlay-pane,.leaflet-shadow-pane,.leaflet-marker-pane,.leaflet-tooltip-pane,.leaflet-popup-pane{position:absolute;top:0;left:0}',
-    '.leaflet-pane,.leaflet-map-pane{z-index:400}',
-    '.leaflet-tile-pane{z-index:200}',
-    '.leaflet-overlay-pane{z-index:400}',
-    '.leaflet-shadow-pane{z-index:500}',
-    '.leaflet-marker-pane{z-index:600}',
-    '.leaflet-tooltip-pane{z-index:650}',
-    '.leaflet-popup-pane{z-index:700}',
-    '.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-zoom-box,.leaflet-image-layer{position:absolute;left:0;top:0}',
-    '.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-layer{position:absolute;left:0;top:0}',
-    '.leaflet-tile{filter:inherit;visibility:inherit}',
-    '.leaflet-zoom-animated{transform-origin:0 0}',
-    '.leaflet-control-container{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none}',
-    '.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}',
-    '.leaflet-top{top:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}.leaflet-right{right:0}',
-    '.leaflet-control{position:relative;z-index:1000;pointer-events:auto;float:left;clear:both}',
-    '.leaflet-right .leaflet-control{float:right}',
-    '.leaflet-control-attribution{margin:0;padding:0 5px;font-size:11px;background:rgba(255,255,255,0.7)}',
-  ].join('\n')
+  style.textContent = LEAFLET_CSS.replace(/url\(images\//g, 'url(/vendor/images/')
   document.head.appendChild(style)
 }
 
 export interface WhenLeafletCssReadyOptions {
-  /** Верхняя граница ожидания; дальше подкладывается минимальная раскладка. */
+  /** Верхняя граница ожидания (не более 1000 ms); дальше применяется vendor CSS. */
   timeoutMs?: number
   /**
    * В Jest/JSDOM внешние стили не грузятся: по умолчанию сразу подкладываем
@@ -130,7 +126,7 @@ export interface WhenLeafletCssReadyOptions {
  *
  * Вставляет стили (как `ensureLeafletCss`) и резолвится, когда leaflet.css
  * применён (load self-hosted или CDN-фолбэка) либо по таймауту — тогда с
- * минимальной раскладкой. Никогда не реджектится: CSS не должен ронять карту.
+ * полной vendor-раскладкой. Никогда не реджектится: CSS не должен ронять карту.
  */
 export function whenLeafletCssReady(options: WhenLeafletCssReadyOptions = {}): Promise<void> {
   const { timeoutMs = LEAFLET_CSS_READY_TIMEOUT_MS, waitInTestEnv = false } = options
@@ -140,54 +136,47 @@ export function whenLeafletCssReady(options: WhenLeafletCssReadyOptions = {}): P
   if (isLeafletCoreCssApplied()) return Promise.resolve()
 
   const isTestEnv = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test'
-  if (isTestEnv && !waitInTestEnv) {
-    injectLeafletLayoutFallback()
-    return Promise.resolve()
-  }
-
-  if (leafletCssReadyPromise) return leafletCssReadyPromise
-
   const link = document.getElementById(LEAFLET_CSS_LINK_ID) as HTMLLinkElement | null
-  if (!link) {
+  const state = link?.getAttribute('data-css-state')
+  if ((isTestEnv && !waitInTestEnv) || !link || state === 'failed' || state === 'loaded') {
+    // A load without core rules is also terminal (e.g. wrong stylesheet content).
     injectLeafletLayoutFallback()
     return Promise.resolve()
   }
 
-  leafletCssReadyPromise = new Promise<void>((resolve) => {
-    let settled = false
-    // Первую ошибку self-hosted обрабатывает withCdnFallback (href → CDN);
-    // ошибка CDN-копии — финальная: раскладка сразу, без ожидания таймаута.
-    let errorsUntilFinal = link.getAttribute('data-css-fallback') === 'cdn' ? 1 : 2
+  const pending = leafletCssReadyPromises.get(link)
+  if (pending) return pending
 
+  const deadline = Number.isFinite(timeoutMs)
+    ? Math.min(LEAFLET_CSS_READY_TIMEOUT_MS, Math.max(0, timeoutMs))
+    : LEAFLET_CSS_READY_TIMEOUT_MS
+  const promise = new Promise<void>((resolve) => {
     const finish = () => {
-      if (settled) return
-      settled = true
       clearTimeout(timer)
       link.removeEventListener('load', onLoad)
       link.removeEventListener('error', onError)
-      leafletCssReadyPromise = null
+      leafletCssReadyPromises.delete(link)
       resolve()
     }
-    // load приходит и для CDN-копии: onerror в withCdnFallback меняет href.
     function onLoad() {
-      if (isLeafletCoreCssApplied()) finish()
+      if (!isLeafletCoreCssApplied()) injectLeafletLayoutFallback()
+      finish()
     }
-    function onError() {
-      errorsUntilFinal -= 1
-      if (errorsUntilFinal > 0) return
+    const onError = () => {
+      if (link.getAttribute('data-css-state') !== 'failed') return
       injectLeafletLayoutFallback()
       finish()
     }
 
-    link.addEventListener('load', onLoad)
-    link.addEventListener('error', onError)
     const timer = setTimeout(() => {
       if (!isLeafletCoreCssApplied()) injectLeafletLayoutFallback()
       finish()
-    }, timeoutMs)
+    }, deadline)
+    link.addEventListener('load', onLoad)
+    link.addEventListener('error', onError)
   })
-
-  return leafletCssReadyPromise
+  leafletCssReadyPromises.set(link, promise)
+  return promise
 }
 
 function ensureMarkerClusterCss(): void {
@@ -199,6 +188,8 @@ function ensureMarkerClusterCss(): void {
     link.href = '/vendor/MarkerCluster.css'
     withCdnFallback(link, MARKERCLUSTER_CSS_CDN)
     document.head.appendChild(link)
+  } else {
+    withCdnFallback(document.getElementById(id) as HTMLLinkElement, MARKERCLUSTER_CSS_CDN)
   }
 
   if (document.getElementById('metravel-markercluster-overrides')) return
@@ -310,6 +301,12 @@ function getLeafletOverridesCSS(): string {
     '.leaflet-popup-close-button{width:32px!important;height:32px!important;border-radius:999px!important;margin:6px!important;color:var(--color-textMuted)!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}',
     '.leaflet-popup-close-button:hover{background:var(--color-backgroundTertiary)!important;color:var(--color-text)!important}',
     '.leaflet-control{z-index:800!important}',
+    // Reserve complete default credit before deferred base-layer attachment.
+    // Two 1.35em lines plus the existing 4px padding keep the prefix-only
+    // and complete OSM credit equally tall when a narrow map wraps the text.
+    // The corner is constrained by its own map, including embedded narrow maps.
+    '.leaflet-container .leaflet-bottom{max-width:100%}',
+    '.leaflet-container .leaflet-control-attribution{box-sizing:border-box!important;width:220px;max-width:100%;min-height:calc(2.7em + 4px);font-family:"Helvetica Neue",Arial,Helvetica,sans-serif!important;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}',
     '.leaflet-control-attribution{z-index:900!important;margin-bottom:4px!important;padding:2px 6px!important;border-radius:10px!important;font-size:11px!important;line-height:1.35!important;color:var(--color-textMuted)!important;background:rgba(255,255,255,0.88)!important}',
     'html[data-theme="dark"] .leaflet-control-attribution{background:rgba(42,42,42,0.88)!important}',
     '.leaflet-control-attribution a{color:var(--color-textMuted)!important}',

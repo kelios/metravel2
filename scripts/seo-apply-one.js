@@ -22,13 +22,11 @@
  *   - Editor post  → METRAVEL_EDITOR_TOKEN env or ~/.metravel_editor_token
  */
 
+const { rethrowTerminalAuthError, createToolSession, publicRequest, TokenError, parseResponseJson  } = require('./lib/metravel-tool-session');
 const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const https = require('https');
+
 const seoEdit = require('./seo-edit');
 const { parseCliArgs, runCli } = require('./lib/cli-contract');
-const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
 const { TextCorruptionError } = require('./lib/textIntegrity');
 
 const API = (process.env.METRAVEL_API || 'https://metravel.by/api').replace(/\/+$/, '');
@@ -70,45 +68,19 @@ let ID = null;
 let FAQ_FILE = '';
 let COMMENT_FILE = '';
 
-function loadToken(envName, fileName) {
-  if (process.env[envName]) return process.env[envName].trim();
-  const p = path.join(os.homedir(), fileName);
-  if (fs.existsSync(p)) return fs.readFileSync(p, 'utf8').trim();
-  return null;
-}
-const AUTHOR_TOKEN = loadToken('METRAVEL_TOKEN', '.metravel_token');
-const EDITOR_TOKEN = loadToken('METRAVEL_EDITOR_TOKEN', '.metravel_editor_token');
 
-function request(method, url, body, token) {
-  return new Promise((resolve, reject) => {
-    const opts = {
-      method,
-      timeout: 60000,
-      headers: { 'Cache-Control': 'no-cache' },
-      rejectUnauthorized: false,
-    };
-    if (token) opts.headers.Authorization = `Token ${token}`;
-    if (body) {
-      opts.headers['Content-Type'] = 'application/json; charset=utf-8';
-      opts.headers['Content-Length'] = Buffer.byteLength(body);
-    }
-    opts.headers = withAcceptEncoding(opts.headers);
-    const req = https.request(url, opts, (res) => {
-      // #1649: whole body buffered, then decoded once — accumulating
-      // `buf += chunk` decoded every transport chunk on its own.
-      readResponseText(res).then((text) => resolve({ status: res.statusCode, body: text }), reject);
-    });
-    req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error(`timeout ${url}`)); });
-    if (body) req.write(body);
-    req.end();
-  });
+const AUTHOR_TOKEN = { request: (...args) => createToolSession({ origin: API, profile: 'owner', expectedUserId: 1 }).request(...args) };
+const EDITOR_TOKEN = { request: (...args) => createToolSession({ origin: API, profile: 'editor', expectedUserId: EDITOR_USER_ID, order: ['editorEnv', 'editorHome'] }).request(...args) };
+
+async function request(method, url, body, session) {
+ const r = await (session ? session.request(url, { method, body, headers: { 'Content-Type': 'application/json; charset=utf-8' } }) : publicRequest(API, url, { method, body }));
+ return { status: r.status, body: await r.text() };
 }
 
 async function getJson(url, token) {
   const { status, body } = await request('GET', url, null, token);
-  if (status >= 300) throw new Error(`HTTP ${status} ${url}: ${body.slice(0, 200)}`);
-  try { return JSON.parse(body); } catch { return null; }
+  if (status >= 300) throw new TokenError('response', { status: status });
+  try { return parseResponseJson(body); } catch { return null; }
 }
 
 async function apply() {
@@ -139,7 +111,7 @@ async function apply() {
       JSON.stringify(payload),
       AUTHOR_TOKEN
     );
-    if (put1.status >= 300) throw new Error(`PUT upsert → HTTP ${put1.status}: ${put1.body.slice(0, 200)}`);
+    if (put1.status >= 300) throw new TokenError('response');
     const after = await getJson(`${API}/travels/${ID}/?_cb=${Date.now()}-${ID}`);
     // #1649: mangled UTF-8 moves the length by one character and passes every
     // guard below, so the round trip is checked for it explicitly.
@@ -161,7 +133,7 @@ async function apply() {
     });
     if (problems.length) {
       const revert = seoEdit.buildUpsertPayload(detail, { description: oldDesc, meta: detail.meta_description });
-      await request('PUT', `${API}/travels/upsert/`, JSON.stringify(revert), AUTHOR_TOKEN).catch(() => {});
+      await request('PUT', `${API}/travels/upsert/`, JSON.stringify(revert), AUTHOR_TOKEN).catch((authError) => { rethrowTerminalAuthError(authError);});
       throw new Error(`FAQ REGRESSION ${ID}: ${problems.join('; ')}`);
     }
     result.faq = 'applied';
@@ -184,8 +156,8 @@ async function apply() {
       JSON.stringify({ travel_id: ID, text }),
       EDITOR_TOKEN
     );
-    if (post.status >= 300) throw new Error(`POST comment → HTTP ${post.status}: ${post.body.slice(0, 200)}`);
-    try { result.commentId = JSON.parse(post.body).id; } catch { /* ignore */ }
+    if (post.status >= 300) throw new TokenError('response');
+    try { result.commentId = parseResponseJson(post.body).id; } catch { /* ignore */ }
     result.comment = 'posted';
   }
 

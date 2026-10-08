@@ -3,6 +3,7 @@ import sanitizeHtml, { Attributes } from 'sanitize-html'
 import { buildPrintImageUrl, PRINT_IMAGE_INLINE_WIDTH } from '@/utils/printImageUrl'
 import { normalizeQuillListMarkup } from '@/utils/richTextLists'
 import { isWeservImageUrl, unwrapWeservImageUrl } from '@/utils/weservImageUrl'
+import { isMetravelMediaHostname } from '@/utils/webResourceHints'
 
 const ALLOWED_IFRAME_HOSTS = [
   'youtube.com',
@@ -137,7 +138,7 @@ function rewriteLocalImageUrl(value: string, options?: { preferConfiguredFirstPa
       /^192\.168\./.test(host) ||
       /^10\./.test(host) ||
       /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
-    const isFirstPartyHost = host === 'metravel.by' || host === 'cdn.metravel.by' || host === 'api.metravel.by'
+    const isFirstPartyHost = isMetravelMediaHostname(host)
 
     if (isFirstPartyHost && parsed.protocol === 'http:') {
       parsed.protocol = 'https:'
@@ -150,10 +151,12 @@ function rewriteLocalImageUrl(value: string, options?: { preferConfiguredFirstPa
         const target = new URL(preferredOrigin)
         parsed.protocol = target.protocol
         parsed.host = target.host
+        parsed.port = target.port
         return parsed.toString()
       }
       parsed.protocol = 'https:'
       parsed.host = 'metravel.by'
+      parsed.port = ''
       return parsed.toString()
     }
   } catch {
@@ -233,12 +236,15 @@ function normalizeRichImageSrc(value?: string, options?: { preferConfiguredFirst
     const hostWithPort = rewrittenUrl.host.toLowerCase()
     const configuredFirstPartyHost = getConfiguredFirstPartyHost()
     if (
-      host === 'metravel.by' ||
-      host === 'cdn.metravel.by' ||
-      host === 'api.metravel.by' ||
+      isMetravelMediaHostname(host) ||
       (configuredFirstPartyHost && hostWithPort === configuredFirstPartyHost)
     ) {
-      return buildPrintImageUrl(cleanRewritten, PRINT_IMAGE_INLINE_WIDTH)
+      // api.metravel.by is no longer an implicit alias. Preserve its previous
+      // resize behavior only when this exact host:port is explicitly configured;
+      // other configured origins keep their existing local/media behavior.
+      return buildPrintImageUrl(cleanRewritten, PRINT_IMAGE_INLINE_WIDTH, {
+        configuredFirstPartyHost: host === 'api.metravel.by' ? configuredFirstPartyHost : null,
+      })
     }
 
     // #1163: чужая картинка отдаётся как есть. Ресайз через `images.weserv.nl` убран:
@@ -284,7 +290,7 @@ function normalizeUrl(value?: string) {
     const url = new URL(value, 'https://metravel.by')
     if (!ALLOWED_SCHEMES.includes(url.protocol.replace(':', ''))) return undefined
     const host = url.hostname.toLowerCase()
-    const isFirstPartyHost = host === 'metravel.by' || host === 'cdn.metravel.by' || host === 'api.metravel.by'
+    const isFirstPartyHost = isMetravelMediaHostname(host)
     if (isFirstPartyHost && url.protocol === 'http:') {
       url.protocol = 'https:'
     }

@@ -54,6 +54,33 @@ describe('mapHeadBootstrap', () => {
     expect(script).not.toContain('__metravelMountMapShellTile =')
   })
 
+  it('persists terminal CSS states before runtime readiness listeners exist', () => {
+    window.history.replaceState({}, '', '/map')
+    document.head.innerHTML = ''
+    try {
+      new Function(buildMapHeadBootstrapScript())()
+      for (const id of ['metravel-leaflet-css', 'metravel-markercluster-css']) {
+        const link = document.getElementById(id) as HTMLLinkElement
+        expect(link.getAttribute('data-css-state')).toBe('loading')
+        link.dispatchEvent(new Event('error'))
+        expect(link.getAttribute('data-css-state')).toBe('loading')
+        expect(link.getAttribute('data-css-fallback')).toBe('cdn')
+        const cdn = link.href
+        link.dispatchEvent(new Event('error'))
+        expect(link.getAttribute('data-css-state')).toBe('failed')
+        expect(link.href).toBe(cdn)
+        // A genuinely late successful load may still apply the pinned CSS.
+        link.dispatchEvent(new Event('load'))
+        expect(link.getAttribute('data-css-state')).toBe('loaded')
+      }
+      new Function(buildMapHeadBootstrapScript())()
+      expect(document.querySelectorAll('link#metravel-leaflet-css')).toHaveLength(1)
+    } finally {
+      document.head.innerHTML = ''
+      window.history.replaceState({}, '', '/')
+    }
+  })
+
   it('starts zero tile requests before runtime fit and keeps one preconnect', () => {
     window.history.replaceState({}, '', '/map')
     document.head.innerHTML = ''

@@ -19,10 +19,11 @@
 // Meta from a temporary tunnel to this machine (see servePublicly).
 
 const crypto = require('crypto')
+const { createToolSession, TokenError  } = require('./lib/metravel-tool-session');
 const fs = require('fs')
 const http = require('http')
 const path = require('path')
-const { execFileSync, spawn } = require('child_process')
+const { spawn } = require('child_process');
 const { GRAPH, GRAPH_VERSION, gget, graphUrl, loadToken, redact } = require('./lib/instagramGraph')
 
 const SITE = 'https://metravel.by'
@@ -80,9 +81,9 @@ async function hostImage(file, siteToken) {
   form.append('file', new File([fs.readFileSync(file)], path.basename(file), { type }))
   form.append('collection', 'gallery')
   form.append('id', String(SLIDES_TRAVEL_ID))
-  const res = await fetch(`${SITE}/api/upload`, { method: 'POST', headers: { Authorization: `Token ${siteToken}` }, body: form })
+  const res = await siteToken.request('/api/upload', { method: 'POST', body: form })
   const j = await res.json().catch(() => ({}))
-  if (!res.ok || !j.url) throw new Error(`Slide upload failed for ${path.basename(file)}: HTTP ${res.status}`)
+  if (!res.ok || !j.url) throw new TokenError('response', { status: res.status })
   return j.url.replace(/^http:/, 'https:')
 }
 
@@ -99,7 +100,7 @@ async function waitUntilReady(containerId, token) {
 }
 
 async function createImageContainers(files, caption, { token, igUserId }) {
-  const siteToken = execFileSync('node', [path.join(__dirname, 'get-quest-token.js')], { encoding: 'utf8' }).trim()
+  const siteToken = createToolSession({ origin: SITE })
   const single = files.length === 1
   const ids = []
   for (const file of files) {
@@ -170,7 +171,7 @@ async function servePublicly(file) {
     })
     const url = `${origin}${route}`
     const head = await fetch(url, { method: 'HEAD' })
-    if (!head.ok || Number(head.headers.get('content-length')) !== size) throw new Error(`The tunnel serves HTTP ${head.status}, not the video.`)
+    if (!head.ok || Number(head.headers.get('content-length')) !== size) throw new TokenError('response')
     return { url, close }
   } catch (e) {
     close()
@@ -205,7 +206,7 @@ async function createReelContainer(file, caption, trial, { token, igUserId }) {
     body: fs.readFileSync(file),
   })
   const j = await res.json().catch(() => ({}))
-  if (!res.ok || j.success === false) throw new Error(`Video upload failed: HTTP ${res.status} ${redact(JSON.stringify(j)).slice(0, 200)}`)
+  if (!res.ok || j.success === false) throw new TokenError('response', { status: res.status })
   console.log(`  ${path.basename(file)} uploaded (${Math.round(size / 1e6)} MB), Instagram is processing it…`)
   return id
 }

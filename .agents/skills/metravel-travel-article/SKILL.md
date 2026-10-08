@@ -12,7 +12,7 @@ description: "Статьи-путешествия Юли: из папки фот
 0a. **Автор — только Юля (`ignatieva_julia@tut.by`, user id 1).** Все статьи
    ведутся от её имени. Перед созданием НОВОЙ статьи (`create-*-guide.js` или
    `PUT /travels/upsert/` с `id:null`) взять её токен:
-   `METRAVEL_TOKEN=$(E2E_EMAIL=$E2E_EMAIL2 E2E_PASSWORD=$E2E_PASSWORD2 node scripts/get-quest-token.js)`
+   `валидный авторский METRAVEL_TOKEN / ~/.metravel_token; resolver проверяет id=1 без входа QA`
    (аккаунт 2 в `.env.e2e` = Julia id 1). Дефолтный токен (`.secrets/metravel-token.json`,
    `E2E_EMAIL`) = Сергей id 104 — под ним статьи создавать НЕЛЬЗЯ. Автор бэк ставит
    по токену ПРИ СОЗДАНИи и не меняет при upsert/PATCH; вышло под чужим автором —
@@ -553,9 +553,9 @@ const d = await (await fetch(`https://metravel.by/api/travels/${ID}/`)).json();
 const payload = buildUpsertPayload(d, {});
 const rename = { 16243: 'Парковка у трассы S7 (Pcim)' };   // id точки: новое имя
 payload.coordsMeTravel = payload.coordsMeTravel.map(p => rename[p.id] ? { ...p, address: rename[p.id] } : p);
-await fetch('https://metravel.by/api/travels/upsert/', { method: 'PUT',
-  headers: { 'Content-Type': 'application/json', Authorization: `Token ${TOKEN}` },
-  body: JSON.stringify(payload) });
+const { bodyMaintenanceSession } = require('./scripts/lib/metravel-tool-session');
+await bodyMaintenanceSession().request('/api/travels/upsert/', {
+  method: 'PUT', json: payload });
 ```
 
 Проверка re-GET: тот же набор `travelAddress[].id`, у каждой точки прежний
@@ -565,8 +565,7 @@ await fetch('https://metravel.by/api/travels/upsert/', { method: 'PUT',
 ## Шаг 5. Запись
 
 ```bash
-METRAVEL_TOKEN=$(cat ~/.metravel_token) \
-  node scripts/seo-edit.js --id <ID> --desc-file new.html --dry-run   # сначала так
+node scripts/seo-edit.js --id <ID> --desc-file new.html --dry-run   # сначала так
 METRAVEL_TOKEN=… node scripts/seo-edit.js --id <ID> --desc-file new.html
 ```
 
@@ -600,9 +599,9 @@ const { buildUpsertPayload } = require('./scripts/seo-edit.js');
 const d = await (await fetch(`https://metravel.by/api/travels/${ID}/`)).json();
 const payload = buildUpsertPayload(d, {});
 payload.plus = '<ul><li>…</li></ul>';   // minus, recommendation — так же
-await fetch('https://metravel.by/api/travels/upsert/', {
-  method: 'PUT', headers: {'Content-Type':'application/json', Authorization:`Token ${TOKEN}`},
-  body: JSON.stringify(payload) });
+const { bodyMaintenanceSession } = require('./scripts/lib/metravel-tool-session');
+await bodyMaintenanceSession().request('/api/travels/upsert/', {
+  method: 'PUT', json: payload });
 ```
 
 ## Шаг 5a. Дата статьи = дата поездки
@@ -660,29 +659,24 @@ await fetch('https://metravel.by/api/travels/upsert/', {
 Сначала проверь, нет ли уже:
 
 ```bash
-curl -s "https://metravel.by/api/travel-comments/tree/?travel_id=<ID>"   # total_count
+curl -s "https://metravel.by/api/travel-comments/tree/?travel_id=<ID>"
 ```
 
-Есть комментарий редакции — не дублируй; правь существующий
-`PATCH /api/travel-comments/<commentId>/` c `{"text": "…"}`.
-
-Публикация (главный тред создаётся сам, если его ещё нет — `POST` с `travel_id`):
-
-```bash
-curl -X POST https://metravel.by/api/travel-comments/ \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Token $METRAVEL_TOKEN" \
-  -d '{"travel_id": <ID>, "text": "…"}'
-```
+Есть комментарий редакции — не дублируй; правь существующий через
+`editor.request('/api/travel-comments/<commentId>/', {method: 'PATCH', json: {text: commentText}})`.
+Новый комментарий создавай через `POST` с `travel_id`: главный тред создаётся
+сам, если его ещё нет.
 
 **Автор — аккаунт «Редакция metravel» (user id 120), не Юля** (решение владельца
 21.09.2026: все комментарии редакции — от редакции). Автор берётся из токена,
 поэтому для комментария нужен отдельный токен, не тот, которым правится статья:
 
-```bash
-set -a; . ./.env.e2e; set +a
-EDITORIAL_TOKEN=$(E2E_EMAIL="$APP_REVIEW_DEMO_EMAIL" E2E_PASSWORD="$APP_REVIEW_DEMO_PASSWORD" \
-  node scripts/get-quest-token.js | tail -1)
+```js
+const { createToolSession } = require('./scripts/lib/metravel-tool-session');
+const editor = createToolSession({ profile: 'editor', expectedUserId: 120,
+  order: ['editorEnv', 'editorHome'] });
+await editor.request('/api/travel-comments/', {
+  method: 'POST', json: {travel_id: ID, text: commentText} });
 ```
 
 Это постоянный reviewer-аккаунт Apple App Review (`docs/WORKFLOW_OPERATIONS.md`
@@ -738,3 +732,5 @@ GET /api/travel-comments/tree/?travel_id={id} → комментарий ред�
   фото; оставлять точкам имена-адреса («Krakowska 149», «S7») и дубли.
 - Сдавать правку с `alt="Изображение"`, пустыми `gallery[].caption` или без
   найденных связанных статей — подписи и «Что рядом» входят в любую правку.
+
+Токены операторских инструментов: `docs/DEVELOPMENT.md` → «Operator token sessions».

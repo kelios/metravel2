@@ -55,9 +55,15 @@ export function buildMapHeadBootstrapScript(envApiUrl = process.env.EXPO_PUBLIC_
       if (id === ${JSON.stringify(LEAFLET_CSS_ID)}) {
         link.setAttribute('data-metravel-leaflet-css', 'preloaded');
       }
+      link.setAttribute('data-css-state', 'loading');
+      link.onload = function() { link.setAttribute('data-css-state', 'loaded'); };
       link.onerror = function() {
-        if (link.getAttribute('data-css-fallback')) return;
+        if (link.getAttribute('data-css-fallback')) {
+          link.setAttribute('data-css-state', 'failed');
+          return;
+        }
         link.setAttribute('data-css-fallback', 'cdn');
+        link.setAttribute('data-css-state', 'loading');
         link.href = fallbackHref;
       };
       document.head.appendChild(link);

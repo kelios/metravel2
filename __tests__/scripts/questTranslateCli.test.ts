@@ -14,6 +14,7 @@ const path = require('path')
 
 const { EmptySelectionError, ExpectedFailureError, UsageError } = require('@/scripts/lib/cli-contract')
 const { RETRY_DELAYS_MS, createApi, resolveToken } = require('@/scripts/lib/questTranslation/api')
+const { createTokenSession, TokenError } = require('@/scripts/lib/metravel-token')
 const { reviewDigest } = require('@/scripts/lib/questTranslation/checks')
 const { parseArgs, run } = require('@/scripts/quest-translate')
 
@@ -38,6 +39,8 @@ let finaleStatuses: Map<string, string>
 // Правка русского источника после `prepare`: поля поверх бандла демо-квеста.
 let bundlePatch: Json
 let requests: string[]
+let identityRequests: string[]
+let uploadRefusal: { status: number; raw?: string; json?: Json } | null
 let QUESTS: typeof BASE_QUESTS
 
 const sendJson = (res: any, status: number, body: unknown) => {
@@ -68,6 +71,10 @@ const statusRows = (locale: string | null) =>
 
 const handle = (req: any, res: any, body: Json | null) => {
   const url = new URL(req.url, 'http://stub')
+  if (url.pathname === '/api/user/me/') {
+    identityRequests.push(url.pathname)
+    return sendJson(res, req.headers.authorization === `Token ${TOKEN}` ? 200 : 401, req.headers.authorization === `Token ${TOKEN}` ? { id: 104 } : { detail: 'Unauthorized' })
+  }
   requests.push(`${req.method} ${url.pathname}${url.search}`)
   const admin = req.headers.authorization === `Token ${TOKEN}`
 
@@ -106,6 +113,10 @@ const handle = (req: any, res: any, body: Json | null) => {
       steps: row.steps.map((step: Json) => ({ ...step, source_hash: 'h', stale: staleStepIds.includes(step.step_id) })),
     })
   }
+  if (uploadRefusal) {
+    if (uploadRefusal.raw !== undefined) { res.writeHead(uploadRefusal.status, { 'Content-Type': 'text/plain' }); return res.end(uploadRefusal.raw) }
+    return sendJson(res, uploadRefusal.status, uploadRefusal.json)
+  }
   const missing = sourceStepIds.filter((id) => !body!.steps.some((step: Json) => step.step_id === id))
   if (body!.status === 'published' && missing.length) {
     return sendJson(res, 400, { errors: [{ code: 'missing_steps', field: 'steps' }], missing_step_ids: missing })
@@ -141,6 +152,8 @@ beforeEach(() => {
   finaleStatuses = new Map()
   bundlePatch = {}
   requests = []
+  identityRequests = []
+  uploadRefusal = null
   QUESTS = [...BASE_QUESTS]
   logSpy = jest.spyOn(console, 'log').mockImplementation(() => {})
   jest.spyOn(console, 'error').mockImplementation(() => {})
@@ -159,7 +172,7 @@ const nodeFetch = (url: string, init: Json) =>
     const request = http.request(url, { method: init.method, headers: init.headers }, (response: any) => {
       let raw = ''
       response.on('data', (chunk: Buffer) => (raw += chunk))
-      response.on('end', () => resolve({ status: response.statusCode, text: async () => raw }))
+      response.on('end', () => resolve({ status: response.statusCode, text: async () => raw, json: async () => JSON.parse(raw) }))
     })
     request.on('error', reject)
     if (init.body) request.write(init.body)
@@ -168,7 +181,7 @@ const nodeFetch = (url: string, init: Json) =>
 
 const cli = (tokens: string[], { token = TOKEN as string | null } = {}) =>
   run(parseArgs([...tokens, '--api-url', apiUrl, '--work-dir', workDir, ...(token ? ['--token', token] : [])]), {
-    fetchImpl: nodeFetch,
+    testFixture: { origin: apiUrl, homeDir, fetchImpl: nodeFetch },
     // Токен читается из окружения и `~/.metravel_token`: тест не должен найти настоящий.
     tokenSources: { env: {}, homeDir },
   })
@@ -223,6 +236,7 @@ describe('разбор вызова', () => {
   it('без токена admin-команды не делают ни одной записи', async () => {
     await prepareAndTranslate()
     requests = []
+    identityRequests = []
     await expect(cli(['upload', ...QUEST], { token: null })).rejects.toThrow(UsageError)
     await expect(cli(['status'], { token: null })).rejects.toThrow('Нужен токен администратора')
     expect(writes()).toEqual([])
@@ -371,6 +385,7 @@ describe('upload', () => {
     edited.steps[1].answer_variants.push('orzełek')
     writeArtifact('.json', edited)
     requests = []
+    identityRequests = []
     await expect(cli(['upload', ...QUEST, '--publish'])).rejects.toThrow('другой версии перевода')
     expect(writes()).toEqual([])
     // Задание проверяющему уже от новой версии — повторная проверка возможна без ручной чистки.
@@ -441,6 +456,7 @@ describe('sweep', () => {
     await prepareLocale('en', makePolishTranslation())
     await prepareLocale('be')
     requests = []
+    identityRequests = []
     await cli(['sweep', 'demo-quest', '--json'])
     const report = printed()
     expect(report.quests).toEqual(['demo-quest'])
@@ -463,6 +479,7 @@ describe('sweep', () => {
     await cli(['sweep', 'demo-quest', '--json'])
     fs.unlinkSync(artifact('.review-task.json'))
     requests = []
+    identityRequests = []
     stdoutSpy.mockClear()
     await cli(['sweep', 'demo-quest', '--json'])
     expect(pairOf(printed(), 'pl')).toMatchObject({ status: 'published', details: ['уже опубликован на сервере'] })
@@ -516,6 +533,7 @@ describe('sweep', () => {
     writeReview(makePolishTranslation())
     bundlePatch = { title: 'Квест по Кракову: демо, новая редакция' }
     requests = []
+    identityRequests = []
     await cli(['sweep', 'demo-quest', '--json'])
     const report = printed()
     expect(pairOf(report, 'pl')).toMatchObject({ status: 'no_task', details: [expect.stringContaining('прежней версии источника')] })
@@ -569,6 +587,7 @@ describe('sweep', () => {
     writeArtifact('.json', makePolishTranslation())
     writeReview(makePolishTranslation())
     requests = []
+    identityRequests = []
     await cli(['sweep', 'demo-quest', '--json'])
     expect(pairOf(printed(), 'pl')).toMatchObject({ status: 'published', details: ['опубликован, шагов 3'] })
     expect(writes()).toEqual(['PUT /api/quests/7/translations/pl/'])
@@ -721,7 +740,52 @@ describe('next, status, city-name', () => {
   it('city-name пишет название города на локали', async () => {
     await cli(['city-name', '--city', '1', '--locale', 'pl', '--name', 'Kraków'])
     expect(cityNames.get('1:pl')).toBe('Kraków')
+    expect(identityRequests).toEqual(['/api/user/me/'])
     expect(writes()).toEqual(['PUT /api/quest-cities/1/translations/pl/'])
+  })
+})
+
+describe('injected translation session binding (TC8)', () => {
+  it.each([
+    { label: 'production session with a declared local API', identity: { origin: 'https://metravel.by', profile: 'qa104', expectedUserId: 104 } },
+    { label: 'local owner session', identity: { origin: 'http://localhost:8000', profile: 'owner', expectedUserId: 1 } },
+    { label: 'local readonly staff session', identity: { origin: 'http://localhost:8000', profile: 'staff-readonly', expectedUserId: 104 } },
+  ])('rejects $label during configuration before session or network use', ({ identity }) => {
+    const tokenSession = createTokenSession({ ...identity, homeDir, sources: [{ kind: 'value', value: TOKEN }], refreshPolicy: 'never' })
+    const request = jest.spyOn(tokenSession, 'request')
+    const ensureToken = jest.spyOn(tokenSession, 'ensureToken')
+    expect(() => createApi({ apiUrl: 'http://localhost:8000', tokenSession })).toThrow(TokenError)
+    expect(() => createApi({ apiUrl: 'http://localhost:8000', tokenSession })).toThrow('configure/configuration')
+    expect(request).not.toHaveBeenCalled()
+    expect(ensureToken).not.toHaveBeenCalled()
+    expect(requests).toEqual([])
+    expect(identityRequests).toEqual([])
+    expect(fs.readdirSync(homeDir)).toEqual([])
+  })
+
+  it.each([{ expectedUserId: 120 }, { expectedUserId: '104' }, { request: null }])('rejects inconsistent injected metadata or request capability %j', (override) => {
+    const original = createTokenSession({ origin: 'http://localhost:8000', profile: 'qa104', homeDir,
+      sources: [{ kind: 'value', value: TOKEN }], refreshPolicy: 'never' })
+    const request = jest.spyOn(original, 'request')
+    const tokenSession = { ...original, ...override }
+    expect(() => createApi({ apiUrl: 'http://localhost:8000', tokenSession })).toThrow('configure/configuration')
+    expect(request).not.toHaveBeenCalled()
+    expect(requests).toEqual([])
+    expect(identityRequests).toEqual([])
+    expect(fs.readdirSync(homeDir)).toEqual([])
+  })
+
+  it('keeps public reads and protected writes on the same fixture target with the actual QA104 session', async () => {
+    const fixture = { origin: apiUrl, homeDir }
+    const tokenSession = createTokenSession({ origin: apiUrl, profile: 'qa104', homeDir,
+      sources: [{ kind: 'value', value: TOKEN }], refreshPolicy: 'never', fixture })
+    const api = createApi({ apiUrl: `${apiUrl}/`, tokenSession, testFixture: fixture })
+    await expect(api.getBundle('demo-quest')).resolves.toMatchObject({ quest_id: 'demo-quest' })
+    await api.putCityName(1, 'pl', 'Kraków')
+    expect(cityNames.get('1:pl')).toBe('Kraków')
+    expect(identityRequests).toEqual(['/api/user/me/'])
+    expect(requests).toEqual(['GET /api/quests/by-quest-id/demo-quest/', 'PUT /api/quest-cities/1/translations/pl/'])
+    expect(fs.readdirSync(homeDir)).toEqual([])
   })
 })
 
@@ -733,7 +797,8 @@ describe('повтор запроса', () => {
       return { status, text: async () => (status === 200 ? '{"title":"ok"}' : 'Bad Gateway') }
     })
     const sleep = jest.fn(async (_ms: number) => {})
-    const api = createApi({ apiUrl: 'https://stub.test/', token: TOKEN, fetchImpl, sleep })
+    const transport = jest.fn(async (url: string, init: any) => url.endsWith('/api/user/me/') ? { status: 200, json: async () => ({ id: 104 }) } : fetchImpl(url, init))
+    const api = createApi({ apiUrl: 'https://stub.test/', token: TOKEN, testFixture: { origin: 'https://stub.test', homeDir, fetchImpl: transport }, sleep })
     await expect(api.putTranslation(7, 'pl', { title: 'ok' })).resolves.toMatchObject({ status: 200, json: { title: 'ok' } })
     expect(fetchImpl).toHaveBeenCalledTimes(3)
     expect(sleep.mock.calls.map((call) => call[0])).toEqual(RETRY_DELAYS_MS)
@@ -742,8 +807,41 @@ describe('повтор запроса', () => {
 
   it('исчерпанные повторы возвращают последний ответ как отказ, а не как успех', async () => {
     const fetchImpl = jest.fn(async (..._args: any[]) => ({ status: 503, text: async () => 'down' }))
-    const api = createApi({ apiUrl: 'https://stub.test', token: TOKEN, fetchImpl, sleep: async () => {} })
+    const transport = jest.fn(async (url: string, init: any) => url.endsWith('/api/user/me/') ? { status: 200, json: async () => ({ id: 104 }) } : fetchImpl(url, init))
+    const api = createApi({ apiUrl: 'https://stub.test', token: TOKEN, testFixture: { origin: 'https://stub.test', homeDir, fetchImpl: transport }, sleep: async () => {} })
     await expect(api.getStatus('pl')).rejects.toThrow('HTTP 503')
     expect(fetchImpl).toHaveBeenCalledTimes(RETRY_DELAYS_MS.length + 1)
+  })
+})
+
+
+describe('authenticated translation error redaction (TC5)', () => {
+  const sentinel = 'AUTH_RESPONSE_SENTINEL'
+  it.each([
+    { status: 403, raw: sentinel }, { status: 500, raw: sentinel },
+    { status: 400, raw: sentinel }, { status: 400, json: { errors: sentinel, missing_step_ids: [sentinel] } },
+    { status: 400, json: { errors: [{ code: sentinel, field: sentinel, step_id: sentinel }], missing_step_ids: [sentinel] } },
+  ])('actual upload/sweep masks reflected or malformed refusal %j', async (refusal) => {
+    await prepareAndTranslate();writeReview(makePolishTranslation())
+    uploadRefusal = refusal
+    let error: any
+    try { await cli(['upload', ...QUEST, '--publish']) } catch (caught) { error = caught }
+    expect(error).toBeInstanceOf(ExpectedFailureError)
+    expect(error.message).toContain(`HTTP ${refusal.status}`)
+    expect(error.message).not.toContain(sentinel)
+    expect(stored()).toBeUndefined()
+    stdoutSpy.mockClear()
+    await expect(cli(['sweep', 'demo-quest', '--json'])).rejects.toThrow(ExpectedFailureError)
+    const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join('') + logged()
+    expect(output).not.toContain(sentinel)
+    const report = JSON.parse(stdoutSpy.mock.calls.map((call) => String(call[0])).join(''))
+    expect(report.pairs.find((pair: Json) => pair.locale === 'pl').status).toBe('upload_failed')
+    expect(stored()).toBeUndefined()
+  })
+  it('known structural400 keeps bounded codes/fields/numeric ids but not untrusted strings', async () => {
+    await prepareAndTranslate();writeReview(makePolishTranslation())
+    uploadRefusal = { status: 400, json: { errors: [{ code: 'missing_steps', field: 'steps', message: sentinel }, { code: sentinel, field: sentinel }], missing_step_ids: [73, sentinel, '74', null] } }
+    await expect(cli(['upload', ...QUEST, '--publish'])).rejects.toThrow('сервер отклонил перевод: missing_steps (steps); missing_step_ids: 73')
+    expect(stored()).toBeUndefined()
   })
 })

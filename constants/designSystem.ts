@@ -301,6 +301,7 @@ export const DESIGN_TOKENS = {
 
     // Overlay
     overlay: colorVar('overlay', MODERN_MATTE_PALETTE.overlay),
+    mediaCaptionOverlay: colorVar('mediaCaptionOverlay', MODERN_MATTE_PALETTE.mediaCaptionOverlay),
     overlayLight: colorVar('overlayLight', MODERN_MATTE_PALETTE.overlayLight),
   },
   radii: {
@@ -862,6 +863,12 @@ export function getThemedColors(isDark: boolean) {
       'overlay',
       MODERN_MATTE_PALETTE.overlay,
       MODERN_MATTE_PALETTE_DARK.overlay,
+      isDark,
+    ),
+    mediaCaptionOverlay: themedColor(
+      'mediaCaptionOverlay',
+      MODERN_MATTE_PALETTE.mediaCaptionOverlay,
+      MODERN_MATTE_PALETTE_DARK.mediaCaptionOverlay,
       isDark,
     ),
     overlayLight: themedColor(

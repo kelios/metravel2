@@ -1,3 +1,6 @@
+import fs from 'fs'
+import { makeTempDir, removeDir } from './cli-test-utils'
+import path from 'path'
 const {
   parseArgs,
   extractTravelSlug,
@@ -319,20 +322,17 @@ describe('report-travel-404 / черновики', () => {
   })
 
   it('берёт токен из env, затем из .secrets, и не находит его на пустой машине', () => {
-    const readFile = (p: string) => {
-      if (p.endsWith('mcp_token.json')) return '{"token":"from-secrets"}'
-      throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
-    }
-    expect(readToken({ env: { METRAVEL_TOKEN: 'from-env' }, readFile })).toMatchObject({ token: 'from-env' })
-    expect(readToken({ env: {}, readFile })).toMatchObject({ token: 'from-secrets' })
-    expect(
-      readToken({
-        env: {},
-        readFile: () => {
-          throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
-        },
-      })
-    ).toBeNull()
+    const homeDir = makeTempDir('report-token-')
+    try {
+      fs.mkdirSync(path.join(homeDir, '.secrets'))
+      fs.writeFileSync(path.join(homeDir, '.secrets', 'mcp_token.json'), '{"token":"from-secrets"}')
+      const options = { homeDir, rootDir: homeDir }
+      expect(readToken({ ...options, env: { METRAVEL_TOKEN: 'from-env' } })).toMatchObject({ token: 'from-env' })
+      expect(readToken({ ...options, env: {} })).toMatchObject({ token: 'from-secrets' })
+      fs.unlinkSync(path.join(homeDir, '.secrets', 'mcp_token.json'))
+      expect(readToken({ ...options, env: {} })).toBeNull()
+    } finally { removeDir(homeDir) }
+
   })
 })
 

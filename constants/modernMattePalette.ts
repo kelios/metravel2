@@ -122,6 +122,7 @@ export const MODERN_MATTE_PALETTE = {
   // OVERLAY И МОДАЛКИ
   // ==========================================
   overlay: 'rgba(31, 31, 31, 0.4)', // Матовый overlay для модалок
+  mediaCaptionOverlay: 'rgba(0, 0, 0, 0.60)', // Белая подпись ≥4.5:1 даже поверх белого кадра
   overlayLight: 'rgba(31, 31, 31, 0.2)', // Легкий overlay
   
   // ==========================================
@@ -310,6 +311,7 @@ export const MODERN_MATTE_PALETTE_DARK = {
   // OVERLAY И МОДАЛКИ
   // ==========================================
   overlay: 'rgba(0, 0, 0, 0.60)', // Темный overlay для модалок
+  mediaCaptionOverlay: 'rgba(0, 0, 0, 0.60)', // Медиа не меняют контраст при смене темы
   overlayLight: 'rgba(0, 0, 0, 0.40)', // Легкий overlay
 
   // ==========================================

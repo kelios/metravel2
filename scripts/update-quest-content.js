@@ -24,10 +24,11 @@
 
 const { execFileSync } = require('child_process');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 
 const { QUESTS: FINALE_QUESTS } = require('./generate-quest-finale-videos.js');
+
+const { rethrowTerminalAuthError, createToolSession, publicRequest, TokenError, formatTokenError  } = require('./lib/metravel-tool-session')
 
 const args = process.argv.slice(2);
 const isDryRun = args.includes('--dry-run');
@@ -101,38 +102,31 @@ function failRun(dataPath, lines) {
     process.exit(1);
 }
 
-function resolveToken() {
-    const t = get('token');
-    if (t) return t;
-    if (process.env.METRAVEL_TOKEN) return process.env.METRAVEL_TOKEN;
-    const sec = path.resolve(__dirname, '..', '.secrets', 'metravel-token.json');
-    if (fs.existsSync(sec)) return JSON.parse(fs.readFileSync(sec, 'utf8')).token;
-    const home = path.join(os.homedir(), '.metravel_token');
-    if (fs.existsSync(home)) return fs.readFileSync(home, 'utf8').trim();
-    return null;
+function createSession() {
+  return createToolSession({ origin: API_BASE, explicit: get('token'), order: ['env', 'json', 'home'] })
 }
-const TOKEN = resolveToken();
-if (!TOKEN && !isDryRun) { console.error('❌ нет токена'); process.exit(1); }
+const SESSION = createSession();
+
 
 function decimal(v) { const n = Number(v); return Number.isFinite(n) ? Number(n.toFixed(6)).toString() : undefined; }
 function serializeAnswer(ap) { return ap ? JSON.stringify(ap) : undefined; }
 
 async function apiGet(endpoint) {
-    const r = await fetch(`${API_BASE}${endpoint}`, { headers: TOKEN ? { Authorization: `Token ${TOKEN}` } : {} });
+    const r = await (isDryRun ? publicRequest(API_BASE, `${API_BASE}${endpoint}`, { headers: {} }) : SESSION.request(`${API_BASE}${endpoint}`, { headers: {} }));
     // statusCode нужен перебору финалов: 404 там означает «нет такой записи» и
     // пропускается, а 5xx/сеть — сбой, после которого пропущенное совпадение
     // превратило бы коллизию в мнимо однозначный резолв.
-    if (!r.ok) throw Object.assign(new Error(`HTTP ${r.status} GET ${endpoint}: ${(await r.text()).slice(0, 200)}`), { statusCode: r.status });
+    if (!r.ok) throw Object.assign(new TokenError('response', { status: r.status }), { statusCode: r.status });
     return r.json();
 }
 async function apiPatch(endpoint, payload) {
     if (isDryRun) { console.log(`  [DRY] PATCH ${endpoint}`, JSON.stringify(payload).slice(0, 140)); return {}; }
-    const r = await fetch(`${API_BASE}${endpoint}`, {
+    const r = await SESSION.request(`${API_BASE}${endpoint}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Token ${TOKEN}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
     });
-    if (!r.ok) throw new Error(`HTTP ${r.status} PATCH ${endpoint}: ${(await r.text()).slice(0, 200)}`);
+    if (!r.ok) throw new TokenError('response', { status: r.status });
     return r.json();
 }
 
@@ -159,6 +153,7 @@ async function resolveFinalePk(curText, dataPath) {
         let mappedText = null;
         try { mappedText = ((await apiGet(`/api/quest-finales/${mapped}/`)).text || '').trim(); }
         catch (e) {
+          rethrowTerminalAuthError(e);
             failRun(dataPath, [
                 `Финал квеста «${QUEST_ID}» по маппингу должен лежать в pk=${mapped}, но записи нет: ${e.message}`,
                 '   Маппинг questId → finaleId в scripts/generate-quest-finale-videos.js протух — сверь его с продом.',
@@ -180,6 +175,7 @@ async function resolveFinalePk(curText, dataPath) {
         let finale = null;
         try { finale = await apiGet(`/api/quest-finales/${i}/`); }
         catch (e) {
+          rethrowTerminalAuthError(e);
             if (e.statusCode === 404) continue;
             // Пропущенный из-за сбоя pk мог быть вторым совпадением: тогда
             // коллизия выглядела бы однозначным резолвом.
@@ -299,4 +295,4 @@ async function main() {
     console.log(`\n📦 Снимок применён и убран в ${displayPath(archived)}`);
     console.log('✅ Done');
 }
-main().catch(e => { console.error('Fatal:', e.message); process.exit(1); });
+main().catch(e => { console.error('Fatal:', formatTokenError(e)); process.exit(1); });

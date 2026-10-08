@@ -52,12 +52,10 @@
  * Токен: env METRAVEL_TOKEN, иначе `.secrets/mcp_token.json`, иначе
  * `~/.metravel_token` (никогда не печатается).
  */
+const { createToolSession, publicRequest, TokenError, parseResponseJson } = require('./lib/metravel-tool-session');
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
-const https = require('https')
 const { buildUpsertPayload } = require('./seo-edit')
-const { readResponseText, withAcceptEncoding } = require('./lib/httpText')
 const { detectStoredTextCorruption } = require('./lib/textIntegrity')
 const { describeSlugMismatch } = require('./lib/travelSlug')
 const {
@@ -70,7 +68,6 @@ const {
 
 const API_BASE = (process.env.METRAVEL_API || 'https://metravel.by').replace(/\/+$/, '') + '/api'
 const BACKUP_DIR = path.join(__dirname, '.seo-backups')
-const SECRETS_TOKEN_FILE = path.join(__dirname, '..', '.secrets', 'mcp_token.json')
 
 const USAGE = `301-алиасы старых слагов travel без бэкенд-миграции — metravel.by
 
@@ -118,60 +115,19 @@ const CLI_SPEC = {
   },
 }
 
-function token() {
-  let t = process.env.METRAVEL_TOKEN
-  if (!t) {
-    try {
-      t = String(JSON.parse(fs.readFileSync(SECRETS_TOKEN_FILE, 'utf8')).token || '').trim()
-    } catch {
-      /* следующий источник */
-    }
-  }
-  if (!t) {
-    const p = path.join(os.homedir(), '.metravel_token')
-    if (fs.existsSync(p)) t = fs.readFileSync(p, 'utf8').trim()
-  }
-  if (!t) {
-    console.error('ERROR: нет токена — env METRAVEL_TOKEN, .secrets/mcp_token.json или ~/.metravel_token')
-    process.exit(1)
-  }
-  return t
-}
 
-function request(method, urlPath, data, { auth = true, followRedirect = false } = {}) {
-  return new Promise((resolve, reject) => {
-    const url = `${API_BASE}${urlPath}`
-    const body = data != null ? Buffer.from(JSON.stringify(data)) : null
-    const opts = { method, timeout: 60000, headers: {} }
-    if (auth) opts.headers.Authorization = `Token ${token()}`
-    if (body) {
-      opts.headers['Content-Type'] = 'application/json'
-      opts.headers['Content-Length'] = body.length
-    }
-    opts.headers = withAcceptEncoding(opts.headers)
-    const req = https.request(url, opts, (res) => {
-      // #1649: whole body buffered, then decoded once — accumulating
-      // `buf += chunk` decoded every transport chunk on its own.
-      readResponseText(res).then(
-        (text) => resolve({ status: res.statusCode, text, location: res.headers.location || '' }),
-        reject
-      )
-    })
-    req.on('error', reject)
-    req.on('timeout', () => {
-      req.destroy()
-      reject(new Error(`Timeout: ${url}`))
-    })
-    if (body) req.write(body)
-    req.end()
-    void followRedirect
-  })
+
+async function request(method, urlPath, data, { auth = true } = {}) {
+ const url = `${API_BASE}${urlPath}`;
+ const init = { method, headers: { 'Content-Type': 'application/json' }, body: data == null ? undefined : JSON.stringify(data) };
+ const response = await (auth ? createToolSession({ origin: API_BASE, order: ['env', 'mcp', 'home'] }).request(url, init) : publicRequest(API_BASE, url, init));
+ return { status: response.status, text: await response.text(), location: response.headers.get('location') || '' };
 }
 
 async function getTravel(id) {
   const { status, text } = await request('GET', `/travels/${id}/`)
-  if (status !== 200) throw new Error(`GET travel ${id} → HTTP ${status}`)
-  return JSON.parse(text)
+  if (status !== 200) throw new TokenError('response', { status: status })
+  return parseResponseJson(text)
 }
 
 async function putName(detail, name) {
@@ -235,7 +191,7 @@ async function resolveSlug(slug) {
   let id = null
   if (status === 200) {
     try {
-      id = JSON.parse(text).id ?? null
+      id = parseResponseJson(text).id ?? null
     } catch {
       /* тело не разобралось — id остаётся null, вызывающая сторона откажет */
     }
@@ -312,7 +268,7 @@ async function backfillOne({ id, oldSlug }, options = {}) {
   // Шаг A: статья временно уезжает на свой прежний адрес.
   const stepA = await putName(before, oldSlug)
   if (stepA.status !== 200 && stepA.status !== 201) {
-    return { status: 'failed', note: `шаг A → HTTP ${stepA.status}: ${stepA.text.slice(0, 200)}` }
+    return { status: 'failed', note: `шаг A → HTTP ${stepA.status}` }
   }
   await sleep(1000)
   const mid = await getTravel(id)
@@ -426,6 +382,7 @@ const defaultDeps = { getTravel, putName, verifyAlias, resolveSlug, saveBackup }
 
 async function main() {
   const args = parseCliArgs(process.argv, CLI_SPEC)
+  createToolSession({ origin: API_BASE });
   const dryRun = args.dryRun
 
   let entries = []

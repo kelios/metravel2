@@ -26,6 +26,8 @@ export type QuestFixtureOptions = {
   /** Числовой id квеста: под ним уходит телеметрия попыток. */
   questNumericId: number
   progressId: number
+  /** Set before navigation so the first map frame uses the requested viewport. */
+  viewport?: { width: number; height: number }
   points: QuestFixturePoint[]
 }
 
@@ -135,7 +137,7 @@ export function createQuestFixture(options: QuestFixtureOptions): QuestFixture {
     )
 
     await preacceptCookies(page)
-    await page.setViewportSize({ width: 1280, height: 900 })
+    await page.setViewportSize(options.viewport ?? { width: 1280, height: 900 })
     await seedActionConsents(page)
 
     await page.goto(`/quests/${questCity.id}/${questId}`, { waitUntil: 'domcontentloaded' })

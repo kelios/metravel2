@@ -26,6 +26,7 @@ import {
   QuestWebVideo,
 } from './questWizardMedia'
 import { translate as i18nT, translatePlural } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider'
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 
 
@@ -514,6 +515,36 @@ export function QuestFinalePanel({
   cityLat?: number
   cityLng?: number
 }) {
+  const { t } = useTranslation()
+  const mediaKey = `${questId ?? questNumericId ?? ''}:${videoUri ?? (typeof finale.video === 'string' ? finale.video : finale.video?.uri) ?? ''}:${posterUri ?? (typeof finale.poster === 'string' ? finale.poster : finale.poster?.uri) ?? ''}`
+  const mediaVisit = React.useRef({ key: mediaKey, revision: 0 })
+  if (mediaVisit.current.key !== mediaKey) {
+    mediaVisit.current = { key: mediaKey, revision: mediaVisit.current.revision + 1 }
+  }
+  const revision = mediaVisit.current.revision
+  const [playback, setPlayback] = React.useState({ revision, playing: false })
+  const onPlayingChange = React.useCallback((playing: boolean) => {
+    if (mediaVisit.current.revision === revision) setPlayback({ revision, playing })
+  }, [revision])
+  const captionCity = cityName?.trim()
+  const hasVideo = Boolean(finale.video)
+  const hasPoster = Boolean(finale.poster || posterUri)
+  const playing = playback.revision === revision && playback.playing
+  const showVideoCaption = !youtubeEmbedUri && (!hasVideo || videoOk) && !playing &&
+    (questCompleted || Boolean(captionCity))
+  const poster = hasPoster ? (
+    <ImageCardMedia
+      source={posterUri ? { uri: posterUri } : finale.poster}
+      fit="contain"
+      blurBackground
+      allowCriticalWebBlur
+      blurRadius={18}
+      style={StyleSheet.absoluteFillObject as any}
+      alt={i18nT('quests:components.quests.questWizardSections.poster_video_kvesta_c8f64bd3')}
+      testID="quest-finale-poster"
+    />
+  ) : null
+
   return (
     <View {...SCREEN_CONTENT_FIRST_PROPS} style={styles.completionScreen} testID="quest-finale-panel">
       {questFinished ? (
@@ -573,54 +604,36 @@ export function QuestFinalePanel({
             </>
           ) : null}
 
-          {finale.video && (
+          {(hasVideo || hasPoster) && (
             <View
-              style={[
-                styles.videoFrame,
-                {
-                  width: '100%',
-                  maxWidth: frameW,
-                  aspectRatio: 16 / 9,
-                },
-              ]}
+              style={[styles.videoFrame, { width: '100%', maxWidth: frameW, aspectRatio: 16 / 9 }]}
+              testID="quest-finale-media-frame"
             >
-              {Platform.OS === 'web' ? (
-                youtubeEmbedUri ? (
-                  <iframe
-                    src={youtubeEmbedUri}
-                    width="100%"
-                    height="100%"
-                    style={{ border: 'none', display: 'block' }}
-                    loading="lazy"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                    title={i18nT('quests:components.quests.questWizardSections.video_kvesta_5a8205e2')}
-                  />
-                ) : videoOk ? (
-                  <QuestWebVideo src={videoUri} poster={posterUri} onError={handleVideoError} />
-                ) : (
-                  <>
-                    {posterUri ? (
-                      <ImageCardMedia
-                        src={posterUri}
-                        fit="contain"
-                        blurBackground
-                        allowCriticalWebBlur
-                        blurRadius={18}
-                        style={StyleSheet.absoluteFillObject as any}
-                        alt={i18nT('quests:components.quests.questWizardSections.poster_video_kvesta_c8f64bd3')}
-                      />
-                    ) : null}
-                    <View style={styles.videoFallbackOverlay}>
-                      <Text style={styles.videoFallbackText}>{i18nT('quests:components.quests.questWizardSections.ne_udalos_vosproizvesti_video_poprobuyte_esc_eaa4ac08')}</Text>
-                      <Pressable onPress={handleVideoRetry} style={styles.videoRetryBtn} hitSlop={8}>
-                        <Text style={styles.videoRetryText}>{i18nT('quests:components.quests.questWizardSections.povtorit_6c2cf666')}</Text>
-                      </Pressable>
-                    </View>
-                  </>
-                )
+              {!hasVideo ? poster : Platform.OS === 'web' && youtubeEmbedUri ? (
+                <iframe
+                  src={youtubeEmbedUri}
+                  width="100%"
+                  height="100%"
+                  style={{ border: 'none', display: 'block' }}
+                  loading="lazy"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  title={i18nT('quests:components.quests.questWizardSections.video_kvesta_5a8205e2')}
+                />
+              ) : !videoOk ? (
+                <>
+                  {poster}
+                  <View style={styles.videoFallbackOverlay}>
+                    <Text style={styles.videoFallbackText}>{i18nT('quests:components.quests.questWizardSections.ne_udalos_vosproizvesti_video_poprobuyte_esc_eaa4ac08')}</Text>
+                    <Pressable onPress={() => { onPlayingChange(false); handleVideoRetry() }} style={styles.videoRetryBtn} hitSlop={8}>
+                      <Text style={styles.videoRetryText}>{i18nT('quests:components.quests.questWizardSections.povtorit_6c2cf666')}</Text>
+                    </Pressable>
+                  </View>
+                </>
+              ) : Platform.OS === 'web' ? (
+                <QuestWebVideo src={videoUri ?? (typeof finale.video === 'string' ? finale.video : finale.video?.uri)} poster={posterUri} onError={() => { if (mediaVisit.current.revision === revision) handleVideoError() }} onPlayingChange={onPlayingChange} />
               ) : (
-                <Suspense fallback={null}>
+                <Suspense fallback={poster}>
                   <NativeQuestVideoLazy
                     source={typeof finale.video === 'string' ? { uri: finale.video } : finale.video}
                     posterSource={typeof finale.poster === 'string' ? { uri: finale.poster } : finale.poster}
@@ -629,10 +642,30 @@ export function QuestFinalePanel({
                     useNativeControls
                     shouldPlay={false}
                     isLooping={false}
-                    onError={() => setVideoOk(false)}
+                    onError={() => {
+                      if (mediaVisit.current.revision === revision) setVideoOk(false)
+                    }}
+                    onPlayingChange={onPlayingChange}
                   />
                 </Suspense>
               )}
+              {showVideoCaption ? (
+                <View
+                  style={styles.videoCaption}
+                  pointerEvents="none"
+                  testID="quest-finale-video-caption"
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
+                  aria-hidden
+                >
+                  {questCompleted ? (
+                    <Text style={styles.videoCaptionTitle} numberOfLines={2}>
+                      {t('questShareStatic:finaleMedia.completedCaption')}
+                    </Text>
+                  ) : null}
+                  {captionCity ? <Text style={styles.videoCaptionCity} numberOfLines={2}>{captionCity}</Text> : null}
+                </View>
+              ) : null}
             </View>
           )}
 

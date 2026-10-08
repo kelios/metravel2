@@ -33,11 +33,9 @@
  *   - Editor poster → METRAVEL_EDITOR_TOKEN env or ~/.metravel_editor_token
  */
 
+const { rethrowTerminalAuthError, createToolSession, publicRequest, TokenError, parseResponseJson  } = require('./lib/metravel-tool-session');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
-const https = require('https');
-const http = require('http');
 
 const seoEdit = require('./seo-edit');
 const {
@@ -47,7 +45,6 @@ const {
   requireNoBatchFailures,
   runCli,
 } = require('./lib/cli-contract');
-const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
 const { TextCorruptionError, isTextCorruptionError } = require('./lib/textIntegrity');
 
 const API = (process.env.METRAVEL_API || 'https://metravel.by/api').replace(/\/+$/, '');
@@ -122,38 +119,17 @@ let FAQ_ONLY = false;
 let COMMENTS_ONLY = false;
 
 // --- tokens ---------------------------------------------------------------
-function loadToken(envName, fileName) {
-  if (process.env[envName]) return process.env[envName].trim();
-  const p = path.join(os.homedir(), fileName);
-  if (fs.existsSync(p)) return fs.readFileSync(p, 'utf8').trim();
-  return null;
-}
-const AUTHOR_TOKEN = loadToken('METRAVEL_TOKEN', '.metravel_token');
-const EDITOR_TOKEN = loadToken('METRAVEL_EDITOR_TOKEN', '.metravel_editor_token');
+
+const AUTHOR_TOKEN = { request: (...args) => createToolSession({ origin: API, profile: 'owner', expectedUserId: Number(USER_ID) }).request(...args) };
+const EDITOR_TOKEN = { request: (...args) => createToolSession({ origin: API, profile: 'editor', expectedUserId: EDITOR_USER_ID, order: ['editorEnv', 'editorHome'] }).request(...args) };
 
 // --- io --------------------------------------------------------------------
-function fetchJson(url, opts = {}) {
-  return new Promise((resolve, reject) => {
-    const mod = url.startsWith('https') ? https : http;
-    const o = { method: 'GET', timeout: 30000, headers: { 'Cache-Control': 'no-cache' }, ...opts };
-    if (mod === https) o.rejectUnauthorized = false;
-    o.headers = withAcceptEncoding(o.headers);
-    const req = mod.request(url, o, (res) => {
-      // #1649: whole body buffered, then decoded once — accumulating
-      // `buf += chunk` decoded every transport chunk on its own.
-      readResponseText(res).then((buf) => {
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-          try { resolve(buf ? JSON.parse(buf) : null); } catch { resolve(buf); }
-        } else {
-          reject(new Error(`HTTP ${res.statusCode} ${url}: ${buf.slice(0, 300)}`));
-        }
-      }, reject);
-    });
-    req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error(`Timeout ${url}`)); });
-    if (opts.body) req.write(opts.body);
-    req.end();
-  });
+async function fetchJson(url, opts = {}) {
+ const { session, ...init } = opts;
+ const response = await (session ? session.request(url, init) : publicRequest(API, url, init));
+ if (!response.ok) throw new TokenError('response', { status: response.status });
+ const text = await response.text();
+ try { return text ? parseResponseJson(text) : null; } catch { throw new TokenError('response'); }
 }
 
 async function listAuthorTravels(userId) {
@@ -183,8 +159,8 @@ async function listCommentsOnTravel(travelId) {
 async function postComment(travelId, text) {
   return fetchJson(`${API}/travel-comments/`, {
     method: 'POST',
+    session: EDITOR_TOKEN,
     headers: {
-      Authorization: `Token ${EDITOR_TOKEN}`,
       'Content-Type': 'application/json; charset=utf-8',
     },
     body: Buffer.from(JSON.stringify({ travel_id: travelId, text }), 'utf8'),
@@ -194,8 +170,8 @@ async function postComment(travelId, text) {
 async function putTravel(payload) {
   return fetchJson(`${API}/travels/upsert/`, {
     method: 'PUT',
+    session: AUTHOR_TOKEN,
     headers: {
-      Authorization: `Token ${AUTHOR_TOKEN}`,
       'Content-Type': 'application/json; charset=utf-8',
     },
     body: Buffer.from(JSON.stringify(payload), 'utf8'),
@@ -619,7 +595,7 @@ async function processArticle(listItem, log) {
         if (problems.length) {
           // attempt rollback
           const revert = seoEdit.buildUpsertPayload(detail, { description: oldDesc, meta: detail.meta_description });
-          await putTravel(revert).catch(() => {});
+          await putTravel(revert).catch((authError) => { rethrowTerminalAuthError(authError);});
           throw new Error(`REGRESSION: ${problems.join('; ')}`);
         }
         entry.faq = 'applied';
@@ -713,6 +689,7 @@ async function main() {
     try {
       await processArticle(t, log);
     } catch (e) {
+      rethrowTerminalAuthError(e);
       console.error(`  ❌ #${t.id} ${e.message}`);
       log.push({ id: t.id, name: t.name, error: e.message });
       if (isTextCorruptionError(e)) {

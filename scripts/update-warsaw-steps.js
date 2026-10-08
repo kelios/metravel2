@@ -7,9 +7,8 @@
  * NODE_TLS_REJECT_UNAUTHORIZED=0 node scripts/update-warsaw-steps.js \
  *   --api-url=https://metravel.by --token=YOUR_TOKEN [--dry-run]
  */
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
+
+const { rethrowTerminalAuthError, createToolSession, publicRequest, TokenError, formatTokenError  } = require('./lib/metravel-tool-session')
 
 const args = process.argv.slice(2);
 const isDryRun = args.includes('--dry-run');
@@ -17,34 +16,26 @@ const apiUrlArg = args.find(a => a.startsWith('--api-url='));
 const tokenArg = args.find(a => a.startsWith('--token='));
 const API_BASE = apiUrlArg ? apiUrlArg.split('=')[1] : 'https://metravel.by';
 
-function resolveToken() {
-    if (tokenArg) return tokenArg.split('=').slice(1).join('=');
-    if (process.env.METRAVEL_TOKEN) return process.env.METRAVEL_TOKEN;
-    try {
-        const p = path.join(os.homedir(), '.metravel_token');
-        if (fs.existsSync(p)) return fs.readFileSync(p, 'utf8').trim();
-    } catch { /* ignore */ }
-    return null;
+function createSession() {
+  return createToolSession({ origin: API_BASE, explicit: tokenArg ? tokenArg.split('=').slice(1).join('=') : undefined })
 }
-const TOKEN = resolveToken();
-if (!TOKEN && !isDryRun) { console.error('❌ Need token'); process.exit(1); }
+const SESSION = createSession();
+
 
 const QUESTS = require('./warsaw-quest-data.js');
 
 async function apiGet(endpoint) {
     const headers = {};
-    if (TOKEN) headers['Authorization'] = `Token ${TOKEN}`;
-    const r = await fetch(`${API_BASE}${endpoint}`, { headers });
-    if (!r.ok) throw new Error(`GET ${endpoint}: HTTP ${r.status}`);
+    const r = await (isDryRun ? publicRequest(API_BASE, `${API_BASE}${endpoint}`, { headers }) : SESSION.request(`${API_BASE}${endpoint}`, { headers }));
+    if (!r.ok) throw new TokenError('response', { status: r.status });
     return r.json();
 }
 
 async function apiPatch(endpoint, payload) {
     if (isDryRun) { console.log(`  [DRY] PATCH ${endpoint}`, JSON.stringify(payload).slice(0, 120)); return {}; }
     const headers = { 'Content-Type': 'application/json' };
-    if (TOKEN) headers['Authorization'] = `Token ${TOKEN}`;
-    const r = await fetch(`${API_BASE}${endpoint}`, { method: 'PATCH', headers, body: JSON.stringify(payload) });
-    if (!r.ok) { const t = await r.text(); throw new Error(`PATCH ${endpoint}: HTTP ${r.status} ${t.slice(0, 120)}`); }
+    const r = await SESSION.request(`${API_BASE}${endpoint}`, { method: 'PATCH', headers, body: JSON.stringify(payload) });
+    if (!r.ok) { throw new TokenError('response', { status: r.status }); }
     return r.json();
 }
 
@@ -75,10 +66,11 @@ async function main() {
                 });
                 console.log(`  ✅ ${s.step_id} (pk ${pk})`);
             } catch (e) {
+              rethrowTerminalAuthError(e);
                 console.error(`  ❌ ${s.step_id}: ${e.message}`);
             }
         }
     }
     console.log('\n✅ Done');
 }
-main().catch(e => { console.error('Fatal:', e); process.exit(1); });
+main().catch(e => { console.error('Fatal:', formatTokenError(e)); process.exit(1); });

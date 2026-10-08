@@ -10,8 +10,7 @@ description: "Финал городского квеста: текст, фина
 - **`text`** — тёплый человеческий вывод о городе/маршруте (создаётся в
   миграции квеста, см. скилл `metravel-quest`). Есть у **всех** квестов.
 - **`video_url`** + **`poster_url`** — короткое финальное видео (Ken Burns по
-  обложке квеста, ~17с, 1280×720, «Квест пройден!» + название города, **без
-  звука**) и его постер. Это отдельный пост-шаг, его легко забыть для новых
+  обложке квеста, ~17с, 1280×720, **без надписей и звука**) и его постер. Это отдельный пост-шаг, его легко забыть для новых
   квестов.
 
 «Квест без финала» на практике = **есть текст, но нет `video_url`** (новый квест
@@ -60,8 +59,9 @@ const get=u=>new Promise((r,j)=>https.get(u,x=>{let d="";x.on("data",c=>d+=c);x.
 
 1. **Найди пробелы** командой выше — выпиши `id` + `quest_id` квестов без видео.
 2. **Внеси квест в список** `scripts/generate-quest-finale-videos.js` → массив
-   `QUESTS`: `{ questId, dir (camelCase), city (подпись на видео), finaleId
-   = числовой id квеста }`. Обложка скачивается с прода автоматически.
+   `QUESTS`: `{ questId, dir (camelCase), finaleId }`. `finaleId` берётся
+   из проверенного маппинга и сверки текущего текста/медиа, не вычисляется
+   из числового id квеста. Обложка скачивается с прода автоматически.
 3. **Сгенерируй видео + постер** (нужен только `ffmpeg`, музыка не нужна —
    backend-профиль запрещает аудиодорожку):
    ```bash
@@ -73,15 +73,17 @@ const get=u=>new Promise((r,j)=>https.get(u,x=>{let d="";x.on("data",c=>d+=c);x.
    ```bash
    node scripts/upload-quest-finales.js --dry-run --quest-id=<quest_id>
    ```
-5. **При явно разрешённой публикации залей выбранный квест на прод.** Токен в `.secrets/metravel-token.json` регулярно протухает,
-   поэтому надёжнее подать свежий через env (в `ps` он не светится):
-   ```bash
-   METRAVEL_TOKEN=$(node scripts/get-quest-token.js) node scripts/upload-quest-finales.js --quest-id=<quest_id>
-   ```
-   Скрипт PATCH-ит `/api/quest-finales/<finaleId>/` и сам проверяет, что у
-   нужного `quest_id` появился `video_url`/`poster_url` (✅/❌ в выводе).
-   Без `--quest-id` зальёт все; `--posters-only` — только постеры (вкл. старые
-   квесты с уже готовым видео).
+5. **При разрешённой публикации залей только проверенные targets.** Используй
+   версию `scripts/upload-quest-finales.js`, подключённую к общему
+   `scripts/lib/metravel-token.js`: она проверяет ожидаемую identity через
+   protected `/me/` и не передаёт токен через stdout/argv. Вывод
+   `get-quest-token.js` — диагностический JSON, не токен; command substitution
+   для `METRAVEL_TOKEN` запрещён. До подключения uploader к этому resolver
+   публикация через старый CLI не является проверенным путём.
+   Для массовой замены #2207 нужен reviewed video-only manifest, исходные MP4
+   backups, проверка preimage/postimage и остановка на первой ошибке; poster,
+   текст и переводы не меняются. Заливка последовательная, с паузами и
+   checkpoint каждой пачки. UI выкатывается только после всей media серии.
 6. **Проверь GET-ом** `GET /api/quests/by-quest-id/<quest_id>/` — `finale.video_url`
    и `poster_url` непустые и ведут на S3. Видео отдаётся байт-в-байт (размер =
    локальному `finale.mp4`), а постер бэк перекодирует в WebP 1200×675 — его
@@ -99,12 +101,11 @@ const get=u=>new Promise((r,j)=>https.get(u,x=>{let d="";x.on("data",c=>d+=c);x.
 | `401 {"detail":"Invalid token."}` | схема распознана, токен протух | взять свежий: `node scripts/get-quest-token.js` |
 | `401 {"detail":"Authentication credentials were not provided."}` | заголовок не распознан (напр. `Bearer`) или его нет | вернуть схему `Token <...>` |
 
-Проверять право на запись безопасно no-op'ом (ничего не меняет, вернёт 200):
-
-```bash
-curl -s -X PATCH -H "Authorization: Token $TOKEN" -H 'Content-Type: application/json' \
-  -d '{}' -w '\nHTTP %{http_code}\n' https://metravel.by/api/quest-finales/<finaleId>/
-```
+Protected `/me/` подтверждает identity, а DRF `OPTIONS`/read-only verification
+подтверждает доступные capabilities. Публичный GET не заменяет эти проверки.
+Не делай no-op PATCH как auth-check и не выводи Authorization/token в команды
+или логи. Успешная identity-проверка не заменяет live preimage и postverify
+конкретного разрешённого media PATCH.
 
 ## Только постер (для квестов с уже готовым видео)
 
@@ -114,24 +115,21 @@ curl -s -X PATCH -H "Authorization: Token $TOKEN" -H 'Content-Type: application/
 
 ## Окружение / macOS (проверено на практике)
 
-- **Шрифты кроссплатформенны через env** (дефолт — Windows):
-  `FONT_BOLD_PATH='/System/Library/Fonts/Supplemental/Arial Bold.ttf'`,
-  `FONT_REG_PATH='/System/Library/Fonts/Supplemental/Arial.ttf'`.
-- **PIL нужен для fallback-оверлея.** `PYTHON_PATH` — любой python3, где
-  проходит `"$p" -c 'import PIL'`; на этом маке это `/opt/homebrew/bin/python3`
-  (Pillow 12, сверено 23.09.2026). Системный `/usr/bin/python3` — шим xcrun:
-  пока не принята лицензия Xcode, он падает с exit 69 и валит генератор на оверлее.
-- **Сначала проверь, что ffmpeg вообще жив:** `ffmpeg -version`. После обновления
-  x265 homebrew-сборка падает на `Library not loaded: libx265.NNN.dylib`, и тогда
-  `ffmpeg -filters` молча пуст — это читается как «нет drawtext», хотя бинарник
-  просто не стартует. Лечится `brew reinstall ffmpeg`.
-- **`ffmpeg` обязателен** (`brew install ffmpeg`). Если сборка БЕЗ `libfreetype`
-  (`ffmpeg -filters | grep drawtext` пусто → ошибка `No such filter: drawtext`) —
-  текст «Квест пройден! / <город>» рендерится в прозрачный PNG (Python PIL,
-  Arial Bold 64 @ y=h-220 + Arial 40 @ y=h-130, white + stroke black@~0.55) и
-  накладывается `overlay`-ом с `fade=in:st=12.44:d=0.8` поверх той же
-  zoompan/xfade-анимации. PNG подавать как `-loop 1 -framerate 25 -t 16.96 -i`,
-  иначе overlay виден только в кадре 0.
+- **Генераторы textless:** нужен только рабочий `ffmpeg` и `ffprobe`.
+  Fonts/PIL/drawtext не требуются. Сначала `ffmpeg -version`: сломанная
+  homebrew-сборка после обновления зависимостей должна остановить процесс.
+- **Ken Burns** сохраняет три zoompan-сегмента и два xfade. **AI** сохраняет
+  исходную анимацию, чистый стоп-кадр 4.5 секунды и финальный fade-out.
+  Не накладывай PNG, поздравление или название города на видео/постер.
+  Поздравление рисует общий UI на языке игрока, город берётся из bundle.
+- **AI без сырья:** сохрани исходный production MP4; определи визуально
+  последнюю чистую часть до вшитой надписи, декодируй/перекодируй её и проверь
+  границу до textless postprocess. Не считай `duration - 4.5` доказанной
+  границей и не делай stream-copy cut по GOP. Если чистого клипа нет —
+  останови этот target, не заменяй существующую анимацию без решения владельца.
+- **Откат:** `video_url` read-only; сохранённый URL не делает rollback рабочим.
+  До записи проверь оригинальный MP4 и возможность повторной загрузки файла.
+  После восстановления байты видео должны совпасть с backup; URL может измениться.
 - **Звука в новых финалах нет.** Backend отклоняет upload с аудиодорожкой
   (`quests/video_policy.py`, документ `docs/QUEST_FINALE_VIDEO_POLICY.md` в
   бэк-репо). Профиль ролика на фронте один —

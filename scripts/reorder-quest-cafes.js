@@ -16,9 +16,8 @@
  * Токен: --token=, env METRAVEL_TOKEN или ~/.metravel_token
  */
 
-const fs = require('fs')
-const os = require('os')
-const path = require('path')
+
+const { rethrowTerminalAuthError, createToolSession, publicRequest, TokenError  } = require('./lib/metravel-tool-session');
 
 const args = process.argv.slice(2)
 const isDryRun = args.includes('--dry-run')
@@ -37,41 +36,28 @@ const ALL_QUESTS = [
   'minsk-dvoriki', 'minsk-cipher',
 ]
 
-function resolveToken() {
-  if (tokenArg) return tokenArg.split('=').slice(1).join('=')
-  if (process.env.METRAVEL_TOKEN) return process.env.METRAVEL_TOKEN
-  try {
-    const p = path.join(os.homedir(), '.metravel_token')
-    if (fs.existsSync(p)) return fs.readFileSync(p, 'utf8').trim()
-  } catch {
-    /* ignore */
-  }
-  return null
+function createSession() {
+  return createToolSession({ origin: API, explicit: tokenArg ? tokenArg.split('=').slice(1).join('=') : undefined })
 }
-const TOKEN = resolveToken()
-if (!TOKEN && !isDryRun) {
-  console.error('Нужен токен: --token=, env METRAVEL_TOKEN или ~/.metravel_token')
-  process.exit(1)
-}
+const SESSION = createSession()
+
 
 async function apiGet(endpoint) {
   const headers = { 'Content-Type': 'application/json' }
-  if (TOKEN) headers['Authorization'] = `Token ${TOKEN}`
-  const r = await fetch(`${API}${endpoint}`, { headers })
-  if (!r.ok) throw new Error(`GET ${endpoint}: HTTP ${r.status}`)
+  const r = await (isDryRun ? publicRequest(API, `${API}${endpoint}`, { headers }) : SESSION.request(`${API}${endpoint}`, { headers }))
+  if (!r.ok) throw new TokenError('response', { status: r.status })
   return r.json()
 }
 
 async function apiPatch(pk, order) {
   if (isDryRun) return
-  const r = await fetch(`${API}/api/quest-steps/${pk}/`, {
+  const r = await SESSION.request(`${API}/api/quest-steps/${pk}/`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', Authorization: `Token ${TOKEN}` },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ order }),
   })
   if (!r.ok) {
-    const t = await r.text()
-    throw new Error(`PATCH ${pk} order=${order}: HTTP ${r.status} ${t.slice(0, 200)}`)
+    throw new TokenError('response', { status: r.status })
   }
 }
 
@@ -160,6 +146,7 @@ async function main() {
         moved++
       }
     } catch (e) {
+      rethrowTerminalAuthError(e);
       console.error(`  ❌ ${q}: ${e.message}`)
     }
   }

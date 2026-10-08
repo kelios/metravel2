@@ -17,13 +17,11 @@
  *
  * Token: METRAVEL_TOKEN env or ~/.metravel_token (never logged).
  */
+const { rethrowTerminalAuthError, bodyMaintenanceSession, publicRequest, TokenError, formatTokenError  } = require('./lib/metravel-tool-session');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
-const http = require('http');
-const https = require('https');
 const { buildUpsertPayload, detectCorruption } = require('./seo-edit');
-const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
+
 const {
   parseCliArgs,
   requireNonEmptySelection,
@@ -84,71 +82,21 @@ const CLI_SPEC = {
   },
 };
 
-function token() {
-  let t = process.env.METRAVEL_TOKEN;
-  if (!t) {
-    const p = path.join(os.homedir(), '.metravel_token');
-    if (fs.existsSync(p)) t = fs.readFileSync(p, 'utf8').trim();
-  }
-  if (!t) {
-    console.error('ERROR: set METRAVEL_TOKEN env var or ~/.metravel_token file');
-    process.exit(1);
-  }
-  return t;
-}
 
-function request(method, urlPath, data) {
-  return new Promise((resolve, reject) => {
-    const url = `${API_BASE}${urlPath}`;
-    const mod = url.startsWith('https') ? https : http;
-    const body = data != null ? Buffer.from(JSON.stringify(data)) : null;
-    const opts = { method, timeout: 60000, headers: { Authorization: `Token ${token()}` } };
-    if (mod === https) opts.rejectUnauthorized = false;
-    if (body) {
-      opts.headers['Content-Type'] = 'application/json';
-      opts.headers['Content-Length'] = body.length;
-    }
-    opts.headers = withAcceptEncoding(opts.headers);
-    const req = mod.request(url, opts, (res) => {
-      // #1649: whole body buffered, then decoded once — accumulating
-      // `buf += chunk` decoded every transport chunk on its own.
-      readResponseText(res).then((text) => resolve({ status: res.statusCode, text }), reject);
-    });
-    req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error(`Timeout: ${url}`)); });
-    if (body) req.write(body);
-    req.end();
-  });
-}
 
-function getJson(urlPath, baseUrl = API_BASE) {
-  return new Promise((resolve, reject) => {
-    const url = `${baseUrl}${urlPath}`;
-    const mod = url.startsWith('https') ? https : http;
-    // #1649: this read fed the PUT below, and it decoded every transport chunk
-    // on its own — a Cyrillic letter split across a chunk boundary came back as
-    // two U+FFFD and was written straight back into the article.
-    const opts = { headers: withAcceptEncoding() };
-    if (mod === https) opts.rejectUnauthorized = false;
-    mod.get(url, opts, (res) => {
-      readResponseText(res).then(
-        (text) => {
-          if (res.statusCode < 200 || res.statusCode >= 300) {
-            reject(new Error(`HTTP ${res.statusCode} ${url}`));
-            return;
-          }
-          try { resolve(JSON.parse(text)); } catch (e) { reject(e); }
-        },
-        reject,
-      );
-    }).on('error', reject);
-  });
-}
-
-/** Бэкенд режет страницу до 100 записей и молча игнорирует больший `perPage`
- *  (проба 01.09.2026, см. scripts/verify-static-travel-seo.js), поэтому шаг
- *  пагинации и признак недобора обязаны читать одно и то же число. */
 const TRAVELS_PER_PAGE = 100;
+
+async function request(method, urlPath, data) {
+  const session = bodyMaintenanceSession({ origin: API_BASE });
+  const response = await session.request(`${API_BASE}${urlPath}`, { method, ...(data != null ? { json: data } : {}) });
+  return { status: response.status, text: await response.text() };
+}
+
+async function getJson(urlPath, baseUrl = API_BASE) {
+  const response = await publicRequest(baseUrl, `${baseUrl}${urlPath}`);
+  if (!response.ok) throw new TokenError('response', { status: response.status });
+  return response.json();
+}
 
 async function listTravels(userId, deps = {}) {
   const fetchJson = deps.getJson || getJson;
@@ -243,13 +191,14 @@ async function restore(id) {
   if (!file) { console.error(`No backup for #${id}`); process.exit(1); }
   const original = JSON.parse(fs.readFileSync(file, 'utf8'));
   const payload = buildUpsertPayload(original, { description: original.description, meta: original.meta_description });
-  const { status, text } = await request('PUT', '/travels/upsert/', payload);
+  const { status } = await request('PUT', '/travels/upsert/', payload);
   console.log(`↩️  restore #${id} → HTTP ${status}`);
-  if (status !== 200 && status !== 201) { console.error(text.slice(0, 300)); process.exit(1); }
+  if (status !== 200 && status !== 201) { console.error(formatTokenError(new TokenError('response', { status }))); process.exit(1); }
 }
 
 async function main(argv = process.argv, deps = {}) {
   const args = parseCliArgs(argv, CLI_SPEC);
+  bodyMaintenanceSession({ origin: API_BASE });
   const io = { getJson, listTravels, loadSlugMap, request, restore, saveBackup, ...deps };
   if (args.mode === 'restore') return io.restore(args.restore);
 
@@ -278,6 +227,7 @@ async function main(argv = process.argv, deps = {}) {
     try {
       detail = await io.getJson(`/travels/${t.id}/`);
     } catch (e) {
+      rethrowTerminalAuthError(e);
       console.warn(`  ⚠️  #${t.id} GET failed: ${e.message}`);
       failed++;
       continue;
@@ -292,14 +242,15 @@ async function main(argv = process.argv, deps = {}) {
     }
     const backup = io.saveBackup(detail);
     const payload = buildUpsertPayload(detail, { description: html, meta: detail.meta_description });
-    const { status, text } = await io.request('PUT', '/travels/upsert/', payload);
+    const { status } = await io.request('PUT', '/travels/upsert/', payload);
     if (status !== 200 && status !== 201) {
-      console.error(`  ❌ #${t.id} PUT → HTTP ${status}: ${text.slice(0, 150)}`);
+      console.error(formatTokenError(new TokenError('response', { status: status })));
       failed++;
       continue;
     }
     let after;
-    try { after = await io.getJson(`/travels/${t.id}/`); } catch { after = {}; }
+    try { after = await io.getJson(`/travels/${t.id}/`); } catch (authError) {
+      rethrowTerminalAuthError(authError); after = {}; }
     // #1649: checked before the regression guards below and fatal to the run —
     // a mangled code point survives every length-based check, and continuing
     // the batch would write the same damage into every remaining article.

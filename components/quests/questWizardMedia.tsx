@@ -23,6 +23,7 @@ export const NativeQuestVideoLazy = lazy(() =>
       shouldPlay?: boolean
       isLooping?: boolean
       onError?: () => void
+      onPlayingChange?: (playing: boolean) => void
     }) {
       const uri = typeof props.source === 'string' ? props.source : props.source?.uri ?? null
       const sourceVisitRef = React.useRef({ uri, revision: 0 })
@@ -40,10 +41,27 @@ export const NativeQuestVideoLazy = lazy(() =>
       React.useEffect(() => {
         if (!player || !onError) return
         const sub = player.addListener('statusChange', (payload: any) => {
-          if (payload?.status === 'error') onError()
+          if (sourceVisitRef.current.revision === sourceRevision && payload?.status === 'error') onError()
         })
         return () => sub?.remove?.()
-      }, [player, onError])
+      }, [player, onError, sourceRevision])
+
+      const { onPlayingChange } = props
+      React.useEffect(() => {
+        if (!player || !onPlayingChange) return
+        const notify = (playing: boolean) => {
+          if (sourceVisitRef.current.revision === sourceRevision) onPlayingChange(playing)
+        }
+        notify(Boolean(player.playing))
+        const playing = player.addListener('playingChange', (payload: { isPlaying: boolean }) => {
+          notify(payload.isPlaying)
+        })
+        const ended = player.addListener('playToEnd', () => notify(false))
+        return () => {
+          playing?.remove?.()
+          ended?.remove?.()
+        }
+      }, [player, onPlayingChange, sourceRevision])
 
       // VideoView типизирован пересечением web+native плееров — для кросс-платформенного вызова ослабляем тип
       const VideoView = module.VideoView as unknown as React.ComponentType<any>
@@ -80,13 +98,16 @@ export const QuestWebVideo = memo(function QuestWebVideo({
   src,
   poster,
   onError,
+  onPlayingChange,
 }: {
   src?: string
   poster?: string
   onError: () => void
+  onPlayingChange?: (playing: boolean) => void
 }) {
   // @ts-ignore -- React Native Web allows direct DOM element creation via React.createElement
   return React.createElement('video', {
+    key: src,
     src,
     poster,
     controls: true,
@@ -102,7 +123,11 @@ export const QuestWebVideo = memo(function QuestWebVideo({
       backgroundColor: '#000',
     },
     onError: () => {
+      onPlayingChange?.(false)
       onError()
     },
+    onPlay: () => onPlayingChange?.(true),
+    onPause: () => onPlayingChange?.(false),
+    onEnded: () => onPlayingChange?.(false),
   })
 })

@@ -61,10 +61,9 @@
  * Токен: env METRAVEL_TOKEN или ~/.metravel_token.
  */
 
+const { bodyMaintenanceSession, TokenError, formatTokenError, parseResponseJson } = require('./lib/metravel-tool-session');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
-const https = require('https');
 
 const { buildUpsertPayload, backupFileName } = require('./seo-edit.js');
 
@@ -117,16 +116,7 @@ const FIXES = [
   },
 ];
 
-function resolveToken() {
-  if (process.env.METRAVEL_TOKEN) return process.env.METRAVEL_TOKEN.trim();
-  try {
-    const p = path.join(os.homedir(), '.metravel_token');
-    if (fs.existsSync(p)) return fs.readFileSync(p, 'utf8').trim();
-  } catch {
-    /* ignore */
-  }
-  return null;
-}
+function resolveToken() { return bodyMaintenanceSession({ origin: API_BASE }); }
 
 const TOKEN = resolveToken();
 if (!TOKEN) {
@@ -134,32 +124,9 @@ if (!TOKEN) {
   process.exit(1);
 }
 
-function req(method, urlPath, data) {
-  return new Promise((resolve, reject) => {
-    const body = data != null ? Buffer.from(JSON.stringify(data)) : null;
-    const opts = {
-      method,
-      timeout: 60000,
-      headers: { Authorization: `Token ${TOKEN}` },
-    };
-    if (body) {
-      opts.headers['Content-Type'] = 'application/json';
-      opts.headers['Content-Length'] = body.length;
-    }
-    const r = https.request(`${API_BASE}${urlPath}`, opts, (res) => {
-      let buf = '';
-      res.setEncoding('utf8');
-      res.on('data', (c) => (buf += c));
-      res.on('end', () => resolve({ status: res.statusCode, text: buf }));
-    });
-    r.on('error', reject);
-    r.on('timeout', () => {
-      r.destroy();
-      reject(new Error('timeout'));
-    });
-    if (body) r.write(body);
-    r.end();
-  });
+async function req(method, urlPath, data) {
+ const response = await TOKEN.request(`${API_BASE}${urlPath}`, { method, ...(data != null ? { json: data } : {}) });
+ return { status: response.status, text: await response.text() };
 }
 
 const describe = (p) =>
@@ -167,8 +134,8 @@ const describe = (p) =>
 
 (async () => {
   const before = await req('GET', `/travels/${TRAVEL_ID}/`);
-  if (before.status !== 200) throw new Error(`GET before HTTP ${before.status}`);
-  const detail = JSON.parse(before.text);
+  if (before.status !== 200) throw new TokenError('response', { status: before.status });
+  const detail = parseResponseJson(before.text);
   const points = detail.coordsMeTravel || [];
 
   // Бэкап снимает только настоящий прогон. Репетиция, кладущая файл в тот же
@@ -220,13 +187,13 @@ const describe = (p) =>
   const put = await req('PUT', '/travels/upsert/', payload);
   console.log(`PUT /travels/upsert/ -> HTTP ${put.status}`);
   if (put.status !== 200 && put.status !== 201) {
-    console.error(put.text.slice(0, 800));
+    console.error(formatTokenError(new TokenError('response', { status: put.status })));
     process.exit(1);
   }
 
   const after = await req('GET', `/travels/${TRAVEL_ID}/`);
-  if (after.status !== 200) throw new Error(`GET after HTTP ${after.status}`);
-  const ad = JSON.parse(after.text);
+  if (after.status !== 200) throw new TokenError('response', { status: after.status });
+  const ad = parseResponseJson(after.text);
   const ap = ad.coordsMeTravel || [];
 
   console.log('--- VERIFY ---');

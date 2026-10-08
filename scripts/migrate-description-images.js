@@ -41,9 +41,10 @@
  * Токен: env METRAVEL_TOKEN или .secrets/mcp_token.json.
  */
 
+const { rethrowTerminalAuthError, createToolSession, TokenError, parseResponseJson  } = require('./lib/metravel-tool-session');
 const fs = require('fs')
 const path = require('path')
-const https = require('https')
+
 const { RICH_TEXT_FIELDS } = require('./lib/articleBodyMedia')
 const { toSourceMediaUrl } = require('./lib/readerMediaUrl')
 
@@ -450,20 +451,7 @@ module.exports = {
 // I/O
 // ---------------------------------------------------------------------------
 
-function readToken() {
-  if (process.env.METRAVEL_TOKEN) return process.env.METRAVEL_TOKEN.trim()
-  const file = path.join(__dirname, '..', '.secrets', 'mcp_token.json')
-  if (fs.existsSync(file)) {
-    try {
-      const parsed = JSON.parse(fs.readFileSync(file, 'utf8'))
-      if (parsed && parsed.token) return String(parsed.token).trim()
-    } catch {
-      /* ниже */
-    }
-  }
-  console.error('ERROR: нет METRAVEL_TOKEN и .secrets/mcp_token.json')
-  process.exit(1)
-}
+function readToken() { return createToolSession({ origin: API_BASE, order: ['env', 'mcp'] }); }
 
 /**
  * GET/PUT к API с теми же повторами, что и у сетевых операций с картинками.
@@ -478,27 +466,10 @@ function request(method, urlPath, body, token) {
   return withRetry(`${method} ${urlPath}`, () => requestOnce(method, urlPath, body, token))
 }
 
-function requestOnce(method, urlPath, body, token) {
-  const url = urlPath.startsWith('http') ? urlPath : `${API_BASE}${urlPath}`
-  return new Promise((resolve, reject) => {
-    const payload = body ? Buffer.from(JSON.stringify(body)) : null
-    const headers = { Accept: 'application/json' }
-    // DRF TokenAuthentication: схема `Token`, не `Bearer` (как в seo-edit.js).
-    if (token) headers.Authorization = `Token ${token}`
-    if (payload) {
-      headers['Content-Type'] = 'application/json'
-      headers['Content-Length'] = payload.length
-    }
-    const req = https.request(url, { method, headers, timeout: 60000 }, (res) => {
-      const chunks = []
-      res.on('data', (c) => chunks.push(c))
-      res.on('end', () => resolve({ status: res.statusCode, text: Buffer.concat(chunks).toString('utf8') }))
-    })
-    req.on('error', reject)
-    req.on('timeout', () => { req.destroy(); reject(new Error(`timeout ${method} ${url}`)) })
-    if (payload) req.write(payload)
-    req.end()
-  })
+async function requestOnce(method, urlPath, body, session) {
+ const url = urlPath.startsWith('http') ? urlPath : `${API_BASE}${urlPath}`;
+ const response = await session.request(url, { method, ...(body == null ? {} : { json: body }) });
+ return { status: response.status, text: await response.text() };
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -515,8 +486,8 @@ async function listAllTravels(token) {
   let next = '/travels/?perPage=100'
   while (next) {
     const { status, text } = await request('GET', next, null, token)
-    if (status !== 200) throw new Error(`листинг → HTTP ${status}`)
-    const page = JSON.parse(text)
+    if (status !== 200) throw new TokenError('response', { status: status })
+    const page = parseResponseJson(text)
     items.push(...(page.results || []))
     next = page.next || null
     if (next) await sleep(200)
@@ -544,7 +515,7 @@ async function runInventory(token) {
       console.log(`  ! ${item.id} ${item.slug} → HTTP ${status}, пропуск`)
       continue
     }
-    const detail = JSON.parse(text)
+    const detail = parseResponseJson(text)
     fs.writeFileSync(path.join(BACKUP_DIR, `${item.id}.json`), JSON.stringify(detail, null, 2))
 
     // Считаем тем же охватом, каким мигрируем: иначе «класса больше нет» —
@@ -621,6 +592,7 @@ async function withRetry(label, fn, attempts = 5) {
     try {
       return await fn()
     } catch (error) {
+      rethrowTerminalAuthError(error);
       lastError = error
       const message = error && error.message ? error.message : String(error)
       // 502/503/504 — это НЕ отказ, а перегрузка: прод держит один vCPU и нарезает
@@ -671,7 +643,7 @@ async function downloadMaster(key) {
   const url = `${SITE}/media-resize/${key}?w=1920`
   return withRetry(`скачивание ${key}`, async () => {
     const res = await fetch(url, { headers: { Accept: 'image/*,*/*' } })
-    if (!res.ok) throw new Error(`скачивание ${key} → HTTP ${res.status}`)
+    if (!res.ok) throw new TokenError('response', { status: res.status })
     const buffer = Buffer.from(await res.arrayBuffer())
     if (!buffer.length) throw new Error(`скачивание ${key} → пустой ответ`)
 
@@ -700,8 +672,8 @@ async function downloadFrame(url, width = null) {
     const res = await fetch(target.toString(), {
       headers: { Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8' },
     })
-    if (res.status >= 500) throw new Error(`скачивание ${label} → HTTP ${res.status}`)
-    if (!res.ok) throw new Error(`скачивание ${label} → HTTP ${res.status}`)
+    if (res.status >= 500) throw new TokenError('response', { status: res.status })
+    if (!res.ok) throw new TokenError('response', { status: res.status })
     const buffer = Buffer.from(await res.arrayBuffer())
     if (!buffer.length) throw new Error(`скачивание ${label} → пустой ответ`)
     const detected = detectImageFormat(buffer)
@@ -731,24 +703,24 @@ async function uploadDescriptionImage(travelId, file, token) {
     form.append('collection', 'description')
     form.append('id', String(travelId))
 
-    const res = await fetch(`${API_BASE}/upload`, {
+    const res = await token.request(`${API_BASE}/upload`, {
       method: 'POST',
-      headers: { Authorization: `Token ${token}`, Accept: 'application/json' },
+      headers: { Accept: 'application/json' },
       body: form,
     })
     const body = await res.text()
-    if (!res.ok) throw new Error(`upload → HTTP ${res.status}: ${body.slice(0, 200)}`)
+    if (!res.ok) throw new TokenError('response', { status: res.status })
     return body
   })
 
   let payload = {}
   try {
-    payload = JSON.parse(text)
+    payload = parseResponseJson(text)
   } catch {
-    throw new Error(`upload → не JSON: ${text.slice(0, 200)}`)
+    throw new TokenError('response')
   }
   const url = payload.url || payload?.data?.url || payload.path || payload.file_url
-  if (!url) throw new Error(`upload → в ответе нет url: ${text.slice(0, 200)}`)
+  if (!url) throw new TokenError('response')
   const absolute = String(url).startsWith('http')
     ? String(url)
     : `${SITE}/${String(url).replace(/^\/+/, '')}`
@@ -788,7 +760,7 @@ async function verifyCanonical(url) {
         // срабатывал: прогон 2026-08-04 на статье 192 получил 502 на всех 39 пробах
         // подряд (13 картинок × 3 ступени сразу после 13 загрузок) и счёл корректную
         // миграцию провалом. Бросаем, чтобы перегрузка уходила в backoff.
-        if (response.status >= 500) throw new Error(`проба → HTTP ${response.status}`)
+        if (response.status >= 500) throw new TokenError('response', { status: response.status })
         return response
       })
     } catch (error) {
@@ -809,8 +781,8 @@ async function verifyCanonical(url) {
 async function migrateOne(id, { token, dryRun }) {
   ensureDirs()
   const { status, text } = await request('GET', `/travels/${id}/`, null, token)
-  if (status !== 200) throw new Error(`GET travel ${id} → HTTP ${status}`)
-  const before = JSON.parse(text)
+  if (status !== 200) throw new TokenError('response', { status: status })
+  const before = parseResponseJson(text)
 
   // Читаем все четыре rich-text-поля, а не одно `description`: в остальных трёх
   // легаси-кадры так и лежали, потому что конвейер до них не доходил (#1855).
@@ -879,11 +851,11 @@ async function migrateOne(id, { token, dryRun }) {
   const put = await request('PUT', '/travels/upsert/', payload, token)
   console.log(`   PUT /travels/upsert/ → HTTP ${put.status}`)
   if (put.status < 200 || put.status >= 300) {
-    throw new Error(`PUT → HTTP ${put.status}: ${put.text.slice(0, 300)}`)
+    throw new TokenError('response', { status: put.status })
   }
 
   await sleep(1000)
-  const after = JSON.parse((await request('GET', `/travels/${id}/`, null, token)).text)
+  const after = parseResponseJson((await request('GET', `/travels/${id}/`, null, token)).text)
 
   // Регрессия ДАННЫХ — единственное основание для отката. Если слетела публикация,
   // slug, галерея или точки, старые тела надо вернуть немедленно. Сохранность
@@ -964,8 +936,8 @@ async function migrateOne(id, { token, dryRun }) {
 async function shrinkOne(id, { token, dryRun, threshold = OVERSIZED_BYTES_PER_PIXEL }) {
   ensureDirs()
   const { status, text } = await request('GET', `/travels/${id}/`, null, token)
-  if (status !== 200) throw new Error(`GET travel ${id} → HTTP ${status}`)
-  const before = JSON.parse(text)
+  if (status !== 200) throw new TokenError('response', { status: status })
+  const before = parseResponseJson(text)
   const original = before.description || ''
 
   const geometry = buildManifestGeometry(before)
@@ -1083,11 +1055,11 @@ async function shrinkOne(id, { token, dryRun, threshold = OVERSIZED_BYTES_PER_PI
   const put = await request('PUT', '/travels/upsert/', payload, token)
   console.log(`   PUT /travels/upsert/ → HTTP ${put.status}`)
   if (put.status < 200 || put.status >= 300) {
-    throw new Error(`PUT → HTTP ${put.status}: ${put.text.slice(0, 300)}`)
+    throw new TokenError('response', { status: put.status })
   }
 
   await sleep(1000)
-  const after = JSON.parse((await request('GET', `/travels/${id}/`, null, token)).text)
+  const after = parseResponseJson((await request('GET', `/travels/${id}/`, null, token)).text)
   const regressions = detectRegression(before, after, { expectChanged: true, newDescription: next })
   if (regressions.length) {
     console.error(`   ❌ регрессия данных: ${regressions.join('; ')}`)
@@ -1119,7 +1091,7 @@ async function restoreOne(id, token) {
   const bodies = Object.fromEntries(BODY_FIELDS.map((field) => [field, before[field] || '']))
   const put = await request('PUT', '/travels/upsert/', buildUpsertPayload(before, bodies), token)
   console.log(`↩︎ restore ${id} из ${path.basename(file)} → HTTP ${put.status}`)
-  if (put.status < 200 || put.status >= 300) throw new Error(`restore → HTTP ${put.status}`)
+  if (put.status < 200 || put.status >= 300) throw new TokenError('response', { status: put.status })
 }
 
 // ---------------------------------------------------------------------------
@@ -1209,7 +1181,7 @@ async function runAudit(token) {
       dirty.push({ id: list[i].id, slug: list[i].slug, problem: `HTTP ${status}` })
       continue
     }
-    const detail = JSON.parse(text)
+    const detail = parseResponseJson(text)
     const problems = []
     // Обход идёт по всем четырём rich-text-полям: описание чистым, а
     // `recommendation` в legacy-классе — ровно та дыра, которой жил #1855.

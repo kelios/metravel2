@@ -42,11 +42,9 @@
  *   Token: env METRAVEL_TOKEN or ~/.metravel_token (same as seo-edit.js).
  */
 
+const { bodyMaintenanceSession, publicRequest, TokenError, formatTokenError, parseResponseJson  } = require('./lib/metravel-tool-session');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
-const https = require('https');
-const http = require('http');
 
 const ORIGIN = (process.env.METRAVEL_ORIGIN || 'https://metravel.by').replace(/\/+$/, '');
 const API = `${ORIGIN}/api`;
@@ -67,70 +65,20 @@ if (!TARGET) {
 }
 
 // ---------- token / http ----------
-function token() {
-  let t = process.env.METRAVEL_TOKEN;
-  if (!t) {
-    const p = path.join(os.homedir(), '.metravel_token');
-    if (fs.existsSync(p)) t = fs.readFileSync(p, 'utf8').trim();
-  }
-  if (!t) { console.error('ERROR: set METRAVEL_TOKEN env var or ~/.metravel_token file'); process.exit(1); }
-  return t;
+
+
+async function fetchRaw(url, { auth = false } = {}) {
+ const response = await (auth ? bodyMaintenanceSession({ origin: API }).request(url) : publicRequest(API, url));
+ return { status: response.status, text: await response.text() };
 }
 
-function fetchRaw(url, { auth = false } = {}) {
-  return new Promise((resolve, reject) => {
-    const mod = url.startsWith('https') ? https : http;
-    const opts = { method: 'GET', timeout: 60000, headers: {} };
-    if (auth) opts.headers.Authorization = `Token ${token()}`;
-    if (mod === https) opts.rejectUnauthorized = false;
-    const req = mod.request(url, opts, (res) => {
-      let buf = '';
-      res.setEncoding('utf8');
-      res.on('data', (c) => (buf += c));
-      res.on('end', () => resolve({ status: res.statusCode, text: buf }));
-    });
-    req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error(`Timeout: ${url}`)); });
-    req.end();
-  });
+async function headStatus(url) {
+  try { return (await publicRequest(API, url)).status; } catch { return -1; }
 }
 
-function headStatus(url) {
-  return new Promise((resolve) => {
-    const mod = url.startsWith('https') ? https : http;
-    const opts = { method: 'GET', timeout: 30000 };
-    if (mod === https) opts.rejectUnauthorized = false;
-    const req = mod.request(url, opts, (res) => { res.destroy(); resolve(res.statusCode); });
-    req.on('error', () => resolve(-1));
-    req.on('timeout', () => { req.destroy(); resolve(-1); });
-    req.end();
-  });
-}
-
-function put(urlPath, data) {
-  return new Promise((resolve, reject) => {
-    const url = `${API}${urlPath}`;
-    const mod = url.startsWith('https') ? https : http;
-    const body = Buffer.from(JSON.stringify(data));
-    const opts = {
-      method: 'PUT', timeout: 120000,
-      headers: {
-        Authorization: `Token ${token()}`,
-        'Content-Type': 'application/json',
-        'Content-Length': body.length,
-      },
-    };
-    if (mod === https) opts.rejectUnauthorized = false;
-    const req = mod.request(url, opts, (res) => {
-      let buf = '';
-      res.setEncoding('utf8');
-      res.on('data', (c) => (buf += c));
-      res.on('end', () => resolve({ status: res.statusCode, text: buf }));
-    });
-    req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('PUT timeout')); });
-    req.write(body); req.end();
-  });
+async function put(urlPath, data) {
+ const response = await bodyMaintenanceSession({ origin: API }).request(`${API}${urlPath}`, { method: 'PUT', json: data });
+ return { status: response.status, text: await response.text() };
 }
 
 // ---------- SSG preload extraction ----------
@@ -167,13 +115,13 @@ async function main() {
   // 1) live record (authed) — source of truth for id, publish/moderation, and
   //    any field the snapshot lacks.
   const live = await fetchRaw(`${API}/travels/${encodeURIComponent(TARGET)}/`, { auth: true });
-  if (live.status !== 200) throw new Error(`GET live travel ${TARGET} → HTTP ${live.status}`);
-  const cur = JSON.parse(live.text);
+  if (live.status !== 200) throw new TokenError('response');
+  const cur = parseResponseJson(live.text);
   const slug = cur.slug || TARGET;
 
   // 2) SSG snapshot from the public page
   const page = await fetchRaw(`${ORIGIN}/travels/${encodeURIComponent(slug)}`);
-  if (page.status !== 200) throw new Error(`GET public page ${slug} → HTTP ${page.status}`);
+  if (page.status !== 200) throw new TokenError('response');
   const snap = extractPreload(page.text);
   if (!snap) throw new Error('Could not find window.__metravelTravelPreload in the SSG page (maybe re-rendered after the wipe).');
 
@@ -270,12 +218,12 @@ async function main() {
   const res = await put('/travels/upsert/', payload);
   console.log(`PUT upsert:  HTTP ${res.status}`);
   if (res.status < 200 || res.status >= 300) {
-    console.log(res.text.slice(0, 800));
+    console.error(formatTokenError(new TokenError('response', { status: res.status })));
     throw new Error('upsert failed — live record unchanged beyond what the server applied; backup saved.');
   }
 
   // verify
-  const after = JSON.parse((await fetchRaw(`${API}/travels/${cur.id}/`, { auth: true })).text);
+  const after = parseResponseJson((await fetchRaw(`${API}/travels/${cur.id}/`, { auth: true })).text);
   const imgChecks = [];
   for (const p of after.coordsMeTravel || []) {
     if (p.image) imgChecks.push({ id: p.id, status: await headStatus(p.image) });

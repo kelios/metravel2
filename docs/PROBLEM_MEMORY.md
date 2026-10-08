@@ -6231,3 +6231,20 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   Отдельная диагностика не считается приёмкой; mandatory review, новый
   push/deploy, пять canonical проходов и PL320→390 ещё впереди.
   Evidence: `cls-responsive-source/` в `.codex-temp/publish-20261007/`.
+
+## FE-TOOLING-PROD-TOKEN-FILE-STALE-001 — operator token authority
+
+- **Canonical:** #2280; surface — quest, SEO, Instagram and Python operator tools.
+- **Mechanism:** logout invalidates the server's single account token; duplicated
+  local cache readers retained the expired candidate, while the old issuer leaked
+  it through stdout. Filename alone cannot establish user identity.
+- **Invariant:** shared resolver proves strict `/api/user/me/` identity before any
+  authenticated write. Only QA104 may renew primary credentials; owner/editor
+  channels stay explicit-only. Unknown/MCP/browser/editor aliases stay readonly.
+  Verified QA104 publication is atomic0600, bounded and coordinated across
+  processes; one401 replay preserves exact payload bytes, TLS and no redirects.
+- **Permanent control:** `guard:metravel-token` in lint/precommit covers direct JS
+  and Python readers, wrappers/import aliases, issuer capture and credential argv.
+  Kernel/profile/replay/cache/CLI/bridge regressions test the same boundary.
+- **Reopen:** a consumer bypasses the resolver, substitutes identities, leaks a
+  credential, mutates foreign caches or renews outside the QA104 channel.

@@ -7,6 +7,7 @@
  *
  * METRAVEL_TOKEN=... node scripts/upload-abandoned-hub-photos.js --travel-id=682 [--cover-only|--points-only]
  */
+const { rethrowTerminalAuthError, bodyMaintenanceSession, TokenError, formatTokenError  } = require('./lib/metravel-tool-session');
 const fs = require('fs');
 const path = require('path');
 
@@ -16,8 +17,8 @@ const TRAVEL_ID = idArg ? Number(idArg.split('=')[1]) : null;
 const coverOnly = args.includes('--cover-only');
 const pointsOnly = args.includes('--points-only');
 const API_BASE = 'https://metravel.by/api';
-const TOKEN = process.env.METRAVEL_TOKEN;
-if (!TOKEN || !TRAVEL_ID) { console.error('❌ Нужны METRAVEL_TOKEN и --travel-id='); process.exit(1); }
+const SESSION = bodyMaintenanceSession({ origin: API_BASE, order: ['env'] });
+if (!TRAVEL_ID) { console.error('❌ Нужны METRAVEL_TOKEN и --travel-id='); process.exit(1); }
 
 const COVER_URL = 'https://metravel.by/address-image/15600/conversions/fe1857f8d298458096fee92a00876d2a.webp'; // Желудок
 
@@ -27,7 +28,7 @@ const key = (lat, lng) => `${Number(lat).toFixed(4)},${Number(lng).toFixed(4)}`;
 
 async function download(url) {
     const r = await fetch(url);
-    if (!r.ok) throw new Error(`download ${url}: HTTP ${r.status}`);
+    if (!r.ok) throw new TokenError('response', { status: r.status });
     return Buffer.from(await r.arrayBuffer());
 }
 
@@ -36,9 +37,9 @@ async function upload(collection, id, buf, filename, mime) {
     form.append('file', new File([buf], filename, { type: mime }));
     form.append('collection', collection);
     form.append('id', String(id));
-    const r = await fetch(`${API_BASE}/upload`, { method: 'POST', headers: { Authorization: `Token ${TOKEN}` }, body: form });
+    const r = await SESSION.request(`${API_BASE}/upload`, { method: 'POST', body: form });
     const t = await r.text();
-    if (!r.ok) throw new Error(`upload ${collection}/${id}: HTTP ${r.status} ${t.slice(0, 200)}`);
+    if (!r.ok) throw new TokenError('response', { status: r.status });
     return t.slice(0, 120);
 }
 
@@ -53,8 +54,8 @@ function nameOf(url, ext) { return url.split('/').pop().split('?')[0].replace(/\
 const hasPhoto = (u) => !!u && !/\/address-image\/?$/.test(u);
 
 async function main() {
-    const r = await fetch(`${API_BASE}/travels/${TRAVEL_ID}/`, { headers: { Authorization: `Token ${TOKEN}` } });
-    if (!r.ok) throw new Error(`GET travel: HTTP ${r.status}`);
+    const r = await fetch(`${API_BASE}/travels/${TRAVEL_ID}/`);
+    if (!r.ok) throw new TokenError('response', { status: r.status });
     const travel = await r.json();
     const byCoord = new Map();
     for (const a of travel.travelAddress || []) {
@@ -75,7 +76,8 @@ async function main() {
                 await upload('travelImageAddress', remote.id, buf, nameOf(p.sourceImage, ext), mime);
                 console.log(`  ✅ ${p.address} → point ${remote.id} (${(buf.length / 1024).toFixed(0)} KB)`);
                 ok++;
-            } catch (e) { console.error(`  ❌ ${p.address}: ${e.message}`); fail++; }
+            } catch (e) {
+              rethrowTerminalAuthError(e); console.error(`  ❌ ${p.address}: ${formatTokenError(e)}`); fail++; }
         }
         console.log(`points: ok=${ok} skip=${skip} fail=${fail}`);
         if (fail > 0) process.exitCode = 1;
@@ -88,4 +90,4 @@ async function main() {
         console.log(`cover: ✅ ${res}`);
     }
 }
-main().catch(e => { console.error('Fatal:', e); process.exit(1); });
+main().catch(e => { console.error('Fatal:', formatTokenError(e)); process.exit(1); });

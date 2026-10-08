@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Quest finale caption — #2207 normative states</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 24px; font: 16px/1.5 system-ui, sans-serif; background: #faf9f7; color: #1f1f1f; }
+  h1 { font-size: 24px; } h2 { font-size: 18px; }
+  section { margin: 24px 0; width: max-content; max-width: 100%; }
+  .viewport { padding: 16px; border: 1px dashed #636363; }
+  .card { padding: 16px; background: #fff; border-radius: 14px; }
+  .frame { position: relative; width: 100%; max-width: 600px; aspect-ratio: 16/9; border-radius: 12px; overflow: hidden; margin: auto; background: #fff; }
+  .caption { position: absolute; top: 0; left: 0; right: 0; padding: 4px 44px; background: rgba(0,0,0,.6); color: #fff; text-align: center; pointer-events: none; }
+  .title { font-size: 16px; font-weight: 700; line-height: 20px; }
+  .city { margin-top: 2px; font-size: 12px; font-weight: 600; line-height: 16px; }
+  .controls { position: absolute; bottom: 0; width: 100%; height: 28px; color: #fff; background: #1f1f1f; padding: 0 8px; font-size: 12px; }
+  .desktop { width: 1440px; } .desktop .card { padding: 24px; }
+  .desktop .caption { padding-top: 8px; padding-bottom: 8px; }
+  .desktop .title { font-size: 24px; line-height: 30px; }
+  .desktop .city { font-size: 18px; line-height: 24px; }
+  .states { display: flex; gap: 16px; flex-wrap: wrap; } .states .frame { width: 256px; }
+</style>
+<h1>Quest finale caption (#2207)</h1>
+<p>Normative position: top of the 16:9 media frame. Both lines are centered; each may wrap to two lines.
+  Side reserve: 44 px; mobile padding: 4 px vertically; desktop: 8 px. Caption passes taps through.
+  The bright frame demonstrates the worst contrast: white on the 60% black scrim is 5.74:1.
+  Actual media width inherits the existing page/card padding and remains capped by the player and 600 px finale column.</p>
+<section><h2>320 px viewport — credited, RU, poster/paused/ended</h2>
+  <div class="viewport" style="width:320px"><div class="card"><div class="frame">
+    <div class="caption"><div class="title">Квест пройден!</div><div class="city">Минск</div></div>
+    <div class="controls">▶ ━━━━━━━━━━ ◼</div>
+  </div></div></div>
+</section>
+<section><h2>390 px viewport — credited, EN, poster/paused/ended</h2>
+  <div class="viewport" style="width:390px"><div class="card"><div class="frame">
+    <div class="caption"><div class="title">Quest complete!</div><div class="city">Minsk</div></div>
+    <div class="controls">▶ ━━━━━━━━━━ ◼</div>
+  </div></div></div>
+</section>
+<section><h2>1440 px viewport — credited, EN, poster/paused/ended</h2>
+  <div class="viewport desktop"><div class="card"><div class="frame">
+    <div class="caption"><div class="title">Quest complete!</div><div class="city">Minsk</div></div>
+    <div class="controls">▶ ━━━━━━━━━━━━━━━━━━━━━ ◼</div>
+  </div></div></div>
+</section>
+<section><h2>States at the narrowest frame</h2><div class="states">
+  <div><p>Poster only: no player controls</p><div class="frame"><div class="caption"><div class="title">Quest complete!</div><div class="city">Minsk</div></div></div></div>
+  <div><p>Playing: no caption</p><div class="frame"><div class="controls">Ⅱ ━━━━━━━━━━ ◼</div></div></div>
+  <div><p>Finished, uncredited: city only</p><div class="frame"><div class="caption"><div class="city">Minsk</div></div><div class="controls">▶ ━━━━━━━━━━ ◼</div></div></div>
+</div></section>
+<p>YouTube and failed media have no caption. A route with no media or an unfinished route has no media caption.
+  The caption duplicates the completed heading and is hidden from assistive technology.
+  Before final acceptance, measure the real caption at 320/390/1440, both themes, RU/EN; no truncated text or covered controls is allowed.</p>
+</html>

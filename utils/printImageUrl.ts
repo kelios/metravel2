@@ -14,6 +14,7 @@ import {
   printWidthForRoute,
 } from '@/constants/imageContract'
 import { PROXY_QUERY_PARAMS, snapProxyQuality, snapProxyWidth } from '@/utils/imageProxy'
+import { isMetravelMediaHostname } from '@/utils/webResourceHints'
 
 /**
  * Ступени печати. Обе входят в `ALLOWED_IMAGE_WIDTHS` бэкенда, поэтому прокси
@@ -35,11 +36,8 @@ export const PRINT_IMAGE_THUMB_WIDTH = IMAGE_WIDTHS.printThumb
  */
 export const PRINT_IMAGE_QUALITY = IMAGE_QUALITY.print
 
-const FIRST_PARTY_HOSTS = new Set(['metravel.by', 'cdn.metravel.by', 'api.metravel.by'])
-
 export function isFirstPartyMetravelHost(host: string, hostWithPort?: string): boolean {
-  const normalizedHost = String(host || '').toLowerCase()
-  if (FIRST_PARTY_HOSTS.has(normalizedHost)) return true
+  if (isMetravelMediaHostname(host)) return true
 
   // Dev/preprod обслуживают приложение и медиа с одного хоста.
   try {
@@ -77,7 +75,7 @@ function resolvePrintWidth(pathname: string, desiredWidth: number): number {
  * то есть мастер целиком. Список первопартийных хостов печати шире, поэтому решение
  * принимается тут, а лестница и квантование quality берутся из общего источника.
  */
-export function buildPrintImageUrl(url: string, width: number): string {
+export function buildPrintImageUrl(url: string, width: number, options?: { configuredFirstPartyHost?: string | null }): string {
   const trimmed = String(url || '').trim()
   if (!trimmed) return trimmed
   if (/^(data:|blob:)/i.test(trimmed)) return trimmed
@@ -89,7 +87,10 @@ export function buildPrintImageUrl(url: string, width: number): string {
     return trimmed
   }
 
-  if (!isFirstPartyMetravelHost(parsed.hostname, parsed.host)) return trimmed
+  // The sanitizer already owns its explicit API host:port contract. Keep that
+  // authorization caller-scoped instead of making it an implicit media alias.
+  const configuredHost = options?.configuredFirstPartyHost?.toLowerCase()
+  if (!isFirstPartyMetravelHost(parsed.hostname, parsed.host) && parsed.host.toLowerCase() !== configuredHost) return trimmed
 
   for (const param of PROXY_QUERY_PARAMS) parsed.searchParams.delete(param)
   parsed.searchParams.set('w', String(resolvePrintWidth(parsed.pathname, width)))

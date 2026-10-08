@@ -1,6 +1,7 @@
 // One-off: fix miscategorized point #343 «Thai Hoa Temple» (travel #129 «Наш Вьетнам»)
 // АЭРОПОРТ (cat 8) -> Храм (cat 141). Board task #803 (F-3).
 // Reuses seo-edit's safe upsert builder; backs up before write and verifies after.
+const { bodyMaintenanceSession, TokenError, formatTokenError, parseResponseJson } = require('./lib/metravel-tool-session');
 const path = require('path');
 const { buildUpsertPayload } = require('./seo-edit.js');
 
@@ -9,36 +10,17 @@ const TRAVEL_ID = 129;
 const POINT_ID = 343;
 const WRONG_CAT = 8;   // Аэропорт
 const RIGHT_CAT = 141; // Храм
-const https = require('https');
 const fs = require('fs');
 
-function req(method, urlPath, data) {
-  return new Promise((resolve, reject) => {
-    const body = data != null ? Buffer.from(JSON.stringify(data)) : null;
-    const opts = {
-      method, timeout: 60000, rejectUnauthorized: false,
-      headers: { Authorization: `Token ${process.env.METRAVEL_TOKEN}` },
-    };
-    if (body) {
-      opts.headers['Content-Type'] = 'application/json';
-      opts.headers['Content-Length'] = body.length;
-    }
-    const r = https.request(`${API_BASE}${urlPath}`, opts, (res) => {
-      let buf = ''; res.setEncoding('utf8');
-      res.on('data', (c) => (buf += c));
-      res.on('end', () => resolve({ status: res.statusCode, text: buf }));
-    });
-    r.on('error', reject);
-    r.on('timeout', () => { r.destroy(); reject(new Error('timeout')); });
-    if (body) r.write(body);
-    r.end();
-  });
+async function req(method, urlPath, data) {
+ const response = await bodyMaintenanceSession({ origin: API_BASE, order: ['env'] }).request(`${API_BASE}${urlPath}`, { method, ...(data != null ? { json: data } : {}) });
+ return { status: response.status, text: await response.text() };
 }
 
 (async () => {
   const before = await req('GET', `/travels/${TRAVEL_ID}/`);
-  if (before.status !== 200) throw new Error(`GET before HTTP ${before.status}`);
-  const detail = JSON.parse(before.text);
+  if (before.status !== 200) throw new TokenError('response', { status: before.status });
+  const detail = parseResponseJson(before.text);
   const pts = detail.coordsMeTravel || [];
   const p = pts.find((x) => x.id === POINT_ID);
   if (!p) throw new Error(`point ${POINT_ID} not found`);
@@ -60,10 +42,10 @@ function req(method, urlPath, data) {
   const payload = buildUpsertPayload(detail, {}); // keeps existing description/meta
   const put = await req('PUT', '/travels/upsert/', payload);
   console.log(`PUT /travels/upsert/ -> HTTP ${put.status}`);
-  if (put.status !== 200 && put.status !== 201) { console.error(put.text.slice(0, 600)); process.exit(1); }
+  if (put.status !== 200 && put.status !== 201) { console.error(formatTokenError(new TokenError('response', {status: put.status}))); process.exit(1); }
 
   const after = await req('GET', `/travels/${TRAVEL_ID}/`);
-  const ad = JSON.parse(after.text);
+  const ad = parseResponseJson(after.text);
   const ap = (ad.coordsMeTravel || []).find((x) => x.id === POINT_ID);
   console.log('--- VERIFY ---');
   console.log(`point ${POINT_ID} categories = ${JSON.stringify(ap && ap.categories)}`);
@@ -74,4 +56,4 @@ function req(method, urlPath, data) {
     && ad.moderation === detail.moderation && ad.publish === detail.publish;
   console.log(ok ? '✅ FIX VERIFIED' : '❌ VERIFY FAILED');
   process.exit(ok ? 0 : 1);
-})().catch((e) => { console.error('Fatal:', e.message); process.exit(1); });
+})().catch((e) => { console.error('Fatal:', formatTokenError(e)); process.exit(1); });

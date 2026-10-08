@@ -4,16 +4,15 @@
  * Идемпотентно: переиспользует существующий квест по quest_id и город по имени,
  * не дублирует шаги.
  *
- * NODE_TLS_REJECT_UNAUTHORIZED=0 node scripts/migrate-amsterdam-quest.js \
- *   --api-url=https://metravel.by --token=YOUR_TOKEN
+ * node scripts/migrate-amsterdam-quest.js \
+ *   --api-url=https://metravel.by
  *
  * Dry run (без записи):
  *   node scripts/migrate-amsterdam-quest.js --dry-run
  */
 
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
+
+const { rethrowTerminalAuthError, createToolSession, TokenError, formatTokenError  } = require('./lib/metravel-tool-session');
 
 const args = process.argv.slice(2);
 const isDryRun = args.includes('--dry-run');
@@ -21,21 +20,12 @@ const apiUrlArg = args.find(a => a.startsWith('--api-url='));
 const tokenArg = args.find(a => a.startsWith('--token='));
 const API_BASE = apiUrlArg ? apiUrlArg.split('=')[1] : 'https://metravel.by';
 
-function resolveToken() {
-    if (tokenArg) return tokenArg.split('=').slice(1).join('=');
-    if (process.env.METRAVEL_TOKEN) return process.env.METRAVEL_TOKEN;
-    try {
-        const p = path.join(os.homedir(), '.metravel_token');
-        if (fs.existsSync(p)) return fs.readFileSync(p, 'utf8').trim();
-    } catch { /* ignore */ }
-    return null;
+function createSession(explicit) {
+    return createToolSession({ origin: API_BASE, explicit: explicit || (typeof tokenArg === 'undefined' ? undefined : tokenArg.split('=').slice(1).join('=')) });
 }
-const TOKEN = resolveToken();
+const SESSION = createSession();
 
-if (!TOKEN && !isDryRun) {
-    console.error('❌ Нужен токен: --token=YOUR_TOKEN, либо env METRAVEL_TOKEN, либо ~/.metravel_token');
-    process.exit(1);
-}
+
 
 function toBackendDecimal(value) {
     const num = Number(value);
@@ -44,29 +34,24 @@ function toBackendDecimal(value) {
 }
 
 async function apiPost(endpoint, payload) {
-    const url = `${API_BASE}${endpoint}`;
     const headers = { 'Content-Type': 'application/json' };
-    if (TOKEN) headers['Authorization'] = `Token ${TOKEN}`;
     if (isDryRun) {
         console.log(`  [DRY] POST ${endpoint}`, JSON.stringify(payload).substring(0, 160));
         return { id: Math.floor(Math.random() * 1000) };
     }
-    const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
+    const response = await SESSION.request(endpoint, { method: 'POST', headers, body: JSON.stringify(payload) });
     if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`HTTP ${response.status} POST ${endpoint}: ${text}`);
+        throw new TokenError('response', { status: response.status });
     }
     return response.json();
 }
 
 async function apiGet(endpoint) {
-    const url = `${API_BASE}${endpoint}`;
+    if (isDryRun) return { data: [] };
     const headers = {};
-    if (TOKEN) headers['Authorization'] = `Token ${TOKEN}`;
-    const response = await fetch(url, { method: 'GET', headers });
+    const response = await SESSION.request(endpoint, { method: 'GET', headers });
     if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`HTTP ${response.status} GET ${endpoint}: ${text}`);
+        throw new TokenError('response', { status: response.status });
     }
     return response.json();
 }
@@ -92,6 +77,7 @@ function serializeAnswer(step) {
 const QUESTS = require('./amsterdam-quest-data.js');
 
 async function main() {
+    if (!isDryRun) await SESSION.ensureToken();
     console.log(`🚀 Миграция квеста (Амстердам) → ${API_BASE} (${isDryRun ? 'DRY RUN' : 'LIVE'})\n`);
 
     for (const q of QUESTS) {
@@ -104,7 +90,8 @@ async function main() {
             existingBundle = await apiGet(`/api/quests/by-quest-id/${encodeURIComponent(q.quest_id)}/`);
             questDbId = existingBundle?.id;
             if (questDbId) console.log(`  ℹ️ Quest already exists: id=${questDbId}`);
-        } catch { /* not found — create below */ }
+        } catch (authError) {
+          rethrowTerminalAuthError(authError); /* not found — create below */ }
 
         // 1. Reuse or create city (only when quest is missing)
         let cityId;
@@ -126,6 +113,8 @@ async function main() {
                     console.log(`  ✅ City: id=${cityId} (${q.city.name})`);
                 }
             } catch (e) {
+              rethrowTerminalAuthError(e);
+            process.exitCode = 1;
                 console.error(`  ❌ City: ${e.message}`);
                 continue;
             }
@@ -150,6 +139,8 @@ async function main() {
                 questDbId = quest.id;
                 console.log(`  ✅ Quest: id=${questDbId}`);
             } catch (e) {
+              rethrowTerminalAuthError(e);
+            process.exitCode = 1;
                 console.error(`  ❌ Quest: ${e.message}`);
                 continue;
             }
@@ -185,6 +176,8 @@ async function main() {
                 });
                 console.log(`  ✅ Intro step`);
             } catch (e) {
+              rethrowTerminalAuthError(e);
+            process.exitCode = 1;
                 console.error(`  ❌ Intro: ${e.message}`);
             }
         } else if (q.intro && hasIntro) {
@@ -217,6 +210,8 @@ async function main() {
                 });
                 console.log(`  ✅ Step ${i + 1}/${q.steps.length}: ${s.step_id} — ${s.title}`);
             } catch (e) {
+              rethrowTerminalAuthError(e);
+            process.exitCode = 1;
                 console.error(`  ❌ Step ${s.step_id}: ${e.message}`);
             }
         }
@@ -229,6 +224,8 @@ async function main() {
                 await apiPost('/api/quest-finales/', { quest: questDbId, text: q.finale.text });
                 console.log(`  ✅ Finale`);
             } catch (e) {
+              rethrowTerminalAuthError(e);
+            process.exitCode = 1;
                 console.error(`  ❌ Finale: ${e.message}`);
             }
         }
@@ -238,7 +235,6 @@ async function main() {
     }
 }
 
-main().catch(e => {
-    console.error('Fatal:', e);
+main().catch(e => { console.error('Fatal:', formatTokenError(e));
     process.exit(1);
 });

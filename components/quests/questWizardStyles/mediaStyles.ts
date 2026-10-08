@@ -56,6 +56,22 @@ export const createMediaStyles = (colors: QuestColors, isMobile: boolean, screen
         marginBottom: isMobile ? SPACING.md : SPACING.lg,
         position: 'relative',
     },
+    // Верхняя подпись оставляет нижние controls и боковые native-кнопки доступными.
+    videoCaption: {
+        position: 'absolute', top: 0, left: 0, right: 0,
+        alignItems: 'center', gap: 2,
+        paddingVertical: isMobile ? SPACING.xs : SPACING.sm,
+        paddingHorizontal: 44,
+        backgroundColor: colors.mediaCaptionOverlay,
+    },
+    videoCaptionTitle: {
+        color: colors.textOnDark, fontSize: isMobile ? 16 : 24,
+        lineHeight: isMobile ? 20 : 30, fontWeight: '700', textAlign: 'center',
+    },
+    videoCaptionCity: {
+        color: colors.textOnDark, fontSize: isMobile ? 12 : 18,
+        lineHeight: isMobile ? 16 : 24, fontWeight: '600', textAlign: 'center',
+    },
     videoFallbackOverlay: {
         ...StyleSheet.absoluteFillObject,
         alignItems: 'center',

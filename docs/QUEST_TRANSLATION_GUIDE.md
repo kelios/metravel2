@@ -261,3 +261,5 @@
 | вокзал | вакзал | вокзал | dworzec | railway station |
 | легенда | легенда | легенда | legenda | legend |
 <!-- glossary:end -->
+
+Авторизованные команды используют общий QA104 resolver (`docs/DEVELOPMENT.md` → «Operator token sessions»). `get-quest-token.js` выводит только статус; stdout не является токеном. Публичные prepare/read не требуют credentials.

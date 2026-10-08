@@ -33,14 +33,11 @@
  * Token: env METRAVEL_TOKEN or ~/.metravel_token.
  */
 
+const { bodyMaintenanceSession, TokenError, parseResponseJson } = require('./lib/metravel-tool-session');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
-const https = require('https');
-const http = require('http');
 
 const { parseCliArgs, runCli } = require('./lib/cli-contract');
-const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
 const { detectStoredTextCorruption } = require('./lib/textIntegrity');
 
 const API_BASE = (process.env.METRAVEL_API || 'https://metravel.by/api').replace(/\/+$/, '');
@@ -327,51 +324,18 @@ function backupFileName(id, ts) {
 // ---------------------------------------------------------------------------
 // I/O shell
 // ---------------------------------------------------------------------------
-function token() {
-  let t = process.env.METRAVEL_TOKEN;
-  if (!t) {
-    const p = path.join(os.homedir(), '.metravel_token');
-    if (fs.existsSync(p)) t = fs.readFileSync(p, 'utf8').trim();
-  }
-  if (!t) {
-    console.error('ERROR: set METRAVEL_TOKEN env var or ~/.metravel_token file');
-    process.exit(1);
-  }
-  return t;
-}
 
-function request(method, urlPath, data) {
-  return new Promise((resolve, reject) => {
-    const url = `${API_BASE}${urlPath}`;
-    const mod = url.startsWith('https') ? https : http;
-    const body = data != null ? Buffer.from(JSON.stringify(data)) : null;
-    const opts = {
-      method,
-      timeout: 60000,
-      headers: { Authorization: `Token ${token()}` },
-    };
-    if (mod === https) opts.rejectUnauthorized = false;
-    if (body) {
-      opts.headers['Content-Type'] = 'application/json';
-      opts.headers['Content-Length'] = body.length;
-    }
-    opts.headers = withAcceptEncoding(opts.headers);
-    const req = mod.request(url, opts, (res) => {
-      // #1649: whole body buffered, then decoded once — accumulating
-      // `buf += chunk` decoded every transport chunk on its own.
-      readResponseText(res).then((text) => resolve({ status: res.statusCode, text }), reject);
-    });
-    req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error(`Timeout: ${url}`)); });
-    if (body) req.write(body);
-    req.end();
-  });
+
+async function request(method, urlPath, data) {
+  const session = bodyMaintenanceSession({ origin: API_BASE });
+  const response = await session.request(`${API_BASE}${urlPath}`, { method, ...(data != null ? { json: data } : {}) });
+  return { status: response.status, text: await response.text() };
 }
 
 async function getTravel(id) {
   const { status, text } = await request('GET', `/travels/${id}/`);
-  if (status !== 200) throw new Error(`GET travel ${id} → HTTP ${status}`);
-  return JSON.parse(text);
+  if (status !== 200) throw new TokenError('response', { status: status });
+  return parseResponseJson(text);
 }
 
 async function putTravel(payload) {
