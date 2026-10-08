@@ -166,6 +166,15 @@ export async function mockFakeAuthApis(page: Page): Promise<void> {
     if (route.request().method() !== 'GET') return route.fallback();
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
   });
+  // Account-delivery status is a private read made by quest/travel forms.
+  // Fake authentication owns this response; subscription mutations keep their handlers.
+  await page.route((url) => url.pathname === '/api/subscribe/status/', (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    return route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ subscribed: false, email: '' }),
+    });
+  });
   await page.route('**/api/user/me/verifications/**', (route) => {
     if (route.request().method() === 'GET') {
       return route.fulfill({

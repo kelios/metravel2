@@ -147,9 +147,18 @@ export function createQuestFixture(options: QuestFixtureOptions): QuestFixture {
     await page.setViewportSize(options.viewport ?? { width: 1280, height: 900 })
     await seedActionConsents(page)
 
-    await page.goto(`/quests/${questCity.id}/${questId}`, { waitUntil: 'domcontentloaded' })
+    // The intro already mounts its related-travel query. Finish this owned read
+    // before the programmed step transition; keep cancellations visible to specs.
+    const [recommendationsResponse] = await Promise.all([
+      page.waitForResponse((response) =>
+        new URL(response.url()).pathname === '/api/travels/near-location/' &&
+        response.request().method() === 'GET' && response.status() === 200,
+      { timeout: 60_000 }),
+      page.goto(`/quests/${questCity.id}/${questId}`, { waitUntil: 'domcontentloaded' }),
+    ])
     const startButton = page.getByRole('button', { name: 'Начать квест' })
     await expect(startButton).toBeVisible({ timeout: 60_000 })
+    expect(await recommendationsResponse.finished()).toBeNull()
     await startButton.click()
   }
 
