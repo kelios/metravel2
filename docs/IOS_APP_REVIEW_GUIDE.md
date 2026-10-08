@@ -173,12 +173,20 @@ Settings (Notifications), not requested automatically at first launch.
 
 ## 7. User-generated content & moderation
 
-- Reports submitted through **Complain** go to the team's moderation queue and
-  are reviewed within **24 hours**.
+This section reflects the revised moderation policy after #2129, not proof
+that it is present in build 9 or an unverified new candidate. The rest of
+this guide still describes build 9; refresh its walkthroughs and candidate
+identity before attaching it to a new submission. In particular, the old
+blocking description in section 4.6 is superseded by the direction below.
+
+- Reports submitted through **Complain** go to the website administrator's
+  moderation queue and are reviewed within **24 hours**. The administrator
+  receives an email notification for each report and block.
 - Reviewer or user questions about a report/moderation outcome can be sent to
   **metraveldev@gmail.com**.
-- A blocked user can no longer see the blocking user's content or contact
-  them; blocking is reversible from the same safety menu (**Unblock**).
+- Blocking immediately hides the blocked author's content from the blocking
+  user's feeds. Blocking is reversible from the safety menu (**Unblock**) or
+  the blocked-users list in Settings.
 - Terms of use: <https://metravel.by/terms>
 - Privacy Policy: <https://metravel.by/privacy>
 
