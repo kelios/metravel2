@@ -57,6 +57,7 @@ import { showToastMessage } from '@/utils/toast'
 import { createProfileScreenStyles } from '@/components/screens/profile/profileScreen.styles';
 import { useProfileTravelSections } from '@/components/screens/profile/useProfileTravelSections';
 import { useProfileTravelTabList } from '@/components/screens/profile/useProfileTravelTabList';
+import { ownerProfileTabCounters, resolveProfileTabCounts, useProfileTravelCountState } from '@/components/screens/profile/profileTabCounts';
 import {
   PROFILE_TRAVELS_PER_PAGE,
   type UserStats,
@@ -100,17 +101,23 @@ export default function ProfileScreen() {
     maxContentWidth,
   });
 
-  const { profile, setProfile, isLoading: profileLoading, fullName } = useUserProfile();
+  const { profile, profileDataUpdatedAt, setProfile, isLoading: profileLoading, fullName } = useUserProfile();
   const { pickAndUpload, isUploading: avatarUploading } = useAvatarUpload({
     onSuccess: (updated) => setProfile(updated),
   });
 
   const [userInfo, setUserInfo] = useState<{ name: string; email: string }>({ name: '', email: '' });
-  const [stats, setStats] = useState<UserStats>({
-    travelsCount: 0,
+  const owner = isAuthenticated ? userId ?? null : null;
+  const initialTabCounts = ownerProfileTabCounters(profile, owner);
+  const { liveTravelsCount, onTotalChange: handleTotalChange } = useProfileTravelCountState(owner);
+  const [collectionStats, setCollectionStats] = useState<Omit<UserStats, 'travelsCount'>>({
     favoritesCount: 0,
     viewsCount: 0,
   });
+  const stats = useMemo<UserStats>(() => ({
+    ...collectionStats,
+    travelsCount: liveTravelsCount === undefined ? initialTabCounts?.travels ?? 0 : liveTravelsCount,
+  }), [collectionStats, initialTabCounts?.travels, liveTravelsCount]);
   const [activeTab, setActiveTab] = useState<ProfileTabKey>('travels');
   const [worldMapGestureActive, setWorldMapGestureActive] = useState(false);
   const { data: myAchievements } = useMyAchievements({ enabled: activeTab === 'overview' });
@@ -133,18 +140,21 @@ export default function ProfileScreen() {
     authors,
     subscriptionsLoading,
     subscribersLoading,
+    subscriptionsCount,
+    subscribersCount,
+    subscriptionsDataUpdatedAt,
+    subscribersDataUpdatedAt,
     getFullName,
     handleUnsubscribe,
   } = useSubscriptionsData({ includeAuthorTravels: activeTab === 'subscriptions' });
-  const subscriptionsCount = subscriptions.length;
-  const subscribersCount = subscribers.length;
   const [activeTravelMetric, setActiveTravelMetric] = useState<ProfileTravelEngagementMetricKey | null>(null);
   const lastEndReachedAtRef = useRef(0);
-  const travelsRequestedRef = useRef(false);
-
-  const handleTotalChange = useCallback((total: number | null) => {
-    setStats((prev) => ({ ...prev, travelsCount: total }));
-  }, []);
+  const travelsRequestedRef = useRef<string | null>(null);
+  const requestedOwnerRef = useRef(owner);
+  if (requestedOwnerRef.current !== owner) {
+    requestedOwnerRef.current = owner;
+    travelsRequestedRef.current = null;
+  }
 
   const allTravels = useMyTravels({
     userId,
@@ -164,8 +174,7 @@ export default function ProfileScreen() {
     load: loadTravels,
     loadMore: loadMoreTravelsHook,
   } = allTravels;
-  // Контент обеих вкладок использует только подтверждённый счётчик; бейджи
-  // сохраняют отдельный контракт начального нуля и недоступности (#1865).
+  // Контент обеих вкладок использует только подтверждённый счётчик.
   const confirmedTravelsCount = travelsLoading ? null : stats.travelsCount;
   // Вкладки «Опубл.» и «Черновики» читают свой срез с сервера (#1833), остальные —
   // общий список автора. Дальше экран работает с уже выбранным источником.
@@ -179,15 +188,15 @@ export default function ProfileScreen() {
   const personalTravelStatusEntries = useTravelStatus()
 
   const ensureTravelsLoaded = useCallback(() => {
-    if (travelsRequestedRef.current) return;
+    if (travelsRequestedRef.current === owner) return;
     // Wait for auth to resolve before committing the one-shot: a call with an
     // unresolved userId no-ops loadTravels into the empty state and would burn
     // the guard, leaving the list permanently empty when 'travels' is the
     // default tab (effect fires on mount, before userId is hydrated).
-    if (!userId) return;
-    travelsRequestedRef.current = true;
+    if (!owner) return;
+    travelsRequestedRef.current = owner;
     void loadTravels();
-  }, [loadTravels, userId]);
+  }, [loadTravels, owner]);
 
   // Ретрай после сбоя идёт мимо one-shot guard: сам guard уже сожжён неудачной
   // попыткой, и без этого кнопка «Повторить» была бы декоративной.
@@ -265,7 +274,7 @@ export default function ProfileScreen() {
   const onRefresh = useCallback(async () => {
     hapticImpact('light');
     setRefreshing(true);
-    travelsRequestedRef.current = true;
+    travelsRequestedRef.current = owner;
     try {
       // Активный список перечитывает reload; на вкладке-срезе он не тот же
       // запрос, что общий список, а счётчики профиля считает именно общий.
@@ -277,16 +286,15 @@ export default function ProfileScreen() {
     } finally {
       setRefreshing(false);
     }
-  }, [loadTravels, loadUserInfo, reloadActiveTravelList, travelList.isFiltered]);
+  }, [loadTravels, loadUserInfo, owner, reloadActiveTravelList, travelList.isFiltered]);
 
   const handleDeleteMyTravel = travelList.remove;
 
   useEffect(() => {
-    setStats((prev) => ({
-      ...prev,
+    setCollectionStats({
       favoritesCount: favorites.length,
       viewsCount: viewHistory.length,
-    }));
+    });
   }, [favorites.length, viewHistory.length]);
 
   useEffect(() => {
@@ -460,22 +468,30 @@ export default function ProfileScreen() {
 
   const tabCounts = useMemo(() => ({
     overview: badgesCount,
-    // При сбое общего списка счётчик приходит `null` — показываем «—», а не
-    // выдуманный ноль (#1865, #1871).
-    travels: stats.travelsCount,
-    publishedTravels: publishedTravelsCount,
-    draftTravels: draftTravelsCount,
-    subscribers: subscribersCount,
-    subscriptions: subscriptionsCount,
+    ...resolveProfileTabCounts({
+      initial: initialTabCounts,
+      travels: liveTravelsCount,
+      published: publishedTravelsCount,
+      drafts: draftTravelsCount,
+      subscribers: subscribersCount,
+      subscriptions: subscriptionsCount,
+      profileDataUpdatedAt,
+      subscribersDataUpdatedAt,
+      subscriptionsDataUpdatedAt,
+    }),
     favorites: stats.favoritesCount,
     history: stats.viewsCount,
   }), [
     badgesCount,
     draftTravelsCount,
     publishedTravelsCount,
-    stats.travelsCount,
+    initialTabCounts,
+    liveTravelsCount,
     subscribersCount,
     subscriptionsCount,
+    profileDataUpdatedAt,
+    subscribersDataUpdatedAt,
+    subscriptionsDataUpdatedAt,
     stats.favoritesCount,
     stats.viewsCount,
   ]);

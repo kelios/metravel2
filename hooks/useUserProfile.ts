@@ -100,6 +100,7 @@ export function useUserProfile() {
 
     return {
         profile,
+        profileDataUpdatedAt: query.dataUpdatedAt,
         setProfile,
         isLoading: query.isLoading,
         loadProfile,

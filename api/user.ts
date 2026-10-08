@@ -23,6 +23,14 @@ export type CardViewTravelDto = {
     updated_at: string | null;
 };
 
+export type ProfileTabCountersDto = {
+    travels: number;
+    published: number;
+    drafts: number;
+    subscribers: number;
+    subscriptions: number;
+};
+
 export type UserProfileDto = {
     id: number;
     first_name: string;
@@ -38,6 +46,7 @@ export type UserProfileDto = {
     // пока поле не приходит, шапка показывает фолбэк-текстуру (graceful degradation).
     cover_photo?: string | null;
     user: number;
+    tab_counters?: ProfileTabCountersDto | null;
     // Серверный premium-флаг для PDF-paywall: (опубликовано ≥ N путешествий) ИЛИ ручной флаг (BE #293).
     // Читаем только это поле; premium_manually_enabled бэк отдаёт публично, на него не завязываемся.
     is_premium?: boolean;

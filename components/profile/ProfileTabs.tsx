@@ -32,7 +32,7 @@ interface ProfileTabsProps {
    * бейдж показывает «—», потому что исчезнувшая цифра неотличима от честного
    * нуля (#1865). `undefined`/отсутствие ключа — бейджа нет вовсе.
    */
-  counts?: Partial<Record<ProfileTabKey, number | null>>;
+  counts?: Partial<Record<ProfileTabKey, number | null | undefined>>;
   /** Какие табы показывать и в каком порядке. По умолчанию — все четыре. */
   tabKeys?: ProfileTabKey[];
 }

@@ -34,6 +34,16 @@ jest.mock('@/hooks/useTheme', () => ({
 const TAB_KEYS = ['travels', 'publishedTravels', 'draftTravels'] as const;
 
 describe('ProfileTabs — недоступный счётчик', () => {
+  it('unknown counts have neither a numeric badge nor an unavailable badge', () => {
+    const { queryByText, getByLabelText } = render(
+      <ProfileTabs activeTab="travels" onChangeTab={jest.fn()} counts={{ travels: undefined }} tabKeys={[...TAB_KEYS]} />
+    );
+
+    expect(queryByText('—')).toBeNull();
+    expect(queryByText('0')).toBeNull();
+    expect(getByLabelText('Маршруты')).toBeTruthy();
+  });
+
   it('показывает «—» вместо цифры и озвучивает недоступность', () => {
     const { getAllByText, getByLabelText } = render(
       <ProfileTabs

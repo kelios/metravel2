@@ -319,6 +319,117 @@ test.describe('Mobile screen budget (#2094)', () => {
     })
   }
 
+  for (const viewport of [
+    { name: '320x640', width: 320, height: 640 },
+    { name: '390x844', width: 390, height: 844 },
+    { name: '1280x900', width: 1280, height: 900 },
+  ]) {
+    test(`profile tabs have counters in their first frame without list-response shifts @ ${viewport.name}`, async ({ page, baseURL }) => {
+      await ensureLiveSession(page, baseURL)
+      await page.setViewportSize(viewport)
+      await page.addInitScript(() => {
+        type Shift = { hadRecentInput: boolean; sources?: Array<{ node?: Node }> }
+        const state = window as unknown as { __profileTabs: { first: string[] | null; shifts: string[] } }
+        state.__profileTabs = { first: null, shifts: [] }
+        new MutationObserver(() => {
+          if (state.__profileTabs.first !== null) return
+          const tabs = Array.from(document.querySelectorAll('[role="tablist"] [role="tab"]'))
+          if (tabs.some((tab) => tab.getAttribute('aria-label')?.startsWith('Черновики маршрутов'))) {
+            state.__profileTabs.first = tabs.map((tab) => tab.getAttribute('aria-label') ?? '')
+          }
+        }).observe(document, { childList: true, subtree: true })
+        new PerformanceObserver((list) => {
+          for (const entry of list.getEntries() as unknown as Shift[]) {
+            if (entry.hadRecentInput) continue
+            for (const source of entry.sources ?? []) {
+              const element = source.node instanceof Element ? source.node : source.node?.parentElement
+              const tab = element?.closest('[role="tab"]')
+              if (tab) state.__profileTabs.shifts.push(tab.getAttribute('aria-label') ?? '')
+            }
+          }
+        }).observe({ type: 'layout-shift', buffered: true })
+      })
+      const gates = ['travels', 'subscribers', 'subscriptions'].map((key) => {
+        let release = () => {}
+        const held = new Promise<void>((resolve) => { release = resolve })
+        return { key, held, release }
+      })
+      await page.route(/\/api\/(?:travels\/\?|user\/(?:subscribers|subscriptions)\/)/, async (route) => {
+        const gate = gates.find(({ key }) => route.request().url().includes(`/${key}/`))
+        await gate?.held
+        await route.continue()
+      })
+      const profileResponse = page.waitForResponse((response) => /\/api\/user\/\d+\/profile\/$/.test(response.url()) && response.ok())
+      try {
+        await page.goto('/profile')
+        const profile = await (await profileResponse).json() as { tab_counters?: Record<string, number> | null }
+        const counts = profile.tab_counters
+        expect(counts, 'свой профиль должен отдавать tab_counters').toBeTruthy()
+        await expect(page.getByRole('tab', { name: /^Черновики маршрутов/ })).toBeAttached()
+        const first = await page.evaluate(() => (window as unknown as { __profileTabs: { first: string[] } }).__profileTabs.first)
+        const countLabels = [
+          ['travels', 'Маршруты'], ['published', 'Опубликованные маршруты'], ['drafts', 'Черновики маршрутов'],
+          ['subscribers', 'Подписчики'], ['subscriptions', 'Подписки'],
+        ] as const
+        for (const [key, label] of countLabels) {
+          const count = counts![key]
+          expect(Number.isInteger(count), `tab_counters.${key} — целое число`).toBe(true)
+          expect(count, `tab_counters.${key} — неотрицательный счётчик`).toBeGreaterThanOrEqual(0)
+          expect(first).toContain(count > 0 ? `${label}: ${count}` : label)
+        }
+        const tabGeometry = () => page.locator('[role="tablist"] [role="tab"]').evaluateAll((tabs) => tabs.map((tab) =>
+          [tab, ...tab.querySelectorAll('svg, [dir="auto"]')].map((node) => {
+            const { x, y, width, height } = node.getBoundingClientRect()
+            return { x, y, width, height }
+          })
+        ))
+        await page.evaluate(() => document.fonts.ready)
+        await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+        for (const key of ['subscriptions', 'subscribers', 'travels']) {
+          const before = await tabGeometry()
+          const response = page.waitForResponse((result) => {
+            const url = new URL(result.url())
+            if (!url.pathname.endsWith(`/api/${key === 'travels' ? '' : 'user/'}${key}/`) || !result.ok()) return false
+            if (key !== 'travels') return true
+            const where = JSON.parse(url.searchParams.get('where') || '{}') as Record<string, unknown>
+            return where.user_id != null && where.publication_status == null && where.publish == null && where.moderation == null
+          })
+          gates.find((gate) => gate.key === key)!.release()
+          const listResponse = await response
+          await listResponse.finished()
+          if (key === 'travels') {
+            await expect(page.getByTestId('profile-travel-grid-skeleton')).toHaveCount(0)
+            for (const [countKey, label] of countLabels.slice(0, 3)) {
+              const count = counts![countKey]
+              await expect(page.getByRole('tab', { name: count > 0 ? `${label}: ${count}` : label, exact: true })).toBeAttached()
+            }
+          } else {
+            const profiles = await listResponse.json() as unknown[]
+            expect(Array.isArray(profiles), `${key} возвращает полный список`).toBe(true)
+            expect(profiles.length, `${key} совпадает со счётчиком профиля`).toBe(counts![key])
+            const label = countLabels.find(([countKey]) => countKey === key)![1]
+            await expect(page.getByRole('tab', { name: profiles.length > 0 ? `${label}: ${profiles.length}` : label, exact: true })).toBeAttached()
+          }
+          await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+          const after = await tabGeometry()
+          expect(after).toHaveLength(before.length)
+          for (const [tabIndex, nodes] of before.entries()) {
+            expect(after[tabIndex], `${key}: состав вкладки ${tabIndex}`).toHaveLength(nodes.length)
+            for (const [nodeIndex, bounds] of nodes.entries()) {
+              for (const coordinate of ['x', 'y', 'width', 'height'] as const) {
+                expect(Math.abs(after[tabIndex][nodeIndex][coordinate] - bounds[coordinate]), `${key}: вкладка ${tabIndex}, узел ${nodeIndex}, ${coordinate}`).toBeLessThanOrEqual(0.5)
+              }
+            }
+          }
+        }
+        const shifts = await page.evaluate(() => (window as unknown as { __profileTabs: { shifts: string[] } }).__profileTabs.shifts)
+        expect(shifts, 'ответы списков не сдвигают вкладки профиля').toEqual([])
+      } finally {
+        gates.forEach((gate) => gate.release())
+      }
+    })
+  }
+
   test.afterAll(() => {
     printResultsTable(SCREENS.map((s) => s.key))
   })

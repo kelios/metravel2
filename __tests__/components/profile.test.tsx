@@ -109,6 +109,7 @@ jest.mock('@/api/misc', () => ({
 
 jest.mock('@/hooks/useUserProfile', () => ({
   useUserProfile: () => ({
+    profileDataUpdatedAt: 0,
     profile: {
       id: '123',
       first_name: 'Test',
@@ -248,6 +249,10 @@ describe('ProfileScreen', () => {
     mockUseSubscriptionsData.mockReturnValue({
       subscriptions: [],
       subscribers: [],
+      subscriptionsCount: 0,
+      subscribersCount: 0,
+      subscriptionsDataUpdatedAt: 0,
+      subscribersDataUpdatedAt: 0,
       authors: [],
       subscriptionsLoading: false,
       subscribersLoading: false,
@@ -530,6 +535,10 @@ describe('ProfileScreen', () => {
     mockUseSubscriptionsData.mockImplementation((options?: { includeAuthorTravels?: boolean }) => ({
       subscriptions: [SUBSCRIPTION_AUTHOR_FIXTURE],
       subscribers: [SUBSCRIBER_FIXTURE],
+      subscriptionsCount: 1,
+      subscribersCount: 1,
+      subscriptionsDataUpdatedAt: 0,
+      subscribersDataUpdatedAt: 0,
       authors: options?.includeAuthorTravels
         ? [{
             profile: SUBSCRIPTION_AUTHOR_FIXTURE,
