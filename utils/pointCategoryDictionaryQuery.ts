@@ -35,6 +35,13 @@ export const POINT_CATEGORY_DICTIONARY_REFRESH_EVENT =
   'metravel:refresh-point-category-dictionary'
 
 export function requestPointCategoryDictionaryRefresh(): void {
-  if (typeof window === 'undefined') return
+  // RN объявляет window = global, но подписчик этого DOM-сигнала существует
+  // только на web. Проверяем DOM API без импорта react-native в общий query-модуль.
+  if (
+    typeof document === 'undefined' ||
+    typeof window === 'undefined' ||
+    typeof window.dispatchEvent !== 'function' ||
+    typeof Event !== 'function'
+  ) return
   window.dispatchEvent(new Event(POINT_CATEGORY_DICTIONARY_REFRESH_EVENT))
 }
