@@ -8,6 +8,7 @@ import {
   useBottomChromeInset,
   useDockReservePx,
   useScrollBottomPadding,
+  useNativeBottomChromeOcclusion,
   WEB_BOTTOM_CHROME_INSET,
   webBottomChromeInset,
   webDockReserve,
@@ -57,6 +58,46 @@ describe('bottomChromeInset', () => {
     )
     expect(renderHook(() => useDockReservePx()).result.current).toBe(0)
     expect(webDockReserve(16)).toBe('calc(var(--mt-dock-h, 0px) + 16px)')
+  })
+
+  it('keeps owner-scoped native occlusion separate from dock and scroll reserves', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'ios', configurable: true })
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <BottomChromeInsetProvider measuredHeight={89}>{children}</BottomChromeInsetProvider>
+    )
+    const { result } = renderHook(() => ({
+      chrome: useNativeBottomChromeOcclusion(),
+      dock: useDockReservePx(),
+      padding: useScrollBottomPadding(16),
+    }), { wrapper })
+    act(() => {
+      result.current.chrome.register('first', 1883)
+      result.current.chrome.register('second', 1800)
+    })
+    expect(result.current).toMatchObject({ chrome: { top: 1800 }, dock: 89, padding: 105 })
+    act(() => result.current.chrome.release('second'))
+    expect(result.current.chrome.top).toBe(1883)
+    act(() => result.current.chrome.register('first', 1200))
+    expect(result.current.chrome.top).toBe(1200)
+    act(() => result.current.chrome.register('first', Number.NaN))
+    expect(result.current.chrome.top).toBe(1200)
+    act(() => result.current.chrome.release('first'))
+    expect(result.current.chrome.top).toBeNull()
+  })
+
+  it('isolates native owners by provider and ignores registrations on web', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'ios', configurable: true })
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <BottomChromeInsetProvider measuredHeight={0}>{children}</BottomChromeInsetProvider>
+    )
+    const first = renderHook(useNativeBottomChromeOcclusion, { wrapper })
+    const second = renderHook(useNativeBottomChromeOcclusion, { wrapper })
+    act(() => first.result.current.register('same-owner', 200))
+    expect(first.result.current.top).toBe(200)
+    expect(second.result.current.top).toBeNull()
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
+    act(() => second.result.current.register('web-owner', 100))
+    expect(second.result.current.top).toBeNull()
   })
 
   it('shares CSS dock measurement across callers, responds to dock markers/resize, and cleans up', async () => {

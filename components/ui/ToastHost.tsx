@@ -1,8 +1,8 @@
-import React from 'react';
-import { Platform, Pressable, Text, StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Keyboard, Platform, Pressable, Text, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Toast, { BaseToast, ErrorToast, InfoToast, SuccessToast } from 'react-native-toast-message';
 
-import { useDockReservePx } from '@/components/layout/bottomChromeInset';
+import { useDockReservePx, useNativeBottomChromeOcclusion } from '@/components/layout/bottomChromeInset';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -51,6 +51,8 @@ const toastConfig = {
   warning: withAction(BaseToast),
 };
 
+const KEYBOARD_OFFSET = 10;
+
 type ToastHostProps = {
   /**
    * false — хост внутри полноэкранного Modal, где дока нет (#844): тост над
@@ -61,19 +63,51 @@ type ToastHostProps = {
 
 /**
  * Хост тостов native (#2161, #2168). Отступ — из того же резерва дока, что и
- * у экранов (`useDockReservePx`, #2097), поэтому тост целиком над доком на
- * любой нижней safe-area. Позиция по умолчанию — снизу, как у web-хоста и
+ * у экранов (`useDockReservePx`, #2097), и измеренной верхней границы активного
+ * футера относительно слоя хоста. Позиция по умолчанию — снизу, как у web-хоста и
  * `useActionFeedback`. Слой — верхний: тост рисуется поверх дока и
  * sticky-баров с `elevation` на Android.
  */
 export default function ToastHost({ overDock = true }: ToastHostProps) {
   const dockReservePx = useDockReservePx();
   const insets = useSafeAreaInsetsSafe();
+  const { top } = useNativeBottomChromeOcclusion();
+  const { width, height } = useWindowDimensions();
+  const layerRef = useRef<View>(null);
+  const generation = useRef(0);
+  const [layerBottom, setLayerBottom] = useState<number | null>(null);
+  const [keyboardLift, setKeyboardLift] = useState(KEYBOARD_OFFSET);
+  const measureLayer = useCallback(() => {
+    if (Platform.OS === 'web') return;
+    const request = ++generation.current;
+    layerRef.current?.measureInWindow((_x, y, _width, measuredHeight) => {
+      if (request !== generation.current || !Number.isFinite(y + measuredHeight) || measuredHeight <= 0) return;
+      setLayerBottom(y + measuredHeight);
+    });
+  }, []);
+  useEffect(() => {
+    measureLayer();
+    return () => { generation.current += 1; };
+  }, [measureLayer, width, height]);
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    const show = Keyboard.addListener('keyboardDidShow', ({ endCoordinates }) => {
+      setKeyboardLift(Math.max(0, endCoordinates.height) + KEYBOARD_OFFSET);
+    });
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardLift(KEYBOARD_OFFSET));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
   if (Platform.OS === 'web') return null;
-  const bottomOffset = toastBottomOffset(overDock ? dockReservePx : 0, insets.bottom);
+  const footerReserve = layerBottom !== null && top !== null ? Math.max(0, layerBottom - top) : 0;
+  const reserve = Math.max(overDock ? Math.max(dockReservePx, footerReserve) : 0, insets.bottom || 0);
+  const bottomOffset = toastBottomOffset(reserve, insets.bottom);
   return (
-    <View pointerEvents="box-none" style={styles.layer} testID="toast-layer">
-      <Toast config={toastConfig} position="bottom" bottomOffset={bottomOffset} />
+    <View ref={layerRef} collapsable={false} onLayout={measureLayer} pointerEvents="box-none" style={styles.layer} testID="toast-layer">
+      {/* The library snapshots its offsets at show(); move this layer for live remeasurements.
+          Its iOS keyboard animation already supplies keyboardLift, so reserve only the remainder. */}
+      <View pointerEvents="box-none" style={[StyleSheet.absoluteFillObject, { bottom: Math.max(0, bottomOffset - keyboardLift) }]} testID="toast-positioning">
+        <Toast config={toastConfig} position="bottom" bottomOffset={0} keyboardOffset={KEYBOARD_OFFSET} />
+      </View>
     </View>
   );
 }

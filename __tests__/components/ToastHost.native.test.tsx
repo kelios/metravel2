@@ -4,8 +4,8 @@
  * нижней safe-area, а не только рядом иконок.
  */
 import React from 'react'
-import { Platform } from 'react-native'
-import { render } from '@testing-library/react-native'
+import { Platform, StyleSheet } from 'react-native'
+import { render, screen } from '@testing-library/react-native'
 
 import { BottomChromeInsetProvider } from '@/components/layout/bottomChromeInset'
 import ToastHost from '@/components/ui/ToastHost'
@@ -36,6 +36,7 @@ jest.mock('@/hooks/useSafeAreaInsetsSafe', () => ({
 }))
 
 const lastProps = () => mockToastProps.at(-1) ?? {}
+const positionedOffset = () => StyleSheet.flatten(screen.getAllByTestId('toast-positioning').at(-1)!.props.style).bottom + 10
 
 describe('ToastHost (native)', () => {
   const originalOS = Platform.OS
@@ -57,13 +58,14 @@ describe('ToastHost (native)', () => {
         <ToastHost />
       </BottomChromeInsetProvider>,
     )
-    expect(lastProps()).toMatchObject({ position: 'bottom', bottomOffset: 89 + TOAST_DOCK_GAP })
+    expect(lastProps()).toMatchObject({ position: 'bottom', bottomOffset: 0, keyboardOffset: 10 })
+    expect(positionedOffset()).toBe(89 + TOAST_DOCK_GAP)
   })
 
   it('до замера дока берёт тот же фолбэк, что экраны: док + нижняя safe-area', () => {
     mockInsets = { top: 0, bottom: 34, left: 0, right: 0 }
     render(<ToastHost />)
-    expect(lastProps().bottomOffset).toBe(56 + 34 + TOAST_DOCK_GAP)
+    expect(positionedOffset()).toBe(56 + 34 + TOAST_DOCK_GAP)
   })
 
   it('без дока и внутри полноэкранного Modal — над home indicator', () => {
@@ -73,14 +75,14 @@ describe('ToastHost (native)', () => {
         <ToastHost />
       </BottomChromeInsetProvider>,
     )
-    expect(lastProps().bottomOffset).toBe(34 + TOAST_DOCK_GAP)
+    expect(positionedOffset()).toBe(34 + TOAST_DOCK_GAP)
 
     render(
       <BottomChromeInsetProvider measuredHeight={89}>
         <ToastHost overDock={false} />
       </BottomChromeInsetProvider>,
     )
-    expect(lastProps().bottomOffset).toBe(34 + TOAST_DOCK_GAP)
+    expect(positionedOffset()).toBe(34 + TOAST_DOCK_GAP)
   })
 
   it('слой тоста верхний и не перехватывает касания', () => {

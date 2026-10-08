@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useSyncExternalStore, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Platform } from 'react-native'
 
 import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe'
@@ -23,6 +23,23 @@ export const WEB_BOTTOM_CHROME_INSET =
   'calc(max(var(--mt-dock-h, 0px), var(--mt-consent-h, 0px)))'
 
 const BottomChromeInsetContext = createContext<number | null>(null)
+
+type NativeBottomChrome = {
+  top: number | null
+  register: (owner: string, top: number) => void
+  release: (owner: string) => void
+}
+
+const NativeBottomChromeContext = createContext<NativeBottomChrome>({
+  top: null,
+  register: () => {},
+  release: () => {},
+})
+
+/** Native overlays use window coordinates; scroll padding still reserves only the dock. */
+export function useNativeBottomChromeOcclusion(): NativeBottomChrome {
+  return useContext(NativeBottomChromeContext)
+}
 
 /** The dock itself must not include the banners' own --mt-consent-h reserve. */
 export function webDockReserve(extra = 0): string {
@@ -100,9 +117,32 @@ export function BottomChromeInsetProvider({
   children: ReactNode
 }) {
   const value = useMemo(() => measuredHeight, [measuredHeight])
+  const [tops, setTops] = useState<ReadonlyMap<string, number>>(() => new Map())
+  const register = useCallback((owner: string, top: number) => {
+    if (Platform.OS === 'web' || !Number.isFinite(top)) return
+    setTops((current) => {
+      if (current.get(owner) === top) return current
+      return new Map(current).set(owner, top)
+    })
+  }, [])
+  const release = useCallback((owner: string) => {
+    setTops((current) => {
+      if (!current.has(owner)) return current
+      const next = new Map(current)
+      next.delete(owner)
+      return next
+    })
+  }, [])
+  const occlusion = useMemo(() => ({
+    top: tops.size ? Math.min(...tops.values()) : null,
+    register,
+    release,
+  }), [tops, register, release])
   return (
     <BottomChromeInsetContext.Provider value={value}>
-      {children}
+      <NativeBottomChromeContext.Provider value={occlusion}>
+        {children}
+      </NativeBottomChromeContext.Provider>
     </BottomChromeInsetContext.Provider>
   )
 }

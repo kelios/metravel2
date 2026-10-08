@@ -1,7 +1,9 @@
-import React, { useMemo } from 'react'
-import { StyleSheet, View } from 'react-native'
+import React, { useCallback, useEffect, useId, useMemo, useRef } from 'react'
+import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
+import { useFocusEffect } from 'expo-router'
 
+import { useNativeBottomChromeOcclusion } from '@/components/layout/bottomChromeInset'
 import Button from '@/components/ui/Button'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useResponsive } from '@/hooks/useResponsive'
@@ -39,6 +41,39 @@ export const WizardStepFooter = React.memo(function WizardStepFooter({
   const isMobile = (isHydrated && isMobileViewport) || isTablet
   const colors = useThemedColors()
   const insets = useSafeAreaInsetsSafe()
+  const { register, release } = useNativeBottomChromeOcclusion()
+  const owner = useId()
+  const footerRef = useRef<View>(null)
+  const focused = useRef(false)
+  const generation = useRef(0)
+  const { width, height } = useWindowDimensions()
+  const visible = isMobile && Boolean(onPrimary || onBack)
+  const measureFooter = useCallback(() => {
+    if (!focused.current || Platform.OS === 'web') return
+    const request = ++generation.current
+    footerRef.current?.measureInWindow((_x, top, _width, measuredHeight) => {
+      if (!focused.current || request !== generation.current || measuredHeight <= 0) return
+      register(owner, top)
+    })
+  }, [owner, register])
+  useFocusEffect(useCallback(() => {
+    if (!visible || Platform.OS === 'web') return
+    focused.current = true
+    measureFooter()
+    return () => {
+      focused.current = false
+      generation.current += 1
+      release(owner)
+    }
+  }, [visible, measureFooter, owner, release]))
+  useEffect(() => {
+    measureFooter()
+  }, [measureFooter, width, height])
+  useEffect(() => () => {
+    focused.current = false
+    generation.current += 1
+    release(owner)
+  }, [owner, release])
 
   // #1038 перенёс основное действие из шапки в футер, но потерял компактную
   // подпись: «К публикации (шаг 6 из 6)» не влезает рядом с «Назад» и обрезается.
@@ -59,6 +94,9 @@ export const WizardStepFooter = React.memo(function WizardStepFooter({
 
   return (
     <View
+      ref={footerRef}
+      collapsable={false}
+      onLayout={measureFooter}
       style={[
         styles.container,
         {
