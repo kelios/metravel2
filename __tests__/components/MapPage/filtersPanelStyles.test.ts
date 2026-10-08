@@ -20,4 +20,17 @@ describe('filtersPanelStyles', () => {
     expect(styles.card.height).toBe('100%')
     expect(styles.card.maxHeight).toBe('100%')
   })
+
+  it.each([
+    ['android', true, 48], ['android', false, 48],
+    ['ios', true, 44], ['ios', false, 44],
+    ['web', true, 44], ['web', false, 44],
+  ] as const)('keeps all footer actions within the %s touch target contract (mobile=%s)', (platform, isMobile, minimum) => {
+    ;(Platform as any).OS = platform
+    const styles = getFiltersPanelStyles(getThemedColors(false), isMobile, isMobile ? 320 : 1280)
+
+    expect(styles.ctaButton.minHeight).toBeGreaterThanOrEqual(minimum)
+    expect(styles.ctaPrimary.minHeight).toBeGreaterThanOrEqual(minimum)
+  })
+
 })

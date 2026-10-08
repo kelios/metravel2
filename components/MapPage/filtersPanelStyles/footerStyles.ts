@@ -1,8 +1,9 @@
 import { Platform, StyleSheet } from 'react-native'
 import { CONTROL_RADIUS, type FiltersPanelStyleContext } from './context'
 
-export const getFooterStyles = ({ colors, isMobile, bottomDockReserve }: FiltersPanelStyleContext) =>
-  ({
+export const getFooterStyles = ({ colors, isMobile, bottomDockReserve }: FiltersPanelStyleContext) => {
+  const minimumControlHeight = Platform.OS === 'android' ? 48 : 44
+  return ({
     stickyFooter: {
       ...(Platform.OS === 'web'
         ? isMobile
@@ -60,14 +61,14 @@ export const getFooterStyles = ({ colors, isMobile, bottomDockReserve }: Filters
       borderRadius: CONTROL_RADIUS,
       paddingHorizontal: isMobile ? 14 : 12,
       paddingVertical: isMobile ? 9 : 8,
-      minHeight: 44,
+      minHeight: minimumControlHeight,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
       flexShrink: 0,
     },
     ctaPrimary: {
-      minHeight: isMobile ? 44 : 48,
+      minHeight: isMobile ? minimumControlHeight : 48,
       paddingVertical: isMobile ? 9 : 12,
       paddingHorizontal: isMobile ? 14 : 18,
       borderRadius: CONTROL_RADIUS,
@@ -105,3 +106,4 @@ export const getFooterStyles = ({ colors, isMobile, bottomDockReserve }: Filters
       marginBottom: 3,
     },
   }) as const
+}
