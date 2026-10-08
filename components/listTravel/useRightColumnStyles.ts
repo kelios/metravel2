@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { CATALOG_CHROME_GEOMETRY } from '@/components/listTravel/travelCatalogGeometry'
 import { Platform, type StyleProp, type ViewStyle } from 'react-native'
 
 import { useScrollBottomPadding } from '@/components/layout/bottomChromeInset'
@@ -79,7 +80,7 @@ export function useRightColumnStyles({
     paddingHorizontal: contentPadding,
     // Keep a small gap below the search chrome on web so the first card
     // doesn't visually tuck under the header shadow or clip its top actions.
-    paddingTop: 8,
+    paddingTop: CATALOG_CHROME_GEOMETRY.listPaddingTop,
     // Reserve whichever bottom overlay is taller: the responsive bottom dock or
     // the consent banner. The dock is also used at tablet widths, where the card
     // grid may still be multi-column, so this cannot depend on the single-column
@@ -89,7 +90,7 @@ export function useRightColumnStyles({
 
   const nativeContentContainerStyle = useMemo(() => ({
     paddingHorizontal: contentPadding,
-    paddingTop: 8,
+    paddingTop: CATALOG_CHROME_GEOMETRY.listPaddingTop,
     paddingBottom: nativeBottomReserve,
   }), [contentPadding, nativeBottomReserve])
 

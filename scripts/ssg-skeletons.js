@@ -9,6 +9,30 @@
  * to avoid importing TS modules at build time).
  */
 
+const { BREAKPOINTS, CARD_GEOMETRY, CARD_MEDIA_SLOT_RATIO, CATALOG_CHROME_GEOMETRY, getCatalogViewportGeometry } = require('../components/listTravel/travelCatalogGeometry');
+
+// Node-only CSS emission stays out of the shared runtime/native geometry module.
+function buildCatalogSkeletonCSS() {
+  const g = CARD_GEOMETRY;
+  const c = CATALOG_CHROME_GEOMETRY;
+  let css = `.ssg-search-brand{height:${c.brandCompactHeight}px}.ssg-search-shell{width:100%;margin:0;padding:0}.ssg-search-layout{display:flex;min-width:0}.ssg-search-aside{display:none;flex-shrink:0}.ssg-search-main{flex:1;min-width:0}.ssg-search-header{padding-top:0}.ssg-search-controls{min-height:${c.headerMinMobile}px}.ssg-search-bar{height:${c.compactSearchHeight}px}.ssg-search-toolbar{height:${c.toolbarHeight}px;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding-top:4px}.ssg-search-grid{display:grid;margin-top:${c.listPaddingTop}px}.ssg-search-card{min-width:0;border:${g.borderWidth}px solid;border-radius:20px}.ssg-search-card-media{width:100%;aspect-ratio:${CARD_MEDIA_SLOT_RATIO}}.ssg-search-card-body{padding:${g.contentPaddingTop}px ${g.contentPaddingHorizontal}px ${g.contentPaddingBottom}px;border-top:${g.borderWidth}px solid transparent;display:flex;flex-direction:column;gap:${g.contentGap}px}.ssg-search-card-title{height:${g.titleLineHeight*g.titleLines}px;display:flex;flex-direction:column;justify-content:space-evenly}.ssg-search-card-meta{min-height:${g.metaMinHeight}px;height:${g.metaLineHeight+g.metaPaddingTop+g.metaBadgePaddingTop}px;display:flex;align-items:center;padding-top:${g.metaPaddingTop+g.metaBadgePaddingTop}px}`;
+  // Emit ranges from the actual producer; a change in column/gap/padding rules
+  // updates first paint without introducing another breakpoint table.
+  for (const isPortrait of [false, true]) {
+    let previous = '';
+    for (let width = 0; width <= BREAKPOINTS.XXL; width++) {
+      const v = getCatalogViewportGeometry({width, isPortrait});
+      const state = `${v.gridColumns}/${v.gapSize}/${v.contentPadding}`;
+      if (state === previous) continue;
+      previous = state;
+      css += `@media(min-width:${width}px) and (orientation:${isPortrait?'portrait':'landscape'}){.ssg-search-grid{grid-template-columns:repeat(${v.gridColumns},minmax(0,1fr));gap:${v.gapSize}px;padding-left:${v.contentPadding}px;padding-right:${v.contentPadding}px}.ssg-search-header{padding-left:${v.contentPadding}px;padding-right:${v.contentPadding}px}}`;
+    }
+  }
+  css += `@media(max-width:${BREAKPOINTS.MOBILE-1}px){.ssg-search-card{border-radius:16px}}@media(min-width:${BREAKPOINTS.MOBILE}px){.ssg-search-main{overflow-y:auto;scrollbar-gutter:stable}.ssg-search-controls{min-height:${c.headerMinDesktop}px}}@media(min-width:${BREAKPOINTS.TABLET}px){.ssg-search-header{padding-top:${c.rightColumnPaddingTop}px}}@media(min-width:${c.brandWideBreakpoint}px){.ssg-search-brand{height:${c.brandWideHeight}px}}@media(min-width:${BREAKPOINTS.DESKTOP}px){.ssg-search-aside{display:block;width:clamp(260px,20vw,340px);min-height:520px;padding:16px;border-right:1px solid}.ssg-search-bar{height:${c.wideSearchHeight}px}}`;
+
+  return css;
+}
+
 // Hardcoded color tokens from modernMattePalette.ts
 const COLORS = {
   light: {
@@ -215,28 +239,20 @@ function buildSkeletonCSS() {
 @media(min-width:1280px){.ssg-home-bar{height:78px;padding:0 24px;gap:0}.ssg-home-bar-logo{width:32px;height:32px;flex:0 0 32px}.ssg-home-bar-brand{gap:8px}.ssg-home-bar-word{display:inline;font:600 18px/1 ${SANS};color:${COLORS.light.text};letter-spacing:-0.01em}.ssg-home-bar-burger{display:none}.ssg-home-bar-nav{display:flex;align-items:center;gap:22px;margin-left:41px;font:500 14px/1 ${SANS};color:${COLORS.light.text};white-space:nowrap}.ssg-home-bar-nav-item{display:inline-flex;align-items:center;gap:6px}.ssg-home-bar-nav-ico{width:18px;height:18px;flex:0 0 18px}.ssg-home-bar-login{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px;margin-left:12px;border-radius:12px;background:${COLORS.light.primary};font:700 14px/1 ${SANS};color:${COLORS.light.textOnPrimary}}.ssg-home-bar-guest{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px;margin-left:12px;border-radius:12px;background:${COLORS.light.bgSecondary};font:500 14px/1 ${SANS};color:${COLORS.light.text}}.ssg-home-shell{max-width:none;padding:52px 40px 24px}.ssg-home-book{display:grid;grid-template-columns:49% 51%;gap:0;width:min(100%,1200px);height:min(calc(100svh - 180px),calc((100vw - 80px)/1.3594771));margin:0 auto;background-color:${COLORS.light.surface};background-image:var(--image-homeHeroBook,none);background-size:100% 100%;background-repeat:no-repeat;border-radius:36px;overflow:hidden}.ssg-home-page{position:relative;top:11.0%;align-self:start;justify-content:flex-start;gap:10px;padding:0 18.4% 0 32.65%;border-radius:0;background:transparent;border:0;overflow:hidden}.ssg-home-chapter{display:flex;align-items:center;gap:10px;margin-bottom:2px}.ssg-home-chapter-label{font:600 11px/1.4 Baskerville,Georgia,'Times New Roman',serif;letter-spacing:.14em;text-transform:uppercase;color:${COLORS.light.textMuted};white-space:nowrap}.ssg-home-chapter-line{flex:1;height:1px;background:${COLORS.light.border}}.ssg-home-title{font-family:Baskerville,Georgia,'Times New Roman',serif;font-size:clamp(24px,1.9vw,32px);line-height:1.24;letter-spacing:-0.2px}.ssg-home-title .ssg-accent{color:${BOOK_PAGE_ACCENT}}.ssg-home-sub{font-size:clamp(12px,.85vw,13px);line-height:1.7}.ssg-home-sub-mobile{display:none}.ssg-home-sub-desktop{display:block}.ssg-home-search-row{height:50px;margin-top:2px}.ssg-home-search{height:50px}.ssg-home-search-btn{width:50px;height:50px;flex:0 0 50px}.ssg-home-cta{width:100%;min-width:190px;height:44px;margin-top:0}.ssg-home-moods,.ssg-home-popular{display:none}.ssg-home-week{top:29.2%;align-self:start;width:61.2%;aspect-ratio:3/2;margin:0 0 0 5.1%;border-radius:12px;border:0;background:${HOME_HERO_FILL}}.ssg-home-hero{position:absolute;inset:0;height:100%;aspect-ratio:auto;border-radius:inherit}.ssg-home-week-body{left:24px;right:24px;bottom:22px;padding:18px}}
 @media(min-width:1280px){.ssg-home-legal{max-width:none;padding:8px 40px 0}}
 @media(min-width:1280px) and (min-height:961px){.ssg-home-notes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:8px}.ssg-home-note{height:44px;border-radius:12px;background:rgba(255,255,255,.45);border:1px solid ${COLORS.light.border}}}
-.ssg-search-shell{width:100%;max-width:1214px;margin:0 auto;padding:10px}
-.ssg-search-layout{display:block;min-width:0}
-.ssg-search-aside{display:none}
+${buildCatalogSkeletonCSS()}
 .ssg-search-aside-group{margin-bottom:18px}
 .ssg-search-aside-title{margin:0 0 10px;font:600 12px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text};text-transform:uppercase;letter-spacing:.08em}
 .ssg-search-aside-line{height:14px;border-radius:7px;margin-bottom:10px}
-.ssg-search-main{min-width:0}
-.ssg-search-header{padding-top:14px}
-.ssg-search-bar{height:48px;border-radius:12px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border};display:flex;align-items:center;padding:0 16px;font:400 15px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.textMuted}}
-.ssg-search-toolbar{height:32px;display:flex;align-items:center;gap:8px;margin-top:8px}
+.ssg-search-bar{border-radius:12px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border};display:flex;align-items:center;padding:0 16px;font:400 15px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.textMuted}}
 .ssg-search-tool{width:88px;height:32px;border-radius:999px;background:${COLORS.light.bgSecondary};border:1px solid ${COLORS.light.border}}
-.ssg-search-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-top:8px}
-.ssg-search-card{min-width:0;border-radius:12px;overflow:hidden;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border}}
-.ssg-search-card-media{width:100%;height:220px}
-.ssg-search-card-body{padding:12px;display:flex;flex-direction:column;gap:8px}
+.ssg-search-aside{background:${COLORS.light.surface};border-color:${COLORS.light.border}}
+.ssg-search-card{overflow:hidden;background:${COLORS.light.surface};border-color:${COLORS.light.border}}
 .ssg-search-card-line{height:14px;border-radius:4px}
-.ssg-search-card-line.w70{width:70%}.ssg-search-card-line.w50{width:50%}.ssg-search-card-line.w30{width:30%}
+.ssg-search-card-line.w70{width:78%}.ssg-search-card-line.w50{width:52%}.ssg-search-card-line.w30{width:96px;height:12px}
 .ssg-search-seo{position:relative;width:100%;margin:32px 0 0;padding:0}
 .ssg-search-h1{margin:0 0 12px;font:700 28px/1.2 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text};letter-spacing:-0.02em;max-width:720px}
 .ssg-search-lead{margin:0;font:400 16px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.textMuted};max-width:720px}
-@media(min-width:768px){.ssg-search-shell{padding:14px}.ssg-search-header{padding-top:59px}.ssg-search-toolbar{gap:14px;margin-top:14px}.ssg-search-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:14px}.ssg-search-card-media{height:270px}.ssg-search-h1{font-size:36px}}
-@media(min-width:1440px){.ssg-search-shell{max-width:1600px}.ssg-search-layout{display:grid;grid-template-columns:300px minmax(0,1fr);gap:16px}.ssg-search-aside{display:block;min-height:520px;padding:16px;background:${COLORS.light.surface};border-right:1px solid ${COLORS.light.border}}}
+@media(min-width:768px){.ssg-search-h1{font-size:36px}}
 .ssg-map-layout{display:flex;min-height:calc(${MAP_VIEWPORT_HEIGHT} - ${MAP_WEB_MOBILE_VIEWPORT_RESERVE_PX}px);background:${COLORS.light.bgSecondary}}
 .ssg-map-canvas{position:relative;flex:1;min-height:calc(${MAP_VIEWPORT_HEIGHT} - ${MAP_WEB_MOBILE_VIEWPORT_RESERVE_PX}px);overflow:hidden;background:linear-gradient(135deg,${COLORS.light.bgSecondary} 0%,${COLORS.light.bg} 50%,${COLORS.light.bgSecondary} 100%)}
 .ssg-map-canvas::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.24) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.24) 1px,transparent 1px);background-size:48px 48px;opacity:.45}
@@ -513,7 +529,7 @@ function buildRemovalScript() {
 function buildSearchCards(count) {
   let html = '';
   for (let i = 0; i < count; i++) {
-    html += `<div class="ssg-search-card"><div class="ssg-search-card-media ssg-pulse"></div><div class="ssg-search-card-body"><div class="ssg-search-card-line w70 ssg-pulse"></div><div class="ssg-search-card-line w50 ssg-pulse"></div><div class="ssg-search-card-line w30 ssg-pulse"></div></div></div>`;
+    html += `<div class="ssg-search-card"><div class="ssg-search-card-media ssg-pulse"></div><div class="ssg-search-card-body"><div class="ssg-search-card-title"><div class="ssg-search-card-line w70 ssg-pulse"></div><div class="ssg-search-card-line w50 ssg-pulse"></div></div><div class="ssg-search-card-meta"><div class="ssg-search-card-line w30 ssg-pulse"></div></div></div></div>`;
   }
   return html;
 }
@@ -612,7 +628,7 @@ function buildSearchSkeletonHtml() {
     'Смотрите фотографии от путешественников, карты с точками интереса, ' +
     'трек-файлы GPX и подробные заметки — всё, что нужно, чтобы собраться и поехать.';
   return `<div id="ssg-skeleton">
-<div class="ssg-bar"><div class="ssg-bar-logo">MeTravel</div></div>
+<div class="ssg-bar ssg-search-brand"><div class="ssg-bar-logo">MeTravel</div></div>
 <div class="ssg-search-shell">
 <div class="ssg-search-layout">
 <aside class="ssg-search-aside">
@@ -622,7 +638,7 @@ function buildSearchSkeletonHtml() {
 </aside>
 <main class="ssg-search-main">
 <div class="ssg-search-header">
-<div class="ssg-search-bar">Найти маршрут…</div>
+<div class="ssg-search-controls"><div class="ssg-search-bar">Найти маршрут…</div></div>
 <div class="ssg-search-toolbar" aria-hidden="true"><div class="ssg-search-tool"></div><div class="ssg-search-tool"></div><div class="ssg-search-tool"></div></div>
 </div>
 <div class="ssg-search-grid">${buildSearchCards(6)}</div>
@@ -967,6 +983,7 @@ function injectSkeletonShell(html, route, ctx) {
 module.exports = {
   HOME_COPY,
   buildSkeletonCSS,
+  buildCatalogSkeletonCSS,
   buildHomeSkeletonHtml,
   buildSearchSkeletonHtml,
   buildMapSkeletonHtml,

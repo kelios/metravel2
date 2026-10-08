@@ -97,7 +97,7 @@ describe('web-резерв под док исчезает на экране бе
   })
 
   it('global.css обнуляет --mt-dock-h на body внутри мобильного медиа-запроса, после объявления резерва', () => {
-    const mobile = /@media \(max-width: 1023px\) \{\s*:root \{\s*--mt-dock-h: calc\(56px \+ env\(safe-area-inset-bottom, 0px\)\);\s*\}\s*body:has\(\[data-mt-dock="off"\]\) \{\s*--mt-dock-h: 0px;\s*\}/
+    const mobile = /@media \(max-width: 1279\.98px\) \{\s*:root \{\s*--mt-dock-h: calc\(56px \+ env\(safe-area-inset-bottom, 0px\)\);\s*\}\s*body:has\(\[data-mt-dock="off"\]\) \{\s*--mt-dock-h: 0px;\s*\}/
     expect(css).toMatch(mobile)
   })
 })

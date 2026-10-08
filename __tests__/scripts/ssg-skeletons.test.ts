@@ -614,32 +614,20 @@ describe('ssg-skeletons', () => {
       expect(html).not.toContain('<template');
     });
 
-    it('matches mobile and 1280px catalogue geometry', () => {
+    it('uses the catalog geometry producer instead of independent fixed media sizes', () => {
+      const { buildCatalogSkeletonCSS } = require('../../scripts/ssg-skeletons');
+      // Runtime/native consumers import the pure geometry CommonJS module;
+      // Node-only CSS emission must not become part of that runtime payload.
+      expect(require('../../components/listTravel/travelCatalogGeometry')).not.toHaveProperty('buildCatalogSkeletonCSS');
       const css = buildSkeletonCSS();
-      const mobileSearchTop = 56 + 10 + 14;
-      const mobileFirstCardTop = mobileSearchTop + 48 + 8 + 32 + 8;
-      const desktopSearchTop = 56 + 14 + 59;
-      const desktopFirstCardTop = desktopSearchTop + 48 + 14 + 32 + 14;
-      const desktopCardWidth = (1214 - 14 * 2 - 14 * 2) / 3;
-
-      expect(mobileSearchTop).toBe(80);
-      expect(mobileFirstCardTop).toBe(176);
-      expect(desktopFirstCardTop).toBe(237);
-      expect(desktopCardWidth).toBe(386);
-      expect(css).toContain('.ssg-search-shell{width:100%;max-width:1214px;margin:0 auto;padding:10px}');
-      expect(css).toContain('.ssg-search-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-top:8px}');
-      expect(css).toContain('.ssg-search-card-media{width:100%;height:220px}');
-      expect(css).toContain('grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:14px');
-      expect(css).toContain('.ssg-search-card-media{height:270px}');
-    });
-
-    it('shows the 300px aside only from 1440px', () => {
-      const css = buildSkeletonCSS();
+      expect(css).toContain(buildCatalogSkeletonCSS());
+      expect(css).toContain('.ssg-search-card-media{width:100%;aspect-ratio:1}');
+      expect(css).not.toContain('.ssg-search-card-media{height:270px}');
+      expect(css).not.toContain('max-width:1214px');
       const html = buildSearchSkeletonHtml();
-      expect(html).toContain('ssg-search-aside');
-      expect(css).toContain('@media(min-width:1440px){.ssg-search-shell{');
-      expect(css).toContain('grid-template-columns:300px minmax(0,1fr);gap:16px');
-      expect(css).not.toContain('@media(min-width:1024px){.ssg-search-aside');
+      expect(html.match(/class="ssg-search-card-title"/g)).toHaveLength(6);
+      expect(html.match(/class="ssg-search-card-meta"/g)).toHaveLength(6);
+      expect(css).toContain('@media(min-width:1440px){.ssg-search-aside');
     });
 
     it('does not invent a mock, cover, or invisible LCP image', () => {

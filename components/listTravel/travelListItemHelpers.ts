@@ -267,4 +267,4 @@ export const resolveCoverSlotGeometry = ({
  * 9:16 — 21.9%. Дожимать эти 20% геометрией клиента нельзя (вернётся рваная
  * сетка) — только контентом: квадратные варианты обложек, прецедент #134/#152.
  */
-export const CARD_MEDIA_SLOT_RATIO = 1
+export { CARD_MEDIA_SLOT_RATIO } from '@/components/listTravel/travelCatalogGeometry'

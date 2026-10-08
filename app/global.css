@@ -525,12 +525,14 @@ select:focus-visible {
 /*
  * Bottom dock height reservation.
  * Use var(--mt-dock-h) in padding-bottom of any scroll container or
- * bottom-anchored UI on mobile web so it never hides behind the dock.
+ * bottom-anchored UI wherever the web dock is visible (<1280px).
+ * Startup fallback for webMobileDockLayout.WEB_MOBILE_DOCK_RESERVE_CSS;
+ * webMobileDockReserve.test.ts keeps both producers in sync.
  */
 :root {
   --mt-dock-h: 0px;
 }
-@media (max-width: 1023px) {
+@media (max-width: 1279.98px) {
   :root {
     --mt-dock-h: calc(56px + env(safe-area-inset-bottom, 0px));
   }
@@ -543,7 +545,9 @@ select:focus-visible {
   body:has([data-mt-dock="off"]) {
     --mt-dock-h: 0px;
   }
+}
 
+@media (max-width: 1023px) {
   body:has([data-testid="map-screen-root"]) .leaflet-control-attribution {
     max-width: calc(100vw - 32px);
     border-radius: 12px;

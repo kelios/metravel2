@@ -1,3 +1,4 @@
+import { CATALOG_CHROME_GEOMETRY } from '@/components/listTravel/travelCatalogGeometry'
 import { Platform, type ViewStyle } from 'react-native'
 import type { Travel } from '@/types/types'
 
@@ -117,7 +118,7 @@ export function buildTravelRows(travels: Travel[], gridColumns: number, isMobile
 
 export function getRightColumnHeaderMinHeight(isMobile: boolean) {
   if (Platform.OS === 'web') {
-    return isMobile ? 50 : 76
+    return isMobile ? CATALOG_CHROME_GEOMETRY.headerMinMobile : CATALOG_CHROME_GEOMETRY.headerMinDesktop
   }
 
   return 52

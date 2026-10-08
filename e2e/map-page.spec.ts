@@ -1344,7 +1344,10 @@ test.describe('Map panel header tabs (#2217)', () => {
 test.describe('Map panel corners (#2245)', () => {
   const CORNER_VIEWPORTS = [
     { width: 820, height: 1180 },
+    { width: 1024, height: 820 },
     { width: 1180, height: 820 },
+    { width: 1279, height: 820 },
+    { width: 1280, height: 820 },
     { width: 1440, height: 900 },
   ];
 
@@ -1368,6 +1371,9 @@ test.describe('Map panel corners (#2245)', () => {
         const collapseButton = page.getByTestId('map-panel-collapse-button');
         await expect(collapseButton).toBeVisible({ timeout: 60_000 });
         await expect(page.getByTestId('map-panel-tab-filters')).toBeVisible({ timeout: 60_000 });
+        // The header mounts before the lazy filters panel; measure only after
+        // its real footer exists, rather than failing on the loading boundary.
+        await expect(page.getByTestId('filters-panel-footer')).toBeVisible({ timeout: 60_000 });
 
         const probe = await page.evaluate(() => {
           const button = document.querySelector('[data-testid="map-panel-collapse-button"]');
@@ -1387,7 +1393,16 @@ test.describe('Map panel corners (#2245)', () => {
               .map((el) => `${el.tagName}.${(el.getAttribute('data-testid') || '')}`);
           const inset = 1.5;
           const control = 24;
+          const dock = Array.from(document.querySelectorAll('[data-testid="footer-dock-row"]'))
+            .map((element) => element.getBoundingClientRect())
+            .find((rect) => rect.width > 0 && rect.height > 0);
+          const footer = panel.querySelector('[data-testid="filters-panel-footer"]')?.getBoundingClientRect();
+          const overlapHeight = (rect: DOMRect) => !dock || rect.right <= dock.left || rect.left >= dock.right
+            ? 0
+            : Math.max(0, Math.min(rect.bottom, dock.bottom) - Math.max(rect.top, dock.top));
           return {
+            panelDockOverlap: overlapHeight(box),
+            footerDockOverlap: footer ? overlapHeight(footer) : null,
             top: [
               paintedBy(box.left + inset, box.top + inset),
               paintedBy(box.right - inset, box.top + inset),
@@ -1412,10 +1427,12 @@ test.describe('Map panel corners (#2245)', () => {
         expect(probe!.control.length, 'control point must hit the panel header').toBeGreaterThan(0);
         expect(probe!.top).toEqual([[], []]);
         expect(probe!.headerRadius).toEqual(['20px', '20px']);
-        // At 768–1279 px the bottom dock covers the panel's bottom edge; the
-        // bottom corners are asserted only where the dock is absent.
-        if (viewport.width >= 1280) {
-          expect(probe!.bottom).toEqual([[], []]);
+        expect(probe!.bottom).toEqual([[], []]);
+        expect(probe!.panelDockOverlap, 'panel must end above the visible dock').toBe(0);
+        expect(probe!.footerDockOverlap, 'filter actions must never sit behind the dock').toBe(0);
+        if (viewport.width === 1180) {
+          // A genuine click also fails when a dock tab intercepts Reset (#2305).
+          await page.getByTestId('filters-panel-footer').getByTestId('filters-reset-button').click();
         }
       });
     }

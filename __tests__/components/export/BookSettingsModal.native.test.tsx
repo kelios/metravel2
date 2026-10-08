@@ -2,11 +2,13 @@
 // общий хук формы — реальные; подменён только источник премиума (граница
 // entitlement) и тосты.
 import React from 'react'
-import { Platform } from 'react-native'
-import { act, fireEvent, render, within } from '@testing-library/react-native'
+import { Platform, StyleSheet } from 'react-native'
+import { act, fireEvent, render, userEvent, within } from '@testing-library/react-native'
 
 import BookSettingsModal from '@/components/export/BookSettingsModal'
 import type { BookSettings } from '@/components/export/BookSettingsModal'
+import { NativeModalFooter } from '@/components/export/BookSettingsModal.native.parts'
+import { i18n, translate } from '@/i18n'
 
 const mockRequireUnlock = jest.fn()
 const mockTrackPaywallView = jest.fn()
@@ -158,5 +160,97 @@ describe.each(['ios', 'android'] as const)('BookSettingsModal на %s (#2229)', 
       fireEvent.press(view.getByTestId('book-settings-preview'))
     })
     expect(onPreview).toHaveBeenCalledWith(expect.objectContaining({ template: 'minimal' }))
+  })
+})
+
+describe.each(['ios', 'android'] as const)('NativeModalFooter на %s (#2229)', (os) => {
+  const renderFooter = (props: Partial<React.ComponentProps<typeof NativeModalFooter>> = {}) => {
+    const handlers = { onClose: jest.fn(), onSave: jest.fn(), onPreview: jest.fn() }
+    return {
+      ...render(<NativeModalFooter isSaving={false} hasErrors={false} showPreview {...handlers} {...props} />),
+      ...handlers,
+    }
+  }
+
+  beforeEach(() => setPlatform(os))
+  afterEach(async () => {
+    await i18n.changeLanguage('ru')
+    setPlatform(originalPlatform)
+  })
+
+  it.each(['ru', 'be', 'uk', 'pl', 'en'])(
+    'сохраняет полные подписи %s у двух и трёх действий без ограничения строк',
+    async (locale) => {
+      await i18n.changeLanguage(locale)
+      const labels = {
+        cancel: translate('profile:components.export.BookSettingsModal_parts.otmena_7c664a0f'),
+        preview: translate('profile:components.export.BookSettingsModal_parts.prevyu_8a8a2b33'),
+        save: translate('profile:components.export.BookSettingsModal_parts.sohranit_pdf_513469e1'),
+      }
+
+      for (const showPreview of [false, true]) {
+        const view = renderFooter({ showPreview })
+        expect(view.getAllByRole('button')).toHaveLength(showPreview ? 3 : 2)
+        expect(StyleSheet.flatten(view.getByTestId('book-settings-footer').props.style)).toMatchObject({
+          flexDirection: 'column', flexShrink: 0,
+        })
+        const actions = showPreview ? ['cancel', 'preview', 'save'] as const : ['cancel', 'save'] as const
+        for (const action of actions) {
+          const button = view.getByTestId(`book-settings-${action}`)
+          const label = within(button).getByText(labels[action])
+          expect(label.props.numberOfLines).toBe(0)
+          expect(StyleSheet.flatten(label.props.style)).toMatchObject({ textAlign: 'center' })
+          const style = StyleSheet.flatten(
+            typeof button.props.style === 'function'
+              ? button.props.style({ pressed: false, hovered: false })
+              : button.props.style,
+          )
+          expect(style).toMatchObject({ width: '100%', minHeight: os === 'android' ? 48 : 44 })
+          expect(style.flex).toBeUndefined()
+          expect(style.height).toBeUndefined()
+        }
+        view.unmount()
+      }
+    },
+  )
+
+  it('сохранение и превью неактивны при ошибке, отмена остаётся доступной', async () => {
+    const view = renderFooter({ hasErrors: true })
+    const user = userEvent.setup()
+    // fireEvent searches composite ancestors and can invoke Button.onPress
+    // above a disabled native host. userEvent targets actual touch responders.
+    for (const action of ['save', 'preview']) {
+      const button = view.getByTestId(`book-settings-${action}`)
+      expect(button.props.accessibilityState.disabled).toBe(true)
+      await user.press(button)
+    }
+    await user.press(view.getByTestId('book-settings-cancel'))
+    expect(view.onSave).not.toHaveBeenCalled()
+    expect(view.onPreview).not.toHaveBeenCalled()
+    expect(view.onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('во время создания показывает индикатор и полную подпись; отмена работает', async () => {
+    const view = renderFooter({ isSaving: true })
+    const user = userEvent.setup()
+    const save = view.getByTestId('book-settings-save')
+    const label = within(save).getByText(translate('profile:components.export.BookSettingsModal_parts.sozdanie_14bbb42e'))
+    expect(save.props.accessibilityState).toMatchObject({ busy: true, disabled: true })
+    expect(label.props.numberOfLines).toBe(0)
+    expect(view.getByTestId('book-settings-preview').props.accessibilityState.disabled).toBe(true)
+    await user.press(save)
+    await user.press(view.getByTestId('book-settings-preview'))
+    await user.press(view.getByTestId('book-settings-cancel'))
+    expect(view.onSave).not.toHaveBeenCalled()
+    expect(view.onPreview).not.toHaveBeenCalled()
+    expect(view.onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('сохраняет исходные обработчики доступных действий', () => {
+    const view = renderFooter()
+    for (const action of ['cancel', 'preview', 'save']) fireEvent.press(view.getByTestId(`book-settings-${action}`))
+    expect(view.onClose).toHaveBeenCalledTimes(1)
+    expect(view.onPreview).toHaveBeenCalledTimes(1)
+    expect(view.onSave).toHaveBeenCalledTimes(1)
   })
 })

@@ -1,5 +1,6 @@
 import { METRICS } from '@/constants/layout'
 import { defineBreakpointLayout } from '@/utils/breakpointLayout'
+import { buildWebDockReserveCss } from './bottomDockItemDefs'
 
 // Match Footer/useResponsive, not the root's separate768px content split.
 export const WEB_MOBILE_DOCK_LAYOUT = defineBreakpointLayout({
@@ -7,6 +8,9 @@ export const WEB_MOBILE_DOCK_LAYOUT = defineBreakpointLayout({
   minWidth: METRICS.breakpoints.desktop,
   blocks: { shell: { narrow: { display: 'flex' }, wide: { display: 'none' } } },
 })
+/** First-frame reserve follows the same visibility breakpoint as the dock. */
+export const WEB_MOBILE_DOCK_MEDIA_MAX_WIDTH = WEB_MOBILE_DOCK_LAYOUT.minWidth - 0.02
+export const WEB_MOBILE_DOCK_RESERVE_CSS = buildWebDockReserveCss(WEB_MOBILE_DOCK_MEDIA_MAX_WIDTH)
 export const WEB_DESKTOP_FOOTER_LAYOUT = defineBreakpointLayout({
   scope: 'web-desktop-footer',
   minWidth: WEB_MOBILE_DOCK_LAYOUT.minWidth,

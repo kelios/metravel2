@@ -5,6 +5,10 @@ import { translate as i18nT } from '@/i18n'
 
 // Eager navigation owns only the five links; sheet/account data stays deferred.
 export const BOTTOM_DOCK_HEIGHT = 56
+/** Canonical first-frame CSS producer; consumers pass their visibility boundary. */
+export function buildWebDockReserveCss(maxWidth: number): string {
+  return `:root{--mt-dock-h:0px}@media (max-width:${maxWidth}px){:root{--mt-dock-h:calc(${BOTTOM_DOCK_HEIGHT}px + env(safe-area-inset-bottom, 0px))}body:has([data-mt-dock="off"]){--mt-dock-h:0px}}`
+}
 export const OPEN_WEB_DOCK_MORE_EVENT = 'metravel:open-bottom-dock-more'
 export type BottomDockIconName = NavigationIconName
 export type BottomDockItemDef = {

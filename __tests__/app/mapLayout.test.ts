@@ -11,7 +11,7 @@ import {
 } from '@/screens/tabs/map.styles';
 import { getDesktopBranchInsets, getDesktopPopoverMaxHeight } from '@/screens/tabs/mapDesktopInsets';
 import { MAP_PANEL_GAP } from '@/screens/tabs/mapDesktopCorner';
-import { METRICS } from '@/constants/layout';
+import { LAYOUT, METRICS } from '@/constants/layout';
 
 describe('map layout header offset', () => {
   const originalOS = Platform.OS;
@@ -85,6 +85,16 @@ describe('map layout header offset', () => {
     expect(styles.container.height).toBe(
       'calc(var(--metravel-map-vh, 100svh) - var(--mt-dock-h, 0px))',
     );
+  });
+
+  it('web desktop branch subtracts the canonical dock reserve exactly once', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'web' });
+    const styles = getStyles(false, 0, themedColors, true);
+    expect(styles.container.height).toBe(
+      `calc(var(--metravel-map-vh, 100svh) - calc(${LAYOUT.headerHeight + METRICS.spacing.s}px + var(--mt-dock-h, 0px)))`,
+    );
+    expect(String(styles.container.height).match(/--mt-dock-h/g)).toHaveLength(1);
+    expect(styles.mapContainer.paddingBottom).toBe(getStyles(false, 0, themedColors, false).mapContainer.paddingBottom);
   });
 });
 

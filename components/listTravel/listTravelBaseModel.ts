@@ -1,6 +1,7 @@
 import { Platform } from 'react-native'
+import { getCatalogViewportGeometry } from '@/components/listTravel/travelCatalogGeometry'
 import type { ViewStyle } from 'react-native'
-import { BREAKPOINTS, calculateColumns } from './utils/listTravelConstants'
+import { BREAKPOINTS } from './utils/listTravelConstants'
 import { translate as i18nT } from '@/i18n'
 
 export function buildCardsGridDynamicStyle(cardsGridStyle: ViewStyle, gapSize: number): ViewStyle[] {
@@ -329,65 +330,9 @@ export function getListTravelViewportState(params: ResponsiveParams): ViewportSt
       ? effectiveResponsiveWidth >= BREAKPOINTS.DESKTOP
       : params.isDesktopSize
 
-  const width = effectiveResponsiveWidth
-  const isCardsSingleColumn = width < BREAKPOINTS.MOBILE
-
-  // Adaptive sidebar width: smoothly scales with viewport so the panel fits
-  // narrow desktops (~1440px) without crowding the cards grid, and gets a bit
-  // more breathing room on wide monitors.
-  const sidebarWidth = usesOverlaySidebar
-    ? 0
-    : Math.round(Math.min(340, Math.max(260, width * 0.2)))
-
-  // Compact web widths use overlay filters; the docked sidebar appears from desktop widths.
-  const effectiveWidth = !usesOverlaySidebar ? width - sidebarWidth : width
-
-  // Gap is based on effectiveWidth (content area) so it stays proportional
-  // when sidebar appears/disappears at the 1024px threshold
-  const gapSize =
-    effectiveWidth < BREAKPOINTS.XS
-      ? 6
-      : effectiveWidth < BREAKPOINTS.SM
-        ? 8
-        : effectiveWidth < BREAKPOINTS.MOBILE
-          ? 10
-          : effectiveWidth < BREAKPOINTS.TABLET
-            ? 12
-            : effectiveWidth < BREAKPOINTS.DESKTOP
-              ? 14
-              : 16
-  const contentPadding =
-    effectiveWidth < BREAKPOINTS.XS
-      ? 8
-      : effectiveWidth < BREAKPOINTS.SM
-        ? 10
-        : effectiveWidth < BREAKPOINTS.MOBILE
-          ? 12
-          : effectiveWidth < BREAKPOINTS.TABLET
-            ? 12
-            : effectiveWidth < BREAKPOINTS.DESKTOP
-              ? 14
-              : effectiveWidth < BREAKPOINTS.DESKTOP_LARGE
-                ? 16
-                : 20
-
-  let gridColumns: number
-  if (isCardsSingleColumn) {
-    gridColumns = 1
-  } else if (usesOverlaySidebar) {
-    gridColumns = calculateColumns(width, resolvedIsPortrait ? 'portrait' : 'landscape')
-  } else if (!isTablet || !resolvedIsPortrait) {
-    gridColumns = calculateColumns(effectiveWidth, 'landscape')
-  } else {
-    gridColumns = calculateColumns(effectiveWidth, 'portrait')
-  }
-
-  // On large desktop (>=1920px content area) allow 4 columns for compact layout
-  if (!usesOverlaySidebar && effectiveWidth >= BREAKPOINTS.DESKTOP_LARGE) {
-    gridColumns = Math.min(gridColumns, 4)
-  } else if (!usesOverlaySidebar && effectiveWidth >= BREAKPOINTS.DESKTOP) {
-    gridColumns = Math.min(gridColumns, 3)
-  }
+  const { width, isCardsSingleColumn, sidebarWidth, effectiveWidth, gapSize, contentPadding, gridColumns } = getCatalogViewportGeometry({
+    width: effectiveResponsiveWidth, usesOverlaySidebar, isTablet, isPortrait: resolvedIsPortrait,
+  })
 
   return {
     contentPadding,

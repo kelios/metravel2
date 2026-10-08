@@ -3,11 +3,12 @@
 // `<input type="checkbox">` и `<button>` web-окна (`BookSettingsModal.parts.tsx`).
 // Подписи — те же ключи, что у сайта.
 import React, { useMemo } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 
 import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
 import { Toggle } from '@/components/ui/Toggle'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
 
@@ -148,11 +149,14 @@ export function NativeModalFooter({
   const { styles } = useNativePartStyles()
   const blocked = isSaving || hasErrors
   return (
-    <View style={styles.footer}>
+    <View style={styles.footer} testID="book-settings-footer">
       <Button
         label={i18nT('profile:components.export.BookSettingsModal_parts.otmena_7c664a0f')}
         variant="outline"
         onPress={onClose}
+        fullWidth
+        labelNumberOfLines={0}
+        labelStyle={styles.footerLabel}
         style={styles.footerButton}
         testID="book-settings-cancel"
       />
@@ -163,6 +167,9 @@ export function NativeModalFooter({
           variant="outline"
           onPress={onPreview}
           disabled={blocked}
+          fullWidth
+          labelNumberOfLines={0}
+          labelStyle={styles.footerLabel}
           style={styles.footerButton}
           testID="book-settings-preview"
         />
@@ -178,6 +185,9 @@ export function NativeModalFooter({
         onPress={onSave}
         disabled={blocked}
         loading={isSaving}
+        fullWidth
+        labelNumberOfLines={0}
+        labelStyle={styles.footerLabel}
         style={styles.footerButton}
         testID="book-settings-save"
       />
@@ -220,14 +230,17 @@ const createStyles = (colors: Colors) =>
     switchTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     footer: {
-      flexDirection: 'row',
-      gap: 8,
-      paddingHorizontal: 16,
-      paddingTop: 12,
-      paddingBottom: 12,
+      // The iPad pageSheet can also be narrow: intrinsic stacked actions keep
+      // translated labels readable without relying on the screen width.
+      flexDirection: 'column',
+      flexShrink: 0,
+      gap: DESIGN_TOKENS.spacing.xs,
+      paddingHorizontal: DESIGN_TOKENS.spacing.md,
+      paddingVertical: DESIGN_TOKENS.spacing.sm,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.border,
       backgroundColor: colors.surface,
     },
-    footerButton: { flex: 1, minHeight: 44 },
+    footerButton: { minHeight: Platform.OS === 'android' ? 48 : 44 },
+    footerLabel: { textAlign: 'center' },
   })

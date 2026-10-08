@@ -1,4 +1,5 @@
 import { Platform, StyleSheet } from 'react-native';
+import { CARD_GEOMETRY } from '@/components/listTravel/travelCatalogGeometry';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { CARD_HOVER_TRANSITION } from '@/components/ui/unifiedTravelCardTokens';
@@ -24,14 +25,14 @@ const META_TEXT_LINE_HEIGHT =
   Platform.OS === 'web'
     ? DESIGN_TOKENS.typography.scale.bodySmall.lineHeight
     : DESIGN_TOKENS.typography.scale.caption.lineHeight;
-const TITLE_TEXT_LINE_HEIGHT = Platform.OS === 'web' ? 20 : 19;
+const TITLE_TEXT_LINE_HEIGHT = Platform.OS === 'web' ? CARD_GEOMETRY.titleLineHeight : 19;
 
 /**
  * Высоты текстового блока карточки — один источник для стилей ниже и для
  * каркаса `TravelListItemSkeleton` (#2176): каркас занимает место настоящей
  * карточки, а не «примерно столько же».
  */
-export const TRAVEL_CARD_TITLE_MIN_HEIGHT = TITLE_TEXT_LINE_HEIGHT * 2;
+export const TRAVEL_CARD_TITLE_MIN_HEIGHT = TITLE_TEXT_LINE_HEIGHT * CARD_GEOMETRY.titleLines;
 export const TRAVEL_CARD_META_LINE_HEIGHT = META_TEXT_LINE_HEIGHT;
 
 export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedColors>) =>
@@ -50,7 +51,7 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       width: '100%',
       backgroundColor: colors.surface,
       borderRadius: DESIGN_TOKENS.radii.lg,
-      borderWidth: 1,
+      borderWidth: CARD_GEOMETRY.borderWidth,
       borderColor: colors.borderLight,
       overflow: 'hidden',
       ...(Platform.OS === 'web'
@@ -222,9 +223,9 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
     },
 
     cardContentContainer: {
-      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-      paddingTop: Platform.OS === 'web' ? 9 : 10,
-      paddingBottom: Platform.OS === 'web' ? 11 : 12,
+      paddingHorizontal: CARD_GEOMETRY.contentPaddingHorizontal,
+      paddingTop: Platform.OS === 'web' ? CARD_GEOMETRY.contentPaddingTop : 10,
+      paddingBottom: Platform.OS === 'web' ? CARD_GEOMETRY.contentPaddingBottom : 12,
       borderTopWidth: 1,
       borderTopColor: colors.borderLight,
     },
@@ -232,7 +233,7 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
     contentStack: {
       width: '100%',
       minWidth: 0,
-      gap: Platform.OS === 'web' ? 4 : 3,
+      gap: Platform.OS === 'web' ? CARD_GEOMETRY.contentGap : 3,
     },
 
     titleInline: {
@@ -265,7 +266,7 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       justifyContent: 'flex-start',
       columnGap: 6,
       rowGap: Platform.OS === 'web' ? 2 : 3,
-      minHeight: Platform.OS === 'web' ? 18 : 20,
+      minHeight: Platform.OS === 'web' ? CARD_GEOMETRY.metaMinHeight : 20,
       paddingTop: 1,
     },
 
