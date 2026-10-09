@@ -176,3 +176,5 @@ GSC follow-up compares the same 28-day `/quests/*` segment, separating original 
 ## Owner Decisions Before Apply
 
 The proposed default is D1 (quest-only language prefixes, RU numeric canonicals, RU-only city landings) and D5 (backend-owned live static gateway/eligibility plus shared immutable SSG package). Both materially change the contract and require owner acceptance. Backend owner must confirm topology/cache feasibility before implementation cards are runnable. Accepted #2193/#2201 remove translation-source blockers but do not authorize backend topology work or applying this change. No other unresolved choice is silently delegated to implementation.
+
+**Owner decision, 2026-10-09:** D1 (quest-only language prefixes, unchanged RU numeric canonicals, RU-only city landings) and D5 (backend-owned live static gateway/eligibility plus shared immutable SSG package) are accepted as proposed. Backend topology/cache feasibility (task 1.2) remains the first step of card C (#2362); source work on A–E still needs its own apply request.

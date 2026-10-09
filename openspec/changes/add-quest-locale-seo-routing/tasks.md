@@ -1,8 +1,8 @@
 ## 1. Acceptance and ownership prerequisites
 
-- [ ] 1.1 Record owner acceptance of the proposed quest-only prefixes, unchanged RU numeric canonicals, RU-only city first stage and backend gateway/activation dependency (design D1–D5); do not interpret planning validation as approval.
+- [x] 1.1 Record owner acceptance of the proposed quest-only prefixes, unchanged RU numeric canonicals, RU-only city first stage and backend gateway/activation dependency (design D1–D5); do not interpret planning validation as approval. Accepted by the owner 2026-10-09: D1 language prefixes and D5 backend-owned live gateway, recorded on #2208.
 - [ ] 1.2 Backend owner confirms real shared serving root, authoritative per-response publication snapshot, private builder revision receipt, anonymous serving projection schema, cache/conditional-request chain and gateway feasibility; agree A/B/C/D interfaces before their parallel implementation and settle any contract change before apply.
-- [ ] 1.3 After acceptance, refresh Problem Memory and turn `implementation-cards.md` drafts into linked board cards with separate FE/BE owners; require a later explicit apply request before source work.
+- [x] 1.3 After acceptance, refresh Problem Memory and turn `implementation-cards.md` drafts into linked board cards with separate FE/BE owners; require a later explicit apply request before source work. Created 2026-10-09 after an all-status board search (no duplicates): A #2364, B #2365, C #2362, D #2363, E #2366.
 
 ## 2. Frontend route, locale and metadata model
 
