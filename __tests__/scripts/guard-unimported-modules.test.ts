@@ -111,6 +111,59 @@ describe('module production reachability', () => {
     expect(graph.runtime).toEqual(expect.arrayContaining(['app/+native-intent.tsx', 'app/items+api.ts', 'app/index.native.tsx', 'app/index.web.tsx', 'utils/intent.ts', 'utils/server.ts']));
   });
 
+  it('does not root app helpers through erased default or reserved-name declarations', () => {
+    const root = fixture({
+      'app/type-helper.ts': 'export default interface Model {}',
+      'app/types+api.ts': 'export type GET = () => void;',
+      'app/declared+api.ts': 'export declare function GET(): void;',
+      'app/+native-intent.ts': 'export type redirectSystemPath = () => void;',
+    });
+    const graph = cleanGraph(root);
+    expect(graph.entries).toEqual([]);
+    expect(graph.runtime).toEqual([]);
+    expect(graph.unreachable).toEqual(['app/+native-intent.ts', 'app/declared+api.ts', 'app/type-helper.ts', 'app/types+api.ts']);
+  });
+
+  it.each([
+    ['interface alias', 'app/helper.ts', 'interface Model {} export { Model as default };'],
+    ['interface default identifier', 'app/helper.ts', 'interface Model {} export default Model;'],
+    ['type alias', 'app/helper.ts', 'type Model = {}; export { Model as default };'],
+    ['type-only namespace', 'app/helper.ts', 'namespace Model { export interface Value {} } export { Model as default };'],
+    ['named type import', 'app/helper.ts', "import type { Named as Model } from '@/types/model'; export { Model as default };"],
+    ['inline type import', 'app/helper.ts', "import { type Named as Model } from '@/types/model'; export { Model as default };"],
+    ['default type import', 'app/helper.ts', "import type Model from '@/types/model'; export default Model;"],
+    ['namespace type import', 'app/helper.ts', "import type * as Model from '@/types/model'; export { Model as default };"],
+    ['API type alias', 'app/helper+api.ts', 'type Handler = () => void; export { Handler as GET };'],
+    ['intent interface alias', 'app/+native-intent.ts', 'interface Handler {} export { Handler as redirectSystemPath };'],
+  ])('does not root %s through a locally erased export binding', (_label, file, source) => {
+    const root = fixture({ [file]: source, 'types/model.ts': 'export default interface Model {} export interface Named {}' });
+    const graph = cleanGraph(root);
+    expect(graph.entries).toEqual([]);
+    expect(graph.runtime).toEqual([]);
+    expect(graph.unreachable).toContain(file);
+    expect(findings(graph, ledger([]))).toContainEqual({ path: file, kind: 'unreachable' });
+  });
+
+  it.each([
+    ['function alias', 'app/index.tsx', 'function Screen() { return null; } export { Screen as default };'],
+    ['interface/function merge', 'app/index.tsx', 'interface Screen {} function Screen() { return null; } export { Screen as default };'],
+    ['interface/class merge', 'app/index.tsx', 'interface Screen {} class Screen {} export default Screen;'],
+    ['type/value name pair', 'app/index.tsx', 'type Screen = {}; const Screen = () => null; export { Screen as default };'],
+    ['runtime namespace', 'app/index.tsx', 'namespace Screen { export const value = 1; } export { Screen as default };'],
+    ['ambient value alias', 'app/index.tsx', 'declare const Screen: unknown; export { Screen as default };'],
+    ['ambient value identifier', 'app/index.tsx', 'declare function Screen(): void; export default Screen;'],
+    ['runtime import alias', 'app/index.tsx', "interface Model {} import Screen from '@/components/Screen'; export { Screen as default };"],
+    ['runtime reexport', 'app/index.tsx', "interface Model {} export { default } from '@/components/Screen';"],
+    ['API value alias', 'app/items+api.ts', 'type Request = {}; function handler() {} export { handler as GET };'],
+    ['intent value alias', 'app/+native-intent.ts', 'interface Intent {} function redirect() {} export { redirect as redirectSystemPath };'],
+  ])('preserves %s as an emitted runtime entry', (_label, file, source) => {
+    const root = fixture({ [file]: source, 'components/Screen.tsx': 'export default function Screen() { return null; }' });
+    const graph = cleanGraph(root);
+    expect(graph.entries).toContainEqual(expect.objectContaining({ path: file, kind: 'runtime' }));
+    expect(graph.runtime).toContain(file);
+    expect(graph.unreachable).not.toContain(file);
+  });
+
   it('retains neutral base/web/native/iOS/Android paths and adapter reexports', () => {
     const root = fixture({
       'entry.js': "require('@/components/Adapter');",
@@ -261,6 +314,34 @@ describe('module production reachability', () => {
     expect(graph.sourceManifest.map((item: { path: string }) => item.path)).toEqual(['components/live.ts', 'entry.js']);
   });
 
+  it('indexes nested confined directory aliases without exempting their orphan modules', () => {
+    const root = fixture({
+      'entry.js': "require('./components/alias/live');",
+      'local-source/live.ts': 'export const value = 1;',
+      'local-source/orphan.ts': 'export const value = 1;',
+    });
+    fs.mkdirSync(path.join(root, 'components'));
+    fs.symlinkSync(path.join(root, 'local-source'), path.join(root, 'components/alias'));
+    const graph = cleanGraph(root);
+    expect(graph.runtime).toEqual(['components/alias/live.ts', 'entry.js']);
+    expect(graph.unreachable).toEqual(['components/alias/orphan.ts']);
+    expect(graph.sourceManifest.map((item: { path: string }) => item.path)).toEqual(['components/alias/live.ts', 'components/alias/orphan.ts', 'entry.js']);
+  });
+
+  it('refuses escaping nested directory aliases before reading their source', () => {
+    const outside = fixture({ 'external/orphan.ts': 'export const value = 1;' });
+    const root = fixture();
+    fs.mkdirSync(path.join(root, 'components'));
+    fs.symlinkSync(path.join(outside, 'external'), path.join(root, 'components/alias'));
+    expect(() => analyzeGraph(root)).toThrow(/source directory missing containment: components\/alias/);
+  });
+
+  it('refuses directory alias cycles instead of recursing indefinitely', () => {
+    const root = fixture({ 'components/orphan.ts': 'export const value = 1;' });
+    fs.symlinkSync(path.join(root, 'components'), path.join(root, 'components/loop'));
+    expect(() => analyzeGraph(root)).toThrow(/source directory symlink cycle: components\/loop/);
+  });
+
   it('refuses an external tsconfig symlink without reading the external source policy', () => {
     const outside = fixture();
     const root = fixture();
@@ -280,6 +361,14 @@ describe('module production reachability', () => {
     "function load() { if (true) { var require = customLoader; } require('../components/dead'); }",
     "if (true) { var require = customLoader; } require('../components/dead');",
     "class Loader { static { if (true) { var require = customLoader; } require('../components/dead'); } }",
+    "switch (1) { case 1: const require = customLoader; require('../components/dead'); }",
+    "const Loader = class require { load() { require('../components/dead'); } };",
+    "({ require } = customLoader); require('../components/dead');",
+    "({ load: require } = customLoader); require('../components/dead');",
+    "[require] = customLoader; require('../components/dead');",
+    "for (require of loaders) {} require('../components/dead');",
+    "for (require in loaders) {} require('../components/dead');",
+    "for ({ require } of loaders) {} require('../components/dead');",
   ])('does not confer liveness through a lexical require binding: %s', (source) => {
     const root = fixture({
       'app/index.tsx': `${source} export default () => null;`,
@@ -291,9 +380,21 @@ describe('module production reachability', () => {
   it.each([
     'function load() { var require = customLoader; }',
     'class Loader { static { var require = customLoader; } }',
+    'for (const require of loaders) { require("../components/localOnly"); }',
   ])('keeps nested var scopes out of the enclosing require scope: %s', (nested) => {
     const root = fixture({
       'app/index.tsx': `${nested} require('../components/live'); export default () => null;`,
+      'components/live.ts': 'export const value = 1;',
+    });
+    expect(cleanGraph(root).unreachable).toEqual([]);
+  });
+
+  it.each([
+    'class Loader { require() { require("../components/live"); } }',
+    'const loader = { require() { require("../components/live"); } };',
+  ])('does not treat a method name as a lexical require binding: %s', (source) => {
+    const root = fixture({
+      'app/index.tsx': `${source} export default () => null;`,
       'components/live.ts': 'export const value = 1;',
     });
     expect(cleanGraph(root).unreachable).toEqual([]);
@@ -306,6 +407,7 @@ describe('operator tooling data boundary', () => {
     ['immutable alias', 'function load(input) { const resolved = path.resolve(process.cwd(), input); return require(resolved); }'],
     ['parameter alias', 'function load(input) { const selected = input; return require(path.resolve(process.cwd(), selected)); }'],
     ['verified CLI result', "const { parseCliArgs } = require('./lib/cli-contract'); const CLI_SPEC = {}; const args = parseCliArgs(process.argv, CLI_SPEC); require(path.resolve(process.cwd(), args.input));"],
+    ['cache clearing', 'function load(input) { const resolved = path.resolve(process.cwd(), input); delete require.cache[require.resolve(resolved)]; return require(resolved); }'],
   ])('allows %s only with zero inferred target edges', (_label, loader) => {
     const root = fixture({
       'scripts/operator.js': `const path = require('node:path'); ${loader}`,
@@ -336,6 +438,13 @@ describe('operator tooling data boundary', () => {
     ['different CLI export', "const { other: parseCliArgs } = require('./lib/cli-contract'); const args = parseCliArgs(process.argv, {}); require(path.resolve(process.cwd(), args.input));"],
     ['modified CLI parser', "let { parseCliArgs } = require('./lib/cli-contract'); parseCliArgs = customParser; const args = parseCliArgs(process.argv, {}); require(path.resolve(process.cwd(), args.input));"],
     ['modified CLI result', "const { parseCliArgs } = require('./lib/cli-contract'); const args = parseCliArgs(process.argv, {}); args.input = 'components/data'; require(path.resolve(process.cwd(), args.input));"],
+    ['destructured path resolver mutation', '({ resolve: path.resolve } = customResolver); function load(input) { require(path.resolve(process.cwd(), input)); }'],
+    ['destructured process cwd mutation', '[process.cwd] = customResolver; function load(input) { require(path.resolve(process.cwd(), input)); }'],
+    ['deleted path resolver', 'delete path.resolve; require(path.resolve(process.cwd(), "components/data"));'],
+    ['deleted process cwd', 'delete process.cwd; function load(input) { require(path.resolve(process.cwd(), input)); }'],
+    ['deleted package resolver', 'delete require.resolve; require(path.join(path.dirname(require.resolve("external-package")), "helper.js"));'],
+    ['for-of resolver assignment', 'for (path.resolve of resolvers) {} require(path.resolve(process.cwd(), "components/data"));'],
+    ['for-in cwd assignment', 'for (process.cwd in resolvers) {} function load(input) { require(path.resolve(process.cwd(), input)); }'],
   ])('refuses %s rather than guessing module targets', (_label, loader) => {
     const graph = analyzeGraph(fixture({ 'scripts/operator.js': `const path = require('path'); ${loader}`, 'scripts/lib/cli-contract.js': 'exports.parseCliArgs = () => ({});' }));
     expect(graph.toolingInputs).toEqual([]);

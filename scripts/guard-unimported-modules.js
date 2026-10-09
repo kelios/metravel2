@@ -9,8 +9,11 @@ const ts = require('typescript')
 const crypto = require('node:crypto')
 
 const BASELINE_PATH = 'scripts/unimported-modules-baseline.json'
-// Bootstrap checkpoint: populated ONLY after independent review and first ledger commit.
-const INITIAL_AUTHORITY = Object.freeze({ commit: null, blob: null })
+// Reviewed first ledger introduction; later revisions may only remove paths.
+const INITIAL_AUTHORITY = Object.freeze({
+  commit: '81781a3284e0d721538b80c95fd46d0b00f6b249',
+  blob: '7c48d8117fe408eba8320b84af13d070bebfefe0',
+})
 const SOURCE_EXTENSIONS = ['.ts', '.tsx', '.mjs', '.js', '.jsx', '.cjs']
 const CANDIDATE_DIRS = new Set(['api', 'app', 'components', 'context', 'hooks', 'screens', 'services', 'stores', 'utils', 'constants', 'types', 'styles'])
 const OMIT_DIRS = new Set(['node_modules', '.git', '.expo', '.codex-temp', '.codex-debug', '__tests__', '__mocks__', 'e2e', 'coverage', 'dist', 'build', 'test-results', 'playwright-report', '__pycache__'])
@@ -42,27 +45,30 @@ function confinedFile(root, relative) {
 
 function inventory(root) {
   const files = []
-  function walk(relative) {
+  function walk(relative, ancestors = new Set()) {
+    const absolute = path.join(root, relative)
+    const real = fs.realpathSync(absolute)
+    if (!real.startsWith(root + path.sep) || !fs.statSync(absolute).isDirectory()) throw new Error(`invalid-policy: source directory missing containment: ${relative}`)
+    if (ancestors.has(real)) throw new Error(`invalid-policy: source directory symlink cycle: ${relative}`)
+    const parents = new Set([...ancestors, real])
     for (const item of fs.readdirSync(path.join(root, relative), { withFileTypes: true })) {
       const name = relative ? `${relative}/${item.name}` : item.name
       if (excluded(name)) continue
       if (item.isSymbolicLink()) {
-        if (sourcePath(name)) {
+        if (fs.statSync(path.join(root, name)).isDirectory()) walk(name, parents)
+        else if (sourcePath(name)) {
           if (!confinedFile(root, name)) throw new Error(`invalid-policy: source symlink escapes repository: ${name}`)
           files.push(name)
         }
         continue
       }
-      if (item.isDirectory()) walk(name)
+      if (item.isDirectory()) walk(name, parents)
       else if (sourcePath(name)) files.push(name)
     }
   }
   for (const dir of sorted(new Set([...CANDIDATE_DIRS, 'scripts']))) {
     const absolute = path.join(root, dir)
     if (!fs.existsSync(absolute)) continue
-    const metadata = fs.lstatSync(absolute)
-    const real = fs.realpathSync(absolute)
-    if (!real.startsWith(root + path.sep) || (!metadata.isDirectory() && (!metadata.isSymbolicLink() || !fs.statSync(absolute).isDirectory()))) throw new Error(`invalid-policy: source directory missing containment: ${dir}`)
     // Confined directory aliases retain their repository path identity.
     walk(dir)
   }
@@ -108,7 +114,7 @@ function lexicalBinding(identifier) {
     if (ts.isFunctionLike(scope)) {
       const parameter = scope.parameters.find((item) => names(item.name))
       if (parameter) return { node: parameter, scope, parameter: true }
-      if (scope.name && names(scope.name)) return { node: scope, scope, function: true }
+      if ((ts.isFunctionDeclaration(scope) || ts.isFunctionExpression(scope)) && scope.name && names(scope.name)) return { node: scope, scope, function: true }
       const hoisted = hoistedVariable(scope, name)
       if (hoisted) return hoisted
     }
@@ -117,12 +123,14 @@ function lexicalBinding(identifier) {
       if (hoisted) return hoisted
     }
     if (ts.isCatchClause(scope) && scope.variableDeclaration && names(scope.variableDeclaration.name)) return { node: scope.variableDeclaration, scope }
+    if (ts.isClassExpression(scope) && scope.name && names(scope.name)) return { node: scope, scope }
     if ((ts.isForStatement(scope) || ts.isForInStatement(scope) || ts.isForOfStatement(scope)) && scope.initializer && ts.isVariableDeclarationList(scope.initializer)) {
       const declaration = scope.initializer.declarations.find((item) => names(item.name))
       if (declaration) return { node: declaration, scope, immutable: Boolean(scope.initializer.flags & ts.NodeFlags.Const) }
     }
-    if (ts.isBlock(scope) || ts.isSourceFile(scope)) {
-      for (const statement of scope.statements) {
+    if (ts.isBlock(scope) || ts.isSourceFile(scope) || ts.isCaseBlock(scope)) {
+      const statements = ts.isCaseBlock(scope) ? scope.clauses.flatMap((clause) => [...clause.statements]) : scope.statements
+      for (const statement of statements) {
         if (ts.isVariableStatement(statement)) for (const declaration of statement.declarationList.declarations) {
           if (ts.isIdentifier(declaration.name) && declaration.name.text === name) return { node: declaration, scope, immutable: Boolean(statement.declarationList.flags & ts.NodeFlags.Const) }
           if (ts.isObjectBindingPattern(declaration.name)) for (const binding of declaration.name.elements) if (ts.isIdentifier(binding.name) && binding.name.text === name) return { node: declaration, scope, immutable: Boolean(statement.declarationList.flags & ts.NodeFlags.Const), binding }
@@ -152,7 +160,7 @@ function isCall(node, name) {
   if (!node || !ts.isCallExpression(node) || node.expression.getText().replace(/\s/g, '') !== name) return false
   if (name === 'require' || name === 'require.resolve') {
     const loader = name === 'require' ? node.expression : node.expression.expression
-    if (lexicalBinding(loader) || !unmodified(loader)) return false
+    if (lexicalBinding(loader) || !unmodified(loader, null, name === 'require.resolve' ? 'resolve' : null)) return false
   }
   return true
 }
@@ -177,23 +185,37 @@ function importedPath(node) {
 function cwdCall(node) { return isCall(node, 'process.cwd') && node.arguments.length === 0 && !lexicalBinding(node.expression.expression) && unmodified(node.expression.expression, null, 'cwd') }
 function pathCall(node, method) { return ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === method && importedPath(node.expression.expression) }
 const mutationCache = new WeakMap()
-function unmodified(identifier, binding, protectedProperty) {
+function unmodified(identifier, binding, protectedProperty = '*') {
   const scope = binding?.scope || identifier.getSourceFile()
   if (!mutationCache.has(scope)) mutationCache.set(scope, new Map())
   const cached = mutationCache.get(scope)
-  const key = `${binding?.node.pos ?? 'global'}:${identifier.text}:${protectedProperty || ''}`
+  const key = `${binding?.node.pos ?? 'global'}:${identifier.text}:${protectedProperty === null ? '[binding]' : protectedProperty}`
   if (cached.has(key)) return cached.get(key)
   let written = false
+  function targets(node) {
+    node = unwrap(node)
+    if (ts.isArrayLiteralExpression(node)) return node.elements.flatMap(targets)
+    if (ts.isObjectLiteralExpression(node)) return node.properties.flatMap((property) => ts.isPropertyAssignment(property) ? targets(property.initializer) : ts.isShorthandPropertyAssignment(property) ? targets(property.name) : ts.isSpreadAssignment(property) ? targets(property.expression) : [])
+    if (ts.isSpreadElement(node)) return targets(node.expression)
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) return targets(node.left)
+    return [node]
+  }
   function visit(node) {
     let target
     if (ts.isBinaryExpression(node) && node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment && node.operatorToken.kind <= ts.SyntaxKind.LastAssignment) target = node.left
     if ((ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node)) && [ts.SyntaxKind.PlusPlusToken, ts.SyntaxKind.MinusMinusToken].includes(node.operator)) target = node.operand
-    let property
-    while (target && (ts.isPropertyAccessExpression(target) || ts.isElementAccessExpression(target))) {
-      property = ts.isPropertyAccessExpression(target) ? target.name.text : ts.isStringLiteralLike(target.argumentExpression) ? target.argumentExpression.text : '*'
-      target = target.expression
+    if (ts.isDeleteExpression(node)) target = node.expression
+    if ((ts.isForInStatement(node) || ts.isForOfStatement(node)) && !ts.isVariableDeclarationList(node.initializer)) target = node.initializer
+    for (let destination of target ? targets(target) : []) {
+      let property
+      while (ts.isPropertyAccessExpression(destination) || ts.isElementAccessExpression(destination)) {
+        property = ts.isPropertyAccessExpression(destination) ? destination.name.text : ts.isStringLiteralLike(destination.argumentExpression) ? destination.argumentExpression.text : '*'
+        destination = destination.expression
+      }
+      // A callable require remains intact when its unrelated cache is changed.
+      const relevantProperty = protectedProperty === null ? !property : protectedProperty === '*' || !property || property === '*' || property === protectedProperty
+      if (relevantProperty && ts.isIdentifier(destination) && destination.text === identifier.text && lexicalBinding(destination)?.node === binding?.node) written = true
     }
-    if ((!protectedProperty || !property || property === '*' || property === protectedProperty) && target && ts.isIdentifier(target) && target.text === identifier.text && lexicalBinding(target)?.node === binding?.node) written = true
     ts.forEachChild(node, visit)
   }
   visit(scope)
@@ -309,6 +331,23 @@ function copiedConfigLoader(file, node, ast) {
   return copied
 }
 
+function runtimeEntryAst(ast) {
+  if (!ast.fileName.startsWith('app/') || ast.fileName.endsWith('.d.ts')) return ast
+  const ambiguousBindings = ast.statements.some((statement) => {
+    const clause = ts.isImportDeclaration(statement) ? statement.importClause : null
+    const named = clause?.namedBindings
+    return ts.isInterfaceDeclaration(statement) || ts.isTypeAliasDeclaration(statement) || ts.isModuleDeclaration(statement) || statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.DeclareKeyword) || (ts.isFunctionDeclaration(statement) && !statement.body) || (ts.isImportEqualsDeclaration(statement) && statement.isTypeOnly) || clause?.isTypeOnly || (named && ts.isNamedImports(named) && named.elements.some((element) => element.isTypeOnly))
+  })
+  if (!ambiguousBindings) return ast
+  // Isolated emit resolves local type/value merges and export aliases without
+  // executing source or looking up cross-module bindings. Edges use the source AST.
+  const emitted = ts.transpileModule(ast.text, {
+    fileName: ast.fileName,
+    compilerOptions: { target: ts.ScriptTarget.Latest, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.Preserve },
+  })
+  return ts.createSourceFile(ast.fileName, emitted.outputText, ts.ScriptTarget.Latest, true)
+}
+
 function collectEdges(file, text) {
   const ast = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true)
   const edges = []
@@ -344,9 +383,10 @@ function collectEdges(file, text) {
   // Package references terminate the graph; explicit relative type contracts do not.
   for (const ref of ast.typeReferenceDirectives) if (localSpecifier(ref.fileName)) add(ref.fileName, 'type')
   const exported = new Set()
-  for (const statement of ast.statements) {
+  for (const statement of runtimeEntryAst(ast).statements) {
     if (ts.isExportAssignment(statement) && !statement.isExportEquals) exported.add('default')
-    if (statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) {
+    const erasedDeclaration = ts.isInterfaceDeclaration(statement) || ts.isTypeAliasDeclaration(statement) || statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.DeclareKeyword) || (ts.isImportEqualsDeclaration(statement) && statement.isTypeOnly)
+    if (!erasedDeclaration && statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) {
       if (statement.modifiers.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword)) exported.add('default')
       if (statement.name && ts.isIdentifier(statement.name)) exported.add(statement.name.text)
       if (ts.isVariableStatement(statement)) for (const declaration of statement.declarationList.declarations) if (ts.isIdentifier(declaration.name)) exported.add(declaration.name.text)
