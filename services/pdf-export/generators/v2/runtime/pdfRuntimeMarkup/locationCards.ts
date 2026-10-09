@@ -10,18 +10,22 @@ export function buildPdfLocationCards({
   showCoordinates,
   escapeHtml,
   getImageFilterStyle,
+  portionContext,
 }: BuildLocationCardsParams): string[] {
   const { colors, typography } = theme
 
   return locations.map((location, index) => {
+    const ordinal = (portionContext?.startIndex ?? 0) + index + 1
+    const inline = portionContext?.textPolicy !== 'detached'
+    const marker = (field: string) => portionContext && inline && (field !== 'address' || rawAddress) ? ` class="book-map-source-text" data-point-id="${escapeHtml(location.id)}" data-point-ordinal="${ordinal}" data-point-field="${field}"` : ''
     const rawAddress = location.address || ''
     const addressParts = rawAddress
       .split(/\s*[·,]\s*/)
       .map((segment) => segment.trim())
       .filter(Boolean)
-    const title = addressParts[0] || rawAddress
+    const title = portionContext ? (inline ? rawAddress : '') : addressParts[0] || rawAddress
     const subtitle =
-      addressParts.length > 2
+      portionContext ? '' : addressParts.length > 2
         ? addressParts.slice(1, 3).join(', ')
         : addressParts.length > 1
           ? addressParts[1]
@@ -35,7 +39,7 @@ export function buildPdfLocationCards({
         : ''
 
     return `
-        <div class="map-location-card" style="
+        <div class="map-location-card"${portionContext ? ` data-point-id="${escapeHtml(location.id)}" data-point-ordinal="${ordinal}"` : ''} style="
           display: flex;
           gap: 0;
           align-items: stretch;
@@ -56,9 +60,9 @@ export function buildPdfLocationCards({
               background: ${colors.surfaceAlt};
               position: relative;
             ">
-              <img src="${escapeHtml(location.thumbnailUrl!)}" alt="${i18nT("export:services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.locationCards.div_style_width_80px_flex_shrink_0_backgroun_59c67203.text01", { value3: index + 1 })}"${thumbFallbackAttr}
+              <img src="${escapeHtml(location.thumbnailUrl!)}" alt="${i18nT("export:services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.locationCards.div_style_width_80px_flex_shrink_0_backgroun_59c67203.text01", { value3: ordinal })}"${thumbFallbackAttr}
                 onerror="${buildPrintImageOnError(thumbFallbackAttr ? thumbFallback : '')}"
-                style="width: 100%; height: 100%; object-fit: cover; display: block; ${getImageFilterStyle()}" />
+                style="width: 100%; height: ${portionContext ? '72px' : '100%'}; object-fit: cover; display: block; ${getImageFilterStyle()}" />
               <div style="
                 position: absolute;
                 top: 5px;
@@ -75,7 +79,7 @@ export function buildPdfLocationCards({
                 font-size: 8pt;
                 font-family: ${typography.headingFont};
                 box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-              ">${index + 1}</div>
+              ">${ordinal}</div>
             </div>
           ` : ''}
           <div style="flex: 1; min-width: 0; padding: 7px 10px; display: flex; flex-direction: column; justify-content: center;">
@@ -98,21 +102,21 @@ export function buildPdfLocationCards({
                   font-size: 8pt;
                   flex-shrink: 0;
                   font-family: ${typography.headingFont};
-                ">${index + 1}</div>
+                ">${ordinal}</div>
               ` : ''}
               <div style="min-width: 0; flex: 1;">
-                <div style="
+                <div${marker('address')} style="
                   font-weight: 700;
                   color: ${colors.text};
                   font-size: 9pt;
                   line-height: 1.25;
                   font-family: ${typography.bodyFont};
-                  overflow: hidden;
+                  ${portionContext ? 'white-space: pre-wrap; overflow-wrap: anywhere;' : `overflow: hidden;
                   text-overflow: ellipsis;
                   display: -webkit-box;
                   -webkit-line-clamp: 2;
-                  -webkit-box-orient: vertical;
-                ">${escapeHtml(title)}</div>
+                  -webkit-box-orient: vertical;`}
+                ">${escapeHtml(title) || (portionContext ? escapeHtml(i18nT('export:services.pdfExport.runtime.atlas.pointFallback', { value1: ordinal })) : '')}</div>
                 ${subtitle ? `
                   <div style="
                     font-size: 7.5pt;
@@ -134,8 +138,8 @@ export function buildPdfLocationCards({
               gap: 3px 5px;
               margin-top: 4px;
             ">
-              ${location.categoryName ? `
-                <span style="
+              ${location.categoryName && (!portionContext || inline) ? `
+                <span${marker('category')} style="
                   display: inline-flex;
                   align-items: center;
                   padding: 1px 6px;
@@ -145,15 +149,15 @@ export function buildPdfLocationCards({
                   font-size: 7pt;
                   line-height: 1.3;
                   font-family: ${typography.bodyFont};
-                  font-weight: 600;
+                  font-weight: 600;${portionContext ? ' white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0;' : ''}
                 ">${escapeHtml(location.categoryName)}</span>
               ` : ''}
-              ${location.coord && showCoordinates ? `
-                <span style="
+              ${location.coord && showCoordinates && (!portionContext || inline) ? `
+                <span${marker('coord')} style="
                   font-size: 6.5pt;
                   color: ${colors.textMuted};
                   opacity: 0.7;
-                  font-family: ${typography.monoFont};
+                  font-family: ${typography.monoFont};${portionContext ? ' white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0;' : ''}
                 ">${escapeHtml(location.coord)}</span>
               ` : ''}
             </div>
@@ -169,7 +173,7 @@ export function buildPdfLocationCards({
               border-left: 1px solid ${colors.border};
               background: ${colors.surfaceAlt};
             ">
-              <img src="${escapeHtml(qrCode)}" alt="${i18nT("export:services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.locationCards.div_style_width_46px_padding_6px_display_fle_e61d8410.text01", { value4: index + 1 })}"
+              <img src="${escapeHtml(qrCode)}" alt="${i18nT("export:services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.locationCards.div_style_width_46px_padding_6px_display_fle_e61d8410.text01", { value4: ordinal })}"
                 style="width: 34px; height: 34px; display: block;" />
             </div>
           ` : ''}

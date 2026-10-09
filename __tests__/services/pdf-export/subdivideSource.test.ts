@@ -27,7 +27,7 @@ describe('measured source subdivision', () => {
     blocks: ['g1', 'g2', 'g3'], occurrences: ['m1', 'm2', 'm3'] }
     expect((await collect(gallery)).flatMap(page => page.occurrences)).toEqual(gallery.occurrences)
     expect((await collect(gallery)).map(source => source.page.type === 'gallery' && source.page.total_photos)).toEqual([3, 3])
-    const map: BookSegmentSource = { page: { type: 'map', travel: { id: 1, name: 'Map' },
+    const map: BookSegmentSource = { source_schema_version: 2, page: { type: 'map', point_start: 20, show_coordinates: false, travel: { id: 1, name: 'Map' },
       locations: [{ id: '1', address: 'First' }, { id: '2', address: 'Second', thumbnailUrl: 'frozen' }, { id: '3', address: 'Third' }] },
     blocks: ['p1', 'p2', 'p3'], occurrences: ['point-image'] }
     const pages = await collect(map)
@@ -86,4 +86,34 @@ describe('measured source subdivision', () => {
     const text = pages.map(page => page.page.type === 'content' ? page.page.html.replace(/<[^>]*>/g, '') : '').join('')
     expect(text).toBe('seventh '.repeat(90) + 'eighth '.repeat(90))
   })
+  it('preserves complete Unicode point fields and one image through bounded detached continuations', async () => {
+    const address = '😀界, fourth, fifth · & <literal> '.repeat(1400)
+    const category = 'LongWord'.repeat(4000)
+    const source: BookSegmentSource = { source_schema_version: 2, page: { type: 'map', travel: { id: 761, name: 'Map' },
+      point_start: 38, show_coordinates: true, locations: [{ id: '16277', address, categoryName: category, coord: '53.9;27.56', thumbnailUrl: 'frozen' }] },
+      blocks: ['761:route:16277'], occurrences: ['761:route-image:1'] }
+    const pages = await collect(source, 512)
+    expect(pages[0].page.type === 'map' && pages[0].page.text_policy).toBe('detached')
+    expect(pages.flatMap(page => page.occurrences)).toEqual(source.occurrences)
+    const { parseDocument, DomUtils } = await import('htmlparser2')
+    for (const [field, expected] of [['address', address], ['category', category], ['coord', '53.9;27.56']]) {
+      const fragments = pages.filter(page => page.page.type === 'map-text' && page.page.field === field)
+      expect(fragments.length).toBeGreaterThan(0)
+      expect(fragments.map(page => page.page.type === 'map-text' ? DomUtils.textContent(parseDocument(page.page.html)) : '').join('')).toBe(expected)
+      expect(fragments.every(page => page.page.type === 'map-text' && page.page.point_id === '16277' && page.page.point_ordinal === 39 && page.page.html.length < 1024)).toBe(true)
+    }
+    expect(new Set(pages.flatMap(page => page.blocks)).size).toBe(pages.flatMap(page => page.blocks).length)
+    const firstText = pages.find(page => page.page.type === 'map-text')!
+    const retry = await collect(firstText, 256)
+    expect(retry.every(page => page.page.type === 'map-text' && page.page.point_ordinal === 39 && page.page.field === 'address')).toBe(true)
+  })
+
+  it('requires an explicit private map schema and never derives hidden coordinates', async () => {
+    const source: BookSegmentSource = { source_schema_version: 2, page: { type: 'map', travel: { id: 1, name: 'Map' }, point_start: 0, show_coordinates: false,
+      locations: [{ id: '1', address: 'Address', coord: '53.9;27.56' }] }, blocks: ['point'], occurrences: [] }
+    expect((await collect(source)).some(page => page.page.type === 'map-text' && page.page.field === 'coord')).toBe(false)
+    await expect(collect({ ...source, source_schema_version: 1 })).rejects.toThrow('SEGMENT_SOURCE_SCHEMA_UNSUPPORTED')
+    await expect(collect({ ...source, source_schema_version: 3 } as unknown as BookSegmentSource)).rejects.toThrow('SEGMENT_SOURCE_SCHEMA_UNSUPPORTED')
+  })
+
 })

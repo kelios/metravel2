@@ -38,6 +38,7 @@ describe('versioned Node book renderer artifact', () => {
     expect(artifact.manifest).toMatchObject({
       renderer_version: 'metravel-book-renderer/1.0.0',
       document_schema_version: 1,
+      prepared_source_schema_version: 2,
       settings_schema_version: 1,
     })
     expect(artifact.manifest.content_hash).toMatch(/^[a-f0-9]{64}$/)

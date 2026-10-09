@@ -13,7 +13,8 @@ import { withWorkerLocale } from './locale'
 import { withImageAnalysis } from './imageAnalysis'
 
 export { renderPreparedPage, type PreparedPageRequest, type PreparedPageReceipt } from './portion'
-export { renderSegment } from '@/services/pdf-export/segments/renderSegment'
+export { BOOK_SEGMENT_SOURCE_SCHEMA_VERSION } from '@/services/pdf-export/segments/types'
+export { renderSegment, assertBookSegmentSourceSchema } from '@/services/pdf-export/segments/renderSegment'
 export { iterateSnapshotChunks, iterateTextFieldRefs, streamSnapshotChunk } from '@/services/pdf-export/segments/snapshotAdapter'
 export { incrementalContent } from '@/services/pdf-export/parsers/incrementalContent'
 export { subdivideSource } from '@/services/pdf-export/segments/subdivideSource'
@@ -23,6 +24,7 @@ export { getFixedTranslator } from './locale'
 
 export interface WorkerCertificate {
   renderer_version: string
+  prepared_source_schema_version: 2
   snapshot_hash: string
   settings_hash: string
   measured: boolean
@@ -67,7 +69,7 @@ export async function runWorker(jobDir: string, outDir: string, options: WorkerO
     const fit = options.measure ?? physical!.fit
     const execute = async () => {
       const body = await planBody(root, out, pinned, summary, fit, readBytes, resourceProfile)
-      const certificate: WorkerCertificate = { renderer_version: BOOK_RENDERER_VERSION,
+      const certificate: WorkerCertificate = { prepared_source_schema_version: 2, renderer_version: BOOK_RENDERER_VERSION,
         snapshot_hash: pinned.snapshot_hash, settings_hash: pinned.settings_hash, measured: !options.measure,
         expected: { travels: summary.travels, blocks: body.blocks, mediaOccurrences: body.occurrences, pages: body.pages },
         completed: { travels: summary.travels, blocks: 0, mediaOccurrences: 0, pages: 0 },
@@ -76,6 +78,7 @@ export async function runWorker(jobDir: string, outDir: string, options: WorkerO
       let order = 0
       const fontCss = options.measure ? '' : (await readBoundedBytes(resolve(fontsDir, 'fonts.css'), 512 * 1024)).toString('utf8')
       const emit = async (source: BookSegmentSource, ref: string, front: boolean) => {
+        source = { ...source, source_schema_version: 2 }
         if (front) {
           certificate.expected.pages++
           certificate.expected.blocks += source.blocks.length

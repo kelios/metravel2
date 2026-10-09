@@ -68,9 +68,9 @@ function sourceRows(travel: SnapshotFixtureTravel, durableWindow?: number): Fixt
       caption: travel.captions?.[index] ?? `Pinned caption ${index + 1}`, file_name: 'fixture.png', mime_type: 'image/png', order: index })
   }
   for (let index = 0; index < (travel.points ?? 0); index++) {
-    record('route', `route:${index + 1}`, { id: index + 1, address: `Pinned route point ${index + 1}`, country_id: 1,
-      lat: '53.9000000', lng: '27.5600000', coord: '53.9,27.56', image: '', image_detail: '', image_landscape: '' })
-    record('route-category', `route:${index + 1}:category:2`, { id: 2, name: 'Pinned route category', route_id: index + 1 })
+    record('route', `route:${index + 1}`, { id: index + 1, address: travel.routeAddresses?.[index] ?? `Pinned route point ${index + 1}`, country_id: 1,
+      lat: '53.9000000', lng: '27.5600000', coord: travel.routeCoordinates?.[index] ?? '53.9,27.56', image: travel.routeThumbnails ? RESOURCE_KEY : '', image_detail: '', image_landscape: '' })
+    record('route-category', `route:${index + 1}:category:2`, { id: 2, name: travel.routeCategories?.[index] ?? 'Pinned route category', route_id: index + 1 })
   }
   record('author', 'author:1', { id: 1, name: 'Fixture author' })
   return rows
@@ -86,6 +86,10 @@ export interface SnapshotFixtureTravel {
   photos?: number
   captions?: string[]
   points?: number
+  routeAddresses?: string[]
+  routeCategories?: string[]
+  routeCoordinates?: string[]
+  routeThumbnails?: boolean
   cover?: boolean
 }
 
@@ -195,6 +199,7 @@ export async function buildSnapshotFixture(jobDir: string, options: SnapshotFixt
     for (const row of rows.filter((candidate) => candidate.kind !== 'travel' && candidate.kind !== 'text')) {
       await emit(row.kind, row.key, row.bytes, row.metadata, travel.id)
       if (row.kind === 'gallery') await image('gallery')
+      if (row.kind === 'route' && 'image' in row.metadata && row.metadata.image) await image('route-image')
     }
   }
 

@@ -14,7 +14,6 @@ import { BOOK_SEGMENT_LIMITS } from '@/services/pdf-export/segments/types'
 import type { BookSegmentSource } from '@/services/pdf-export/segments/renderSegment'
 import { TRAVEL_QUOTES, type TravelQuote } from '@/services/pdf-export/quotes/travelQuotes'
 import { parseCoordinates } from '@/services/pdf-export/generators/v2/runtime/bookData'
-import { translate } from './locale'
 import { appendRecord, canonicalJson, jsonLines, makePrivateDirectory, readBoundedJson, sha256 } from './filesystem'
 import { appendMetadataLabel, assetUrl, firstMedia, sourceImageKey, textSource, travelDirectory, travelMetadata, type IndexedBookSummary } from './snapshot'
 import { DEFAULT_RENDERER_RESOURCE_PROFILE, probeFrozenImage, type MeasurePage, type RendererResourceProfile } from './measurement'
@@ -117,16 +116,17 @@ export async function planBody(root: string, out: string, pinned: BookDocument, 
   const plan: BodyPlan = { pages: 0, atlas_pages: 0, toc_pages: 0, blocks: 0, occurrences: 0 }
   const fitHtml: MeasurePage = async html => {
     try { return await measure(html) } catch (error) {
-      if (error instanceof Error && ['WORKER_PAGE_IMAGE_BUDGET_EXCEEDED', 'WORKER_DOM_BUDGET_EXCEEDED', 'WORKER_HTML_BUDGET_EXCEEDED'].includes(error.message)) return { pages: 0, fits: false }
+      if (error instanceof Error && ['WORKER_PAGE_IMAGE_BUDGET_EXCEEDED', 'WORKER_DOM_BUDGET_EXCEEDED', 'WORKER_HTML_BUDGET_EXCEEDED', 'WORKER_SEGMENT_PDF_BUDGET_EXCEEDED'].includes(error.message)) return { pages: 0, fits: false }
       throw error
     }
   }
   const add = async (source: BookSegmentSource, id: number, contentBudget = 1024): Promise<void> => {
+    source = { ...source, source_schema_version: 2 }
     const html = await renderer.renderBoundedPage(source.page, { start_page: plan.pages + 1, folio_area_mm: 12 }, pinned)
     const result = await fitHtml(html)
     if (result.pages !== 1 || !result.fits) {
-      if ((source.page.type === 'content' || source.page.type === 'gallery-caption') && contentBudget < 256) throw new Error('SEGMENT_REQUIRES_SINGLE_SOURCE_LAYOUT')
-      const nextContentBudget = source.page.type === 'content' || source.page.type === 'gallery-caption'
+      if ((source.page.type === 'content' || source.page.type === 'gallery-caption' || source.page.type === 'map-text') && contentBudget < 256) throw new Error('SEGMENT_REQUIRES_SINGLE_SOURCE_LAYOUT')
+      const nextContentBudget = source.page.type === 'content' || source.page.type === 'gallery-caption' || source.page.type === 'map-text'
         ? Math.floor(contentBudget / 2) : contentBudget
       for await (const portion of subdivideSource(source, contentBudget)) await add(portion, id, nextContentBudget)
       return
@@ -225,14 +225,14 @@ export async function planBody(root: string, out: string, pinned: BookDocument, 
       const flushMap = async () => {
         if (!locations.length) return
         mapStart ??= plan.pages
-        await add({ page: { type: 'map', travel, locations }, blocks: mapBlocks, occurrences: mapOccurrences }, id)
+        await add({ page: { type: 'map', travel, locations, point_start: pointOrdinal - locations.length, show_coordinates: pinned.settings.showCoordinatesOnMapPage }, blocks: mapBlocks, occurrences: mapOccurrences }, id)
         locations = []; mapBlocks = []; mapOccurrences = []
       }
       for await (const row of jsonLines<BookSnapshotChunk>(resolve(travelDirectory(out, id), 'route.ndjson'))) {
         if (row.kind !== 'route') continue
         const route = row.metadata
         pointOrdinal++
-        const location: NormalizedLocation = { id: String(route.id), address: route.address || translate('export:services.pdfExport.runtime.atlas.pointFallback', { value1: pointOrdinal }), coord: route.coord || `${route.lat},${route.lng}` }
+        const location: NormalizedLocation = { id: String(route.id), address: route.address, coord: route.coord || `${route.lat},${route.lng}` }
         const coordinates = parseCoordinates(location.coord)
         if (coordinates) { location.lat = coordinates.lat; location.lng = coordinates.lng }
         // Related categories stay in the pinned source; only this row's bounded labels are read.

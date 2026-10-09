@@ -205,15 +205,15 @@ export function parseCoordinates(coord?: string | null): { lat: number; lng: num
 export function buildRouteSvg(
   locations: NormalizedLocation[],
   theme: Pick<PdfThemeConfig, 'colors'>,
-  options: { routeLineCoords?: Array<[number, number]>; showLabels?: boolean } = {}
+  options: { routeLineCoords?: Array<[number, number]>; showLabels?: boolean; pointStart?: number } = {}
 ): string {
   const showLabels = options.showLabels ?? true;
   const points = locations
-    .map((location) => {
+    .map((location, sourceIndex) => {
       if (typeof location.lat !== 'number' || typeof location.lng !== 'number') return null;
-      return { lat: location.lat, lng: location.lng, label: location.address };
+      return { lat: location.lat, lng: location.lng, label: location.address, sourceIndex };
     })
-    .filter(Boolean) as Array<{ lat: number; lng: number; label?: string }>;
+    .filter(Boolean) as Array<{ lat: number; lng: number; label?: string; sourceIndex: number }>;
 
   const routeLine = (Array.isArray(options.routeLineCoords) ? options.routeLineCoords : [])
     .filter(
@@ -260,7 +260,7 @@ export function buildRouteSvg(
     const shortLabel = firstSegment.length > 15 ? firstSegment.slice(0, 14) + '…' : firstSegment;
     return {
       ...projectPoint(point),
-      index,
+      index: options.pointStart === undefined ? index : options.pointStart + point.sourceIndex,
       label: shortLabel,
     };
   });

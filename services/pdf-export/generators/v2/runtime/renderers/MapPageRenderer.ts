@@ -1,3 +1,4 @@
+import type { RuntimeMapPortionContext } from './mapPortionContext'
 import type { ParsedRoutePreview } from '@/types/travelRoutes'
 import { escapeHtml } from '../../../../utils/htmlUtils'
 import { buildRunningHeader, type RuntimeRenderContext } from './renderHelpers'
@@ -25,7 +26,7 @@ export class RuntimeMapRenderer {
   private static readonly FIRST_PAGE_MAX_CARDS_WITH_ELEVATION = 0
   private static readonly CONTINUATION_PAGE_MAX_CARDS = 10
 
-  render(data: RuntimeMapPageData): string {
+  render(data: RuntimeMapPageData, portionContext?: RuntimeMapPortionContext): string {
     const { colors, typography, spacing } = this.ctx.theme
     const locationCount = Number.isFinite(data.locationCount) ? data.locationCount : 0
     const hasElevation = !!data.routePreview && Array.isArray(data.routePreview.elevationProfile) && data.routePreview.elevationProfile.length >= 2
@@ -96,7 +97,7 @@ export class RuntimeMapRenderer {
         ${firstPageCards.length > 0 ? `
         <div>
           ${routeHeaderHtml}
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3mm;">${firstPageCards.join('')}</div>
+          <div style="display: grid; grid-template-columns: ${portionContext && locationCount === 1 ? '1fr' : '1fr 1fr'}; gap: 3mm;">${firstPageCards.join('')}</div>
         </div>
         ` : ''}
       </section>
@@ -123,7 +124,7 @@ export class RuntimeMapRenderer {
           ${buildRunningHeader(this.ctx, data.travelName, continuationPageNum)}
           <div>
             ${headerHtml}
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3mm;">${chunk.join('')}</div>
+            <div style="display: grid; grid-template-columns: ${portionContext && locationCount === 1 ? '1fr' : '1fr 1fr'}; gap: 3mm;">${chunk.join('')}</div>
           </div>
         </section>
       `

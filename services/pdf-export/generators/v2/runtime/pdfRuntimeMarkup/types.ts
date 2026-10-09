@@ -3,6 +3,7 @@ import type { TravelForBook } from '@/types/pdf-export'
 import type { CaptionPosition, GalleryLayout } from '@/types/pdf-gallery'
 import type { ParsedContentBlock } from '../../../../parsers/ContentParser'
 import type { NormalizedLocation } from '../types'
+import type { RuntimeMapPortionContext } from '../renderers/mapPortionContext'
 import { getThemeConfig } from '../../../../themes/PdfThemeConfig'
 
 export type RuntimeTheme = ReturnType<typeof getThemeConfig>
@@ -20,6 +21,7 @@ export type BuildHtmlDocumentParams = {
 }
 
 export type BuildLocationCardsParams = {
+  portionContext?: RuntimeMapPortionContext
   locations: NormalizedLocation[]
   qrCodes?: string[]
   theme: RuntimeTheme

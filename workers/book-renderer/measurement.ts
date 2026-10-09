@@ -176,15 +176,20 @@ export async function physicalMeasurer(root: string, out: string, fontsDir: stri
       return !overflow
     }
     const measure: MeasurePage = async html => {
-      const fits = await geometryFits(html)
-      const pdf = await page!.pdf({ format: 'A4', printBackground: true, preferCSSPageSize: true })
-      if (pdf.byteLength > 4 * 1024 * 1024) throw new Error('WORKER_SEGMENT_PDF_BUDGET_EXCEEDED')
-      const counts = Array.from(pdf.toString('latin1').matchAll(/\/Count\s+(\d+)/g), value => Number(value[1]))
-      const pages = counts.length ? Math.max(...counts) : 0
-      await page!.goto('about:blank')
-      await page!.requestGC()
-      return { pages, fits: fits && pages === 1 }
+      try {
+        const fits = await geometryFits(html)
+        if (!fits) return { pages: 0, fits: false }
+        const pdf = await page!.pdf({ format: 'A4', printBackground: true, preferCSSPageSize: true })
+        if (pdf.byteLength > 4 * 1024 * 1024) throw new Error('WORKER_SEGMENT_PDF_BUDGET_EXCEEDED')
+        const counts = Array.from(pdf.toString('latin1').matchAll(/\/Count\s+(\d+)/g), value => Number(value[1]))
+        const pages = counts.length ? Math.max(...counts) : 0
+        return { pages, fits: fits && pages === 1 }
+      } finally {
+        await page!.goto('about:blank')
+        await page!.requestGC()
+      }
     }
+
     const sample = async (url: string) => {
       await setHtml(`<!DOCTYPE html><html><head></head><body><img id="sample" src="${url}"></body></html>`)
       return page!.evaluate(() => {
@@ -205,7 +210,12 @@ export async function physicalMeasurer(root: string, out: string, fontsDir: stri
         return { brightness: Math.round(total / (64 * 64)), composition: { topBusy: busy[0], centerBusy: busy[1], bottomBusy: busy[2] } }
       })
     }
-    return { measure, fit: async html => ({ pages: 1, fits: await geometryFits(html) }), close: () => browser!.close(),
+    return { measure, fit: async html => {
+      try { return await measure(html) } catch (error) {
+        if (error instanceof Error && error.message === 'WORKER_SEGMENT_PDF_BUDGET_EXCEEDED') return { pages: 0, fits: false }
+        throw error
+      }
+    }, close: () => browser!.close(),
       brightness: async url => (await sample(url)).brightness,
       composition: async url => (await sample(url)).composition }
   } catch (error) {

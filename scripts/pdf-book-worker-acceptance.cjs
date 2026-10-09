@@ -73,6 +73,7 @@ async function verifyArtifact(directory, expectedHash) {
   assert(artifact.startsWith(path.join(ROOT, '.codex-temp') + path.sep), 'Artifact must be in ignored .codex-temp/')
   assert.equal(await fsp.realpath(artifact), artifact, 'Artifact root/ancestor must not be a symlink')
   const manifest = JSON.parse(await fsp.readFile(privateRef(artifact, 'renderer-manifest.json'), 'utf8'))
+  assert.equal(manifest.prepared_source_schema_version, 2, 'Unsupported prepared source artifact')
   assert.equal(manifest.content_hash, expectedHash, 'Artifact differs from reviewed content hash')
   const digest = crypto.createHash('sha256')
   const files = [...manifest.files].sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0)
@@ -193,6 +194,11 @@ function corpus(suite) {
       minus: '<ol><li>FIRST_LIST_ITEM ' + 'continued numbered item '.repeat(6000) + '</li><li>LAST_LIST_ITEM</li></ol>',
       recommendation: '<p>FINAL_RECOMMENDATION</p>', photos: 31, points: 37,
     }, { id: 12, title: 'Final chapter', description: '<p>FINAL_CHAPTER_TEXT</p>', photos: 1, points: 1 }] })
+    for (const showCoordinatesOnMapPage of [false, true]) result.push({ name: `map-complete-${Number(showCoordinatesOnMapPage)}`,
+      travels: [{ id: 761, title: 'Complete map fields', points: 8, routeThumbnails: true,
+        routeAddresses: ['Автовокзал Luxexpo на Кирхберге: автобусы 201 и 211 в Эхтернах', 'A, B, C, D · E 😀界', 'LongWord'.repeat(6000)],
+        routeCategories: ['Category, full value', '😀界'.repeat(8000)], routeCoordinates: ['53.9;27.56'] }],
+      settings: { includeMap: true, showCoordinatesOnMapPage, includeGallery: false, includeToc: false } })
     const inline = '/media/uploads/fixture-shared.png'
     result.push({ name: 'repeated-inline', travels: [{ ...small, description: `<p>${'inline value '.repeat(6000)}</p><img src="${inline}"><img src="${inline}"><p>INLINE_END</p>`, photos: 31 }] })
   }
@@ -255,12 +261,55 @@ function renderedCaptions(html) {
   return captions
 }
 
+function assertRouteCoverage(points, fields) {
+  for (const [key, point] of points) assert.equal(point.rendered, 1, `Missing or duplicated source map point: ${key}`)
+  for (const [key, field] of fields) assert.equal(field.actual, field.expected, `Incomplete source map field: ${key}`)
+}
+
+function renderedMapPoints(html) {
+  const points = []
+  let depth = 0, active = null
+  new Parser({
+    onopentag(name, attributes) {
+      depth++
+      if ((attributes.class || '').split(/\s+/).includes('map-location-card')) {
+        assert.equal(active, null, 'Nested map cards')
+        const id = attributes['data-point-id'], ordinal = Number(attributes['data-point-ordinal'])
+        assert(id && Number.isSafeInteger(ordinal) && ordinal > 0, 'Missing map point identity')
+        active = { id, ordinal, images: [], depth }; points.push(active)
+      }
+      if (active && name === 'img' && /^https:\/\/book-snapshot\.invalid\/assets\/[a-f0-9]{64}$/.test(attributes.src || '')) active.images.push(attributes.src.split('/').pop())
+    },
+    onclosetag() { if (active?.depth === depth) active = null; depth-- },
+  }).end(html)
+  return points.map(point => ({ id: point.id, ordinal: point.ordinal, images: point.images }))
+}
+
+function renderedMapText(html) {
+  const fields = []
+  let depth = 0, active = null
+  new Parser({
+    onopentag(name, attributes) {
+      depth++
+      if (!(attributes.class || '').split(/\s+/).includes('book-map-source-text')) return
+      assert.equal(active, null, 'Nested map field containers')
+      const field = attributes['data-point-field'], id = attributes['data-point-id'], ordinal = Number(attributes['data-point-ordinal'])
+      assert(['address', 'category', 'coord'].includes(field) && id && Number.isSafeInteger(ordinal) && ordinal > 0, 'Invalid map field identity')
+      active = { id, field, ordinal, text: '', depth }; fields.push(active)
+    },
+    ontext(value) { if (active) active.text += value },
+    onclosetag() { if (active?.depth === depth) active = null; depth-- },
+  }, { decodeEntities: true }).end(html)
+  return fields
+}
+
 async function verifyResult(fixture, out, manifest, artifact, profile) {
   const { PDF_THEMES, getFixedTranslator } = loadArtifactEntrypoint(privateRef(artifact, manifest.entrypoint), artifact, manifest)
   const translate = getFixedTranslator(fixture.document.settings.locale)
   const theme = PDF_THEMES[fixture.document.settings.template]
   assert(theme, 'Unknown pinned theme')
   const certificate = JSON.parse(await fsp.readFile(path.join(out, 'certificate.json'), 'utf8'))
+  assert.equal(certificate.prepared_source_schema_version, 2, 'Certificate source schema differs from artifact')
   assert.equal(certificate.measured, true, 'Injected measurements cannot pass physical acceptance')
   if (profile) assert.deepEqual(certificate.resource_profile, profile.limits.renderer_resources, 'Renderer ignored supplied B2 resource profile')
   assert.equal(certificate.renderer_version, manifest.renderer_version)
@@ -314,6 +363,23 @@ async function verifyResult(fixture, out, manifest, artifact, profile) {
   assert.deepEqual(chapters, fixture.expected.travel_ids, 'Chapter selection/order differs')
   assert.equal(countsChecked.size, fixture.expected.travel_ids.length)
   for (const [key, sink] of expectedText) assert.deepEqual(actualText.get(key).finish(), sink.finish(), `Incomplete text: ${key}`)
+  const routeCoverage = new Map(), routeOrdinals = new Map(), routePoints = new Map(), routeImagePositions = new Map()
+  if (fixture.document.settings.includeMap) for (const chunk of fixture.manifest.filter(row => row.kind === 'route')) {
+    const ordinal = (routeOrdinals.get(chunk.travel_id) || 0) + 1
+    routeOrdinals.set(chunk.travel_id, ordinal)
+    const imagePosition = routeImagePositions.get(chunk.travel_id) || 0
+    const image = chunk.metadata.image ? fixture.manifest.filter(row => row.kind === 'media' && row.travel_id === chunk.travel_id && row.metadata.role === 'route-image')[imagePosition] : undefined
+    if (chunk.metadata.image) {
+      assert(image && image.metadata.resource_key === chunk.metadata.image, 'Independent route media order differs')
+      routeImagePositions.set(chunk.travel_id, imagePosition + 1)
+    }
+    routePoints.set(`${chunk.travel_id}:${chunk.metadata.id}`, { ordinal, rendered: 0, image_checksum: image?.checksum, occurrence_key: image?.occurrence_key })
+    const labels = fixture.manifest.filter(row => row.kind === 'route-category' && row.travel_id === chunk.travel_id && row.metadata.route_id === chunk.metadata.id)
+      .map(row => row.metadata.name).filter(Boolean).join(', ')
+    const fields = { address: chunk.metadata.address, category: labels,
+      coord: fixture.document.settings.showCoordinatesOnMapPage ? chunk.metadata.coord || `${chunk.metadata.lat},${chunk.metadata.lng}` : '' }
+    for (const [field, expected] of Object.entries(fields)) if (expected) routeCoverage.set(`${chunk.travel_id}:${chunk.metadata.id}:${field}`, { expected, actual: '', ordinal })
+  }
   let pages = 0, blocks = 0, occurrences = 0
   const captionsEnabled = fixture.document.settings.includeGallery && fixture.document.settings.showCaptions && fixture.document.settings.captionPosition !== 'none'
   const captionCoverage = new Map(fixture.manifest.filter(chunk => chunk.kind === 'gallery' && captionsEnabled && chunk.metadata.caption.trim())
@@ -332,7 +398,7 @@ async function verifyResult(fixture, out, manifest, artifact, profile) {
     assert(bytes.toString('utf8').includes(`background: ${theme.colors.background}`), 'Theme background changed')
     pageDigest.update(row.checksum)
     pageTypes.add(row.type)
-    if (row.type === 'content' || row.type === 'gallery' || row.type === 'gallery-caption') {
+    if (row.type === 'content' || row.type === 'gallery' || row.type === 'gallery-caption' || row.type === 'map' || row.type === 'map-text') {
       let images = 0
       new Parser({ onopentag(name, attributes) {
         if (name === 'img' && /^https:\/\/book-snapshot\.invalid\/assets\/[0-9a-f]{64}$/.test(attributes.src || '') && attributes['aria-hidden'] !== 'true') images++
@@ -341,6 +407,22 @@ async function verifyResult(fixture, out, manifest, artifact, profile) {
     }
     if (!row.segment_ref.startsWith('frontmatter:')) {
       const source = JSON.parse(await fsp.readFile(privateRef(out, row.segment_ref), 'utf8'))
+      assert.equal(source.source_schema_version, 2, 'Plan source omitted pinned schema')
+      for (const point of renderedMapPoints(bytes.toString('utf8'))) {
+        const coverage = routePoints.get(`${source.page.travel?.id}:${point.id}`)
+        assert(coverage, 'Unexpected map point')
+        assert.equal(point.ordinal, coverage.ordinal, 'Map card ordinal changed')
+        assert.deepEqual(point.images, coverage.image_checksum ? [coverage.image_checksum] : [], 'Map thumbnail changed source or repeated placement')
+        coverage.rendered++
+      }
+      for (const field of renderedMapText(bytes.toString('utf8'))) {
+        const coverage = routeCoverage.get(`${source.page.travel?.id}:${field.id}:${field.field}`)
+        assert(coverage, 'Unexpected or disabled map field')
+        assert.equal(field.ordinal, coverage.ordinal, 'Map point ordinal changed after subdivision')
+        coverage.actual += field.text
+      }
+      if (source.page.type === 'map') assert.deepEqual(row.occurrences, source.page.locations.map(location => routePoints.get(`${source.page.travel.id}:${location.id}`)?.occurrence_key).filter(Boolean), 'Map image occurrence order differs from source points')
+      if (source.page.type === 'map-text') assert.equal(row.occurrences.length, 0, 'Map text repeated a source image')
       const sourceFields = source.page.type === 'legacy-content' ? FIELDS.map(field => source.page.travel[field] || '') : source.page.type === 'content' ? [source.page.html] : []
       const delivered = semanticText(bytes.toString('utf8'), { contentOnly: true })
       for (const html of sourceFields) assert(delivered.includes(semanticText(html)), 'Planned text missing from saved HTML')
@@ -375,6 +457,7 @@ async function verifyResult(fixture, out, manifest, artifact, profile) {
   assert.equal(pages, certificate.completed.pages)
   assert.equal(blocks, certificate.completed.blocks)
   assert.equal(occurrences, certificate.completed.mediaOccurrences)
+  assertRouteCoverage(routePoints, routeCoverage)
   for (const [key, caption] of captionCoverage) assert.equal(caption.actual, caption.expected, `Incomplete source caption: ${key}`)
   assert.equal(pageTypes.has('gallery'), fixture.document.settings.includeGallery && fixture.manifest.some(chunk => chunk.kind === 'gallery'))
   assert.equal(pageTypes.has('map'), fixture.document.settings.includeMap && fixture.manifest.some(chunk => chunk.kind === 'route'))
@@ -517,7 +600,7 @@ async function main() {
   }
 }
 
-module.exports = { privateRef, verifyArtifact, loadArtifactEntrypoint, parseOptions, corpus, readProfile, enforceProfile, renderedCaptions, semanticText }
+module.exports = { privateRef, verifyArtifact, loadArtifactEntrypoint, parseOptions, corpus, readProfile, enforceProfile, renderedCaptions, renderedMapText, renderedMapPoints, assertRouteCoverage, semanticText }
 
 if (require.main === module) {
   if (process.argv[2] === '--internal-worker') {

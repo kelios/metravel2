@@ -185,3 +185,58 @@ captions и source title, длинный URL, таблица и список у 
 Merged PDF correctness, composer RSS, restart/retry/cancel, download ACL и
 реальная selection владельца 2012–2013 остаются gates B3/F3. Fixture PASS F1
 не включает v2 availability и не закрывает эти gates.
+
+## Prepared source schema 2: complete map fields
+
+The B1 `BookDocument`/manifest/settings schemas and `renderer_version` remain
+unchanged (`metravel-book-renderer/1.0.0`). This additive **private prepared
+source** contract is version 2, exported as `BOOK_SEGMENT_SOURCE_SCHEMA_VERSION`
+and pinned in `renderer-runtime.json`/manifest as
+`prepared_source_schema_version: 2`. B3 must pin the new exact artifact
+content/source hash and this schema; the previous `026e6f34…` artifact cannot
+consume `map-text` sources. The full-run certificate records the schema, and a
+prepared-page receipt records the actual source schema.
+
+Every new prepared source envelope has `source_schema_version: 2`. Unsupported
+versions/page types fail closed before rendering. For compatibility, absent
+version or explicit 1 accepts only the original page types; `map-text` and new
+map context fields require version 2. A legacy map must be explicitly upgraded
+before subdivision because its global position and coordinate policy cannot be
+inferred from a single portion.
+
+A map source has `point_start` (zero-based global source offset),
+`show_coordinates` (pinned settings policy), and optional `text_policy`
+(`inline` by default, or `detached`). The worker-only map context prints the
+complete raw address, category labels and enabled coordinates, preserving
+commas, whitespace, Unicode and unbroken words. Cards grow naturally, a single
+card uses the available width, and each frozen thumbnail has a bounded frame.
+Card and SVG numbers preserve the global point ordinal through row splitting.
+Calls to the shared renderer without this context retain the legacy markup.
+
+A physically rejected single card detaches its source text. Its map/card/image
+placement is emitted once, followed by bounded `map-text` pages:
+`{type:'map-text', travel, point_id, point_ordinal, field, html}` where `field`
+is `address`, `category` or `coord`. Escaped HTML fragments preserve the entire
+field and may be subdivided again without repeating the image. Hidden
+coordinates produce no continuation. Disabled map/coordinate settings reject
+incompatible prepared sources rather than dropping their receipts.
+
+Planning rejects overflowing geometry before PDF allocation; every geometrically
+fitting candidate must then prove one actual Chromium PDF page and the unchanged
+4 MiB PDF portion budget. Aggregate PDF/DOM/page-image/HTML budget
+failures trigger subdivision. Individual resource limits, corrupted bytes,
+font failures and mutable resource requests remain fatal. Failed PDF portions
+release the working page before retry. No source image bytes are resized or
+replaced to satisfy a budget.
+
+The acceptance runner independently derives expected route IDs, global
+ordinals, raw addresses, ordered category labels and enabled coordinates from
+the input manifest. It reconciles these against saved HTML source field markers
+across inline and detached pages, requires each point card once, compares its
+actual thumbnail checksum to the original route media and checks occurrence
+receipts in source point order. The physical corpus adds
+long Unicode/unbroken fields, addresses with more than three comma-separated
+segments, coordinate policies and repeated frozen thumbnail bytes. Protocol
+unit measurements prove source ordering/failure handling only; root-owned
+physical acceptance must prove geometry, per-page PDF budgets and independently
+extracted real Luxembourg PDF text before any completion claim.

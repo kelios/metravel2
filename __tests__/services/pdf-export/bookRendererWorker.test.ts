@@ -91,6 +91,7 @@ describe('isolated book renderer worker protocol', () => {
 
   it('publishes a pinned artifact with a closed dependency graph and reproducible file checksums', async () => {
     expect(artifactManifest.renderer_version).toBe(BOOK_RENDERER_VERSION)
+    expect((artifactManifest as typeof artifactManifest & { prepared_source_schema_version: number }).prepared_source_schema_version).toBe(2)
     expect(artifactManifest.files.some((file) => file.path.includes('ContentParser'))).toBe(true)
     expect(artifactManifest.files.some((file) => file.path.includes('EnhancedPdfGeneratorBase'))).toBe(true)
     for (const file of artifactManifest.files) {
@@ -199,7 +200,7 @@ describe('isolated book renderer worker protocol', () => {
       document(markup: string): string { return this.buildHtmlDocument([markup], this.currentSettings!, true) }
       content(travel: TravelForBook): string { return this.renderTravelContentPage(travel, '', 7) }
       photo(travel: TravelForBook): string { return this.renderTravelPhotoPage(travel, 7) }
-      map(travel: TravelForBook, points: NormalizedLocation[]): Promise<string> { return this.renderMapPage(travel, points, 7) }
+      map(travel: TravelForBook, points: NormalizedLocation[]): Promise<string> { return this.renderMapPage(travel, points, 7, { startIndex: 0, textPolicy: 'inline' }) }
       cover(data: Parameters<typeof generateSharedCoverPageMarkup>[1]): Promise<string> { return generateSharedCoverPageMarkup(this.theme, data) }
       async description(raw: string): Promise<string> { return (await this.ensureBlockRenderer()).renderRichText(raw, 'description') }
     }
@@ -384,6 +385,66 @@ describe('isolated book renderer worker protocol', () => {
     expect(actual).toBe('ADAPTIVE_SOURCE '.repeat(200))
     expect(points).toBe(201)
   }, 90_000)
+
+  it.each([false, true])('adapts PDF-budget map portions and preserves full detached route fields (coordinates=%s)', async (showCoordinatesOnMapPage) => {
+    const address = 'ROUTE_VALUE 😀界, fourth, fifth · & <literal> '.repeat(900)
+    const category = 'CATEGORY_WORD'.repeat(2000)
+    const fixture = await buildSnapshotFixture(path.join(scratch, `map-fields-${showCoordinatesOnMapPage}-input`), {
+      travels: [{ id: 761, title: 'Map completeness', points: 8, routeThumbnails: true, routeAddresses: [address, 'A, B, C, D · E'], routeCategories: [category] }],
+      settings: { includeMap: true, showCoordinatesOnMapPage, includeToc: false, includeGallery: false },
+    })
+    const out = path.join(scratch, `map-fields-${showCoordinatesOnMapPage}-output`)
+    const certificate = await runWorker(fixture.jobDir, out, { read_bytes: 257, measure: async html => {
+      const cards = [...html.matchAll(/class="map-location-card"/g)].length
+      if (cards > 2) throw new Error('WORKER_SEGMENT_PDF_BUDGET_EXCEEDED')
+      return { pages: 1, fits: !(cards && html.includes('ROUTE_VALUE')) && [...html.matchAll(/ROUTE_VALUE/g)].length <= 10 }
+    } })
+    expect(certificate.expected).toEqual(certificate.completed)
+    expect(certificate.source_media_coverage).toEqual({ expected: 9, completed: 9 })
+    const fields = new Map<string, string>(), ordinals: number[] = [], placements: string[] = []
+    for (const row of await readRows<{ ref: string }>(path.join(out, 'body.ndjson'))) {
+      const source = JSON.parse(await readFile(path.join(out, row.ref), 'utf8')) as import('@/services/pdf-export/segments/renderSegment').BookSegmentSource
+      placements.push(...source.occurrences)
+      if (source.page.type === 'map') {
+        expect(source.page.locations.length).toBeLessThanOrEqual(2)
+        ordinals.push(...source.page.locations.map((_, index) => source.page.type === 'map' ? source.page.point_start! + index + 1 : 0))
+      }
+      if (source.page.type === 'map-text') {
+        expect(source.source_schema_version).toBe(2)
+        expect(source.page.point_ordinal).toBe(1)
+        expect(source.page.point_id).toBe('1')
+        fields.set(source.page.field, (fields.get(source.page.field) || '') + sourceText(source.page.html))
+      }
+    }
+    expect(ordinals).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
+    expect(fields.get('address')).toBe(address)
+    expect(fields.get('category')).toBe(category)
+    expect(fields.get('coord')).toBe(showCoordinatesOnMapPage ? '53.9,27.56' : undefined)
+    expect(new Set(placements).size).toBe(9)
+  }, 90_000)
+
+  it.each([undefined, 1, 3])('rejects a prepared map-text envelope with incompatible schema %s before measuring', async source_schema_version => {
+    const fixture = await buildSnapshotFixture(path.join(scratch, `map-schema-${source_schema_version}-input`), { travels: [{ id: 1, title: 'Map schema' }], settings: { includeMap: true } })
+    const planRoot = path.join(scratch, `map-schema-${source_schema_version}-plan`)
+    await mkdir(planRoot)
+    const source = { ...(source_schema_version === undefined ? {} : { source_schema_version }), page: { type: 'map-text', travel: { id: 1, name: 'Map' },
+      point_id: '16277', point_ordinal: 1, field: 'address', html: '<p>Exact address</p>' }, blocks: ['point:text:address'], occurrences: [] }
+    const bytes = fixtureCanonicalJson(source)
+    await writeFile(path.join(planRoot, 'page.json'), bytes)
+    const { renderPreparedPage } = nativeRequire(path.join(scratch, 'artifact', 'workers/book-renderer/index.js')) as { renderPreparedPage: typeof import('@/workers/book-renderer/portion').renderPreparedPage }
+    const measure = jest.fn(async () => ({ pages: 1, fits: true }))
+    await expect(renderPreparedPage(fixture.jobDir, planRoot, path.join(scratch, `map-schema-${source_schema_version}-output`), fixture.document,
+      { segment_ref: 'page.json', snapshot_hash: fixture.document.snapshot_hash, source_checksum: sha256(bytes), page_context: { start_page: 1, folio_area_mm: 12 }, expected: { blocks: source.blocks, occurrences: [] } }, { measure }))
+      .rejects.toThrow('SEGMENT_SOURCE_SCHEMA_UNSUPPORTED')
+    expect(measure).not.toHaveBeenCalled()
+  })
+
+  it.each(['SNAPSHOT_IMAGE_ENCODED_BUDGET_EXCEEDED', 'SNAPSHOT_IMAGE_DECODE_BUDGET_EXCEEDED', 'SNAPSHOT_IMAGE_UNAVAILABLE', 'SNAPSHOT_FONT_UNAVAILABLE', 'WORKER_FONT_INTEGRITY_FAILED', 'SNAPSHOT_MUTABLE_RESOURCE_REQUEST'])('does not turn fatal resource failure %s into adaptive layout', async (failure) => {
+    const fixture = await buildSnapshotFixture(path.join(scratch, `fatal-${failure}-input`), { travels: [{ id: 9, title: 'Fatal resource' }] })
+    const measure = jest.fn(async () => { throw new Error(failure) })
+    await expect(runWorker(fixture.jobDir, path.join(scratch, `fatal-${failure}-output`), { read_bytes: 257, measure })).rejects.toThrow(failure)
+    expect(measure).toHaveBeenCalledTimes(1)
+  })
 
   it.each(['polaroid', 'collage'] as const)('preserves rejected %s captions across caption-only pages and keeps each photo once', async (galleryLayout) => {
     const caption = 'CAPTION_WORD '.repeat(38) + 'abcdef'

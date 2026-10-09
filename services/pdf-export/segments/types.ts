@@ -12,6 +12,9 @@ export interface BookSummary {
   photos: number
 }
 
+export const BOOK_SEGMENT_SOURCE_SCHEMA_VERSION = 2 as const
+export type BookMapTextField = 'address' | 'category' | 'coord'
+
 export type BookSegmentPage =
   | { type: 'cover'; data: SharedCoverPageData }
   | { type: 'photo'; travel: TravelForBook }
@@ -19,7 +22,8 @@ export type BookSegmentPage =
   | { type: 'content'; travel: TravelForBook; field: BookTextField; html: string; first: boolean; last: boolean; qr: string }
   | { type: 'gallery'; travel: TravelForBook; aspects: Record<string, number>; start_index?: number; total_photos?: number; caption_policy?: 'inline' | 'detached' }
   | { type: 'gallery-caption'; travel: TravelForBook; photo_ordinal: number; photo_id?: number | string; html: string }
-  | { type: 'map'; travel: TravelForBook; locations: NormalizedLocation[] }
+  | { type: 'map'; travel: TravelForBook; locations: NormalizedLocation[]; point_start?: number; text_policy?: 'inline' | 'detached'; show_coordinates?: boolean }
+  | { type: 'map-text'; travel: TravelForBook; point_id: string; point_ordinal: number; field: BookMapTextField; html: string }
   | { type: 'toc'; entries: TravelSectionMeta[]; total: number; start: number }
   | { type: 'atlas'; entries: TravelSectionMeta[]; part: 'map' | 'index'; total_pages: number; total_points: number; total_travels: number; index: number }
   | { type: 'separator'; travel: TravelForBook; ordinal: number; total: number }

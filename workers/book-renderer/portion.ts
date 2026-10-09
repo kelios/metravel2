@@ -2,7 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import type { BookDocument } from '@/types/bookDocument'
 import { assertBookDocument } from '@/services/pdf-export/segments/snapshotAdapter'
-import { renderSegment, type BookSegmentSource, type SegmentRenderRequest, type SegmentRenderResult } from '@/services/pdf-export/segments/renderSegment'
+import { assertBookSegmentSourceSchema, renderSegment, type BookSegmentSource, type SegmentRenderRequest, type SegmentRenderResult } from '@/services/pdf-export/segments/renderSegment'
 import { BOOK_SEGMENT_LIMITS } from '@/services/pdf-export/segments/types'
 import { canonicalJson, privatePath, readBoundedBytes, sha256 } from './filesystem'
 import { DEFAULT_RENDERER_RESOURCE_PROFILE, physicalMeasurer, validateRendererResourceProfile, type MeasurePage, type RendererResourceProfile } from './measurement'
@@ -28,6 +28,7 @@ export interface PreparedPageReceipt extends SegmentRenderResult {
   source_checksum: string
   measured: boolean
   resource_profile: RendererResourceProfile
+  source_schema_version: number
 }
 
 /** One B3-supervised portion. B3 fences and publishes this receipt after its cgroup checks. */
@@ -42,6 +43,7 @@ export async function renderPreparedPage(
   const sourceBytes = await readBoundedBytes(sourceFile, BOOK_SEGMENT_LIMITS.source_bytes)
   if (sha256(sourceBytes) !== request.source_checksum) throw new Error('SEGMENT_PLAN_INTEGRITY_FAILED')
   const source = JSON.parse(sourceBytes.toString('utf8')) as BookSegmentSource
+  assertBookSegmentSourceSchema(source)
   if (
     canonicalJson(source.blocks) !== canonicalJson(request.expected.blocks) || canonicalJson(source.occurrences) !== canonicalJson(request.expected.occurrences)) throw new Error('SEGMENT_PLAN_INTEGRITY_FAILED')
   const resourceProfile = options.resource_profile ?? DEFAULT_RENDERER_RESOURCE_PROFILE
@@ -66,7 +68,7 @@ export async function renderPreparedPage(
       const receipt: PreparedPageReceipt = { ...result, snapshot_hash: pinned.snapshot_hash,
         settings_hash: pinned.settings_hash, renderer_version: pinned.renderer_version,
         segment_ref: request.segment_ref, source_checksum: request.source_checksum,
-        measured: !!physical, resource_profile: resourceProfile }
+        measured: !!physical, resource_profile: resourceProfile, source_schema_version: source.source_schema_version ?? 1 }
       await writeFile(resolve(out, 'receipt.json'), canonicalJson(receipt), { mode: 0o600, flag: 'wx' })
       return receipt
     }

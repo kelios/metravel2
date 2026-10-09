@@ -49,6 +49,7 @@ import {
   buildPdfTravelContentRuntimeData,
 } from './pdfRuntimeMarkup';
 import { RuntimeFinalRenderer } from './renderers/FinalPageRenderer';
+import type { RuntimeMapPortionContext } from './renderers/mapPortionContext';
 import { RuntimeGalleryRenderer } from './renderers/GalleryPageRenderer';
 import { RuntimeMapRenderer } from './renderers/MapPageRenderer';
 
@@ -372,16 +373,17 @@ export class EnhancedPdfGeneratorBase {
   protected async renderMapPage(
     travel: TravelForBook,
     locations: NormalizedLocation[],
-    pageNumber: number
+    pageNumber: number,
+    portionContext?: RuntimeMapPortionContext
   ): Promise<string> {
     if (!locations.length) return '';
     const mapRuntimeData = await buildPdfMapRuntimeData({
       travel,
       locations,
-      buildRouteSvg: (mapLocations, options) => sharedBuildRouteSvg(mapLocations, this.theme, options),
+      buildRouteSvg: (mapLocations, options) => sharedBuildRouteSvg(mapLocations, this.theme, { ...options, ...(portionContext ? { pointStart: portionContext.startIndex } : {}) }),
       calculateRouteDistanceFromPreview: (preview) => this.calculateRouteDistanceFromPreview(preview),
       generateLocationQRCodes: (mapLocations) => this.generateLocationQRCodes(mapLocations),
-      buildLocationCards: (mapLocations, qrCodes) => this.buildLocationCards(mapLocations, qrCodes),
+      buildLocationCards: (mapLocations, qrCodes) => this.buildLocationCards(mapLocations, qrCodes, portionContext),
       getLeafletRouteSnapshot: () => this.getLeafletRouteSnapshot(),
     });
 
@@ -394,7 +396,7 @@ export class EnhancedPdfGeneratorBase {
       pageNumber,
       routeInfo: mapRuntimeData.routeInfo,
       routePreview: mapRuntimeData.routePreview,
-    });
+    }, portionContext);
   }
 
   private calculateRouteDistanceFromPreview(preview: import('@/types/travelRoutes').ParsedRoutePreview): number {
@@ -566,10 +568,11 @@ export class EnhancedPdfGeneratorBase {
     );
   }
 
-  private buildLocationCards(locations: NormalizedLocation[], qrCodes: string[] = []): string[] {
+  private buildLocationCards(locations: NormalizedLocation[], qrCodes: string[] = [], portionContext?: RuntimeMapPortionContext): string[] {
     return buildPdfLocationCards({
       locations,
       qrCodes,
+      portionContext,
       theme: this.theme,
       showCoordinates: this.currentSettings?.showCoordinatesOnMapPage === true,
       escapeHtml: (value) => this.escapeHtml(value),

@@ -214,6 +214,7 @@ function buildBookRenderer(options = {}) {
     name: ARTIFACT_NAME,
     renderer_version: renderer,
     document_schema_version: schemaVersion(root, 'types/bookDocument.ts', 'BOOK_DOCUMENT_SCHEMA_VERSION'),
+    prepared_source_schema_version: schemaVersion(root, 'services/pdf-export/segments/types.ts', 'BOOK_SEGMENT_SOURCE_SCHEMA_VERSION'),
     settings_schema_version: schemaVersion(root, 'types/bookSettings.ts', 'BOOK_SETTINGS_SCHEMA_VERSION'),
     entrypoint: outputName(entry),
     source_hash: sourceHash,

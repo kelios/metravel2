@@ -6,7 +6,7 @@ import path from 'node:path'
 
 const ROOT = path.resolve(__dirname, '../..')
 const nativeRequire = createRequire(__filename)
-const { privateRef, verifyArtifact, loadArtifactEntrypoint, parseOptions, corpus, readProfile, enforceProfile, renderedCaptions, semanticText } = nativeRequire(
+const { privateRef, verifyArtifact, loadArtifactEntrypoint, parseOptions, corpus, readProfile, enforceProfile, renderedCaptions, renderedMapText, renderedMapPoints, assertRouteCoverage, semanticText } = nativeRequire(
   path.join(ROOT, 'scripts/pdf-book-worker-acceptance.cjs'),
 )
 const sha256 = (value: string | Buffer) => createHash('sha256').update(value).digest('hex')
@@ -33,6 +33,24 @@ describe('physical book acceptance evidence boundaries (no browser)', () => {
       .toEqual(new Map([['continuation', 'continued <text>']]))
     expect(() => renderedCaptions('<figcaption class="book-gallery-caption" data-photo-ordinal="1">first</figcaption><figcaption class="book-gallery-caption" data-photo-ordinal="1">duplicate</figcaption>'))
       .toThrow('Duplicate rendered caption')
+  })
+
+  it('extracts exact route field text without labels or structural indentation', () => {
+    const html = '<div class="map-location-card" data-point-id="16277" data-point-ordinal="39"><h2>Point 39</h2>' +
+      '<div class="book-map-source-text" data-point-id="16277" data-point-ordinal="39" data-point-field="address"><p>A, B, C, D · 😀界 &amp; &lt;script&gt;</p></div></div>'
+    expect(renderedMapPoints(html)).toEqual([{ id: '16277', ordinal: 39, images: [] }])
+    expect(renderedMapText(html).map((field: { id: string; ordinal: number; field: string; text: string }) => ({ id: field.id, ordinal: field.ordinal, field: field.field, text: field.text })))
+      .toEqual([{ id: '16277', ordinal: 39, field: 'address', text: 'A, B, C, D · 😀界 & <script>' }])
+    expect(() => renderedMapText('<div class="book-map-source-text" data-point-id="16277" data-point-ordinal="0" data-point-field="address">text</div>')).toThrow('identity')
+  })
+
+  it.each(['A, B, C', 'A, C, B, D', 'A, B, C, D, D'])('rejects omitted/reordered/repeated raw map fields: %s', actual => {
+    expect(() => assertRouteCoverage(new Map([['761:16277', { rendered: 1 }]]), new Map([['761:16277:address', { expected: 'A, B, C, D', actual }]])))
+      .toThrow('Incomplete source map field')
+  })
+
+  it.each([0, 2])('rejects missing or duplicated source point cards (%s)', rendered => {
+    expect(() => assertRouteCoverage(new Map([['761:16277', { rendered }]]), new Map())).toThrow('source map point')
   })
 
   const contentPage = (content: string, elsewhere = '') => `<html><head><title>${elsewhere}</title><style>${elsewhere}</style></head><body>
@@ -85,7 +103,7 @@ describe('physical book acceptance evidence boundaries (no browser)', () => {
   it('verifies reviewed artifact bytes and rejects changed bytes or a symlinked artifact root', async () => {
     const artifact = path.join(scratch, 'artifact')
     await mkdir(path.join(artifact, 'fonts'), { recursive: true })
-    const runtime = { entrypoint: 'index.js', renderer_version: 'fixture/1.0.0' }
+    const runtime = { entrypoint: 'index.js', renderer_version: 'fixture/1.0.0', prepared_source_schema_version: 2 }
     const files = [{ path: 'fonts/fonts.css', value: 'pinned font stylesheet' }, { path: 'index.js', value: 'module.exports = {}' }, { path: 'renderer-runtime.json', value: JSON.stringify(runtime) }]
     const content = createHash('sha256')
     for (const file of files) {
@@ -133,6 +151,16 @@ describe('physical book acceptance evidence boundaries (no browser)', () => {
       const captionCase = cases.find((entry: { name: string }) => entry.name === `caption-500-${layout}`)
       expect(Array.from(captionCase.travels[0].captions[0])).toHaveLength(500)
       expect(captionCase.settings.galleryColumns).toBe(4)
+    }
+  })
+
+  it('keeps long map corpus rows within immutable snapshot record budgets', () => {
+    for (const name of ['map-complete-0', 'map-complete-1']) {
+      const travel = corpus('all').find((entry: { name: string }) => entry.name === name).travels[0]
+      expect(travel.routeAddresses.some((value: string) => value.length > 40000)).toBe(true)
+      expect(travel.routeCategories.some((value: string) => Array.from(value).length > 10000)).toBe(true)
+      for (const value of travel.routeAddresses) expect(Buffer.byteLength(JSON.stringify({ id: 1, address: value, country_id: 1, lat: '53.9000000', lng: '27.5600000', coord: '53.9,27.56', image: 'uploads/fixture-shared.png', image_detail: '', image_landscape: '' }))).toBeLessThanOrEqual(65536)
+      for (const value of travel.routeCategories) expect(Buffer.byteLength(JSON.stringify({ id: 2, name: value, route_id: 1 }))).toBeLessThanOrEqual(65536)
     }
   })
 

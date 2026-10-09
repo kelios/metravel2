@@ -108,7 +108,7 @@ export function travelDirectory(out: string, id: number): string { return resolv
 
 export function appendMetadataLabel(previous: string | undefined, next: string | null | undefined): string | undefined {
   if (!next) return previous
-  if ((previous?.length || 0) + next.length + 2 > 32_768) throw new Error('WORKER_METADATA_BUDGET_EXCEEDED')
+  if ((previous ? previous.length + 2 : 0) + next.length > 32_768) throw new Error('WORKER_METADATA_BUDGET_EXCEEDED')
   return previous ? `${previous}, ${next}` : next
 }
 

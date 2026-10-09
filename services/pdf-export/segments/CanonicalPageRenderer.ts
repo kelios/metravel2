@@ -44,11 +44,14 @@ export class CanonicalPageRenderer extends EnhancedPdfGeneratorBase {
       }
       case 'separator': markup = this.renderSeparatorPage(source.travel, source.ordinal, source.total); break;
       case 'content':
-      case 'gallery-caption': {
+      case 'gallery-caption':
+      case 'map-text': {
         if (source.html.length > BOOK_SEGMENT_LIMITS.content_chars) throw new Error('SEGMENT_SOURCE_BUDGET_EXCEEDED');
         if (source.type === 'gallery-caption' && (!settings.includeGallery || settings.showCaptions === false || settings.captionPosition === 'none')) throw new Error('SEGMENT_CAPTION_SETTINGS_MISMATCH');
         if (source.type === 'gallery-caption' && (!Number.isSafeInteger(source.photo_ordinal) || source.photo_ordinal < 1)) throw new Error('SEGMENT_GALLERY_POSITION_INVALID');
-        const content = source.type === 'gallery-caption'
+        if (source.type === 'map-text' && (!settings.includeMap || (source.field === 'coord' && !settings.showCoordinatesOnMapPage))) throw new Error('SEGMENT_MAP_SETTINGS_MISMATCH');
+        if (source.type === 'map-text' && (!Number.isSafeInteger(source.point_ordinal) || source.point_ordinal < 1 || !source.point_id || !['address', 'category', 'coord'].includes(source.field))) throw new Error('SEGMENT_MAP_POSITION_INVALID');
+        const content = source.type !== 'content'
           ? { ...source, field: 'description' as const, first: false, last: false, qr: '' }
           : source;
         const contentHtml = source.type === 'gallery-caption'
@@ -56,7 +59,10 @@ export class CanonicalPageRenderer extends EnhancedPdfGeneratorBase {
               <h2>${sharedEscapeHtml(translate('export:services.pdfExport.runtime.gallery.photoAlt', { value1: source.photo_ordinal }))}</h2>
               <div class="book-gallery-caption-text" style="white-space: pre-wrap; overflow-wrap: anywhere;">${source.html}</div>
             </div>`
-          : source.html;
+          : source.type === 'map-text' ? `<div class="book-map-text-continuation">
+              <h2>${sharedEscapeHtml(translate('export:services.pdfExport.runtime.atlas.pointFallback', { value1: source.point_ordinal }))}</h2>
+              <div class="book-map-source-text" data-point-id="${sharedEscapeHtml(source.point_id)}" data-point-ordinal="${source.point_ordinal}" data-point-field="${source.field}" style="white-space: pre-wrap; overflow-wrap: anywhere;">${source.html}</div>
+            </div>` : source.html;
         const blocks: ParsedContentBlock[] = [{ type: 'paragraph', text: ' ', html: source.html }];
         // Streamed tables/links remain balanced markup. Reparsing a header-only table loses it.
         markup = renderTravelContentPageMarkup({
@@ -96,7 +102,10 @@ export class CanonicalPageRenderer extends EnhancedPdfGeneratorBase {
       }
       case 'map':
         if (source.locations.length > BOOK_SEGMENT_LIMITS.map_points) throw new Error('SEGMENT_SOURCE_BUDGET_EXCEEDED');
-        markup = await this.renderMapPage(source.travel, source.locations, number);
+        if (source.show_coordinates !== undefined && source.show_coordinates !== settings.showCoordinatesOnMapPage) throw new Error('SEGMENT_MAP_SETTINGS_MISMATCH');
+        if (!settings.includeMap) throw new Error('SEGMENT_MAP_SETTINGS_MISMATCH');
+        if (!Number.isSafeInteger(source.point_start ?? 0) || (source.point_start ?? 0) < 0 || (source.text_policy !== undefined && !['inline', 'detached'].includes(source.text_policy))) throw new Error('SEGMENT_MAP_POSITION_INVALID');
+        markup = await this.renderMapPage(source.travel, source.locations, number, { startIndex: source.point_start ?? 0, textPolicy: source.text_policy ?? 'inline' });
         break;
       case 'toc':
         if (source.entries.length > BOOK_SEGMENT_LIMITS.toc_entries) throw new Error('SEGMENT_SOURCE_BUDGET_EXCEEDED');
