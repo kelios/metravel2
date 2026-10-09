@@ -6381,3 +6381,49 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   для CI: согласованное изменение lint-job checkout `fetch-depth: 0`,
   подключение guard в `lint:ci` и проверка фиксированной Git-границы в таком
   checkout. Workflow и политика истории в #2260 не обходятся.
+
+### PDF-BOOK-SCALE-001 — весь архив блокируется count caps и собирается целиком в памяти
+
+- Каноническая новая цепочка: parent feature #2352; B1 #2353 / F1 #2354 /
+  B2 #2355 / B3 #2356 / F2 #2357 / F3 #2358, sprint #27. #2353 стартовый
+  контракт; #2358 снимает gates только после работающих #2356+#2357.
+- Источник (09.10.2026): владелец не может экспортировать книгу 2012–2013 и
+  требует отсутствие лимитов количества; screenshot `/export` показывает 25
+  выбранных путешествий, но не сообщение отказа и не точный состав/число фото.
+- Причина source-confirmed двумя независимыми разборами:
+  `BookHtmlExportService.ts:27` вызывает `TravelDataTransformer.validate`, где
+  `:285–289` стоят 50 travels / 30 gallery+thumb на travel / 200 всего /
+  50k символов на поле / 500k всего. Inline фото не считаются; это не бюджет
+  декодированной памяти. `pdfPageAssembly.ts:58,82–122` накапливает страницы,
+  `htmlDocument.ts:373` склеивает весь HTML, `openBookPreviewWindow.ts:31–35`
+  создаёт весь DOM. `usePdfExportRuntime.ts:155–159` после любого server failure
+  возвращает книгу в этот клиентский путь.
+- Отдельные подтверждённые причины неполноты: `useListTravelExport.ts:66–89`
+  выбирает лишь loaded catalog pages; `usePdfExportRuntime.ts:251–253` после
+  failed details использует partial card. Runtime отказ конкретной книги не
+  воспроизводился; анализ не является acceptance или исправлением.
+- History preflight: весь MCP board, 2344 карточки/8 статусов; открытого дубля
+  нет. Verdict **create-linked**: #713 done (сознательно HTML-only), #716 done
+  (fallback), #788 done (защитные caps), #1133 done (старый контракт20/21,
+  print derivatives). Это новое требование, не провал прежних Done gates.
+  #754 wont_do (железо) не переоткрывается; #2232/#2274 переиспользуются;
+  активный чужой #2229 и clean-up #2349 не меняются.
+- Инвариант нового desktop-web v2: любой конечный доступный выбор → один полный
+  PDF без product count caps; ожидаемые content/media occurrences совпадают с
+  фактическими. Ограничивается ресурсная порция, не объём выбранной книги.
+- Корректирующий слой **запланирован, не реализован**: versioned paged selection,
+  immutable content/media bytes snapshot, canonical renderer, durable jobs,
+  bounded ingestion/render/merge, actual-page TOC/folio, safe scoped download,
+  complete-result certificate. Поднять/удалить одну константу без маршрута
+  считается симптоматической правкой. Capacity и PDF certification оба нужны
+  перед включением capability; hardware/provisioning не разрешаются анализом.
+- План постоянного контроля: exact owner2012–2013 selection; >30/>200/>50,
+  >50k/>500k и many-points; 1000/5000-photo loads под одинаковым заявленным
+  process-tree RSS budget; huge paragraph/table, frozen-media replacement,
+  worker restart/reload/offline/cancel, broken asset, unauthorized/expiry,
+  physical pages/TOC и coverage без blank-success. Это будущие acceptance
+  критерии, не уже полученный pass и не новый product cap.
+- Канонический дизайн и delta contract:
+  `openspec/changes/scalable-travel-book-export/{proposal,design,tasks}.md` и
+  `specs/large-travel-book-export/spec.md`. Apply — отдельный запрос владельца;
+  backend implementation выполняет владелец backend по связанным карточкам.
