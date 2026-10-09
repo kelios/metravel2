@@ -24,13 +24,15 @@ BookSettingsModal
 - `parsers/ContentParser.ts`, `renderers/BlockRenderer.ts` — rich content;
 - `parsers/contentParser/htmlTree*` — дерево HTML для разбора описаний: тонкий
   интерфейс (`htmlTree.types.ts`), `DOMParser` на web (`htmlTree.web.ts`), parse5
-  в приложениях (`htmlTree.native.ts`);
+  в приложениях (`htmlTree.native.ts`, общий adapter `htmlTree.parse5.ts`);
 - `entitlement/` и `premiumSettingsGate.ts` — источник premium availability;
 - `utils/` — локальные helpers без feature-level imports.
 
 ## Контракты
 
-- `BookSettings` импортируется из `components/export/BookSettingsModal`;
+- `BookSettings`, full `BookSettingsDto` v1 и defaults импортируются из
+  `types/bookSettings`; модалка сохраняет compatibility re-export. DTO явно
+  фиксирует locale `RU/BE/UK/PL/EN` и сохраняет `galleryPhotosPerPage=0`;
 - `TravelForBook` и export states — из `types/pdf-export`;
 - новые callers используют `BookHtmlExportService`, а не внутренние runtime
   renderer classes;

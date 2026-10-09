@@ -1,4 +1,4 @@
-import type { BookSettings } from '@/components/export/BookSettingsModal'
+import type { BookSettings } from '@/types/bookSettings'
 import type { PdfThemeConfig } from '../../../../themes/PdfThemeConfig'
 import { escapeHtml } from '../../../../utils/htmlUtils'
 import { formatDays, getTravelLabel } from '../../../../utils/pluralize'

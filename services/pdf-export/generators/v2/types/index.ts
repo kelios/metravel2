@@ -1,7 +1,7 @@
 // src/services/pdf-export/generators/v2/types/index.ts
 // ✅ ТИПЫ: Общие типы для новой архитектуры PDF-генератора
 
-import type { BookSettings } from '@/components/export/BookSettingsModal';
+import type { BookSettings } from '@/types/bookSettings';
 import type { TravelForBook } from '@/types/pdf-export';
 import type { PdfThemeConfig } from '../../../themes/PdfThemeConfig';
 

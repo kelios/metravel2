@@ -1,4 +1,4 @@
-import type { BookSettings } from '@/components/export/BookSettingsModal'
+import type { BookSettings } from '@/types/bookSettings'
 import { getThemeConfig } from '../../../themes/PdfThemeConfig'
 
 import type { TravelSectionMeta } from './types'

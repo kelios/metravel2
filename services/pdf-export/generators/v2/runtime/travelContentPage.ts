@@ -2,7 +2,7 @@ import type { TravelForBook } from '@/types/pdf-export'
 import type { PdfThemeConfig } from '../../../themes/PdfThemeConfig'
 import type { ParsedContentBlock } from '../../../parsers/ContentParser'
 import type { PdfRichTextSection } from '../../../themes/headingLevels'
-import type { BookSettings } from '@/components/export/BookSettingsModal'
+import type { BookSettings } from '@/types/bookSettings'
 import type { PdfIconName } from './pdfVisualHelpers'
 import { translate as i18nT } from '@/i18n'
 

@@ -1,4 +1,4 @@
-import type { BookSettings } from '@/components/export/BookSettingsModal'
+import type { BookSettings } from '@/types/bookSettings'
 import type { TravelForBook } from '@/types/pdf-export'
 
 import { getAtlasPageCount, shouldRenderAtlas } from './atlasPages'

@@ -1,7 +1,7 @@
 // src/services/pdf-export/generators/v2/runtime/EnhancedPdfGeneratorBase.ts
 // ✅ RUNTIME: Общая orchestration/runtime-логика для канонического EnhancedPdfGenerator v2
 
-import type { BookSettings } from '@/components/export/BookSettingsModal';
+import type { BookSettings } from '@/types/bookSettings';
 import type { TravelForBook } from '@/types/pdf-export';
 import type { GalleryLayout, CaptionPosition } from '@/types/pdf-gallery';
 import { getThemeConfig, type PdfThemeName } from '../../../themes/PdfThemeConfig';

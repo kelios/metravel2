@@ -1,5 +1,5 @@
 import type { CaptionPosition } from '@/types/pdf-gallery'
-import type { BookSettings } from '@/components/export/BookSettingsModal'
+import type { BookSettings } from '@/types/bookSettings'
 import type { PdfThemeConfig } from '../../../themes/PdfThemeConfig'
 import { escapeHtml } from '../../../utils/htmlUtils'
 import { translate as i18nT } from '@/i18n'

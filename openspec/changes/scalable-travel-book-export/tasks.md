@@ -13,6 +13,14 @@
 - [ ] 2.4 Bounded ingestion до whole-field ContentParser: incremental tokenize/sanitize, huge single paragraph/table, paged atlas/all-points и disk-backed metadata aggregates; зафиксировать parity/stress evidence по каждому примеру.
 - [ ] 2.5 Unit/golden parity web/native для тем/settings; repeated resource используется в нескольких occurrences; разные chunk sizes дают эквивалентную coverage/order; одна huge chapter остаётся bounded. Requirements: Faithful settings and pagination; Verifiable completeness.
 
+Подготовка F1 в рамках родителя #2352 (2026-10-09): настройки и их полные
+DTO/defaults вынесены в независимый от UI модуль с compatibility exports;
+существующая parse5-реализация выделена из native adapter для повторного
+использования. Это сохраняет малую печать и не закрывает пункты 2.1–2.5:
+порционный document/plan, incremental ingestion и физическая пагинация ещё
+требуют принятого B1 и интеграции worker. Неиспользуемый snapshot reader не
+включается в production-код до появления реального потребителя B2/B3.
+
 ## 3. B2 #2355 — Durable jobs, storage и capacity readiness
 
 - [ ] 3.1 Backend owner заменяет daemon thread durable queue с leases/heartbeat/idempotent claim, persisted checkpoints, retry_wait/cancel/expiry, owner job list и counters; full artifacts вне TextField. Requirement: Recoverable background lifecycle.
