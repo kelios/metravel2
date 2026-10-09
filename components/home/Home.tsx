@@ -15,6 +15,7 @@ import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries'
 import { queryKeys } from '@/api/queryKeys'
 import { useProgressiveLoad, type ProgressiveLoadConfig } from '@/hooks/useProgressiveLoading'
 import { useHomeViewport } from './useHomeViewport'
+import { HOME_WEB_SCROLL_DOCK_CLIP, homeWebScrollEndPadding } from './homeScrollDockClip'
 import { buildCanonicalUrl } from '@/utils/seo'
 import {
   EmailSubscriptionForm,
@@ -44,6 +45,9 @@ const WEB_SCROLL_STYLE = IS_WEB
       WebkitOverflowScrolling: 'touch',
       touchAction: 'pan-y',
       overscrollBehaviorY: 'contain',
+      // #2359: клип прокрутки = клип SSG-оболочки над доком, иначе React-копия
+      // hero перехватывает LCP у раннего SSG-кадра (homeScrollDockClip.ts).
+      marginBottom: HOME_WEB_SCROLL_DOCK_CLIP,
     } as any)
   : undefined
 
@@ -366,9 +370,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: bool
       // --mt-consent-h) so the bottom CTA/sections are not hidden behind it on mobile
       // (D-004). max() keeps the existing base padding when the banner is absent/shorter.
       paddingBottom: Platform.select({
-        web: (isMobile
-          ? `calc(max(96px, var(--mt-consent-h, 0px)) + 8px)`
-          : `calc(max(120px, var(--mt-consent-h, 0px)) + 8px)`) as any,
+        web: homeWebScrollEndPadding(isMobile ? 96 : 120) as any,
         ios: 96,
         android: 88,
         default: 120,

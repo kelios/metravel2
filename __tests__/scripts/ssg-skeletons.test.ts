@@ -88,6 +88,77 @@ describe('ssg-skeletons', () => {
       expect(buildRemovalScript()).toContain('data-first-screen-ready');
       expect(buildRemovalScript()).toContain('app-hydrated');
     });
+
+    // #2359: the SSG hero and its React copy are one frame in one box (#1358),
+    // so the LCP winner is decided by the clip of the scroller each one lives in.
+    // A React clip taller than the SSG clip made the late React paint a larger
+    // candidate (prod 412x823: 61560 vs 40660 px2) and moved LCP from ~2.2 s to ~6 s.
+    it('keeps the SSG Home hero candidate at least as large as its React copy under the dock', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const { HOME_WEB_SCROLL_DOCK_CLIP, homeWebScrollEndPadding } = require('../../components/home/homeScrollDockClip');
+      const { WEB_MOBILE_DOCK_RESERVE_CSS } = require('../../components/layout/webMobileDockLayout');
+      const { HOME_HERO_MEDIA_SLOT_RATIO } = require('../../components/home/homeHeroShared');
+
+      // Tiny px-only CSS evaluator: calc(), +/-, var(--mt-dock-h) and env(safe-area-inset-bottom).
+      const dockVar = WEB_MOBILE_DOCK_RESERVE_CSS.match(/@media \(max-width:([\d.]+)px\)\{:root\{--mt-dock-h:([^}]+)\}/);
+      expect(dockVar).not.toBeNull();
+      const resolvePx = (expression: string, width: number, inset: number): number => {
+        const source = expression
+          .replace(/var\(--mt-dock-h,\s*0px\)/g, width <= Number(dockVar![1]) ? `(${dockVar![2]})` : '0px')
+          .replace(/env\(safe-area-inset-bottom,\s*0px\)/g, `${inset}px`)
+          .replace(/var\(--mt-consent-h,\s*0px\)/g, '0px')
+          .replace(/calc/g, '')
+          .replace(/max/g, 'M');
+        const tokens = source.match(/M|[\d.]+px|[()+\-,]/g) ?? [];
+        // Anything the evaluator does not understand fails here instead of being skipped.
+        expect(tokens.join('')).toBe(source.replace(/\s/g, ''));
+        let i = 0;
+        const expr = (): number => {
+          let value = term();
+          while (tokens[i] === '+' || tokens[i] === '-') value = tokens[i++] === '+' ? value + term() : value - term();
+          return value;
+        };
+        const term = (): number => {
+          const token = tokens[i++];
+          if (token === 'M') { i++; const a = expr(); i++; const b = expr(); i++; return Math.max(a, b); }
+          if (token === '(') { const value = expr(); i++; return value; }
+          return Number(token.replace('px', ''));
+        };
+        return expr();
+      };
+
+      const ssgRule = emittedOpeningRule();
+      const ssgMax = Number(ssgRule.media.match(/^\(max-width:\s*([\d.]+)px\)$/)?.[1]);
+      const ssgReserve = (width: number, inset: number) => (width <= ssgMax ? resolvePx(ssgRule.bottom, width, inset) : 0);
+      const reactReserve = (width: number, inset: number) => resolvePx(HOME_WEB_SCROLL_DOCK_CLIP, width, inset);
+      const visibleArea = (width: number, height: number, top: number, clipBottom: number) =>
+        width * Math.max(0, Math.min(top + height, clipBottom) - Math.max(top, 0));
+
+      for (const [width, viewport] of [[360, 740], [390, 844], [412, 823], [412, 915], [1280, 800]]) {
+        const heroWidth = width < 1280 ? width - 32 : 365;
+        const heroHeight = Math.round(heroWidth / HOME_HERO_MEDIA_SLOT_RATIO);
+        for (const inset of [0, 34]) {
+          expect(reactReserve(width, inset)).toBeGreaterThanOrEqual(ssgReserve(width, inset));
+          for (let top = -heroHeight; top <= viewport; top += 1) {
+            const ssg = visibleArea(heroWidth, heroHeight, top, viewport - ssgReserve(width, inset));
+            const react = visibleArea(heroWidth, heroHeight, top, viewport - reactReserve(width, inset));
+            if (react > ssg) throw new Error(`React hero copy outgrows SSG LCP at ${width}x${viewport}, inset ${inset}, top ${top}: ${react} > ${ssg}`);
+          }
+        }
+      }
+      // The prod failure geometry (412x823, hero top 660) stays pinned.
+      expect(visibleArea(380, 253, 660, 823 - ssgReserve(412, 0))).toBe(40660);
+      expect(visibleArea(380, 253, 660, 823 - reactReserve(412, 0))).toBe(40660);
+      // Moving the scroller end up by the dock must not move the end of the page.
+      for (const [width, minimum] of [[390, 96], [1000, 120], [1280, 120]]) {
+        expect(resolvePx(homeWebScrollEndPadding(minimum), width, 0) + reactReserve(width, 0)).toBe(minimum + 8);
+      }
+      const homeSource = fs.readFileSync(path.join(__dirname, '../../components/home/Home.tsx'), 'utf8');
+      expect(homeSource).toMatch(/const WEB_SCROLL_STYLE = IS_WEB[\s\S]*?marginBottom: HOME_WEB_SCROLL_DOCK_CLIP,[\s\S]*?: undefined/);
+      expect(homeSource).toMatch(/style=\{\[styles\.container, WEB_SCROLL_STYLE\]\}/);
+      expect(homeSource).toContain('web: homeWebScrollEndPadding(isMobile ? 96 : 120)');
+    });
   });
 
   describe('buildSkeletonCSS', () => {
