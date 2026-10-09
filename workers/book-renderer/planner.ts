@@ -16,7 +16,7 @@ import { TRAVEL_QUOTES, type TravelQuote } from '@/services/pdf-export/quotes/tr
 import { parseCoordinates } from '@/services/pdf-export/generators/v2/runtime/bookData'
 import { appendRecord, canonicalJson, jsonLines, makePrivateDirectory, readBoundedJson, sha256 } from './filesystem'
 import { appendMetadataLabel, assetUrl, firstMedia, sourceImageKey, textSource, travelDirectory, travelMetadata, type IndexedBookSummary } from './snapshot'
-import { DEFAULT_RENDERER_RESOURCE_PROFILE, probeFrozenImage, type MeasurePage, type RendererResourceProfile } from './measurement'
+import { DEFAULT_RENDERER_RESOURCE_PROFILE, probeFrozenImage, type MeasurePage, type RendererResourceProfile, type PhysicalMeasurer } from './measurement'
 
 const FIELDS: BookTextField[] = ['description', 'plus', 'minus', 'recommendation']
 export interface BodyRecord { ref: string; travel_id: number; ordinal: number }
@@ -110,26 +110,42 @@ async function smallContent(root: string, out: string, pinned: BookDocument, id:
     blocks: [...FIELDS.filter(field => fields[field]).map(field => `${id}:${field}:small`), `${id}:online`], occurrences: [] }
 }
 
-export async function planBody(root: string, out: string, pinned: BookDocument, summary: IndexedBookSummary, measure: MeasurePage, readBytes: number, profile = DEFAULT_RENDERER_RESOURCE_PROFILE): Promise<BodyPlan> {
+export async function planBody(root: string, out: string, pinned: BookDocument, summary: IndexedBookSummary, measure: MeasurePage, readBytes: number, profile = DEFAULT_RENDERER_RESOURCE_PROFILE, prepare?: PhysicalMeasurer['prepareHtml'], verifyResources?: PhysicalMeasurer['assertResourceServing']): Promise<BodyPlan> {
   await makePrivateDirectory(resolve(out, 'body'))
   const renderer = new CanonicalPageRenderer(pinned.settings.template)
   const plan: BodyPlan = { pages: 0, atlas_pages: 0, toc_pages: 0, blocks: 0, occurrences: 0 }
   const fitHtml: MeasurePage = async html => {
-    try { return await measure(html) } catch (error) {
+    try { return await measure(prepare ? (await prepare(html)).html : html) } catch (error) {
       if (error instanceof Error && ['WORKER_PAGE_IMAGE_BUDGET_EXCEEDED', 'WORKER_DOM_BUDGET_EXCEEDED', 'WORKER_HTML_BUDGET_EXCEEDED', 'WORKER_SEGMENT_PDF_BUDGET_EXCEEDED'].includes(error.message)) return { pages: 0, fits: false }
       throw error
     }
   }
   const add = async (source: BookSegmentSource, id: number, contentBudget = 1024): Promise<void> => {
     source = { ...source, source_schema_version: 2 }
-    const html = await renderer.renderBoundedPage(source.page, { start_page: plan.pages + 1, folio_area_mm: 12 }, pinned)
-    const result = await fitHtml(html)
+    let html = await renderer.renderBoundedPage(source.page, { start_page: plan.pages + 1, folio_area_mm: 12 }, pinned)
+    let result
+    try {
+      if (prepare) {
+        const prepared = await prepare(html)
+        source = { ...source, resource_bindings: prepared.resource_bindings, resource_bindings_hash: prepared.resource_bindings_hash,
+          resource_policy_hash: prepared.resource_policy_hash, encoder_identity_hash: prepared.encoder_identity_hash, source_schema_version: 3 }
+        html = prepared.html
+      }
+      result = await measure(html)
+    } catch (error) {
+      if (!(error instanceof Error && ['WORKER_PAGE_IMAGE_BUDGET_EXCEEDED', 'WORKER_DOM_BUDGET_EXCEEDED', 'WORKER_HTML_BUDGET_EXCEEDED', 'WORKER_SEGMENT_PDF_BUDGET_EXCEEDED'].includes(error.message))) throw error
+      result = { pages: 0, fits: false }
+    }
     if (result.pages !== 1 || !result.fits) {
       if ((source.page.type === 'content' || source.page.type === 'gallery-caption' || source.page.type === 'map-text') && contentBudget < 256) throw new Error('SEGMENT_REQUIRES_SINGLE_SOURCE_LAYOUT')
       const nextContentBudget = source.page.type === 'content' || source.page.type === 'gallery-caption' || source.page.type === 'map-text'
         ? Math.floor(contentBudget / 2) : contentBudget
       for await (const portion of subdivideSource(source, contentBudget)) await add(portion, id, nextContentBudget)
       return
+    }
+    if (prepare) {
+      if (!verifyResources) throw new Error('SEGMENT_RESOURCE_PORT_REQUIRED')
+      verifyResources()
     }
     const ref = `body/${plan.pages}.json`
     const serialized = canonicalJson(source)

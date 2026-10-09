@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { deflateSync } from 'node:zlib'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import {
   BOOK_RENDERER_VERSION,
@@ -19,6 +20,49 @@ const PNG_BYTES = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4AWOYNm3afwAGSgLC3tfsoQAAAABJRU5ErkJggg==',
   'base64',
 )
+
+/** Synthetic RGBA fixtures exercise native alpha tiles; they are never editorial media. */
+export function printFixturePng(singleAlpha: boolean, rotated = false): Buffer {
+  const width = 2501, height = 2
+  const crc32 = (bytes: Buffer) => {
+    let value = 0xffffffff
+    for (const byte of bytes) {
+      value ^= byte
+      for (let bit = 0; bit < 8; bit++) value = value & 1 ? (value >>> 1) ^ 0xedb88320 : value >>> 1
+    }
+    return (value ^ 0xffffffff) >>> 0
+  }
+  const chunk = (type: string, bytes: Buffer) => {
+    const name = Buffer.from(type), size = Buffer.alloc(4), crc = Buffer.alloc(4)
+    size.writeUInt32BE(bytes.length); crc.writeUInt32BE(crc32(Buffer.concat([name, bytes])))
+    return Buffer.concat([size, name, bytes, crc])
+  }
+  const header = Buffer.alloc(13)
+  header.writeUInt32BE(width); header.writeUInt32BE(height, 4); header[8] = 8; header[9] = 6
+  const pixels = Buffer.alloc(height * (1 + width * 4))
+  for (let row = 0; row < height; row++) for (let column = 0; column < width; column++) {
+    const offset = row * (1 + width * 4) + 1 + column * 4
+    pixels[offset] = column % 251; pixels[offset + 1] = 80; pixels[offset + 2] = 160
+    pixels[offset + 3] = singleAlpha && row === 1 && column === 2400 ? 0 : 255
+  }
+  const exif = Buffer.from('4d4d002a00000008000101120003000000010006000000000000', 'hex')
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', header),
+    ...(rotated ? [chunk('eXIf', exif)] : []), chunk('IDAT', deflateSync(pixels)), chunk('IEND', Buffer.alloc(0))])
+}
+
+/** Existing placeholder bytes plus fixed EXIF6 metadata; no browser/encoder needed to build the fixture. */
+async function rotatedWebpFixture(root: string): Promise<Buffer> {
+  const original = await readFile(path.join(root, 'assets/no-data.webp'))
+  if (sha256(original) !== '712415eb90b04c42c97526dd8daefd7a3c5049e72c76d1d761b249e7944cacf6') throw new Error('PRINT_FIXTURE_BYTES_CHANGED')
+  const vp8x = Buffer.alloc(18)
+  vp8x.write('VP8X'); vp8x.writeUInt32LE(10, 4); vp8x[8] = 0x08
+  vp8x.writeUIntLE(299, 12, 3); vp8x.writeUIntLE(199, 15, 3)
+  const exif = Buffer.from('4d4d002a00000008000101120003000000010006000000000000', 'hex')
+  const exifHeader = Buffer.alloc(8); exifHeader.write('EXIF'); exifHeader.writeUInt32LE(exif.length, 4)
+  const body = Buffer.concat([Buffer.from('WEBP'), vp8x, original.subarray(12), exifHeader, exif])
+  const header = Buffer.alloc(8); header.write('RIFF'); header.writeUInt32LE(body.length, 4)
+  return Buffer.concat([header, body])
+}
 
 /** Independent implementation of B1 ensure_ascii=False/sorted-keys JSON. */
 export function fixtureCanonicalJson(value: unknown): string {
@@ -99,6 +143,7 @@ export interface SnapshotFixtureOptions {
   locale?: BookSettingsLocale
   seed?: string
   durableTextWindow?: number
+  mediaFixture?: 'opaque-rgba' | 'single-alpha' | 'rotated-png' | 'rotated-webp'
 }
 
 export interface SnapshotFixture {
@@ -110,6 +155,7 @@ export interface SnapshotFixture {
     text_by_field: Record<number, Partial<Record<BookTextField, string>>>
     media_occurrence_keys: string[]
     unique_media_hashes: string[]
+    print_media?: { source_has_alpha: boolean; served_mime: 'image/jpeg' | 'image/png'; oriented_width?: number; oriented_height?: number }
   }
 }
 
@@ -118,6 +164,8 @@ export async function buildSnapshotFixture(jobDir: string, options: SnapshotFixt
   const root = path.resolve(__dirname, '../../..')
   const scratch = path.join(root, '.codex-temp', 'tests') + path.sep
   if (!path.resolve(jobDir).startsWith(scratch)) throw new Error('Snapshot fixtures belong in ignored .codex-temp/tests/')
+  const mediaBytes = options.mediaFixture === 'rotated-webp' ? await rotatedWebpFixture(root)
+    : options.mediaFixture ? printFixturePng(options.mediaFixture === 'single-alpha', options.mediaFixture === 'rotated-png') : PNG_BYTES
   const namespace = options.durableTextWindow ? `${FIXTURE_ID}/attempt-1` : FIXTURE_ID
   await mkdir(path.join(jobDir, namespace), { recursive: true, mode: 0o700 })
   const settings = toBookSettingsDto({ ...DEFAULT_BOOK_SETTINGS, ...options.settings }, options.locale ?? 'RU')
@@ -140,6 +188,8 @@ export async function buildSnapshotFixture(jobDir: string, options: SnapshotFixt
     text_by_field: {},
     media_occurrence_keys: [],
     unique_media_hashes: [],
+    ...(options.mediaFixture ? { print_media: { source_has_alpha: options.mediaFixture === 'single-alpha', served_mime: options.mediaFixture === 'single-alpha' ? 'image/png' as const : 'image/jpeg' as const,
+      ...(options.mediaFixture === 'rotated-png' ? { oriented_width: 2, oriented_height: 2501 } : options.mediaFixture === 'rotated-webp' ? { oriented_width: 200, oriented_height: 300 } : {}) } } : {}),
   }
 
   const emit = async (
@@ -172,8 +222,8 @@ export async function buildSnapshotFixture(jobDir: string, options: SnapshotFixt
     let occurrence = 0
     const image = async (role: string): Promise<void> => {
       occurrence++
-      await emit('media', `${role}:${occurrence}`, PNG_BYTES, {
-        role, resource_key: RESOURCE_KEY, version: sha256(PNG_BYTES),
+      await emit('media', `${role}:${occurrence}`, mediaBytes, {
+        role, resource_key: RESOURCE_KEY, version: sha256(mediaBytes),
       }, travel.id, `${travel.id}:${role}:${occurrence}`)
     }
     const first = rows[0]

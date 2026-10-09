@@ -7,6 +7,12 @@ import { escapeHtml } from '@/services/pdf-export/utils/htmlUtils'
 /** Subdivision changes only working pages, never drops a source placement. */
 export async function* subdivideSource(source: BookSegmentSource, contentBudget = 1024): AsyncGenerator<BookSegmentSource> {
   assertBookSegmentSourceSchema(source)
+  if (source.source_schema_version === 3) {
+    const unbound = { ...source }
+    delete unbound.resource_bindings; delete unbound.resource_bindings_hash
+    delete unbound.resource_policy_hash; delete unbound.encoder_identity_hash
+    source = { ...unbound, source_schema_version: 2 }
+  }
   const page = source.page
   if (page.type === 'map' && source.source_schema_version !== 2) throw new Error('SEGMENT_SOURCE_SCHEMA_UPGRADE_REQUIRED')
   if ((page.type === 'content' || page.type === 'gallery-caption' || page.type === 'map-text') && page.html) {

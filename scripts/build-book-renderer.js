@@ -100,6 +100,23 @@ function schemaVersion(root, file, constant) {
   return Number(match[1]);
 }
 
+function printAssetRecipe(root) {
+  const file = 'services/pdf-export/segments/printAssetsTypes.ts';
+  const tree = ts.createSourceFile(file, fs.readFileSync(path.join(root, file), 'utf8'), ts.ScriptTarget.Latest, true);
+  const declaration = tree.statements.filter(ts.isVariableStatement).flatMap(node => [...node.declarationList.declarations])
+    .find(node => node.name.getText(tree) === 'PRINT_ASSET_RECIPE');
+  const object = declaration?.initializer && ts.isAsExpression(declaration.initializer) ? declaration.initializer.expression : declaration?.initializer;
+  if (!object || !ts.isObjectLiteralExpression(object)) throw new Error('Missing canonical print asset recipe');
+  return Object.fromEntries(object.properties.map(property => {
+    if (!ts.isPropertyAssignment(property)) throw new Error('Nonliteral print asset recipe');
+    const value = property.initializer;
+    const parsed = ts.isNumericLiteral(value) ? Number(value.text.replace(/_/g, '')) : ts.isStringLiteral(value) ? value.text
+      : value.kind === ts.SyntaxKind.FalseKeyword ? false : value.kind === ts.SyntaxKind.TrueKeyword ? true : undefined;
+    if (parsed === undefined) throw new Error('Nonliteral print asset recipe');
+    return [property.name.getText(tree), parsed];
+  }));
+}
+
 function rendererVersion(root) {
   const source = fs.readFileSync(path.join(root, 'types/bookDocument.ts'), 'utf8');
   const value = source.match(/export const BOOK_RENDERER_VERSION = ['"]([^'"]+)['"] as const/)?.[1];
@@ -214,6 +231,15 @@ function buildBookRenderer(options = {}) {
     name: ARTIFACT_NAME,
     renderer_version: renderer,
     document_schema_version: schemaVersion(root, 'types/bookDocument.ts', 'BOOK_DOCUMENT_SCHEMA_VERSION'),
+    print_asset_recipe: printAssetRecipe(root),
+    print_resource_policy_hash: sha256(JSON.stringify(Object.fromEntries(Object.entries(printAssetRecipe(root)).sort(comparePaths)))),
+    print_encoder_pin: (() => {
+      const info = JSON.parse(fs.readFileSync(require.resolve('playwright-core/package.json'), 'utf8'));
+      const browsers = JSON.parse(fs.readFileSync(path.join(path.dirname(require.resolve('playwright-core/package.json')), 'browsers.json'), 'utf8')).browsers;
+      const browser = browsers.find(value => value.name === 'chromium');
+      if (!browser?.browserVersion || !browser.revision) throw new Error('Missing pinned Chromium identity');
+      return { browser_name: 'chromium', playwright_version: info.version, chromium_revision: browser.revision, chromium_version: browser.browserVersion };
+    })(),
     prepared_source_schema_version: schemaVersion(root, 'services/pdf-export/segments/types.ts', 'BOOK_SEGMENT_SOURCE_SCHEMA_VERSION'),
     settings_schema_version: schemaVersion(root, 'types/bookSettings.ts', 'BOOK_SETTINGS_SCHEMA_VERSION'),
     entrypoint: outputName(entry),

@@ -55,8 +55,10 @@ export async function readBoundedJson<T>(file: string, maxBytes = 65_536): Promi
 export async function readBoundedBytes(file: string, maxBytes = 65_536): Promise<Buffer> {
   const handle = await open(file, 'r')
   try {
-    if (!(await handle.stat()).isFile()) throw new Error('WORKER_SOURCE_INVALID')
-    const buffer = Buffer.alloc(maxBytes + 1)
+    const info = await handle.stat()
+    if (!info.isFile()) throw new Error('WORKER_SOURCE_INVALID')
+    if (info.size > maxBytes) throw new Error('WORKER_RECORD_BUDGET_EXCEEDED')
+    const buffer = Buffer.alloc(Math.min(maxBytes + 1, info.size + 1))
     let size = 0
     while (size < buffer.length) {
       const { bytesRead } = await handle.read(buffer, size, buffer.length - size, size)
@@ -64,6 +66,7 @@ export async function readBoundedBytes(file: string, maxBytes = 65_536): Promise
       size += bytesRead
     }
     if (size > maxBytes) throw new Error('WORKER_RECORD_BUDGET_EXCEEDED')
+    if (size !== info.size) throw new Error('WORKER_SOURCE_CHANGED_DURING_READ')
     return buffer.subarray(0, size)
   } finally { await handle.close() }
 }

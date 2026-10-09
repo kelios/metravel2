@@ -73,7 +73,7 @@ async function verifyArtifact(directory, expectedHash) {
   assert(artifact.startsWith(path.join(ROOT, '.codex-temp') + path.sep), 'Artifact must be in ignored .codex-temp/')
   assert.equal(await fsp.realpath(artifact), artifact, 'Artifact root/ancestor must not be a symlink')
   const manifest = JSON.parse(await fsp.readFile(privateRef(artifact, 'renderer-manifest.json'), 'utf8'))
-  assert.equal(manifest.prepared_source_schema_version, 2, 'Unsupported prepared source artifact')
+  assert.equal(manifest.prepared_source_schema_version, 3, 'Unsupported prepared source artifact')
   assert.equal(manifest.content_hash, expectedHash, 'Artifact differs from reviewed content hash')
   const digest = crypto.createHash('sha256')
   const files = [...manifest.files].sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0)
@@ -164,6 +164,7 @@ function corpus(suite) {
   const small = { id: 41, title: 'Pinned golden chapter', description: '<h2>Heading</h2><p>Before <strong>bold</strong> <a href="https://example.com/source">linked text</a> after.</p>', photos: 2, points: 2 }
   const result = []
   if (suite !== 'stress') {
+    for (const mediaFixture of ['opaque-rgba', 'single-alpha', 'rotated-png', 'rotated-webp']) result.push({ name: `print-${mediaFixture}`, mediaFixture, travels: [{ ...small, routeThumbnails: true }], settings: { includeMap: true, includeGallery: true, includeToc: false, photoPageLayout: 'framed' } })
     for (const template of THEMES) result.push({ name: `theme-${template}`, travels: [small], settings: {
       title: 'Pinned book title', subtitle: 'Pinned subtitle', template, includeMap: true, includeToc: true,
       includeChecklists: true, galleryPhotosPerPage: 0, galleryColumns: 4, showCaptions: true, photoPageLayout: 'framed',
@@ -266,7 +267,7 @@ function assertRouteCoverage(points, fields) {
   for (const [key, field] of fields) assert.equal(field.actual, field.expected, `Incomplete source map field: ${key}`)
 }
 
-function renderedMapPoints(html) {
+function renderedMapPoints(html, originalHash = value => value) {
   const points = []
   let depth = 0, active = null
   new Parser({
@@ -278,7 +279,7 @@ function renderedMapPoints(html) {
         assert(id && Number.isSafeInteger(ordinal) && ordinal > 0, 'Missing map point identity')
         active = { id, ordinal, images: [], depth }; points.push(active)
       }
-      if (active && name === 'img' && /^https:\/\/book-snapshot\.invalid\/assets\/[a-f0-9]{64}$/.test(attributes.src || '')) active.images.push(attributes.src.split('/').pop())
+      if (active && name === 'img' && /^https:\/\/book-snapshot\.invalid\/(?:assets\/[a-f0-9]{64}|print-assets\/[a-f0-9]{64}\/[a-f0-9]{64})$/.test(attributes.src || '')) active.images.push(originalHash(attributes.src.split('/').pop(), attributes.src))
     },
     onclosetag() { if (active?.depth === depth) active = null; depth-- },
   }).end(html)
@@ -303,13 +304,110 @@ function renderedMapText(html) {
   return fields
 }
 
+/** Independent saved-source/original/cache/served-byte proof, not a renderer digest echo. */
+async function verifyPrintResources(fixture, out, row, html, certificate, manifest) {
+  const canonical = fixtureHelper().fixtureCanonicalJson
+  const sourceBytes = await fsp.readFile(privateRef(out, row.segment_ref))
+  assert.equal(hash(sourceBytes), row.source_checksum, 'Prepared source differs from committed plan')
+  const source = JSON.parse(sourceBytes)
+  assert.equal(source.source_schema_version, 3)
+  assert.equal(source.resource_bindings_hash, hash(canonical(source.resource_bindings)))
+  assert.equal(source.resource_policy_hash, hash(canonical(manifest.print_asset_recipe)))
+  assert.equal(source.encoder_identity_hash, hash(canonical(certificate.print_encoder_identity)))
+  for (const key of ['resource_bindings_hash', 'resource_policy_hash', 'encoder_identity_hash']) assert.equal(row[key], source[key])
+  for (const key of Object.keys(manifest.print_encoder_pin)) assert.equal(certificate.print_encoder_identity[key], manifest.print_encoder_pin[key])
+  assert(/^[a-f0-9]{64}$/.test(certificate.print_encoder_identity.executable_sha256))
+  const byServed = new Map(), originals = new Set()
+  const { imageSize } = require('image-size')
+  for (const binding of source.resource_bindings) {
+    assert(!originals.has(binding.original_checksum), 'Repeated resource binding')
+    originals.add(binding.original_checksum)
+    const chunk = fixture.manifest.find(value => value.kind === 'media' && value.checksum === binding.original_checksum)
+    assert(chunk, 'Derivative origin is outside immutable snapshot')
+    const original = await fsp.readFile(privateRef(fixture.jobDir, chunk.file_ref))
+    assert.equal(hash(original), binding.original_checksum)
+    assert.equal(original.length, binding.original_encoded_bytes)
+    const descriptorBytes = await fsp.readFile(privateRef(out, binding.descriptor_ref))
+    assert.equal(hash(descriptorBytes), binding.descriptor_checksum)
+    const descriptor = JSON.parse(descriptorBytes)
+    assert.equal(descriptor.original_checksum, binding.original_checksum)
+    if (fixture.expected?.print_media) {
+      assert.equal(descriptor.has_source_alpha, fixture.expected.print_media.source_has_alpha, 'Actual alpha decision differs from native fixture pixels')
+      assert.equal(binding.mime, fixture.expected.print_media.served_mime, 'Opaque/transparent print policy changed')
+      if (fixture.expected.print_media.oriented_width !== undefined) {
+        assert.equal(descriptor.oriented_width, fixture.expected.print_media.oriented_width, 'Fixture EXIF orientation was ignored')
+        assert.equal(descriptor.oriented_height, fixture.expected.print_media.oriented_height, 'Fixture EXIF orientation was ignored')
+      }
+    }
+    assert.deepEqual(descriptor.recipe, manifest.print_asset_recipe)
+    assert.deepEqual(descriptor.encoder_identity, certificate.print_encoder_identity)
+    const expectedBinding = { ...binding }; delete expectedBinding.descriptor_ref; delete expectedBinding.descriptor_checksum
+    assert.deepEqual(descriptor.binding, expectedBinding)
+    const encoded = await fsp.readFile(privateRef(out, binding.served_file_ref))
+    assert.equal(hash(encoded), binding.served_checksum, 'Saved served bytes differ from lineage')
+    assert.equal(encoded.length, binding.encoded_bytes)
+    const raw = imageSize(original), dimensions = imageSize(encoded)
+    const rotated = raw.orientation >= 5 && raw.orientation <= 8
+    const exactOrientation = descriptor.oriented_width === (rotated ? raw.height : raw.width) && descriptor.oriented_height === (rotated ? raw.width : raw.height)
+    const decoderWitness = ['png', 'webp'].includes(raw.type) && raw.orientation === undefined && descriptor.oriented_width === raw.height && descriptor.oriented_height === raw.width
+    assert(exactOrientation || decoderWitness, 'Oriented dimensions are outside immutable header bounds')
+    assert.equal(binding.original_pixels, raw.width * raw.height)
+    const mime = encoded[0] === 255 && encoded[1] === 216 ? 'image/jpeg' : encoded.subarray(1, 4).toString() === 'PNG' ? 'image/png' : null
+    assert.equal(mime, binding.mime)
+    if (binding.mode === 'passthrough') {
+      assert.equal(binding.mime, 'image/jpeg')
+      assert.equal(binding.served_checksum, binding.original_checksum)
+      assert(original.length <= manifest.print_asset_recipe.jpeg_passthrough_bytes)
+      assert.equal(binding.width, descriptor.oriented_width); assert.equal(binding.height, descriptor.oriented_height)
+    } else {
+      assert.equal(binding.mode, 'encoded')
+      assert.equal(dimensions.width, binding.width); assert.equal(dimensions.height, binding.height)
+      const scale = Math.min(1, manifest.print_asset_recipe.max_long_edge / Math.max(descriptor.oriented_width, descriptor.oriented_height),
+        Math.sqrt(manifest.print_asset_recipe.max_pixels / (descriptor.oriented_width * descriptor.oriented_height)))
+      assert.equal(binding.width, Math.max(1, Math.floor(descriptor.oriented_width * scale)))
+      assert.equal(binding.height, Math.max(1, Math.floor(descriptor.oriented_height * scale)))
+      if (descriptor.has_source_alpha || descriptor.has_output_alpha) assert.equal(binding.mime, 'image/png', 'Source alpha was flattened')
+    }
+    assert(Math.max(binding.width, binding.height) <= manifest.print_asset_recipe.max_long_edge)
+    assert.equal(binding.served_pixels, binding.width * binding.height)
+    assert.equal(binding.recipe_hash, source.resource_policy_hash)
+    assert.equal(binding.encoder_identity_hash, source.encoder_identity_hash)
+    byServed.set(`${binding.original_checksum}/${binding.served_checksum}`, binding.original_checksum)
+  }
+  const requested = new Set()
+  // Only resources are inspected; authored text and hyperlink URLs remain source text.
+  const inspect = value => { for (const match of value.matchAll(/https:\/\/book-snapshot\.invalid\/(assets|print-assets)\/([a-f0-9]{64})(?:\/([a-f0-9]{64}))?/g)) {
+    assert.equal(match[1], 'print-assets', 'Schema3 still serves original encoding')
+    const pair = `${match[2]}/${match[3]}`
+    assert(byServed.has(pair), 'HTML references unbound served bytes'); requested.add(pair)
+  } }
+  let inStyle = false
+  new Parser({ onopentag(name, attributes) {
+    if (name === 'img' || name === 'source') inspect(attributes.src || '')
+    if (name === 'video') inspect(attributes.poster || '')
+    for (const match of (attributes.style || '').matchAll(/url\(([^)]*)\)/g)) inspect(match[1])
+    if (name === 'style') inStyle = true
+  }, ontext(text) { if (inStyle) for (const match of text.matchAll(/url\(([^)]*)\)/g)) inspect(match[1]) }, onclosetag(name) { if (name === 'style') inStyle = false } }).end(html)
+  assert.equal(requested.size, byServed.size, 'Prepared binding was never referenced by HTML')
+  for (const served of row.served_resources) {
+    assert.equal(byServed.get(`${served.original_checksum}/${served.served_checksum}`), served.original_checksum, 'Actual response lacks origin binding')
+    assert(requested.has(`${served.original_checksum}/${served.served_checksum}`), 'Receipt claims unrequested resource')
+  }
+  const actual = new Set(row.served_resources.map(value => `${value.original_checksum}/${value.served_checksum}`))
+  assert.equal(actual.size, row.served_resources.length, 'Duplicate actual resource response identity')
+  for (const served of requested) assert(actual.has(served), 'HTML resource was never served during measurement')
+  return source
+}
+
 async function verifyResult(fixture, out, manifest, artifact, profile) {
   const { PDF_THEMES, getFixedTranslator } = loadArtifactEntrypoint(privateRef(artifact, manifest.entrypoint), artifact, manifest)
   const translate = getFixedTranslator(fixture.document.settings.locale)
   const theme = PDF_THEMES[fixture.document.settings.template]
   assert(theme, 'Unknown pinned theme')
   const certificate = JSON.parse(await fsp.readFile(path.join(out, 'certificate.json'), 'utf8'))
-  assert.equal(certificate.prepared_source_schema_version, 2, 'Certificate source schema differs from artifact')
+  assert.equal(certificate.prepared_source_schema_version, 3, 'Certificate source schema differs from artifact')
+  assert.equal(certificate.print_resource_policy_hash, manifest.print_resource_policy_hash)
+  assert.equal(manifest.print_resource_policy_hash, hash(fixtureHelper().fixtureCanonicalJson(manifest.print_asset_recipe)))
   assert.equal(certificate.measured, true, 'Injected measurements cannot pass physical acceptance')
   if (profile) assert.deepEqual(certificate.resource_profile, profile.limits.renderer_resources, 'Renderer ignored supplied B2 resource profile')
   assert.equal(certificate.renderer_version, manifest.renderer_version)
@@ -401,14 +499,19 @@ async function verifyResult(fixture, out, manifest, artifact, profile) {
     if (row.type === 'content' || row.type === 'gallery' || row.type === 'gallery-caption' || row.type === 'map' || row.type === 'map-text') {
       let images = 0
       new Parser({ onopentag(name, attributes) {
-        if (name === 'img' && /^https:\/\/book-snapshot\.invalid\/assets\/[0-9a-f]{64}$/.test(attributes.src || '') && attributes['aria-hidden'] !== 'true') images++
+        if (name === 'img' && /^https:\/\/book-snapshot\.invalid\/(?:assets\/[0-9a-f]{64}|print-assets\/[0-9a-f]{64}\/[0-9a-f]{64})$/.test(attributes.src || '') && attributes['aria-hidden'] !== 'true') images++
       } }).end(bytes.toString('utf8'))
       assert.equal(images, row.occurrences.length, 'Media receipts differ from rendered images')
     }
-    if (!row.segment_ref.startsWith('frontmatter:')) {
-      const source = JSON.parse(await fsp.readFile(privateRef(out, row.segment_ref), 'utf8'))
-      assert.equal(source.source_schema_version, 2, 'Plan source omitted pinned schema')
-      for (const point of renderedMapPoints(bytes.toString('utf8'))) {
+    const source = await verifyPrintResources(fixture, out, row, bytes.toString('utf8'), certificate, manifest)
+    if (!row.frontmatter) {
+      assert.equal(source.source_schema_version, 3, 'Plan source omitted pinned schema')
+      for (const point of renderedMapPoints(bytes.toString('utf8'), (served, url) => {
+        const original = url.split('/').at(-2)
+        const bound = source.resource_bindings.find(value => value.original_checksum === original && value.served_checksum === served)
+        assert(bound, 'Map thumbnail has no immutable-origin binding')
+        return bound.original_checksum
+      })) {
         const coverage = routePoints.get(`${source.page.travel?.id}:${point.id}`)
         assert(coverage, 'Unexpected map point')
         assert.equal(point.ordinal, coverage.ordinal, 'Map card ordinal changed')
@@ -600,7 +703,7 @@ async function main() {
   }
 }
 
-module.exports = { privateRef, verifyArtifact, loadArtifactEntrypoint, parseOptions, corpus, readProfile, enforceProfile, renderedCaptions, renderedMapText, renderedMapPoints, assertRouteCoverage, semanticText }
+module.exports = { privateRef, verifyArtifact, loadArtifactEntrypoint, parseOptions, corpus, readProfile, enforceProfile, renderedCaptions, renderedMapText, renderedMapPoints, assertRouteCoverage, semanticText, verifyPrintResources }
 
 if (require.main === module) {
   if (process.argv[2] === '--internal-worker') {

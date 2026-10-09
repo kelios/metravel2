@@ -2,6 +2,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import crypto from 'node:crypto'
+import { PRINT_ASSET_RECIPE } from '@/services/pdf-export/segments/printAssetsTypes'
 
 const ROOT = path.resolve(__dirname, '../../..')
 const { buildBookRenderer, moduleCalls } = require('../../../scripts/build-book-renderer')
@@ -38,9 +39,11 @@ describe('versioned Node book renderer artifact', () => {
     expect(artifact.manifest).toMatchObject({
       renderer_version: 'metravel-book-renderer/1.0.0',
       document_schema_version: 1,
-      prepared_source_schema_version: 2,
+      prepared_source_schema_version: 3,
       settings_schema_version: 1,
     })
+    expect(artifact.manifest.print_asset_recipe).toEqual(PRINT_ASSET_RECIPE)
+    expect(artifact.manifest.print_encoder_pin.chromium_version).toMatch(/^\d+\.\d+\.\d+\.\d+$/)
     expect(artifact.manifest.content_hash).toMatch(/^[a-f0-9]{64}$/)
     expect(artifact.manifest.source_hash).toMatch(/^[a-f0-9]{64}$/)
     const records = artifact.manifest.files as { path: string; sha256: string; size_bytes: number }[]

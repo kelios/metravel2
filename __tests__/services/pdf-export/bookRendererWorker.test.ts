@@ -91,7 +91,7 @@ describe('isolated book renderer worker protocol', () => {
 
   it('publishes a pinned artifact with a closed dependency graph and reproducible file checksums', async () => {
     expect(artifactManifest.renderer_version).toBe(BOOK_RENDERER_VERSION)
-    expect((artifactManifest as typeof artifactManifest & { prepared_source_schema_version: number }).prepared_source_schema_version).toBe(2)
+    expect((artifactManifest as typeof artifactManifest & { prepared_source_schema_version: number }).prepared_source_schema_version).toBe(3)
     expect(artifactManifest.files.some((file) => file.path.includes('ContentParser'))).toBe(true)
     expect(artifactManifest.files.some((file) => file.path.includes('EnhancedPdfGeneratorBase'))).toBe(true)
     for (const file of artifactManifest.files) {
@@ -423,7 +423,7 @@ describe('isolated book renderer worker protocol', () => {
     expect(new Set(placements).size).toBe(9)
   }, 90_000)
 
-  it.each([undefined, 1, 3])('rejects a prepared map-text envelope with incompatible schema %s before measuring', async source_schema_version => {
+  it.each([undefined, 1, 3, 4])('rejects a prepared map-text envelope with incompatible schema %s before measuring', async source_schema_version => {
     const fixture = await buildSnapshotFixture(path.join(scratch, `map-schema-${source_schema_version}-input`), { travels: [{ id: 1, title: 'Map schema' }], settings: { includeMap: true } })
     const planRoot = path.join(scratch, `map-schema-${source_schema_version}-plan`)
     await mkdir(planRoot)
@@ -435,7 +435,7 @@ describe('isolated book renderer worker protocol', () => {
     const measure = jest.fn(async () => ({ pages: 1, fits: true }))
     await expect(renderPreparedPage(fixture.jobDir, planRoot, path.join(scratch, `map-schema-${source_schema_version}-output`), fixture.document,
       { segment_ref: 'page.json', snapshot_hash: fixture.document.snapshot_hash, source_checksum: sha256(bytes), page_context: { start_page: 1, folio_area_mm: 12 }, expected: { blocks: source.blocks, occurrences: [] } }, { measure }))
-      .rejects.toThrow('SEGMENT_SOURCE_SCHEMA_UNSUPPORTED')
+      .rejects.toThrow(source_schema_version === 3 ? 'SEGMENT_RESOURCE_BINDING_INVALID' : 'SEGMENT_SOURCE_SCHEMA_UNSUPPORTED')
     expect(measure).not.toHaveBeenCalled()
   })
 

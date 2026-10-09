@@ -226,8 +226,9 @@ fitting candidate must then prove one actual Chromium PDF page and the unchanged
 4 MiB PDF portion budget. Aggregate PDF/DOM/page-image/HTML budget
 failures trigger subdivision. Individual resource limits, corrupted bytes,
 font failures and mutable resource requests remain fatal. Failed PDF portions
-release the working page before retry. No source image bytes are resized or
-replaced to satisfy a budget.
+release the working page before retry. Schema 1/2 serve original encodings. The
+schema-3 successor below adds fixed print-local derivatives while preserving
+original immutable bytes and placement identities.
 
 The acceptance runner independently derives expected route IDs, global
 ordinals, raw addresses, ordered category labels and enabled coordinates from
@@ -240,3 +241,93 @@ segments, coordinate policies and repeated frozen thumbnail bytes. Protocol
 unit measurements prove source ordering/failure handling only; root-owned
 physical acceptance must prove geometry, per-page PDF budgets and independently
 extracted real Luxembourg PDF text before any completion claim.
+
+## Prepared source schema 3: bounded print assets
+
+Schema 3 supersedes the schema-2 artifact for newly prepared pages. B1 document,
+settings, original media checksums, occurrence keys and `renderer_version` remain
+unchanged. Sources 1/2 retain original `/assets/<originalSHA>` serving. A schema-3
+source requires all four private fields: `resource_bindings`,
+`resource_bindings_hash`, `resource_policy_hash`, `encoder_identity_hash`.
+Unsupported/mixed schemas, invalid numerical fields and mismatched pins fail
+before printing. The artifact manifest/runtime declare the canonical
+`PRINT_ASSET_RECIPE`, its policy hash and Chromium vendor pin. B3 must accept the
+new exact artifact content/source hash and schema 3 before using these sources.
+
+The fixed recipe keeps the entire frame and aspect ratio (integer pixel rounding),
+never crops or upscales, and caps the longest edge at 2400 and output at 5.76M
+pixels. Opaque images use JPEG quality 0.92. Actual source/output transparency
+uses PNG, without flattening on white. A bounded native-resolution alpha scan
+uses one canvas at most 2400×16, exact source-coordinate tiles, `clearRect` before
+each tile, and tile-only `getImageData`; downsampled pixels alone cannot prove
+opacity. Suitable JPEGs pass through unchanged when their original encoded bytes
+are at most 2MiB and their EXIF-oriented longest edge is at most 2400. JPEG,
+PNG and WebP have bounded header dimension checks; active/vector/other containers
+and animated sources fail with typed unsupported errors before decoding. There
+is no adaptive quality reduction or codec retry to evade the 4MiB PDF guard.
+An indivisible noisy/transparent asset can honestly remain unprintable under the
+fixed resource profile; the runner must report that failure.
+
+Encoding runs in a separate worker Chromium context/page, never from inside the
+print-page request handler. The decoder image uses anonymous CORS and the private
+route supplies ACAO; mutable requests are rejected. Chromium launches with the
+explicit public `chromium.executablePath()` path. The actual encoder identity
+contains browser name, locked Playwright version, Chromium revision/version,
+streamed executable SHA, platform and architecture, verified against hashed
+artifact runtime metadata. Cache identity includes original SHA, canonical recipe
+hash and actual encoder identity hash. Cache descriptors bind original file/hash,
+raw and oriented dimensions, source/output alpha, recipe and served bytes. Cache
+reuse rechecks the immutable original, descriptor digest, derived digest/MIME/
+dimensions/policy; missing, corrupt, substituted or symlinked cache files fail.
+JPEG orientation follows its bounded EXIF header. For PNG/WebP whose header probe
+does not expose orientation, the pinned decoder provides a witness constrained
+to the exact raw or swapped dimensions, preserving the same pixel count. The
+preallocation ledger charges the larger possible tile/scratch orientation.
+Descriptors bind this witness to original SHA, recipe and encoder identity;
+cache reuse rejects arbitrary dimensions. The independent verifier applies the
+same two-orientation domain and real EXIF6 fixtures additionally require their
+known oriented dimensions. Cover brightness/composition uses the same static
+raster/animation guard before decoding and releases its working page afterward.
+
+Printing uses `/print-assets/<originalSHA>/<servedSHA>`. The derived disk path is
+`print-assets/<servedSHA>` under the private plan root. Origin-qualified URLs keep
+lineage distinct when two original encodings produce identical derived bytes.
+Only image resource attributes and CSS `url()` are rewritten; editorial text,
+hyperlinks and proof attributes remain intact. Selection and media occurrence
+ledgers retain original identities and ordering. Source3 rendering verifies the
+exact active binding set against actual responses before persistence/receipt.
+
+`physicalMeasurer(...).prepareHtml(html, pinnedSource?)` prepares or verifies one
+bounded resource set. `prepareSegmentSource(source,pinned,pageContext,physical)`
+returns a schema-3 envelope that B3 commits/checksums before rendering. A legacy
+map requires explicit ordinal/coordinate-policy upgrade first. `planBody` also
+materializes bindings before fit measurement and source persistence. Subdivision
+clears parent bindings and returns schema-2 children: B3 must rematerialize each
+child, including no-image caption/map-text continuations, before committing it.
+`renderPreparedPage` requires the three binding/policy/encoder digests in its
+request and records them, the actual encoder identity and actual
+`served_resources:[{original_checksum,served_checksum}]` in the receipt. Injected
+measurement cannot certify a schema-3 prepared page.
+
+The conservative compressed working ledger per binding charges
+`2×original bytes + 2×served bytes + 4×(original base64 bytes + derived base64 bytes)`
+for retained buffers, Blob and UTF-16/protocol transfer copies. The pixel ledger
+charges original decode, alpha tile canvas and tile scratch, target canvas,
+encoder RGBA bound, served decode and output alpha scratch. These bounds are
+checked before decode/canvas allocation and for the full portion; encoded output
+is bounded before base64 transfer. Derived files/descriptors remain private disk
+artifacts counted by the runtime temp-disk monitor. The bounded file reader
+allocates to pinned file size and rejects concurrent size changes. These are
+conservative logical bounds, not a proof of total Chromium/process RSS or B2's
+256MiB capacity gate.
+
+The independent acceptance verifier checks original source bytes, persisted
+source checksum, descriptor/derived bytes, MIME/dimensions/full-frame recipe,
+actual URL response lineage and original occurrence ordering. Physical fixtures
+include fully opaque RGBA and a single transparent pixel after the first native
+tile, plus real EXIF6 PNG and WebP fixtures with known swapped dimensions.
+Actual Luxembourg media/text acceptance and all 20 themes with its real
+2500×1875 WebP remain required after review: grayscale/sepia filters can alter PDF
+embedding even after JPEG encoding. The unchanged actual one-page/4MiB PDF guard,
+vector text and theme appearance must all pass; synthetic codec mocks establish
+protocol failure behavior only.

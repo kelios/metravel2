@@ -4,6 +4,8 @@ import type { BookDocument } from '@/types/bookDocument'
 import { BOOK_RENDERER_VERSION } from '@/types/bookDocument'
 import { assertBookDocument } from '@/services/pdf-export/segments/snapshotAdapter'
 import { renderSegment, type BookSegmentSource } from '@/services/pdf-export/segments/renderSegment'
+import { CanonicalPageRenderer } from '@/services/pdf-export/segments/CanonicalPageRenderer'
+import type { PrintEncoderIdentity } from '@/services/pdf-export/segments/printAssetsTypes'
 import { BOOK_SEGMENT_LIMITS } from '@/services/pdf-export/segments/types'
 import { appendRecord, canonicalJson, jsonLines, makePrivateDirectory, readBoundedBytes, readBoundedJson, sha256 } from './filesystem'
 import { DEFAULT_RENDERER_RESOURCE_PROFILE, physicalMeasurer, validateRendererResourceProfile, type MeasurePage, type PhysicalMeasurer, type RendererResourceProfile } from './measurement'
@@ -12,6 +14,10 @@ import { frontmatter, planBody, type BodyRecord } from './planner'
 import { withWorkerLocale } from './locale'
 import { withImageAnalysis } from './imageAnalysis'
 
+export { PRINT_ASSET_RECIPE, assertPrintResourceBinding } from '@/services/pdf-export/segments/printAssetsTypes'
+export { PRINT_RESOURCE_POLICY_HASH, transformPrintResourceUrls, checkPrintWorkingBudget } from './printAssets'
+export { physicalMeasurer, DEFAULT_RENDERER_RESOURCE_PROFILE } from './measurement'
+export { prepareSegmentSource } from './portion'
 export { renderPreparedPage, type PreparedPageRequest, type PreparedPageReceipt } from './portion'
 export { BOOK_SEGMENT_SOURCE_SCHEMA_VERSION } from '@/services/pdf-export/segments/types'
 export { renderSegment, assertBookSegmentSourceSchema } from '@/services/pdf-export/segments/renderSegment'
@@ -24,7 +30,9 @@ export { getFixedTranslator } from './locale'
 
 export interface WorkerCertificate {
   renderer_version: string
-  prepared_source_schema_version: 2
+  prepared_source_schema_version: 3
+  print_resource_policy_hash?: string
+  print_encoder_identity?: PrintEncoderIdentity
   snapshot_hash: string
   settings_hash: string
   measured: boolean
@@ -68,17 +76,31 @@ export async function runWorker(jobDir: string, outDir: string, options: WorkerO
     const measure = options.measure ?? physical!.measure
     const fit = options.measure ?? physical!.fit
     const execute = async () => {
-      const body = await planBody(root, out, pinned, summary, fit, readBytes, resourceProfile)
-      const certificate: WorkerCertificate = { prepared_source_schema_version: 2, renderer_version: BOOK_RENDERER_VERSION,
+      const body = await planBody(root, out, pinned, summary, fit, readBytes, resourceProfile, physical?.prepareHtml, physical?.assertResourceServing)
+      const certificate: WorkerCertificate = { prepared_source_schema_version: 3, renderer_version: BOOK_RENDERER_VERSION,
         snapshot_hash: pinned.snapshot_hash, settings_hash: pinned.settings_hash, measured: !options.measure,
         expected: { travels: summary.travels, blocks: body.blocks, mediaOccurrences: body.occurrences, pages: body.pages },
         completed: { travels: summary.travels, blocks: 0, mediaOccurrences: 0, pages: 0 },
         source_count: summary.sources, peak_heap_bytes: peakHeap, plan_ref: 'plan.ndjson',
+        print_resource_policy_hash: physical?.resource_policy_hash, print_encoder_identity: physical?.encoder_identity,
         source_media_coverage: { expected: summary.included_media_occurrences, completed: 0 }, resource_profile: resourceProfile }
       let order = 0
       const fontCss = options.measure ? '' : (await readBoundedBytes(resolve(fontsDir, 'fonts.css'), 512 * 1024)).toString('utf8')
       const emit = async (source: BookSegmentSource, ref: string, front: boolean) => {
-        source = { ...source, source_schema_version: 2 }
+        if (source.source_schema_version !== 3) {
+          source = { ...source, source_schema_version: 2 }
+          if (physical) {
+            const html = await new CanonicalPageRenderer(pinned.settings.template).renderBoundedPage(source.page, { start_page: order + 1, folio_area_mm: 12 }, pinned)
+            const prepared = await physical.prepareHtml(html)
+            source = { ...source, resource_bindings: prepared.resource_bindings, resource_bindings_hash: prepared.resource_bindings_hash,
+              resource_policy_hash: prepared.resource_policy_hash, encoder_identity_hash: prepared.encoder_identity_hash, source_schema_version: 3 }
+          }
+        }
+        // Front matter also has a committed bounded prepared source, not a transient name.
+        if (front && physical) {
+          ref = `pages/${order}.source.json`
+          await writeFile(resolve(out, ref), canonicalJson(source), { mode: 0o600, flag: 'wx' })
+        }
         if (front) {
           certificate.expected.pages++
           certificate.expected.blocks += source.blocks.length
@@ -91,6 +113,8 @@ export async function runWorker(jobDir: string, outDir: string, options: WorkerO
         const result = await renderSegment({ segment_ref: ref, snapshot_hash: pinned.snapshot_hash,
           page_context: { start_page: order + 1, folio_area_mm: 12 } }, pinned, {
           load: async () => source,
+          verifyResources: physical?.assertResourceServing,
+          prepare: physical ? async (html, source) => (await physical!.prepareHtml(html, source)).html : undefined,
           measure,
           persist: async html => {
             const pinnedHtml = fontCss ? html.replace(/<link\b[^>]*https:\/\/fonts\.[^>]*>/g, '').replace('</head>', `<style>${fontCss}</style></head>`) : html
@@ -101,6 +125,9 @@ export async function runWorker(jobDir: string, outDir: string, options: WorkerO
         await appendRecord(resolve(out, 'plan.ndjson'), { order, segment_ref: ref, file_ref: fileRef,
           type: source.page.type, start_page: order + 1, folio_area_mm: 12,
           checksum: result.checksum, measured_pages: result.measured_pages,
+          source_checksum: sha256(canonicalJson(source)), source_schema_version: source.source_schema_version,
+          resource_bindings_hash: source.resource_bindings_hash, resource_policy_hash: source.resource_policy_hash, encoder_identity_hash: source.encoder_identity_hash,
+          served_resources: physical?.servedResources(), frontmatter: front,
           blocks: source.blocks, occurrences: source.occurrences })
         certificate.completed.pages += result.measured_pages
         certificate.completed.blocks += result.completed.blocks

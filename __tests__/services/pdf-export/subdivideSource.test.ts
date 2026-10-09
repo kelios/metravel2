@@ -113,7 +113,8 @@ describe('measured source subdivision', () => {
       locations: [{ id: '1', address: 'Address', coord: '53.9;27.56' }] }, blocks: ['point'], occurrences: [] }
     expect((await collect(source)).some(page => page.page.type === 'map-text' && page.page.field === 'coord')).toBe(false)
     await expect(collect({ ...source, source_schema_version: 1 })).rejects.toThrow('SEGMENT_SOURCE_SCHEMA_UNSUPPORTED')
-    await expect(collect({ ...source, source_schema_version: 3 } as unknown as BookSegmentSource)).rejects.toThrow('SEGMENT_SOURCE_SCHEMA_UNSUPPORTED')
+    await expect(collect({ ...source, source_schema_version: 4 } as unknown as BookSegmentSource)).rejects.toThrow('SEGMENT_SOURCE_SCHEMA_UNSUPPORTED')
+    await expect(collect({ ...source, source_schema_version: 3 })).rejects.toThrow('SEGMENT_RESOURCE_BINDING_INVALID')
   })
 
 })
