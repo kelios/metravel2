@@ -206,9 +206,35 @@ function textSink() {
   return { parser, finish() { parser.end(); return { hash: digest.digest('hex'), characters } } }
 }
 
-function plain(html) {
+/** Preserve inline words while treating structural HTML boundaries as whitespace. */
+function semanticText(html, { contentOnly = false } = {}) {
+  const boundaries = new Set(['address', 'article', 'blockquote', 'br', 'dd', 'div', 'dl', 'dt', 'figcaption', 'figure',
+    'footer', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'hr', 'li', 'main', 'ol', 'p', 'pre', 'section',
+    'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'tr', 'ul'])
+  const excluded = new Set(['head', 'style', 'script', 'template'])
+  const stack = []
   let value = ''
-  new Parser({ ontext(part) { value += part } }, { decodeEntities: true }).end(html)
+  const accepts = frame => frame && !frame.excluded && (!contentOnly || frame.content)
+  new Parser({
+    onopentag(name, attributes) {
+      const parent = stack.at(-1)
+      const classes = (attributes.class || '').split(/\s+/)
+      const page = parent?.page || classes.includes('travel-content-page')
+      const layout = parent?.layout || (page && name === 'table' && classes.includes('content-layout'))
+      const frame = { page, layout, excluded: parent?.excluded || excluded.has(name),
+        content: parent?.content || (layout && name === 'tbody') }
+      stack.push(frame)
+      if (accepts(frame) && boundaries.has(name)) value += ' '
+    },
+    ontext(part) {
+      const frame = stack.at(-1)
+      if (accepts(frame) || (!frame && !contentOnly)) value += part
+    },
+    onclosetag(name) {
+      const frame = stack.pop()
+      if (accepts(frame) && boundaries.has(name)) value += ' '
+    },
+  }, { decodeEntities: true }).end(html)
   return value.replace(/\s+/g, ' ').trim()
 }
 
@@ -316,8 +342,8 @@ async function verifyResult(fixture, out, manifest, artifact, profile) {
     if (!row.segment_ref.startsWith('frontmatter:')) {
       const source = JSON.parse(await fsp.readFile(privateRef(out, row.segment_ref), 'utf8'))
       const sourceFields = source.page.type === 'legacy-content' ? FIELDS.map(field => source.page.travel[field] || '') : source.page.type === 'content' ? [source.page.html] : []
-      const delivered = plain(bytes.toString('utf8'))
-      for (const html of sourceFields) assert(delivered.includes(plain(html)), 'Planned text missing from saved HTML')
+      const delivered = semanticText(bytes.toString('utf8'), { contentOnly: true })
+      for (const html of sourceFields) assert(delivered.includes(semanticText(html)), 'Planned text missing from saved HTML')
       if (source.page.type === 'legacy-content' || (source.page.type === 'content' && source.page.first)) {
         const counts = source.page.travel.sourceCounts
         if (counts.photos) assert(delivered.includes(translate('errors:utils.pluralize.photosCount', { count: counts.photos })), 'Visible photo stats lost source totals/locale')
@@ -491,7 +517,7 @@ async function main() {
   }
 }
 
-module.exports = { privateRef, verifyArtifact, loadArtifactEntrypoint, parseOptions, corpus, readProfile, enforceProfile, renderedCaptions }
+module.exports = { privateRef, verifyArtifact, loadArtifactEntrypoint, parseOptions, corpus, readProfile, enforceProfile, renderedCaptions, semanticText }
 
 if (require.main === module) {
   if (process.argv[2] === '--internal-worker') {

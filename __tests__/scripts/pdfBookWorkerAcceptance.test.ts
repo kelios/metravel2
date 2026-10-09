@@ -6,7 +6,7 @@ import path from 'node:path'
 
 const ROOT = path.resolve(__dirname, '../..')
 const nativeRequire = createRequire(__filename)
-const { privateRef, verifyArtifact, loadArtifactEntrypoint, parseOptions, corpus, readProfile, enforceProfile, renderedCaptions } = nativeRequire(
+const { privateRef, verifyArtifact, loadArtifactEntrypoint, parseOptions, corpus, readProfile, enforceProfile, renderedCaptions, semanticText } = nativeRequire(
   path.join(ROOT, 'scripts/pdf-book-worker-acceptance.cjs'),
 )
 const sha256 = (value: string | Buffer) => createHash('sha256').update(value).digest('hex')
@@ -33,6 +33,45 @@ describe('physical book acceptance evidence boundaries (no browser)', () => {
       .toEqual(new Map([['continuation', 'continued <text>']]))
     expect(() => renderedCaptions('<figcaption class="book-gallery-caption" data-photo-ordinal="1">first</figcaption><figcaption class="book-gallery-caption" data-photo-ordinal="1">duplicate</figcaption>'))
       .toThrow('Duplicate rendered caption')
+  })
+
+  const contentPage = (content: string, elsewhere = '') => `<html><head><title>${elsewhere}</title><style>${elsewhere}</style></head><body>
+    <section class="travel-content-page"><style>${elsewhere}</style><table class="content-layout">
+      <thead><tr><td>${elsewhere}</td></tr></thead><tbody><tr><td>${content}</td></tr></tbody>
+    </table></section><footer>${elsewhere}</footer><script>${elsewhere}</script></body></html>`
+
+  it.each([
+    ['<h2>Heading</h2><p>Before <strong>bold</strong> <a>linked text</a> after.</p>',
+      '<h3>Heading</h3>\n  <p>Before <strong>bold</strong> <a>linked text</a> after.</p>', 'Heading Before bold linked text after.'],
+    ['<p>First</p><p>Second</p>', '<p>First</p>\n<p>Second</p>', 'First Second'],
+    ['<table><tr><th>Column</th><td>Value</td></tr></table><ol><li>One</li><li>Two</li></ol>',
+      '<table>\n<tr><th>Column</th>\n<td>Value</td></tr></table>\n<ol><li>One</li>\n<li>Two</li></ol>', 'Column Value One Two'],
+    ['<p>A<br>B &amp; 😀</p>', '<p>A<br />\nB &amp; 😀</p>', 'A B & 😀'],
+  ])('compares semantic block boundaries without requiring renderer indentation: %s', (source, rendered, expected) => {
+    expect(semanticText(source)).toBe(expected)
+    expect(semanticText(contentPage(rendered), { contentOnly: true })).toBe(expected)
+  })
+
+  it('preserves inline adjacency and authored whitespace between words', () => {
+    expect(semanticText('<p>pre<strong>fix</strong> <a>next</a> word</p>')).toBe('prefix next word')
+    expect(semanticText('<p>foo <strong>bar</strong></p>')).not.toBe(semanticText('<p>foo<strong>bar</strong></p>'))
+  })
+
+  it.each([
+    ['missing word', '<p>alpha beta gamma</p>', '<p>alpha gamma</p>'],
+    ['changed order', '<p>alpha beta gamma</p>', '<p>alpha gamma beta</p>'],
+    ['lost repetition', '<p>repeat repeat repeat</p>', '<p>repeat repeat</p>'],
+    ['merged words', '<p>foo bar</p>', '<p>foobar</p>'],
+  ])('rejects %s even when exact source text appears outside the content body', (_reason, source, rendered) => {
+    const delivered = semanticText(contentPage(rendered, semanticText(source)), { contentOnly: true })
+    expect(delivered.includes(semanticText(source))).toBe(false)
+  })
+
+  it('excludes non-content head/style/script/template text and requires the canonical content body', () => {
+    expect(semanticText('<head><title>head</title></head><style>style</style><script>script</script><template>template</template><p>body</p>'))
+      .toBe('body')
+    expect(semanticText('<section class="travel-content-page"><p>outside body</p></section>', { contentOnly: true })).toBe('')
+    expect(semanticText(contentPage('<p>visible</p><script>hidden</script><template>hidden</template>'), { contentOnly: true })).toBe('visible')
   })
 
   it('rejects escaped references and symlinked private files', async () => {
