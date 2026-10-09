@@ -26,6 +26,7 @@ export interface SharedCoverPageData {
   textPosition?: 'top' | 'center' | 'bottom' | 'auto'
   overlayOpacity?: number
   showDecorations?: boolean
+  generatedAt?: string
 }
 
 export async function generateSharedCoverPageMarkup(
@@ -81,7 +82,8 @@ export async function generateSharedCoverPageMarkup(
       ${renderContent(theme, data, textPosition, textColor, Boolean(safeCoverImage))}
       ${renderFooterRail(
         theme,
-        `${escapeHtml(String(data.travelCount))} ${travelLabel}${formattedYearRange ? ` • ${escapeHtml(formattedYearRange)}` : ''}`
+        `${escapeHtml(String(data.travelCount))} ${travelLabel}${formattedYearRange ? ` • ${escapeHtml(formattedYearRange)}` : ''}`,
+        data.generatedAt,
       )}
     </section>
   `
@@ -362,11 +364,12 @@ function renderTitle(theme: PdfThemeConfig, title: string, textColor?: string): 
   `
 }
 
-function renderDate(theme: PdfThemeConfig): string {
-  const dateStr = formatDate(new Date(), {
+function renderDate(theme: PdfThemeConfig, generatedAt?: string): string {
+  const dateStr = formatDate(generatedAt ? new Date(generatedAt) : new Date(), {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
+    ...(generatedAt ? { timeZone: 'UTC' } : {}),
   })
 
   return `
@@ -434,7 +437,7 @@ function isDarkTextColor(textColor?: string): boolean {
   return false
 }
 
-function renderFooterRail(theme: PdfThemeConfig, metaLine: string): string {
+function renderFooterRail(theme: PdfThemeConfig, metaLine: string, generatedAt?: string): string {
   const { colors } = theme
   const g0 = colors.cover.backgroundGradient[0]
   const g1 = colors.cover.backgroundGradient[1]
@@ -490,7 +493,7 @@ function renderFooterRail(theme: PdfThemeConfig, metaLine: string): string {
           text-transform: uppercase;
           margin-bottom: 2mm;
         ">MeTravel.by</div>
-        ${renderDate(theme)}
+        ${renderDate(theme, generatedAt)}
       </div>
     </div>
   `

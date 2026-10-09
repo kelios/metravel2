@@ -9083,12 +9083,13 @@
   
 
       <section class="pdf-page final-page" style="
-        padding: 0;
+        padding: 24mm 28mm 18mm;
+        box-sizing: border-box;
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
         height: 285mm;
+        min-height: 285mm;
         text-align: center;
         color: #ffffff;
         background: linear-gradient(135deg, #cf9b86 0%, #9b786f 100%);
@@ -9097,9 +9098,8 @@
       ">
         <div style="
           position: absolute;
-          top: 12mm; right: 12mm; bottom: 12mm; left: 12mm;
-          border: 1.5px solid rgba(255,255,255,0.2);
-          border-radius: 14px;
+          top: 10mm; right: 10mm; bottom: 10mm; left: 10mm;
+          border: 1px solid rgba(255,255,255,0.2);
           pointer-events: none;
         "></div>
 
@@ -9114,13 +9114,11 @@
           pointer-events: none;
         "></div>
         <svg class="final-route-line" viewBox="0 0 320 120" aria-hidden="true" style="
-          position: absolute;
-          top: 28mm;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 132mm;
-          height: auto;
-          opacity: 0.45;
+          position: relative;
+          width: 84mm;
+          height: 28mm;
+          flex-shrink: 0;
+          opacity: 0.6;
         ">
           <path d="M18 90 C60 30, 98 102, 136 58 S214 18, 252 56 S292 108, 306 34" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2.5" stroke-linecap="round"/>
           <circle cx="18" cy="90" r="4" fill="rgba(255,255,255,0.85)"/>
@@ -9132,43 +9130,35 @@
 
         <div style="
           position: relative;
-          width: 148mm;
-          padding: 26mm 18mm 18mm;
-          border-radius: 26px;
-          background: rgba(255,255,255,0.1);
-          border: 1px solid rgba(255,255,255,0.2);
-          box-shadow: 0 18px 42px rgba(0,0,0,0.2);
+          width: 100%;
+          margin: auto 0;
         ">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto 6mm auto; display: block; opacity: 0.7;">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="2" y1="12" x2="22" y2="12"/>
-            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-          </svg>
-
           <div style="
-            width: 38mm;
-            height: 2px;
+            width: 20mm;
+            height: 1px;
             background: linear-gradient(90deg, #000, rgb(140,140,140), #000);
             mix-blend-mode: screen;
             border-radius: 999px;
-            margin: 0 auto 8mm auto;
+            margin: 0 auto 7mm auto;
           "></div>
 
           <h2 style="
-            font-size: 36pt;
-            margin-bottom: 4mm;
-            letter-spacing: -0.02em;
+            font-size: 32pt;
+            font-weight: 800;
+            max-width: 132mm;
+            margin: 0 auto 5mm;
+            letter-spacing: -0.025em;
             font-family: 'Playfair Display', Georgia, serif;
             color: #ffffff;
-            line-height: 1.1;
-            text-shadow: 0 8px 24px rgba(0,0,0,0.18);
+            line-height: 1.15;
+            overflow-wrap: anywhere;
           ">Спасибо за путешествие!</h2>
           <p style="
-            max-width: 112mm;
-            margin: 0 auto 12mm auto;
-            font-size: 12pt;
-            line-height: 1.9;
-            opacity: 0.8;
+            max-width: 116mm;
+            margin: 0 auto;
+            font-size: 11pt;
+            line-height: 1.65;
+            color: #fed7aa;
             font-family: 'Open Sans', system-ui, sans-serif;
           ">
             Пусть эта книга напоминает о самых тёплых эмоциях
@@ -9176,114 +9166,128 @@
           </p>
           
       <div style="
-        display: flex;
-        justify-content: center;
-        gap: 6mm;
-        margin-bottom: 14mm;
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 112mm;
+        max-width: 100%;
+        margin: 10mm auto 0;
+        border-top: 1px solid rgba(255,255,255,0.28);
+        border-bottom: 1px solid rgba(255,255,255,0.28);
       ">
         
           <div class="final-summary-tile" style="
             text-align: center;
-            padding: 14px 20px;
-            min-width: 60px;
-            border-radius: 18px;
-            background: rgba(255,255,255,0.07);
-            border: 1px solid rgba(255,255,255,0.12);
+            padding: 5mm 3mm;
+            min-width: 0;
+            
+            
+            
           ">
             <div style="
-              font-size: 30pt;
-              font-weight: 800;
+              font-size: 28pt;
+              font-weight: 600;
               color: #ffffff;
               font-family: 'Playfair Display', Georgia, serif;
               line-height: 1.1;
-              margin-bottom: 2mm;
+              margin-bottom: 1.5mm;
+              font-variant-numeric: tabular-nums;
+              overflow-wrap: anywhere;
             ">1</div>
             <div style="
-              font-size: 10pt;
+              font-size: 8pt;
               text-transform: uppercase;
-              letter-spacing: 0.1em;
+              letter-spacing: 0.08em;
               color: #fed7aa;
               font-family: 'Open Sans', system-ui, sans-serif;
-              opacity: 0.85;
+              line-height: 1.4;
+              overflow-wrap: anywhere;
             ">путешествие</div>
           </div>
         
           <div class="final-summary-tile" style="
             text-align: center;
-            padding: 14px 20px;
-            min-width: 60px;
-            border-radius: 18px;
-            background: rgba(255,255,255,0.07);
-            border: 1px solid rgba(255,255,255,0.12);
+            padding: 5mm 3mm;
+            min-width: 0;
+            border-left: 1px solid rgba(255,255,255,0.2);
+            
+            
           ">
             <div style="
-              font-size: 30pt;
-              font-weight: 800;
+              font-size: 28pt;
+              font-weight: 600;
               color: #ffffff;
               font-family: 'Playfair Display', Georgia, serif;
               line-height: 1.1;
-              margin-bottom: 2mm;
+              margin-bottom: 1.5mm;
+              font-variant-numeric: tabular-nums;
+              overflow-wrap: anywhere;
             ">1</div>
             <div style="
-              font-size: 10pt;
+              font-size: 8pt;
               text-transform: uppercase;
-              letter-spacing: 0.1em;
+              letter-spacing: 0.08em;
               color: #fed7aa;
               font-family: 'Open Sans', system-ui, sans-serif;
-              opacity: 0.85;
+              line-height: 1.4;
+              overflow-wrap: anywhere;
             ">страна</div>
           </div>
         
           <div class="final-summary-tile" style="
             text-align: center;
-            padding: 14px 20px;
-            min-width: 60px;
-            border-radius: 18px;
-            background: rgba(255,255,255,0.07);
-            border: 1px solid rgba(255,255,255,0.12);
+            padding: 5mm 3mm;
+            min-width: 0;
+            
+            border-top: 1px solid rgba(255,255,255,0.2);
+            
           ">
             <div style="
-              font-size: 30pt;
-              font-weight: 800;
+              font-size: 28pt;
+              font-weight: 600;
               color: #ffffff;
               font-family: 'Playfair Display', Georgia, serif;
               line-height: 1.1;
-              margin-bottom: 2mm;
+              margin-bottom: 1.5mm;
+              font-variant-numeric: tabular-nums;
+              overflow-wrap: anywhere;
             ">2</div>
             <div style="
-              font-size: 10pt;
+              font-size: 8pt;
               text-transform: uppercase;
-              letter-spacing: 0.1em;
+              letter-spacing: 0.08em;
               color: #fed7aa;
               font-family: 'Open Sans', system-ui, sans-serif;
-              opacity: 0.85;
+              line-height: 1.4;
+              overflow-wrap: anywhere;
             ">дня</div>
           </div>
         
           <div class="final-summary-tile" style="
             text-align: center;
-            padding: 14px 20px;
-            min-width: 60px;
-            border-radius: 18px;
-            background: rgba(255,255,255,0.07);
-            border: 1px solid rgba(255,255,255,0.12);
+            padding: 5mm 3mm;
+            min-width: 0;
+            border-left: 1px solid rgba(255,255,255,0.2);
+            border-top: 1px solid rgba(255,255,255,0.2);
+            
           ">
             <div style="
-              font-size: 30pt;
-              font-weight: 800;
+              font-size: 28pt;
+              font-weight: 600;
               color: #ffffff;
               font-family: 'Playfair Display', Georgia, serif;
               line-height: 1.1;
-              margin-bottom: 2mm;
+              margin-bottom: 1.5mm;
+              font-variant-numeric: tabular-nums;
+              overflow-wrap: anywhere;
             ">3</div>
             <div style="
-              font-size: 10pt;
+              font-size: 8pt;
               text-transform: uppercase;
-              letter-spacing: 0.1em;
+              letter-spacing: 0.08em;
               color: #fed7aa;
               font-family: 'Open Sans', system-ui, sans-serif;
-              opacity: 0.85;
+              line-height: 1.4;
+              overflow-wrap: anywhere;
             ">фотографии</div>
           </div>
         
@@ -9295,56 +9299,43 @@
               height: 1px;
               background: linear-gradient(90deg, #000, rgb(77,77,77), #000);
               mix-blend-mode: screen;
-              margin: 0 auto 8mm auto;
+              margin: 10mm auto 5mm;
             "></div>
-            <div style="
-              max-width: 112mm;
+            <blockquote style="
+              max-width: 116mm;
               margin: 0 auto;
-              padding: 10px 0;
               position: relative;
             ">
-              <div style="
-                font-size: 32pt;
-                line-height: 1;
-                opacity: 0.35;
-                font-family: Georgia, serif;
-                position: absolute;
-                top: -4mm;
-                left: -3mm;
-              ">"</div>
               <p style="
-                margin: 0 0 4mm 0;
-                font-size: 12pt;
-                line-height: 1.65;
-                opacity: 0.88;
+                margin: 0 0 3mm 0;
+                font-size: 11pt;
+                line-height: 1.6;
                 font-style: italic;
                 font-family: 'Open Sans', system-ui, sans-serif;
-                padding: 0 6mm;
               ">
                 Раз в году посещай место, где ты никогда раньше не был
               </p>
               <p style="
                 margin: 0;
-                font-size: 9pt;
+                font-size: 8pt;
                 line-height: 1.4;
-                opacity: 0.7;
+                color: #fed7aa;
                 letter-spacing: 0.08em;
                 text-transform: uppercase;
                 font-family: 'Open Sans', system-ui, sans-serif;
               ">
                 — Далай-лама
               </p>
-            </div>
+            </blockquote>
           
         </div>
-        <div style="
-          position: absolute;
-          bottom: 22mm;
+        <footer style="
+          position: relative;
+          flex-shrink: 0;
+          margin-top: 8mm;
           width: 100%;
-          left: 0;
           text-align: center;
           font-size: 10pt;
-          opacity: 0.7;
           font-family: 'Open Sans', system-ui, sans-serif;
         ">
           <div style="
@@ -9358,8 +9349,8 @@
               MeTravel.by
             </span>
           </div>
-          <div>© 2026</div>
-        </div>
+          <div style="font-size: 8pt; color: #fed7aa;">© 2026</div>
+        </footer>
       </section>
     
 </body>

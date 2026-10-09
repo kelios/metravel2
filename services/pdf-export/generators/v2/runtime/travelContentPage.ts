@@ -68,6 +68,7 @@ export function renderTravelContentPageMarkup(args: {
   showInlineGallery?: boolean
   includeGallery?: BookSettings['includeGallery']
   hasGalleryMedia?: boolean
+  applyDropCap?: boolean
 }): string {
   const {
     travel,
@@ -87,6 +88,7 @@ export function renderTravelContentPageMarkup(args: {
     showInlineGallery = false,
     includeGallery,
     hasGalleryMedia = false,
+    applyDropCap = true,
   } = args
 
   const { colors, typography, spacing } = theme
@@ -95,7 +97,7 @@ export function renderTravelContentPageMarkup(args: {
     showInlineGallery &&
     !(includeGallery !== false && hasGalleryMedia)
 
-  const processedDescriptionHtml = variant === 'runtime' && descriptionHtml
+  const processedDescriptionHtml = variant === 'runtime' && descriptionHtml && applyDropCap
     ? buildDropCapHtml(descriptionHtml, colors, typography)
     : descriptionHtml
 

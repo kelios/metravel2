@@ -45,7 +45,7 @@ const allowedTags = Array.from(
   ]),
 )
 
-const allowedAttributes: sanitizeHtml.IOptions['allowedAttributes'] = {
+const allowedAttributes = {
   ...sanitizeHtml.defaults.allowedAttributes,
   '*': Array.from(
     new Set([
@@ -92,7 +92,7 @@ const allowedAttributes: sanitizeHtml.IOptions['allowedAttributes'] = {
   ol: ['data-list'],
   ul: ['data-list'],
   li: ['data-list'],
-}
+} satisfies sanitizeHtml.IOptions['allowedAttributes']
 
 function isSafeDataImage(value: string) {
   return SAFE_DATA_IMAGE_RE.test(value)
@@ -344,8 +344,18 @@ function removeReactNativeComponents(html: string): string {
   return cleaned;
 }
 
-function injectAutoHeadingAnchors(html: string): string {
+export interface PdfRichTextSanitizationOptions {
+  /** Disk-backed forward-link lookup for bounded book ingestion. */
+  headingAnchorResolver?: (ordinal: number) => string | undefined
+  /** A continued source heading already emitted its destination. */
+  suppressAutomaticHeadingAnchors?: boolean
+  /** Internal prepared-page subdivision retains its derived ordered-list counter. */
+  preserveOrderedListStarts?: boolean
+}
+
+function injectAutoHeadingAnchors(html: string, options?: PdfRichTextSanitizationOptions): string {
   if (!html) return html
+  if (options?.suppressAutomaticHeadingAnchors) return html
   const orderedHashIds = Array.from(
     html.matchAll(/<a\b[^>]*href=(["'])#([^"'#?]+)\1[^>]*>/gi),
     (match) => String(match[2] || '').trim(),
@@ -369,9 +379,12 @@ function injectAutoHeadingAnchors(html: string): string {
     const m = innerText.match(/^(\d{1,3})[.)]\s+/)
     if (!m) return full
     const orderedId = uniqueOrderedHashIds[Number(m[1]) - 1]
-    const id = orderedId || `part${m[1]}`
+    const resolvedId = options?.headingAnchorResolver?.(Number(m[1]))
+    const escapedId = resolvedId
+      ? resolvedId.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      : orderedId || `part${m[1]}`
 
-    const nextAttrs = attrs ? `${attrs} id="${id}"` : ` id="${id}"`
+    const nextAttrs = attrs ? `${attrs} id="${escapedId}"` : ` id="${escapedId}"`
     return `<h${level}${nextAttrs}>${inner}</h${level}>`
   })
 }
@@ -390,17 +403,19 @@ export function sanitizeRichText(html?: string | null): string {
 
 function sanitizeRichTextInternal(
   html?: string | null,
-  options?: { preferConfiguredFirstPartyOrigin?: boolean },
+  options?: { preferConfiguredFirstPartyOrigin?: boolean } & PdfRichTextSanitizationOptions,
 ): string {
   if (!html) return ''
 
   // ✅ КРИТИЧНО: Удаляем React Native компоненты перед санитизацией
   const withoutReactComponents = removeReactNativeComponents(html);
-  const withAutoAnchors = injectAutoHeadingAnchors(withoutReactComponents)
+  const withAutoAnchors = injectAutoHeadingAnchors(withoutReactComponents, options)
 
   const sanitizedHtml = sanitizeHtml(withAutoAnchors, {
     allowedTags,
-    allowedAttributes,
+    allowedAttributes: options?.preserveOrderedListStarts
+      ? { ...allowedAttributes, ol: [...allowedAttributes.ol, 'start'] }
+      : allowedAttributes,
     allowedStyles: {
       '*': {
         'text-align': [/^(left|right|center|justify)$/],
@@ -513,11 +528,11 @@ function sanitizeRichTextInternal(
 /**
  * Санитизирует и объединяет HTML в один сплошной блок для PDF экспорта
  */
-export function sanitizeRichTextForPdf(html?: string | null): string {
+export function sanitizeRichTextForPdf(html?: string | null, options?: PdfRichTextSanitizationOptions): string {
   if (!html) return ''
   
   // Для PDF держим prod-safe rewrite локальных IP на публичный домен.
-  const sanitized = sanitizeRichTextInternal(html, { preferConfiguredFirstPartyOrigin: false });
+  const sanitized = sanitizeRichTextInternal(html, { ...options, preferConfiguredFirstPartyOrigin: false });
   
   // Для PDF важно сохранить разметку (абзацы, списки, изображения)
   return sanitized;

@@ -30,7 +30,7 @@ export function buildPdfStatsMiniCard({
     items.push({ icon: renderPdfIcon('clock', iconColor, iconSize), value: formatDays(travel.number_days) })
   }
 
-  const photoCount = (travel.gallery || []).length
+  const photoCount = travel.sourceCounts?.photos ?? (travel.gallery || []).length
   if (photoCount > 0) {
     items.push({
       icon: renderPdfIcon('camera', iconColor, iconSize),
@@ -38,7 +38,7 @@ export function buildPdfStatsMiniCard({
     })
   }
 
-  const locationCount = (travel.travelAddress || []).length
+  const locationCount = travel.sourceCounts?.locations ?? (travel.travelAddress || []).length
   if (locationCount > 0) {
     items.push({
       icon: renderPdfIcon('map-pin', iconColor, iconSize),

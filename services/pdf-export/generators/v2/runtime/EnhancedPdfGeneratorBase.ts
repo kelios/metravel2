@@ -64,12 +64,12 @@ type QrCodeModule = {
 export class EnhancedPdfGeneratorBase {
   private parser: ContentParser | null = null;
   private blockRenderer: BlockRenderer | null = null;
-  private theme: ReturnType<typeof getThemeConfig>;
+  protected theme: ReturnType<typeof getThemeConfig>;
   private themeName: string;
   private selectedQuotes?: { cover?: TravelQuote; final?: TravelQuote };
-  private currentSettings?: BookSettings;
-  private finalRenderer!: RuntimeFinalRenderer;
-  private galleryRenderer!: RuntimeGalleryRenderer;
+  protected currentSettings?: BookSettings;
+  protected finalRenderer!: RuntimeFinalRenderer;
+  protected galleryRenderer!: RuntimeGalleryRenderer;
   private mapRenderer!: RuntimeMapRenderer;
 
   private getGalleryOptions(): {
@@ -133,7 +133,7 @@ export class EnhancedPdfGeneratorBase {
     this.initRenderers();
   }
 
-  private initRenderers(): void {
+  protected initRenderers(): void {
     const ctx = { theme: this.theme, settings: this.currentSettings };
     this.finalRenderer = new RuntimeFinalRenderer(ctx);
     this.galleryRenderer = new RuntimeGalleryRenderer(ctx);
@@ -145,7 +145,7 @@ export class EnhancedPdfGeneratorBase {
    * чтобы генерация не падала. UI и так не даёт выбрать премиум не-премиуму —
    * это страховка (#297). Перенастраивает theme/themeName на месте.
    */
-  private applyPremiumThemeGate(isPremium: boolean): void {
+  protected applyPremiumThemeGate(isPremium: boolean): void {
     if (isPremium) return;
     if (!isPremiumThemeName(this.themeName)) return;
 
@@ -267,7 +267,7 @@ export class EnhancedPdfGeneratorBase {
   /**
    * Рендерит оглавление
    */
-  private renderTocPage(
+  protected renderTocPage(
     meta: TravelSectionMeta[],
     pageNumber: number,
     totalCount: number,
@@ -299,7 +299,7 @@ export class EnhancedPdfGeneratorBase {
   /**
    * Рендерит страницу с фото путешествия (поддерживает 3 layout'а)
    */
-  private renderTravelPhotoPage(travel: TravelForBook, pageNumber: number): string {
+  protected renderTravelPhotoPage(travel: TravelForBook, pageNumber: number): string {
     return renderTravelPhotoPageMarkup({
       travel,
       pageNumber,
@@ -315,7 +315,7 @@ export class EnhancedPdfGeneratorBase {
   /**
    * Рендерит страницу с контентом путешествия
    */
-  private renderTravelContentPage(
+  protected renderTravelContentPage(
     travel: TravelForBook,
     qrCode: string,
     pageNumber: number
@@ -362,14 +362,14 @@ export class EnhancedPdfGeneratorBase {
     return this.renderGalleryPages(travel, pageNumber)[0] || '';
   }
 
-  private renderGalleryPages(travel: TravelForBook, startPageNumber: number): string[] {
+  protected renderGalleryPages(travel: TravelForBook, startPageNumber: number): string[] {
     return this.galleryRenderer.renderPages(travel, startPageNumber);
   }
 
   /**
    * Рендерит страницу с картой
    */
-  private async renderMapPage(
+  protected async renderMapPage(
     travel: TravelForBook,
     locations: NormalizedLocation[],
     pageNumber: number
@@ -422,7 +422,7 @@ export class EnhancedPdfGeneratorBase {
   /**
    * Рендерит страницу чек-листов
    */
-  private renderChecklistPage(settings: BookSettings, pageNumber: number): string | null {
+  protected renderChecklistPage(settings: BookSettings, pageNumber: number): string | null {
     return renderChecklistPageSection({
       settings,
       pageNumber,
@@ -442,7 +442,7 @@ export class EnhancedPdfGeneratorBase {
   /**
    * Собирает HTML документ
    */
-  private buildHtmlDocument(pages: string[], settings: BookSettings, isPremium: boolean): string {
+  protected buildHtmlDocument(pages: string[], settings: BookSettings, isPremium: boolean): string {
     return buildPdfHtmlDocument({
       pages,
       settings,
@@ -455,7 +455,7 @@ export class EnhancedPdfGeneratorBase {
   /**
    * Компактная мини-карточка со статистикой путешествия (страна, год, дни, фото, локации)
    */
-  private buildStatsMiniCard(
+  protected buildStatsMiniCard(
     travel: TravelForBook,
     colors: ReturnType<typeof getThemeConfig>['colors'],
     typography: ReturnType<typeof getThemeConfig>['typography'],
@@ -476,7 +476,7 @@ export class EnhancedPdfGeneratorBase {
   /**
    * Разделительная страница между путешествиями (при 3+ путешествиях в книге)
    */
-  private renderSeparatorPage(travel: TravelForBook, travelIndex: number, totalTravels: number): string {
+  protected renderSeparatorPage(travel: TravelForBook, travelIndex: number, totalTravels: number): string {
     return buildPdfSeparatorPage({
       travel,
       travelIndex,
@@ -492,7 +492,7 @@ export class EnhancedPdfGeneratorBase {
   /**
    * Running header для контент-страниц (не для обложки, TOC, фото-страницы и финала)
    */
-  private buildRunningHeader(travelName: string, pageNumber: number): string {
+  protected buildRunningHeader(travelName: string, pageNumber: number): string {
     return buildPdfRunningHeader({
       travelName,
       pageNumber,
@@ -755,14 +755,14 @@ export class EnhancedPdfGeneratorBase {
     return this.parser;
   }
 
-  private async ensureParser(): Promise<ContentParser> {
+  protected async ensureParser(): Promise<ContentParser> {
     if (this.parser) return this.parser;
     const mod = await import('../../../parsers/ContentParser');
     this.parser = new mod.ContentParser();
     return this.parser;
   }
 
-  private async ensureBlockRenderer(): Promise<BlockRenderer> {
+  protected async ensureBlockRenderer(): Promise<BlockRenderer> {
     if (this.blockRenderer) return this.blockRenderer;
     const mod = await import('../../../renderers/BlockRenderer');
     this.blockRenderer = new mod.BlockRenderer(this.theme);

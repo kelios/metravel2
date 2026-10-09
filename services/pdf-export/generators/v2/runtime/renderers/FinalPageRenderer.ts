@@ -3,6 +3,7 @@ import type { TravelQuote } from '../../../../quotes/travelQuotes'
 import { escapeHtml, formatDays, getTravelLabel, type RuntimeRenderContext } from './renderHelpers'
 import { translate as i18nT } from '@/i18n'
 import { getCountryLabel, getPhotoLabel } from '@/utils/pluralize'
+import type { BookSummary } from '../../../../segments/types'
 
 /**
  * #2275: печать WebKit на iOS (и в Safari/macOS) теряет альфу у цветов
@@ -35,24 +36,25 @@ export class RuntimeFinalRenderer {
   render(
     pageNumber: number,
     travels: TravelForBook[] = [],
-    finalQuote?: TravelQuote | null
+    finalQuote?: TravelQuote | null,
+    pinned?: { summary: BookSummary; generatedAt: string },
   ): string {
     const { colors, typography } = this.ctx.theme
 
-    const totalTravels = travels.length
-    const countries = new Set(travels.map((t) => t.countryName).filter(Boolean))
-    const totalDays = travels.reduce((sum, t) => {
+    const totalTravels = pinned?.summary.travels ?? travels.length
+    const countryCount = pinned?.summary.countries ?? new Set(travels.map((t) => t.countryName).filter(Boolean)).size
+    const totalDays = pinned?.summary.days ?? travels.reduce((sum, t) => {
       const days = typeof t.number_days === 'number' ? t.number_days : 0
       return sum + Math.max(0, days)
     }, 0)
-    const totalPhotos = travels.reduce((sum, t) => sum + (t.gallery || []).length, 0)
+    const totalPhotos = pinned?.summary.photos ?? travels.reduce((sum, t) => sum + (t.gallery || []).length, 0)
 
     const stats: Array<{ value: number; label: string }> = []
     if (totalTravels > 0) {
       stats.push({ value: totalTravels, label: getTravelLabel(totalTravels) })
     }
-    if (countries.size > 0) {
-      const cl = countries.size
+    if (countryCount > 0) {
+      const cl = countryCount
       stats.push({ value: cl, label: getCountryLabel(cl) })
     }
     if (totalDays > 0) {
@@ -68,36 +70,41 @@ export class RuntimeFinalRenderer {
 
     const statsHtml = stats.length > 0 ? `
       <div style="
-        display: flex;
-        justify-content: center;
-        gap: 6mm;
-        margin-bottom: 14mm;
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: repeat(${Math.min(stats.length, 2)}, minmax(0, 1fr));
+        width: 112mm;
+        max-width: 100%;
+        margin: 10mm auto 0;
+        border-top: 1px solid rgba(255,255,255,0.28);
+        border-bottom: 1px solid rgba(255,255,255,0.28);
       ">
-        ${stats.map((s) => `
+        ${stats.map((s, index) => `
           <div class="final-summary-tile" style="
             text-align: center;
-            padding: 14px 20px;
-            min-width: 60px;
-            border-radius: 18px;
-            background: rgba(255,255,255,0.07);
-            border: 1px solid rgba(255,255,255,0.12);
+            padding: 5mm 3mm;
+            min-width: 0;
+            ${index % 2 === 1 ? 'border-left: 1px solid rgba(255,255,255,0.2);' : ''}
+            ${index >= 2 ? 'border-top: 1px solid rgba(255,255,255,0.2);' : ''}
+            ${stats.length === 3 && index === 2 ? 'grid-column: 1 / -1;' : ''}
           ">
             <div style="
-              font-size: 30pt;
-              font-weight: 800;
+              font-size: 28pt;
+              font-weight: 600;
               color: ${colors.cover.text};
               font-family: ${typography.headingFont};
               line-height: 1.1;
-              margin-bottom: 2mm;
+              margin-bottom: 1.5mm;
+              font-variant-numeric: tabular-nums;
+              overflow-wrap: anywhere;
             ">${s.value}</div>
             <div style="
-              font-size: ${typography.caption.size};
+              font-size: 8pt;
               text-transform: uppercase;
-              letter-spacing: 0.1em;
+              letter-spacing: 0.08em;
               color: ${colors.cover.textSecondary};
               font-family: ${typography.bodyFont};
-              opacity: 0.85;
+              line-height: 1.4;
+              overflow-wrap: anywhere;
             ">${escapeHtml(s.label)}</div>
           </div>
         `).join('')}
@@ -106,12 +113,13 @@ export class RuntimeFinalRenderer {
 
     return `
       <section class="pdf-page final-page" style="
-        padding: 0;
+        padding: 24mm 28mm 18mm;
+        box-sizing: border-box;
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
         height: 285mm;
+        min-height: 285mm;
         text-align: center;
         color: ${colors.cover.text};
         background: linear-gradient(135deg, ${colors.cover.backgroundGradient[0]} 0%, ${colors.cover.backgroundGradient[1]} 100%);
@@ -120,9 +128,8 @@ export class RuntimeFinalRenderer {
       ">
         <div style="
           position: absolute;
-          top: 12mm; right: 12mm; bottom: 12mm; left: 12mm;
-          border: 1.5px solid rgba(255,255,255,0.2);
-          border-radius: 14px;
+          top: 10mm; right: 10mm; bottom: 10mm; left: 10mm;
+          border: 1px solid rgba(255,255,255,0.2);
           pointer-events: none;
         "></div>
 
@@ -137,13 +144,11 @@ export class RuntimeFinalRenderer {
           pointer-events: none;
         "></div>
         <svg class="final-route-line" viewBox="0 0 320 120" aria-hidden="true" style="
-          position: absolute;
-          top: 28mm;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 132mm;
-          height: auto;
-          opacity: 0.45;
+          position: relative;
+          width: 84mm;
+          height: 28mm;
+          flex-shrink: 0;
+          opacity: 0.6;
         ">
           <path d="M18 90 C60 30, 98 102, 136 58 S214 18, 252 56 S292 108, 306 34" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2.5" stroke-linecap="round"/>
           <circle cx="18" cy="90" r="4" fill="rgba(255,255,255,0.85)"/>
@@ -155,43 +160,35 @@ export class RuntimeFinalRenderer {
 
         <div style="
           position: relative;
-          width: 148mm;
-          padding: 26mm 18mm 18mm;
-          border-radius: 26px;
-          background: rgba(255,255,255,0.1);
-          border: 1px solid rgba(255,255,255,0.2);
-          box-shadow: 0 18px 42px rgba(0,0,0,0.2);
+          width: 100%;
+          margin: auto 0;
         ">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto 6mm auto; display: block; opacity: 0.7;">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="2" y1="12" x2="22" y2="12"/>
-            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-          </svg>
-
           <div style="
-            width: 38mm;
-            height: 2px;
+            width: 20mm;
+            height: 1px;
             background: linear-gradient(90deg, #000, ${screenGray(0.55)}, #000);
             ${SCREEN_LAYER}
             border-radius: 999px;
-            margin: 0 auto 8mm auto;
+            margin: 0 auto 7mm auto;
           "></div>
 
           <h2 style="
-            font-size: ${typography.h1.size};
-            margin-bottom: 4mm;
-            letter-spacing: -0.02em;
+            font-size: 32pt;
+            font-weight: ${typography.h1.weight};
+            max-width: 132mm;
+            margin: 0 auto 5mm;
+            letter-spacing: -0.025em;
             font-family: ${typography.headingFont};
             color: ${colors.cover.text};
-            line-height: ${typography.h1.lineHeight};
-            text-shadow: 0 8px 24px rgba(0,0,0,0.18);
+            line-height: 1.15;
+            overflow-wrap: anywhere;
           ">${i18nT("export:services.pdf_export.generators.v2.runtime.renderers.FinalPageRenderer.section_class_pdf_page_final_page_style_padd_473b31a3.text01")}</h2>
           <p style="
-            max-width: 112mm;
-            margin: 0 auto 12mm auto;
-            font-size: ${typography.body.size};
-            line-height: ${typography.body.lineHeight};
-            opacity: 0.8;
+            max-width: 116mm;
+            margin: 0 auto;
+            font-size: 11pt;
+            line-height: 1.65;
+            color: ${colors.cover.textSecondary};
             font-family: ${typography.bodyFont};
           ">
             ${i18nT("export:services.pdf_export.generators.v2.runtime.renderers.FinalPageRenderer.section_class_pdf_page_final_page_style_padd_473b31a3.text02")}
@@ -203,56 +200,43 @@ export class RuntimeFinalRenderer {
               height: 1px;
               background: linear-gradient(90deg, #000, ${screenGray(0.3)}, #000);
               ${SCREEN_LAYER}
-              margin: 0 auto 8mm auto;
+              margin: 10mm auto 5mm;
             "></div>
-            <div style="
-              max-width: 112mm;
+            <blockquote style="
+              max-width: 116mm;
               margin: 0 auto;
-              padding: 10px 0;
               position: relative;
             ">
-              <div style="
-                font-size: 32pt;
-                line-height: 1;
-                opacity: 0.35;
-                font-family: Georgia, serif;
-                position: absolute;
-                top: -4mm;
-                left: -3mm;
-              ">"</div>
               <p style="
-                margin: 0 0 4mm 0;
-                font-size: 12pt;
-                line-height: 1.65;
-                opacity: 0.88;
+                margin: 0 0 3mm 0;
+                font-size: 11pt;
+                line-height: 1.6;
                 font-style: italic;
                 font-family: ${typography.bodyFont};
-                padding: 0 6mm;
               ">
                 ${escapeHtml(finalQuote.text)}
               </p>
               <p style="
                 margin: 0;
-                font-size: 9pt;
+                font-size: 8pt;
                 line-height: 1.4;
-                opacity: 0.7;
+                color: ${colors.cover.textSecondary};
                 letter-spacing: 0.08em;
                 text-transform: uppercase;
                 font-family: ${typography.bodyFont};
               ">
                 — ${escapeHtml(finalQuote.author || 'MeTravel.by')}
               </p>
-            </div>
+            </blockquote>
           ` : ''}
         </div>
-        <div style="
-          position: absolute;
-          bottom: 22mm;
+        <footer style="
+          position: relative;
+          flex-shrink: 0;
+          margin-top: 8mm;
           width: 100%;
-          left: 0;
           text-align: center;
           font-size: ${typography.caption.size};
-          opacity: 0.7;
           font-family: ${typography.bodyFont};
         ">
           <div style="
@@ -266,8 +250,8 @@ export class RuntimeFinalRenderer {
               MeTravel.by
             </span>
           </div>
-          <div>© ${new Date().getFullYear()}</div>
-        </div>
+          <div style="font-size: 8pt; color: ${colors.cover.textSecondary};">© ${pinned ? new Date(pinned.generatedAt).getUTCFullYear() : new Date().getFullYear()}</div>
+        </footer>
       </section>
     `
   }

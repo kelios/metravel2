@@ -366,6 +366,16 @@ function collectEdges(file, text) {
       add(node.moduleReference.expression.text, node.isTypeOnly ? 'type' : 'runtime')
     } else if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument) && ts.isStringLiteralLike(node.argument.literal)) {
       add(node.argument.literal.text, 'type')
+    } else if (isCall(node, 'require.resolve')) {
+      // A finite source path is consumed by packagers without executing its module.
+      const argument = node.arguments[0]
+      if (node.arguments.length === 1 && argument && ts.isStringLiteralLike(argument)) add(argument.text, 'type')
+      else {
+        const resolved = node.arguments.length === 1 && argument ? resolveLoaderArgument(argument) : null
+        if (resolved?.kind === 'finite') add(resolved.target, 'type')
+        else if (resolved?.kind !== 'package-loader') opaque.push({ importer: file, line: ast.getLineAndCharacterOfPosition(node.getStart(ast)).line + 1,
+          expression: argument?.getText(ast) || '<missing>', kind: 'opaque-loader', operatorInput: resolved?.kind === 'operator-input' })
+      }
     } else if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword || isCall(node, 'require'))) {
       const argument = node.arguments[0]
       if (argument && ts.isStringLiteralLike(argument)) add(argument.text, 'runtime')

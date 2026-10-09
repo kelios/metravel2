@@ -84,4 +84,27 @@ describe('RuntimeGalleryRenderer', () => {
 
     expect(page).toContain('Нормандия')
   })
+
+  it.each(['grid', 'collage', 'polaroid', 'slideshow'])('worker %s retains complete captions and pinned photo ordinals', (galleryLayout) => {
+    const caption = 'FULL_CAPTION '.repeat(38).padEnd(500, 'x')
+    const renderer = makeRenderer(undefined, { galleryLayout, galleryPhotosPerPage: 0, galleryColumns: 4, showCaptions: true, captionPosition: 'bottom' })
+    const [html] = renderer.renderPages({ id: 1, name: 'Trip', gallery: [{ url: URL1, caption }] }, 10,
+      { startIndex: 7, totalPhotos: 20, captionPolicy: 'inline' })
+    expect(html).toContain(caption)
+    expect(html).toContain('data-photo-ordinal="8"')
+    expect(html).toContain('height: auto; overflow: visible; overflow-wrap: anywhere')
+    expect(html).toContain('>8</span>')
+  })
+
+  it('worker detached captions retain the selected image layout and legacy calls reset the optional context', () => {
+    const renderer = makeRenderer(undefined, { galleryLayout: 'collage', showCaptions: true, captionPosition: 'bottom' })
+    const travel = { id: 1, name: 'Trip', gallery: [{ url: URL1, caption: 'AUTHORED_CAPTION' }] }
+    const [detached] = renderer.renderPages(travel, 2, { startIndex: 3, totalPhotos: 9, captionPolicy: 'detached' })
+    expect(detached).not.toContain('AUTHORED_CAPTION')
+    expect(detached).toContain('gallery-photo-frame')
+    expect(detached).toContain('>4</span>')
+    const [legacy] = renderer.renderPages(travel, 2)
+    expect(legacy).not.toContain('book-gallery-caption')
+    expect(legacy).toContain('>1</span>')
+  })
 })

@@ -215,6 +215,36 @@ describe('module production reachability', () => {
     expect(cleanGraph(root).unreachable).toEqual(['utils/comment.ts', 'utils/string.ts']);
   });
 
+  it('records a real finite packager require.resolve source reference without pretending to execute TypeScript', () => {
+    const root = fixture({
+      'scripts/build-worker.js': 'const path = require("node:path"); const entry = path.relative(process.cwd(), require.resolve("../workers/index.ts")); exports.entry = entry;',
+      'workers/index.ts': "export { render } from '../services/renderer';",
+      'services/renderer.ts': 'throw new Error("MUST_NOT_EXECUTE"); export const render = 1;',
+    });
+    const graph = cleanGraph(root);
+    expect(graph.unreachable).toEqual([]);
+    expect(graph.type).toEqual(expect.arrayContaining(['workers/index.ts', 'services/renderer.ts']));
+    expect(graph.runtime).not.toContain('services/renderer.ts');
+  });
+
+  it.each([
+    ['parameter shadow', 'function resolve(require) { return require.resolve("../utils/source.ts"); }'],
+    ['mutated resolver', 'require.resolve = arbitrary; require.resolve("../utils/source.ts");'],
+    ['deleted resolver', 'delete require.resolve; require.resolve("../utils/source.ts");'],
+  ])('does not confer reachability through a %s', (_label, source) => {
+    const graph = analyzeGraph(fixture({ 'scripts/packager.js': source, 'utils/source.ts': 'export const source = 1;' }));
+    expect(graph.unreachable).toContain('utils/source.ts');
+  });
+
+  it.each([
+    'require.resolve(process.argv[2]);',
+    'require.resolve("../utils/source.ts", { paths: [process.argv[2]] });',
+  ])('fails closed on an unresolved or customized source resolver: %s', source => {
+    const graph = analyzeGraph(fixture({ 'scripts/packager.js': source, 'utils/source.ts': 'export const source = 1;' }));
+    expect(graph.errors).toEqual(expect.arrayContaining([expect.objectContaining({ kind: 'opaque-loader' })]));
+    expect(graph.unreachable).toContain('utils/source.ts');
+  });
+
   it('records type-only/import-type/reference/ambient augmentation dependencies as compile-time usage', () => {
     const root = fixture({
       'app/index.tsx': "import type { Model } from '@/types/model'; import { type Named } from '@/types/named'; export type { Reexported } from '@/types/reexported'; type Inline = import('@/types/inline').Inline; export default () => null;",
@@ -416,7 +446,8 @@ describe('operator tooling data boundary', () => {
     });
     const graph = cleanGraph(root);
     expect(graph.unreachable).toEqual(['components/operatorSelected.ts']);
-    expect(graph.toolingInputs).toEqual([expect.objectContaining({ importer: 'scripts/operator.js', line: expect.any(Number), expression: expect.any(String), reason: expect.any(String) })]);
+    expect(graph.toolingInputs).toHaveLength(_label === 'cache clearing' ? 2 : 1);
+    for (const input of graph.toolingInputs) expect(input).toEqual(expect.objectContaining({ importer: 'scripts/operator.js', line: expect.any(Number), expression: expect.any(String), reason: expect.any(String) }));
     expect(graph.provenance['components/operatorSelected.ts']).toBeUndefined();
   });
 

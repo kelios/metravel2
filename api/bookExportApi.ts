@@ -8,6 +8,7 @@
 import { apiClient } from '@/api/client'
 import { ApiError } from '@/api/clientErrors'
 import type { DownloadResponse } from '@/api/clientTypes'
+import type { BookSettingsDto } from '@/types/bookSettings'
 import { translate as i18nT } from '@/i18n'
 
 export type BookExportFormat = 'html' | 'pdf'
@@ -40,6 +41,149 @@ export const PDF_RENDERER_UNAVAILABLE_CODE = 'PDF_RENDERER_UNAVAILABLE'
 const BOOK_EXPORTS_ENDPOINT = '/exports/books/'
 const DEFAULT_POLL_INTERVAL_MS = 1500
 const DEFAULT_JOB_TIMEOUT_MS = 120_000
+
+export interface BookExportCapabilities {
+  contract_versions: number[]
+  settings_version: number
+  renderer_version: string
+  pdf_available: boolean
+  resumable: boolean
+  direct_download: boolean
+  unavailable_reason: string | null
+}
+
+export type BookSelectionCreatePayload =
+  | {
+      mode: 'filters'
+      filters: { year_from: number; year_to: number }
+      sort_order?: BookSettingsDto['sortOrder']
+    }
+  | { mode: 'ordered'; sort_order?: 'manual' }
+
+export interface BookSelectionDraft {
+  selection_id: string
+  state: 'draft'
+  travel_count: number
+  next_sequence: number
+}
+
+export interface BookSelectionFinalized {
+  selection_id: string
+  state: 'finalized'
+  travel_count: number
+  selection_hash: string
+}
+
+export interface BookSelectionAppendPayload {
+  sequence: number
+  travel_ids: number[]
+  idempotency_key: string
+}
+
+export interface BookExportV2CreatePayload {
+  contract_version: 2
+  selection_id: string
+  settings_version: 1
+  settings: BookSettingsDto
+  format: 'pdf'
+  idempotency_key: string
+}
+
+export interface BookExportV2CreatedJob {
+  job_id: string
+  status: 'queued'
+  settings_hash: string
+}
+
+export type BookExportV2JobStatus =
+  | 'queued'
+  | 'running'
+  | 'retry_wait'
+  | 'cancel_requested'
+  | 'cancelled'
+  | 'done'
+  | 'failed'
+  | 'expired'
+
+export interface BookExportV2Counter {
+  expected: number | null
+  completed: number
+}
+
+export interface BookExportV2Job {
+  job_id: string
+  status: BookExportV2JobStatus
+  stage: string
+  counters: Record<'travels' | 'blocks' | 'mediaOccurrences' | 'pages', BookExportV2Counter>
+  snapshot_hash: string | null
+  settings_hash: string
+  completeness: 'complete' | 'incomplete' | 'pending'
+  error_code: string
+  retryable: boolean
+  expires_at: string | null
+  download: { available: boolean; size_bytes: number | null; checksum: string | null } | null
+  snapshot_state: 'pending' | 'frozen' | 'failed'
+  artifact_url: null
+}
+
+export interface BookExportV2JobPage {
+  results: BookExportV2Job[]
+  next_cursor: string | null
+}
+
+export interface BookExportV2JobListOptions {
+  cursor?: string
+  page_size?: number
+}
+
+export function getBookExportCapabilities(): Promise<BookExportCapabilities> {
+  return apiClient.get<BookExportCapabilities>(`${BOOK_EXPORTS_ENDPOINT}capabilities/`)
+}
+
+export function createBookSelection(payload: BookSelectionCreatePayload): Promise<BookSelectionDraft> {
+  return apiClient.post<BookSelectionDraft>(`${BOOK_EXPORTS_ENDPOINT}selections/`, payload)
+}
+
+export function appendBookSelection(
+  selectionId: string,
+  payload: BookSelectionAppendPayload,
+): Promise<BookSelectionDraft> {
+  return apiClient.patch<BookSelectionDraft>(
+    `${BOOK_EXPORTS_ENDPOINT}selections/${encodeURIComponent(selectionId)}/`,
+    payload,
+  )
+}
+
+export function finalizeBookSelection(selectionId: string): Promise<BookSelectionFinalized> {
+  return apiClient.post<BookSelectionFinalized>(
+    `${BOOK_EXPORTS_ENDPOINT}selections/${encodeURIComponent(selectionId)}/finalize/`,
+    {},
+  )
+}
+
+export function createBookExportV2Job(payload: BookExportV2CreatePayload): Promise<BookExportV2CreatedJob> {
+  return apiClient.post<BookExportV2CreatedJob>(BOOK_EXPORTS_ENDPOINT, payload)
+}
+
+export function getBookExportV2Job(jobId: string): Promise<BookExportV2Job> {
+  return apiClient.get<BookExportV2Job>(`${BOOK_EXPORTS_ENDPOINT}${encodeURIComponent(jobId)}/`)
+}
+
+export function listBookExportV2Jobs(options: BookExportV2JobListOptions = {}): Promise<BookExportV2JobPage> {
+  const params = new URLSearchParams()
+  if (options.cursor !== undefined) params.set('cursor', options.cursor)
+  if (options.page_size !== undefined) params.set('page_size', String(options.page_size))
+  const query = params.toString()
+  return apiClient.get<BookExportV2JobPage>(`${BOOK_EXPORTS_ENDPOINT}${query ? `?${query}` : ''}`)
+}
+
+export function cancelBookExportV2Job(jobId: string): Promise<BookExportV2Job> {
+  return apiClient.post<BookExportV2Job>(`${BOOK_EXPORTS_ENDPOINT}${encodeURIComponent(jobId)}/cancel/`, {})
+}
+
+export function retryBookExportV2Job(jobId: string): Promise<BookExportV2Job> {
+  return apiClient.post<BookExportV2Job>(`${BOOK_EXPORTS_ENDPOINT}${encodeURIComponent(jobId)}/retry/`, {})
+}
 
 export class BookExportJobFailedError extends Error {
   readonly errorCode: string | null

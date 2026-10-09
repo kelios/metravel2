@@ -27,8 +27,15 @@ const PAGE_WIDTH_MM = 210
 const CAPTION_BLOCK_MM = 8
 const CAPTION_GAP_MM = 1.6
 
+export interface RuntimeGalleryPortionContext {
+  startIndex: number
+  totalPhotos: number
+  captionPolicy: 'inline' | 'detached'
+}
+
 export class RuntimeGalleryRenderer {
   private imageAspects: Map<string, number> = new Map()
+  private portionContext?: RuntimeGalleryPortionContext
 
   constructor(private ctx: RuntimeRenderContext) {}
 
@@ -36,7 +43,8 @@ export class RuntimeGalleryRenderer {
     this.imageAspects = aspects
   }
 
-  renderPages(travel: TravelForBook, startPageNumber: number): string[] {
+  renderPages(travel: TravelForBook, startPageNumber: number, portionContext?: RuntimeGalleryPortionContext): string[] {
+    this.portionContext = portionContext
     const { colors, spacing } = this.ctx.theme
     const photos: GalleryPagePhoto[] = (travel.gallery || [])
       .map((item): GalleryPagePhoto | null => {
@@ -44,7 +52,8 @@ export class RuntimeGalleryRenderer {
         const url = buildSafeImageUrl(raw)
         if (!url || !url.trim().length) return null
         const rawCaption = typeof item === 'string' ? undefined : item?.caption
-        const caption = typeof rawCaption === 'string' && rawCaption.trim() ? rawCaption.trim() : undefined
+        const caption = typeof rawCaption === 'string' && rawCaption.trim()
+          ? portionContext ? rawCaption : rawCaption.trim() : undefined
         const measuredAspect = this.imageAspects.get(url)
         const hasAspect = typeof measuredAspect === 'number' && Number.isFinite(measuredAspect) && measuredAspect > 0
         return {
@@ -84,14 +93,14 @@ export class RuntimeGalleryRenderer {
       chunks.push(photos.slice(start, start + photosPerPage))
     }
 
-    const totalPhotos = photos.length
+    const totalPhotos = portionContext?.totalPhotos ?? photos.length
     const useFramedGrid = layout === 'collage' || layout === 'polaroid'
 
     return chunks.map((pagePhotos, pageIndex) => {
       const pageNumber = startPageNumber + pageIndex
-      const isFirstGalleryPage = pageIndex === 0
+      const isFirstGalleryPage = pageIndex === 0 && (portionContext?.startIndex ?? 0) === 0
 
-      const globalStartIndex = pageIndex * photosPerPage
+      const globalStartIndex = (portionContext?.startIndex ?? 0) + pageIndex * photosPerPage
       const rangeStart = globalStartIndex + 1
       const rangeEnd = Math.min(globalStartIndex + pagePhotos.length, totalPhotos)
 
@@ -270,7 +279,7 @@ export class RuntimeGalleryRenderer {
     const borderRadiusValue = this.increaseBorderRadius(this.ctx.theme.blocks.borderRadius, 2)
     const caption = showCaptions ? photo.caption : undefined
     const captionHtml = caption
-      ? `
+      ? this.portionContext ? this.renderCompleteCaption(caption, globalIndex) : `
         <figcaption style="
           height: ${CAPTION_BLOCK_MM - CAPTION_GAP_MM}mm;
           margin-top: ${CAPTION_GAP_MM}mm;
@@ -284,7 +293,7 @@ export class RuntimeGalleryRenderer {
       : ''
 
     return `
-      <figure class="gallery-photo-frame" style="margin: 0; width: ${widthMm.toFixed(2)}mm; flex: 0 0 auto; min-width: 0;">
+      <figure class="gallery-photo-frame" style="margin: 0; width: ${widthMm.toFixed(2)}mm; flex: 0 0 auto; min-width: 0;${this.portionContext ? ' position: relative;' : ''}">${this.portionContext && this.ctx.settings?.captionPosition === 'top' ? `\n        ${captionHtml}` : ''}
         <div style="
           position: relative;
           width: 100%;
@@ -333,8 +342,19 @@ export class RuntimeGalleryRenderer {
             z-index: 1;
           ">${globalIndex + 1}</span>
         </div>
-        ${captionHtml}
+        ${this.portionContext && this.ctx.settings?.captionPosition === 'top' ? '' : captionHtml}
       </figure>`
+  }
+
+  private renderCompleteCaption(caption: string, globalIndex: number, authored = true): string {
+    const { colors, typography } = this.ctx.theme
+    const overlay = this.ctx.settings?.captionPosition === 'overlay'
+    return `<figcaption class="${authored ? 'book-gallery-caption' : 'book-gallery-photo-label'}" data-photo-ordinal="${globalIndex + 1}" style="
+      height: auto; overflow: visible; overflow-wrap: anywhere; white-space: pre-wrap;
+      font-size: 8pt; line-height: 1.3; text-align: center;
+      color: ${colors.textSecondary}; font-family: ${typography.bodyFont};
+      ${overlay ? `position: absolute; bottom: 0; left: 0; width: 100%; box-sizing: border-box; padding: 2mm; background: ${colors.surface}; z-index: 2;` : 'margin: 1.6mm 0 0; flex: 0 0 auto;'}
+    ">${escapeHtml(caption)}</figcaption>`
   }
 
   private pickBestRowPartition(
@@ -500,8 +520,9 @@ export class RuntimeGalleryRenderer {
               : pagePhotos.length <= 6
                 ? 110
                 : 95
-    const cardHeightMm = Math.min(targetCardHeightMm, maxCardHeightMm)
-    const singleCardHeightMm = Math.min(210, availableContentHeightMm)
+    const workerCaptionReserve = this.portionContext && (layout === 'polaroid' || showCaptions) ? CAPTION_BLOCK_MM : 0
+    const cardHeightMm = Math.min(targetCardHeightMm, maxCardHeightMm - workerCaptionReserve)
+    const singleCardHeightMm = Math.min(210, availableContentHeightMm - workerCaptionReserve)
     const imageHeight = `${cardHeightMm}mm`
     const singleImageHeight = `${singleCardHeightMm}mm`
 
@@ -547,7 +568,11 @@ export class RuntimeGalleryRenderer {
         `
 
         const polaroidCaptionText = showCaptions && photo.caption ? photo.caption : i18nT('export:services.pdf_export.generators.v2.runtime.renderers.GalleryPageRenderer.foto_value1_dddeabe9', { value1: globalIndex + 1 })
-        const polaroidCaption = layout === 'polaroid' ? `
+        const polaroidCaption = this.portionContext
+          ? layout === 'polaroid'
+            ? this.renderCompleteCaption(polaroidCaptionText, globalIndex, showCaptions && !!photo.caption)
+            : showCaptions && photo.caption ? this.renderCompleteCaption(photo.caption, globalIndex) : ''
+          : layout === 'polaroid' ? `
           <div style="
             height: 8mm;
             display: flex;
@@ -565,14 +590,14 @@ export class RuntimeGalleryRenderer {
       <div class="gallery-photo-frame" style="
         ${collageSpan}
         border-radius: ${borderRadiusValue};
-        overflow: hidden;
+        overflow: ${this.portionContext ? 'visible' : 'hidden'};
         position: relative;
         box-shadow: ${this.ctx.theme.blocks.shadow};
         background: ${layout === 'polaroid' ? '#fff' : colors.surfaceAlt};
         ${polaroidStyle}
         ${layout === 'polaroid' ? 'display: flex; flex-direction: column;' : ''}
         ${layout === 'polaroid' ? '' : 'padding: 0;'}
-      ">
+      ">${this.portionContext && this.ctx.settings?.captionPosition === 'top' ? `\n        ${polaroidCaption}` : ''}
         <div style="position: relative; width: 100%; ${imgHeightStyle} overflow: hidden; ${layout === 'polaroid' ? 'flex: 1;' : ''}">
           <img src="${escapeHtml(photo.url)}" alt=""
             loading="eager" decoding="sync" aria-hidden="true"
@@ -602,7 +627,7 @@ export class RuntimeGalleryRenderer {
             onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
           ${numberBadge}
         </div>
-        ${polaroidCaption}
+        ${this.portionContext && this.ctx.settings?.captionPosition === 'top' ? '' : polaroidCaption}
       </div>
     `
       })
@@ -617,7 +642,8 @@ export class RuntimeGalleryRenderer {
     const columns = settings?.galleryColumns
     // Подписи включены по умолчанию (как в EnhancedPdfGeneratorBase) — выводятся,
     // только если у фото реально есть caption
-    const showCaptions = settings?.showCaptions !== false
+    const showCaptions = settings?.showCaptions !== false && (!this.portionContext ||
+      (this.portionContext.captionPolicy === 'inline' && settings?.captionPosition !== 'none'))
     const captionPosition = settings?.captionPosition || 'none'
     const spacing = settings?.gallerySpacing || 'normal'
     return { layout, columns, showCaptions, captionPosition, spacing }

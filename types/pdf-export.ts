@@ -40,6 +40,8 @@ export interface TravelForBook {
   }>;
   youtube_link?: string;
   userName?: string;
+  /** Frozen worker summaries avoid retaining complete gallery/point arrays. */
+  sourceCounts?: { photos: number; locations: number };
 }
 
 /**
