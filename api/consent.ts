@@ -1,3 +1,4 @@
+import { appBelievesAuthenticated } from '@/api/authInvalidation';
 import { apiClient, ApiError } from '@/api/client';
 import type { ConsentType } from '@/utils/actionConsent';
 
@@ -21,13 +22,19 @@ const isExpectedConsentError = (error: unknown): boolean =>
 
 /**
  * Зафиксировать факт согласия на сервере. Никогда не бросает — при любой ошибке
- * (нет логина, эндпоинт ещё не задеплоен, offline) тихо завершается: локальная
- * запись уже сделана вызывающей стороной.
+ * (эндпоинт ещё не задеплоен, offline) тихо завершается: локальная запись уже
+ * сделана вызывающей стороной.
+ *
+ * #2361: гостю запрос не отправляется вовсе. `/user/consents/` требует сессию и
+ * отвечает гостю 401, а на 401 транспорт ещё и пробует сессию
+ * (`/user/me/verifications/`) — две красные строки в консоли на каждое действие.
+ * Гостевое согласие на рассылку уходит полями `/api/subscribe/` (#1522).
  */
 export const postConsentRecord = async (
   consentType: ConsentType,
   version = '1',
 ): Promise<void> => {
+  if (!appBelievesAuthenticated()) return;
   try {
     await apiClient.post('/user/consents/', { consent_type: consentType, version });
   } catch (error) {
