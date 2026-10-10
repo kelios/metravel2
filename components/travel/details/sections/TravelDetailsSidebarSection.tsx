@@ -113,26 +113,6 @@ export const TravelDetailsSidebarSection: React.FC<{
         </View>
       </View>
 
-      <TravelDetailsDeferredTransition
-        key={travel.id}
-        testID="travel-details-related-navigation-transition"
-        isMobile={width < METRICS.breakpoints.tablet}
-        pending={false}
-        placeholder={null}
-        runtimeFrameReady
-        allowEmptyRuntime
-      >
-        {shouldShowNavigationArrows && (
-          <View
-            style={[styles.sectionContainer, styles.navigationArrowsContainer]}
-            accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.navigatsiya_po_pohozhim_marshrutam_cbec0b95')}
-            role="navigation"
-          >
-            <NavigationArrows currentTravel={travel} relatedTravels={relatedTravels} />
-          </View>
-        )}
-      </TravelDetailsDeferredTransition>
-
       <View
         ref={anchors.popular}
         style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
@@ -158,6 +138,35 @@ export const TravelDetailsSidebarSection: React.FC<{
           </View>
         </View>
       </View>
+
+      {/*
+        #2367: стрелки по похожим маршрутам известны только из ответа «Рядом», а
+        каркас их размера не знает (ряд/колонка, 0–2 карточки). Между «Рядом» и
+        «Популярные» их появление сдвигало «Популярные» на 157–162 px уже после
+        прокрутки к секции. Здесь, после последней секции, блок растёт только в
+        резерв сайдбара (`travel-details-sidebar-transition`), который до
+        устоявшегося кадра не отпущен, — видимые секции не двигаются, а пустой или
+        ошибочный ответ ничего не резервирует.
+      */}
+      <TravelDetailsDeferredTransition
+        key={travel.id}
+        testID="travel-details-related-navigation-transition"
+        isMobile={width < METRICS.breakpoints.tablet}
+        pending={false}
+        placeholder={null}
+        runtimeFrameReady
+        allowEmptyRuntime
+      >
+        {shouldShowNavigationArrows && (
+          <View
+            style={[styles.sectionContainer, styles.navigationArrowsContainer]}
+            accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.navigatsiya_po_pohozhim_marshrutam_cbec0b95')}
+            role="navigation"
+          >
+            <NavigationArrows currentTravel={travel} relatedTravels={relatedTravels} />
+          </View>
+        )}
+      </TravelDetailsDeferredTransition>
     </View>
   )
 }
