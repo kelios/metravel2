@@ -24,6 +24,15 @@ export function getTravelLabel(count: number): string {
   return translatePlural('errors:utils.pluralize.travelNoun', count);
 }
 
+/**
+ * Родительный падеж после предлога: «из 332 путешествий», «из 21 путешествия»
+ * (#2375). `getTravelLabel` даёт именительный счётный («332 путешествия») и после
+ * «из» не согласуется.
+ */
+export function getTravelLabelGenitive(count: number): string {
+  return translatePlural('errors:utils.pluralize.travelNounGenitive', count);
+}
+
 export function getPhotoLabel(count: number): string {
   return translatePlural('errors:utils.pluralize.photoNoun', count);
 }

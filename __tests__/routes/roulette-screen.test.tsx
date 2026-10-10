@@ -118,7 +118,7 @@ const createTravel = (id: number) => ({
   name: `Travel ${id}`,
 } as any);
 
-function setupWeb() {
+function setupWeb(dataOverrides: Record<string, unknown> = {}) {
   (Platform as any).OS = 'web';
 
   (global as any).__mockResponsive = {
@@ -175,6 +175,7 @@ function setupWeb() {
     handleEndReached: jest.fn(),
     handleRefresh: jest.fn(),
     isRefreshing: false,
+    ...dataOverrides,
   } as any);
 
   const utils = render(
@@ -280,6 +281,28 @@ describe('RouletteScreen', () => {
 
     await waitFor(() => {
       expect(refetch).toHaveBeenCalled();
+    });
+
+    unmount();
+  });
+
+  // #2375: пустая выдача под фильтрами — плитка «Ничего не нашли»; ошибка запроса
+  // пустым состоянием не считается.
+  it('shows roulette-empty when the completed request returned no travels', async () => {
+    const { getByTestId, unmount } = setupWeb({ data: [], total: 0, isEmpty: true });
+
+    await waitFor(() => {
+      expect(getByTestId('roulette-empty')).toBeTruthy();
+    });
+
+    unmount();
+  });
+
+  it('does not show roulette-empty on a failed request', async () => {
+    const { queryByTestId, unmount } = setupWeb({ data: [], total: 0, isEmpty: false, isError: true, status: 'error' });
+
+    await waitFor(() => {
+      expect(queryByTestId('roulette-empty')).toBeNull();
     });
 
     unmount();

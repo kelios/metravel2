@@ -453,6 +453,45 @@ describe('useRandomTravelData', () => {
     queryClient.clear();
   });
 
+  // #2375: рулетка держит запрос выключенным и запускает его `refetch()` по кнопке —
+  // «пусто» считается по завершённому запросу, а не по `isQueryEnabled`.
+  it('isQueryEnabled:false — successful empty refetch sets isEmpty, nothing is fetched on mount', async () => {
+    (fetchRandomTravels as jest.Mock).mockResolvedValueOnce({ total: 0, data: [] });
+
+    const { ref, queryClient, unmount } = renderRandomWithClient({ queryParams: {}, isQueryEnabled: false });
+
+    expect(fetchRandomTravels).not.toHaveBeenCalled();
+    expect(ref.current?.isEmpty).toBe(false);
+
+    await act(async () => {
+      await ref.current?.refetch();
+    });
+
+    await waitFor(() => expect(ref.current?.isEmpty).toBe(true));
+    expect(fetchRandomTravels).toHaveBeenCalledTimes(1);
+    expect(ref.current?.data).toHaveLength(0);
+    expect(ref.current?.isError).toBe(false);
+
+    unmount();
+    queryClient.clear();
+  });
+
+  it('isQueryEnabled:false — failed refetch is an error, not an empty result', async () => {
+    (fetchRandomTravels as jest.Mock).mockRejectedValueOnce(new Error('network'));
+
+    const { ref, queryClient, unmount } = renderRandomWithClient({ queryParams: {}, isQueryEnabled: false });
+
+    await act(async () => {
+      await ref.current?.refetch();
+    });
+
+    await waitFor(() => expect(ref.current?.isError).toBe(true));
+    expect(ref.current?.isEmpty).toBe(false);
+
+    unmount();
+    queryClient.clear();
+  });
+
   it('sets isEmpty when backend returns no random items', async () => {
     (fetchRandomTravels as jest.Mock).mockResolvedValueOnce({
       total: 0,

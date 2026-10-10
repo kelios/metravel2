@@ -128,6 +128,16 @@ export function useRoulette() {
     return params;
   }, [queryParams, defaultCountries]);
 
+  // #2375: панель фильтров и переключение чипов читают тот же выбор стран, что
+  // уходит в запрос. Раньше `filter.countries` оставался пустым, пока в запрос
+  // подставлялись Беларусь и Польша, — на desktop страны по умолчанию стояли
+  // неотмеченными, хотя выдача считалась по ним.
+  const effectiveFilter = useMemo(() => {
+    const hasCountry = Array.isArray(filter.countries) && filter.countries.length > 0;
+    if (hasCountry || defaultCountries.length === 0) return filter;
+    return { ...filter, countries: defaultCountries };
+  }, [filter, defaultCountries]);
+
   const { data: facetsData, isFetching: resultsLoading, isError: resultsError } = useQuery({
     queryKey: queryKeys.rouletteTravelFacets(rouletteQueryParams),
     queryFn: ({ signal }) =>
@@ -148,11 +158,11 @@ export function useRoulette() {
       buildTravelFilterGroups({
         options,
         facetCounts,
-        selectedFilters: filter,
+        selectedFilters: effectiveFilter,
         includeSort: false,
         hideCountries: false,
       }),
-    [options, facetCounts, filter],
+    [options, facetCounts, effectiveFilter],
   );
 
   const activeFiltersCount = useMemo(
@@ -252,7 +262,7 @@ export function useRoulette() {
 
   const handleFilterChange = useCallback(
     (groupKey: string, optionId: string) => {
-      const current: string[] = ((filter as Record<string, unknown>)[groupKey] as unknown[] | undefined || [])
+      const current: string[] = ((effectiveFilter as Record<string, unknown>)[groupKey] as unknown[] | undefined || [])
         .map((v) => String(v));
       const id = String(optionId);
       const nextValues = current.includes(id)
@@ -260,13 +270,13 @@ export function useRoulette() {
         : [...current, id];
       onSelect(groupKey, nextValues);
     },
-    [filter, onSelect],
+    [effectiveFilter, onSelect],
   );
 
   const showLoading = isLoading || isFetching || filtersLoading;
 
   return {
-    filter,
+    filter: effectiveFilter,
     filterGroups,
     filtersSummary,
     activeFiltersCount,

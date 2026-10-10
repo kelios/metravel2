@@ -179,8 +179,12 @@ function useBaseTravelData(
 
   const isInitialLoading = isLoading && !hasAnyItems;
   const isNextPageLoading = isFetchingNextPage;
+  // «Пусто» — факт завершённого запроса: успех без единого элемента. Признак
+  // `isQueryEnabled` сюда не входит (#2375): рулетка держит запрос выключенным и
+  // запускает его `refetch()` по кнопке, и с `isQueryEnabled && …` её пустая выдача
+  // была недостижима. Выключенный запрос без данных остаётся `pending` и сам по
+  // себе «пусто» не даёт; ошибка (`status === 'error'`) — тоже не пусто.
   const isEmpty =
-    isQueryEnabled &&
     status === 'success' &&
     !isFetching &&
     !isLoading &&

@@ -53,6 +53,10 @@ const SAME_FORM_SETS: Record<string, { locales: Locale[]; reason: string }> = {
     locales: ['be', 'uk'],
     reason: 'BE «фота» и UK «фото» не склоняются: «1 фото», «5 фото»',
   },
+  'errors:utils.pluralize.travelNounGenitive': {
+    locales: ['pl'],
+    reason: 'PL родительный после «z» един для всех чисел: «z 1 podróży», «z 2 podróży», «z 5 podróży» (#2375)',
+  },
   ...Object.fromEntries(
     [
       'profile:components.profile.ProfileHeaderQuickActions.value1_value2_neprochitannyh_be8896bb',

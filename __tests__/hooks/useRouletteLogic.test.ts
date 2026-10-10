@@ -123,6 +123,19 @@ describe('useRouletteLogic', () => {
     expect(fetchAllFiltersOptimized).toHaveBeenCalledTimes(1);
   });
 
+  // #2375: страны по умолчанию видны в панели как выбранные и снимаются чипом.
+  it('exposes default countries as the selected filter and toggles them off', async () => {
+    const { result } = renderHook(() => useRouletteLogic());
+
+    await waitFor(() => expect(result.current.filter.countries).toEqual([1, 2]));
+
+    const { onSelect } = useListTravelFilters.mock.results[0].value as { onSelect: jest.Mock };
+    act(() => {
+      result.current.handleFilterChange('countries', '1');
+    });
+    expect(onSelect).toHaveBeenCalledWith('countries', ['2']);
+  });
+
   it('hides facet options with zero count unless they are selected', () => {
     fetchAllFiltersOptimized.mockReturnValueOnce({
       countries: [{ id: 1, name: 'Беларусь', title_ru: 'Беларусь' }],

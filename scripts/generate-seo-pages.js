@@ -3729,9 +3729,11 @@ const STATIC_PAGES = [
     robots: 'noindex, nofollow',
   },
   {
+    // #2375: один источник правды с клиентом (`+html.tsx` и `seo_static.ts`) —
+    // иначе статический HTML и гидратированная страница спорили о title/description.
     route: '/roulette',
-    title: 'Случайный маршрут и идеи поездок | Metravel',
-    description: 'Не знаешь куда поехать? Крути рулетку и получи случайное направление для путешествия!',
+    title: readRequiredRuTranslation('seoStatic:root.roulette.title'),
+    description: readRequiredRuTranslation('seoStatic:root.roulette.description'),
     breadcrumb: 'Рулетка маршрутов',
   },
   {
