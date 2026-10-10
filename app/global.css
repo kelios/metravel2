@@ -894,3 +894,177 @@ select:focus-visible {
   height: 44px !important;
   line-height: 44px !important;
 }
+
+/*
+ * Сезонное (праздничное) оформление (#2376).
+ * Реестр тем и окна — `constants/seasonalThemes.ts`; атрибут `data-season`
+ * на <html> ставит стартовый скрипт `app/+html.tsx` и синхронизирует
+ * `hooks/useTheme.ts`. Каждая тема — два блока переменных (светлая и тёмная)
+ * плюс декоративный слой `body::after`: чистый CSS, без JS и бандла,
+ * `pointer-events: none`, движение выключается `prefers-reduced-motion`.
+ * Без `data-season` ни одно правило ниже не срабатывает — обычный вид не меняется.
+ * Новая тема: блок `html[data-season="<id>"]`, блок `[data-theme="dark"]`,
+ * свои `--season-decor-*`.
+ */
+
+/* ---- Хэллоуин: тыква + фиолет, светлая ---- */
+html[data-season="halloween"] {
+  --color-background: #fcf8f4;
+  --color-backgroundSecondary: #f8f2ec;
+  --color-backgroundTertiary: #f3ece4;
+  --color-primary: #d9873f;
+  --color-primary-30: #d9873f30;
+  --color-primary-40: #d9873f40;
+  --color-primary-50: #d9873f50;
+  --color-primaryDark: #c27030;
+  --color-primaryText: #9a4f12;
+  --color-primaryLight: #fbefe4;
+  --color-primarySoft: rgba(217, 135, 63, 0.08);
+  --color-accent: #8e73b5;
+  --color-accentDark: #78609e;
+  --color-accentLight: #f1edf7;
+  --color-accentSoft: rgba(142, 115, 181, 0.10);
+  --color-borderAccent: rgba(217, 135, 63, 0.20);
+  --color-focus: rgba(142, 115, 181, 0.40);
+  --color-focusStrong: rgba(142, 115, 181, 0.55);
+  --gradient-hero: linear-gradient(135deg, #f8f2ec 0%, #f1e9f5 50%, #fcf8f4 100%);
+  --gradient-section-bg: radial-gradient(ellipse at top, rgba(142, 115, 181, 0.08) 0%, transparent 70%);
+  --season-decor-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 480 320'%3E%3Cg fill='%233b2a4f' fill-opacity='0.22'%3E%3Cpath transform='translate(40 60)' d='M32 10C28 2 20 2 14 8 10 4 4 6 0 12 6 10 10 14 12 18 16 14 22 16 24 22L32 16 40 22C42 16 48 14 52 18 54 14 58 10 64 12 60 6 54 4 50 8 44 2 36 2 32 10Z'/%3E%3Cpath transform='translate(300 200) scale(0.7)' d='M32 10C28 2 20 2 14 8 10 4 4 6 0 12 6 10 10 14 12 18 16 14 22 16 24 22L32 16 40 22C42 16 48 14 52 18 54 14 58 10 64 12 60 6 54 4 50 8 44 2 36 2 32 10Z'/%3E%3Cpath transform='translate(180 270) scale(0.5)' d='M32 10C28 2 20 2 14 8 10 4 4 6 0 12 6 10 10 14 12 18 16 14 22 16 24 22L32 16 40 22C42 16 48 14 52 18 54 14 58 10 64 12 60 6 54 4 50 8 44 2 36 2 32 10Z'/%3E%3C/g%3E%3C/svg%3E");
+  --season-decor-size: 480px 320px;
+  --season-decor-opacity: 0.9;
+  --season-decor-animation: mt-season-drift 48s linear infinite;
+}
+
+/* ---- Хэллоуин: тёмная ---- */
+html[data-season="halloween"][data-theme="dark"] {
+  --color-background: #15111a;
+  --color-backgroundSecondary: #1b1621;
+  --color-backgroundTertiary: #231c2b;
+  --color-surface: #241d2c;
+  --color-surface-40: #241d2c40;
+  --color-surfaceMuted: rgba(36, 29, 44, 0.75);
+  --color-surfaceElevated: #2d2537;
+  --color-card: #241d2c;
+  --color-cardMuted: #1b1621;
+  --color-dockBackground: #1b1621;
+  --color-primary: #e8965a;
+  --color-primary-30: #e8965a30;
+  --color-primary-40: #e8965a40;
+  --color-primary-50: #e8965a50;
+  --color-primaryDark: #d8864a;
+  --color-primaryText: #e8965a;
+  --color-primaryLight: #352a22;
+  --color-primarySoft: rgba(232, 150, 90, 0.12);
+  --color-accent: #b39ad6;
+  --color-accentDark: #a088c4;
+  --color-accentLight: #2c2438;
+  --color-accentSoft: rgba(179, 154, 214, 0.12);
+  --color-borderAccent: rgba(232, 150, 90, 0.25);
+  --color-focus: rgba(179, 154, 214, 0.45);
+  --color-focusStrong: rgba(179, 154, 214, 0.60);
+  --gradient-hero: linear-gradient(135deg, #1b1621 0%, #241a2e 50%, #15111a 100%);
+  --gradient-card-featured: linear-gradient(180deg, #2d2537 0%, #241d2c 100%);
+  --gradient-section-bg: radial-gradient(ellipse at top, rgba(179, 154, 214, 0.10) 0%, transparent 70%);
+  --season-decor-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 480 320'%3E%3Cg fill='%23d9c7f0' fill-opacity='0.16'%3E%3Cpath transform='translate(40 60)' d='M32 10C28 2 20 2 14 8 10 4 4 6 0 12 6 10 10 14 12 18 16 14 22 16 24 22L32 16 40 22C42 16 48 14 52 18 54 14 58 10 64 12 60 6 54 4 50 8 44 2 36 2 32 10Z'/%3E%3Cpath transform='translate(300 200) scale(0.7)' d='M32 10C28 2 20 2 14 8 10 4 4 6 0 12 6 10 10 14 12 18 16 14 22 16 24 22L32 16 40 22C42 16 48 14 52 18 54 14 58 10 64 12 60 6 54 4 50 8 44 2 36 2 32 10Z'/%3E%3Cpath transform='translate(180 270) scale(0.5)' d='M32 10C28 2 20 2 14 8 10 4 4 6 0 12 6 10 10 14 12 18 16 14 22 16 24 22L32 16 40 22C42 16 48 14 52 18 54 14 58 10 64 12 60 6 54 4 50 8 44 2 36 2 32 10Z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* ---- Рождество и Новый год: хвоя + клюква, светлая ---- */
+html[data-season="christmas"] {
+  --color-background: #f9fbfa;
+  --color-backgroundSecondary: #f2f7f4;
+  --color-backgroundTertiary: #ecf3ef;
+  --color-primary: #6fa58a;
+  --color-primary-30: #6fa58a30;
+  --color-primary-40: #6fa58a40;
+  --color-primary-50: #6fa58a50;
+  --color-primaryDark: #5c9478;
+  --color-primaryText: #2f6b4f;
+  --color-primaryLight: #eaf4ee;
+  --color-primarySoft: rgba(111, 165, 138, 0.08);
+  --color-accent: #c0525c;
+  --color-accentDark: #a8434d;
+  --color-accentLight: #f9ecee;
+  --color-accentSoft: rgba(192, 82, 92, 0.10);
+  --color-borderAccent: rgba(111, 165, 138, 0.20);
+  --color-focus: rgba(192, 82, 92, 0.35);
+  --color-focusStrong: rgba(192, 82, 92, 0.50);
+  --gradient-hero: linear-gradient(135deg, #f2f7f4 0%, #fbeeef 50%, #f9fbfa 100%);
+  --gradient-section-bg: radial-gradient(ellipse at top, rgba(192, 82, 92, 0.06) 0%, transparent 70%);
+  --season-decor-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'%3E%3Cg fill='%237898a8'%3E%3Ccircle cx='20' cy='30' r='2.2' fill-opacity='0.45'/%3E%3Ccircle cx='90' cy='70' r='1.5' fill-opacity='0.35'/%3E%3Ccircle cx='160' cy='20' r='2.8' fill-opacity='0.4'/%3E%3Ccircle cx='210' cy='110' r='1.8' fill-opacity='0.35'/%3E%3Ccircle cx='50' cy='150' r='2.5' fill-opacity='0.4'/%3E%3Ccircle cx='130' cy='190' r='1.6' fill-opacity='0.3'/%3E%3Ccircle cx='190' cy='220' r='2.3' fill-opacity='0.45'/%3E%3Ccircle cx='110' cy='120' r='1.2' fill-opacity='0.3'/%3E%3Ccircle cx='230' cy='60' r='1.4' fill-opacity='0.3'/%3E%3Ccircle cx='70' cy='225' r='1.9' fill-opacity='0.35'/%3E%3C/g%3E%3C/svg%3E");
+  --season-decor-size: 240px 240px;
+  --season-decor-opacity: 1;
+  --season-decor-animation: mt-season-fall 22s linear infinite;
+}
+
+/* ---- Рождество и Новый год: тёмная ---- */
+html[data-season="christmas"][data-theme="dark"] {
+  --color-background: #101a15;
+  --color-backgroundSecondary: #15211b;
+  --color-backgroundTertiary: #1b2a22;
+  --color-surface: #1c2a23;
+  --color-surface-40: #1c2a2340;
+  --color-surfaceMuted: rgba(28, 42, 35, 0.75);
+  --color-surfaceElevated: #243329;
+  --color-card: #1c2a23;
+  --color-cardMuted: #15211b;
+  --color-dockBackground: #15211b;
+  --color-primary: #86c4a3;
+  --color-primary-30: #86c4a330;
+  --color-primary-40: #86c4a340;
+  --color-primary-50: #86c4a350;
+  --color-primaryDark: #74b291;
+  --color-primaryText: #86c4a3;
+  --color-primaryLight: #233a2f;
+  --color-primarySoft: rgba(134, 196, 163, 0.12);
+  --color-accent: #e07a84;
+  --color-accentDark: #cc6a74;
+  --color-accentLight: #3a2428;
+  --color-accentSoft: rgba(224, 122, 132, 0.12);
+  --color-borderAccent: rgba(134, 196, 163, 0.25);
+  --color-focus: rgba(224, 122, 132, 0.45);
+  --color-focusStrong: rgba(224, 122, 132, 0.60);
+  --gradient-hero: linear-gradient(135deg, #15211b 0%, #1e2a24 50%, #101a15 100%);
+  --gradient-card-featured: linear-gradient(180deg, #243329 0%, #1c2a23 100%);
+  --gradient-section-bg: radial-gradient(ellipse at top, rgba(224, 122, 132, 0.10) 0%, transparent 70%);
+  --season-decor-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'%3E%3Cg fill='%23ffffff'%3E%3Ccircle cx='20' cy='30' r='2.2' fill-opacity='0.75'/%3E%3Ccircle cx='90' cy='70' r='1.5' fill-opacity='0.55'/%3E%3Ccircle cx='160' cy='20' r='2.8' fill-opacity='0.7'/%3E%3Ccircle cx='210' cy='110' r='1.8' fill-opacity='0.55'/%3E%3Ccircle cx='50' cy='150' r='2.5' fill-opacity='0.7'/%3E%3Ccircle cx='130' cy='190' r='1.6' fill-opacity='0.5'/%3E%3Ccircle cx='190' cy='220' r='2.3' fill-opacity='0.75'/%3E%3Ccircle cx='110' cy='120' r='1.2' fill-opacity='0.5'/%3E%3Ccircle cx='230' cy='60' r='1.4' fill-opacity='0.5'/%3E%3Ccircle cx='70' cy='225' r='1.9' fill-opacity='0.55'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/*
+ * Декоративный слой: один fixed-псевдоэлемент на весь вьюпорт с запасом 480px
+ * по обеим осям, чтобы сдвиг ровно на 480px (кратно тайлу 240/480) зацикливался
+ * бесшовно. Двигается только transform — композитор, без перерисовки.
+ * z-index 9: над потоком страницы, под модалками и диалогами (portal ≥ 1000).
+ */
+@keyframes mt-season-fall {
+  to { transform: translate3d(0, 480px, 0); }
+}
+@keyframes mt-season-drift {
+  to { transform: translate3d(480px, 0, 0); }
+}
+html[data-season] body::after {
+  content: '';
+  position: fixed;
+  top: -480px;
+  left: -480px;
+  width: calc(100% + 480px);
+  height: calc(100% + 480px);
+  pointer-events: none;
+  z-index: 9;
+  background-image: var(--season-decor-image);
+  background-repeat: repeat;
+  background-size: var(--season-decor-size);
+  opacity: var(--season-decor-opacity, 1);
+  animation: var(--season-decor-animation);
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-season] body::after {
+    animation: none;
+    will-change: auto;
+  }
+}
+@media print {
+  html[data-season] body::after {
+    display: none;
+  }
+}

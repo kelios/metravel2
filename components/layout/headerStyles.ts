@@ -177,6 +177,8 @@ export const createMenuStyles = (colors: ThemedColors) =>
     themeSection: {
       paddingHorizontal: 8,
       paddingVertical: 2,
+      // Два ряда: светлая/тёмная/авто и праздничное оформление (#2376).
+      gap: 10,
     },
     menuItem: {
       borderRadius: CONTROL_RADIUS,

@@ -1,8 +1,7 @@
-import { useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { useTheme, useThemedColors } from '@/hooks/useTheme';
+import { useTheme } from '@/hooks/useTheme';
 import type { Theme } from '@/hooks/useTheme';
+import ThemeOptionGroup, { type ThemeOptionGroupOption } from '@/components/layout/ThemeOptionGroup';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -15,114 +14,35 @@ interface ThemeToggleProps {
   showLabels?: boolean;
 }
 
+const renderFeather = (name: 'sun' | 'moon' | 'monitor') => (size: number, color: string) => (
+  <Feather name={name} size={size} color={color} />
+);
+
 export default function ThemeToggle({
   compact = false,
   layout = 'horizontal',
   showLabels = true,
 }: ThemeToggleProps) {
   const { theme, setTheme } = useTheme();
-  const colors = useThemedColors();
 
-  const styles = useMemo(
-    () =>
-      StyleSheet.create({
-        container: {
-          flexDirection: layout === 'horizontal' ? 'row' : 'column',
-          // Ряд укладывается в контейнер, а не распирает его: с длинной подписью
-          // (PL «Automatyczny», кнопка 132 px) три кнопки шире панели меню на
-          // 320 px, и правая обрезалась краем панели (#2244).
-          flexWrap: layout === 'horizontal' ? 'wrap' : undefined,
-          gap: compact ? 6 : 8,
-          padding: compact ? 0 : 12,
-          backgroundColor: compact ? 'transparent' : colors.surface,
-          borderRadius: 12,
-          borderWidth: compact ? 0 : 1,
-          borderColor: colors.border,
-        },
-        button: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: compact ? 6 : 8,
-          // Высота задавалась только паддингом и давала 30dp (#1297).
-          minHeight: 44,
-          paddingVertical: compact ? 6 : 8,
-          paddingHorizontal: compact ? 10 : 12,
-          borderRadius: 8,
-          backgroundColor: colors.surfaceMuted,
-          borderWidth: 1,
-          borderColor: colors.border,
-          minWidth: layout === 'horizontal' ? (compact ? 70 : 80) : undefined,
-          justifyContent: 'center',
-        },
-        buttonActive: {
-          backgroundColor: colors.primary,
-          borderColor: colors.primaryDark,
-        },
-        buttonHover: {
-          backgroundColor: colors.surfaceElevated,
-        },
-        label: {
-          fontSize: compact ? 13 : 14,
-          fontWeight: '500',
-          color: colors.text,
-        },
-        labelActive: {
-          color: colors.textOnPrimary,
-        },
-        iconWrapper: {
-          width: compact ? 16 : 20,
-          height: compact ? 16 : 20,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-      }),
-    [colors, compact, layout]
-  );
-
-  const themeOptions: Array<{ value: Theme; icon: string; label: string }> = [
-    { value: 'light', icon: 'sun', label: i18nT('navigation:components.layout.ThemeToggle.svetlaya_246afe18') },
-    { value: 'dark', icon: 'moon', label: i18nT('navigation:components.layout.ThemeToggle.temnaya_b882d236') },
-    { value: 'auto', icon: 'monitor', label: i18nT('navigation:components.layout.ThemeToggle.avto_f4fd1de9') },
+  const themeOptions: Array<ThemeOptionGroupOption<Theme>> = [
+    { value: 'light', renderIcon: renderFeather('sun'), label: i18nT('navigation:components.layout.ThemeToggle.svetlaya_246afe18') },
+    { value: 'dark', renderIcon: renderFeather('moon'), label: i18nT('navigation:components.layout.ThemeToggle.temnaya_b882d236') },
+    { value: 'auto', renderIcon: renderFeather('monitor'), label: i18nT('navigation:components.layout.ThemeToggle.avto_f4fd1de9') },
   ];
 
   return (
-    <View style={styles.container} testID="theme-toggle">
-      {themeOptions.map((option) => {
-        const isActive = theme === option.value;
-
-        return (
-          <Pressable
-            key={option.value}
-            onPress={() => setTheme(option.value)}
-            style={({ hovered }) => [
-              styles.button,
-              isActive && styles.buttonActive,
-              (hovered && !isActive) && styles.buttonHover,
-            ]}
-            accessibilityRole="radio"
-            accessibilityState={{ checked: isActive }}
-            accessibilityLabel={i18nT('navigation:components.layout.ThemeToggle.vybrat_temu_value1_2ab8849f', { value1: option.label })}
-            testID={`theme-toggle-${option.value}`}
-            {...(Platform.OS === 'web'
-              ? {
-                  // @ts-ignore -- aria-label is a web-only ARIA attribute not in RN Pressable types
-                  'aria-label': i18nT('navigation:components.layout.ThemeToggle.vybrat_temu_value1_2ab8849f', { value1: option.label }),
-                  // @ts-ignore -- aria-checked is a web-only ARIA attribute not in RN Pressable types
-                  'aria-checked': isActive,
-                }
-              : {})}
-          >
-            <View style={styles.iconWrapper}>
-              <Feather name={option.icon as any} size={compact ? 16 : 20} color={isActive ? colors.textOnPrimary : colors.text} />
-            </View>
-            {showLabels && (
-              <Text style={[styles.label, isActive && styles.labelActive]}>
-                {option.label}
-              </Text>
-            )}
-          </Pressable>
-        );
-      })}
-    </View>
+    <ThemeOptionGroup
+      testID="theme-toggle"
+      options={themeOptions}
+      value={theme}
+      onChange={setTheme}
+      getAccessibilityLabel={(option) =>
+        i18nT('navigation:components.layout.ThemeToggle.vybrat_temu_value1_2ab8849f', { value1: option.label })
+      }
+      compact={compact}
+      layout={layout}
+      showLabels={showLabels}
+    />
   );
 }

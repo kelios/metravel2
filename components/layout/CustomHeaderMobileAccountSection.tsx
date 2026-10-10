@@ -14,6 +14,7 @@ import UserAvatar from './UserAvatar';
 import {
   CustomHeaderMobileMenuComp,
   isHeaderMobileMenuTestEnv,
+  SeasonalThemeToggleLazy,
   ThemeToggleLazy,
 } from './customHeaderMobileLazy';
 import { translate as i18nT } from '@/i18n'
@@ -268,7 +269,10 @@ export default function CustomHeaderMobileAccountSection({
               {...menuProps}
               themeToggleNode={
                 <Suspense fallback={null}>
-                  <ThemeToggleLazy compact layout="horizontal" showLabels />
+                  <View style={{ gap: 10 }}>
+                    <ThemeToggleLazy compact layout="horizontal" showLabels />
+                    <SeasonalThemeToggleLazy compact layout="horizontal" showLabels />
+                  </View>
                 </Suspense>
               }
             />

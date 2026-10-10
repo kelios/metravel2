@@ -2,6 +2,7 @@
 import { ScrollViewStyleReset } from 'expo-router/html';
 import React from 'react';
 import { DESIGN_COLORS } from '@/constants/designSystem';
+import { getSeasonalThemeBootScript } from '@/utils/seasonalThemeBootScript';
 import { getAnalyticsInlineScript } from '@/utils/analyticsInlineScript';
 import { ANALYTICS_ORIGINS, WEB_RESOURCE_HINTS } from '@/utils/webResourceHints';
 import { stringifyJsonLd } from '@/utils/jsonLd';
@@ -410,6 +411,7 @@ const getCriticalHeadScript = () => {
     var tc=document.getElementById('app-theme-color');
     if(tc)tc.setAttribute('content',d?'${DESIGN_COLORS.themeColorDark}':'${DESIGN_COLORS.themeColorLight}');
   } catch(_){}
+  ${getSeasonalThemeBootScript()}
   window.__EXPO_ROUTER_INSPECTOR=false;
   try {
     var p2=window.location.pathname||'';

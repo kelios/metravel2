@@ -234,6 +234,9 @@ jest.mock('@/hooks/useTheme', () => {
     isDark: false,
     setTheme: jest.fn(),
     toggleTheme: jest.fn(),
+    seasonalTheme: 'off',
+    activeSeasonalTheme: null,
+    setSeasonalTheme: jest.fn(),
   }
 
   const ThemeContext = React.createContext(defaultTheme)

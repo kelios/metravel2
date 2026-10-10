@@ -3,9 +3,17 @@
  * Handles light/dark mode switching with persistence
  */
 
-import { useEffect, useMemo, useState, useCallback, createContext, useContext, createElement, type Context } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback, createContext, useContext, createElement, type Context } from 'react';
 import { Appearance, Platform, useColorScheme } from 'react-native';
 import { DESIGN_COLORS, getThemedColors } from '@/constants/designSystem';
+import {
+  SEASONAL_THEME_DOM_ATTRIBUTE,
+  SEASONAL_THEME_STORAGE_KEY,
+  isSeasonalThemePreference,
+  resolveSeasonalTheme,
+  type SeasonalThemeId,
+  type SeasonalThemePreference,
+} from '@/constants/seasonalThemes';
 
 // Re-export helper for callers that historically imported it from this module.
 export { getThemedColors };
@@ -26,6 +34,85 @@ export interface ThemeContextType {
   isDark: boolean;
   setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
+  /** Настройка праздничного оформления (#2376): по календарю, выключено или конкретная тема. */
+  seasonalTheme: SeasonalThemePreference;
+  /** Фактически применённая праздничная тема (`null` — обычный вид). */
+  activeSeasonalTheme: SeasonalThemeId | null;
+  setSeasonalTheme: (preference: SeasonalThemePreference) => void;
+}
+
+const THEME_STORAGE_KEY = 'theme';
+
+type PersistedThemePrefs = { theme: Theme | null; seasonalTheme: SeasonalThemePreference | null };
+
+const isTheme = (value: unknown): value is Theme =>
+  value === 'light' || value === 'dark' || value === 'auto';
+
+/** Итоговая схема по настройке и системной схеме (web читает matchMedia сам). */
+const resolveIsDark = (theme: Theme, systemColorScheme: string | null | undefined): boolean => {
+  if (theme === 'dark') return true;
+  if (theme === 'light') return false;
+  if (Platform.OS === 'web') {
+    return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-color-scheme: dark)').matches
+      : false;
+  }
+  return systemColorScheme === 'dark';
+};
+
+/** Читает обе настройки из хранилища платформы; на native — асинхронно через AsyncStorage. */
+function readPersistedThemePrefs(onRead: (prefs: PersistedThemePrefs) => void): void {
+  if (Platform.OS === 'web') {
+    let theme: string | null = null;
+    let seasonal: string | null = null;
+    try {
+      theme = localStorage.getItem(THEME_STORAGE_KEY);
+      seasonal = localStorage.getItem(SEASONAL_THEME_STORAGE_KEY);
+    } catch {
+      // localStorage недоступен (приватный режим / запрет cookies) — остаёмся на дефолтах
+    }
+    onRead({
+      theme: isTheme(theme) ? theme : null,
+      seasonalTheme: isSeasonalThemePreference(seasonal) ? seasonal : null,
+    });
+    return;
+  }
+  // AND-24: Native — restore saved prefs from AsyncStorage
+  try {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    AsyncStorage.multiGet([THEME_STORAGE_KEY, SEASONAL_THEME_STORAGE_KEY])
+      .then((pairs: Array<[string, string | null]>) => {
+        const map = new Map(pairs);
+        const theme = map.get(THEME_STORAGE_KEY);
+        const seasonal = map.get(SEASONAL_THEME_STORAGE_KEY);
+        onRead({
+          theme: isTheme(theme) ? theme : null,
+          seasonalTheme: isSeasonalThemePreference(seasonal) ? seasonal : null,
+        });
+      })
+      .catch(() => onRead({ theme: null, seasonalTheme: null }));
+  } catch {
+    // AsyncStorage not available — дефолты, но флаг чтения всё равно должен подняться
+    onRead({ theme: null, seasonalTheme: null });
+  }
+}
+
+function persistThemePref(key: string, value: string): void {
+  if (Platform.OS === 'web') {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // хранилище недоступно — настройка живёт до перезагрузки
+    }
+    return;
+  }
+  // AND-24: Persist on native via AsyncStorage
+  try {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    AsyncStorage.setItem(key, value).catch(() => {});
+  } catch {
+    // noop
+  }
 }
 
 const THEME_CONTEXT_GLOBAL_KEY = '__metravelThemeContext_v1';
@@ -67,6 +154,9 @@ export function useTheme(): ThemeContextType {
       isDark: false,
       setTheme: () => undefined,
       toggleTheme: () => undefined,
+      seasonalTheme: 'auto',
+      activeSeasonalTheme: null,
+      setSeasonalTheme: () => undefined,
     };
   }
 
@@ -88,46 +178,55 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return false;
   });
 
-  // Инициализация темы при монтировании
+  // Праздничное оформление (#2376). SSR-дефолт `auto`; стартовый скрипт
+  // `app/+html.tsx` уже поставил `data-season` по тем же окнам, здесь атрибут
+  // лишь синхронизируется с настройкой после чтения хранилища.
+  const [seasonalTheme, setSeasonalThemeState] = useState<SeasonalThemePreference>('auto');
+  // Вкладка, открытая через границу окна (14.10 → 15.10), пересчитывает сезон при
+  // возврате к ней: дата обновляется на visibilitychange и пересобирает memo.
+  const [calendarDate, setCalendarDate] = useState(() => new Date());
+  const activeSeasonalTheme = useMemo(
+    () => resolveSeasonalTheme(seasonalTheme, calendarDate),
+    [seasonalTheme, calendarDate],
+  );
+
   useEffect(() => {
-    if (Platform.OS === 'web') {
-      // Получить сохраненную тему из localStorage
-      const stored = localStorage.getItem('theme') as Theme | null;
-      if (stored && ['light', 'dark', 'auto'].includes(stored)) {
-        setSavedTheme(stored);
-      }
-    } else {
-      // AND-24: Native — restore saved theme from AsyncStorage
-      try {
-        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-        AsyncStorage.getItem('theme').then((stored: string | null) => {
-          if (stored && ['light', 'dark', 'auto'].includes(stored)) {
-            setSavedTheme(stored as Theme);
-          }
-        }).catch(() => {});
-      } catch {
-        // AsyncStorage not available — use default
-      }
-    }
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') setCalendarDate(new Date());
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
 
-  // Определить текущую тему
+  // До чтения хранилища атрибуты `<html>` не трогаем (#2376, #2381): SSR-дефолты
+  // (`auto`/светлая) расходятся с сохранёнными, и первый эффект на них затирал
+  // `data-theme`/`data-season`, выставленные стартовым скриптом, — вспышка
+  // противоположной темы на каждой загрузке. На web чтение синхронное, поэтому
+  // сохранённые значения, итоговая схема и флаг попадают в один рендер.
+  const [prefsRead, setPrefsRead] = useState(false);
+  // Системная схема на момент чтения; дальше её ведёт свой эффект, а чтение — одноразовое.
+  const systemColorSchemeRef = useRef(systemColorScheme);
+  systemColorSchemeRef.current = systemColorScheme;
+
+  // Инициализация темы при монтировании
   useEffect(() => {
-    let currentDark = false;
+    readPersistedThemePrefs((prefs) => {
+      const theme = prefs.theme ?? 'auto';
+      setSavedTheme(theme);
+      setIsDark(resolveIsDark(theme, systemColorSchemeRef.current));
+      if (prefs.seasonalTheme) setSeasonalThemeState(prefs.seasonalTheme);
+      setPrefsRead(true);
+    });
+  }, []);
 
-    if (savedTheme === 'auto') {
-      // Используем системную тему
-      if (Platform.OS === 'web') {
-        currentDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      } else {
-        currentDark = systemColorScheme === 'dark';
-      }
-    } else {
-      currentDark = savedTheme === 'dark';
-    }
-
-    setIsDark(currentDark);
-  }, [savedTheme, systemColorScheme]);
+  // Определить текущую тему. До чтения хранилища не пересчитываем: в одном
+  // проходе эффектов этот пересчёт по SSR-дефолту `auto` затирал бы значение,
+  // только что выставленное по сохранённой настройке (#2381).
+  useEffect(() => {
+    if (!prefsRead) return;
+    setIsDark(resolveIsDark(savedTheme, systemColorScheme));
+  }, [savedTheme, systemColorScheme, prefsRead]);
 
   // Слушать изменения системной темы
   useEffect(() => {
@@ -153,6 +252,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     if (typeof document === 'undefined') return;
+    if (!prefsRead) return;
 
     const root = document.documentElement;
     root.setAttribute('data-theme', isDark ? 'dark' : 'light');
@@ -160,22 +260,31 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     document
       .getElementById('app-theme-color')
       ?.setAttribute('content', isDark ? DESIGN_COLORS.themeColorDark : DESIGN_COLORS.themeColorLight);
-  }, [isDark]);
+  }, [isDark, prefsRead]);
+
+  // Синхронизация праздничного оформления для web: `data-season` читает app/global.css.
+  // На Android/iOS токены — литералы StyleSheet, сезонной палитры там нет (осознанно, #2376).
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (typeof document === 'undefined') return;
+    if (!prefsRead) return;
+
+    const root = document.documentElement;
+    if (activeSeasonalTheme) {
+      root.setAttribute(SEASONAL_THEME_DOM_ATTRIBUTE, activeSeasonalTheme);
+    } else {
+      root.removeAttribute(SEASONAL_THEME_DOM_ATTRIBUTE);
+    }
+  }, [activeSeasonalTheme, prefsRead]);
 
   const setTheme = useCallback((theme: Theme) => {
     setSavedTheme(theme);
+    persistThemePref(THEME_STORAGE_KEY, theme);
+  }, []);
 
-    if (Platform.OS === 'web') {
-      localStorage.setItem('theme', theme);
-    } else {
-      // AND-24: Persist theme on native via AsyncStorage
-      try {
-        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-        AsyncStorage.setItem('theme', theme).catch(() => {});
-      } catch {
-        // noop
-      }
-    }
+  const setSeasonalTheme = useCallback((preference: SeasonalThemePreference) => {
+    setSeasonalThemeState(preference);
+    persistThemePref(SEASONAL_THEME_STORAGE_KEY, preference);
   }, []);
 
   const toggleTheme = useCallback(() => {
@@ -187,7 +296,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     isDark,
     setTheme,
     toggleTheme,
-  }), [savedTheme, isDark, setTheme, toggleTheme]);
+    seasonalTheme,
+    activeSeasonalTheme,
+    setSeasonalTheme,
+  }), [savedTheme, isDark, setTheme, toggleTheme, seasonalTheme, activeSeasonalTheme, setSeasonalTheme]);
 
   return createElement(ThemeContext.Provider, { value }, children);
 }

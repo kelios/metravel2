@@ -5,6 +5,7 @@ import { router } from 'expo-router'
 
 import { DialogMenu } from '@/ui/paper'
 import ThemeToggle from '@/components/layout/ThemeToggle'
+import SeasonalThemeToggle from '@/components/layout/SeasonalThemeToggle'
 import AccountMenuSection from './AccountMenuSection'
 import UserAvatar from './UserAvatar'
 import {
@@ -419,6 +420,7 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
             <Text style={menuStyles.sectionTitle}>{i18nT('navigation:components.layout.AccountMenu.tema_oformleniya_06b0d02a')}</Text>
             <View style={menuStyles.themeSection}>
               <ThemeToggle compact />
+              <SeasonalThemeToggle compact />
             </View>
             <View style={menuStyles.sectionDivider} />
             <Text style={menuStyles.sectionTitle}>{i18nT('navigation:components.layout.AccountMenu.dokumenty_9a7a7063')}</Text>
@@ -474,6 +476,7 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
             >
               <View style={menuStyles.themeSection}>
                 <ThemeToggle compact />
+                <SeasonalThemeToggle compact />
               </View>
             </AccountMenuSection>
 

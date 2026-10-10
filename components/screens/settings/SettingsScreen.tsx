@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { View, Text, Platform, ScrollView } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 import { useRouter, type Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -30,7 +31,8 @@ import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler';
 import StravaSettingsSection from '@/components/settings/StravaSettingsSection';
 import DataOwnershipSection from '@/components/settings/DataOwnershipSection';
 import ProfileSection from '@/components/settings/ProfileSection';
-import ThemeSection from '@/components/settings/ThemeSection';
+import ThemeSection, { type ThemeOption } from '@/components/settings/ThemeSection';
+import { getSeasonalThemeOptions } from '@/components/layout/seasonalThemeOptions';
 import BiometricSection from '@/components/settings/BiometricSection';
 import AccountSection from '@/components/settings/AccountSection';
 import DataManagementSection from '@/components/settings/DataManagementSection';
@@ -56,7 +58,7 @@ export default function SettingsScreen() {
     const isWeb = Platform.OS === 'web';
     const header = useScreenHeader({ title: i18nT('profile:app.tabs.settings.nastroyki_bc351c51') });
     const favoritesContext = useFavorites();
-    const { theme, setTheme } = useTheme();
+    const { theme, setTheme, seasonalTheme, setSeasonalTheme } = useTheme();
     const colors = useThemedColors();
     const dockPadding = useScrollBottomPadding(DESIGN_TOKENS.spacing.xxxl);
     const styles = useMemo(() => createSettingsStyles(colors, dockPadding), [colors, dockPadding]);
@@ -126,29 +128,32 @@ export default function SettingsScreen() {
         setAvatarPreviewUrl,
     });
 
-    const themeOptions = useMemo(
+    const themeOptions = useMemo<ThemeOption<Theme>[]>(
         () => [
             {
-                value: 'light' as Theme,
+                value: 'light',
                 label: i18nT('profile:app.tabs.settings.svetlaya_5011d52d'),
                 description: i18nT('profile:app.tabs.settings.po_umolchaniyu_70591a06'),
-                icon: 'sun' as const,
+                renderIcon: (size, color) => <Feather name="sun" size={size} color={color} />,
             },
             {
-                value: 'dark' as Theme,
+                value: 'dark',
                 label: i18nT('profile:app.tabs.settings.temnaya_f8f50e31'),
                 description: i18nT('profile:app.tabs.settings.komfortno_v_temnote_cdb57379'),
-                icon: 'moon' as const,
+                renderIcon: (size, color) => <Feather name="moon" size={size} color={color} />,
             },
             {
-                value: 'auto' as Theme,
+                value: 'auto',
                 label: i18nT('profile:app.tabs.settings.sistemnaya_c4a54d45'),
                 description: i18nT('profile:app.tabs.settings.sledovat_nastroykam_ustroystva_3f8a9b61'),
-                icon: 'smartphone' as const,
+                renderIcon: (size, color) => <Feather name="smartphone" size={size} color={color} />,
             },
         ],
         []
     );
+
+    // Праздничное оформление (#2376) — только web, см. SeasonalThemeToggle.
+    const seasonalThemeOptions = useMemo(() => (Platform.OS === 'web' ? getSeasonalThemeOptions() : []), []);
 
     const messengerOptions = useMemo(
         () => [
@@ -365,6 +370,20 @@ export default function SettingsScreen() {
                         setTheme={setTheme}
                         themeOptions={themeOptions}
                     />
+
+                    {seasonalThemeOptions.length > 0 ? (
+                        <ThemeSection
+                            styles={styles}
+                            colors={colors}
+                            theme={seasonalTheme}
+                            setTheme={setSeasonalTheme}
+                            themeOptions={seasonalThemeOptions}
+                            title={i18nT('navigationStatic:seasonalTheme.title')}
+                            description={i18nT('navigationStatic:seasonalTheme.description')}
+                            headerIcon="gift"
+                            accessibilityLabel={i18nT('navigationStatic:seasonalTheme.title')}
+                        />
+                    ) : null}
 
                     {/* AND-17: Biometric authentication toggle (native only) */}
                     {showBiometricToggle ? (

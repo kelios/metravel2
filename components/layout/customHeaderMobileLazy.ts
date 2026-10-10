@@ -4,6 +4,7 @@ export const isHeaderMobileMenuTestEnv =
   typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined
 
 export const ThemeToggleLazy = lazy(() => import('@/components/layout/ThemeToggle'))
+export const SeasonalThemeToggleLazy = lazy(() => import('@/components/layout/SeasonalThemeToggle'))
 
 export const CustomHeaderMobileMenuComp = isHeaderMobileMenuTestEnv
   ? (require('./CustomHeaderMobileMenu').default as React.ComponentType<any>)
