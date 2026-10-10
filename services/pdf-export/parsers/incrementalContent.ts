@@ -10,6 +10,8 @@ export interface IncrementalContentOptions {
   headingAnchorResolver?: (ordinal: number) => string | undefined
   /** Prepared page subdivision retains derived list starts; authored HTML uses the canonical policy. */
   preserveListStarts?: boolean
+  /** Private worker print policy; default ingestion retains authored disclosure elements. */
+  expandDisclosures?: boolean
   onMetrics?: (metrics: IncrementalContentMetrics) => void
 }
 
@@ -129,7 +131,7 @@ class TokenBudget {
 }
 
 type OpenElement = {
-  name: string; open: string; reopen: string; close: string; omitted: boolean
+  name: string; emittedName: string; open: string; reopen: string; close: string; omitted: boolean
   tableIndex?: number; rowIndex?: number; cellIndex?: number; nextChild?: number
   listItem?: number
   listRun?: 'ol' | 'ul'
@@ -160,6 +162,7 @@ class FragmentWriter {
     private readonly maxDepth: number,
     private readonly headingAnchorResolver?: IncrementalContentOptions['headingAnchorResolver'],
     private readonly preserveListStarts = false,
+    private readonly expandDisclosures = false,
   ) {
     // Leave room for sanitizer-added attributes and first-party image rewrites.
     this.rawBudget = Math.floor(maxFragment / 2)
@@ -169,16 +172,18 @@ class FragmentWriter {
     this.finishSurrogate()
     this.closePlainText()
     const name = originalName.toLowerCase()
+    const emittedName = this.expandDisclosures && name === 'details' ? 'div'
+      : this.expandDisclosures && name === 'summary' && this.stack.at(-1)?.name === 'details' ? 'h4' : name
     const isVoid = VOID_TAGS.has(name)
     const omitted = !!this.omittedDepth || OMIT_CONTENT.has(name) || name === 'image'
     if (!isVoid && this.stack.length >= this.maxDepth) {
       throw new IncrementalContentError('SOURCE_NESTING_TOO_DEEP')
     }
-    const open = omitted || UNWRAP.has(name) ? '' : `<${name}${Object.entries(attrs)
+    const open = omitted || UNWRAP.has(name) ? '' : `<${emittedName}${Object.entries(attrs)
       .map(([key, value]) => ` ${key.toLowerCase()}="${escapeAttribute(value)}"`).join('')}>`
-    const close = open && !isVoid ? `</${name}>` : ''
+    const close = open && !isVoid ? `</${emittedName}>` : ''
     // The source destination exists only once, even when its element continues.
-    const reopen = open ? `<${name}${Object.entries(attrs)
+    const reopen = open ? `<${emittedName}${Object.entries(attrs)
       .filter(([key]) => !['id', 'name'].includes(key.toLowerCase()))
       .map(([key, value]) => ` ${key.toLowerCase()}="${escapeAttribute(value)}"`).join('')}>` : ''
     if (open) {
@@ -192,7 +197,7 @@ class FragmentWriter {
       }
     }
     if (!isVoid) {
-      const element: OpenElement = { name, open, reopen, close, omitted }
+      const element: OpenElement = { name, emittedName, open, reopen, close, omitted }
       if (name === 'table') {
         element.tableIndex = this.nextTable++
         element.nextChild = 0
@@ -330,7 +335,7 @@ class FragmentWriter {
         })
       }
     }
-    this.continuedPath = this.stack.filter((entry) => entry.open).map((entry) => entry.name)
+    this.continuedPath = this.stack.filter((entry) => entry.open).map((entry) => entry.emittedName)
     const table = this.stack.slice().reverse().find((entry) => entry.name === 'table')
     const row = this.stack.slice().reverse().find((entry) => entry.name === 'tr')
     const cell = this.stack.slice().reverse().find((entry) => entry.name === 'td' || entry.name === 'th')
@@ -367,7 +372,7 @@ export async function* incrementalContent(
   const maxToken = budget(options.maxTokenChars, 65536, 64)
   const maxDepth = budget(options.maxDepth, 32, 1)
   const maxInput = budget(options.maxInputChunkChars, 65536, 1)
-  const writer = new FragmentWriter(maxFragment, maxDepth, options.headingAnchorResolver, options.preserveListStarts)
+  const writer = new FragmentWriter(maxFragment, maxDepth, options.headingAnchorResolver, options.preserveListStarts, options.expandDisclosures)
   const tokenBudget = new TokenBudget(maxToken)
   const parser = new Parser({
     onopentag: (name, attrs) => writer.open(name, attrs),

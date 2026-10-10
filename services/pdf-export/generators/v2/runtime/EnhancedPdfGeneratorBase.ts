@@ -69,6 +69,8 @@ export class EnhancedPdfGeneratorBase {
   private themeName: string;
   private selectedQuotes?: { cover?: TravelQuote; final?: TravelQuote };
   protected currentSettings?: BookSettings;
+  protected workerImageEffects = false;
+  private blockRendererWorkerTheme?: string;
   protected finalRenderer!: RuntimeFinalRenderer;
   protected galleryRenderer!: RuntimeGalleryRenderer;
   private mapRenderer!: RuntimeMapRenderer;
@@ -135,7 +137,7 @@ export class EnhancedPdfGeneratorBase {
   }
 
   protected initRenderers(): void {
-    const ctx = { theme: this.theme, settings: this.currentSettings };
+    const ctx = { theme: this.theme, settings: this.currentSettings, workerThemeId: this.workerImageEffects ? this.theme.name : undefined };
     this.finalRenderer = new RuntimeFinalRenderer(ctx);
     this.galleryRenderer = new RuntimeGalleryRenderer(ctx);
     this.mapRenderer = new RuntimeMapRenderer(ctx);
@@ -713,7 +715,7 @@ export class EnhancedPdfGeneratorBase {
    * Получает CSS-фильтр для изображений в зависимости от темы
    */
   private getImageFilterStyle(): string {
-    return getImageFilterStyle(this.theme.imageFilter);
+    return getImageFilterStyle(this.theme.imageFilter, this.workerImageEffects ? this.theme.name : undefined);
   }
 
   /**
@@ -766,9 +768,11 @@ export class EnhancedPdfGeneratorBase {
   }
 
   protected async ensureBlockRenderer(): Promise<BlockRenderer> {
-    if (this.blockRenderer) return this.blockRenderer;
+    const workerTheme = this.workerImageEffects ? this.theme.name : undefined;
+    if (this.blockRenderer && this.blockRendererWorkerTheme === workerTheme) return this.blockRenderer;
     const mod = await import('../../../renderers/BlockRenderer');
-    this.blockRenderer = new mod.BlockRenderer(this.theme);
+    this.blockRenderer = new mod.BlockRenderer(this.theme, workerTheme);
+    this.blockRendererWorkerTheme = workerTheme;
     return this.blockRenderer;
   }
 

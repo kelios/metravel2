@@ -1,8 +1,9 @@
 /** @jest-environment node */
+import { workerImageFilterStyle } from '@/services/pdf-export/segments/workerImageEffects'
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { Page, BrowserContext } from 'playwright'
-import { assertPrintResourceBinding, PRINT_ASSET_RECIPE, type PrintResourceBinding } from '@/services/pdf-export/segments/printAssetsTypes'
+import { assertPrintResourceBinding, assertPrintVariantBinding, PRINT_VARIANT_RECIPE, PRINT_ASSET_RECIPE, type PrintResourceBinding } from '@/services/pdf-export/segments/printAssetsTypes'
 import { PrintAssetCache, PRINT_RESOURCE_POLICY_HASH, checkPrintWorkingBudget, encodePrintImage, printDimensions, transformPrintResourceUrls } from '@/workers/book-renderer/printAssets'
 import { canonicalJson, readBoundedBytes, sha256 } from '@/workers/book-renderer/filesystem'
 import { DEFAULT_RENDERER_RESOURCE_PROFILE } from '@/workers/book-renderer/measurement'
@@ -56,6 +57,15 @@ it('charges original protocol transport, encoder pixels and alpha scratch instea
   expect(() => checkPrintWorkingBudget([item], { ...DEFAULT_RENDERER_RESOURCE_PROFILE, decoded_portion_pixels: 51_599 })).toThrow('WORKER_PAGE_IMAGE_BUDGET_EXCEEDED')
 })
 
+it('charges the color working buffer and every retained variant before accepting a portion', () => {
+  const unfiltered = { ...binding(), variant_hash: 'f'.repeat(64), effect: { theme_id: 'unfiltered', filter: 'none' as const }, filter_working_pixels: 0 }
+  const colored = { ...binding(), variant_hash: '9'.repeat(64), effect: { theme_id: 'sepia', filter: 'sepia(1)' as const }, filter_working_pixels: 10_000 }
+  expect(() => checkPrintWorkingBudget([colored], { ...DEFAULT_RENDERER_RESOURCE_PROFILE, decoded_portion_pixels: 61_600 })).not.toThrow()
+  expect(() => checkPrintWorkingBudget([colored], { ...DEFAULT_RENDERER_RESOURCE_PROFILE, decoded_portion_pixels: 61_599 })).toThrow('WORKER_PAGE_IMAGE_BUDGET_EXCEEDED')
+  expect(() => checkPrintWorkingBudget([unfiltered, colored], { ...DEFAULT_RENDERER_RESOURCE_PROFILE, decoded_portion_pixels: 113_199 })).toThrow('WORKER_PAGE_IMAGE_BUDGET_EXCEEDED')
+  expect(() => checkPrintWorkingBudget([{ ...colored, filter_working_pixels: 0 }], DEFAULT_RENDERER_RESOURCE_PROFILE)).toThrow('SEGMENT_RESOURCE_BINDING_INVALID')
+})
+
 it('clears parent bindings on subdivision so no-image text and child gallery sources must be rematerialized', async () => {
   const source: BookSegmentSource = { source_schema_version: 3, resource_bindings: [binding()], resource_bindings_hash: 'f'.repeat(64),
     resource_policy_hash: PRINT_RESOURCE_POLICY_HASH, encoder_identity_hash: sha256(canonicalJson(identity)),
@@ -73,12 +83,15 @@ it('clears parent bindings on subdivision so no-image text and child gallery sou
 })
 
 describe('alpha decision with a mocked native pixel port, not physical decoder evidence', () => {
-  it.each([false, true])('native tiles detect source transparency=%s including a single pixel after an opaque tile', async transparent => {
+  it.each([
+    [false, 'none'], [true, 'none'], [false, 'sepia(1)'], [true, 'sepia(1)'], [false, 'grayscale(1)'], [true, 'grayscale(1)'],
+  ] as const)('native tiles detect source transparency=%s before color filter %s', async (transparent, colorFilter) => {
     const originalDocument = Object.getOwnPropertyDescriptor(globalThis, 'document')
     const originalReader = Object.getOwnPropertyDescriptor(globalThis, 'FileReader')
     const calls: number[][] = []
+    const filters: string[] = []
     let draw: number[] = [], requestedMime = ''
-    const ctx = { clearRect: jest.fn(), drawImage: (_image: unknown, ...args: number[]) => { draw = args; calls.push(args) },
+    const ctx = { filter: 'none', clearRect: jest.fn(), drawImage: (_image: unknown, ...args: number[]) => { draw = args; calls.push(args); filters.push(ctx.filter) },
       getImageData: () => ({ data: new Uint8ClampedArray([1, 2, 3, transparent && draw.length === 8 && draw[0] === 2400 ? 0 : 255]) }) }
     const canvas = { width: 0, height: 0, getContext: () => ctx,
       toBlob: (callback: (value: { type: string; size: number }) => void, mime: string) => { requestedMime = mime; callback({ type: mime, size: 3 }) } }
@@ -88,10 +101,11 @@ describe('alpha decision with a mocked native pixel port, not physical decoder e
       readAsDataURL() { this.onload?.() }
     } })
     try {
-      const result = await encodePrintImage({ width: 2400, height: 1, alphaPossible: true, quality: .92, maxBytes: 100 })
+      const result = await encodePrintImage({ width: 2400, height: 1, alphaPossible: true, quality: .92, maxBytes: 100, colorFilter })
       expect(result.sourceHasAlpha).toBe(transparent)
       expect(requestedMime).toBe(transparent ? 'image/png' : 'image/jpeg')
       expect(calls.slice(0, 2)).toEqual([[0, 0, 2400, 1, 0, 0, 2400, 1], [2400, 0, 1, 1, 0, 0, 1, 1]])
+      expect(filters).toEqual(['none', 'none', colorFilter])
       expect(ctx.clearRect).toHaveBeenCalledTimes(2)
       expect(canvas.width).toBeLessThanOrEqual(PRINT_ASSET_RECIPE.max_long_edge)
     } finally {
@@ -214,6 +228,47 @@ describe('print cache integrity with a mocked codec port', () => {
       await writeFile(file, canonicalJson(descriptor))
       await expect(cache.prepareHtml(sourceHtml)).rejects.toThrow('PRINT_IMAGE_DIMENSIONS_INVALID')
     }
+  })
+  it('keeps unfiltered and baked occurrences distinct even when codec produces identical bytes', async () => {
+    page.evaluate.mockResolvedValueOnce({ width: 1, height: 1 }).mockResolvedValueOnce({ data: `data:image/png;base64,${png.toString('base64')}`, mime: 'image/png', hasAlpha: true, sourceHasAlpha: true })
+    const mixed = html() + `<img src="https://book-snapshot.invalid/assets/${checksum}" style="filter: blur(28px); ${workerImageFilterStyle('sepia(100%)', 'sepia')}">`
+    const first = await cache.prepareHtml(mixed, undefined, true)
+    expect(first.resource_bindings).toHaveLength(2)
+    expect(new Set(first.resource_bindings.map(item => item.variant_hash)).size).toBe(2)
+    expect(new Set(first.resource_bindings.map(item => item.served_checksum)).size).toBe(1)
+    for (const item of first.resource_bindings) {
+      expect(() => assertPrintVariantBinding(item)).not.toThrow()
+      expect(first.html).toContain(`/print-assets/${checksum}/${item.variant_hash}/${item.served_checksum}`)
+      const descriptor = JSON.parse(await readFile(path.join(index, item.descriptor_ref), 'utf8'))
+      expect(descriptor.recipe).toEqual(PRINT_VARIANT_RECIPE)
+      expect(descriptor.binding.effect).toEqual(item.effect)
+    }
+    expect(page.evaluate.mock.calls.filter(call => call[0] === encodePrintImage).map(call => call[1].colorFilter).sort()).toEqual(['none', 'sepia(1)'])
+    expect(await cache.prepareHtml(mixed, undefined, true)).toEqual(first)
+    expect(page.evaluate).toHaveBeenCalledTimes(4)
+    const source: BookSegmentSource = { ...first, source_schema_version: 4, page: { type: 'checklists' }, blocks: [], occurrences: [] }
+    await expect(cache.prepareHtml(mixed, source)).resolves.toEqual(first)
+    await expect(cache.prepareHtml(html(), source)).rejects.toThrow('PRINT_RESOURCE_BINDING_MISMATCH')
+    const colored = first.resource_bindings.find(item => item.effect?.filter === 'sepia(1)')!
+    const descriptorPath = path.join(index, colored.descriptor_ref)
+    const descriptor = JSON.parse(await readFile(descriptorPath, 'utf8')); descriptor.binding.effect.filter = 'grayscale(1)'
+    await writeFile(descriptorPath, canonicalJson(descriptor))
+    await expect(cache.prepareHtml(mixed, undefined, true)).rejects.toThrow('PRINT_IMAGE_EFFECT_UNSUPPORTED')
+    descriptor.binding.effect.theme_id = 'black-white'
+    await writeFile(descriptorPath, canonicalJson(descriptor))
+    await expect(cache.prepareHtml(mixed, undefined, true)).rejects.toThrow('PRINT_RESOURCE_BINDING_MISMATCH')
+  })
+  it('forces an otherwise safe JPEG through the encoder when its occurrence needs color transformation', async () => {
+    const jpeg = Buffer.from('ffd8ffe00002ffc00011080002000303011100021101031101ffd9', 'hex'), key = sha256(jpeg)
+    await writeFile(path.join(root, key), jpeg)
+    await writeFile(path.join(index, 'assets', `${key}.json`), canonicalJson({ checksum: key, file_ref: key, size_bytes: jpeg.length }))
+    page.evaluate.mockReset().mockResolvedValueOnce({ width: 3, height: 2 })
+      .mockResolvedValueOnce({ data: `data:image/jpeg;base64,${jpeg.toString('base64')}`, mime: 'image/jpeg', hasAlpha: false, sourceHasAlpha: false })
+    const coloredHtml = `<img src="https://book-snapshot.invalid/assets/${key}" style="${workerImageFilterStyle('sepia(100%)', 'sepia')}">`
+    const prepared = await cache.prepareHtml(coloredHtml, undefined, true)
+    expect(prepared.resource_bindings[0]).toMatchObject({ mode: 'encoded', effect: { theme_id: 'sepia', filter: 'sepia(1)' }, filter_working_pixels: 6 })
+    expect(() => assertPrintVariantBinding({ ...prepared.resource_bindings[0], mode: 'passthrough' })).toThrow('SEGMENT_RESOURCE_BINDING_INVALID')
+    expect(page.evaluate.mock.calls[1][1].colorFilter).toBe('sepia(1)')
   })
   it('rejects changed policy, actual encoder identity, binding digest and nonnumeric fields', async () => {
     const prepared = await cache.prepareHtml(html())

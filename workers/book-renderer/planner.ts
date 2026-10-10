@@ -37,7 +37,7 @@ export async function pinnedTravel(out: string, id: number): Promise<TravelForBo
 }
 
 /** Resolve forward numbered heading links with a disk index, not a whole-field tree/map. */
-async function anchorResolver(root: string, out: string, pinned: BookDocument, id: number, field: BookTextField, readBytes: number): Promise<(ordinal: number) => string | undefined> {
+async function anchorResolver(root: string, out: string, pinned: BookDocument, id: number, field: BookTextField, readBytes: number, expandDisclosures = false): Promise<(ordinal: number) => string | undefined> {
   const dir = resolve(travelDirectory(out, id), `anchors-${field}`)
   await makePrivateDirectory(dir)
   let number = 0
@@ -53,7 +53,7 @@ async function anchorResolver(root: string, out: string, pinned: BookDocument, i
       }
     }
   }
-  for await (const fragment of incrementalContent(textSource(root, out, pinned, id, field, readBytes))) {
+  for await (const fragment of incrementalContent(textSource(root, out, pinned, id, field, readBytes), { expandDisclosures })) {
     const parser = new Parser({ onopentag(name, attributes) {
       if (name === 'a' && /^#[^#?]+$/.test(attributes.href || '')) pending.push(attributes.href.slice(1))
     } })
@@ -115,20 +115,20 @@ export async function planBody(root: string, out: string, pinned: BookDocument, 
   const renderer = new CanonicalPageRenderer(pinned.settings.template)
   const plan: BodyPlan = { pages: 0, atlas_pages: 0, toc_pages: 0, blocks: 0, occurrences: 0 }
   const fitHtml: MeasurePage = async html => {
-    try { return await measure(prepare ? (await prepare(html)).html : html) } catch (error) {
+    try { return await measure(prepare ? (await prepare(html, undefined, true)).html : html) } catch (error) {
       if (error instanceof Error && ['WORKER_PAGE_IMAGE_BUDGET_EXCEEDED', 'WORKER_DOM_BUDGET_EXCEEDED', 'WORKER_HTML_BUDGET_EXCEEDED', 'WORKER_SEGMENT_PDF_BUDGET_EXCEEDED'].includes(error.message)) return { pages: 0, fits: false }
       throw error
     }
   }
   const add = async (source: BookSegmentSource, id: number, contentBudget = 1024): Promise<void> => {
     source = { ...source, source_schema_version: 2 }
-    let html = await renderer.renderBoundedPage(source.page, { start_page: plan.pages + 1, folio_area_mm: 12 }, pinned)
+    let html = await renderer.renderBoundedPage(source.page, { start_page: plan.pages + 1, folio_area_mm: 12 }, pinned, !!prepare)
     let result
     try {
       if (prepare) {
-        const prepared = await prepare(html)
+        const prepared = await prepare(html, undefined, true)
         source = { ...source, resource_bindings: prepared.resource_bindings, resource_bindings_hash: prepared.resource_bindings_hash,
-          resource_policy_hash: prepared.resource_policy_hash, encoder_identity_hash: prepared.encoder_identity_hash, source_schema_version: 3 }
+          resource_policy_hash: prepared.resource_policy_hash, encoder_identity_hash: prepared.encoder_identity_hash, source_schema_version: 4 }
         html = prepared.html
       }
       result = await measure(html)
@@ -165,7 +165,7 @@ export async function planBody(root: string, out: string, pinned: BookDocument, 
     await add({ page: { type: 'photo', travel }, blocks: [`${id}:photo`], occurrences: cover ? [cover.occurrence_key] : [] }, id)
     const qr = await QRCode.toDataURL(travel.url || '', { width: 110, margin: 0 })
     const small = await smallContent(root, out, pinned, id, travel, qr, readBytes)
-    const smallMeasurement = small ? await fitHtml(await renderer.renderBoundedPage(small.page, { start_page: plan.pages + 1, folio_area_mm: 12 }, pinned)) : undefined
+    const smallMeasurement = small ? await fitHtml(await renderer.renderBoundedPage(small.page, { start_page: plan.pages + 1, folio_area_mm: 12 }, pinned, !!prepare)) : undefined
     if (small && smallMeasurement?.fits && smallMeasurement.pages === 1) {
       await add(small, id)
     } else {
@@ -173,7 +173,7 @@ export async function planBody(root: string, out: string, pinned: BookDocument, 
     let first = true
     let emittedContent = false
     for (const field of FIELDS) {
-      const resolver = await anchorResolver(root, out, pinned, id, field, readBytes)
+      const resolver = await anchorResolver(root, out, pinned, id, field, readBytes, !!prepare)
       let pageHtml = ''
       let blocks: string[] = []
       let occurrences: string[] = []
@@ -182,12 +182,12 @@ export async function planBody(root: string, out: string, pinned: BookDocument, 
         await add({ page: { type: 'content', travel: { ...travel, url: undefined }, field, html: pageHtml, first, last: false, qr: '' }, blocks, occurrences }, id)
         first = false; emittedContent = true; pageHtml = ''; blocks = []; occurrences = []
       }
-      for await (const fragment of incrementalContent(textSource(root, out, pinned, id, field, readBytes), { headingAnchorResolver: resolver })) {
+      for await (const fragment of incrementalContent(textSource(root, out, pinned, id, field, readBytes), { headingAnchorResolver: resolver, expandDisclosures: !!prepare })) {
         const rewritten = await rewriteFragment(root, fragment, inline, profile)
         const candidate = mergeContentContinuation(pageHtml, { ...fragment, html: rewritten.html })
         const candidateSource = { type: 'content' as const, travel: { ...travel, url: undefined }, field, html: candidate, first, last: false, qr: '' }
         const fits = candidate.length <= 24_000 && blocks.length < 128 && occurrences.length + rewritten.occurrences.length <= 32
-          ? await fitHtml(await renderer.renderBoundedPage(candidateSource, { start_page: plan.pages + 1, folio_area_mm: 12 }, pinned)) : { fits: false, pages: 0 }
+          ? await fitHtml(await renderer.renderBoundedPage(candidateSource, { start_page: plan.pages + 1, folio_area_mm: 12 }, pinned, !!prepare)) : { fits: false, pages: 0 }
         if (!fits.fits || fits.pages !== 1) await flush()
         const next = { ...fragment, html: rewritten.html }
         pageHtml = pageHtml ? mergeContentContinuation(pageHtml, next) : continueContentOnPage(next).html
@@ -277,7 +277,7 @@ export async function planBody(root: string, out: string, pinned: BookDocument, 
   }
   if (pinned.settings.includeToc) {
     const addToc = async (source: BookSegmentSource): Promise<void> => {
-      const fit = await fitHtml(await renderer.renderBoundedPage(source.page, { start_page: 1, folio_area_mm: 12 }, pinned))
+      const fit = await fitHtml(await renderer.renderBoundedPage(source.page, { start_page: 1, folio_area_mm: 12 }, pinned, !!prepare))
       if (!fit.fits || fit.pages !== 1) {
         for await (const portion of subdivideSource(source)) await addToc(portion)
         return

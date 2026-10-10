@@ -1,10 +1,10 @@
-import { assertPrintResourceBinding, type PrintResourceBinding } from './printAssetsTypes'
+import { assertPrintResourceBinding, assertPrintVariantBinding, type PrintResourceBinding } from './printAssetsTypes'
 import type { BookDocument } from '@/types/bookDocument'
 import { CanonicalPageRenderer } from './CanonicalPageRenderer'
 import { BOOK_SEGMENT_SOURCE_SCHEMA_VERSION, BOOK_SEGMENT_LIMITS, type BookPageContext, type BookSegmentPage } from './types'
 
 export interface BookSegmentSource {
-  source_schema_version?: 1 | 2 | typeof BOOK_SEGMENT_SOURCE_SCHEMA_VERSION
+  source_schema_version?: 1 | 2 | 3 | typeof BOOK_SEGMENT_SOURCE_SCHEMA_VERSION
   resource_bindings?: PrintResourceBinding[]
   resource_bindings_hash?: string
   resource_policy_hash?: string
@@ -38,10 +38,13 @@ const LEGACY_SOURCE_TYPES = new Set(['cover', 'photo', 'legacy-content', 'conten
 export function assertBookSegmentSourceSchema(source: BookSegmentSource): void {
   if (!source || !source.page || typeof source.page !== 'object') throw new Error('SEGMENT_SOURCE_SCHEMA_UNSUPPORTED')
   const version = source.source_schema_version === undefined ? 1 : source.source_schema_version
-  if (version !== 1 && version !== 2 && version !== BOOK_SEGMENT_SOURCE_SCHEMA_VERSION) throw new Error('SEGMENT_SOURCE_SCHEMA_UNSUPPORTED')
-  if (version === 3 && (!Array.isArray(source.resource_bindings) || source.resource_bindings.length > 64 ||
+  if (version !== 1 && version !== 2 && version !== 3 && version !== BOOK_SEGMENT_SOURCE_SCHEMA_VERSION) throw new Error('SEGMENT_SOURCE_SCHEMA_UNSUPPORTED')
+  if (version >= 3 && (!Array.isArray(source.resource_bindings) || source.resource_bindings.length > 64 ||
     ![source.resource_bindings_hash, source.resource_policy_hash, source.encoder_identity_hash].every(value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value)))) throw new Error('SEGMENT_RESOURCE_BINDING_INVALID')
-  if (version === 3) source.resource_bindings!.forEach(assertPrintResourceBinding)
+  if (version >= 3) source.resource_bindings!.forEach(value => {
+    if (version === 4) assertPrintVariantBinding(value)
+    else { assertPrintResourceBinding(value); if (value.variant_hash !== undefined || value.effect !== undefined || value.filter_working_pixels !== undefined) throw new Error('SEGMENT_RESOURCE_BINDING_INVALID') }
+  })
   if (version < 3 && [source.resource_bindings, source.resource_bindings_hash, source.resource_policy_hash, source.encoder_identity_hash].some(value => value !== undefined)) throw new Error('SEGMENT_RESOURCE_BINDING_INVALID')
   if (!LEGACY_SOURCE_TYPES.has(source.page.type) && source.page.type !== 'map-text') throw new Error('SEGMENT_SOURCE_SCHEMA_UNSUPPORTED')
   if (version >= 2 && source.page.type === 'map' && (!Number.isSafeInteger(source.page.point_start) || source.page.point_start! < 0 || typeof source.page.show_coordinates !== 'boolean')) throw new Error('SEGMENT_MAP_POSITION_INVALID')
@@ -61,15 +64,15 @@ export async function renderSegment(
   assertBookSegmentSourceSchema(source)
   if (source.blocks.length > 256 || source.occurrences.length > 64) throw new Error('SEGMENT_COVERAGE_BUDGET_EXCEEDED')
   const renderer = new CanonicalPageRenderer(pinned.settings.template)
-  let html = await renderer.renderBoundedPage(source.page, request.page_context, pinned)
-  if (source.source_schema_version === 3) {
+  let html = await renderer.renderBoundedPage(source.page, request.page_context, pinned, source.source_schema_version === 4)
+  if ((source.source_schema_version ?? 1) >= 3) {
     if (!ports.prepare || !ports.verifyResources) throw new Error('SEGMENT_RESOURCE_PORT_REQUIRED')
     html = await ports.prepare(html, source)
   }
   if (new TextEncoder().encode(html).byteLength > BOOK_SEGMENT_LIMITS.html_bytes) throw new Error('SEGMENT_HTML_BUDGET_EXCEEDED')
   const measured = await ports.measure(html)
   if (!measured.fits || measured.pages !== 1) throw new Error('SEGMENT_REQUIRES_SUBDIVISION')
-  if (source.source_schema_version === 3) ports.verifyResources!()
+  if ((source.source_schema_version ?? 1) >= 3) ports.verifyResources!()
   const expected = { blocks: source.blocks.length, mediaOccurrences: source.occurrences.length }
   return { ...await ports.persist(html), measured_pages: measured.pages, expected, completed: { ...expected } }
 }

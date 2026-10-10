@@ -73,7 +73,7 @@ async function verifyArtifact(directory, expectedHash) {
   assert(artifact.startsWith(path.join(ROOT, '.codex-temp') + path.sep), 'Artifact must be in ignored .codex-temp/')
   assert.equal(await fsp.realpath(artifact), artifact, 'Artifact root/ancestor must not be a symlink')
   const manifest = JSON.parse(await fsp.readFile(privateRef(artifact, 'renderer-manifest.json'), 'utf8'))
-  assert.equal(manifest.prepared_source_schema_version, 3, 'Unsupported prepared source artifact')
+  assert.equal(manifest.prepared_source_schema_version, 4, 'Unsupported prepared source artifact')
   assert.equal(manifest.content_hash, expectedHash, 'Artifact differs from reviewed content hash')
   const digest = crypto.createHash('sha256')
   const files = [...manifest.files].sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0)
@@ -165,6 +165,10 @@ function corpus(suite) {
   const result = []
   if (suite !== 'stress') {
     for (const mediaFixture of ['opaque-rgba', 'single-alpha', 'rotated-png', 'rotated-webp']) result.push({ name: `print-${mediaFixture}`, mediaFixture, travels: [{ ...small, routeThumbnails: true }], settings: { includeMap: true, includeGallery: true, includeToc: false, photoPageLayout: 'framed' } })
+    for (const [template, mediaFixture] of [['sepia', 'opaque-rgba'], ['sepia', 'single-alpha'], ['black-white', 'opaque-rgba']]) result.push({
+      name: `effect-${template}-${mediaFixture}`, mediaFixture, travels: [{ ...small, routeThumbnails: true }],
+      settings: { template, includeMap: true, includeGallery: true, includeToc: true, galleryLayout: 'slideshow' },
+    })
     for (const template of THEMES) result.push({ name: `theme-${template}`, travels: [small], settings: {
       title: 'Pinned book title', subtitle: 'Pinned subtitle', template, includeMap: true, includeToc: true,
       includeChecklists: true, galleryPhotosPerPage: 0, galleryColumns: 4, showCaptions: true, photoPageLayout: 'framed',
@@ -279,7 +283,7 @@ function renderedMapPoints(html, originalHash = value => value) {
         assert(id && Number.isSafeInteger(ordinal) && ordinal > 0, 'Missing map point identity')
         active = { id, ordinal, images: [], depth }; points.push(active)
       }
-      if (active && name === 'img' && /^https:\/\/book-snapshot\.invalid\/(?:assets\/[a-f0-9]{64}|print-assets\/[a-f0-9]{64}\/[a-f0-9]{64})$/.test(attributes.src || '')) active.images.push(originalHash(attributes.src.split('/').pop(), attributes.src))
+      if (active && name === 'img' && /^https:\/\/book-snapshot\.invalid\/(?:assets\/[a-f0-9]{64}|print-assets\/[a-f0-9]{64}\/(?:[a-f0-9]{64}\/)?[a-f0-9]{64})$/.test(attributes.src || '')) active.images.push(originalHash(attributes.src.split('/').pop(), attributes.src))
     },
     onclosetag() { if (active?.depth === depth) active = null; depth-- },
   }).end(html)
@@ -310,9 +314,11 @@ async function verifyPrintResources(fixture, out, row, html, certificate, manife
   const sourceBytes = await fsp.readFile(privateRef(out, row.segment_ref))
   assert.equal(hash(sourceBytes), row.source_checksum, 'Prepared source differs from committed plan')
   const source = JSON.parse(sourceBytes)
-  assert.equal(source.source_schema_version, 3)
+  assert([3, 4].includes(source.source_schema_version))
+  const variants = source.source_schema_version === 4
+  const recipe = variants ? manifest.print_variant_recipe : manifest.print_asset_recipe
   assert.equal(source.resource_bindings_hash, hash(canonical(source.resource_bindings)))
-  assert.equal(source.resource_policy_hash, hash(canonical(manifest.print_asset_recipe)))
+  assert.equal(source.resource_policy_hash, hash(canonical(recipe)))
   assert.equal(source.encoder_identity_hash, hash(canonical(certificate.print_encoder_identity)))
   for (const key of ['resource_bindings_hash', 'resource_policy_hash', 'encoder_identity_hash']) assert.equal(row[key], source[key])
   for (const key of Object.keys(manifest.print_encoder_pin)) assert.equal(certificate.print_encoder_identity[key], manifest.print_encoder_pin[key])
@@ -320,8 +326,17 @@ async function verifyPrintResources(fixture, out, row, html, certificate, manife
   const byServed = new Map(), originals = new Set()
   const { imageSize } = require('image-size')
   for (const binding of source.resource_bindings) {
-    assert(!originals.has(binding.original_checksum), 'Repeated resource binding')
-    originals.add(binding.original_checksum)
+    const identity = variants ? binding.variant_hash : binding.original_checksum
+    assert(!originals.has(identity), 'Repeated resource binding')
+    originals.add(identity)
+    if (variants) {
+      const effect = binding.effect
+      assert(effect && Object.keys(effect).length === 2 && ((effect.theme_id === 'unfiltered' && effect.filter === 'none') ||
+        (effect.theme_id === 'sepia' && effect.filter === 'sepia(1)') || (effect.theme_id === 'black-white' && effect.filter === 'grayscale(1)')), 'Unsupported effect intent')
+      if (effect.filter !== 'none') assert.equal(effect.theme_id, fixture.document.settings.template, 'Effect differs from pinned theme')
+      assert.equal(binding.variant_hash, hash(canonical([binding.original_checksum, effect, source.resource_policy_hash, source.encoder_identity_hash])), 'Variant identity differs from source/policy/encoder')
+      assert.equal(binding.filter_working_pixels, effect.filter === 'none' ? 0 : binding.served_pixels, 'Uncharged filter allocation')
+    }
     const chunk = fixture.manifest.find(value => value.kind === 'media' && value.checksum === binding.original_checksum)
     assert(chunk, 'Derivative origin is outside immutable snapshot')
     const original = await fsp.readFile(privateRef(fixture.jobDir, chunk.file_ref))
@@ -339,7 +354,7 @@ async function verifyPrintResources(fixture, out, row, html, certificate, manife
         assert.equal(descriptor.oriented_height, fixture.expected.print_media.oriented_height, 'Fixture EXIF orientation was ignored')
       }
     }
-    assert.deepEqual(descriptor.recipe, manifest.print_asset_recipe)
+    assert.deepEqual(descriptor.recipe, recipe)
     assert.deepEqual(descriptor.encoder_identity, certificate.print_encoder_identity)
     const expectedBinding = { ...binding }; delete expectedBinding.descriptor_ref; delete expectedBinding.descriptor_checksum
     assert.deepEqual(descriptor.binding, expectedBinding)
@@ -356,44 +371,56 @@ async function verifyPrintResources(fixture, out, row, html, certificate, manife
     assert.equal(mime, binding.mime)
     if (binding.mode === 'passthrough') {
       assert.equal(binding.mime, 'image/jpeg')
+      if (variants) assert.equal(binding.effect.filter, 'none', 'Filtered JPEG cannot pass through')
       assert.equal(binding.served_checksum, binding.original_checksum)
-      assert(original.length <= manifest.print_asset_recipe.jpeg_passthrough_bytes)
+      assert(original.length <= recipe.jpeg_passthrough_bytes)
       assert.equal(binding.width, descriptor.oriented_width); assert.equal(binding.height, descriptor.oriented_height)
     } else {
       assert.equal(binding.mode, 'encoded')
       assert.equal(dimensions.width, binding.width); assert.equal(dimensions.height, binding.height)
-      const scale = Math.min(1, manifest.print_asset_recipe.max_long_edge / Math.max(descriptor.oriented_width, descriptor.oriented_height),
-        Math.sqrt(manifest.print_asset_recipe.max_pixels / (descriptor.oriented_width * descriptor.oriented_height)))
+      const scale = Math.min(1, recipe.max_long_edge / Math.max(descriptor.oriented_width, descriptor.oriented_height),
+        Math.sqrt(recipe.max_pixels / (descriptor.oriented_width * descriptor.oriented_height)))
       assert.equal(binding.width, Math.max(1, Math.floor(descriptor.oriented_width * scale)))
       assert.equal(binding.height, Math.max(1, Math.floor(descriptor.oriented_height * scale)))
       if (descriptor.has_source_alpha || descriptor.has_output_alpha) assert.equal(binding.mime, 'image/png', 'Source alpha was flattened')
     }
-    assert(Math.max(binding.width, binding.height) <= manifest.print_asset_recipe.max_long_edge)
+    assert(Math.max(binding.width, binding.height) <= recipe.max_long_edge)
     assert.equal(binding.served_pixels, binding.width * binding.height)
     assert.equal(binding.recipe_hash, source.resource_policy_hash)
     assert.equal(binding.encoder_identity_hash, source.encoder_identity_hash)
-    byServed.set(`${binding.original_checksum}/${binding.served_checksum}`, binding.original_checksum)
+    byServed.set(`${binding.original_checksum}/${binding.variant_hash ? `${binding.variant_hash}/` : ''}${binding.served_checksum}`, binding)
   }
   const requested = new Set()
   // Only resources are inspected; authored text and hyperlink URLs remain source text.
-  const inspect = value => { for (const match of value.matchAll(/https:\/\/book-snapshot\.invalid\/(assets|print-assets)\/([a-f0-9]{64})(?:\/([a-f0-9]{64}))?/g)) {
-    assert.equal(match[1], 'print-assets', 'Schema3 still serves original encoding')
-    const pair = `${match[2]}/${match[3]}`
-    assert(byServed.has(pair), 'HTML references unbound served bytes'); requested.add(pair)
+  const effectOf = style => {
+    const effect = [...style.matchAll(/--metravel-print-effect\s*:\s*([^;]+)/g)], themes = [...style.matchAll(/--metravel-print-theme\s*:\s*([^;]+)/g)]
+    if (!effect.length && !themes.length) return { theme_id: 'unfiltered', filter: 'none' }
+    assert.equal(effect.length, 1); assert.equal(themes.length, 1)
+    const filters = [...style.matchAll(/(?:^|;)\s*filter\s*:\s*([^;]+)/g)]
+    assert(filters.length && filters.at(-1)[1].trim() === 'none', 'Baked effect still uses CSS filtering')
+    return { theme_id: themes[0][1].trim(), filter: effect[0][1].trim() }
+  }
+  const inspect = (value, effect = { theme_id: 'unfiltered', filter: 'none' }) => { for (const match of value.matchAll(/https:\/\/book-snapshot\.invalid\/(assets|print-assets)\/([a-f0-9]{64})(?:\/([a-f0-9]{64}))?(?:\/([a-f0-9]{64}))?/g)) {
+    assert.equal(match[1], 'print-assets', 'Prepared source still serves original encoding')
+    const pair = `${match[2]}/${match[3]}${match[4] ? `/${match[4]}` : ''}`
+    const binding = byServed.get(pair)
+    assert(binding, 'HTML references unbound served bytes')
+    if (variants) assert.deepEqual(binding.effect, effect, 'HTML occurrence changed its authorized effect')
+    requested.add(pair)
   } }
   let inStyle = false
   new Parser({ onopentag(name, attributes) {
-    if (name === 'img' || name === 'source') inspect(attributes.src || '')
+    if (name === 'img' || name === 'source') inspect(attributes.src || '', variants && name === 'img' ? effectOf(attributes.style || '') : undefined)
     if (name === 'video') inspect(attributes.poster || '')
     for (const match of (attributes.style || '').matchAll(/url\(([^)]*)\)/g)) inspect(match[1])
     if (name === 'style') inStyle = true
   }, ontext(text) { if (inStyle) for (const match of text.matchAll(/url\(([^)]*)\)/g)) inspect(match[1]) }, onclosetag(name) { if (name === 'style') inStyle = false } }).end(html)
   assert.equal(requested.size, byServed.size, 'Prepared binding was never referenced by HTML')
   for (const served of row.served_resources) {
-    assert.equal(byServed.get(`${served.original_checksum}/${served.served_checksum}`), served.original_checksum, 'Actual response lacks origin binding')
-    assert(requested.has(`${served.original_checksum}/${served.served_checksum}`), 'Receipt claims unrequested resource')
+    assert.equal(byServed.get(`${served.original_checksum}/${served.variant_hash ? `${served.variant_hash}/` : ''}${served.served_checksum}`)?.original_checksum, served.original_checksum, 'Actual response lacks origin binding')
+    assert(requested.has(`${served.original_checksum}/${served.variant_hash ? `${served.variant_hash}/` : ''}${served.served_checksum}`), 'Receipt claims unrequested resource')
   }
-  const actual = new Set(row.served_resources.map(value => `${value.original_checksum}/${value.served_checksum}`))
+  const actual = new Set(row.served_resources.map(value => `${value.original_checksum}/${value.variant_hash ? `${value.variant_hash}/` : ''}${value.served_checksum}`))
   assert.equal(actual.size, row.served_resources.length, 'Duplicate actual resource response identity')
   for (const served of requested) assert(actual.has(served), 'HTML resource was never served during measurement')
   return source
@@ -405,9 +432,9 @@ async function verifyResult(fixture, out, manifest, artifact, profile) {
   const theme = PDF_THEMES[fixture.document.settings.template]
   assert(theme, 'Unknown pinned theme')
   const certificate = JSON.parse(await fsp.readFile(path.join(out, 'certificate.json'), 'utf8'))
-  assert.equal(certificate.prepared_source_schema_version, 3, 'Certificate source schema differs from artifact')
+  assert.equal(certificate.prepared_source_schema_version, 4, 'Certificate source schema differs from artifact')
   assert.equal(certificate.print_resource_policy_hash, manifest.print_resource_policy_hash)
-  assert.equal(manifest.print_resource_policy_hash, hash(fixtureHelper().fixtureCanonicalJson(manifest.print_asset_recipe)))
+  assert.equal(manifest.print_resource_policy_hash, hash(fixtureHelper().fixtureCanonicalJson(manifest.print_variant_recipe)))
   assert.equal(certificate.measured, true, 'Injected measurements cannot pass physical acceptance')
   if (profile) assert.deepEqual(certificate.resource_profile, profile.limits.renderer_resources, 'Renderer ignored supplied B2 resource profile')
   assert.equal(certificate.renderer_version, manifest.renderer_version)
@@ -499,15 +526,15 @@ async function verifyResult(fixture, out, manifest, artifact, profile) {
     if (row.type === 'content' || row.type === 'gallery' || row.type === 'gallery-caption' || row.type === 'map' || row.type === 'map-text') {
       let images = 0
       new Parser({ onopentag(name, attributes) {
-        if (name === 'img' && /^https:\/\/book-snapshot\.invalid\/(?:assets\/[0-9a-f]{64}|print-assets\/[0-9a-f]{64}\/[0-9a-f]{64})$/.test(attributes.src || '') && attributes['aria-hidden'] !== 'true') images++
+        if (name === 'img' && /^https:\/\/book-snapshot\.invalid\/(?:assets\/[0-9a-f]{64}|print-assets\/[0-9a-f]{64}\/(?:[0-9a-f]{64}\/)?[0-9a-f]{64})$/.test(attributes.src || '') && attributes['aria-hidden'] !== 'true') images++
       } }).end(bytes.toString('utf8'))
       assert.equal(images, row.occurrences.length, 'Media receipts differ from rendered images')
     }
     const source = await verifyPrintResources(fixture, out, row, bytes.toString('utf8'), certificate, manifest)
     if (!row.frontmatter) {
-      assert.equal(source.source_schema_version, 3, 'Plan source omitted pinned schema')
+      assert.equal(source.source_schema_version, 4, 'Plan source omitted pinned schema')
       for (const point of renderedMapPoints(bytes.toString('utf8'), (served, url) => {
-        const original = url.split('/').at(-2)
+        const original = new URL(url).pathname.split('/')[2]
         const bound = source.resource_bindings.find(value => value.original_checksum === original && value.served_checksum === served)
         assert(bound, 'Map thumbnail has no immutable-origin binding')
         return bound.original_checksum

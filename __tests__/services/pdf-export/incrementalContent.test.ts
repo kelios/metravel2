@@ -1,5 +1,8 @@
 import { incrementalContent, IncrementalContentError } from '@/services/pdf-export/parsers/incrementalContent'
-import type { IncrementalContentMetrics, SafeContentFragment } from '@/services/pdf-export/parsers/incrementalContent'
+import type { IncrementalContentMetrics, IncrementalContentOptions, SafeContentFragment } from '@/services/pdf-export/parsers/incrementalContent'
+import { continueContentOnPage, mergeContentContinuation } from '@/services/pdf-export/segments/contentContinuation'
+import { subdivideSource } from '@/services/pdf-export/segments/subdivideSource'
+import type { BookSegmentSource } from '@/services/pdf-export/segments/renderSegment'
 import { ContentParser } from '@/services/pdf-export/parsers/ContentParser'
 import { parseHtmlBody } from '@/services/pdf-export/parsers/contentParser/htmlTree.parse5'
 import { parseHtmlBody as parseWebHtmlBody } from '@/services/pdf-export/parsers/contentParser/htmlTree.web'
@@ -9,9 +12,9 @@ async function* chunks(html: string, size: number): AsyncGenerator<string> {
   for (let offset = 0; offset < html.length; offset += size) yield html.slice(offset, offset + size)
 }
 
-async function collect(source: AsyncIterable<string>, maxFragmentChars = 1024): Promise<SafeContentFragment[]> {
+async function collect(source: AsyncIterable<string>, maxFragmentChars = 1024, options: IncrementalContentOptions = {}): Promise<SafeContentFragment[]> {
   const result: SafeContentFragment[] = []
-  for await (const fragment of incrementalContent(source, { maxFragmentChars })) result.push(fragment)
+  for await (const fragment of incrementalContent(source, { maxFragmentChars, ...options })) result.push(fragment)
   return result
 }
 
@@ -20,6 +23,82 @@ function textOf(html: string): string {
 }
 
 describe('incremental book content ingestion', () => {
+  it('expands the real closed Luxembourg FAQ answer before print measurement without changing default ingestion', async () => {
+    const question = 'Сколько дней нужно на Mullerthal Trail?'
+    const answer = 'Весь маршрут — 112 км в трёх кольцах. Я прошла его за шесть дней с большим рюкзаком, и самый длинный день вышел больше 35 км. Если хочется идти без спешки и заходить в замки, закладывайте семь-восемь дней.'
+    const source = `<section class="seo-faq"><details><summary><strong>${question}</strong></summary><div><div><p>${answer}</p></div></div></details></section>`
+    const normal = await collect(chunks(source, 17), 4096)
+    expect(await collect(chunks(source, 17), 4096, { expandDisclosures: false })).toEqual(normal)
+    expect(normal.map(fragment => fragment.html).join('')).toContain('<details>')
+    const expanded = await collect(chunks(source, 1), 4096, { expandDisclosures: true })
+    const html = expanded.reduce((previous, fragment) => mergeContentContinuation(previous, fragment), '')
+    expect(html).not.toMatch(/<\/?(?:details|summary)\b/)
+    expect(parseHtmlBody(html)?.querySelector('h4')?.textContent).toBe(question)
+    expect(textOf(html)).toBe(question + answer)
+    const opened = source.replace('<details>', '<details open>')
+    expect((await collect(chunks(opened, 17), 4096, { expandDisclosures: true })).map(fragment => textOf(fragment.html)).join('')).toBe(question + answer)
+  })
+
+  it('keeps long nested questions, answers, links, images, table cells and list numbering across disclosure continuations', async () => {
+    const source = '<details id="faq"><summary id="question">' + 'Question 😀 '.repeat(50)
+      + '<a href="#answer">question link</a><img src="https://example.com/question.jpg"></summary>'
+      + '<details id="nested"><summary>Nested question</summary><p id="answer">'
+      + 'Answer 界 '.repeat(80) + '<a href="https://example.com/answer">answer link</a>'
+      + '<img src="https://example.com/answer.jpg"></p><table><tr><td>' + 'Cell '.repeat(70)
+      + '</td><td>LAST_CELL</td></tr></table><ol><li>' + 'Item '.repeat(90)
+      + '</li><li>' + 'Second item '.repeat(90) + 'LAST_ITEM</li></ol></details></details><summary>Standalone summary</summary>'
+    const fragments = await collect(chunks(source, 1), 512, { expandDisclosures: true })
+    expect(fragments).toEqual(await collect(chunks(source, 257), 512, { expandDisclosures: true }))
+    expect(fragments.some(fragment => fragment.continuationPath.includes('h4'))).toBe(true)
+    expect(fragments.some(fragment => fragment.continuationPath.includes('td'))).toBe(true)
+    expect(fragments.every(fragment => !fragment.continuationPath.includes('details') && !fragment.continuationPath.includes('summary'))).toBe(true)
+    expect(fragments.flatMap(fragment => fragment.imageOccurrences)).toEqual([
+      { index: 0, source: 'https://example.com/question.jpg' },
+      { index: 1, source: 'https://example.com/answer.jpg' },
+    ])
+    const expected = textOf(sanitizeRichTextForPdf(source))
+    expect(fragments.map(fragment => textOf(fragment.html)).join('')).toBe(expected)
+    const pages = fragments.map(fragment => continueContentOnPage(fragment))
+    expect(pages.map(fragment => textOf(fragment.html)).join('')).toBe(expected)
+    expect(fragments.some(fragment => fragment.listContinuation?.some(list => list.item === 2))).toBe(true)
+    expect(pages.some(fragment => /<ol start="2"/.test(fragment.html))).toBe(true)
+    const html = fragments.reduce((previous, fragment) => mergeContentContinuation(previous, fragment), '')
+    expect(textOf(html)).toBe(expected)
+    expect(html).not.toMatch(/<\/?details\b/)
+    expect(parseHtmlBody(html)?.querySelectorAll('h4')).toHaveLength(2)
+    expect(parseHtmlBody(html)?.querySelector('summary')?.textContent).toBe('Standalone summary')
+    for (const id of ['faq', 'question', 'nested', 'answer']) {
+      expect(fragments.map(fragment => fragment.html).join('').match(new RegExp(`id="${id}"`, 'g'))).toHaveLength(1)
+    }
+    expect(fragments.reduce((sum, fragment) => sum + fragment.sourceTextChars, 0)).toBe(expected.length)
+  })
+
+  it('preserves empty and summary-free disclosure content without inventing a Details label', async () => {
+    const source = '<details></details><details><p>Answer without question</p><details><p>Nested answer</p></details></details>'
+    const fragments = await collect(chunks(source, 3), 512, { expandDisclosures: true })
+    const html = fragments.reduce((previous, fragment) => mergeContentContinuation(previous, fragment), '')
+    expect(textOf(html)).toBe('Answer without questionNested answer')
+    expect(html).not.toMatch(/<\/?(?:details|summary|h4)\b/)
+  })
+
+  it('expands raw worker4 disclosures during adaptive subdivision but preserves published worker3 semantics', async () => {
+    const source: BookSegmentSource = { source_schema_version: 4, resource_bindings: [],
+      resource_bindings_hash: 'a'.repeat(64), resource_policy_hash: 'b'.repeat(64), encoder_identity_hash: 'c'.repeat(64),
+      page: { type: 'content', travel: { id: 761, name: 'Disclosure source' }, field: 'description', first: false, last: false, qr: '',
+        html: '<details><summary>Question</summary><p>' + 'Answer 😀 '.repeat(70) + '<img src="https://example.com/answer.jpg"></p></details>' },
+      blocks: ['761:description:faq'], occurrences: ['761:inline:answer'] }
+    const portions: BookSegmentSource[] = []
+    for await (const portion of subdivideSource(source, 512)) portions.push(portion)
+    expect(portions.length).toBeGreaterThan(2)
+    const html = portions.map(portion => 'html' in portion.page ? portion.page.html : '').join('')
+    expect(html).not.toMatch(/<\/?(?:details|summary)\b/)
+    expect(textOf(html)).toBe('Question' + 'Answer 😀 '.repeat(70))
+    expect(portions.flatMap(portion => portion.occurrences)).toEqual(source.occurrences)
+    const legacy: BookSegmentSource[] = []
+    for await (const portion of subdivideSource({ ...source, source_schema_version: 3 }, 512)) legacy.push(portion)
+    expect(legacy.some(portion => 'html' in portion.page && portion.page.html.includes('<details>'))).toBe(true)
+  })
+
   it('preserves small rich-text semantics with the canonical sanitizer and both parser adapters', async () => {
     const source = '<h2 id="route">Route</h2><p>Before <a href="https://example.com/path">link</a> '
       + '<strong>bold</strong> &amp; after.</p><ul><li>One</li><li>Two</li></ul>'

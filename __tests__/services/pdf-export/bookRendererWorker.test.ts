@@ -91,7 +91,7 @@ describe('isolated book renderer worker protocol', () => {
 
   it('publishes a pinned artifact with a closed dependency graph and reproducible file checksums', async () => {
     expect(artifactManifest.renderer_version).toBe(BOOK_RENDERER_VERSION)
-    expect((artifactManifest as typeof artifactManifest & { prepared_source_schema_version: number }).prepared_source_schema_version).toBe(3)
+    expect((artifactManifest as typeof artifactManifest & { prepared_source_schema_version: number }).prepared_source_schema_version).toBe(4)
     expect(artifactManifest.files.some((file) => file.path.includes('ContentParser'))).toBe(true)
     expect(artifactManifest.files.some((file) => file.path.includes('EnhancedPdfGeneratorBase'))).toBe(true)
     for (const file of artifactManifest.files) {
@@ -246,6 +246,57 @@ describe('isolated book renderer worker protocol', () => {
     await expect(new CanonicalPageRenderer(fixture.document.settings.template).renderBoundedPage({ type: 'gallery-caption',
       travel: { id: 25, name: 'Caption guard' }, photo_ordinal: 1, photo_id: 101, html: '<p>Hidden caption</p>' },
     { start_page: 7, folio_area_mm: 12 }, fixture.document)).rejects.toThrow('SEGMENT_CAPTION_SETTINGS_MISMATCH')
+  })
+
+  it('plans all four worker4 text fields with expanded answers before the first DOM measure and keeps source media once', async () => {
+    const fields = ['description', 'plus', 'minus', 'recommendation'] as const
+    const authored = Object.fromEntries(fields.map(field => [field, `<details><summary>${field} QUESTION</summary><p>${`${field} answer 😀 `.repeat(150)}${field === 'description' ? `<img src="${SNAPSHOT_FIXTURE_IMAGE_SRC}">` : ''}</p></details>`]))
+    const fixture = await buildSnapshotFixture(path.join(scratch, 'faq-planning-input'), {
+      travels: [{ id: 761, title: 'Streamed FAQ', ...authored }], settings: { includeGallery: false, includeMap: false },
+    })
+    const out = path.join(scratch, 'faq-planning-output')
+    await mkdir(out)
+    // runWorker initializes this ledger before calling planBody.
+    await mkdir(path.join(out, 'expected-occurrences'), { mode: 0o700 })
+    const { indexSnapshot } = nativeRequire(path.join(scratch, 'artifact', 'workers/book-renderer/snapshot.js')) as typeof import('@/workers/book-renderer/snapshot')
+    const { planBody } = nativeRequire(path.join(scratch, 'artifact', 'workers/book-renderer/planner.js')) as typeof import('@/workers/book-renderer/planner')
+    const { DEFAULT_RENDERER_RESOURCE_PROFILE } = nativeRequire(path.join(scratch, 'artifact', 'workers/book-renderer/measurement.js')) as typeof import('@/workers/book-renderer/measurement')
+    const summary = await indexSnapshot(fixture.jobDir, out, fixture.document, 17)
+    let measured = 0
+    // Protocol only: real PDF visibility is checked after independent review.
+    const measure = async (html: string) => {
+      measured++
+      expect(html).not.toMatch(/<\/?(?:details|summary)\b/)
+      return { pages: 1, fits: true }
+    }
+    const prepare = async (html: string) => ({ html, resource_bindings: [], resource_bindings_hash: 'a'.repeat(64), resource_policy_hash: 'b'.repeat(64), encoder_identity_hash: 'c'.repeat(64) })
+    await planBody(fixture.jobDir, out, fixture.document, summary, measure, 17, DEFAULT_RENDERER_RESOURCE_PROFILE, prepare, () => undefined)
+    expect(measured).toBeGreaterThan(4)
+    const rows = await readRows<{ ref: string }>(path.join(out, 'body.ndjson'))
+    const sources = await Promise.all(rows.map(async row => JSON.parse(await readFile(path.join(out, row.ref), 'utf8')) as import('@/services/pdf-export/segments/renderSegment').BookSegmentSource))
+    for (const field of fields) {
+      const pages = sources.flatMap(source => source.page.type === 'content' && source.page.field === field && source.page.html ? [source.page.html] : [])
+      expect(sourceText(pages.join(''))).toBe(sourceText(authored[field]))
+      expect(pages.join('')).toContain(`<h4>${field} QUESTION</h4>`)
+    }
+    expect(sources.flatMap(source => source.occurrences).sort()).toEqual([...fixture.expected.media_occurrence_keys].sort())
+  })
+
+  it('rejects unexpanded streamed worker4 disclosures before measuring while published/default markup stays compatible', async () => {
+    const fixture = await buildSnapshotFixture(path.join(scratch, 'faq-guard-input'), { travels: [{ id: 761, title: 'FAQ guard' }] })
+    const { renderSegment } = nativeRequire(path.join(scratch, 'artifact', 'services/pdf-export/segments/renderSegment.js')) as typeof import('@/services/pdf-export/segments/renderSegment')
+    const source: import('@/services/pdf-export/segments/renderSegment').BookSegmentSource = { source_schema_version: 4,
+      resource_bindings: [], resource_bindings_hash: 'a'.repeat(64), resource_policy_hash: 'b'.repeat(64), encoder_identity_hash: 'c'.repeat(64),
+      page: { type: 'content', travel: { id: 761, name: 'FAQ guard' }, field: 'description', first: false, last: false, qr: '',
+        html: '<details><summary>Question</summary><p>Hidden answer</p></details>' }, blocks: ['faq'], occurrences: [] }
+    const measure = jest.fn(async () => ({ pages: 1, fits: true }))
+    await expect(renderSegment({ segment_ref: 'faq.json', snapshot_hash: fixture.document.snapshot_hash, page_context: { start_page: 1, folio_area_mm: 12 } }, fixture.document,
+      { load: async () => source, prepare: async html => html, verifyResources: () => undefined, measure, persist: async () => ({ html_ref: 'page.html', checksum: '' }) }))
+      .rejects.toThrow('SEGMENT_DISCLOSURE_EXPANSION_REQUIRED')
+    expect(measure).not.toHaveBeenCalled()
+    const { CanonicalPageRenderer } = nativeRequire(path.join(scratch, 'artifact', 'services/pdf-export/segments/CanonicalPageRenderer.js')) as typeof import('@/services/pdf-export/segments/CanonicalPageRenderer')
+    const defaultHtml = await new CanonicalPageRenderer(fixture.document.settings.template).renderBoundedPage(source.page, { start_page: 1, folio_area_mm: 12 }, fixture.document)
+    expect(defaultHtml).toContain('<details>')
   })
 
   it('keeps full chapter/huge paragraph/table/repeated photo coverage across source read budgets', async () => {
@@ -423,7 +474,7 @@ describe('isolated book renderer worker protocol', () => {
     expect(new Set(placements).size).toBe(9)
   }, 90_000)
 
-  it.each([undefined, 1, 3, 4])('rejects a prepared map-text envelope with incompatible schema %s before measuring', async source_schema_version => {
+  it.each([undefined, 1, 3, 4, 5])('rejects a prepared map-text envelope with incompatible schema %s before measuring', async source_schema_version => {
     const fixture = await buildSnapshotFixture(path.join(scratch, `map-schema-${source_schema_version}-input`), { travels: [{ id: 1, title: 'Map schema' }], settings: { includeMap: true } })
     const planRoot = path.join(scratch, `map-schema-${source_schema_version}-plan`)
     await mkdir(planRoot)
@@ -435,7 +486,7 @@ describe('isolated book renderer worker protocol', () => {
     const measure = jest.fn(async () => ({ pages: 1, fits: true }))
     await expect(renderPreparedPage(fixture.jobDir, planRoot, path.join(scratch, `map-schema-${source_schema_version}-output`), fixture.document,
       { segment_ref: 'page.json', snapshot_hash: fixture.document.snapshot_hash, source_checksum: sha256(bytes), page_context: { start_page: 1, folio_area_mm: 12 }, expected: { blocks: source.blocks, occurrences: [] } }, { measure }))
-      .rejects.toThrow(source_schema_version === 3 ? 'SEGMENT_RESOURCE_BINDING_INVALID' : 'SEGMENT_SOURCE_SCHEMA_UNSUPPORTED')
+      .rejects.toThrow(source_schema_version === 3 || source_schema_version === 4 ? 'SEGMENT_RESOURCE_BINDING_INVALID' : 'SEGMENT_SOURCE_SCHEMA_UNSUPPORTED')
     expect(measure).not.toHaveBeenCalled()
   })
 

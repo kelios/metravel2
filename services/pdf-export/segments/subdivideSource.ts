@@ -7,7 +7,8 @@ import { escapeHtml } from '@/services/pdf-export/utils/htmlUtils'
 /** Subdivision changes only working pages, never drops a source placement. */
 export async function* subdivideSource(source: BookSegmentSource, contentBudget = 1024): AsyncGenerator<BookSegmentSource> {
   assertBookSegmentSourceSchema(source)
-  if (source.source_schema_version === 3) {
+  const expandDisclosures = source.source_schema_version === 4
+  if ((source.source_schema_version ?? 1) >= 3) {
     const unbound = { ...source }
     delete unbound.resource_bindings; delete unbound.resource_bindings_hash
     delete unbound.resource_policy_hash; delete unbound.encoder_identity_hash
@@ -21,6 +22,7 @@ export async function* subdivideSource(source: BookSegmentSource, contentBudget 
     for await (const fragment of incrementalContent((async function* () { yield page.html })(), {
       maxFragmentChars: contentBudget,
       preserveListStarts: true,
+      expandDisclosures,
     })) {
       const count = fragment.imageOccurrences.length
       yield { source_schema_version: 2, page: page.type === 'content'

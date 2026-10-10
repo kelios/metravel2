@@ -1,3 +1,4 @@
+import { workerImageFilterStyle } from '@/services/pdf-export/segments/workerImageEffects'
 // src/services/pdf-export/renderers/BlockRenderer.ts
 // ✅ АРХИТЕКТУРА: Рендерер блоков контента в HTML
 
@@ -33,7 +34,7 @@ const INFO_BLOCK_THEME_COLORS = {
  * Рендерер блоков контента
  */
 export class BlockRenderer {
-  constructor(private theme: PdfThemeConfig) {}
+  constructor(private theme: PdfThemeConfig, private workerThemeId?: string) {}
 
   private isShortTextBlock(block: ParsedContentBlock): boolean {
     if (block.type === 'heading') {
@@ -127,7 +128,7 @@ export class BlockRenderer {
             max-height: inherit;
             display: block;
             object-fit: contain;
-            ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
+            ${workerImageFilterStyle(this.theme.imageFilter, this.workerThemeId)}
           "
           onerror="${onError}"
         />

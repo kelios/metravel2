@@ -331,3 +331,77 @@ Actual Luxembourg media/text acceptance and all 20 themes with its real
 embedding even after JPEG encoding. The unchanged actual one-page/4MiB PDF guard,
 vector text and theme appearance must all pass; synthetic codec mocks establish
 protocol failure behavior only.
+
+
+## Prepared source schema 4: per-occurrence color variants
+
+Private worker-4 streamed content expands disclosures before any DOM measurement
+or adaptive subdivision. The bounded SAX writer emits `details` as static `div`
+containers and their direct-child `summary` as `h4`, keeping source-tag identity
+for closing events and emitted-tag identity for continuation/reopening. Nested,
+summary-free and continued answers remain printable without generated UA
+"Details" labels. Authored text order, source-text counts, media occurrences,
+links and one-time destinations remain attached to the same source ledger.
+Default ingestion and prepared sources 1/2/3 keep their published behavior.
+Worker-4 canonical rendering rejects an unexpanded streamed `details` before
+measurement rather than certifying hidden answers. Existing plans must be
+replanned with the new pinned artifact; saved HTML/text counts alone do not prove
+visibility. Acceptance requires the real Luxembourg FAQ answers (all six),
+including the formerly hidden answer on old page 75, in extracted PDF text and
+visible printed-page evidence after fresh measurement and pagination.
+
+The schema-4 artifact supersedes schema 3 for newly prepared plans. B1 document,
+settings version 1 and renderer version 1.0.0 are unchanged. Direct source 1/2
+rendering and source-3 recipe/cache/URL semantics remain compatible. Source 3
+still uses the original `PRINT_ASSET_RECIPE` and legacy policy hash; its prepared
+sources do not acquire new effects. `prepareSegmentSource` preserves a supplied
+source 3, and upgrades unbound source 1/2 to 4 (legacy map 1 needs explicit upgrade).
+B3 must accept the new exact artifact content/source hash and private schema 4
+before using new plans. Old jobs/artifacts are not silently substituted.
+
+`PRINT_VARIANT_RECIPE` version 2 retains full frame, maxedge 2400/5.76Mpx,
+JPEG q.92 and alpha PNG. The new bounded operation is an authorized canonical
+theme color effect: none, sepia(1) or grayscale(1). Only a canonical schema-4
+image-effect context emits the private CSS intent markers. Default shared
+web/native markup and source-3 CSS filters are unchanged. Authored/private
+markers, unknown effects, ambiguous winning styles and colored markers on an
+unbound resource fail with typed errors. Ordinary authored text/CSS/data that
+is outside this private context remains editorial source content.
+
+In the separate pinned decoder context, the color operation applies to the
+full-frame canvas before fixed encoding. A colored JPEG cannot pass through.
+Native source alpha scanning and output alpha checks still preserve transparency.
+The worker neutralizes the exact winning color-only theme CSS declaration with
+`filter:none` at its original cascade position. It does not delete a declaration
+and accidentally reactivate an earlier blur. Book covers or other originally
+unfiltered occurrences do not receive a global theme tint. Genuinely compound
+spatial decorative filters keep their original order/appearance and remain
+subject to actual PDF limits; no blur recipe or quality fallback is invented.
+
+Each schema-4 binding includes `variant_hash`, `effect:{theme_id,filter}` and
+`filter_working_pixels`. Variant identity is SHA256 of canonical JSON
+`[original_checksum,effect,resource_policy_hash,encoder_identity_hash]`.
+The resource policy hash comes from canonical `PRINT_VARIANT_RECIPE`; runtime
+metadata also retains the legacy recipe/hash. Descriptor and cache keys bind
+that complete identity. New URLs are
+`/print-assets/<originalSHA>/<variantSHA>/<servedSHA>`, allowing different
+variants or identical served bytes from one original without collapsing lineage.
+The request/source binding digest pins all variants; served receipts additionally
+include `variant_hash`. Missing/extra/duplicate variants fail closed. Snapshot
+media occurrence keys and source inclusion counts are independent of variants.
+
+Resource accounting charges every retained variant, source/served transport,
+alpha tiles/scratch, canvas and encoder pixels, plus one target-size filter
+working buffer for colored variants before allocation. Existing 8MiB/24Mpx
+resource, 24MiB/72Mpx portion and actual one-A4/4MiB PDF limits remain unchanged;
+these ledgers do not certify Linux B2 RSS/capacity. Subdivision clears prepared
+bindings and children must be independently materialized with their own effects.
+
+Independent acceptance checks original/descriptor/served bytes, variant identity,
+per-image effect markers and actual served receipts. Corpus includes opaque and
+single-alpha sepia plus opaque grayscale fixtures with mixed cover/gallery/map
+placements. Testing additionally requires the real Luxembourg photo in all
+20 themes, visual comparison against the original CSS effect, searchable text,
+full Luxembourg source/placements, and the existing contextless web/native goldens.
+A noisy/transparent or residual spatial-filter portion may still honestly fail
+fixed resource/PDF limits; no guard is raised to turn that failure into PASS.

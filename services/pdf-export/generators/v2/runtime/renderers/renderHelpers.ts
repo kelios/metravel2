@@ -1,3 +1,4 @@
+import { workerImageFilterStyle } from '@/services/pdf-export/segments/workerImageEffects'
 import type { BookSettings } from '@/types/bookSettings'
 import type { PdfThemeConfig } from '../../../../themes/PdfThemeConfig'
 import { escapeHtml } from '../../../../utils/htmlUtils'
@@ -7,6 +8,7 @@ export { escapeHtml, formatDays, getTravelLabel }
 
 export interface RuntimeRenderContext {
   theme: PdfThemeConfig
+  workerThemeId?: string
   settings?: BookSettings
 }
 
@@ -78,5 +80,5 @@ export function buildRunningHeader(
 }
 
 export function getImageFilterStyle(ctx: RuntimeRenderContext): string {
-  return ctx.theme.imageFilter ? `filter: ${ctx.theme.imageFilter};` : ''
+  return workerImageFilterStyle(ctx.theme.imageFilter, ctx.workerThemeId)
 }

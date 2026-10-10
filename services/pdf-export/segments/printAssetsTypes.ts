@@ -1,8 +1,15 @@
+import { assertWorkerImageEffect, type WorkerImageEffect } from './workerImageEffects'
 /** Private worker data only; original B1 snapshot/media identity never changes. */
 export const PRINT_ASSET_RECIPE = {
   version: 1, max_long_edge: 2400, max_pixels: 5_760_000, jpeg_quality: 0.92,
   jpeg_passthrough_bytes: 2097152,
   upscale: false, crop: false, alpha: 'preserve-png', color_space: 'srgb',
+} as const
+
+export const PRINT_VARIANT_RECIPE = {
+  version: 2, max_long_edge: 2400, max_pixels: 5_760_000, jpeg_quality: 0.92,
+  jpeg_passthrough_bytes: 2097152, upscale: false, crop: false, alpha: 'preserve-png', color_space: 'srgb',
+  color_transform: 'canonical-theme-color-only-v1',
 } as const
 
 export interface PrintEncoderIdentity {
@@ -16,6 +23,9 @@ export interface PrintEncoderIdentity {
 }
 
 export interface PrintResourceBinding {
+  variant_hash?: string
+  effect?: WorkerImageEffect
+  filter_working_pixels?: number
   original_checksum: string
   served_checksum: string
   descriptor_ref: string
@@ -63,3 +73,13 @@ export function assertPrintResourceBinding(value: PrintResourceBinding): void {
     (value.mode === 'passthrough' && (value.mime !== 'image/jpeg' || value.served_checksum !== value.original_checksum || value.alpha_canvas_pixels || value.alpha_scratch_bytes || value.canvas_pixels || value.encoder_pixels || value.transfer_bytes || value.pixel_scratch_bytes)) ||
     (value.mode === 'encoded' && (value.canvas_pixels !== value.served_pixels || value.encoder_pixels !== value.canvas_pixels || value.transfer_bytes !== Math.ceil(value.encoded_bytes / 3) * 4 || value.pixel_scratch_bytes !== value.width * Math.min(16, value.height) * 4))) throw new Error('SEGMENT_RESOURCE_BINDING_INVALID')
 }
+
+export function assertPrintVariantBinding(value: PrintResourceBinding): void {
+  assertPrintResourceBinding(value)
+  if (typeof value.variant_hash !== 'string' || !/^[a-f0-9]{64}$/.test(value.variant_hash) || !value.effect ||
+    !Number.isSafeInteger(value.filter_working_pixels) || value.filter_working_pixels !== (value.effect.filter === 'none' ? 0 : value.served_pixels) ||
+    (value.effect.filter !== 'none' && value.mode === 'passthrough')) throw new Error('SEGMENT_RESOURCE_BINDING_INVALID')
+  assertWorkerImageEffect(value.effect)
+}
+
+export interface PrintServedResource { original_checksum: string; served_checksum: string; variant_hash?: string }

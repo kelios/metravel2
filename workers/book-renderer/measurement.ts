@@ -5,7 +5,7 @@ import { imageSize } from 'image-size'
 import { BOOK_SEGMENT_LIMITS } from '@/services/pdf-export/segments/types'
 import type { BookMediaChunk } from '@/types/bookDocument'
 import { privatePath, readBoundedBytes, sha256, verifyFile } from './filesystem'
-import type { PreparedPrintResources, PrintEncoderIdentity, PrintResourceBinding } from '@/services/pdf-export/segments/printAssetsTypes'
+import type { PreparedPrintResources, PrintEncoderIdentity, PrintResourceBinding, PrintServedResource } from '@/services/pdf-export/segments/printAssetsTypes'
 import type { BookSegmentSource } from '@/services/pdf-export/segments/renderSegment'
 import { PrintAssetCache, printImageHeader } from './printAssets'
 import { loadAssetDescriptor, SNAPSHOT_ASSET_ORIGIN } from './snapshot'
@@ -13,11 +13,11 @@ import { loadAssetDescriptor, SNAPSHOT_ASSET_ORIGIN } from './snapshot'
 export interface PageMeasurement { pages: number; fits: boolean }
 export type MeasurePage = (html: string) => Promise<PageMeasurement>
 export interface PhysicalMeasurer {
-  prepareHtml: (html: string, pinned?: BookSegmentSource) => Promise<PreparedPrintResources>
+  prepareHtml: (html: string, pinned?: BookSegmentSource, variants?: boolean) => Promise<PreparedPrintResources>
   encoder_identity: PrintEncoderIdentity
   resource_policy_hash: string
   assertResourceServing: () => void
-  servedResources: () => Array<{ original_checksum: string; served_checksum: string }>
+  servedResources: () => PrintServedResource[]
   measure: MeasurePage
   fit: MeasurePage
   close: () => Promise<void>
@@ -121,7 +121,7 @@ export async function physicalMeasurer(root: string, out: string, fontsDir: stri
   let page: Page | undefined
   let printCache: PrintAssetCache | undefined
   let bindings = new Map<string, PrintResourceBinding>()
-  let served = new Map<string, { original_checksum: string; served_checksum: string }>()
+  let served = new Map<string, PrintServedResource>()
   let preparedResources = false
   let denied = false
   let routeError: Error | undefined
@@ -135,12 +135,14 @@ export async function physicalMeasurer(root: string, out: string, fontsDir: stri
     await context.route('**/*', async route => {
       try {
       const url = new URL(route.request().url())
-      if (url.origin === SNAPSHOT_ASSET_ORIGIN && /^\/print-assets\/[0-9a-f]{64}\/[0-9a-f]{64}$/.test(url.pathname)) {
-        const binding = bindings.get(url.pathname.split('/').at(-2)!)
-        if (!binding || binding.served_checksum !== url.pathname.split('/').at(-1)) throw new Error('PRINT_RESOURCE_BINDING_MISMATCH')
+      if (url.origin === SNAPSHOT_ASSET_ORIGIN && /^\/print-assets\/[0-9a-f]{64}\/(?:[0-9a-f]{64}\/)?[0-9a-f]{64}$/.test(url.pathname)) {
+        const parts = url.pathname.split('/')
+        const key = parts.at(-2)!
+        const binding = bindings.get(key)
+        if (!binding || binding.served_checksum !== parts.at(-1) || binding.original_checksum !== parts[2] || (binding.variant_hash ? parts.length !== 5 || binding.variant_hash !== key : parts.length !== 4)) throw new Error('PRINT_RESOURCE_BINDING_MISMATCH')
         const bytes = await printCache!.load(binding)
         if (sha256(bytes) !== binding.served_checksum) throw new Error('PRINT_RESOURCE_INTEGRITY_FAILED')
-        served.set(binding.original_checksum, { original_checksum: binding.original_checksum, served_checksum: binding.served_checksum })
+        served.set(key, { original_checksum: binding.original_checksum, served_checksum: binding.served_checksum, ...(binding.variant_hash ? { variant_hash: binding.variant_hash } : {}) })
         await route.fulfill({ body: bytes, contentType: binding.mime, headers: { 'Access-Control-Allow-Origin': '*' } })
       } else if (url.origin === SNAPSHOT_ASSET_ORIGIN && /^\/assets\/[0-9a-f]{64}$/.test(url.pathname)) {
         if (preparedResources) throw new Error('PRINT_RESOURCE_BINDING_MISMATCH')
@@ -242,17 +244,17 @@ export async function physicalMeasurer(root: string, out: string, fontsDir: stri
         })
       } finally { await page!.goto('about:blank'); await page!.requestGC() }
     }
-    return { prepareHtml: async (html, pinned) => {
-      const prepared = await printCache!.prepareHtml(html, pinned)
+    return { prepareHtml: async (html, pinned, variants) => {
+      const prepared = await printCache!.prepareHtml(html, pinned, variants)
       preparedResources = true
-      bindings = new Map(prepared.resource_bindings.map(value => [value.original_checksum, value]))
+      bindings = new Map(prepared.resource_bindings.map(value => [value.variant_hash ?? value.original_checksum, value]))
       return prepared
     }, encoder_identity: printCache.identity, resource_policy_hash: printCache.policyHash,
     assertResourceServing: () => {
       if (!preparedResources || served.size !== bindings.size) throw new Error('PRINT_RESOURCE_SERVING_INCOMPLETE')
-      for (const [original, binding] of bindings) if (served.get(original)?.served_checksum !== binding.served_checksum) throw new Error('PRINT_RESOURCE_SERVING_INCOMPLETE')
+      for (const [key, binding] of bindings) if (served.get(key)?.served_checksum !== binding.served_checksum || served.get(key)?.original_checksum !== binding.original_checksum || served.get(key)?.variant_hash !== binding.variant_hash) throw new Error('PRINT_RESOURCE_SERVING_INCOMPLETE')
     },
-    servedResources: () => [...served.values()].sort((a, b) => a.original_checksum.localeCompare(b.original_checksum)),
+    servedResources: () => [...served.values()].sort((a, b) => (a.variant_hash ?? a.original_checksum).localeCompare(b.variant_hash ?? b.original_checksum)),
     measure, fit: async html => {
       try { return await measure(html) } catch (error) {
         if (error instanceof Error && error.message === 'WORKER_SEGMENT_PDF_BUDGET_EXCEEDED') return { pages: 0, fits: false }

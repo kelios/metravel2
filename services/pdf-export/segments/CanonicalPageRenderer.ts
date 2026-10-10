@@ -1,4 +1,5 @@
 import type { BookDocument } from '@/types/bookDocument'
+import { Parser } from 'htmlparser2'
 import type { ParsedContentBlock } from '../parsers/ContentParser'
 import { downgradeNonPremiumSettings } from '../premiumSettingsGate'
 import { escapeHtml as sharedEscapeHtml } from '../utils/htmlUtils'
@@ -10,6 +11,7 @@ import { buildEntries as buildAtlasEntries } from '../generators/v2/runtime/atla
 import { renderAtlasIndexPage, renderAtlasMapPage } from '../generators/v2/runtime/atlas/htmlPages'
 import { BOOK_SEGMENT_LIMITS, type BookSegmentPage, type BookPageContext } from './types'
 import { translate } from '@/i18n'
+import { assertNoAuthoredImageEffectMarkers } from './workerImageEffects'
 
 /** Single-page facade over the same canonical theme, gates and page renderers. */
 export class CanonicalPageRenderer extends EnhancedPdfGeneratorBase {
@@ -18,10 +20,14 @@ export class CanonicalPageRenderer extends EnhancedPdfGeneratorBase {
     source: BookSegmentPage,
     context: BookPageContext,
     pinned: BookDocument,
+    bakeImageEffects = false,
   ): Promise<string> {
     if (!Number.isSafeInteger(context.start_page) || context.start_page < 1 || context.folio_area_mm !== 12) {
       throw new Error('SEGMENT_PAGE_CONTEXT_INVALID');
     }
+    this.workerImageEffects = bakeImageEffects;
+    const authoredFields = ['html' in source ? source.html : undefined, ...('travel' in source ? [source.travel.description, source.travel.plus, source.travel.minus, source.travel.recommendation] : [])];
+    if (bakeImageEffects) for (const value of authoredFields) if (typeof value === 'string') assertNoAuthoredImageEffectMarkers(value);
     const settings = downgradeNonPremiumSettings(pinned.settings, pinned.entitlement.premium);
     this.applyPremiumThemeGate(pinned.entitlement.premium);
     this.currentSettings = settings;
@@ -47,6 +53,12 @@ export class CanonicalPageRenderer extends EnhancedPdfGeneratorBase {
       case 'gallery-caption':
       case 'map-text': {
         if (source.html.length > BOOK_SEGMENT_LIMITS.content_chars) throw new Error('SEGMENT_SOURCE_BUDGET_EXCEEDED');
+        if (bakeImageEffects) {
+          const disclosureGuard = new Parser({ onopentag(name) {
+            if (name === 'details') throw new Error('SEGMENT_DISCLOSURE_EXPANSION_REQUIRED');
+          } });
+          disclosureGuard.end(source.html);
+        }
         if (source.type === 'gallery-caption' && (!settings.includeGallery || settings.showCaptions === false || settings.captionPosition === 'none')) throw new Error('SEGMENT_CAPTION_SETTINGS_MISMATCH');
         if (source.type === 'gallery-caption' && (!Number.isSafeInteger(source.photo_ordinal) || source.photo_ordinal < 1)) throw new Error('SEGMENT_GALLERY_POSITION_INVALID');
         if (source.type === 'map-text' && (!settings.includeMap || (source.field === 'coord' && !settings.showCoordinatesOnMapPage))) throw new Error('SEGMENT_MAP_SETTINGS_MISMATCH');

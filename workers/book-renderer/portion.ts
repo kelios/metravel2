@@ -5,7 +5,7 @@ import { assertBookDocument } from '@/services/pdf-export/segments/snapshotAdapt
 import { assertBookSegmentSourceSchema, renderSegment, type BookSegmentSource, type SegmentRenderRequest, type SegmentRenderResult } from '@/services/pdf-export/segments/renderSegment'
 import { CanonicalPageRenderer } from '@/services/pdf-export/segments/CanonicalPageRenderer'
 import type { BookPageContext } from '@/services/pdf-export/segments/types'
-import type { PrintEncoderIdentity } from '@/services/pdf-export/segments/printAssetsTypes'
+import type { PrintEncoderIdentity, PrintServedResource } from '@/services/pdf-export/segments/printAssetsTypes'
 import { BOOK_SEGMENT_LIMITS } from '@/services/pdf-export/segments/types'
 import { canonicalJson, privatePath, readBoundedBytes, sha256 } from './filesystem'
 import { DEFAULT_RENDERER_RESOURCE_PROFILE, physicalMeasurer, validateRendererResourceProfile, type MeasurePage, type RendererResourceProfile, type PhysicalMeasurer } from './measurement'
@@ -39,16 +39,16 @@ export interface PreparedPageReceipt extends SegmentRenderResult {
   resource_policy_hash?: string
   encoder_identity_hash?: string
   encoder_identity?: PrintEncoderIdentity
-  served_resources?: Array<{ original_checksum: string; served_checksum: string }>
+  served_resources?: PrintServedResource[]
 }
 
 /** B3 must commit the returned source/checksum before consuming the bounded portion adapter. */
 export async function prepareSegmentSource(source: BookSegmentSource, pinned: BookDocument, page: BookPageContext, physical: PhysicalMeasurer): Promise<BookSegmentSource> {
   assertBookSegmentSourceSchema(source)
   if ((source.source_schema_version ?? 1) === 1 && source.page.type === 'map') throw new Error('SEGMENT_SOURCE_SCHEMA_UPGRADE_REQUIRED')
-  const html = await new CanonicalPageRenderer(pinned.settings.template).renderBoundedPage(source.page, page, pinned)
-  const prepared = await physical.prepareHtml(html, source.source_schema_version === 3 ? source : undefined)
-  return { ...source, source_schema_version: 3, resource_bindings: prepared.resource_bindings,
+  const html = await new CanonicalPageRenderer(pinned.settings.template).renderBoundedPage(source.page, page, pinned, source.source_schema_version !== 3)
+  const prepared = await physical.prepareHtml(html, (source.source_schema_version ?? 1) >= 3 ? source : undefined, source.source_schema_version !== 3)
+  return { ...source, source_schema_version: source.source_schema_version === 3 ? 3 : 4, resource_bindings: prepared.resource_bindings,
     resource_bindings_hash: prepared.resource_bindings_hash, resource_policy_hash: prepared.resource_policy_hash, encoder_identity_hash: prepared.encoder_identity_hash }
 }
 
@@ -67,7 +67,7 @@ export async function renderPreparedPage(
   assertBookSegmentSourceSchema(source)
   if (
     canonicalJson(source.blocks) !== canonicalJson(request.expected.blocks) || canonicalJson(source.occurrences) !== canonicalJson(request.expected.occurrences)) throw new Error('SEGMENT_PLAN_INTEGRITY_FAILED')
-  if (source.source_schema_version === 3 && (request.resource_bindings_hash !== source.resource_bindings_hash || request.resource_policy_hash !== source.resource_policy_hash || request.encoder_identity_hash !== source.encoder_identity_hash || options.measure)) throw new Error('PRINT_RESOURCE_BINDING_MISMATCH')
+  if ((source.source_schema_version ?? 1) >= 3 && (request.resource_bindings_hash !== source.resource_bindings_hash || request.resource_policy_hash !== source.resource_policy_hash || request.encoder_identity_hash !== source.encoder_identity_hash || options.measure)) throw new Error('PRINT_RESOURCE_BINDING_MISMATCH')
   if ((source.source_schema_version ?? 1) < 3 && [request.resource_bindings_hash, request.resource_policy_hash, request.encoder_identity_hash].some(value => value !== undefined)) throw new Error('PRINT_RESOURCE_BINDING_MISMATCH')
   const resourceProfile = options.resource_profile ?? DEFAULT_RENDERER_RESOURCE_PROFILE
   validateRendererResourceProfile(resourceProfile)
@@ -94,8 +94,8 @@ export async function renderPreparedPage(
         settings_hash: pinned.settings_hash, renderer_version: pinned.renderer_version,
         segment_ref: request.segment_ref, source_checksum: request.source_checksum,
         resource_bindings_hash: source.resource_bindings_hash, resource_policy_hash: source.resource_policy_hash, encoder_identity_hash: source.encoder_identity_hash,
-        encoder_identity: source.source_schema_version === 3 ? physical?.encoder_identity : undefined,
-        served_resources: source.source_schema_version === 3 ? physical?.servedResources() : undefined,
+        encoder_identity: (source.source_schema_version ?? 1) >= 3 ? physical?.encoder_identity : undefined,
+        served_resources: (source.source_schema_version ?? 1) >= 3 ? physical?.servedResources() : undefined,
         measured: !!physical, resource_profile: resourceProfile, source_schema_version: source.source_schema_version ?? 1 }
       await writeFile(resolve(out, 'receipt.json'), canonicalJson(receipt), { mode: 0o600, flag: 'wx' })
       return receipt

@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promis
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import { buildSnapshotFixture, fixtureCanonicalJson } from '../fixtures/pdfBook/buildSnapshotFixture'
-import { PRINT_ASSET_RECIPE } from '@/services/pdf-export/segments/printAssetsTypes'
+import { PRINT_ASSET_RECIPE, PRINT_VARIANT_RECIPE } from '@/services/pdf-export/segments/printAssetsTypes'
 
 const ROOT = path.resolve(__dirname, '../..')
 const nativeRequire = createRequire(__filename)
@@ -125,11 +125,48 @@ describe('physical book acceptance evidence boundaries (no browser)', () => {
     const certificate = { print_encoder_identity: identity }, manifest = { print_asset_recipe: PRINT_ASSET_RECIPE, print_encoder_pin: {} }
     const html = `<p>https://book-snapshot.invalid/assets/${chunk.checksum}</p><img src="https://book-snapshot.invalid/print-assets/${chunk.checksum}/${chunk.checksum}">`
     await expect(verifyPrintResources(fixture, out, row, html, certificate, manifest)).resolves.toEqual(source)
+    const legacyStyle = 'filter:sepia(100%); --metravel-print-effect:sepia(1); --metravel-print-theme:sepia;'
+    await expect(verifyPrintResources(fixture, out, row, html.replace('<img ', `<img style="${legacyStyle}" `), certificate, manifest)).resolves.toEqual(source)
     await expect(verifyPrintResources(fixture, out, row, '<p>no resource</p>', certificate, manifest)).rejects.toThrow('never referenced')
     await expect(verifyPrintResources(fixture, out, { ...row, served_resources: [] }, html, certificate, manifest)).rejects.toThrow('never served')
     await expect(verifyPrintResources(fixture, out, { ...row, served_resources: [response, response] }, html, certificate, manifest)).rejects.toThrow('Duplicate actual')
     await writeFile(path.join(out, body.served_file_ref), Buffer.from('corruption'))
     await expect(verifyPrintResources(fixture, out, row, html, certificate, manifest)).rejects.toThrow('Saved served bytes')
+  })
+
+  it('independently reconciles mixed variants of identical source/served bytes and rejects effect/response substitution', async () => {
+    const fixture = await buildSnapshotFixture(path.join(scratch, 'variant-input'), { travels: [{ id: 41, title: 'Variant proof' }], settings: { template: 'sepia' } })
+    const chunk = fixture.manifest.find(value => value.kind === 'media')!, original = await readFile(path.join(fixture.jobDir, chunk.file_ref))
+    const out = path.join(scratch, 'variant-output'); await mkdir(out)
+    const identity = { executable_sha256: 'c'.repeat(64) }, identityHash = sha256(fixtureCanonicalJson(identity))
+    const policyHash = sha256(fixtureCanonicalJson(PRINT_VARIANT_RECIPE))
+    const bindings = []
+    for (const effect of [{ theme_id: 'unfiltered', filter: 'none' }, { theme_id: 'sepia', filter: 'sepia(1)' }]) {
+      const variant = sha256(fixtureCanonicalJson([chunk.checksum, effect, policyHash, identityHash]))
+      const body = { original_checksum: chunk.checksum, served_checksum: chunk.checksum, variant_hash: variant, effect,
+        filter_working_pixels: effect.filter === 'none' ? 0 : 1, served_file_ref: 'derived.png', mode: 'encoded', mime: 'image/png',
+        width: 1, height: 1, encoded_bytes: original.length, original_encoded_bytes: original.length, original_pixels: 1,
+        served_pixels: 1, recipe_hash: policyHash, encoder_identity_hash: identityHash }
+      const descriptor = fixtureCanonicalJson({ original_checksum: chunk.checksum, oriented_width: 1, oriented_height: 1,
+        has_source_alpha: true, has_output_alpha: true, recipe: PRINT_VARIANT_RECIPE, encoder_identity: identity, binding: body })
+      await writeFile(path.join(out, `${variant}.json`), descriptor)
+      bindings.push({ ...body, descriptor_ref: `${variant}.json`, descriptor_checksum: sha256(descriptor) })
+    }
+    await writeFile(path.join(out, 'derived.png'), original)
+    const source = { source_schema_version: 4, resource_bindings: bindings, resource_bindings_hash: sha256(fixtureCanonicalJson(bindings)),
+      resource_policy_hash: policyHash, encoder_identity_hash: identityHash }
+    const sourceBytes = fixtureCanonicalJson(source); await writeFile(path.join(out, 'source.json'), sourceBytes)
+    const responses = bindings.map(value => ({ original_checksum: value.original_checksum, served_checksum: value.served_checksum, variant_hash: value.variant_hash }))
+    const row = { segment_ref: 'source.json', source_checksum: sha256(sourceBytes), resource_bindings_hash: source.resource_bindings_hash,
+      resource_policy_hash: policyHash, encoder_identity_hash: identityHash, served_resources: responses }
+    const certificate = { print_encoder_identity: identity }, manifest = { print_variant_recipe: PRINT_VARIANT_RECIPE, print_encoder_pin: {} }
+    const img = (index: number, style = '') => `<img src="https://book-snapshot.invalid/print-assets/${chunk.checksum}/${bindings[index].variant_hash}/${chunk.checksum}" style="${style}">`
+    const html = img(0) + img(1, 'filter:blur(28px); filter:none; --metravel-print-effect:sepia(1); --metravel-print-theme:sepia;')
+    await expect(verifyPrintResources(fixture, out, row, html, certificate, manifest)).resolves.toEqual(source)
+    await expect(verifyPrintResources(fixture, out, row, img(0) + img(1), certificate, manifest)).rejects.toThrow('authorized effect')
+    await expect(verifyPrintResources(fixture, out, { ...row, served_resources: [responses[0], responses[0]] }, html, certificate, manifest)).rejects.toThrow('Duplicate actual')
+    await expect(verifyPrintResources(fixture, out, { ...row, served_resources: [responses[0]] }, html, certificate, manifest)).rejects.toThrow('never served')
+    await expect(verifyPrintResources(fixture, out, row, html.replace('filter:none;', ''), certificate, manifest)).rejects.toThrow('CSS filtering')
   })
 
   it('retains genuine rotated PNG/WebP fixtures with independently expected orientation', async () => {
@@ -148,7 +185,7 @@ describe('physical book acceptance evidence boundaries (no browser)', () => {
   it('verifies reviewed artifact bytes and rejects changed bytes or a symlinked artifact root', async () => {
     const artifact = path.join(scratch, 'artifact')
     await mkdir(path.join(artifact, 'fonts'), { recursive: true })
-    const runtime = { entrypoint: 'index.js', renderer_version: 'fixture/1.0.0', prepared_source_schema_version: 3 }
+    const runtime = { entrypoint: 'index.js', renderer_version: 'fixture/1.0.0', prepared_source_schema_version: 4 }
     const files = [{ path: 'fonts/fonts.css', value: 'pinned font stylesheet' }, { path: 'index.js', value: 'module.exports = {}' }, { path: 'renderer-runtime.json', value: JSON.stringify(runtime) }]
     const content = createHash('sha256')
     for (const file of files) {

@@ -1,3 +1,4 @@
+import { workerImageFilterStyle } from '@/services/pdf-export/segments/workerImageEffects'
 import type { CaptionPosition } from '@/types/pdf-gallery'
 import type { BookSettings } from '@/types/bookSettings'
 import type { PdfThemeConfig } from '../../../themes/PdfThemeConfig'
@@ -84,8 +85,8 @@ export function buildGalleryCaption(args: {
   }
 }
 
-export function getImageFilterStyle(imageFilter?: string): string {
-  return imageFilter ? `filter: ${imageFilter};` : ''
+export function getImageFilterStyle(imageFilter?: string, workerThemeId?: string): string {
+  return workerImageFilterStyle(imageFilter, workerThemeId)
 }
 
 export function buildContainImageMarkup(args: {

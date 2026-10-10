@@ -100,11 +100,11 @@ function schemaVersion(root, file, constant) {
   return Number(match[1]);
 }
 
-function printAssetRecipe(root) {
+function printAssetRecipe(root, constant = 'PRINT_ASSET_RECIPE') {
   const file = 'services/pdf-export/segments/printAssetsTypes.ts';
   const tree = ts.createSourceFile(file, fs.readFileSync(path.join(root, file), 'utf8'), ts.ScriptTarget.Latest, true);
   const declaration = tree.statements.filter(ts.isVariableStatement).flatMap(node => [...node.declarationList.declarations])
-    .find(node => node.name.getText(tree) === 'PRINT_ASSET_RECIPE');
+    .find(node => node.name.getText(tree) === constant);
   const object = declaration?.initializer && ts.isAsExpression(declaration.initializer) ? declaration.initializer.expression : declaration?.initializer;
   if (!object || !ts.isObjectLiteralExpression(object)) throw new Error('Missing canonical print asset recipe');
   return Object.fromEntries(object.properties.map(property => {
@@ -232,7 +232,9 @@ function buildBookRenderer(options = {}) {
     renderer_version: renderer,
     document_schema_version: schemaVersion(root, 'types/bookDocument.ts', 'BOOK_DOCUMENT_SCHEMA_VERSION'),
     print_asset_recipe: printAssetRecipe(root),
-    print_resource_policy_hash: sha256(JSON.stringify(Object.fromEntries(Object.entries(printAssetRecipe(root)).sort(comparePaths)))),
+    print_variant_recipe: printAssetRecipe(root, 'PRINT_VARIANT_RECIPE'),
+    legacy_print_resource_policy_hash: sha256(JSON.stringify(Object.fromEntries(Object.entries(printAssetRecipe(root)).sort(comparePaths)))),
+    print_resource_policy_hash: sha256(JSON.stringify(Object.fromEntries(Object.entries(printAssetRecipe(root, 'PRINT_VARIANT_RECIPE')).sort(comparePaths)))),
     print_encoder_pin: (() => {
       const info = JSON.parse(fs.readFileSync(require.resolve('playwright-core/package.json'), 'utf8'));
       const browsers = JSON.parse(fs.readFileSync(path.join(path.dirname(require.resolve('playwright-core/package.json')), 'browsers.json'), 'utf8')).browsers;
