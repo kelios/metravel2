@@ -4853,7 +4853,7 @@
     
 
       <section class="pdf-page final-page" style="
-        padding: 24mm 28mm 18mm;
+        padding: 20mm 26mm 17mm;
         box-sizing: border-box;
         display: flex;
         flex-direction: column;
@@ -4868,40 +4868,66 @@
       ">
         <div style="
           position: absolute;
-          top: 10mm; right: 10mm; bottom: 10mm; left: 10mm;
-          border: 1px solid rgba(255,255,255,0.2);
-          pointer-events: none;
-        "></div>
-
-        <div style="
-          position: absolute;
           top: 0; right: 0; bottom: 0; left: 0;
           background:
-            radial-gradient(circle at 50% 25%, rgb(20,20,20), #000 36%),
-            radial-gradient(circle at 50% 80%, rgb(29,3,0), #000 32%);
+            radial-gradient(circle at 50% 17%, rgb(20,20,20), #000 34%),
+            radial-gradient(circle at 50% 86%, rgb(29,3,0), #000 32%);
           background-blend-mode: screen;
           mix-blend-mode: screen;
           pointer-events: none;
         "></div>
-        <svg class="final-route-line" viewBox="0 0 320 120" aria-hidden="true" style="
-          position: relative;
-          width: 84mm;
-          height: 28mm;
-          flex-shrink: 0;
-          opacity: 0.6;
+        
+        <svg class="final-contours" viewBox="0 0 210 285" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="
+          position: absolute;
+          top: 0; left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
         ">
-          <path d="M18 90 C60 30, 98 102, 136 58 S214 18, 252 56 S292 108, 306 34" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2.5" stroke-linecap="round"/>
-          <circle cx="18" cy="90" r="4" fill="rgba(255,255,255,0.85)"/>
-          <circle cx="77" cy="60" r="3.5" fill="rgba(255,255,255,0.5)"/>
-          <circle cx="136" cy="58" r="4" fill="rgba(255,255,255,0.55)"/>
-          <circle cx="194" cy="36" r="3.5" fill="rgba(255,255,255,0.5)"/>
-          <circle cx="306" cy="34" r="4" fill="rgba(255,255,255,0.85)"/>
+          <path d="M7.8 33Q8.6 34 8.7 35.2Q8.9 36.4 8.3 37.5Q7.8 38.7 6.9 39.6Q5.9 40.5 4.9 41.3Q3.8 42 2.6 42.6Q1.4 43.2 0 43.3Q-1.4 43.5 -2.7 43.3Q-4 43.1 -5.2 42.8Q-6.3 42.4 -7.5 42.3Q-8.7 42.1 -10.1 41.9Q-11.5 41.8 -12.9 41.2Q-14.3 40.7 -15.1 39.7Q-15.9 38.7 -16 37.5Q-16.1 36.3 -15.8 35.1Q-15.4 34 -15.1 33Q-14.8 32 -14.6 30.9Q-14.3 29.9 -13.8 28.9Q-13.4 27.9 -12.5 27Q-11.6 26.2 -10.4 25.6Q-9.3 25 -8 24.5Q-6.8 24.1 -5.4 23.7Q-4 23.4 -2.5 23.5Q-1.1 23.5 0.2 24.1Q1.4 24.8 2.2 25.8Q3 26.8 3.5 27.8Q3.9 28.8 4.6 29.6Q5.2 30.4 6.1 31.2Q7 31.9 7.8 33ZM16.2 32.2Q17.4 34 17.4 36Q17.4 38 16.3 39.8Q15.1 41.6 13.5 43Q11.9 44.4 10.1 45.5Q8.3 46.7 6.4 47.5Q4.4 48.4 2.3 48.6Q0.2 48.9 -1.9 48.7Q-4 48.5 -5.9 48.1Q-7.8 47.8 -9.9 47.7Q-12 47.6 -14.3 47.3Q-16.7 47.1 -18.9 46.1Q-21 45.1 -22.1 43.4Q-23.3 41.6 -23.2 39.6Q-23.2 37.6 -22.7 35.8Q-22.2 34 -21.9 32.4Q-21.5 30.7 -21.3 29Q-21 27.3 -20.3 25.6Q-19.5 23.9 -18 22.5Q-16.5 21.1 -14.6 20.2Q-12.7 19.2 -10.6 18.5Q-8.5 17.8 -6.2 17.4Q-4 17 -1.7 17.2Q0.6 17.4 2.5 18.5Q4.4 19.6 5.7 21.2Q6.9 22.8 7.9 24.2Q8.8 25.6 10.2 26.7Q11.5 27.9 13.2 29.2Q14.9 30.5 16.2 32.2ZM25.2 31.4Q26.7 34 26.3 36.8Q25.8 39.6 23.9 41.9Q22 44.3 19.6 46.1Q17.2 47.9 14.8 49.4Q12.4 50.9 9.9 52Q7.3 53.2 4.4 53.7Q1.6 54.1 -1.2 54Q-4 53.9 -6.7 53.8Q-9.5 53.6 -12.5 53.6Q-15.5 53.6 -18.9 53.2Q-22.2 52.7 -25 51.2Q-27.8 49.6 -29.1 47Q-30.3 44.4 -30.1 41.6Q-29.9 38.8 -29.3 36.4Q-28.7 34 -28.5 31.7Q-28.4 29.4 -28.2 27Q-28 24.5 -26.9 22.1Q-25.8 19.7 -23.7 17.9Q-21.5 16 -18.7 14.8Q-16 13.5 -13.1 12.7Q-10.2 11.8 -7.1 11.3Q-4 10.8 -0.9 11.3Q2.2 11.8 4.7 13.3Q7.3 14.8 9 16.8Q10.8 18.8 12.4 20.5Q14.1 22.2 16.4 23.6Q18.7 25.1 21.2 26.9Q23.7 28.8 25.2 31.4ZM34.6 30.5Q36 34 34.8 37.5Q33.6 41 30.8 43.8Q28 46.6 24.9 48.8Q21.9 51 19.1 52.9Q16.2 54.8 13.1 56.4Q10.1 57.9 6.6 58.7Q3.1 59.5 -0.4 59.7Q-4 59.9 -7.6 60Q-11.3 60.1 -15.3 60.2Q-19.4 60.2 -23.7 59.4Q-27.9 58.6 -31.2 56.3Q-34.4 53.9 -35.6 50.4Q-36.8 46.9 -36.4 43.5Q-36 40 -35.5 37Q-35.1 34 -35.3 31.1Q-35.4 28.1 -35.3 24.9Q-35.2 21.7 -33.7 18.6Q-32.3 15.5 -29.3 13.2Q-26.4 11 -22.8 9.5Q-19.3 8 -15.5 7Q-11.8 5.9 -7.9 5.5Q-4 5 -0.2 5.7Q3.7 6.4 6.9 8.2Q10 10.1 12.5 12.3Q14.9 14.6 17.4 16.4Q20 18.3 23.3 20.1Q26.7 21.9 29.9 24.5Q33.2 27 34.6 30.5ZM43.6 29.6Q44.6 34 42.4 38.1Q40.3 42.3 36.7 45.5Q33 48.6 29.6 51.2Q26.2 53.7 23.1 56.2Q20 58.6 16.5 60.8Q13 62.9 8.9 64.2Q4.8 65.5 0.4 66Q-4 66.5 -8.6 66.9Q-13.2 67.2 -18.4 67.2Q-23.5 67.2 -28.5 65.8Q-33.6 64.4 -37.1 61.2Q-40.5 57.9 -41.5 53.6Q-42.5 49.2 -42.1 45.1Q-41.7 41 -41.6 37.5Q-41.5 34 -42.1 30.4Q-42.8 26.7 -42.8 22.7Q-42.8 18.7 -40.8 15Q-38.7 11.3 -35 8.6Q-31.2 6 -26.8 4.3Q-22.4 2.7 -17.9 1.5Q-13.4 0.3 -8.7 -0.2Q-4 -0.7 0.6 0.2Q5.2 1 9.1 3.1Q12.9 5.2 16.2 7.6Q19.4 9.9 23 12Q26.6 14 31 16.2Q35.3 18.5 39 21.9Q42.7 25.3 43.6 29.6ZM51.9 28.8Q52 34 48.9 38.7Q45.7 43.3 41.5 46.8Q37.3 50.3 33.8 53.4Q30.3 56.4 27.1 59.6Q24 62.8 20.1 65.7Q16.3 68.5 11.5 70.3Q6.6 72.2 1.3 73Q-4 73.9 -9.7 74.3Q-15.3 74.8 -21.5 74.5Q-27.6 74.2 -33.2 72Q-38.9 69.9 -42.4 65.6Q-45.9 61.4 -46.7 56.3Q-47.5 51.2 -47.3 46.6Q-47 42 -47.5 38Q-48.1 34 -49.4 29.6Q-50.6 25.3 -50.6 20.4Q-50.6 15.6 -47.9 11.3Q-45.2 7 -40.6 4.1Q-35.9 1.2 -30.7 -0.6Q-25.4 -2.5 -20.2 -3.9Q-14.9 -5.2 -9.5 -5.8Q-4 -6.4 1.4 -5.4Q6.7 -4.5 11.4 -2.3Q16 0 20.2 2.4Q24.3 4.9 29.1 7.1Q33.8 9.3 39 12.1Q44.2 15 48 19.3Q51.7 23.6 51.9 28.8ZM59 28Q58.2 34 54.2 39.1Q50.1 44.1 45.7 48Q41.3 51.9 38 55.6Q34.8 59.4 31.7 63.5Q28.7 67.6 24.4 71.3Q20.1 75 14.4 77.3Q8.7 79.6 2.3 80.7Q-4 81.7 -10.7 82.1Q-17.5 82.4 -24.5 81.6Q-31.5 80.8 -37.5 77.7Q-43.6 74.7 -47 69.5Q-50.4 64.3 -51.1 58.6Q-51.9 52.9 -52.1 48Q-52.3 43 -53.8 38.5Q-55.3 34 -57.2 28.8Q-59.1 23.7 -58.9 18Q-58.7 12.4 -55.2 7.6Q-51.7 2.8 -46 -0.3Q-40.4 -3.4 -34.4 -5.5Q-28.4 -7.5 -22.4 -9.1Q-16.4 -10.7 -10.2 -11.5Q-4 -12.2 2.2 -11.2Q8.3 -10.3 13.8 -8Q19.3 -5.7 24.5 -3.1Q29.7 -0.6 35.4 1.9Q41.2 4.4 47.1 8Q52.9 11.5 56.4 16.8Q59.8 22.1 59 28ZM64.9 27.4Q63.1 34 58.5 39.4Q53.9 44.8 49.8 49.2Q45.6 53.6 42.9 58.2Q40.2 62.9 37.2 68.1Q34.3 73.3 29.3 77.8Q24.4 82.4 17.7 85Q10.9 87.6 3.5 88.7Q-4 89.7 -11.7 89.7Q-19.5 89.7 -27.2 88.1Q-34.9 86.6 -41.1 82.6Q-47.4 78.6 -50.7 72.7Q-54 66.7 -55 60.6Q-55.9 54.5 -57 49.3Q-58.1 44.1 -60.7 39.1Q-63.4 34 -65.9 28Q-68.4 22 -67.8 15.5Q-67.1 9.1 -62.6 3.9Q-58 -1.3 -51.4 -4.6Q-44.7 -7.9 -38 -10.1Q-31.3 -12.4 -24.6 -14.3Q-18 -16.3 -11 -17.2Q-4 -18.2 3 -17.2Q10 -16.3 16.4 -14Q22.8 -11.6 29 -8.9Q35.2 -6.3 41.9 -3.3Q48.6 -0.4 54.8 4Q61 8.3 63.8 14.6Q66.7 20.8 64.9 27.4ZM69.8 26.8Q67.2 34 62.5 39.8Q57.8 45.6 54.4 50.6Q50.9 55.7 48.9 61.5Q46.8 67.2 43.8 73.6Q40.7 80 34.9 85.2Q29.1 90.3 21.1 93Q13.2 95.7 4.6 96.4Q-4 97.1 -12.6 96.5Q-21.3 96 -29.5 93.7Q-37.7 91.4 -44.1 86.6Q-50.4 81.8 -53.8 75.3Q-57.2 68.8 -58.7 62.5Q-60.2 56.2 -62.5 50.8Q-64.9 45.4 -68.8 39.7Q-72.7 34 -75.6 27Q-78.4 20.1 -77 12.9Q-75.6 5.7 -69.8 0.2Q-64 -5.2 -56.4 -8.7Q-48.8 -12.1 -41.4 -14.6Q-34.1 -17.2 -26.8 -19.6Q-19.6 -21.9 -11.8 -23.1Q-4 -24.4 3.9 -23.5Q11.7 -22.6 19 -20.1Q26.4 -17.7 33.5 -14.8Q40.7 -12 48.2 -8.5Q55.7 -5 61.9 0.2Q68.2 5.5 70.3 12.6Q72.5 19.7 69.8 26.8Z" fill="none" stroke="rgba(249,250,251,0.1)" stroke-width="0.3"/>
+          <path d="M227.8 251Q228.6 252 228.7 253.2Q228.9 254.4 228.3 255.5Q227.8 256.7 226.9 257.6Q225.9 258.5 224.9 259.3Q223.8 260 222.6 260.6Q221.4 261.2 220 261.3Q218.6 261.5 217.3 261.3Q216 261.1 214.8 260.8Q213.7 260.4 212.5 260.3Q211.3 260.1 209.9 259.9Q208.5 259.8 207.1 259.2Q205.7 258.7 204.9 257.7Q204.1 256.7 204 255.5Q203.9 254.3 204.2 253.1Q204.6 252 204.9 251Q205.2 250 205.4 248.9Q205.7 247.9 206.2 246.9Q206.6 245.9 207.5 245Q208.4 244.2 209.6 243.6Q210.7 243 212 242.5Q213.2 242.1 214.6 241.7Q216 241.4 217.5 241.5Q218.9 241.5 220.2 242.1Q221.4 242.8 222.2 243.8Q223 244.8 223.5 245.8Q223.9 246.8 224.6 247.6Q225.2 248.4 226.1 249.2Q227 249.9 227.8 251ZM236.2 250.2Q237.4 252 237.4 254Q237.4 256 236.3 257.8Q235.1 259.6 233.5 261Q231.9 262.4 230.1 263.5Q228.3 264.7 226.4 265.5Q224.4 266.4 222.3 266.6Q220.2 266.9 218.1 266.7Q216 266.5 214.1 266.1Q212.2 265.8 210.1 265.7Q208 265.6 205.7 265.3Q203.3 265.1 201.1 264.1Q199 263.1 197.9 261.4Q196.7 259.6 196.8 257.6Q196.8 255.6 197.3 253.8Q197.8 252 198.1 250.4Q198.5 248.7 198.7 247Q199 245.3 199.7 243.6Q200.5 241.9 202 240.5Q203.5 239.1 205.4 238.2Q207.3 237.2 209.4 236.5Q211.5 235.8 213.8 235.4Q216 235 218.3 235.2Q220.6 235.4 222.5 236.5Q224.4 237.6 225.7 239.2Q226.9 240.8 227.9 242.2Q228.8 243.6 230.2 244.7Q231.5 245.9 233.2 247.2Q234.9 248.5 236.2 250.2ZM245.2 249.4Q246.7 252 246.3 254.8Q245.8 257.6 243.9 259.9Q242 262.3 239.6 264.1Q237.2 265.9 234.8 267.4Q232.4 268.9 229.9 270Q227.3 271.2 224.4 271.7Q221.6 272.1 218.8 272Q216 271.9 213.3 271.8Q210.5 271.6 207.5 271.6Q204.5 271.6 201.1 271.2Q197.8 270.7 195 269.2Q192.2 267.6 190.9 265Q189.7 262.4 189.9 259.6Q190.1 256.8 190.7 254.4Q191.3 252 191.5 249.7Q191.6 247.4 191.8 245Q192 242.5 193.1 240.1Q194.2 237.7 196.3 235.9Q198.5 234 201.3 232.8Q204 231.5 206.9 230.7Q209.8 229.8 212.9 229.3Q216 228.8 219.1 229.3Q222.2 229.8 224.7 231.3Q227.3 232.8 229 234.8Q230.8 236.8 232.4 238.5Q234.1 240.2 236.4 241.6Q238.7 243.1 241.2 244.9Q243.7 246.8 245.2 249.4ZM254.6 248.5Q256 252 254.8 255.5Q253.6 259 250.8 261.8Q248 264.6 244.9 266.8Q241.9 269 239.1 270.9Q236.2 272.8 233.1 274.4Q230.1 275.9 226.6 276.7Q223.1 277.5 219.6 277.7Q216 277.9 212.4 278Q208.7 278.1 204.7 278.2Q200.6 278.2 196.3 277.4Q192.1 276.6 188.8 274.3Q185.6 271.9 184.4 268.4Q183.2 264.9 183.6 261.5Q184 258 184.5 255Q184.9 252 184.7 249.1Q184.6 246.1 184.7 242.9Q184.8 239.7 186.3 236.6Q187.7 233.5 190.7 231.2Q193.6 229 197.2 227.5Q200.7 226 204.5 225Q208.2 223.9 212.1 223.5Q216 223 219.8 223.7Q223.7 224.4 226.9 226.2Q230 228.1 232.5 230.3Q234.9 232.6 237.4 234.4Q240 236.3 243.3 238.1Q246.7 239.9 249.9 242.5Q253.2 245 254.6 248.5ZM263.6 247.6Q264.6 252 262.4 256.1Q260.3 260.3 256.7 263.5Q253 266.6 249.6 269.2Q246.2 271.7 243.1 274.2Q240 276.6 236.5 278.8Q233 280.9 228.9 282.2Q224.8 283.5 220.4 284Q216 284.5 211.4 284.9Q206.8 285.2 201.6 285.2Q196.5 285.2 191.5 283.8Q186.4 282.4 182.9 279.2Q179.5 275.9 178.5 271.6Q177.5 267.2 177.9 263.1Q178.3 259 178.4 255.5Q178.5 252 177.9 248.4Q177.2 244.7 177.2 240.7Q177.2 236.7 179.2 233Q181.3 229.3 185 226.6Q188.8 224 193.2 222.3Q197.6 220.7 202.1 219.5Q206.6 218.3 211.3 217.8Q216 217.3 220.6 218.2Q225.2 219 229.1 221.1Q232.9 223.2 236.2 225.6Q239.4 227.9 243 230Q246.6 232 251 234.2Q255.3 236.5 259 239.9Q262.7 243.3 263.6 247.6ZM271.9 246.8Q272 252 268.9 256.7Q265.7 261.3 261.5 264.8Q257.3 268.3 253.8 271.4Q250.3 274.4 247.1 277.6Q244 280.8 240.1 283.7Q236.3 286.5 231.5 288.3Q226.6 290.2 221.3 291Q216 291.9 210.3 292.3Q204.7 292.8 198.5 292.5Q192.4 292.2 186.8 290Q181.1 287.9 177.6 283.6Q174.1 279.4 173.3 274.3Q172.5 269.2 172.7 264.6Q173 260 172.5 256Q171.9 252 170.6 247.6Q169.4 243.3 169.4 238.4Q169.4 233.6 172.1 229.3Q174.8 225 179.4 222.1Q184.1 219.2 189.3 217.4Q194.6 215.5 199.8 214.1Q205.1 212.8 210.5 212.2Q216 211.6 221.4 212.6Q226.7 213.5 231.4 215.7Q236 218 240.2 220.4Q244.3 222.9 249.1 225.1Q253.8 227.3 259 230.1Q264.2 233 268 237.3Q271.7 241.6 271.9 246.8ZM279 246Q278.2 252 274.2 257.1Q270.1 262.1 265.7 266Q261.3 269.9 258 273.6Q254.8 277.4 251.7 281.5Q248.7 285.6 244.4 289.3Q240.1 293 234.4 295.3Q228.7 297.6 222.3 298.7Q216 299.7 209.3 300.1Q202.5 300.4 195.5 299.6Q188.5 298.8 182.5 295.7Q176.4 292.7 173 287.5Q169.6 282.3 168.9 276.6Q168.1 270.9 167.9 266Q167.7 261 166.2 256.5Q164.7 252 162.8 246.8Q160.9 241.7 161.1 236Q161.3 230.4 164.8 225.6Q168.3 220.8 174 217.7Q179.6 214.6 185.6 212.5Q191.6 210.5 197.6 208.9Q203.6 207.3 209.8 206.5Q216 205.8 222.2 206.8Q228.3 207.7 233.8 210Q239.3 212.3 244.5 214.9Q249.7 217.4 255.4 219.9Q261.2 222.4 267.1 226Q272.9 229.5 276.4 234.8Q279.8 240.1 279 246ZM284.9 245.4Q283.1 252 278.5 257.4Q273.9 262.8 269.8 267.2Q265.6 271.6 262.9 276.2Q260.2 280.9 257.2 286.1Q254.3 291.3 249.3 295.8Q244.4 300.4 237.7 303Q230.9 305.6 223.5 306.7Q216 307.7 208.3 307.7Q200.5 307.7 192.8 306.1Q185.1 304.6 178.9 300.6Q172.6 296.6 169.3 290.7Q166 284.7 165 278.6Q164.1 272.5 163 267.3Q161.9 262.1 159.3 257.1Q156.6 252 154.1 246Q151.6 240 152.2 233.5Q152.9 227.1 157.4 221.9Q162 216.7 168.6 213.4Q175.3 210.1 182 207.9Q188.7 205.6 195.4 203.7Q202 201.7 209 200.8Q216 199.8 223 200.8Q230 201.7 236.4 204Q242.8 206.4 249 209.1Q255.2 211.7 261.9 214.7Q268.6 217.6 274.8 222Q281 226.3 283.8 232.6Q286.7 238.8 284.9 245.4ZM289.8 244.8Q287.2 252 282.5 257.8Q277.8 263.6 274.4 268.6Q270.9 273.7 268.9 279.5Q266.8 285.2 263.8 291.6Q260.7 298 254.9 303.2Q249.1 308.3 241.1 311Q233.2 313.7 224.6 314.4Q216 315.1 207.4 314.5Q198.7 314 190.5 311.7Q182.3 309.4 175.9 304.6Q169.6 299.8 166.2 293.3Q162.8 286.8 161.3 280.5Q159.8 274.2 157.5 268.8Q155.1 263.4 151.2 257.7Q147.3 252 144.4 245Q141.6 238.1 143 230.9Q144.4 223.7 150.2 218.2Q156 212.8 163.6 209.3Q171.2 205.9 178.6 203.4Q185.9 200.8 193.2 198.4Q200.4 196.1 208.2 194.9Q216 193.6 223.9 194.5Q231.7 195.4 239 197.9Q246.4 200.3 253.5 203.2Q260.7 206 268.2 209.5Q275.7 213 281.9 218.2Q288.2 223.5 290.3 230.6Q292.5 237.7 289.8 244.8Z" fill="none" stroke="rgba(249,250,251,0.1)" stroke-width="0.3"/>
+        </svg>
+        <div style="
+          position: absolute;
+          top: 10mm; right: 10mm; bottom: 10mm; left: 10mm;
+          border: 1px solid rgba(249,250,251,0.26);
+          pointer-events: none;
+        "></div>
+        <div style="
+          position: absolute;
+          top: 12mm; right: 12mm; bottom: 12mm; left: 12mm;
+          border: 1px solid rgba(249,250,251,0.12);
+          pointer-events: none;
+        "></div>
+        
+        <svg class="final-emblem" viewBox="0 0 200 120" aria-hidden="true" style="
+          position: relative;
+          display: block;
+          width: 96mm;
+          height: 57.6mm;
+          min-height: 0;
+          flex-shrink: 1;
+        ">
+          <path d="M184.6 35.7A88 24 -16 0 0 15.4 84.3" fill="none" stroke="rgba(249,250,251,0.22)" stroke-width="0.9" stroke-dasharray="2.5 3" stroke-linecap="round"/>
+          <circle cx="100" cy="60" r="36" fill="none" stroke="rgba(249,250,251,0.7)" stroke-width="1.2"/>
+          <ellipse cx="100" cy="60" rx="18" ry="36" fill="none" stroke="rgba(249,250,251,0.42)" stroke-width="0.8"/>
+          <ellipse cx="100" cy="60" rx="31.2" ry="36" fill="none" stroke="rgba(249,250,251,0.42)" stroke-width="0.8"/>
+          <path d="M100 24V96M64 60H136M68.8 42H131.2M68.8 78H131.2M82 28.8H118M82 91.2H118" fill="none" stroke="rgba(249,250,251,0.42)" stroke-width="0.8"/>
+          <path d="M15.4 84.3A88 24 -16 0 0 155.1 64.4" fill="none" stroke="rgba(249,250,251,0.8)" stroke-width="1.1" stroke-dasharray="5 3.5" stroke-linecap="round"/>
+          <path d="M155.1 64.4A88 24 -16 0 0 184.6 35.7" fill="none" stroke="rgba(249,250,251,0.4)" stroke-width="1" stroke-dasharray="0.1 3.2" stroke-linecap="round"/>
+          <circle cx="15.4" cy="84.3" r="2.6" fill="#f9fafb"/>
+          <circle cx="15.4" cy="84.3" r="5" fill="none" stroke="rgba(249,250,251,0.45)" stroke-width="0.8"/>
+          <path d="M12 2C12.8 2 13.3 2.9 13.3 4V9.2L21 13.6V15.6L13.3 13.3V18.6L15.4 20.2V21.8L12 20.9L8.6 21.8V20.2L10.7 18.6V13.3L3 15.6V13.6L10.7 9.2V4C10.7 2.9 11.2 2 12 2Z" fill="#f9fafb" transform="translate(155.1 64.4) rotate(62.8) scale(0.62) translate(-12 -12)"/>
+          <path d="M34 18.8L34.9 21.1L37.2 22L34.9 22.9L34 25.2L33.1 22.9L30.8 22L33.1 21.1Z" fill="rgba(249,250,251,0.55)"/>
+          <path d="M166 95.4L166.7 97.3L168.6 98L166.7 98.7L166 100.6L165.3 98.7L163.4 98L165.3 97.3Z" fill="rgba(249,250,251,0.55)"/>
+          <path d="M156 16.2L156.5 17.5L157.8 18L156.5 18.5L156 19.8L155.5 18.5L154.2 18L155.5 17.5Z" fill="rgba(249,250,251,0.55)"/>
         </svg>
 
         <div style="
           position: relative;
           width: 100%;
           margin: auto 0;
+          flex-shrink: 0;
         ">
           <div style="
             width: 20mm;
@@ -4935,150 +4961,177 @@
             и помогает планировать новые приключения.
           </p>
           
-      <div style="
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        width: 112mm;
+      <div class="final-ticket" style="
+        width: 150mm;
         max-width: 100%;
-        margin: 10mm auto 0;
-        border-top: 1px solid rgba(255,255,255,0.28);
-        border-bottom: 1px solid rgba(255,255,255,0.28);
+        margin: 11mm auto 0;
+        border: 1px solid rgba(249,250,251,0.34);
+        border-radius: 3.5mm;
       ">
         
-          <div class="final-summary-tile" style="
-            text-align: center;
-            padding: 5mm 3mm;
-            min-width: 0;
-            
-            
-            
+          <div class="final-route-line" aria-hidden="true" style="
+            display: flex;
+            align-items: center;
+            gap: 2.5mm;
+            padding: 4mm 7mm 3.5mm;
           ">
-            <div style="
-              font-size: 28pt;
-              font-weight: 600;
-              color: #f9fafb;
-              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
-              line-height: 1.1;
-              margin-bottom: 1.5mm;
-              font-variant-numeric: tabular-nums;
-              overflow-wrap: anywhere;
-            ">1</div>
-            <div style="
-              font-size: 8pt;
-              text-transform: uppercase;
-              letter-spacing: 0.08em;
-              color: #e5e7eb;
-              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
-              line-height: 1.4;
-              overflow-wrap: anywhere;
-            ">путешествие</div>
+            <span style="
+              width: 2.4mm;
+              height: 2.4mm;
+              border-radius: 50%;
+              border: 1px solid rgba(249,250,251,0.8);
+              flex-shrink: 0;
+            "></span>
+            <span style="
+              flex: 1;
+              height: 0;
+              border-top: 1px dashed rgba(249,250,251,0.45);
+            "></span>
+            <svg viewBox="0 0 24 24" width="12" height="12" style="flex-shrink: 0;">
+              <path d="M12 2C12.8 2 13.3 2.9 13.3 4V9.2L21 13.6V15.6L13.3 13.3V18.6L15.4 20.2V21.8L12 20.9L8.6 21.8V20.2L10.7 18.6V13.3L3 15.6V13.6L10.7 9.2V4C10.7 2.9 11.2 2 12 2Z" fill="rgba(249,250,251,0.85)" transform="rotate(90 12 12)"/>
+            </svg>
+            <span style="
+              flex: 1;
+              height: 0;
+              border-top: 1px dashed rgba(249,250,251,0.45);
+            "></span>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="rgba(249,250,251,0.85)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
           </div>
-        
-          <div class="final-summary-tile" style="
-            text-align: center;
-            padding: 5mm 3mm;
-            min-width: 0;
-            border-left: 1px solid rgba(255,255,255,0.2);
-            
-            
-          ">
-            <div style="
-              font-size: 28pt;
-              font-weight: 600;
-              color: #f9fafb;
-              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
-              line-height: 1.1;
-              margin-bottom: 1.5mm;
-              font-variant-numeric: tabular-nums;
-              overflow-wrap: anywhere;
-            ">1</div>
-            <div style="
-              font-size: 8pt;
-              text-transform: uppercase;
-              letter-spacing: 0.08em;
-              color: #e5e7eb;
-              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
-              line-height: 1.4;
-              overflow-wrap: anywhere;
-            ">страна</div>
-          </div>
-        
-          <div class="final-summary-tile" style="
-            text-align: center;
-            padding: 5mm 3mm;
-            min-width: 0;
-            
-            border-top: 1px solid rgba(255,255,255,0.2);
-            
-          ">
-            <div style="
-              font-size: 28pt;
-              font-weight: 600;
-              color: #f9fafb;
-              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
-              line-height: 1.1;
-              margin-bottom: 1.5mm;
-              font-variant-numeric: tabular-nums;
-              overflow-wrap: anywhere;
-            ">1</div>
-            <div style="
-              font-size: 8pt;
-              text-transform: uppercase;
-              letter-spacing: 0.08em;
-              color: #e5e7eb;
-              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
-              line-height: 1.4;
-              overflow-wrap: anywhere;
-            ">день</div>
-          </div>
-        
-          <div class="final-summary-tile" style="
-            text-align: center;
-            padding: 5mm 3mm;
-            min-width: 0;
-            border-left: 1px solid rgba(255,255,255,0.2);
-            border-top: 1px solid rgba(255,255,255,0.2);
-            
-          ">
-            <div style="
-              font-size: 28pt;
-              font-weight: 600;
-              color: #f9fafb;
-              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
-              line-height: 1.1;
-              margin-bottom: 1.5mm;
-              font-variant-numeric: tabular-nums;
-              overflow-wrap: anywhere;
-            ">10</div>
-            <div style="
-              font-size: 8pt;
-              text-transform: uppercase;
-              letter-spacing: 0.08em;
-              color: #e5e7eb;
-              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
-              line-height: 1.4;
-              overflow-wrap: anywhere;
-            ">фотографий</div>
-          </div>
-        
+        <div style="
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          border-top: 1px dashed rgba(249,250,251,0.34);
+        ">
+          
+            <div class="final-summary-tile" style="
+              text-align: center;
+              padding: 5mm 2mm 5.5mm;
+              min-width: 0;
+              
+            ">
+              <div style="
+                font-size: 26pt;
+                font-weight: 600;
+                color: #f9fafb;
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
+                line-height: 1.1;
+                margin-bottom: 1.5mm;
+                font-variant-numeric: tabular-nums;
+                overflow-wrap: anywhere;
+              ">1</div>
+              <div style="
+                font-size: 7.5pt;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+                color: #e5e7eb;
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
+                line-height: 1.4;
+                overflow-wrap: anywhere;
+              ">путешествие</div>
+            </div>
+          
+            <div class="final-summary-tile" style="
+              text-align: center;
+              padding: 5mm 2mm 5.5mm;
+              min-width: 0;
+              border-left: 1px solid rgba(249,250,251,0.18);
+            ">
+              <div style="
+                font-size: 26pt;
+                font-weight: 600;
+                color: #f9fafb;
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
+                line-height: 1.1;
+                margin-bottom: 1.5mm;
+                font-variant-numeric: tabular-nums;
+                overflow-wrap: anywhere;
+              ">1</div>
+              <div style="
+                font-size: 7.5pt;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+                color: #e5e7eb;
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
+                line-height: 1.4;
+                overflow-wrap: anywhere;
+              ">страна</div>
+            </div>
+          
+            <div class="final-summary-tile" style="
+              text-align: center;
+              padding: 5mm 2mm 5.5mm;
+              min-width: 0;
+              border-left: 1px solid rgba(249,250,251,0.18);
+            ">
+              <div style="
+                font-size: 26pt;
+                font-weight: 600;
+                color: #f9fafb;
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
+                line-height: 1.1;
+                margin-bottom: 1.5mm;
+                font-variant-numeric: tabular-nums;
+                overflow-wrap: anywhere;
+              ">1</div>
+              <div style="
+                font-size: 7.5pt;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+                color: #e5e7eb;
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
+                line-height: 1.4;
+                overflow-wrap: anywhere;
+              ">день</div>
+            </div>
+          
+            <div class="final-summary-tile" style="
+              text-align: center;
+              padding: 5mm 2mm 5.5mm;
+              min-width: 0;
+              border-left: 1px solid rgba(249,250,251,0.18);
+            ">
+              <div style="
+                font-size: 26pt;
+                font-weight: 600;
+                color: #f9fafb;
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
+                line-height: 1.1;
+                margin-bottom: 1.5mm;
+                font-variant-numeric: tabular-nums;
+                overflow-wrap: anywhere;
+              ">10</div>
+              <div style="
+                font-size: 7.5pt;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+                color: #e5e7eb;
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
+                line-height: 1.4;
+                overflow-wrap: anywhere;
+              ">фотографий</div>
+            </div>
+          
+        </div>
       </div>
     
           
-            <div style="
-              width: 24mm;
-              height: 1px;
-              background: linear-gradient(90deg, #000, rgb(77,77,77), #000);
-              mix-blend-mode: screen;
-              margin: 10mm auto 5mm;
-            "></div>
             <blockquote style="
-              max-width: 116mm;
-              margin: 0 auto;
+              max-width: 120mm;
+              margin: 11mm auto 0;
               position: relative;
             ">
+              
+            <svg viewBox="0 0 40 28" aria-hidden="true" style="
+              display: block;
+              width: 8.5mm;
+              height: 6mm;
+              margin: 0 auto 3.5mm;
+            ">
+              <path d="M2 28V16.5C2 8.4 6.6 2.6 15 0.5L16.4 4C11.8 5.6 9.4 8.6 9.2 13H16V28ZM22 28V16.5C22 8.4 26.6 2.6 35 0.5L36.4 4C31.8 5.6 29.4 8.6 29.2 13H36V28Z" fill="rgba(249,250,251,0.38)"/>
+            </svg>
               <p style="
                 margin: 0 0 3mm 0;
-                font-size: 11pt;
+                font-size: 11.5pt;
                 line-height: 1.6;
                 font-style: italic;
                 font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
@@ -5104,22 +5157,66 @@
           flex-shrink: 0;
           margin-top: 8mm;
           width: 100%;
-          text-align: center;
-          font-size: 10pt;
+          height: 31mm;
           font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
         ">
-          <div style="
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            margin-bottom: 1mm;
-            font-size: 10pt;
+          
+          <svg viewBox="0 0 56 21.5" aria-hidden="true" style="
+            position: absolute;
+            top: 50%;
+            left: calc(50% + 17mm);
+            width: 38mm;
+            height: 14.6mm;
+            margin-top: -7.3mm;
           ">
-            <span style="font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;">
-              MeTravel.by
-            </span>
+            <path d="M0 4Q3.5 1.4 7 4T14 4T21 4T28 4T35 4T42 4T49 4T56 4M0 8.5Q3.5 5.9 7 8.5T14 8.5T21 8.5T28 8.5T35 8.5T42 8.5T49 8.5T56 8.5M0 13Q3.5 10.4 7 13T14 13T21 13T28 13T35 13T42 13T49 13T56 13M0 17.5Q3.5 14.9 7 17.5T14 17.5T21 17.5T28 17.5T35 17.5T42 17.5T49 17.5T56 17.5" fill="none" stroke="rgba(249,250,251,0.38)" stroke-width="0.8" stroke-linecap="round"/>
+          </svg>
+          <div class="final-postmark" style="
+            position: relative;
+            width: 31mm;
+            height: 31mm;
+            margin: 0 auto;
+            transform: rotate(-8deg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+          ">
+            
+            <svg viewBox="0 0 60 60" aria-hidden="true" style="
+              position: absolute;
+              top: 0; left: 0;
+              width: 100%;
+              height: 100%;
+            ">
+              <circle cx="30" cy="30" r="29" fill="none" stroke="rgba(249,250,251,0.6)" stroke-width="0.9"/>
+              <circle cx="30" cy="30" r="26.6" fill="none" stroke="rgba(249,250,251,0.45)" stroke-width="0.5"/>
+              <circle cx="30" cy="30" r="24.2" fill="none" stroke="rgba(249,250,251,0.55)" stroke-width="1" stroke-dasharray="0.1 2.4" stroke-linecap="round"/>
+            </svg>
+            <span style="
+              position: relative;
+              font-size: 7pt;
+              font-weight: 700;
+              letter-spacing: 0.12em;
+              text-transform: uppercase;
+              line-height: 1.2;
+            ">MeTravel.by</span>
+            <span style="
+              position: relative;
+              width: 15mm;
+              height: 0;
+              margin: 1.4mm 0 1.2mm;
+              border-top: 1px solid rgba(249,250,251,0.5);
+            "></span>
+            <span style="
+              position: relative;
+              font-size: 10pt;
+              font-weight: 600;
+              letter-spacing: 0.06em;
+              line-height: 1.2;
+              font-variant-numeric: tabular-nums;
+            ">© 2026</span>
           </div>
-          <div style="font-size: 8pt; color: #e5e7eb;">© 2026</div>
         </footer>
       </section>
     

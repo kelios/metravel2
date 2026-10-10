@@ -4,6 +4,15 @@ import { escapeHtml, formatDays, getTravelLabel, type RuntimeRenderContext } fro
 import { translate as i18nT } from '@/i18n'
 import { getCountryLabel, getPhotoLabel } from '@/utils/pluralize'
 import type { BookSummary } from '../../../../segments/types'
+import {
+  buildContourLayer,
+  buildEmblemSvg,
+  buildPostmarkRings,
+  buildPostmarkWaves,
+  buildQuoteMark,
+  buildTicketRoute,
+  inkWithAlpha,
+} from './finalPageArt'
 
 /**
  * #2275: печать WebKit на iOS (и в Safari/macOS) теряет альфу у цветов
@@ -68,52 +77,59 @@ export class RuntimeFinalRenderer {
       stats.push({ value: totalPhotos, label: getPhotoLabel(totalPhotos) })
     }
 
+    const ink = colors.cover.text
+    const numberSize = stats.length > 3 ? '26pt' : '30pt'
     const statsHtml = stats.length > 0 ? `
-      <div style="
-        display: grid;
-        grid-template-columns: repeat(${Math.min(stats.length, 2)}, minmax(0, 1fr));
-        width: 112mm;
+      <div class="final-ticket" style="
+        width: 150mm;
         max-width: 100%;
-        margin: 10mm auto 0;
-        border-top: 1px solid rgba(255,255,255,0.28);
-        border-bottom: 1px solid rgba(255,255,255,0.28);
+        margin: 11mm auto 0;
+        border: 1px solid ${inkWithAlpha(ink, 0.34)};
+        border-radius: 3.5mm;
       ">
-        ${stats.map((s, index) => `
-          <div class="final-summary-tile" style="
-            text-align: center;
-            padding: 5mm 3mm;
-            min-width: 0;
-            ${index % 2 === 1 ? 'border-left: 1px solid rgba(255,255,255,0.2);' : ''}
-            ${index >= 2 ? 'border-top: 1px solid rgba(255,255,255,0.2);' : ''}
-            ${stats.length === 3 && index === 2 ? 'grid-column: 1 / -1;' : ''}
-          ">
-            <div style="
-              font-size: 28pt;
-              font-weight: 600;
-              color: ${colors.cover.text};
-              font-family: ${typography.headingFont};
-              line-height: 1.1;
-              margin-bottom: 1.5mm;
-              font-variant-numeric: tabular-nums;
-              overflow-wrap: anywhere;
-            ">${s.value}</div>
-            <div style="
-              font-size: 8pt;
-              text-transform: uppercase;
-              letter-spacing: 0.08em;
-              color: ${colors.cover.textSecondary};
-              font-family: ${typography.bodyFont};
-              line-height: 1.4;
-              overflow-wrap: anywhere;
-            ">${escapeHtml(s.label)}</div>
-          </div>
-        `).join('')}
+        ${buildTicketRoute(ink)}
+        <div style="
+          display: grid;
+          grid-template-columns: repeat(${stats.length}, minmax(0, 1fr));
+          border-top: 1px dashed ${inkWithAlpha(ink, 0.34)};
+        ">
+          ${stats.map((s, index) => `
+            <div class="final-summary-tile" style="
+              text-align: center;
+              padding: 5mm 2mm 5.5mm;
+              min-width: 0;
+              ${index > 0 ? `border-left: 1px solid ${inkWithAlpha(ink, 0.18)};` : ''}
+            ">
+              <div style="
+                font-size: ${numberSize};
+                font-weight: 600;
+                color: ${ink};
+                font-family: ${typography.headingFont};
+                line-height: 1.1;
+                margin-bottom: 1.5mm;
+                font-variant-numeric: tabular-nums;
+                overflow-wrap: anywhere;
+              ">${s.value}</div>
+              <div style="
+                font-size: 7.5pt;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+                color: ${colors.cover.textSecondary};
+                font-family: ${typography.bodyFont};
+                line-height: 1.4;
+                overflow-wrap: anywhere;
+              ">${escapeHtml(s.label)}</div>
+            </div>
+          `).join('')}
+        </div>
       </div>
     ` : ''
 
+    const year = pinned ? new Date(pinned.generatedAt).getUTCFullYear() : new Date().getFullYear()
+
     return `
       <section class="pdf-page final-page" style="
-        padding: 24mm 28mm 18mm;
+        padding: 20mm 26mm 17mm;
         box-sizing: border-box;
         display: flex;
         flex-direction: column;
@@ -121,47 +137,41 @@ export class RuntimeFinalRenderer {
         height: 285mm;
         min-height: 285mm;
         text-align: center;
-        color: ${colors.cover.text};
+        color: ${ink};
         background: linear-gradient(135deg, ${colors.cover.backgroundGradient[0]} 0%, ${colors.cover.backgroundGradient[1]} 100%);
         position: relative;
         overflow: hidden;
       ">
         <div style="
           position: absolute;
-          top: 10mm; right: 10mm; bottom: 10mm; left: 10mm;
-          border: 1px solid rgba(255,255,255,0.2);
-          pointer-events: none;
-        "></div>
-
-        <div style="
-          position: absolute;
           top: 0; right: 0; bottom: 0; left: 0;
           background:
-            radial-gradient(circle at 50% 25%, ${screenGray(0.08)}, #000 36%),
-            radial-gradient(circle at 50% 80%, ${ORANGE_GLOW_SCREEN}, #000 32%);
+            radial-gradient(circle at 50% 17%, ${screenGray(0.08)}, #000 34%),
+            radial-gradient(circle at 50% 86%, ${ORANGE_GLOW_SCREEN}, #000 32%);
           background-blend-mode: screen;
           ${SCREEN_LAYER}
           pointer-events: none;
         "></div>
-        <svg class="final-route-line" viewBox="0 0 320 120" aria-hidden="true" style="
-          position: relative;
-          width: 84mm;
-          height: 28mm;
-          flex-shrink: 0;
-          opacity: 0.6;
-        ">
-          <path d="M18 90 C60 30, 98 102, 136 58 S214 18, 252 56 S292 108, 306 34" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2.5" stroke-linecap="round"/>
-          <circle cx="18" cy="90" r="4" fill="rgba(255,255,255,0.85)"/>
-          <circle cx="77" cy="60" r="3.5" fill="rgba(255,255,255,0.5)"/>
-          <circle cx="136" cy="58" r="4" fill="rgba(255,255,255,0.55)"/>
-          <circle cx="194" cy="36" r="3.5" fill="rgba(255,255,255,0.5)"/>
-          <circle cx="306" cy="34" r="4" fill="rgba(255,255,255,0.85)"/>
-        </svg>
+        ${buildContourLayer(ink)}
+        <div style="
+          position: absolute;
+          top: 10mm; right: 10mm; bottom: 10mm; left: 10mm;
+          border: 1px solid ${inkWithAlpha(ink, 0.26)};
+          pointer-events: none;
+        "></div>
+        <div style="
+          position: absolute;
+          top: 12mm; right: 12mm; bottom: 12mm; left: 12mm;
+          border: 1px solid ${inkWithAlpha(ink, 0.12)};
+          pointer-events: none;
+        "></div>
+        ${buildEmblemSvg(ink)}
 
         <div style="
           position: relative;
           width: 100%;
           margin: auto 0;
+          flex-shrink: 0;
         ">
           <div style="
             width: 20mm;
@@ -179,7 +189,7 @@ export class RuntimeFinalRenderer {
             margin: 0 auto 5mm;
             letter-spacing: -0.025em;
             font-family: ${typography.headingFont};
-            color: ${colors.cover.text};
+            color: ${ink};
             line-height: 1.15;
             overflow-wrap: anywhere;
           ">${i18nT("export:services.pdf_export.generators.v2.runtime.renderers.FinalPageRenderer.section_class_pdf_page_final_page_style_padd_473b31a3.text01")}</h2>
@@ -195,21 +205,15 @@ export class RuntimeFinalRenderer {
           </p>
           ${statsHtml}
           ${finalQuote ? `
-            <div style="
-              width: 24mm;
-              height: 1px;
-              background: linear-gradient(90deg, #000, ${screenGray(0.3)}, #000);
-              ${SCREEN_LAYER}
-              margin: 10mm auto 5mm;
-            "></div>
             <blockquote style="
-              max-width: 116mm;
-              margin: 0 auto;
+              max-width: 120mm;
+              margin: 11mm auto 0;
               position: relative;
             ">
+              ${buildQuoteMark(ink)}
               <p style="
                 margin: 0 0 3mm 0;
-                font-size: 11pt;
+                font-size: 11.5pt;
                 line-height: 1.6;
                 font-style: italic;
                 font-family: ${typography.bodyFont};
@@ -235,22 +239,46 @@ export class RuntimeFinalRenderer {
           flex-shrink: 0;
           margin-top: 8mm;
           width: 100%;
-          text-align: center;
-          font-size: ${typography.caption.size};
+          height: 31mm;
           font-family: ${typography.bodyFont};
         ">
-          <div style="
-            display: inline-flex;
+          ${buildPostmarkWaves(ink)}
+          <div class="final-postmark" style="
+            position: relative;
+            width: 31mm;
+            height: 31mm;
+            margin: 0 auto;
+            transform: rotate(-8deg);
+            display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 6px;
-            margin-bottom: 1mm;
-            font-size: ${typography.caption.size};
+            justify-content: center;
           ">
-            <span style="font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;">
-              MeTravel.by
-            </span>
+            ${buildPostmarkRings(ink)}
+            <span style="
+              position: relative;
+              font-size: 7pt;
+              font-weight: 700;
+              letter-spacing: 0.12em;
+              text-transform: uppercase;
+              line-height: 1.2;
+            ">MeTravel.by</span>
+            <span style="
+              position: relative;
+              width: 15mm;
+              height: 0;
+              margin: 1.4mm 0 1.2mm;
+              border-top: 1px solid ${inkWithAlpha(ink, 0.5)};
+            "></span>
+            <span style="
+              position: relative;
+              font-size: 10pt;
+              font-weight: 600;
+              letter-spacing: 0.06em;
+              line-height: 1.2;
+              font-variant-numeric: tabular-nums;
+            ">© ${year}</span>
           </div>
-          <div style="font-size: 8pt; color: ${colors.cover.textSecondary};">© ${pinned ? new Date(pinned.generatedAt).getUTCFullYear() : new Date().getFullYear()}</div>
         </footer>
       </section>
     `

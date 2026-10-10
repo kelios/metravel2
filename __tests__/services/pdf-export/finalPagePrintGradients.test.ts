@@ -46,8 +46,46 @@ describe('финальная страница книги: градиенты б�
   it('светлые слои наложены через screen, а карточка без z-index не изолирует их', () => {
     const html = new RuntimeFinalRenderer({ theme: PDF_THEMES.minimal }).render(12, travels, quote)
 
-    expect((html.match(/mix-blend-mode: screen;/g) ?? []).length).toBe(3)
+    expect((html.match(/mix-blend-mode: screen;/g) ?? []).length).toBe(2)
     expect(html).not.toMatch(/z-index/)
+  })
+
+  // #2368: проверка обрезки воркера книги меряет текстовые узлы, а `<svg>` по
+  // умолчанию `overflow: hidden` — надписи декора живут в HTML, не в SVG.
+  it.each(Object.keys(PDF_THEMES))('тема %s: в SVG декора нет текста', (themeName) => {
+    const theme = PDF_THEMES[themeName as keyof typeof PDF_THEMES]
+    const html = new RuntimeFinalRenderer({ theme }).render(12, travels, quote)
+
+    for (const svg of html.match(/<svg[\s\S]*?<\/svg>/g) ?? []) {
+      expect(svg).not.toMatch(/<text\b|<textPath\b/)
+      expect(svg.replace(/<[^>]*>/g, '').trim()).toBe('')
+    }
+  })
+
+  // #2368: переполнение финала роняет сборку закреплённой книги в воркере
+  // (SEGMENT_REQUIRES_SINGLE_SOURCE_LAYOUT). Колонка страницы держит запас тем,
+  // что сжимается только эмблема; текстовый блок и штемпель не сжимаются.
+  it('в колонке страницы сжимается только эмблема', () => {
+    const html = new RuntimeFinalRenderer({ theme: PDF_THEMES.minimal }).render(12, travels, quote)
+    const style = (marker: string): string => {
+      const at = html.indexOf(marker)
+      expect(at).toBeGreaterThan(-1)
+      return html.slice(at, html.indexOf('">', at))
+    }
+
+    expect(style('class="final-emblem"')).toMatch(/min-height: 0;[\s\S]*flex-shrink: 1;/)
+    expect(style('position: relative;\n          width: 100%;\n          margin: auto 0;')).toContain('flex-shrink: 0;')
+    expect(style('<footer')).toContain('flex-shrink: 0;')
+  })
+
+  // #2368: декор рисуется цветом текста обложки, а не белым — на светлой
+  // обложке «Иллюстрированная» белые линии не видны.
+  it('декор светлой обложки берёт тёмный цвет текста темы', () => {
+    const html = new RuntimeFinalRenderer({ theme: PDF_THEMES.illustrated }).render(12, travels, quote)
+
+    expect(PDF_THEMES.illustrated.colors.cover.text).toBe('#2d2d2d')
+    expect(html).not.toMatch(/rgba\(255,\s*255,\s*255/)
+    expect(html).toContain('rgba(45,45,45,')
   })
 
   it('регулярка ловит прежнюю подложку', () => {
