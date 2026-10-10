@@ -121,7 +121,8 @@ export async function preparePlanningStep(jobRoot: string, planRoot: string, pin
   if (!request || !/^[a-f0-9]{64}$/.test(request.renderer_content_hash)) throw new Error('WORKER_PLANNING_RENDERER_PIN_INVALID')
   integer(request.generation, Number.MAX_SAFE_INTEGER, 1)
   const resourceProfile = request.resource_profile ?? DEFAULT_RENDERER_RESOURCE_PROFILE
-  keys(record(resourceProfile), Object.keys(DEFAULT_RENDERER_RESOURCE_PROFILE))
+  // A malformed profile is a request error, not checkpoint corruption.
+  try { keys(record(resourceProfile), Object.keys(DEFAULT_RENDERER_RESOURCE_PROFILE)) } catch { throw new Error('WORKER_RESOURCE_PROFILE_INVALID') }
   validateRendererResourceProfile(resourceProfile)
   // Every planning output, including one served print resource, must stay ledgerable.
   if (resourceProfile.encoded_resource_bytes > MAX_PLANNING_OUTPUT_FILE_BYTES) throw new Error('WORKER_RESOURCE_PROFILE_INVALID')
@@ -135,7 +136,6 @@ export async function preparePlanningStep(jobRoot: string, planRoot: string, pin
   const info = await lstat(planRoot)
   if (!info.isDirectory() || info.isSymbolicLink() || (info.mode & 0o077)) throw new Error('WORKER_PLANNING_DIRECTORY_INVALID')
   const storage = new PlanningStorage(planRoot, limits, options.committed)
-  const checkpointMaximum = request.checkpoint ? MAX_BOOK_CHECKPOINT_BYTES : MAX_PLANNING_CHECKPOINT_BYTES
   // Restore first: an index resume still needs its bounded manifest carry reserve.
   let checkpoint: PlanningCheckpoint
   if (request.checkpoint) {
@@ -161,7 +161,7 @@ export async function preparePlanningStep(jobRoot: string, planRoot: string, pin
     checkpoint = { version: PLANNING_PROTOCOL_VERSION, identity, generation: 1, phase: 'index', index: initialSnapshotIndex(pinned) }
   }
   if (checkpoint.phase === 'plan_ready') throw new Error('WORKER_PLANNING_ALREADY_COMPLETE')
-  const savedMaximum = checkpoint.phase === 'index' ? MAX_PLANNING_CHECKPOINT_BYTES : checkpointMaximum
+  const savedMaximum = checkpoint.phase === 'index' ? MAX_PLANNING_CHECKPOINT_BYTES : MAX_BOOK_CHECKPOINT_BYTES
   storage.reserve(2, savedMaximum + MAX_GENERATION_LEDGER_BYTES)
   const previousLedger = checkpoint.ledger ?? null
   await storage.put('identity.json', { version: PLANNING_PROTOCOL_VERSION, identity, renderer_content_hash: request.renderer_content_hash,
