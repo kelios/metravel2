@@ -176,6 +176,15 @@ Dated snapshots — использовать только с указанным 
 - `docs/SOCIAL_CONTENT_PACK_2026-07.md` — content pack по июльскому GSC snapshot.
 - `docs/INSTAGRAM_PLAN.md` — живой план Instagram @metravelby для агента `instagram-editor`: диагноз 04.10.2026, календарь, пакеты недель, недельные разборы (только статьи автора 1).
 
+## Development handoffs
+
+Неприменённые снимки незавершённой разработки; не действующие контракты:
+
+- [#2352: handoff планировщика PDF](handoffs/2352-planner-wip.md) — состояние,
+  ограничения проверок и порядок возобновления на 2026-10-10;
+- [#2352: WIP-патч](handoffs/2352-planner-wip.patch) — сохранённые исходники и
+  тесты; применение и проверка требуют отдельного продолжения задачи.
+
 ## Legacy local tooling
 
 Эти файлы не являются task source of truth:
