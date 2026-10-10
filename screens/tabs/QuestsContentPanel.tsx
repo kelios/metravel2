@@ -21,10 +21,11 @@ import { useQuestGridCardWidth } from '@/hooks/useQuestCatalogResponsiveModel';
 
 import QuestCard from './QuestCard';
 import { QuestsCountPlaceholder, QuestsGridSkeleton } from './QuestsCatalogPlaceholders';
-import { ALL_QUESTS_ID, COMPLETED_BY_OTHERS_FILTER_ID, COMPLETED_FILTER_ID, REVIEWED_FILTER_ID, UNCOMPLETED_FILTER_ID } from './QuestsScreen.helpers';
+import { ALL_QUESTS_ID, COMPLETED_BY_OTHERS_FILTER_ID, COMPLETED_FILTER_ID, REVIEWED_FILTER_ID, UNCOMPLETED_FILTER_ID, parseThemeSelectionId } from './QuestsScreen.helpers';
+import { getQuestThemeById } from '@/utils/questThemes';
 import QuestsMobileToolbar from './QuestsMobileToolbar';
 import QuestsSeoIntroFaq from './QuestsSeoIntroFaq';
-import { pluralizeQuest, type QuestMeta, type QuestSortOrder } from './questsShared';
+import { pluralizeQuest, type QuestMeta, type QuestSortOrder, type QuestThemeEntry } from './questsShared';
 import QuestsSortChips, { EMPTY_SORT_ORDERS } from './QuestsSortChips';
 
 import { translate as i18nT } from '@/i18n'
@@ -83,6 +84,8 @@ type QuestsContentPanelProps = {
     onResetFilters: () => void;
     onShowKids?: () => void;
     onShowBike?: () => void;
+    themeChips?: QuestThemeEntry[];
+    onShowTheme?: (selectionId: string) => void;
     onShowNearby: () => void;
     onOpenFilterDrawer: () => void;
     onToggleViewMode: () => void;
@@ -136,6 +139,8 @@ function QuestsContentPanel({
     onResetFilters,
     onShowKids = () => {},
     onShowBike = () => {},
+    themeChips,
+    onShowTheme,
     onShowNearby,
     onOpenFilterDrawer,
     onToggleViewMode,
@@ -288,6 +293,7 @@ function QuestsContentPanel({
 
     const questKeyExtractor = useCallback((quest: QuestListItem) => String(quest.id), []);
 
+    const selectedTheme = getQuestThemeById(parseThemeSelectionId(selectedCityId));
     const contentTitleText = searchActive
             ? i18nT('quests:screens.tabs.QuestsContentPanel.rezultaty_poiska_5ebb750c')
             : isMapAreaActive
@@ -298,6 +304,8 @@ function QuestsContentPanel({
                         ? i18nT('quests:screens.tabs.QuestsContentPanel.kvesty_dlya_detey_fbda5ab0')
                         : selectedCityId === bikeFilterId
                             ? i18nT('quests:screens.tabs.QuestsContentPanel.veloTitle')
+                        : selectedTheme
+                            ? selectedTheme.label
                             : selectedCityId === REVIEWED_FILTER_ID
                                 ? i18nT('quests:screens.tabs.QuestsScreen.reviewedTitle')
                                 : selectedCityId === COMPLETED_FILTER_ID
@@ -412,6 +420,8 @@ function QuestsContentPanel({
             nearbyId={nearbyId}
             onShowKids={onShowKids}
             onShowBike={onShowBike}
+            themeChips={themeChips}
+            onShowTheme={onShowTheme}
             onShowNearby={onShowNearby}
             geoRequesting={geoRequesting}
             showResetChip={showResetChip}

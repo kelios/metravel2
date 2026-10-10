@@ -310,4 +310,13 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsSidebar.completedByOthersA11y": "Квэсты, пройдзеныя іншымі гульцамі, {{value1}}",
   "screens.tabs.QuestsContentPanel.completedByOthersTitle": "Квэсты, пройдзеныя іншымі",
   "screens.tabs.QuestsScreen.completedByOthersSeoTitle": "Квэсты, пройдзеныя іншымі | MeTravel",
+  "utils.questThemes.halloween": "Хэлоўін",
+  "utils.questThemes.christmas": "Каляды і Новы год",
+  "utils.questThemes.legends": "Легенды і прывіды",
+  "utils.questThemes.detective": "Дэтэктыў",
+  "utils.questThemes.fairytale": "Казкі",
+  "screens.tabs.QuestsSidebar.themeA11y": "{{value1}}: {{value2}}",
+  "screens.tabs.QuestsContentPanel.themeShowA11y": "Паказаць падборку «{{value1}}»",
+  "screens.tabs.QuestsScreen.themeTitle": "{{value1}}: {{value2}} {{value3}} | MeTravel",
+  "screens.tabs.QuestsScreen.themeDescription": "Падборка «{{value1}}»: афлайн-квэсты па гарадах з легендамі і заданнямі па дарозе — кропкі на карце, старт з горада.",
 } as const

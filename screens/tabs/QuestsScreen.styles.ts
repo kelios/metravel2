@@ -1276,6 +1276,29 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             fontSize: badgeFontSize,
             fontWeight: '600',
         },
+        // Бейдж тематической подборки (#2377) — тот же стек, свой цвет.
+        questCardThemeBadge: {
+            position: 'absolute',
+            top: spacing.sm,
+            right: spacing.sm,
+            backgroundColor: 'rgba(94, 53, 177, 0.95)',
+            paddingHorizontal: spacing.sm,
+            paddingVertical: 4,
+            borderRadius: radii.full,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            zIndex: 6,
+            // Четвёртый бейдж правого стека с самой длинной подписью: ширина
+            // ограничена, чтобы не наехать на левый бейдж и кнопку «Играть».
+            maxWidth: '55%',
+            ...questCardBikeBadgeWebStyle,
+        },
+        questCardThemeText: {
+            color: colors.textOnDark,
+            fontSize: badgeFontSize,
+            fontWeight: '600',
+        },
         questCardPlayIcon: {
             position: 'absolute',
             top: '42%',

@@ -4,6 +4,9 @@ import Feather from '@expo/vector-icons/Feather';
 
 import NavigationIcon from '@/components/layout/NavigationIcon';
 import { translate as i18nT } from '@/i18n';
+import type { QuestThemeEntry } from './questsShared';
+
+const EMPTY_THEMES: QuestThemeEntry[] = [];
 
 /**
  * Липкая шапка каталога квестов на телефоне.
@@ -39,6 +42,9 @@ type QuestsMobileToolbarProps = {
     nearbyId: string;
     onShowKids: () => void;
     onShowBike: () => void;
+    /** Чипы тематических подборок (#2377): только темы с квестами. */
+    themeChips?: QuestThemeEntry[];
+    onShowTheme?: (selectionId: string) => void;
     onShowNearby: () => void;
     geoRequesting: boolean;
     showResetChip: boolean;
@@ -103,6 +109,8 @@ function QuestsMobileToolbar({
     nearbyId,
     onShowKids,
     onShowBike,
+    themeChips = EMPTY_THEMES,
+    onShowTheme = () => {},
     onShowNearby,
     geoRequesting,
     showResetChip,
@@ -182,6 +190,21 @@ function QuestsMobileToolbar({
                     accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.veloShowA11y')}
                     testID="quests-show-bike"
                 />
+                {themeChips.map((entry) => {
+                    const active = selectedCityId === entry.selectionId;
+                    return (
+                        <ToolbarChip
+                            key={entry.selectionId}
+                            styles={styles}
+                            active={active}
+                            icon={<NavigationIcon name={entry.icon} size={13} color={chipIconColor(active)} />}
+                            label={entry.label}
+                            onPress={() => onShowTheme(entry.selectionId)}
+                            accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.themeShowA11y', { value1: entry.label })}
+                            testID={`quests-show-theme-${entry.id}`}
+                        />
+                    );
+                })}
                 <ToolbarChip
                     styles={styles}
                     active={nearbyActive}

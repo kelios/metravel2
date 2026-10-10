@@ -570,6 +570,14 @@ poi_info: {
   `public-art-walk`.
 - **Жанр сюжета:** `legend`, `myth`, `mystic`, `detective`, `fairytale`,
   `story`, `history`, `memorial`, `memory`.
+- **Тематические подборки (#2377, реестр `utils/questThemes.ts`):** квест
+  попадает в подборку каталога по тегу, сезон живёт в реестре, а не в квесте.
+  «Легенды и призраки» — `mystic`/`myth`/`mystery`/`ghost` (тег `legend` в
+  подборку НЕ ведёт: он стоит у 60% каталога); «Детектив» — `detective`;
+  «Сказки» — `fairytale`; «Хэллоуин» (15.10–1.11) — `halloween`; «Рождество и
+  Новый год» (1.12–14.01) — `christmas`. Сезонный тег ставится ВМЕСТЕ с вечным
+  жанровым (`['halloween', 'mystic', …]`), а `quest_id` и заголовок не содержат
+  названия праздника — вне сезона квест живёт в вечной подборке.
 - **Слой города:** `citywalk`, `park`, `roadtrip`, `street-art`, `art`,
   `sculpture`, `architecture`, `culture`, `urbanism`, `urban-symbols`,
   `visual-literacy`, `music`, `animals`, `logic`, `puzzle`.

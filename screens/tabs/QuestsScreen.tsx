@@ -50,10 +50,13 @@ import {
     loadExpoLocation,
     resolveQuestMapCenter,
     resolveStoredQuestCatalogSelection,
+    parseThemeSelectionId,
+    toThemeSelectionId,
     type QuestMapArea,
     type MapPoint,
 } from './QuestsScreen.helpers';
 import { canRankQuestsByPopularity, sortQuestsByPopularity } from '@/utils/questPopularity';
+import { filterQuestsByTheme, getActiveQuestThemes, getQuestThemeById } from '@/utils/questThemes';
 import { canRankQuestsByRating, sortQuestsByRating } from '@/utils/questRatingOrder';
 import type { QuestSortOrder } from './questsShared';
 import { useQuestCatalogHandoff } from './useQuestCatalogHandoff';
@@ -121,6 +124,12 @@ export default function QuestsScreen() {
         toggleCountryGroup: handleToggleCountryGroup,
         toggleAllCountryGroups: handleToggleAllCountryGroups,
     } = useQuestCountrySelection(selectedCityId, CITIES, cityQuests);
+    // Выбранная тематическая подборка (#2377) по реестру, без окна сезона:
+    // сохранённый выбор темы вне её сезона остаётся валидным срезом.
+    const selectedTheme = useMemo(
+        () => getQuestThemeById(parseThemeSelectionId(selectedCityId)),
+        [selectedCityId],
+    );
 
     const isFocused = useIsFocused();
     const colors = useThemedColors();
@@ -206,6 +215,10 @@ export default function QuestsScreen() {
         void handleSelectCity(BIKE_FILTER_ID);
     }, [handleSelectCity]);
 
+    const handleShowTheme = useCallback((selectionId: string) => {
+        void handleSelectCity(selectionId);
+    }, [handleSelectCity]);
+
     const requestNearbyQuests = useCallback(() => {
         if (geoRequesting) return;
         void handleSelectCity(NEARBY_ID);
@@ -257,11 +270,12 @@ export default function QuestsScreen() {
             || selectedCityId === BIKE_FILTER_ID
             || (selectedCityId === REVIEWED_FILTER_ID && reviewedQuests.length > 0)
             || Boolean(selectedCountry)
+            || Boolean(selectedTheme)
             || (selectedCityId ? validIds.has(selectedCityId) : false);
         if (isValid) return;
         setSelectedCityId(ALL_QUESTS_ID);
         void AsyncStorage.setItem(STORAGE_SELECTED_CITY, ALL_QUESTS_ID);
-    }, [CITIES, cityCatalog.canonicalCityIdById, dataLoaded, questsError, selectedCityId, selectedCountry, reviewedQuests.length, personalSlices]);
+    }, [CITIES, cityCatalog.canonicalCityIdById, dataLoaded, questsError, selectedCityId, selectedCountry, selectedTheme, reviewedQuests.length, personalSlices]);
 
     // Один владелец location-запроса: выбор «Рядом» и открытие карты не должны
     // запускать параллельные permission/current-position вызовы.
@@ -337,6 +351,18 @@ export default function QuestsScreen() {
     // даёт дополнительный срез, но не заменяет городскую группировку.
     // Велоквесты (тег `bike`) — такой же дополнительный срез каталога.
     const bikeQuests = useMemo(() => filterBikeQuests(ALL_QUESTS), [ALL_QUESTS]);
+    // Тематические подборки (#2377): активные темы реестра (сезонные — в своём
+    // окне дат), у которых есть хотя бы один квест. Пустая тема не рендерится.
+    const themeSlices = useMemo(
+        () => getActiveQuestThemes()
+            .map((theme) => ({ theme, selectionId: toThemeSelectionId(theme.id), quests: filterQuestsByTheme(ALL_QUESTS, theme) }))
+            .filter((slice) => slice.quests.length > 0),
+        [ALL_QUESTS],
+    );
+    const themeEntries = useMemo(
+        () => themeSlices.map(({ theme, selectionId }) => ({ id: theme.id, selectionId, label: theme.label, icon: theme.icon })),
+        [themeSlices],
+    );
 
     const nearbyCount = useMemo(() => {
         if (!userLoc || !ALL_QUESTS.length) return null;
@@ -353,10 +379,11 @@ export default function QuestsScreen() {
         if (nearbyCount != null) counts[NEARBY_ID] = nearbyCount;
         counts[KIDS_FILTER_ID] = kidsQuests.length;
         counts[BIKE_FILTER_ID] = bikeQuests.length;
+        for (const slice of themeSlices) counts[slice.selectionId] = slice.quests.length;
         counts[REVIEWED_FILTER_ID] = reviewedQuests.length;
         Object.assign(counts, personalSlices.counts);
         return counts;
-    }, [CITIES, nearbyCount, cityQuests, kidsQuests.length, bikeQuests.length, reviewedQuests.length, personalSlices]);
+    }, [CITIES, nearbyCount, cityQuests, kidsQuests.length, bikeQuests.length, themeSlices, reviewedQuests.length, personalSlices]);
 
     // #1826: поле ввода остаётся мгновенным (`searchQuery` — состояние экрана),
     // а пересчёт каталога отстаёт на паузу в наборе. Без этого каждый символ
@@ -386,6 +413,12 @@ export default function QuestsScreen() {
         if (selectedCityId === REVIEWED_FILTER_ID) {
             return reviewedQuests;
         }
+        if (selectedTheme) {
+            // Сохранённый выбор темы вне её сезона всё равно отдаёт свои квесты:
+            // окно дат прячет чип, а не ломает восстановленный срез.
+            return themeSlices.find((slice) => slice.theme === selectedTheme)?.quests
+                ?? filterQuestsByTheme(ALL_QUESTS, selectedTheme);
+        }
         const personalSlice = personalSlices.sliceFor(selectedCityId);
         if (personalSlice) return personalSlice;
         if (selectedCityId === NEARBY_ID) {
@@ -406,6 +439,8 @@ export default function QuestsScreen() {
         kidsQuests,
         bikeQuests,
         reviewedQuests,
+        selectedTheme,
+        themeSlices,
         personalSlices,
     ]);
 
@@ -510,6 +545,7 @@ export default function QuestsScreen() {
             || selectedCityId === REVIEWED_FILTER_ID
             || personalSlices.isPersonalSliceId(selectedCityId)
             || Boolean(selectedCountry)
+            || Boolean(selectedTheme)
             ? getAverageQuestMapPointCenter(mapPoints)
             : null;
         const selectedCity = virtualFilterCenter
@@ -522,7 +558,7 @@ export default function QuestsScreen() {
             userLoc,
             selectedCity,
         });
-    }, [CITIES, mapPoints, searchTerm, selectedCityId, selectedCountry, userLoc, activeMapAreaCenter, personalSlices]);
+    }, [CITIES, mapPoints, searchTerm, selectedCityId, selectedCountry, selectedTheme, userLoc, activeMapAreaCenter, personalSlices]);
 
     const handleMapUserLocationChange = useCallback((loc: { latitude: number; longitude: number } | null) => {
         if (!loc) return;
@@ -592,6 +628,9 @@ export default function QuestsScreen() {
         if (selectedCityId === BIKE_FILTER_ID) {
             return i18nT('quests:screens.tabs.QuestsScreen.veloTitle', { value1: bikeQuests.length, value2: i18nT('quests:screens.tabs.QuestsScreen.questNoun', { count: bikeQuests.length }) });
         }
+        if (selectedTheme) {
+            return i18nT('quests:screens.tabs.QuestsScreen.themeTitle', { value1: selectedTheme.label, value2: questsAll.length, value3: i18nT('quests:screens.tabs.QuestsScreen.questNoun', { count: questsAll.length }) });
+        }
         if (selectedCityId === REVIEWED_FILTER_ID) {
             return i18nT('quests:screens.tabs.QuestsScreen.reviewedSeoTitle');
         }
@@ -611,7 +650,7 @@ export default function QuestsScreen() {
         return selectedCityName
             ? i18nT('quests:screens.tabs.QuestsScreen.kvesty_value1_metravel_f8aef4dd', { value1: selectedCityName })
             : i18nT('quests:screens.tabs.QuestsScreen.catalogTitleDefault');
-    }, [selectedCityId, selectedCityName, nearbyCount, userLoc, activeMapAreaCenter, questsAll.length, kidsQuests.length, bikeQuests.length]);
+    }, [selectedCityId, selectedCityName, selectedTheme, nearbyCount, userLoc, activeMapAreaCenter, questsAll.length, kidsQuests.length, bikeQuests.length]);
 
     const descText = useMemo(() => {
         if (activeMapAreaCenter) {
@@ -629,10 +668,13 @@ export default function QuestsScreen() {
         if (selectedCityId === BIKE_FILTER_ID) {
             return i18nT('quests:screens.tabs.QuestsScreen.veloDescription');
         }
+        if (selectedTheme) {
+            return i18nT('quests:screens.tabs.QuestsScreen.themeDescription', { value1: selectedTheme.label });
+        }
         if (selectedCountry) return i18nT('quests:screens.tabs.QuestsScreen.countryDescription', { value1: selectedCountry.name });
         if (selectedCityName) return i18nT('quests:screens.tabs.QuestsScreen.oflayn_kvesty_v_gorode_value1_progulki_po_to_c1bef6e1', { value1: selectedCityName });
         return i18nT('quests:screens.tabs.QuestsScreen.issleduyte_goroda_i_parki_s_oflayn_kvestami__76e12a53');
-    }, [selectedCityId, selectedCityName, selectedCountry, userLoc, activeMapAreaCenter]);
+    }, [selectedCityId, selectedCityName, selectedCountry, selectedTheme, userLoc, activeMapAreaCenter]);
     const questsStructuredData = createQuestCatalogStructuredData({
         canonical: buildCanonicalUrl('/quests'),
         title: titleText,
@@ -685,6 +727,7 @@ export default function QuestsScreen() {
         nearbyId: NEARBY_ID,
         kidsFilterId: KIDS_FILTER_ID,
         bikeFilterId: BIKE_FILTER_ID,
+        themes: themeEntries,
         showCompletedFilter: personalSlices.showCompletedFilter,
         showCompletedByOthersFilter: personalSlices.showCompletedByOthersFilter,
         showUncompletedFilter: personalSlices.showUncompletedFilter,
@@ -773,6 +816,8 @@ export default function QuestsScreen() {
                 onResetFilters={handleResetFilters}
                 onShowKids={handleShowKidsQuests}
                 onShowBike={handleShowBikeQuests}
+                themeChips={themeEntries}
+                onShowTheme={handleShowTheme}
                 onShowNearby={requestNearbyQuests}
                 onOpenFilterDrawer={handleOpenFilterDrawer}
                 onToggleViewMode={handleToggleViewMode}

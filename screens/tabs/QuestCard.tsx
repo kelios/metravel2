@@ -21,6 +21,7 @@ import { IMAGE_QUALITY, IMAGE_WIDTHS } from '@/constants/imageContract';
 import { QUEST_CARD_BASE_HEIGHT, QUEST_CARD_PHONE_HEIGHT, QUESTS_GRID_MIN_COLUMN_WIDTH } from '@/constants/questLayout';
 
 import { getQuestAgeBadgeLabel, getQuestAgeCategory } from '@/utils/questAudience';
+import { getPrimaryQuestTheme } from '@/utils/questThemes';
 import { isBikeQuest } from './QuestsScreen.helpers';
 
 import { pluralizePoints, type QuestMeta } from './questsShared';
@@ -85,6 +86,8 @@ function QuestCard({
     const ageCategory = quest.ageCategory ?? getQuestAgeCategory(quest.tags);
     const ageBadgeLabel = getQuestAgeBadgeLabel(ageCategory);
     const isBike = isBikeQuest(quest.tags);
+    // Одна подпись темы (#2377): активная сезонная важнее вечной.
+    const theme = getPrimaryQuestTheme(quest.tags);
     const categoryLabel = quest.cityName || quest.countryName || null;
     const distanceText = nearby && typeof quest._distanceKm === 'number'
         ? formatDistance(quest._distanceKm)
@@ -334,6 +337,22 @@ function QuestCard({
                         <NavigationIcon name="bike" size={12} color={colors.textOnDark} />
                         <Text style={styles.questCardBikeText} numberOfLines={1}>
                             {i18nT('quests:screens.tabs.QuestCard.veloBadge')}
+                        </Text>
+                    </View>
+                )}
+
+                {theme && (
+                    <View
+                        style={[
+                            styles.questCardThemeBadge,
+                            // Тот же правый стек бейджей: ниже сложности, возраста и «Вело».
+                            { top: 8 + (difficultyInfo ? 36 : 0) + (ageBadgeLabel ? 36 : 0) + (isBike ? 36 : 0) },
+                        ]}
+                        testID={`quest-card-theme-${quest.id}`}
+                    >
+                        <NavigationIcon name={theme.icon} size={12} color={colors.textOnDark} />
+                        <Text style={styles.questCardThemeText} numberOfLines={1}>
+                            {theme.label}
                         </Text>
                     </View>
                 )}

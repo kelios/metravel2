@@ -7,7 +7,7 @@ import type { NavigationIconName } from '@/constants/navigationIcons';
 import { useBreakpoints } from '@/hooks/useResponsive';
 import type { ThemedColors } from '@/hooks/useTheme';
 
-import type { City, NearbyCity } from './questsShared';
+import type { City, NearbyCity, QuestThemeEntry } from './questsShared';
 import { pluralizeQuest } from './questsShared';
 import { COMPLETED_BY_OTHERS_FILTER_ID, COMPLETED_FILTER_ID, REVIEWED_FILTER_ID, UNCOMPLETED_FILTER_ID } from './QuestsScreen.helpers';
 import { OTHER_COUNTRY_CODE } from './useQuestCountrySelection';
@@ -15,6 +15,8 @@ import { toCountrySelectionId } from '@/utils/questCatalogSelection';
 import { translate as i18nT } from '@/i18n'
 import { webTitleRef } from '@/utils/webProps'
 
+
+const EMPTY_THEMES: QuestThemeEntry[] = [];
 
 type SidebarActionButtonProps = {
     styles: any;
@@ -114,7 +116,7 @@ type SidebarFilterRowProps = {
     styles: any;
     colors: ThemedColors;
     iconSize: number;
-    icon: React.ComponentProps<typeof Feather>['name'];
+    icon: NavigationIconName;
     label: string;
     count: number;
     active: boolean;
@@ -152,7 +154,7 @@ function SidebarFilterRow({
         >
             <View style={styles.cityItemLeft}>
                 <View style={[styles.cityItemIcon, active && styles.cityItemIconActive]}>
-                    <Feather name={icon} size={iconSize} color={active ? colors.textOnPrimary : colors.textMuted} />
+                    <NavigationIcon name={icon} size={iconSize} color={active ? colors.textOnPrimary : colors.textMuted} />
                 </View>
                 <Text style={[styles.cityItemText, active && styles.cityItemTextActive]}>
                     {label}
@@ -188,6 +190,8 @@ type QuestsSidebarProps = {
     nearbyId: string;
     kidsFilterId: string;
     bikeFilterId: string;
+    /** Тематические подборки с квестами (#2377); пустой список — строк нет. */
+    themes?: QuestThemeEntry[];
     /** Личные срезы каталога показываются только вошедшему игроку (#1791). */
     showCompletedFilter?: boolean;
     showCompletedByOthersFilter?: boolean;
@@ -215,6 +219,7 @@ function QuestsSidebar({
     nearbyId,
     kidsFilterId,
     bikeFilterId,
+    themes = EMPTY_THEMES,
     showCompletedFilter = false,
     showCompletedByOthersFilter = false,
     showUncompletedFilter = false,
@@ -400,6 +405,24 @@ function QuestsSidebar({
                         testID="quests-sidebar-uncompleted-button"
                     />
                 )}
+                {themes.map((entry) => {
+                    const count = cityQuestCountById[entry.selectionId] || 0;
+                    return (
+                        <SidebarFilterRow
+                            key={entry.selectionId}
+                            styles={styles}
+                            colors={colors}
+                            iconSize={iconSize}
+                            icon={entry.icon}
+                            label={entry.label}
+                            count={count}
+                            active={selectedCityId === entry.selectionId}
+                            onPress={() => onSelectCity(entry.selectionId)}
+                            accessibilityLabel={i18nT('quests:screens.tabs.QuestsSidebar.themeA11y', { value1: entry.label, value2: pluralizeQuest(count) })}
+                            testID={`quests-sidebar-theme-${entry.id}`}
+                        />
+                    );
+                })}
                 <View style={styles.countryList}>
                     {citiesByCountry.map((group) => {
                         const isCollapsed = collapsedCountryCodes[group.code] ?? true;

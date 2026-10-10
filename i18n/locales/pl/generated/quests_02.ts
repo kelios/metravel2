@@ -310,4 +310,13 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsSidebar.completedByOthersA11y": "Questy ukończone przez innych graczy, {{value1}}",
   "screens.tabs.QuestsContentPanel.completedByOthersTitle": "Questy ukończone przez innych",
   "screens.tabs.QuestsScreen.completedByOthersSeoTitle": "Questy ukończone przez innych | MeTravel",
+  "utils.questThemes.halloween": "Halloween",
+  "utils.questThemes.christmas": "Boże Narodzenie i Nowy Rok",
+  "utils.questThemes.legends": "Legendy i duchy",
+  "utils.questThemes.detective": "Kryminał",
+  "utils.questThemes.fairytale": "Baśnie",
+  "screens.tabs.QuestsSidebar.themeA11y": "{{value1}}: {{value2}}",
+  "screens.tabs.QuestsContentPanel.themeShowA11y": "Pokaż kolekcję „{{value1}}”",
+  "screens.tabs.QuestsScreen.themeTitle": "{{value1}}: {{value2}} {{value3}} | MeTravel",
+  "screens.tabs.QuestsScreen.themeDescription": "Kolekcja „{{value1}}”: questy offline po miastach z legendami i zadaniami po drodze — punkty na mapie, start z miasta.",
 } as const

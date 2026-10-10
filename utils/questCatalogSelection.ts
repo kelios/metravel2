@@ -42,6 +42,25 @@ export function parseCountrySelectionId(selectionId: string | null | undefined):
 }
 
 /**
+ * Тематическая подборка (#2377) — тот же слот выбора, что город и страна:
+ * `__theme__:halloween`. Реестр тем и предикат живут в `utils/questThemes.ts`;
+ * здесь только форма id, чтобы профиль, хранилище и SSG-скрипт восстановления
+ * выбора (#2320) узнавали срез без импорта реестра и i18n.
+ */
+export const THEME_FILTER_PREFIX = '__theme__:';
+
+export function toThemeSelectionId(themeId: string): string {
+    return `${THEME_FILTER_PREFIX}${themeId.trim().toLowerCase()}`;
+}
+
+/** Id темы из id выбора; `null` для города и любого другого среза. */
+export function parseThemeSelectionId(selectionId: string | null | undefined): string | null {
+    if (!selectionId || !selectionId.startsWith(THEME_FILTER_PREFIX)) return null;
+    const id = selectionId.slice(THEME_FILTER_PREFIX.length).trim().toLowerCase();
+    return id || null;
+}
+
+/**
  * Предикат этих двух срезов. Флаг приходит в каждом элементе `/quests/`
  * (`is_completed_by_me` → `isCompletedByMe`), поэтому срез не стоит отдельного
  * запроса. Живёт рядом со своими id и без зависимостей: одним правилом каталог

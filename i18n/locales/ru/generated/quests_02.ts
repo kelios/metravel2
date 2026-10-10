@@ -310,4 +310,13 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsSidebar.completedByOthersA11y": "Пройденные другими игроками квесты, {{value1}}",
   "screens.tabs.QuestsContentPanel.completedByOthersTitle": "Квесты, пройденные другими",
   "screens.tabs.QuestsScreen.completedByOthersSeoTitle": "Квесты, пройденные другими | MeTravel",
+  "utils.questThemes.halloween": "Хэллоуин",
+  "utils.questThemes.christmas": "Рождество и Новый год",
+  "utils.questThemes.legends": "Легенды и призраки",
+  "utils.questThemes.detective": "Детектив",
+  "utils.questThemes.fairytale": "Сказки",
+  "screens.tabs.QuestsSidebar.themeA11y": "{{value1}}: {{value2}}",
+  "screens.tabs.QuestsContentPanel.themeShowA11y": "Показать подборку «{{value1}}»",
+  "screens.tabs.QuestsScreen.themeTitle": "{{value1}}: {{value2}} {{value3}} | MeTravel",
+  "screens.tabs.QuestsScreen.themeDescription": "Подборка «{{value1}}»: офлайн-квесты по городам с легендами и заданиями по пути — точки на карте, старт из города.",
 } as const

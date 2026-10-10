@@ -310,4 +310,13 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsSidebar.completedByOthersA11y": "Quests completed by other players, {{value1}}",
   "screens.tabs.QuestsContentPanel.completedByOthersTitle": "Quests completed by others",
   "screens.tabs.QuestsScreen.completedByOthersSeoTitle": "Quests completed by others | MeTravel",
+  "utils.questThemes.halloween": "Halloween",
+  "utils.questThemes.christmas": "Christmas and New Year",
+  "utils.questThemes.legends": "Legends and ghosts",
+  "utils.questThemes.detective": "Detective",
+  "utils.questThemes.fairytale": "Fairy tales",
+  "screens.tabs.QuestsSidebar.themeA11y": "{{value1}}: {{value2}}",
+  "screens.tabs.QuestsContentPanel.themeShowA11y": "Show the “{{value1}}” collection",
+  "screens.tabs.QuestsScreen.themeTitle": "{{value1}}: {{value2}} {{value3}} | MeTravel",
+  "screens.tabs.QuestsScreen.themeDescription": "“{{value1}}” collection: offline city quests with legends and tasks along the way — points on the map, starting from the city.",
 } as const

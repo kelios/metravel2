@@ -310,4 +310,13 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsSidebar.completedByOthersA11y": "Квести, пройдені іншими гравцями, {{value1}}",
   "screens.tabs.QuestsContentPanel.completedByOthersTitle": "Квести, пройдені іншими",
   "screens.tabs.QuestsScreen.completedByOthersSeoTitle": "Квести, пройдені іншими | MeTravel",
+  "utils.questThemes.halloween": "Геловін",
+  "utils.questThemes.christmas": "Різдво і Новий рік",
+  "utils.questThemes.legends": "Легенди та привиди",
+  "utils.questThemes.detective": "Детектив",
+  "utils.questThemes.fairytale": "Казки",
+  "screens.tabs.QuestsSidebar.themeA11y": "{{value1}}: {{value2}}",
+  "screens.tabs.QuestsContentPanel.themeShowA11y": "Показати добірку «{{value1}}»",
+  "screens.tabs.QuestsScreen.themeTitle": "{{value1}}: {{value2}} {{value3}} | MeTravel",
+  "screens.tabs.QuestsScreen.themeDescription": "Добірка «{{value1}}»: офлайн-квести містами з легендами та завданнями дорогою — точки на карті, старт із міста.",
 } as const

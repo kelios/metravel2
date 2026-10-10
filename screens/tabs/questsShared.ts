@@ -1,3 +1,4 @@
+import type { NavigationIconName } from '@/constants/navigationIcons';
 import { translatePlural } from '@/i18n'
 export type City = {
     id: string;
@@ -8,6 +9,14 @@ export type City = {
 };
 
 export type NearbyCity = City & { isNearby: true };
+
+/** Тематическая подборка каталога (#2377) в виде, готовом для сайдбара и чипов. */
+export type QuestThemeEntry = {
+    id: string;
+    selectionId: string;
+    label: string;
+    icon: NavigationIconName;
+};
 
 export type { QuestMeta } from '@/utils/questAdapters';
 
