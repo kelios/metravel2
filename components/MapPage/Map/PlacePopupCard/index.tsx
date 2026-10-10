@@ -1033,7 +1033,7 @@ const PlacePopupCard: React.FC<Props> = ({
     <CardActionPressable
       accessibilityLabel={i18nT('map:components.MapPage.Map.PlacePopupCard.index.zakryt_popap_252bac72')}
       onPress={onClose}
-      title={i18nT('map:components.MapPage.Map.PlacePopupCard.index.zakryt_168e0bd3')}
+      title={i18nT('common:action.close')}
       enableWebClickFallback
       style={({ pressed }) => [styles.closeButton, pressed && styles.closeButtonPressed]}
     >

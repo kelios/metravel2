@@ -94,7 +94,7 @@ function AdminGrantRareAward({ recipientId, recipientName, testID, style }: Prop
       />
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={close}>
-        <Pressable style={styles.backdrop} onPress={close} accessibilityLabel={i18nT('achievements:components.achievements.AdminGrantRareAward.zakryt_a6eb2fe6')}>
+        <Pressable style={styles.backdrop} onPress={close} accessibilityLabel={i18nT('common:action.close')}>
           <Pressable style={styles.sheet} onPress={() => {}}>
             <View style={styles.header}>
               <Text style={styles.title}>
@@ -104,7 +104,7 @@ function AdminGrantRareAward({ recipientId, recipientName, testID, style }: Prop
                 style={styles.closeBtn}
                 onPress={close}
                 accessibilityRole="button"
-                accessibilityLabel={i18nT('achievements:components.achievements.AdminGrantRareAward.zakryt_a6eb2fe6')}
+                accessibilityLabel={i18nT('common:action.close')}
               >
                 <Feather name="x" size={20} color={colors.text} />
               </Pressable>

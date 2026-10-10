@@ -53,8 +53,8 @@ export default function ListTravelLayout({
           visible={!!deleteId}
           title={i18nT('travel:components.listTravel.parts.ListTravelLayout.udalit_puteshestvie_10878612')}
           message={deleteError ?? i18nT('travel:components.listTravel.parts.ListTravelLayout.deleteIrreversible')}
-          confirmText={i18nT('travel:components.listTravel.parts.ListTravelLayout.udalit_306481cb')}
-          cancelText={i18nT('travel:components.listTravel.parts.ListTravelLayout.otmena_19a369ba')}
+          confirmText={i18nT('common:action.delete')}
+          cancelText={i18nT('common:action.cancel')}
           onConfirm={onConfirmDelete}
           onClose={onCloseDelete}
           confirmTestID="confirm-delete-button"

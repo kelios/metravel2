@@ -622,7 +622,7 @@ function QuestFullMap({
                             style={[styles.modalOption, styles.cancelOption]}
                             onPress={() => setExportMenuVisible(false)}
                         >
-                            <Text style={styles.cancelOptionText}>{i18nT('quests:components.quests.QuestFullMap.otmena_0f9f0745')}</Text>
+                            <Text style={styles.cancelOptionText}>{i18nT('common:action.cancel')}</Text>
                         </TouchableOpacity>
                     </View>
                 </TouchableOpacity>

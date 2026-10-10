@@ -143,7 +143,7 @@ function PublicTripFilters({ trips, value, onChange, hasActive, onReset }: Props
                 <Pressable
                   onPress={() => setOpenKey(null)}
                   accessibilityRole="button"
-                  accessibilityLabel={i18nT('trips:components.trips.PublicTripFilters.zakryt_cc5d5e01')}
+                  accessibilityLabel={i18nT('common:action.close')}
                   hitSlop={8}
                 >
                   <Feather name="x" size={20} color={colors.text} />

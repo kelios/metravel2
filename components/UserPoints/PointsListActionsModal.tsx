@@ -99,9 +99,9 @@ export const PointsListActionsModal: React.FC<Props> = ({
           />
 
           <Button
-            label={i18nT('map:components.UserPoints.PointsListActionsModal.otmena_bfdbf5e3')}
+            label={i18nT('common:action.cancel')}
             onPress={onClose}
-            accessibilityLabel={i18nT('map:components.UserPoints.PointsListActionsModal.otmena_bfdbf5e3')}
+            accessibilityLabel={i18nT('common:action.cancel')}
             fullWidth
             variant="ghost"
           />

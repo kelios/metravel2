@@ -152,6 +152,7 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
 // ✅ I2.2: Optional RNW tree-shake via slim barrel.
 // Set EXPO_PUBLIC_RNW_SLIM=1 to enable cherry-picked react-native-web imports.
 const RNW_SLIM_ENABLED = process.env.EXPO_PUBLIC_RNW_SLIM === '1'
+const QUILL_SOURCE_DIR_RE = /[\\/]node_modules[\\/]quill[\\/]/
 config.resolver.resolveRequest = ((orig) => {
   return (context, moduleName, platform) => {
     const resolverEnvironment = context.customResolverOptions?.environment
@@ -216,6 +217,18 @@ config.resolver.resolveRequest = ((orig) => {
     ) {
       return {
         filePath: path.resolve(__dirname, 'metro-stubs/react-native-reanimated.js'),
+        type: 'sourceFile',
+      }
+    }
+    // #2360: quill's `lodash-es` barrel import pulled all of lodash-es into the
+    // editor chunk; only quill's own imports go to the three-method module.
+    if (
+      platform === 'web' &&
+      moduleName === 'lodash-es' &&
+      QUILL_SOURCE_DIR_RE.test(context.originModulePath || '')
+    ) {
+      return {
+        filePath: path.resolve(__dirname, 'metro-stubs/quill-lodash-es.js'),
         type: 'sourceFile',
       }
     }

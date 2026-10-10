@@ -304,7 +304,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                             : i18nT('travel:components.travel.TravelWizardStepPublish.puteshestvie_vernetsya_v_chernoviki_i_budet__d9185285')
                     }
                     confirmText={i18nT('travel:components.travel.TravelWizardStepPublish.otklonit_a76b58b3')}
-                    cancelText={i18nT('travel:components.travel.TravelWizardStepPublish.otmena_1fdffdc8')}
+                    cancelText={i18nT('common:action.cancel')}
                 />
             </KeyboardAvoidingView>
         </SafeAreaView>

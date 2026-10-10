@@ -290,7 +290,8 @@ const TERMS: Term[] = [
   {
     name: '«Хочу поехать» — одно имя списка на всех экранах',
     ru: RU_WISHLIST_NAME,
-    minEntries: 90,
+    // #2360: 11 ключей без ссылок в коде удалены из всех локалей (93 → 82).
+    minEntries: 82,
     locales: {
       en: { required: /\bI want to go\b/i, forbidden: /want to travel/i },
       pl: { required: /Chcę pojechać/, forbidden: PL_WALK_VERB },

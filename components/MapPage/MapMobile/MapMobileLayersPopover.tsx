@@ -116,7 +116,7 @@ const MapMobileLayersPopoverInner: React.FC<MapMobileLayersPopoverProps> = ({
           testID="map-mobile-layers-popover-close"
           onPress={onRequestClose}
           accessibilityRole="button"
-          accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileLayersPopover.zakryt_ceb4ed2d')}
+          accessibilityLabel={i18nT('common:action.close')}
           style={({ pressed }) => [styles.closeButton, pressed && { opacity: 0.6 }]}
         >
           <Feather name="x" size={18} color={colors.textMuted} />

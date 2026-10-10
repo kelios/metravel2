@@ -170,7 +170,6 @@ export const homeGenerated1 = {
   "components.mainPage.StickySearchBar.sbrosit_usloviya_c412986e": "Zresetuj warunki",
   "components.mainPage.StickySearchBar.sbrosit_vse_filtry_i_poisk_96874bf6": "Zresetuj wszystkie filtry i wyszukaj",
   "components.mainPage.StickySearchBar.skryt_idei_puteshestviy_7fd2b644": "Ukryj pomysły na podróże",
-  "components.mainPage.StickySearchBar.udalit_da76c0e4": "Usuń",
   "components.mainPage.StickySearchBar.udalit_iz_istorii_value1_f59529ef": "Usuń z historii: {{value1}}",
   "components.roulette.useRoulette.bez_filtrov_d6910ca1": "Żadnych filtrów",
   "components.roulette.useRoulette.value1_i_esche_value2_6f94ef8e": "{{value1}}, a także {{value2}}",

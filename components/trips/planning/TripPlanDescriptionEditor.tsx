@@ -287,7 +287,7 @@ export default function TripPlanDescriptionEditor({
             >
               <View style={styles.fullscreenHeader}>
                 <Button
-                  label={t('trips:app.tabs.trips.plan.id.zakryt_87bc8fb5')}
+                  label={t('common:action.close')}
                   onPress={closeFullscreen}
                   variant="ghost"
                   size="sm"
@@ -415,7 +415,7 @@ export default function TripPlanDescriptionEditor({
                 ) : null}
                 <View style={styles.dialogActions}>
                   <Button
-                    label={t('trips:app.tabs.trips.plan.id.otmena_66379efd')}
+                    label={t('common:action.cancel')}
                     onPress={closeLinkDialog}
                     variant="ghost"
                     size="sm"

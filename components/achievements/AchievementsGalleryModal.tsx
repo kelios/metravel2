@@ -149,7 +149,7 @@ function AchievementsGalleryModal({ visible, onClose, data, ownerName }: Props) 
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={i18nT('achievements:components.achievements.AchievementsGalleryModal.zakryt_1442a22e')}>
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={i18nT('common:action.close')}>
         <Pressable style={styles.sheet} onPress={() => {}}>
           <View style={styles.header}>
             <Text style={styles.title}>{i18nT('achievements:components.achievements.AchievementsGalleryModal.dostizheniya_b8ede63f')}</Text>
@@ -157,7 +157,7 @@ function AchievementsGalleryModal({ visible, onClose, data, ownerName }: Props) 
               style={styles.closeBtn}
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel={i18nT('achievements:components.achievements.AchievementsGalleryModal.zakryt_1442a22e')}
+              accessibilityLabel={i18nT('common:action.close')}
             >
               <Feather name="x" size={20} color={colors.text} />
             </Pressable>

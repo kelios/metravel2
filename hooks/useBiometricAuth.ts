@@ -128,7 +128,7 @@ export function useBiometricAuth(): UseBiometricAuthReturn {
       // Verify biometric before enabling (ensure user can actually use it)
       const result = await LocalAuth.authenticateAsync({
         promptMessage: i18nT('shared:hooks.useBiometricAuth.podtverdite_dlya_vklyucheniya_biometrii_48c83745'),
-        cancelLabel: i18nT('shared:hooks.useBiometricAuth.otmena_7b421ce1'),
+        cancelLabel: i18nT('common:action.cancel'),
         disableDeviceFallback: false,
       });
 

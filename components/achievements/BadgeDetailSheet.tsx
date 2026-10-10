@@ -197,7 +197,7 @@ function BadgeDetailSheet({ visible, onClose, detail, ownerName }: Props) {
       <Pressable
         style={styles.backdrop}
         onPress={onClose}
-        accessibilityLabel={i18nT('achievements:components.achievements.BadgeDetailSheet.zakryt_f1ccd424')}
+        accessibilityLabel={i18nT('common:action.close')}
       >
         <Pressable
           style={styles.sheet}
@@ -209,7 +209,7 @@ function BadgeDetailSheet({ visible, onClose, detail, ownerName }: Props) {
               style={styles.closeBtn}
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel={i18nT('achievements:components.achievements.BadgeDetailSheet.zakryt_f1ccd424')}
+              accessibilityLabel={i18nT('common:action.close')}
             >
               <Feather name="x" size={20} color={colors.text} />
             </Pressable>

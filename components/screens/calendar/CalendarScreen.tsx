@@ -68,7 +68,7 @@ async function confirmRemoveFromCalendar(title: string, onConfirm: () => void) {
     title: i18nT('calendar:app.tabs.calendar.ubrat_iz_kalendarya_171623ca'),
     message: i18nT('calendar:app.tabs.calendar.value1_ischeznet_iz_kalendarya_sam_marshrut__79185a97', { value1: cleanTitle }),
     confirmText: i18nT('calendar:app.tabs.calendar.ubrat_77b9552b'),
-    cancelText: i18nT('calendar:app.tabs.calendar.otmena_57439d65'),
+    cancelText: i18nT('common:action.cancel'),
   })
   if (confirmed) onConfirm()
 }

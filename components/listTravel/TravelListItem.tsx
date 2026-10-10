@@ -551,8 +551,8 @@ function TravelListItem({
         <>
           <View style={[styles.adminDivider, isMobile && styles.adminDividerMobile]} />
           <CardActionPressable
-            accessibilityLabel={isDeleting ? i18nT('travel:components.listTravel.TravelListItem.marshrut_udalyaetsya_0d0bf1c2') : i18nT('travel:components.listTravel.TravelListItem.udalit_aa22ae90')}
-            title={isDeleting ? i18nT('travel:components.listTravel.TravelListItem.udalyaetsya_6e5041bf') : i18nT('travel:components.listTravel.TravelListItem.udalit_aa22ae90')}
+            accessibilityLabel={isDeleting ? i18nT('travel:components.listTravel.TravelListItem.marshrut_udalyaetsya_0d0bf1c2') : i18nT('common:action.delete')}
+            title={isDeleting ? i18nT('travel:components.listTravel.TravelListItem.udalyaetsya_6e5041bf') : i18nT('common:action.delete')}
             onPress={handleDelete}
             style={[styles.adminBtn, isMobile && styles.adminBtnMobile]}
             testID="delete-button"

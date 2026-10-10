@@ -461,7 +461,7 @@ function StickySearchBar({
                 onPress={() => runHistoryActionOnPress(() => void removeQuery(query))}
                 accessibilityRole="button"
                 accessibilityLabel={i18nT('home:components.mainPage.StickySearchBar.udalit_iz_istorii_value1_f59529ef', { value1: query })}
-                ref={webTitleRef(i18nT('home:components.mainPage.StickySearchBar.udalit_da76c0e4'))}
+                ref={webTitleRef(i18nT('common:action.delete'))}
                 {...Platform.select({
                   web: {
                     onMouseDown: (event: unknown) => runHistoryActionOnMouseDown(event, () => void removeQuery(query)),

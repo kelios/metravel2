@@ -55,8 +55,8 @@ export const NativePointList = React.memo(function NativePointList({
       void confirmAction({
         title: i18nT('travel:components.travel.stepRoute.NativePointList.removeTitle'),
         message: i18nT('travel:components.travel.stepRoute.NativePointList.removeMessage'),
-        confirmText: i18nT('travel:components.travel.stepRoute.NativePointList.delete'),
-        cancelText: i18nT('travel:components.travel.stepRoute.NativePointList.cancel'),
+        confirmText: i18nT('common:action.delete'),
+        cancelText: i18nT('common:action.cancel'),
       }).then((confirmed) => {
         if (confirmed) onChange(markers.filter((_, i) => i !== index))
       })
@@ -187,7 +187,7 @@ export const NativePointList = React.memo(function NativePointList({
             <View style={{ flex: 1 }} />
             {iconBtn(
               'trash-2',
-              i18nT('travel:components.travel.stepRoute.NativePointList.delete'),
+              i18nT('common:action.delete'),
               () => remove(index),
               false,
               true,

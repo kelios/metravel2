@@ -424,9 +424,9 @@ export function DateEditorModal({
                 style={[styles.dateSecondaryButton, globalFocusStyles.focusable]}
                 onPress={onClose}
                 accessibilityRole="button"
-                accessibilityLabel={i18nT('calendar:components.screens.calendar.calendarScreen_parts.otmena_682370b1')}
+                accessibilityLabel={i18nT('common:action.cancel')}
               >
-                <Text style={styles.dateSecondaryText}>{i18nT('calendar:components.screens.calendar.calendarScreen_parts.otmena_682370b1')}</Text>
+                <Text style={styles.dateSecondaryText}>{i18nT('common:action.cancel')}</Text>
               </Pressable>
               <Pressable
                 style={[styles.datePrimaryButton, globalFocusStyles.focusable]}

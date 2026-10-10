@@ -587,7 +587,7 @@ export default function TravelStatusButton({
                 style={[styles.closeBtn, globalFocusStyles.focusable]}
                 onPress={closeModal}
                 accessibilityRole="button"
-                accessibilityLabel={i18nT('travel:components.travel.TravelStatusButton.zakryt_ee95ca3d')}
+                accessibilityLabel={i18nT('common:action.close')}
                 hitSlop={8}
               >
                 <Feather name="x" size={22} color={colors.textSecondary} />

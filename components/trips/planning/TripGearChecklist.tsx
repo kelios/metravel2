@@ -219,7 +219,7 @@ function TripGearChecklist({ trip }: Props) {
             testID="trip-gear-add-submit"
           />
           <Button
-            label={i18nT('trips:components.trips.planning.TripGearChecklist.addCancel')}
+            label={i18nT('common:action.cancel')}
             variant="outline"
             size="md"
             onPress={closeAddForm}

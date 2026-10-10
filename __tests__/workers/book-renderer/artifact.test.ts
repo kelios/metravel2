@@ -25,6 +25,8 @@ beforeAll(() => {
     export { parseHtmlBody } from '@/services/pdf-export/parsers/contentParser/htmlTree'
     export { buildPrintImageUrl } from '@/utils/printImageUrl'
     export { resolveImageAspect, lookupDescriptionImageAspect } from '@/services/pdf-export/utils/imageAspects'
+    export { incrementalContentStep } from '@/workers/book-renderer/htmlCheckpoint/incrementalStep'
+    export { preparePlanningStep } from '@/workers/book-renderer/planningStep'
   `)
   artifact = buildBookRenderer({ root: ROOT, entry, outDir: path.join(scratch, 'artifact') })
   worker = require(path.join(artifact.outDir, artifact.manifest.entrypoint))
@@ -41,6 +43,8 @@ describe('versioned Node book renderer artifact', () => {
       document_schema_version: 1,
       prepared_source_schema_version: 5,
       settings_schema_version: 1,
+      planning_protocol_version: 1,
+      html_checkpoint: { protocol_version: 1 },
     })
     expect(artifact.manifest.print_asset_recipe).toEqual(PRINT_ASSET_RECIPE)
     expect(artifact.manifest.print_variant_recipe).toEqual(PRINT_VARIANT_RECIPE)
@@ -67,6 +71,27 @@ describe('versioned Node book renderer artifact', () => {
     expect(packageJson.dependencies.parse5).toMatch(/^\d+\.\d+\.\d+$/)
     const lock = fs.readFileSync(path.join(artifact.outDir, 'yarn.lock'), 'utf8')
     expect(lock).toContain(`"parse5@${packageJson.dependencies.parse5}":`)
+  })
+
+  it('ships original license notices and binds the exact upstream parser sources independently of the modified port', () => {
+    const metadata = artifact.manifest.html_checkpoint
+    expect(metadata.upstream_pin).toMatch(/^[a-f0-9]{64}$/)
+    for (const ref of [metadata.upstream, ...metadata.licenses]) {
+      expect(fs.readFileSync(path.join(artifact.outDir, ref))).toEqual(fs.readFileSync(path.join(ROOT, ref)))
+    }
+    expect(fs.readFileSync(path.join(artifact.outDir, metadata.licenses[0]), 'utf8')).toContain('MIT')
+    expect(fs.readFileSync(path.join(artifact.outDir, metadata.licenses[1]), 'utf8')).toContain('Redistribution')
+    const originalRead = fs.readFileSync
+    const parser = path.join(ROOT, 'node_modules/htmlparser2/src/Parser.ts')
+    const spy = jest.spyOn(fs, 'readFileSync').mockImplementation(((file: fs.PathOrFileDescriptor, ...args: unknown[]) => {
+      if (String(file) === parser) return Buffer.from('changed upstream source')
+      return (originalRead as (...values: unknown[]) => unknown)(file, ...args)
+    }) as typeof fs.readFileSync)
+    try {
+      expect(() => buildBookRenderer({ root: ROOT, entry, outDir: path.join(scratch, 'changed-upstream') }))
+        .toThrow('HTML checkpoint upstream source changed')
+      expect(fs.existsSync(path.join(scratch, 'changed-upstream/renderer-manifest.json'))).toBe(false)
+    } finally { spy.mockRestore() }
   })
 
   it('has no unresolved app aliases, React, Expo or browser platform imports', () => {

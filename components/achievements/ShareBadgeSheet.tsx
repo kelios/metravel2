@@ -263,7 +263,7 @@ function ShareBadgeSheet({ visible, onClose, subject, context = 'detail' }: Prop
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={i18nT('achievements:components.achievements.ShareBadgeSheet.zakryt_967f1bbf')}>
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={i18nT('common:action.close')}>
         <Pressable style={styles.sheet} onPress={() => {}}>
           <View style={styles.header}>
             <Text style={styles.heading}>{i18nT('achievements:components.achievements.ShareBadgeSheet.podelitsya_dostizheniem_75a70bc0')}</Text>
@@ -271,7 +271,7 @@ function ShareBadgeSheet({ visible, onClose, subject, context = 'detail' }: Prop
               style={styles.closeBtn}
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel={i18nT('achievements:components.achievements.ShareBadgeSheet.zakryt_967f1bbf')}
+              accessibilityLabel={i18nT('common:action.close')}
             >
               <Feather name="x" size={20} color={colors.text} />
             </Pressable>

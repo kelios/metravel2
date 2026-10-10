@@ -198,7 +198,7 @@ export function ModalFooter({
           target.style.boxShadow = themed.boxShadows.light as any
         }}
       >
-        {i18nT('profile:components.export.BookSettingsModal_parts.otmena_7c664a0f')}</button>
+        {i18nT('common:action.cancel')}</button>
       {onPreview && (
         <button
           onClick={onPreviewClick}

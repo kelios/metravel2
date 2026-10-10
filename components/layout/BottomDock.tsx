@@ -436,7 +436,7 @@ function BottomDock({ onDockHeight, renderDock = true }: BottomDockProps) {
                 onPress={() => setShowMore(false)}
                 style={[styles.sheetCloseBtn, globalFocusStyles.focusable]}
                 accessibilityRole="button"
-                accessibilityLabel={i18nT('navigation:components.layout.BottomDock.zakryt_6a41e4ea')}
+                accessibilityLabel={i18nT('common:action.close')}
               >
                 <Feather name="x" size={20} color={colors.textMuted} />
               </Pressable>
@@ -478,7 +478,7 @@ function BottomDock({ onDockHeight, renderDock = true }: BottomDockProps) {
                   onPress={() => setShowMore(false)}
                   style={[styles.sheetCloseBtn, globalFocusStyles.focusable]}
                   accessibilityRole="button"
-                  accessibilityLabel={i18nT('navigation:components.layout.BottomDock.zakryt_6a41e4ea')}
+                  accessibilityLabel={i18nT('common:action.close')}
                 >
                   <Feather name="x" size={20} color={colors.textMuted} />
                 </Pressable>

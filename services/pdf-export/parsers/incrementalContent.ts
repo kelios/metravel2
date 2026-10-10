@@ -1,5 +1,8 @@
 import { Parser } from 'htmlparser2'
+import { IncrementalContentError } from '@/services/pdf-export/parsers/incrementalContentError'
+export { IncrementalContentError } from '@/services/pdf-export/parsers/incrementalContentError'
 import { sanitizeRichTextForPdf } from '@/utils/sanitizeRichText'
+import { validateFragmentWriterCheckpoint, type FragmentWriterCheckpoint, type FragmentOpenElement } from '@/services/pdf-export/parsers/incrementalContentState'
 
 /** Transfer/working-set budgets, never a limit on the total source length. */
 export interface IncrementalContentOptions {
@@ -37,13 +40,6 @@ export interface SafeContentFragment {
   imageOccurrences: Array<{ index: number; source: string }>
 }
 
-export class IncrementalContentError extends Error {
-  constructor(readonly code: string) {
-    super(code)
-    this.name = 'IncrementalContentError'
-  }
-}
-
 const VOID_TAGS = new Set([
   'area', 'base', 'basefont', 'br', 'col', 'embed', 'frame', 'hr', 'img', 'input',
   'isindex', 'keygen', 'link', 'meta', 'param', 'source', 'track', 'wbr',
@@ -75,7 +71,9 @@ function budget(value: number | undefined, fallback: number, minimum: number): n
  * Scan those tokens before feeding it, so even a never-closed comment stays
  * within the declared budget. No source token or field is accumulated here.
  */
-class TokenBudget {
+export interface TokenBudgetCheckpoint {version: 1; maximum: number; length: number; prefix: string; tail: string; quote: string; comment: boolean; cdata: boolean}
+
+export class TokenBudget {
   private length = 0
   private prefix = ''
   private tail = ''
@@ -84,6 +82,20 @@ class TokenBudget {
   private cdata = false
 
   constructor(private readonly maximum: number) {}
+
+  save(): TokenBudgetCheckpoint {
+    return {version: 1, maximum: this.maximum, length: this.length, prefix: this.prefix, tail: this.tail, quote: this.quote, comment: this.comment, cdata: this.cdata}
+  }
+
+  restore(value: unknown): void {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new IncrementalContentError('TOKEN_CHECKPOINT_INVALID')
+    const state = value as Record<string, unknown>
+    if (state.version !== 1 || state.maximum !== this.maximum || !Number.isSafeInteger(state.length) || typeof state.length !== 'number' || state.length < 0 || state.length > this.maximum
+      || typeof state.prefix !== 'string' || state.prefix.length > 9 || typeof state.tail !== 'string' || state.tail.length > 3
+      || !['', '"', "'"].includes(state.quote as string) || typeof state.comment !== 'boolean' || typeof state.cdata !== 'boolean') throw new IncrementalContentError('TOKEN_CHECKPOINT_INVALID')
+    this.length = state.length; this.prefix = state.prefix; this.tail = state.tail; this.quote = state.quote as string
+    this.comment = state.comment; this.cdata = state.cdata
+  }
 
   feed(chunk: string): void {
     for (const char of chunk) {
@@ -130,19 +142,12 @@ class TokenBudget {
   }
 }
 
-type OpenElement = {
-  name: string; emittedName: string; open: string; reopen: string; close: string; omitted: boolean
-  tableIndex?: number; rowIndex?: number; cellIndex?: number; nextChild?: number
-  listItem?: number
-  listRun?: 'ol' | 'ul'
-}
-
-class FragmentWriter {
+export class FragmentWriter {
   readonly ready: SafeContentFragment[] = []
   readonly metrics: IncrementalContentMetrics = {
     fragments: 0, sourceTextChars: 0, images: 0, peakBufferedChars: 0, peakDepth: 0,
   }
-  private readonly stack: OpenElement[] = []
+  private readonly stack: FragmentOpenElement[] = []
   private parts: string[] = []
   private chars = 0
   private textChars = 0
@@ -166,6 +171,28 @@ class FragmentWriter {
   ) {
     // Leave room for sanitizer-added attributes and first-party image rewrites.
     this.rawBudget = Math.floor(maxFragment / 2)
+  }
+
+  save(anchorPolicy = ''): FragmentWriterCheckpoint {
+    if (this.ready.length) throw new IncrementalContentError('FRAGMENT_CHECKPOINT_QUEUE_NOT_DRAINED')
+    if (this.headingAnchorResolver && !anchorPolicy) throw new IncrementalContentError('FRAGMENT_CHECKPOINT_ANCHOR_POLICY_REQUIRED')
+    return validateFragmentWriterCheckpoint({version: 1,
+      policy: {maxFragment: this.maxFragment, maxDepth: this.maxDepth, preserveListStarts: this.preserveListStarts, expandDisclosures: this.expandDisclosures, anchorPolicy},
+      stack: this.stack, parts: this.parts, chars: this.chars, textChars: this.textChars, images: this.images,
+      payload: this.payload, continuedPath: this.continuedPath, tableContinuation: this.tableContinuation,
+      listContinuation: this.listContinuation, nextTable: this.nextTable, pendingSurrogate: this.pendingSurrogate,
+      plainText: this.plainText, omittedDepth: this.omittedDepth, metrics: this.metrics})
+  }
+
+  restore(value: unknown, anchorPolicy = ''): void {
+    if (this.ready.length) throw new IncrementalContentError('FRAGMENT_CHECKPOINT_QUEUE_NOT_DRAINED')
+    const state = validateFragmentWriterCheckpoint(value)
+    if (JSON.stringify(state.policy) !== JSON.stringify(this.save(anchorPolicy).policy)) throw new IncrementalContentError('FRAGMENT_CHECKPOINT_POLICY_MISMATCH')
+    this.stack.splice(0, this.stack.length, ...state.stack); this.parts = state.parts; this.chars = state.chars
+    this.textChars = state.textChars; this.images = state.images; this.payload = state.payload
+    this.continuedPath = state.continuedPath; this.tableContinuation = state.tableContinuation
+    this.listContinuation = state.listContinuation; this.nextTable = state.nextTable; this.pendingSurrogate = state.pendingSurrogate
+    this.plainText = state.plainText; this.omittedDepth = state.omittedDepth; Object.assign(this.metrics, state.metrics)
   }
 
   open(originalName: string, attrs: Record<string, string>): void {
@@ -197,7 +224,7 @@ class FragmentWriter {
       }
     }
     if (!isVoid) {
-      const element: OpenElement = { name, emittedName, open, reopen, close, omitted }
+      const element: FragmentOpenElement = { name, emittedName, open, reopen, close, omitted }
       if (name === 'table') {
         element.tableIndex = this.nextTable++
         element.nextChild = 0

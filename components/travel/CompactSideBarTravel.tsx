@@ -380,7 +380,7 @@ function CompactSideBarTravel({
             {...webOnly({ role: 'button', 'aria-label': i18nT('travel:components.travel.CompactSideBarTravel.zakryt_menyu_3aadf09e') } as any)}
           >
             <Feather name="x" size={20} color={colors.textInverse} />
-            <Text style={[styles.closeTxt, { color: colors.textInverse }]}>{i18nT('travel:components.travel.CompactSideBarTravel.zakryt_250cc0ad')}</Text>
+            <Text style={[styles.closeTxt, { color: colors.textInverse }]}>{i18nT('common:action.close')}</Text>
           </Pressable>
         </View>
       )}

@@ -68,7 +68,7 @@ function ReportReasonSheet({ visible, target, onClose, onReported }: Props) {
       <Pressable
         style={styles.backdrop}
         onPress={close}
-        accessibilityLabel={i18nT('sharedStatic:contentSafety.close')}
+        accessibilityLabel={i18nT('common:action.close')}
       >
         <Pressable style={styles.sheet} onPress={() => {}}>
           <View style={styles.header}>
@@ -79,7 +79,7 @@ function ReportReasonSheet({ visible, target, onClose, onReported }: Props) {
               style={styles.closeBtn}
               onPress={close}
               accessibilityRole="button"
-              accessibilityLabel={i18nT('sharedStatic:contentSafety.close')}
+              accessibilityLabel={i18nT('common:action.close')}
               testID="report-close"
             >
               <Feather name="x" size={20} color={colors.text} />

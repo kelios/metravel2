@@ -79,7 +79,7 @@ export const PointsListBulkMapBar: React.FC<PointsListBulkMapBarProps> = ({
                 accessibilityLabel={i18nT('map:components.UserPoints.PointsListBulkMapBar.izmenit_d066c372')}
               />
               <Button
-                label={i18nT('map:components.UserPoints.PointsListBulkMapBar.udalit_b55d2000')}
+                label={i18nT('common:action.delete')}
                 onPress={onOpenDeleteSelected}
                 disabled={isBulkWorking}
                 size="sm"

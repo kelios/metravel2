@@ -360,7 +360,7 @@ function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
       <Pressable
         style={[styles.backdrop, backdropViewportStyle]}
         onPress={onClose}
-        accessibilityLabel={t('questShareStatic:finaleShare.close')}
+        accessibilityLabel={t('common:action.close')}
       >
         <Pressable
           style={[
@@ -376,7 +376,7 @@ function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
               style={styles.closeBtn}
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel={t('questShareStatic:finaleShare.close')}
+              accessibilityLabel={t('common:action.close')}
             >
               <Feather name="x" size={20} color={colors.text} />
             </Pressable>

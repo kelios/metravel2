@@ -421,7 +421,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: DESIGN_TOKENS.spacing.sm }}>
               <Button
                 onPress={() => setAnchorModalVisible(false)}
-                label={i18nT('shared:components.article.ArticleEditor.otmena_ae83d861')}
+                label={i18nT('common:action.cancel')}
                 variant="ghost"
                 size="sm"
               />

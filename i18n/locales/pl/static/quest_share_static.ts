@@ -19,6 +19,5 @@ export const questShareStaticResources = {
   "finaleShare.copyFailed": "Nie udało się skopiować",
   "finaleShare.imageSaved": "Obrazek zapisany",
   "finaleShare.instagramHint": "Obrazek zapisany — dodaj go do swojej relacji",
-  "finaleShare.close": "Zamknij",
   "finaleMedia.completedCaption": "Quest ukończony!",
 } as const

@@ -60,7 +60,7 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
           </View>
           <IconButton
             icon={<Feather name="x" size={16} color={colors.textMuted} />}
-            label={i18nT('map:components.MapPage.FiltersPanelHeader.zakryt_52463818')}
+            label={i18nT('common:action.close')}
             onPress={onClose}
             size="sm"
             style={styles.compactMetaCloseButton}

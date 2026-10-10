@@ -723,7 +723,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
           testID="map-mobile-sheet-close"
           onPress={handleCloseSheet}
           accessibilityRole="button"
-          accessibilityLabel={i18nT('map:components.MapPage.MapMobileLayout.zakryt_d55e477b')}
+          accessibilityLabel={i18nT('common:action.close')}
           style={({ pressed }) => [
             styles.sheetCloseButton,
             pressed && { opacity: 0.7 },

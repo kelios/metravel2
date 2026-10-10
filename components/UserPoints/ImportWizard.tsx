@@ -170,7 +170,7 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
       {!!error && <Text style={styles.errorText}>{error}</Text>}
 
       <Button
-        label={i18nT('map:components.UserPoints.ImportWizard.otmena_f80d9fde')}
+        label={i18nT('common:action.cancel')}
         onPress={onCancel}
         variant="ghost"
         fullWidth

@@ -60,7 +60,7 @@ function PeerBadgePickerSheet({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={i18nT('achievements:components.achievements.PeerBadgePickerSheet.zakryt_a1c659fa')}>
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={i18nT('common:action.close')}>
         <Pressable style={styles.sheet} onPress={() => {}}>
           <View style={styles.header}>
             <Text style={styles.title}>{heading}</Text>
@@ -68,7 +68,7 @@ function PeerBadgePickerSheet({
               style={styles.closeBtn}
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel={i18nT('achievements:components.achievements.PeerBadgePickerSheet.zakryt_a1c659fa')}
+              accessibilityLabel={i18nT('common:action.close')}
             >
               <Feather name="x" size={20} color={colors.text} />
             </Pressable>

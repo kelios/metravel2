@@ -409,7 +409,7 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
                       />
                     </View>
                     <Button
-                      label={i18nT('trips:components.trips.planning.TripCreateForm.otmena_b15b4282')}
+                      label={i18nT('common:action.cancel')}
                       onPress={closeStartDatePicker}
                       variant="secondary"
                       fullWidth
@@ -550,7 +550,7 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
                     />
                   </View>
                   <Button
-                    label={i18nT('trips:components.trips.planning.TripCreateForm.otmena_b15b4282')}
+                    label={i18nT('common:action.cancel')}
                     onPress={closeEndDatePicker}
                     variant="secondary"
                     fullWidth

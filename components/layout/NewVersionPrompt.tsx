@@ -94,7 +94,7 @@ export default function NewVersionPrompt() {
           type="button"
           style={dismissButtonStyle}
           onClick={dismiss}
-          aria-label={i18nT('navigation:components.layout.NewVersionPrompt.zakryt_077bdfcd')}
+          aria-label={i18nT('common:action.close')}
         >
           ✕
         </button>

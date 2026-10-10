@@ -1,0 +1,55 @@
+{
+  "protocol_version": 1,
+  "htmlparser2_version": "10.1.0",
+  "entities_version": "7.0.1",
+  "files": [
+    {
+      "source": "node_modules/htmlparser2/src/Parser.ts",
+      "target": "Parser.ts",
+      "sha256": "bfb5ef86311cdbf2f844dbe516787bdb48fc9d4f4201f2379efa9c4a4e61d468",
+      "bytes": 18668
+    },
+    {
+      "source": "node_modules/htmlparser2/src/Tokenizer.ts",
+      "target": "Tokenizer.ts",
+      "sha256": "21b724765e8f1c6126f12de015ed87f2fc674623d878c8f7fb40e0f5d944f90b",
+      "bytes": 30605
+    },
+    {
+      "source": "node_modules/htmlparser2/node_modules/entities/src/decode.ts",
+      "target": "entities/EntityDecoder.ts",
+      "sha256": "038bb022e414910f18da2e1955adba2d68d4e52c3d804c83be2b10ea03354bad",
+      "bytes": 23654
+    },
+    {
+      "source": "node_modules/htmlparser2/node_modules/entities/src/decode-codepoint.ts",
+      "target": "entities/codepoint.ts",
+      "sha256": "0b1d7046c34a79adbc49a5498e2d9a11e45c118a6f46d31acb510402c41b0d7e",
+      "bytes": 2164
+    },
+    {
+      "source": "node_modules/htmlparser2/node_modules/entities/src/internal/bin-trie-flags.ts",
+      "target": "entities/flags.ts",
+      "sha256": "6406c15b039dc3fd58e81d8b9cfa41e47bf56d46dca6f7f2e4d2b8ec65d0f1fc",
+      "bytes": 723
+    },
+    {
+      "source": "node_modules/htmlparser2/node_modules/entities/src/generated/decode-data-html.ts",
+      "target": "entities/htmlDecodeTree.ts",
+      "sha256": "201e7c705a5b3311d1978edabbb5488c097484a7a3078d4fd1eed98032d88d41",
+      "bytes": 32393
+    },
+    {
+      "source": "node_modules/htmlparser2/node_modules/entities/src/generated/decode-data-xml.ts",
+      "target": "entities/xmlDecodeTree.ts",
+      "sha256": "61f60f7c5efd6ca497d6243bb0c31762247da222d828f08e0b743f763258a81d",
+      "bytes": 256
+    },
+    {
+      "source": "node_modules/htmlparser2/node_modules/entities/src/internal/decode-shared.ts",
+      "target": "entities/decodeBase64.ts",
+      "sha256": "093c37c3784a2810d74d6f12d18aae6b46d6ce2f5c6f8efae63c5439e4a8e822",
+      "bytes": 1276
+    }
+  ]
+}

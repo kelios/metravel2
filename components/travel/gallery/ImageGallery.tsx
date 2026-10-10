@@ -806,8 +806,8 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
         onConfirm={confirmDeleteImage}
         title={i18nT('travel:components.travel.gallery.ImageGallery.udalenie_izobrazheniya_f8f83382')}
         message={i18nT('travel:components.travel.gallery.ImageGallery.vy_uvereny_chto_hotite_udalit_eto_izobrazhen_6f7f41ae')}
-        confirmText={i18nT('travel:components.travel.gallery.ImageGallery.udalit_7c7423a6')}
-        cancelText={i18nT('travel:components.travel.gallery.ImageGallery.otmena_b86a2b90')}
+        confirmText={i18nT('common:action.delete')}
+        cancelText={i18nT('common:action.cancel')}
         confirmTestID="confirm-delete"
         cancelTestID="cancel-delete"
       />
@@ -818,8 +818,8 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
         onConfirm={confirmDeleteSelected}
         title={i18nT('travel:components.travel.gallery.ImageGallery.batchDeleteTitle')}
         message={i18nT('travel:components.travel.gallery.ImageGallery.batchDeleteMessage', { value1: selectedKeys.size })}
-        confirmText={i18nT('travel:components.travel.gallery.ImageGallery.udalit_7c7423a6')}
-        cancelText={i18nT('travel:components.travel.gallery.ImageGallery.otmena_b86a2b90')}
+        confirmText={i18nT('common:action.delete')}
+        cancelText={i18nT('common:action.cancel')}
         confirmTestID="confirm-batch-delete"
         cancelTestID="cancel-batch-delete"
       />

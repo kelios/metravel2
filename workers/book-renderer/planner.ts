@@ -36,6 +36,15 @@ export async function pinnedTravel(out: string, id: number): Promise<TravelForBo
   return travel
 }
 
+export function extractAnchorTargets(html: string): string[] {
+  const targets: string[] = []
+  const parser = new Parser({ onopentag(name, attributes) {
+    if (name === 'a' && /^#[^#?]+$/.test(attributes.href || '')) targets.push(attributes.href.slice(1))
+  } })
+  parser.end(html)
+  return targets
+}
+
 /** Resolve forward numbered heading links with a disk index, not a whole-field tree/map. */
 async function anchorResolver(root: string, out: string, pinned: BookDocument, id: number, field: BookTextField, readBytes: number, expandDisclosures = false): Promise<(ordinal: number) => string | undefined> {
   const dir = resolve(travelDirectory(out, id), `anchors-${field}`)
@@ -54,10 +63,7 @@ async function anchorResolver(root: string, out: string, pinned: BookDocument, i
     }
   }
   for await (const fragment of incrementalContent(textSource(root, out, pinned, id, field, readBytes), { expandDisclosures })) {
-    const parser = new Parser({ onopentag(name, attributes) {
-      if (name === 'a' && /^#[^#?]+$/.test(attributes.href || '')) pending.push(attributes.href.slice(1))
-    } })
-    parser.end(fragment.html)
+    pending.push(...extractAnchorTargets(fragment.html))
     await flush()
   }
   return ordinal => {

@@ -8,8 +8,6 @@ export const tripsGenerated3 = {
   "components.trips.planning.TripGearChecklist.add": "Додати річ",
   "components.trips.planning.TripGearChecklist.addTitlePlaceholder": "Назва речі",
   "components.trips.planning.TripGearChecklist.addSubmit": "Додати",
-  "components.trips.planning.TripGearChecklist.addCancel": "Скасувати",
-  "components.trips.planning.TripGearChecklist.addCategory": "Категорія",
   "components.trips.planning.TripGearChecklist.delete": "Видалити «{{title}}»",
   "components.trips.planning.TripGearChecklist.statusToggle": "{{title}}: {{status}}. Змінити статус",
   "components.trips.planning.TripGearChecklist.loading": "Завантажуємо чекліст",

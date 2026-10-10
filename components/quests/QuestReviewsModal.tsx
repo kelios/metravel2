@@ -152,7 +152,7 @@ function QuestReviewsModal({ questId, visible, onClose }: Props) {
       visible={visible}
       onClose={onClose}
       title={i18nT('quests:components.quests.QuestReviewsModal.otzyvy_o_kveste_0e87f487')}
-      closeLabel={i18nT('quests:components.quests.QuestReviewsModal.zakryt_bc1e31bc')}
+      closeLabel={i18nT('common:action.close')}
       overlayLabel={i18nT('quests:components.quests.QuestReviewsModal.zakryt_otzyvy_3d58b380')}
       testID="quest-reviews-modal"
       closeTestID="quest-reviews-close"

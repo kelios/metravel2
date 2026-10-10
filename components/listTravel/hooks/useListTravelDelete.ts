@@ -87,8 +87,8 @@ export function useListTravelDelete(): UseListTravelDeleteReturn {
       void confirmAction({
         title: i18nT('travel:components.listTravel.ListTravelBase.udalit_puteshestvie_b9ed27f5'),
         message: i18nT('travel:components.listTravel.ListTravelBase.eto_deystvie_nelzya_otmenit_dd4f9ae8'),
-        confirmText: i18nT('travel:components.listTravel.ListTravelBase.udalit_39199478'),
-        cancelText: i18nT('travel:components.listTravel.ListTravelBase.otmena_b3f645ff'),
+        confirmText: i18nT('common:action.delete'),
+        cancelText: i18nT('common:action.cancel'),
       }).then((confirmed) => {
         if (confirmed) void handleDelete(id)
       })

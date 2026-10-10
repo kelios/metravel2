@@ -201,10 +201,10 @@ function ThreadRow({
                             { backgroundColor: colors.backgroundSecondary, borderColor: colors.borderLight },
                         ]}
                         accessibilityRole="button"
-                        accessibilityLabel={i18nT('messages:components.messages.ThreadList.otmena_c248c023')}
+                        accessibilityLabel={i18nT('common:action.cancel')}
                     >
                         <Text style={[styles.deleteConfirmText, { color: colors.text }]}>
-                            {i18nT('messages:components.messages.ThreadList.otmena_c248c023')}
+                            {i18nT('common:action.cancel')}
                         </Text>
                     </Pressable>
                 </View>

@@ -26,7 +26,6 @@ export const sharedStaticResources = {
   "contentSafety.commentPlaceholder": "What happened?",
   "contentSafety.reportFailed": "Could not send the report. Please try again.",
   "contentSafety.submit": "Send report",
-  "contentSafety.close": "Close",
   "contentSafety.reportSent": "Report sent",
   "contentSafety.reportAlreadySent": "You have already reported this",
   "contentSafety.reportSla": "Our moderators will review it within 24 hours.",

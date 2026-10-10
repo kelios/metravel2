@@ -172,7 +172,7 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
                   <>
                     <Feather name="trash-2" size={18} color={colors.danger} />
                     <Text style={showsAdminDeleteLabel ? styles.deleteAdminLabel : styles.deleteLabel}>
-                      {showsAdminDeleteLabel ? i18nT('travel:components.travel.CommentItem.udalit_admin_b33b3c72') : i18nT('travel:components.travel.CommentItem.udalit_15129e08')}
+                      {showsAdminDeleteLabel ? i18nT('travel:components.travel.CommentItem.udalit_admin_b33b3c72') : i18nT('common:action.delete')}
                     </Text>
                   </>
                 )}
@@ -241,8 +241,8 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
           onConfirm={handleConfirmDelete}
           title={i18nT('travel:components.travel.CommentItem.udalit_kommentariy_a5d75f50')}
           message={i18nT('travel:components.travel.CommentItem.vy_uvereny_chto_hotite_udalit_kommentariy_et_d2432436')}
-          confirmText={i18nT('travel:components.travel.CommentItem.udalit_15129e08')}
-          cancelText={i18nT('travel:components.travel.CommentItem.otmena_6a66c8f0')}
+          confirmText={i18nT('common:action.delete')}
+          cancelText={i18nT('common:action.cancel')}
           confirmTestID="comment-delete-confirm"
           cancelTestID="comment-delete-cancel"
         />

@@ -189,7 +189,7 @@ export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) 
         title: i18nT('shared:hooks.useSubscriptionsData.otpisatsya_b4c7f63a'),
         message: i18nT('shared:hooks.useSubscriptionsData.vy_uvereny_chto_hotite_otpisatsya_ot_etogo_a_68da60cc'),
         confirmText: i18nT('shared:hooks.useSubscriptionsData.otpisatsya_b4c7f63a'),
-        cancelText: i18nT('shared:hooks.useSubscriptionsData.otmena_a30f32ee'),
+        cancelText: i18nT('common:action.cancel'),
       });
       if (!confirmed) return;
 

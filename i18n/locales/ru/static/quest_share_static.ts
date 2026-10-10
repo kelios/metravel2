@@ -21,6 +21,5 @@ export const questShareStaticResources = {
   "finaleShare.copyFailed": "Не удалось скопировать",
   "finaleShare.imageSaved": "Картинка сохранена",
   "finaleShare.instagramHint": "Картинка сохранена — добавьте её в историю",
-  "finaleShare.close": "Закрыть",
   "finaleMedia.completedCaption": "Квест пройден!",
 } as const

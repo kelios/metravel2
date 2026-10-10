@@ -11,6 +11,31 @@ jest.mock('playwright', () => ({ chromium: { launch: jest.fn(), executablePath: 
 jest.mock('@/workers/book-renderer/printAssets', () => ({ ...jest.requireActual('@/workers/book-renderer/printAssets'), PrintAssetCache: { create: jest.fn(async () => ({ identity: {}, policyHash: 'fixture' })) } }))
 
 describe('physical measurement resource readiness with a mocked browser port', () => {
+  it.each(['single', 'overflow', 'multiple', 'oversized'] as const)('returns exact bounded PDF bytes only for a successful single page (%s)', async kind => {
+    const root = path.resolve(__dirname, '../../../.codex-temp/tests')
+    await mkdir(root, { recursive: true })
+    const scratch = await mkdtemp(path.join(root, 'book-measured-pdf-'))
+    const fonts = path.join(scratch, 'fonts'); await mkdir(fonts); await writeFile(path.join(fonts, 'fonts.css'), '')
+    const bytes = kind === 'oversized' ? Buffer.alloc(4 * 1024 * 1024 + 1) : Buffer.from(`%PDF-1.4\n/Count ${kind === 'multiple' ? 2 : 1}\n`)
+    const page = { setDefaultTimeout: jest.fn(), emulateMedia: jest.fn(), setContent: jest.fn(),
+      evaluate: jest.fn().mockResolvedValueOnce(undefined).mockResolvedValue(kind === 'overflow'),
+      pdf: jest.fn().mockResolvedValue(bytes), goto: jest.fn(), requestGC: jest.fn() }
+    const browser = { close: jest.fn(), newContext: async () => ({ route: jest.fn(), newPage: async () => page }) }
+    jest.mocked(chromium.launch).mockResolvedValueOnce(browser as unknown as Browser)
+    let measurer: Awaited<ReturnType<typeof physicalMeasurer>> | undefined
+    try {
+      measurer = await physicalMeasurer(scratch, scratch, fonts)
+      if (kind === 'oversized') await expect(measurer.measurePdf('<html><head></head><body></body></html>')).rejects.toThrow('WORKER_SEGMENT_PDF_BUDGET_EXCEEDED')
+      else {
+        const result = await measurer.measurePdf('<html><head></head><body></body></html>')
+        if (kind === 'single') { expect(result).toEqual({ pages: 1, fits: true, pdf: bytes }); expect(result.pdf).toBe(bytes) }
+        else expect(result).toEqual({ pages: kind === 'multiple' ? 2 : 0, fits: false })
+      }
+      expect(page.pdf).toHaveBeenCalledTimes(kind === 'overflow' ? 0 : 1)
+      expect(page.goto).toHaveBeenCalledWith('about:blank')
+      expect(page.requestGC).toHaveBeenCalledTimes(1)
+    } finally { await measurer?.close(); await rm(scratch, { recursive: true, force: true }) }
+  })
   it.each([false, true])('requires each original response even when two bindings share served bytes (complete=%s)', async complete => {
     const root = path.resolve(__dirname, '../../../.codex-temp/tests')
     await mkdir(root, { recursive: true })

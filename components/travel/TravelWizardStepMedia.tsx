@@ -608,8 +608,8 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                     onConfirm={confirmDeleteCover}
                     title={i18nT('travel:components.travel.TravelWizardStepMedia.udalit_oblozhku_a2bdb3d5')}
                     message={i18nT('travel:components.travel.TravelWizardStepMedia.vy_uvereny_chto_hotite_udalit_glavnoe_izobra_4d548581')}
-                    confirmText={i18nT('travel:components.travel.TravelWizardStepMedia.udalit_71f38991')}
-                    cancelText={i18nT('travel:components.travel.TravelWizardStepMedia.otmena_bd4b67b1')}
+                    confirmText={i18nT('common:action.delete')}
+                    cancelText={i18nT('common:action.cancel')}
                 />
             </KeyboardAvoidingView>
         </SafeAreaView>

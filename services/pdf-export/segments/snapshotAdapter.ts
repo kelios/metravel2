@@ -176,6 +176,10 @@ function validateChunk(value: unknown, snapshotId: string, maxBytes: number): Bo
   return value as unknown as BookSnapshotChunk
 }
 
+export function validateSnapshotChunk(value: unknown, header: BookDocument, maxBytes = BOOK_SNAPSHOT_READ_BYTES): BookSnapshotChunk {
+  return validateChunk(value, header.snapshot_id, maxBytes)
+}
+
 function validatePage(
   value: unknown,
   header: BookDocument,

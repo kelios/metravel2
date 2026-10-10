@@ -541,7 +541,7 @@ export default function TripPlanRouteMap({
                 >
                   <Feather name="trash-2" size={14} color={colors.danger} />
                   <Text style={[styles.pointActionsButtonText, styles.pointActionsButtonTextDanger]}>
-                    {i18nT('tripsStatic:plan.map.deletePoint')}
+                    {i18nT('common:action.delete')}
                   </Text>
                 </Pressable>
               ) : null}

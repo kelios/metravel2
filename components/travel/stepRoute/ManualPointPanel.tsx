@@ -157,9 +157,9 @@ export const ManualPointPanel = React.memo(function ManualPointPanel({
               onPress={onCancel}
               compact
               testID="travel-wizard.step-route.manual.cancel"
-              accessibilityLabel={i18nT('travel:components.travel.stepRoute.ManualPointPanel.otmena_b2a62e12')}
+              accessibilityLabel={i18nT('common:action.cancel')}
             >
-              {i18nT('travel:components.travel.stepRoute.ManualPointPanel.otmena_b2a62e12')}</Button>
+              {i18nT('common:action.cancel')}</Button>
           </View>
         </View>
       )}

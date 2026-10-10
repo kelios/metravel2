@@ -383,7 +383,7 @@ export default function TravelRouteFilesPanel({
 
               {canManage ? (
                 <Pressable onPress={() => void handleDelete(file)} style={styles.actionButton}>
-                  <Text style={[styles.actionText, { color: colors.danger }]}>{i18nT('travel:components.travel.TravelRouteFilesPanel.udalit_9c366e41')}</Text>
+                  <Text style={[styles.actionText, { color: colors.danger }]}>{i18nT('common:action.delete')}</Text>
                 </Pressable>
               ) : null}
             </View>

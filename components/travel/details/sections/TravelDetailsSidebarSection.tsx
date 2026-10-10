@@ -5,13 +5,11 @@ import Feather from '@expo/vector-icons/Feather'
 import type { Travel } from '@/types/types'
 
 import type { AnchorsMap } from '../TravelDetailsTypes'
-import { withLazy } from '../TravelDetailsLazy'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { useThemedColors } from '@/hooks/useTheme'
 import NavigationArrows from '@/components/travel/NavigationArrows'
 import { useTravelDetailsSidebarSectionModel } from '../hooks/useTravelDetailsSidebarSectionModel'
-import NearTravelList from '@/components/travel/NearTravelList'
-import PopularTravelList from '@/components/travel/PopularTravelList'
+import { NearTravelListComponent, PopularTravelListComponent } from './travelDetailsSidebarLists'
 import { getNearbyTravelsSubtitle } from '@/constants/nearby'
 import { translate as i18nT } from '@/i18n'
 import { TravelDetailsDeferredTransition } from '@/components/travel/details/TravelDetailsDeferredTransition'
@@ -20,20 +18,6 @@ import { METRICS } from '@/constants/layout'
 
 const SIDEBAR_CONTENT_MARGIN_STYLE = { marginTop: 8 } as const
 const LIST_FALLBACK_STYLE = { minHeight: 220 } as const
-
-const NearTravelListLazy = withLazy(() =>
-  Promise.resolve(import('@/components/travel/NearTravelList')).then((module) => ({
-    default: module.default,
-  })),
-)
-
-const PopularTravelListLazy = withLazy(() =>
-  Promise.resolve(import('@/components/travel/PopularTravelList')).then((module) => ({
-    default: module.default,
-  })),
-)
-const NearTravelListComponent = Platform.OS === 'web' ? NearTravelListLazy : NearTravelList
-const PopularTravelListComponent = Platform.OS === 'web' ? PopularTravelListLazy : PopularTravelList
 
 export const TravelDetailsSidebarSection: React.FC<{
   travel: Travel

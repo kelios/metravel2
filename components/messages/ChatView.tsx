@@ -500,7 +500,7 @@ function ChatHeader({
           }}
           title={i18nT('messages:components.messages.ThreadList.udalit_dialog_690a8668')}
           message={i18nT('messages:components.messages.ThreadList.vy_uvereny_chto_hotite_udalit_etot_dialog_cdd9a62d')}
-          confirmText={i18nT('messages:components.messages.ThreadList.udalit_004e3e97')}
+          confirmText={i18nT('common:action.delete')}
           confirmTestID="chat-header-delete-confirm"
         />
       ) : null}

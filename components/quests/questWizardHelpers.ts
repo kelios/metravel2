@@ -47,7 +47,7 @@ export const confirmQuestAsync = (title: string, message: string): Promise<boole
     title,
     message,
     confirmText: i18nT('quests:components.quests.questWizardHelpers.ok_eaabc1d8'),
-    cancelText: i18nT('quests:components.quests.questWizardHelpers.otmena_9f846483'),
+    cancelText: i18nT('common:action.cancel'),
   })
 
 export const resolveQuestUri = (src: any | undefined): string | undefined => {

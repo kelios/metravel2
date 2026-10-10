@@ -84,7 +84,7 @@ const BottomSheet: React.FC<Props> = ({ visible, onClose, title, children, onDis
     ? { marginBottom: asBottomDimension(chromeBottom) }
     : { paddingBottom: Math.max(insets.bottom || 0, PANEL_PADDING_BOTTOM) }
 
-  const closeLabel = i18nT('shared:components.ui.ActionListSheet.zakryt_e47a2993')
+  const closeLabel = i18nT('common:action.close')
 
   const sheet = (
     <Modal

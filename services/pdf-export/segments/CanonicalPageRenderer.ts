@@ -11,7 +11,7 @@ import { buildEntries as buildAtlasEntries } from '../generators/v2/runtime/atla
 import { renderAtlasIndexPage, renderAtlasMapPage } from '../generators/v2/runtime/atlas/htmlPages'
 import { BOOK_SEGMENT_LIMITS, type BookSegmentPage, type BookPageContext } from './types'
 import { translate } from '@/i18n'
-import { assertNoAuthoredImageEffectMarkers } from './workerImageEffects'
+import { assertNoAuthoredImageEffectMarkers } from './workerImageEffectMarkers'
 
 /** Single-page facade over the same canonical theme, gates and page renderers. */
 export class CanonicalPageRenderer extends EnhancedPdfGeneratorBase {

@@ -206,7 +206,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
           {!disabled && (
             <Pressable style={styles.nativeRemoveButton} onPress={handleRemovePress}>
               <Feather name="trash-2" size={14} color={colors.danger} />
-              <Text style={styles.nativeRemoveText}>{i18nT('travel:components.travel.PhotoUploadWithPreview.udalit_752b7703')}</Text>
+              <Text style={styles.nativeRemoveText}>{i18nT('common:action.delete')}</Text>
             </Pressable>
           )}
         </View>

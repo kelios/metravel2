@@ -386,7 +386,7 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
                 onPress={handleClose}
                 {...(Platform.OS === 'web' ? { onClick: handleClose } : {})}
                 accessibilityRole="button"
-                accessibilityLabel={i18nT('travel:components.travel.TravelSectionsSheet.zakryt_6652418c')}
+                accessibilityLabel={i18nT('common:action.close')}
                 ref={closeRef}
                 style={({ pressed }) => [styles.closeBtn, pressed && styles.closeBtnPressed]}
               >

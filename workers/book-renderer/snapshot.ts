@@ -115,10 +115,7 @@ export function appendMetadataLabel(previous: string | undefined, next: string |
 export async function travelMetadata(out: string, id: number): Promise<TravelForBook> {
   const dir = travelDirectory(out, id)
   const source = await readBoundedJson<Record<string, unknown>>(resolve(dir, 'travel.json'))
-  const travel: TravelForBook = { id, name: String(source.name || ''), slug: String(source.slug || ''),
-    year: source.year === null ? undefined : Number(source.year), number_days: Number(source.number_days || 0),
-    youtube_link: String(source.youtube_link || ''), url: `https://metravel.by/travels/${String(source.slug || id)}` }
-  travel.sourceCounts = await readBoundedJson(resolve(dir, 'counts.json'))
+  const travel = travelMetadataBase(source, id, await readBoundedJson(resolve(dir, 'counts.json')))
   for await (const chunk of jsonLines<BookSnapshotChunk>(resolve(dir, 'country.ndjson'))) {
     if (chunk.kind === 'country') travel.countryName = appendMetadataLabel(travel.countryName, chunk.metadata.title_ru || chunk.metadata.title_en)
   }
@@ -130,6 +127,12 @@ export async function travelMetadata(out: string, id: number): Promise<TravelFor
   }
   if (canonicalJson(travel).length > 32_768) throw new Error('WORKER_METADATA_BUDGET_EXCEEDED')
   return travel
+}
+
+export function travelMetadataBase(source: Record<string, unknown>, id: number, sourceCounts: { photos: number; locations: number }): TravelForBook {
+  return { id, name: String(source.name || ''), slug: String(source.slug || ''),
+    year: source.year === null ? undefined : Number(source.year), number_days: Number(source.number_days || 0),
+    youtube_link: String(source.youtube_link || ''), url: `https://metravel.by/travels/${String(source.slug || id)}`, sourceCounts }
 }
 
 export async function* textSource(root: string, out: string, pinned: BookDocument, id: number, field: BookTextField, readBytes: number): AsyncGenerator<string> {

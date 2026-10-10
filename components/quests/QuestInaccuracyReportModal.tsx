@@ -136,7 +136,7 @@ function QuestInaccuracyReportModal({ visible, onClose, questTitle, questId, cit
         <Pressable
           style={styles.overlay}
           onPress={handleClose}
-          accessibilityLabel={i18nT('quests:components.quests.QuestInaccuracyReportModal.close')}
+          accessibilityLabel={i18nT('common:action.close')}
         >
           <Pressable
             style={styles.sheet}
@@ -152,7 +152,7 @@ function QuestInaccuracyReportModal({ visible, onClose, questTitle, questId, cit
                 hitSlop={10}
                 style={styles.closeButton}
                 accessibilityRole="button"
-                accessibilityLabel={i18nT('quests:components.quests.QuestInaccuracyReportModal.close')}
+                accessibilityLabel={i18nT('common:action.close')}
                 testID="quest-inaccuracy-report-close"
               >
                 <Feather name="x" size={20} color={colors.text} />

@@ -73,8 +73,8 @@ function ThreadList({
             void confirmAction({
                 title: i18nT('messages:components.messages.ThreadList.udalit_dialog_690a8668'),
                 message: i18nT('messages:components.messages.ThreadList.vy_uvereny_chto_hotite_udalit_etot_dialog_cdd9a62d'),
-                confirmText: i18nT('messages:components.messages.ThreadList.udalit_004e3e97'),
-                cancelText: i18nT('messages:components.messages.ThreadList.otmena_c248c023'),
+                confirmText: i18nT('common:action.delete'),
+                cancelText: i18nT('common:action.cancel'),
             }).then((confirmed) => {
                 if (confirmed) onDeleteThread(threadId);
             });

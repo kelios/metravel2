@@ -46,10 +46,38 @@ pinnedDocument, request, options)`: ровно один подготовленн
 512 KiB, проверенный `source_checksum`, independently committed
 `expected.blocks`/`expected.occurrences` и fixed `page_context`.
 `planRoot` содержит source JSON и `assets/<checksum>.json`; `jobRoot` — frozen
-private source bytes. Новая output directory получает `page.html` и immutable
+private source bytes. Физический адаптер сохраняет точный PDF из успешного
+измерения одной A4-страницы (не более 4 MiB) как `page.pdf` без повторного
+рендеринга. Новая output directory получает `page.html`, `page.pdf` и immutable
 `receipt.json`; receipt фиксирует checksum источника и HTML, document/settings/
 renderer identity, physical measurement и применённый resource profile.
+Добавочное поле `receipt.pdf` содержит `{pdf_ref: 'page.pdf', checksum,
+size_bytes, pages: 1}`. Injected `measure` остаётся диагностическим: выдаёт
+`measured: false`, не создаёт PDF и не содержит `receipt.pdf`. Receipt пишется
+последним, после завершения проверок и закрытия Chromium; ошибка удаляет только
+файлы, созданные текущим вызовом. Новый код требует нового artifact content pin;
+public DTO и private source schemas 1–5 остаются совместимыми.
 Все source refs относительны приватному root; symlink refs запрещены.
+
+Добавочный `planning_protocol_version: 1` отделён от public document/settings
+и private source schemas. `preparePlanningStep` сохраняет ограниченный,
+checksummed checkpoint между вызовами; результаты становятся доступными только
+после B2 epoch/lease commit. Промежуточная фаза `indexed` означает завершение
+проверки frozen manifest и immutable индексов, а не готовность PDF.
+Каждый вызов проверяет renderer content pin, document identity и последовательную
+generation. Чтение идёт по byte offset без повторного прохода префикса; SHA-256
+имеет явное переносимое состояние. Output ledger должен независимо проверяться
+сервером перед commit; собственный checksum не доказывает происхождение данных.
+
+`incrementalContentStep` использует собственный публичный checkpoint-порт,
+производный от htmlparser2 10.1.0 и его entities 7.0.1. В runtime manifest
+`html_checkpoint` фиксирует protocol version и canonical upstream pin;
+артефакт содержит исходные license notices и `UPSTREAM.json`. Modified code
+проверяется общим artifact content hash. Сохраняются tokenizer/entity/parser,
+FragmentWriter и TokenBudget state, включая foreign contexts и UTF-16 blocks;
+EOF применяется только на конце поля. `createDiskCheckpointStores` требует
+существующий epoch-private root с mode 0700; immutable файлы имеют mode 0600.
+Legacy `incrementalContent` продолжает использовать исходную библиотеку.
 
 Также экспортируются pull-driven `iterateSnapshotChunks`, `iterateTextFieldRefs`,
 `streamSnapshotChunk`, `incrementalContent`, `subdivideSource`,

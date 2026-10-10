@@ -56,4 +56,7 @@ export const common = {
   'pdfPresets.category.mapFocused.description': "Z mapami i nawigacją",
   'pdfPresets.category.print.name': "Druk",
   'pdfPresets.category.print.description': "Zoptymalizowane pod drukarnię",
+  'action.cancel': "Anuluj",
+  'action.close': "Zamknij",
+  'action.delete': "Usuń",
 } as const

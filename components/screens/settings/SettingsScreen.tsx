@@ -164,8 +164,8 @@ export default function SettingsScreen() {
             const confirmed = await confirmAction({
                 title: i18nT('profile:app.tabs.settings.udalit_akkaunt_bb9a5af4'),
                 message: i18nT('profile:app.tabs.settings.akkaunt_i_vashi_puteshestviya_budut_udaleny__4fb3eb8e'),
-                confirmText: i18nT('profile:app.tabs.settings.udalit_67c7c30f'),
-                cancelText: i18nT('profile:app.tabs.settings.otmena_0a594e8d'),
+                confirmText: i18nT('common:action.delete'),
+                cancelText: i18nT('common:action.cancel'),
             });
             if (!confirmed) return;
 
@@ -185,7 +185,7 @@ export default function SettingsScreen() {
                 title: i18nT('profile:app.tabs.settings.vyhod_iz_akkaunta_001b3d7a'),
                 message: i18nT('profile:app.tabs.settings.vyyti_iz_akkaunta_6cb6575a'),
                 confirmText: i18nT('profile:app.tabs.settings.vyyti_63a0b3ce'),
-                cancelText: i18nT('profile:app.tabs.settings.otmena_0a594e8d'),
+                cancelText: i18nT('common:action.cancel'),
             });
             if (!confirmed) return;
 
@@ -204,7 +204,7 @@ export default function SettingsScreen() {
                 title: i18nT('profile:app.tabs.settings.ochistit_istoriyu_6ea9b985'),
                 message: i18nT('profile:app.tabs.settings.ochistit_istoriyu_prosmotrov_c3bd1dea'),
                 confirmText: i18nT('profile:app.tabs.settings.ochistit_7b65714a'),
-                cancelText: i18nT('profile:app.tabs.settings.otmena_0a594e8d'),
+                cancelText: i18nT('common:action.cancel'),
             });
             if (!confirmed) return;
 
@@ -224,7 +224,7 @@ export default function SettingsScreen() {
                 title: i18nT('profile:app.tabs.settings.ochistit_hochu_poehat_dbb86f70'),
                 message: i18nT('profile:app.tabs.settings.ochistit_hochu_poehat_92eed92a'),
                 confirmText: i18nT('profile:app.tabs.settings.ochistit_7b65714a'),
-                cancelText: i18nT('profile:app.tabs.settings.otmena_0a594e8d'),
+                cancelText: i18nT('common:action.cancel'),
             });
             if (!confirmed) return;
 

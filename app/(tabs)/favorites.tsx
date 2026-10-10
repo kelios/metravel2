@@ -137,7 +137,7 @@ export default function FavoritesScreen() {
                 title: i18nT('shared:app.tabs.favorites.ochistit_hochu_poehat_250e6c33'),
                 message: i18nT('shared:app.tabs.favorites.ochistit_hochu_poehat_8e2219f3'),
                 confirmText: i18nT('shared:app.tabs.favorites.ochistit_97020d69'),
-                cancelText: i18nT('shared:app.tabs.favorites.otmena_201b3e96'),
+                cancelText: i18nT('common:action.cancel'),
             });
             if (!confirmed) return;
 

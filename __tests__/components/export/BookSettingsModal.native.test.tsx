@@ -220,7 +220,7 @@ describe.each(['ios', 'android'] as const)('NativeModalFooter на %s (#2229)', 
     async (locale) => {
       await i18n.changeLanguage(locale)
       const labels = {
-        cancel: translate('profile:components.export.BookSettingsModal_parts.otmena_7c664a0f'),
+        cancel: translate('common:action.cancel'),
         preview: translate('profile:components.export.BookSettingsModal_parts.prevyu_8a8a2b33'),
         save: translate('profile:components.export.BookSettingsModal_parts.sohranit_pdf_513469e1'),
       }

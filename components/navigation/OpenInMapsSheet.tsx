@@ -47,7 +47,7 @@ export default function OpenInMapsSheet({ visible, title = i18nT('navigation:com
           style={StyleSheet.absoluteFill}
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel={i18nT('navigation:components.navigation.OpenInMapsSheet.zakryt_ffe5de0e')}
+          accessibilityLabel={i18nT('common:action.close')}
         />
 
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, DESIGN_TOKENS.spacing.md) }]}>
@@ -60,7 +60,7 @@ export default function OpenInMapsSheet({ visible, title = i18nT('navigation:com
             <Pressable
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel={i18nT('navigation:components.navigation.OpenInMapsSheet.zakryt_ffe5de0e')}
+              accessibilityLabel={i18nT('common:action.close')}
               hitSlop={10}
               style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
             >
@@ -101,10 +101,10 @@ export default function OpenInMapsSheet({ visible, title = i18nT('navigation:com
           <Pressable
             onPress={onClose}
             accessibilityRole="button"
-            accessibilityLabel={i18nT('navigation:components.navigation.OpenInMapsSheet.otmena_471c1045')}
+            accessibilityLabel={i18nT('common:action.cancel')}
             style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed]}
           >
-            <Text style={styles.cancelLabel}>{i18nT('navigation:components.navigation.OpenInMapsSheet.otmena_471c1045')}</Text>
+            <Text style={styles.cancelLabel}>{i18nT('common:action.cancel')}</Text>
           </Pressable>
         </View>
       </View>

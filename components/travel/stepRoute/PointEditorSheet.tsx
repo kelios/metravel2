@@ -123,7 +123,7 @@ export const PointEditorSheet = React.memo(function PointEditorSheet({
               hitSlop={10}
               style={styles.closeButton}
               accessibilityRole="button"
-              accessibilityLabel={i18nT('map:components.map.EditMarkerModal.otmena_0a02aca0')}
+              accessibilityLabel={i18nT('common:action.cancel')}
               testID="travel-wizard.point-editor.close"
             >
               <Feather name="x" size={20} color={colors.text} />
@@ -223,7 +223,7 @@ export const PointEditorSheet = React.memo(function PointEditorSheet({
                   <View style={styles.removeConfirmActions}>
                     <Button
                       variant="ghost"
-                      label={i18nT('map:components.map.EditMarkerModal.otmena_0a02aca0')}
+                      label={i18nT('common:action.cancel')}
                       onPress={() => setConfirmingRemove(false)}
                       fullWidth
                     />

@@ -976,23 +976,35 @@ describe('bundle budget release contract', () => {
         BUNDLE_BUDGET_CONFIG: testBudgetPath,
       })
 
-    it('pins the committed index owners under the pre-split index ceiling', () => {
+    it('preserves index ceilings except the owner-approved synchronous trips budget', () => {
       const budget = validateCommittedBudget(budgetPath)
       const rows = requireRecord(budget.chunks, 'bundle budget.chunks')
       expect(rows).not.toHaveProperty('index')
 
       const committedOwners = Object.entries(rows).filter(([key]) => key.startsWith('index:'))
       expect(committedOwners.length).toBeGreaterThanOrEqual(2)
+      // #2360 (owner, 2026-10-10): only /trips was re-pinned for the
+      // synchronous catalog contract #864. Its allowance cannot fund other owners.
+      const previousTripsCeiling = { maxRawKB: 0.7, maxGzipKB: 0.5, maxBrotliKB: 0.4 }
+      const synchronousTripsCeiling = { maxRawKB: 13.1, maxGzipKB: 4.8, maxBrotliKB: 4 }
+      expect(rows).toHaveProperty('index:trips')
       const sums = { maxRawKB: 0, maxGzipKB: 0, maxBrotliKB: 0 }
       for (const [key, value] of committedOwners) {
         const row = requireRecord(value, `bundle budget.chunks.${key}`)
         ensure(typeof row.marker === 'string' && row.marker.trim().length > 0, `${key} must declare a marker.`)
         for (const metric of Object.keys(sums) as (keyof typeof sums)[]) {
-          sums[metric] += requireBudgetNumber(row[metric], `bundle budget.chunks.${key}.${metric}`)
+          const ceiling = requireBudgetNumber(row[metric], `bundle budget.chunks.${key}.${metric}`)
+          if (key === 'index:trips') {
+            expect(ceiling).toBeLessThanOrEqual(synchronousTripsCeiling[metric])
+          } else {
+            sums[metric] += ceiling
+          }
         }
       }
       for (const metric of Object.keys(sums) as (keyof typeof sums)[]) {
-        expect(Math.round(sums[metric] * 10) / 10).toBeLessThanOrEqual(PREVIOUS_INDEX_CEILING[metric])
+        expect(Math.round(sums[metric] * 10) / 10).toBeLessThanOrEqual(
+          Math.round((PREVIOUS_INDEX_CEILING[metric] - previousTripsCeiling[metric]) * 10) / 10,
+        )
       }
     })
 

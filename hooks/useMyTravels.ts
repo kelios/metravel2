@@ -338,8 +338,8 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, publicati
         const ok = await confirmAction({
           title: i18nT('shared:hooks.useMyTravels.udalit_puteshestvie_64a5de65'),
           message: i18nT('shared:hooks.useMyTravels.udalit_etot_marshrut_deystvie_nelzya_otmenit_d24a1543'),
-          confirmText: i18nT('shared:hooks.useMyTravels.udalit_c7e4f56b'),
-          cancelText: i18nT('shared:hooks.useMyTravels.otmena_e1cbb99f'),
+          confirmText: i18nT('common:action.delete'),
+          cancelText: i18nT('common:action.cancel'),
         });
         if (!ok) return false;
 

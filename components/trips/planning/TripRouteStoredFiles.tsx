@@ -157,7 +157,7 @@ function TripRouteStoredFiles({
           onConfirm={handleConfirmRemove}
           title={t('tripsStatic:plan.routeImport.original.removeConfirmTitle')}
           message={t('tripsStatic:plan.routeImport.original.removeConfirmMessage')}
-          cancelText={t('tripsStatic:plan.routeImport.cancel')}
+          cancelText={t('common:action.cancel')}
           confirmTestID={`${testIDPrefix}-remove-original-confirm`}
           cancelTestID={`${testIDPrefix}-remove-original-cancel`}
         />

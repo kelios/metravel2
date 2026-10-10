@@ -80,9 +80,9 @@ export const PointsListManualModal: React.FC<PointsListManualModalProps> = ({
           <View style={styles.manualHeader}>
             <Text style={styles.manualTitle}>{editingPointId ? i18nT('map:components.UserPoints.PointsListManualModal.redaktirovat_tochku_db3835c8') : i18nT('map:components.UserPoints.PointsListManualModal.dobavit_tochku_vruchnuyu_4666a821')}</Text>
             <Button
-              label={i18nT('map:components.UserPoints.PointsListManualModal.zakryt_1cff2e81')}
+              label={i18nT('common:action.close')}
               onPress={onClose}
-              accessibilityLabel={i18nT('map:components.UserPoints.PointsListManualModal.zakryt_1cff2e81')}
+              accessibilityLabel={i18nT('common:action.close')}
               size="sm"
               variant="secondary"
             />

@@ -160,8 +160,8 @@ const FullscreenPopupOverlay: React.FC<{
             e.stopPropagation()
             handleClose()
           }}
-          aria-label={i18nT('map:components.MapPage.Map.PlacePopupCard.FullscreenPopupOverlay.zakryt_a9918aa5')}
-          title={i18nT('map:components.MapPage.Map.PlacePopupCard.FullscreenPopupOverlay.zakryt_a9918aa5')}
+          aria-label={i18nT('common:action.close')}
+          title={i18nT('common:action.close')}
           style={{
             position: 'absolute',
             top: 'max(12px, env(safe-area-inset-top, 12px))',

@@ -331,7 +331,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
             style={styles.modalBackdrop}
             onPress={handleClose}
             accessibilityRole="button"
-            accessibilityLabel={i18nT('shared:components.forms.SimpleMultiSelect.zakryt_2edf8c7d')}
+            accessibilityLabel={i18nT('common:action.close')}
           />
 
           <View style={styles.modalContentWrap}>
@@ -343,7 +343,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
                 onPress={handleClose}
                 hitSlop={compactControlHitSlop}
                 accessibilityRole="button"
-                accessibilityLabel={i18nT('shared:components.forms.SimpleMultiSelect.zakryt_2edf8c7d')}
+                accessibilityLabel={i18nT('common:action.close')}
               >
                 <Feather name="x" size={24} color={colors.text} />
               </Pressable>

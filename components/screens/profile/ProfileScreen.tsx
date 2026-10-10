@@ -420,7 +420,7 @@ export default function ProfileScreen() {
           title: i18nT('profile:app.tabs.profile.ochistit_hochu_poehat_de703e72'),
           message: i18nT('profile:app.tabs.profile.udalit_vse_marshruty_iz_hochu_poehat_a5c1de2c'),
           confirmText: i18nT('profile:app.tabs.profile.ochistit_ef7ce3e3'),
-          cancelText: i18nT('profile:app.tabs.profile.otmena_0e762c35'),
+          cancelText: i18nT('common:action.cancel'),
         });
         if (!ok) return;
         await clearFavorites?.();
@@ -433,7 +433,7 @@ export default function ProfileScreen() {
           title: i18nT('profile:app.tabs.profile.ochistit_istoriyu_ce6a05b3'),
           message: i18nT('profile:app.tabs.profile.udalit_vsyu_istoriyu_prosmotrov_50f5efeb'),
           confirmText: i18nT('profile:app.tabs.profile.ochistit_ef7ce3e3'),
-          cancelText: i18nT('profile:app.tabs.profile.otmena_0e762c35'),
+          cancelText: i18nT('common:action.cancel'),
         });
         if (!ok) return;
         await clearHistory?.();

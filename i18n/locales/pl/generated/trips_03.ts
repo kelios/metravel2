@@ -8,8 +8,6 @@ export const tripsGenerated3 = {
   "components.trips.planning.TripGearChecklist.add": "Dodaj rzecz",
   "components.trips.planning.TripGearChecklist.addTitlePlaceholder": "Nazwa rzeczy",
   "components.trips.planning.TripGearChecklist.addSubmit": "Dodaj",
-  "components.trips.planning.TripGearChecklist.addCancel": "Anuluj",
-  "components.trips.planning.TripGearChecklist.addCategory": "Kategoria",
   "components.trips.planning.TripGearChecklist.delete": "Usuń „{{title}}”",
   "components.trips.planning.TripGearChecklist.statusToggle": "{{title}}: {{status}}. Zmień status",
   "components.trips.planning.TripGearChecklist.loading": "Wczytujemy listę",

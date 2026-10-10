@@ -317,7 +317,7 @@ function TripRouteImportPanel({
               <Text style={styles.fileName} numberOfLines={1}>{prepared.fileName}</Text>
             </View>
             <Button
-              label={t('tripsStatic:plan.routeImport.cancel')}
+              label={t('common:action.cancel')}
               onPress={handleCancel}
               variant="ghost"
               size="sm"

@@ -124,6 +124,42 @@ function rendererVersion(root) {
   return value;
 }
 
+function checkpointPort(root, compiled, files, sources) {
+  const base = 'workers/book-renderer/htmlCheckpoint';
+  if (!compiled.has(`${base}/Parser.ts`)) return null;
+  const canonical = value => JSON.stringify(value, function (_key, item) {
+    return item && typeof item === 'object' && !Array.isArray(item)
+      ? Object.fromEntries(Object.entries(item).sort(comparePaths)) : item;
+  });
+  const upstream = JSON.parse(fs.readFileSync(path.join(root, base, 'UPSTREAM.json'), 'utf8'));
+  const pin = fs.readFileSync(path.join(root, base, 'protocol.ts'), 'utf8')
+    .match(/export const HTML_PORT_UPSTREAM_PIN = '([a-f0-9]{64})' as const/)?.[1];
+  const targets = ['Parser.ts', 'Tokenizer.ts', 'entities/EntityDecoder.ts', 'entities/codepoint.ts',
+    'entities/flags.ts', 'entities/htmlDecodeTree.ts', 'entities/xmlDecodeTree.ts', 'entities/decodeBase64.ts'];
+  if (!pin || sha256(canonical(upstream)) !== pin || upstream.protocol_version !== 1 ||
+    upstream.htmlparser2_version !== '10.1.0' || upstream.entities_version !== '7.0.1' ||
+    !Array.isArray(upstream.files) || upstream.files.length !== targets.length) {
+    throw new Error('Invalid owned HTML checkpoint upstream pin');
+  }
+  for (const [index, record] of upstream.files.entries()) {
+    if (record.target !== targets[index] || typeof record.source !== 'string' ||
+      !record.source.startsWith('node_modules/htmlparser2/') || record.source.split('/').includes('..') ||
+      !/^[a-f0-9]{64}$/.test(record.sha256) || !Number.isSafeInteger(record.bytes) || record.bytes < 1) {
+      throw new Error('Invalid owned HTML checkpoint upstream source');
+    }
+    const bytes = fs.readFileSync(path.join(root, record.source));
+    if (bytes.length !== record.bytes || sha256(bytes) !== record.sha256) throw new Error('HTML checkpoint upstream source changed');
+  }
+  for (const name of ['UPSTREAM.json', 'LICENSE-htmlparser2', 'LICENSE-entities']) {
+    const ref = `${base}/${name}`;
+    const bytes = fs.readFileSync(path.join(root, ref));
+    files.set(ref, bytes); sources.set(ref, bytes.toString('utf8'));
+  }
+  return { protocol_version: schemaVersion(root, `${base}/protocol.ts`, 'HTML_PORT_PROTOCOL_VERSION'),
+    upstream_pin: pin, upstream: `${base}/UPSTREAM.json`,
+    licenses: [`${base}/LICENSE-htmlparser2`, `${base}/LICENSE-entities`] };
+}
+
 /** Exact runtime roots reuse the repository's frozen transitive Yarn resolutions. */
 function dependencyLock(root, externals) {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
@@ -223,6 +259,7 @@ function buildBookRenderer(options = {}) {
     for (const record of bundle.records) files.set(`fonts/${record.path}`, fs.readFileSync(path.join(fontDir, record.path)));
     sources.set('workers/book-renderer/fonts.lock.json', json(bundle.lock));
   }
+  const htmlCheckpoint = checkpointPort(root, compiled, files, sources);
   const sourceHash = sha256([...sources,
     ['scripts/build-book-renderer.js', fs.readFileSync(__filename, 'utf8')],
     ['scripts/prepare-book-renderer-fonts.js', fs.readFileSync(path.join(__dirname, 'prepare-book-renderer-fonts.js'), 'utf8')]]
@@ -246,6 +283,9 @@ function buildBookRenderer(options = {}) {
     })(),
     prepared_source_schema_version: schemaVersion(root, 'services/pdf-export/segments/types.ts', 'BOOK_SEGMENT_SOURCE_SCHEMA_VERSION'),
     settings_schema_version: schemaVersion(root, 'types/bookSettings.ts', 'BOOK_SETTINGS_SCHEMA_VERSION'),
+    planning_protocol_version: compiled.has('workers/book-renderer/planningStep.ts')
+      ? schemaVersion(root, 'workers/book-renderer/planningTypes.ts', 'PLANNING_PROTOCOL_VERSION') : null,
+    html_checkpoint: htmlCheckpoint,
     entrypoint: outputName(entry),
     source_hash: sourceHash,
     compiler: { name: 'typescript', version: ts.version },

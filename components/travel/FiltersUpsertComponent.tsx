@@ -209,7 +209,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                     size="sm"
                     style={styles.closeIcon}
                     labelStyle={styles.closeButtonText}
-                    accessibilityLabel={i18nT('travel:components.travel.FiltersUpsertComponent.zakryt_abd8267c')}
+                    accessibilityLabel={i18nT('common:action.close')}
                 />
             )}
 

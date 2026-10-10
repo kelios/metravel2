@@ -319,12 +319,12 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
     if (onDelete) {
       result.push({
         key: 'delete',
-        label: i18nT('map:components.UserPoints.PointCard.udalit_8bbb4e8c'),
+        label: i18nT('common:action.delete'),
         icon: 'trash-2',
         destructive: true,
         onPress: () => onDelete(point),
-        accessibilityLabel: i18nT('map:components.UserPoints.PointCard.udalit_8bbb4e8c'),
-        title: i18nT('map:components.UserPoints.PointCard.udalit_8bbb4e8c'),
+        accessibilityLabel: i18nT('common:action.delete'),
+        title: i18nT('common:action.delete'),
       });
     }
     return result;

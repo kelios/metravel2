@@ -297,7 +297,7 @@ export default function HistoryScreen() {
             title: i18nT('shared:app.tabs.history.ochistit_istoriyu_b56d803a'),
             message: i18nT('shared:app.tabs.history.ochistit_istoriyu_prosmotrov_f8fc9029'),
             confirmText: i18nT('shared:app.tabs.history.ochistit_60c1f61d'),
-            cancelText: i18nT('shared:app.tabs.history.otmena_373b932d'),
+            cancelText: i18nT('common:action.cancel'),
         });
         if (!confirmed) return;
 

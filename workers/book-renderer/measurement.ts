@@ -13,6 +13,7 @@ import { normalizePrintOrientation, printOrientationMatrix } from './printOrient
 
 export interface PageMeasurement { pages: number; fits: boolean }
 export type MeasurePage = (html: string) => Promise<PageMeasurement>
+export interface PdfPageMeasurement extends PageMeasurement { pdf?: Buffer }
 export interface PhysicalMeasurer {
   prepareHtml: (html: string, pinned?: BookSegmentSource, policy?: PrintSourcePolicy) => Promise<PreparedPrintResources>
   encoder_identity: PrintEncoderIdentity
@@ -20,6 +21,7 @@ export interface PhysicalMeasurer {
   assertResourceServing: () => void
   servedResources: () => PrintServedResource[]
   measure: MeasurePage
+  measurePdf: (html: string) => Promise<PdfPageMeasurement>
   fit: MeasurePage
   close: () => Promise<void>
   brightness: (url: string) => Promise<number>
@@ -228,7 +230,7 @@ export async function physicalMeasurer(root: string, out: string, fontsDir: stri
       const overflow = await page!.evaluate(hasPrintedPageOverflow, profile.dom_nodes)
       return !overflow
     }
-    const measure: MeasurePage = async html => {
+    const measurePdf = async (html: string): Promise<PdfPageMeasurement> => {
       try {
         const fits = await geometryFits(html)
         if (!fits) return { pages: 0, fits: false }
@@ -236,11 +238,15 @@ export async function physicalMeasurer(root: string, out: string, fontsDir: stri
         if (pdf.byteLength > 4 * 1024 * 1024) throw new Error('WORKER_SEGMENT_PDF_BUDGET_EXCEEDED')
         const counts = Array.from(pdf.toString('latin1').matchAll(/\/Count\s+(\d+)/g), value => Number(value[1]))
         const pages = counts.length ? Math.max(...counts) : 0
-        return { pages, fits: fits && pages === 1 }
+        return pages === 1 ? { pages, fits: true, pdf } : { pages, fits: false }
       } finally {
         await page!.goto('about:blank')
         await page!.requestGC()
       }
+    }
+    const measure: MeasurePage = async html => {
+      const { pages, fits } = await measurePdf(html)
+      return { pages, fits }
     }
 
     const sample = async (url: string) => {
@@ -273,7 +279,7 @@ export async function physicalMeasurer(root: string, out: string, fontsDir: stri
       for (const [key, binding] of bindings) if (served.get(key)?.served_checksum !== binding.served_checksum || served.get(key)?.original_checksum !== binding.original_checksum || served.get(key)?.variant_hash !== binding.variant_hash) throw new Error('PRINT_RESOURCE_SERVING_INCOMPLETE')
     },
     servedResources: () => [...served.values()].sort((a, b) => (a.variant_hash ?? a.original_checksum).localeCompare(b.variant_hash ?? b.original_checksum)),
-    measure, fit: async html => {
+    measure, measurePdf, fit: async html => {
       try { return await measure(html) } catch (error) {
         if (error instanceof Error && error.message === 'WORKER_SEGMENT_PDF_BUDGET_EXCEEDED') return { pages: 0, fits: false }
         throw error

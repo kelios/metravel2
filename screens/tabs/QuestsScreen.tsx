@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import {
     View, Pressable, Platform,
     Dimensions,
@@ -7,6 +7,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useDockReservePx } from '@/components/layout/bottomChromeInset';
+import safeLazy from '@/components/layout/safeLazy';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { jsonLdScript } from '@/components/seo/jsonLdScript';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -20,7 +21,6 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useQuestsList } from '@/hooks/useQuestsApi';
 import { useQuestReturnVisit } from '@/hooks/useQuestReturnVisit';
 import { useQuestReviewPrompt } from '@/hooks/useQuestReviewPrompt';
-import QuestReviewPromptBanner from '@/components/quests/QuestReviewPromptBanner';
 import QuestsContentPanel from './QuestsContentPanel';
 import { releaseQuestCatalogRestoredClass } from '@/utils/questCatalogSelection';
 import { useQuestPersonalSlices } from './useQuestPersonalSlices';
@@ -67,6 +67,12 @@ const { spacing, radii } = DESIGN_TOKENS;
 const EMPTY_QUESTS: (QuestMeta & { _distanceKm?: number })[] = [];
 
 const LazyQuestMap = React.lazy(() => import('@/components/MapPage/Map.web'));
+// #2360: optional banner stays out of the catalog chunk; safeLazy renders
+// nothing if its chunk fails, instead of throwing the catalog into the boundary.
+const QuestReviewPromptBanner = safeLazy(
+  () => import('@/components/quests/QuestReviewPromptBanner'),
+  'QuestReviewPromptBanner',
+);
 
 export default function QuestsScreen() {
     // #1484: заход в каталог после ранее завершённого квеста — это и есть
@@ -657,12 +663,14 @@ export default function QuestsScreen() {
         if (!reviewPrompt) return null;
         const promptedQuest = ALL_QUESTS.find((quest) => quest.id === reviewPrompt.questId);
         return (
-            <QuestReviewPromptBanner
-                questId={reviewPrompt.questId}
-                cityId={reviewPrompt.cityId ?? promptedQuest?.cityId}
-                questTitle={promptedQuest?.title}
-                onDismiss={dismissReviewPrompt}
-            />
+            <Suspense fallback={null}>
+                <QuestReviewPromptBanner
+                    questId={reviewPrompt.questId}
+                    cityId={reviewPrompt.cityId ?? promptedQuest?.cityId}
+                    questTitle={promptedQuest?.title}
+                    onDismiss={dismissReviewPrompt}
+                />
+            </Suspense>
         );
     }, [ALL_QUESTS, dismissReviewPrompt, reviewPrompt]);
 

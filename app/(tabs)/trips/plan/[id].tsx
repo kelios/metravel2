@@ -676,7 +676,7 @@ export default function PlannedTripScreen() {
                                 />
                               </View>
                               <Button
-                                label={i18nT('trips:app.tabs.trips.plan.id.otmena_66379efd')}
+                                label={i18nT('common:action.cancel')}
                                 onPress={() => setEditDatePickerVisible(false)}
                                 variant="secondary"
                                 fullWidth
@@ -814,7 +814,7 @@ export default function PlannedTripScreen() {
                               />
                             </View>
                             <Button
-                              label={i18nT('trips:app.tabs.trips.plan.id.otmena_66379efd')}
+                              label={i18nT('common:action.cancel')}
                               onPress={() => setEditEndDatePickerVisible(false)}
                               variant="secondary"
                               fullWidth
@@ -926,7 +926,7 @@ export default function PlannedTripScreen() {
                     testID="trip-plan-edit-save"
                   />
                   <Button
-                    label={i18nT('trips:app.tabs.trips.plan.id.zakryt_87bc8fb5')}
+                    label={i18nT('common:action.close')}
                     onPress={handleCancelEdit}
                     variant="ghost"
                     size="sm"
@@ -1030,7 +1030,7 @@ export default function PlannedTripScreen() {
               onConfirm={handleDelete}
               title={i18nT('trips:app.tabs.trips.plan.id.udalit_poezdku_0d7713a2')}
               message={i18nT('trips:app.tabs.trips.plan.id.poezdka_ischeznet_iz_kataloga_i_vashih_sozda_6e60ee80')}
-              confirmText={i18nT('trips:app.tabs.trips.plan.id.udalit_eafe069e')}
+              confirmText={i18nT('common:action.delete')}
               cancelText={i18nT('trips:app.tabs.trips.plan.id.ostavit_1f797003')}
               confirmTestID="trip-plan-delete-confirm"
               cancelTestID="trip-plan-delete-cancel"

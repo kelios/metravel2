@@ -128,7 +128,7 @@ export function useDataOwnership() {
         const confirmed = await confirmAction({
             title: i18nT('shared:hooks.useDataOwnership.udalit_perepisku_1d65d54f'),
             message: i18nT('shared:hooks.useDataOwnership.vsya_vasha_lichnaya_perepiska_budet_udalena__45ded7c4'),
-            confirmText: i18nT('shared:hooks.useDataOwnership.udalit_fcfe15ec'),
+            confirmText: i18nT('common:action.delete'),
         });
         if (confirmed) deleteMessagesMutation.mutate();
     }, [deleteMessagesMutation]);

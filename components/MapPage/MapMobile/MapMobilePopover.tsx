@@ -81,7 +81,7 @@ const MapMobilePopoverInner: React.FC<MapMobilePopoverProps> = ({
         style={StyleSheet.absoluteFill}
         onPress={onRequestClose}
         accessibilityRole="button"
-        accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobilePopover.zakryt_fd8363db')}
+        accessibilityLabel={i18nT('common:action.close')}
         testID={testID ? `${testID}-backdrop` : undefined}
       />
 

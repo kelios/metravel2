@@ -56,4 +56,7 @@ export const common = {
   'pdfPresets.category.mapFocused.description': "С картами и навигацией",
   'pdfPresets.category.print.name': "Печать",
   'pdfPresets.category.print.description': "Оптимизировано для типографии",
+  'action.cancel': "Отмена",
+  'action.close': "Закрыть",
+  'action.delete': "Удалить",
 } as const

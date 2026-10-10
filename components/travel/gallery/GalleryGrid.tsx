@@ -188,7 +188,7 @@ export const GalleryGrid: React.FC<{
                     style={[styles.errorActionButton, { backgroundColor: colors.primary }]}
                     testID="delete-image-button"
                   >
-                    <Text style={[styles.errorActionText, { color: colors.textInverse }]}>{i18nT('travel:components.travel.gallery.GalleryGrid.udalit_d2e753de')}</Text>
+                    <Text style={[styles.errorActionText, { color: colors.textInverse }]}>{i18nT('common:action.delete')}</Text>
                   </DeleteAction>
                 </View>
                 <DeleteAction

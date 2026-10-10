@@ -256,7 +256,7 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                                 onClick={handleClose}
                                 style={styles.secondaryButton}
                             >
-                                {i18nT('map:components.map.EditMarkerModal.otmena_0a02aca0')}</button>
+                                {i18nT('common:action.cancel')}</button>
                         </div>
                         <button
                             type="button"

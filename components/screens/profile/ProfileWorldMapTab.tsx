@@ -545,7 +545,7 @@ export function ProfileWorldMapTab({
               <Pressable
                 onPress={() => setSelectedCode(null)}
                 accessibilityRole="button"
-                accessibilityLabel={i18nT('profile:components.screens.profile.ProfileWorldMapTab.zakryt_62507eb9')}
+                accessibilityLabel={i18nT('common:action.close')}
                 hitSlop={8}
                 style={styles.infoClose}
               >
@@ -621,7 +621,7 @@ export function ProfileWorldMapTab({
                   <Pressable
                     onPress={() => setSelectedCode(null)}
                     accessibilityRole="button"
-                    accessibilityLabel={i18nT('profile:components.screens.profile.ProfileWorldMapTab.zakryt_62507eb9')}
+                    accessibilityLabel={i18nT('common:action.close')}
                     hitSlop={8}
                     style={styles.infoClose}
                   >

@@ -68,8 +68,8 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
         void confirmAction({
             title: i18nT('messages:components.messages.MessageBubble.udalit_soobschenie_db3677e9'),
             message: i18nT('messages:components.messages.MessageBubble.vy_uvereny_chto_hotite_udalit_eto_soobscheni_85438546'),
-            confirmText: i18nT('messages:components.messages.MessageBubble.udalit_90cd7b34'),
-            cancelText: i18nT('messages:components.messages.MessageBubble.otmena_c63270ad'),
+            confirmText: i18nT('common:action.delete'),
+            cancelText: i18nT('common:action.cancel'),
         }).then((confirmed) => {
             if (confirmed) onDelete();
         });
@@ -88,7 +88,7 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
         if (onDelete) {
             items.push({
                 key: 'delete',
-                label: i18nT('messages:components.messages.MessageBubble.udalit_90cd7b34'),
+                label: i18nT('common:action.delete'),
                 accessibilityLabel: i18nT('messages:components.messages.MessageBubble.udalit_soobschenie_db3677e9'),
                 icon: 'trash-2',
                 destructive: true,
@@ -185,7 +185,7 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
                         accessibilityLabel={i18nT('messages:components.messages.MessageBubble.udalit_soobschenie_db3677e9')}
                     >
                         <Feather name="trash-2" size={14} color={colors.textSecondary} />
-                        <Text style={[styles.deleteActionText, { color: colors.textSecondary }]}>{i18nT('messages:components.messages.MessageBubble.udalit_080df1a5')}</Text>
+                        <Text style={[styles.deleteActionText, { color: colors.textSecondary }]}>{i18nT('common:action.delete')}</Text>
                     </Pressable>
                 </View>
             )}
@@ -198,7 +198,7 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
                         accessibilityLabel={i18nT('messages:components.messages.MessageBubble.podtverdit_udalenie_soobscheniya_7ffecfa5')}
                     >
                         <Feather name="trash-2" size={14} color={colors.textInverse} />
-                        <Text style={[styles.deleteActionText, { color: colors.textInverse }]}>{i18nT('messages:components.messages.MessageBubble.udalit_080df1a5')}</Text>
+                        <Text style={[styles.deleteActionText, { color: colors.textInverse }]}>{i18nT('common:action.delete')}</Text>
                     </Pressable>
                     <Pressable
                         onPress={handleCancelDelete}
@@ -206,7 +206,7 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
                         accessibilityRole="button"
                         accessibilityLabel={i18nT('messages:components.messages.MessageBubble.otmena_udaleniya_soobscheniya_5b6b0d34')}
                     >
-                        <Text style={[styles.deleteActionText, { color: colors.textSecondary }]}>{i18nT('messages:components.messages.MessageBubble.otmena_240238ff')}</Text>
+                        <Text style={[styles.deleteActionText, { color: colors.textSecondary }]}>{i18nT('common:action.cancel')}</Text>
                     </Pressable>
                 </View>
             )}

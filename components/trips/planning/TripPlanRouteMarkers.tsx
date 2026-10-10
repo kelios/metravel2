@@ -283,7 +283,7 @@ function RouteMarker({
                   style={styles.popupButtonDanger as React.CSSProperties}
                   data-testid={`trip-plan-map-delete-point-${index}`}
                 >
-                  {i18nT('tripsStatic:plan.map.deletePoint')}</button>
+                  {i18nT('common:action.delete')}</button>
               ) : null}
             </div>
           ) : null}

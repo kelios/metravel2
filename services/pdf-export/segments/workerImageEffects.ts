@@ -1,4 +1,6 @@
-import { Parser } from 'htmlparser2'
+// Shared with the client PDF runtime (pdfVisualHelpers, renderHelpers,
+// BlockRenderer): keep it parser-free. HTML scanning lives in
+// ./workerImageEffectMarkers so htmlparser2 stays out of the web bundle (#2360).
 
 export type WorkerColorFilter = 'none' | 'sepia(1)' | 'grayscale(1)'
 export interface WorkerImageEffect { theme_id: string; filter: WorkerColorFilter }
@@ -34,11 +36,4 @@ export function imageEffectFromWorkerStyle(style: string): WorkerImageEffect {
     filter: effect[0].split(':').slice(1).join(':').replace(/;$/, '').trim() as WorkerColorFilter }
   assertWorkerImageEffect(intent)
   return intent
-}
-
-
-export function assertNoAuthoredImageEffectMarkers(html: string): void {
-  new Parser({ onopentag(_name, attributes) {
-    if (/--metravel-print-/i.test(attributes.style || '') || Object.keys(attributes).some(name => /^data-(?:metravel|book)-print-(?:color|effect|theme)/i.test(name))) throw new Error('PRINT_IMAGE_EFFECT_AUTHORED_MARKER')
-  } }, { decodeEntities: true }).end(html)
 }

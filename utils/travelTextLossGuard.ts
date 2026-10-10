@@ -94,6 +94,6 @@ export async function confirmRichTextLossIfNeeded(
     title: i18nT('shared:utils.travelTextLossGuard.udalenie_teksta_a462d4b0'),
     message: i18nT('shared:utils.travelTextLossGuard.vy_udalyaete_bolshuyu_chast_teksta_value1_so_5ee11217', { value1: labels }),
     confirmText: i18nT('shared:utils.travelTextLossGuard.sohranit_6bb2a5f7'),
-    cancelText: i18nT('shared:utils.travelTextLossGuard.otmena_d5b1e3ab'),
+    cancelText: i18nT('common:action.cancel'),
   })
 }

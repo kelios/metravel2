@@ -375,8 +375,8 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
     void confirmAction({
       title: i18nT('travel:components.travel.ImageGalleryComponent.batchDeleteTitle'),
       message: i18nT('travel:components.travel.ImageGalleryComponent.batchDeleteMessage', { value1: selectedIds.size }),
-      confirmText: i18nT('travel:components.travel.ImageGalleryComponent.udalit_4f0a77b6'),
-      cancelText: i18nT('travel:components.travel.ImageGalleryComponent.otmena_03c4d548'),
+      confirmText: i18nT('common:action.delete'),
+      cancelText: i18nT('common:action.cancel'),
     }).then((confirmed) => {
       if (confirmed) void performDeleteSelected();
     });
@@ -610,8 +610,8 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
         onConfirm={confirmDeleteImage}
         title={i18nT('travel:components.travel.ImageGalleryComponent.udalenie_izobrazheniya_fe89ef6a')}
         message={i18nT('travel:components.travel.ImageGalleryComponent.vy_uvereny_chto_hotite_udalit_eto_izobrazhen_c41049cb')}
-        confirmText={i18nT('travel:components.travel.ImageGalleryComponent.udalit_4f0a77b6')}
-        cancelText={i18nT('travel:components.travel.ImageGalleryComponent.otmena_03c4d548')}
+        confirmText={i18nT('common:action.delete')}
+        cancelText={i18nT('common:action.cancel')}
       />
     </View>
   );

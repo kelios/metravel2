@@ -37,6 +37,19 @@ const LAZY_ONLY_VENDORS: Array<{ pkg: string; allowedSyncImporters: string[]; ti
     allowedSyncImporters: ['utils/leafletVendor.ts'],
     ticket: '#765',
   },
+  // #2360: htmlparser2@10 нужен только модулям книжного воркера. Клиентский
+  // PDF-рантайм импортировал общий `segments/workerImageEffects.ts`, и вместе с
+  // ним в web приехал второй парсер (~136 КБ raw) рядом с копией sanitize-html.
+  {
+    pkg: 'htmlparser2',
+    allowedSyncImporters: [
+      'services/pdf-export/parsers/incrementalContent.ts',
+      'services/pdf-export/segments/CanonicalPageRenderer.ts',
+      'services/pdf-export/segments/contentContinuation.ts',
+      'services/pdf-export/segments/workerImageEffectMarkers.ts',
+    ],
+    ticket: '#2360',
+  },
   // #2059: ядро react-leaflet импортирует leaflet — тот же канон, что у самого react-leaflet.
   {
     pkg: '@react-leaflet/core',
@@ -338,16 +351,6 @@ const LAZY_DEFEATED_BY_SYNC_ALLOWLIST: Array<{ file: string; specifier: string; 
     file: 'components/travel/NearTravelList.tsx',
     specifier: '@/components/MapPage/TravelMap',
     reason: 'открытый долг: карта попадает в чанк сайдбара; на стартовый граф travel-детали не влияет',
-  },
-  {
-    file: 'components/travel/details/sections/TravelDetailsSidebarSection.tsx',
-    specifier: '@/components/travel/NearTravelList',
-    reason: 'открытый долг: сам сайдбар уже за async-границей, вес остаётся внутри его чанка',
-  },
-  {
-    file: 'components/travel/details/sections/TravelDetailsSidebarSection.tsx',
-    specifier: '@/components/travel/PopularTravelList',
-    reason: 'открытый долг: то же, вес внутри чанка сайдбара',
   },
   {
     file: 'components/layout/Footer.tsx',

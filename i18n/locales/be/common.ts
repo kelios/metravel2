@@ -56,4 +56,7 @@ export const common = {
   'pdfPresets.category.mapFocused.description': "З картамі і навігацыяй",
   'pdfPresets.category.print.name': "Друк",
   'pdfPresets.category.print.description': "Аптымізавана для друкарні",
+  'action.cancel': "Скасаваць",
+  'action.close': "Зачыніць",
+  'action.delete': "Выдаліць",
 } as const

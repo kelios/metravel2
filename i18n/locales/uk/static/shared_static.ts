@@ -26,7 +26,6 @@ export const sharedStaticResources = {
   "contentSafety.commentPlaceholder": "Що сталося?",
   "contentSafety.reportFailed": "Не вдалося надіслати скаргу. Спробуйте ще раз.",
   "contentSafety.submit": "Надіслати скаргу",
-  "contentSafety.close": "Закрити",
   "contentSafety.reportSent": "Скаргу надіслано",
   "contentSafety.reportAlreadySent": "Ви вже поскаржилися на це",
   "contentSafety.reportSla": "Модерація розгляне її протягом 24 годин.",

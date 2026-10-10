@@ -60,7 +60,7 @@ export const PointsListBulkModals: React.FC<PointsListBulkModalsProps> = ({
             style={styles.actionsBackdrop}
             onPress={onClosePointDelete}
             accessibilityRole="button"
-            accessibilityLabel={i18nT('map:components.UserPoints.PointsListBulkModals.zakryt_1fe45ea3')}
+            accessibilityLabel={i18nT('common:action.close')}
           />
 
           <View style={styles.actionsModal}>
@@ -68,19 +68,19 @@ export const PointsListBulkModals: React.FC<PointsListBulkModalsProps> = ({
             <Text style={styles.modalSubtext}>{String(pointToDelete?.name ?? '')}</Text>
 
             <Button
-              label={i18nT('map:components.UserPoints.PointsListBulkModals.udalit_0873ed30')}
+              label={i18nT('common:action.delete')}
               onPress={onConfirmPointDelete}
               disabled={isBulkWorking}
               loading={isBulkWorking}
-              accessibilityLabel={i18nT('map:components.UserPoints.PointsListBulkModals.udalit_0873ed30')}
+              accessibilityLabel={i18nT('common:action.delete')}
               fullWidth
               variant="danger"
             />
 
             <Button
-              label={i18nT('map:components.UserPoints.PointsListBulkModals.otmena_95ebfb0e')}
+              label={i18nT('common:action.cancel')}
               onPress={onClosePointDelete}
-              accessibilityLabel={i18nT('map:components.UserPoints.PointsListBulkModals.otmena_95ebfb0e')}
+              accessibilityLabel={i18nT('common:action.cancel')}
               fullWidth
               variant="ghost"
               style={styles.modalSpacing}
@@ -100,7 +100,7 @@ export const PointsListBulkModals: React.FC<PointsListBulkModalsProps> = ({
             style={styles.actionsBackdrop}
             onPress={onCloseBulkEdit}
             accessibilityRole="button"
-            accessibilityLabel={i18nT('map:components.UserPoints.PointsListBulkModals.zakryt_1fe45ea3')}
+            accessibilityLabel={i18nT('common:action.close')}
           />
 
           <View style={styles.actionsModal}>
@@ -130,9 +130,9 @@ export const PointsListBulkModals: React.FC<PointsListBulkModalsProps> = ({
             />
 
             <Button
-              label={i18nT('map:components.UserPoints.PointsListBulkModals.otmena_95ebfb0e')}
+              label={i18nT('common:action.cancel')}
               onPress={onCloseBulkEdit}
-              accessibilityLabel={i18nT('map:components.UserPoints.PointsListBulkModals.otmena_95ebfb0e')}
+              accessibilityLabel={i18nT('common:action.cancel')}
               fullWidth
               variant="ghost"
               style={styles.modalSpacing}
@@ -152,26 +152,26 @@ export const PointsListBulkModals: React.FC<PointsListBulkModalsProps> = ({
             style={styles.actionsBackdrop}
             onPress={onCloseConfirmDeleteSelected}
             accessibilityRole="button"
-            accessibilityLabel={i18nT('map:components.UserPoints.PointsListBulkModals.zakryt_1fe45ea3')}
+            accessibilityLabel={i18nT('common:action.close')}
           />
           <View style={styles.actionsModal}>
             <Text style={styles.actionsTitle}>{i18nT('map:components.UserPoints.PointsListBulkModals.udalit_vybrannye_e97d9bbe')}</Text>
             <Text style={styles.modalSubtext}>{i18nT('map:components.UserPoints.PointsListBulkModals.budut_udaleny_625a665a', { value1: selectedCount })}</Text>
 
             <Button
-              label={i18nT('map:components.UserPoints.PointsListBulkModals.udalit_0873ed30')}
+              label={i18nT('common:action.delete')}
               onPress={onDeleteSelected}
               disabled={isBulkWorking}
               loading={isBulkWorking}
-              accessibilityLabel={i18nT('map:components.UserPoints.PointsListBulkModals.udalit_0873ed30')}
+              accessibilityLabel={i18nT('common:action.delete')}
               fullWidth
               variant="danger"
             />
 
             <Button
-              label={i18nT('map:components.UserPoints.PointsListBulkModals.otmena_95ebfb0e')}
+              label={i18nT('common:action.cancel')}
               onPress={onCloseConfirmDeleteSelected}
-              accessibilityLabel={i18nT('map:components.UserPoints.PointsListBulkModals.otmena_95ebfb0e')}
+              accessibilityLabel={i18nT('common:action.cancel')}
               fullWidth
               variant="ghost"
               style={styles.modalSpacing}
@@ -191,7 +191,7 @@ export const PointsListBulkModals: React.FC<PointsListBulkModalsProps> = ({
             style={styles.actionsBackdrop}
             onPress={onCloseConfirmDeleteAll}
             accessibilityRole="button"
-            accessibilityLabel={i18nT('map:components.UserPoints.PointsListBulkModals.zakryt_1fe45ea3')}
+            accessibilityLabel={i18nT('common:action.close')}
           />
           <View style={styles.actionsModal}>
             <Text style={styles.actionsTitle}>{i18nT('map:components.UserPoints.PointsListBulkModals.udalit_vse_tochki_e0facc9e')}</Text>
@@ -208,9 +208,9 @@ export const PointsListBulkModals: React.FC<PointsListBulkModalsProps> = ({
             />
 
             <Button
-              label={i18nT('map:components.UserPoints.PointsListBulkModals.otmena_95ebfb0e')}
+              label={i18nT('common:action.cancel')}
               onPress={onCloseConfirmDeleteAll}
-              accessibilityLabel={i18nT('map:components.UserPoints.PointsListBulkModals.otmena_95ebfb0e')}
+              accessibilityLabel={i18nT('common:action.cancel')}
               fullWidth
               variant="ghost"
               style={styles.modalSpacing}

@@ -912,6 +912,81 @@ describe('ssg-skeletons', () => {
       document.body.innerHTML = '';
     });
 
+    describe('first presented content gate (#2359)', () => {
+      let observerDescriptor: PropertyDescriptor | undefined;
+      let notifyPaint: (names: string[]) => void;
+      let observe: jest.Mock;
+      let disconnect: jest.Mock;
+
+      beforeEach(() => {
+        observerDescriptor = Object.getOwnPropertyDescriptor(window, 'PerformanceObserver');
+        observe = jest.fn();
+        disconnect = jest.fn();
+        class PaintObserver {
+          static supportedEntryTypes = ['paint'];
+          observe = observe;
+          disconnect = disconnect;
+          constructor(callback: (list: { getEntries: () => { name: string }[] }) => void) {
+            notifyPaint = (names) => callback({ getEntries: () => names.map((name) => ({ name })) });
+          }
+        }
+        Object.defineProperty(window, 'PerformanceObserver', { configurable: true, value: PaintObserver });
+      });
+
+      afterEach(() => {
+        if (observerDescriptor) Object.defineProperty(window, 'PerformanceObserver', observerDescriptor);
+        else delete (window as any).PerformanceObserver;
+      });
+
+      it.each(['travel', 'map', 'catalog'] as const)('retains a ready %s shell until FCP is reported', (route) => {
+        if (route === 'map') setupMapDom();
+        else setupDom({ travel: route === 'travel' });
+        const ready = route === 'map' ? 'data-map-route-ready'
+          : route === 'travel' ? 'data-travel-details-ready' : 'data-first-screen-ready';
+        document.getElementById('root')?.setAttribute(ready, 'true');
+
+        runScript();
+        expect(observe).toHaveBeenCalledWith({ type: 'paint', buffered: true });
+        jest.advanceTimersByTime(500);
+        expect(skeleton()).not.toBeNull();
+
+        notifyPaint(['first-paint']);
+        expect(skeleton()).not.toBeNull();
+        notifyPaint(['first-contentful-paint']);
+        expect(skeleton()).toBeNull();
+        expect(document.getElementById('ssg-skeleton-css')).toBeNull();
+        expect(disconnect).toHaveBeenCalledTimes(1);
+      });
+
+      it('keeps the shell after FCP when React has not declared readiness', () => {
+        setupDom();
+        runScript();
+        notifyPaint(['first-contentful-paint']);
+        expect(skeleton()).not.toBeNull();
+        document.getElementById('root')?.setAttribute('data-travel-details-ready', 'true');
+        jest.advanceTimersByTime(200);
+        expect(skeleton()).toBeNull();
+      });
+
+      it('opens the gate when the browser rejects paint observation', () => {
+        setupDom({ travel: false });
+        document.getElementById('root')?.setAttribute('data-first-screen-ready', 'true');
+        observe.mockImplementation(() => { throw new Error('Paint observation unavailable'); });
+        runScript();
+        expect(skeleton()).toBeNull();
+      });
+
+      it('preserves the late readiness fallback if no paint entry arrives', () => {
+        setupDom({ travel: false });
+        document.getElementById('root')?.setAttribute('data-first-screen-ready', 'true');
+        runScript();
+        jest.advanceTimersByTime(19999);
+        expect(skeleton()).not.toBeNull();
+        jest.advanceTimersByTime(1);
+        expect(skeleton()).toBeNull();
+      });
+    });
+
     it('does NOT remove the skeleton at 20s when React never mounted (static shell in #root)', () => {
       setupDom();
       runScript();

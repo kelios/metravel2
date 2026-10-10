@@ -162,7 +162,7 @@ export const ArticleEditorAnchorModal = ({
           style={dynamicStyles.modalInput}
         />
         <View style={dynamicStyles.modalActions}>
-          <Button onPress={onCancel} label={i18nT('shared:components.article.ArticleEditorWebChrome.otmena_2b1f8ee3')} variant="ghost" size="sm" />
+          <Button onPress={onCancel} label={i18nT('common:action.cancel')} variant="ghost" size="sm" />
           <Button onPress={onConfirm} label={i18nT('shared:components.article.ArticleEditorWebChrome.vstavit_db7090ed')} variant="primary" size="sm" />
         </View>
       </View>
@@ -216,7 +216,7 @@ export const ArticleEditorLinkModal = ({
           style={dynamicStyles.modalInput}
         />
         <View style={dynamicStyles.modalActions}>
-          <Button onPress={onCancel} label={i18nT('shared:components.article.ArticleEditorWebChrome.otmena_2b1f8ee3')} variant="ghost" size="sm" />
+          <Button onPress={onCancel} label={i18nT('common:action.cancel')} variant="ghost" size="sm" />
           <Button onPress={onConfirm} label={i18nT('shared:components.article.ArticleEditorWebChrome.sohranit_59531924')} variant="primary" size="sm" />
         </View>
       </View>

@@ -225,7 +225,7 @@ export default function RoutePointAddForm({
           />
         ) : null}
         <Button
-          label={i18nT('trips:components.trips.planning.RouteBuilder.otmena_cb0c29f2')}
+          label={i18nT('common:action.cancel')}
           onPress={onCancel}
           variant="ghost"
           testID="route-builder-add-cancel"

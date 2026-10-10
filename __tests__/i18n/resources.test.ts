@@ -71,8 +71,8 @@ describe('i18n resources', () => {
       }
     }
 
-    expect(cancelKeys).toContain('shared:components.ui.ConfirmDialog.otmena_53464360')
-    expect(cancelKeys).toContain('messages:components.messages.MessageBubble.otmena_240238ff')
+    // #2360: ConfirmDialog, MessageBubble and the other identical buttons share it.
+    expect(cancelKeys).toContain('common:action.cancel')
     for (const key of cancelKeys) {
       expect({ key, value: fixedTranslate(key) }).toEqual({ key, value: expected })
     }

@@ -607,7 +607,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                                     <View style={styles.modalActionContent}>
                                                         <Feather name="x" size={14} color={colors.primaryText} />
                                                         {!isCompactFullscreenHeader && (
-                                                            <Text style={styles.modalHeaderAction}>{i18nT('travel:components.travel.ContentUpsertSection.zakryt_f8478810')}</Text>
+                                                            <Text style={styles.modalHeaderAction}>{i18nT('common:action.close')}</Text>
                                                         )}
                                                     </View>
                                                 </TouchableOpacity>

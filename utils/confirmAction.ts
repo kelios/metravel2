@@ -15,7 +15,7 @@ export async function confirmAction({
   title,
   message,
   confirmText = i18nT('shared:utils.confirmAction.podtverdit_bceede58'),
-  cancelText = i18nT('shared:utils.confirmAction.otmena_719687da'),
+  cancelText = i18nT('common:action.cancel'),
 }: ConfirmActionOptions): Promise<boolean> {
   if (Platform.OS === 'web') {
     // #1556: на web подтверждение идёт через дизайн-системный `ConfirmDialog`

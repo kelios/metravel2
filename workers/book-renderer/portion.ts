@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, open, rm } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import type { BookDocument } from '@/types/bookDocument'
 import { assertBookDocument } from '@/services/pdf-export/segments/snapshotAdapter'
@@ -40,6 +40,7 @@ export interface PreparedPageReceipt extends SegmentRenderResult {
   encoder_identity_hash?: string
   encoder_identity?: PrintEncoderIdentity
   served_resources?: PrintServedResource[]
+  pdf?: { pdf_ref: string; checksum: string; size_bytes: number; pages: 1 }
 }
 
 export function printReplayPolicy(version: BookSegmentSource['source_schema_version']): PrintSourcePolicy {
@@ -86,31 +87,61 @@ export async function renderPreparedPage(
   await mkdir(out, { mode: 0o700 })
   const fontsDir = options.fonts_dir ?? resolve(__dirname, '../../fonts')
   const policy = printReplayPolicy(source.source_schema_version)
-  const physical = options.measure ? undefined : await physicalMeasurer(jobRoot, planRoot, fontsDir, resourceProfile, policy)
+  const created: string[] = []
+  const persistExclusive = async (name: string, bytes: string | Buffer) => {
+    const file = resolve(out, name)
+    const handle = await open(file, 'wx', 0o600)
+    created.push(file)
+    try { await handle.writeFile(bytes) } finally { await handle.close() }
+  }
   try {
-    const fontCss = physical ? (await readBoundedBytes(resolve(fontsDir, 'fonts.css'), 512 * 1024)).toString('utf8') : ''
-    const execute = async () => {
-      const result = await renderSegment(request, pinned, {
-        load: async () => source,
-        verifyResources: physical?.assertResourceServing,
-        prepare: physical ? async (html, source) => (await physical.prepareHtml(html, source)).html : undefined,
-        measure: options.measure ?? physical!.measure,
-        persist: async html => {
-          const pinnedHtml = fontCss ? html.replace(/<link\b[^>]*https:\/\/fonts\.[^>]*>/g, '').replace('</head>', `<style>${fontCss}</style></head>`) : html
-          await writeFile(resolve(out, 'page.html'), pinnedHtml, { mode: 0o600, flag: 'wx' })
-          return { html_ref: 'page.html', checksum: sha256(pinnedHtml) }
-        },
-      })
-      const receipt: PreparedPageReceipt = { ...result, snapshot_hash: pinned.snapshot_hash,
-        settings_hash: pinned.settings_hash, renderer_version: pinned.renderer_version,
-        segment_ref: request.segment_ref, source_checksum: request.source_checksum,
-        resource_bindings_hash: source.resource_bindings_hash, resource_policy_hash: source.resource_policy_hash, encoder_identity_hash: source.encoder_identity_hash,
-        encoder_identity: (source.source_schema_version ?? 1) >= 3 ? physical?.encoder_identity : undefined,
-        served_resources: (source.source_schema_version ?? 1) >= 3 ? physical?.servedResources() : undefined,
-        measured: !!physical, resource_profile: resourceProfile, source_schema_version: source.source_schema_version ?? 1 }
-      await writeFile(resolve(out, 'receipt.json'), canonicalJson(receipt), { mode: 0o600, flag: 'wx' })
-      return receipt
-    }
-    return await withWorkerLocale(pinned.settings.locale, () => physical ? withImageAnalysis(physical, execute) : execute())
-  } finally { await physical?.close() }
+    const physical = options.measure ? undefined : await physicalMeasurer(jobRoot, planRoot, fontsDir, resourceProfile, policy)
+    let receipt: PreparedPageReceipt
+    try {
+      const fontCss = physical ? (await readBoundedBytes(resolve(fontsDir, 'fonts.css'), 512 * 1024)).toString('utf8') : ''
+      const execute = async () => {
+        let pdf: Buffer | undefined
+        let measuredHtmlChecksum: string | undefined
+        const measure: MeasurePage = options.measure ?? (async html => {
+          const measured = await physical!.measurePdf(html)
+          pdf = measured.pdf
+          measuredHtmlChecksum = sha256(html)
+          return { pages: measured.pages, fits: measured.fits }
+        })
+        let pdfReceipt: PreparedPageReceipt['pdf']
+        const result = await renderSegment(request, pinned, {
+          load: async () => source,
+          verifyResources: physical?.assertResourceServing,
+          prepare: physical ? async (html, source) => (await physical.prepareHtml(html, source)).html : undefined,
+          measure,
+          persist: async html => {
+            if (physical) {
+              if (!Buffer.isBuffer(pdf) || !pdf.length || pdf.length > 4 * 1024 * 1024 || measuredHtmlChecksum !== sha256(html)) throw new Error('WORKER_MEASURED_PDF_MISMATCH')
+              pdfReceipt = { pdf_ref: 'page.pdf', checksum: sha256(pdf), size_bytes: pdf.length, pages: 1 }
+              await persistExclusive('page.pdf', pdf)
+              pdf = undefined
+            }
+            const pinnedHtml = fontCss ? html.replace(/<link\b[^>]*https:\/\/fonts\.[^>]*>/g, '').replace('</head>', `<style>${fontCss}</style></head>`) : html
+            await persistExclusive('page.html', pinnedHtml)
+            return { html_ref: 'page.html', checksum: sha256(pinnedHtml) }
+          },
+        })
+        const receipt: PreparedPageReceipt = { ...result, snapshot_hash: pinned.snapshot_hash,
+          settings_hash: pinned.settings_hash, renderer_version: pinned.renderer_version,
+          segment_ref: request.segment_ref, source_checksum: request.source_checksum,
+          resource_bindings_hash: source.resource_bindings_hash, resource_policy_hash: source.resource_policy_hash, encoder_identity_hash: source.encoder_identity_hash,
+          encoder_identity: (source.source_schema_version ?? 1) >= 3 ? physical?.encoder_identity : undefined,
+          served_resources: (source.source_schema_version ?? 1) >= 3 ? physical?.servedResources() : undefined,
+          measured: !!physical, resource_profile: resourceProfile, source_schema_version: source.source_schema_version ?? 1,
+          ...(pdfReceipt ? { pdf: pdfReceipt } : {}) }
+        return receipt
+      }
+      receipt = await withWorkerLocale(pinned.settings.locale, () => physical ? withImageAnalysis(physical, execute) : execute())
+    } finally { await physical?.close() }
+    await persistExclusive('receipt.json', canonicalJson(receipt))
+    return receipt
+  } catch (error) {
+    await Promise.all(created.map(file => rm(file, { force: true })))
+    throw error
+  }
 }

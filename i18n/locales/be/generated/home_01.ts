@@ -170,7 +170,6 @@ export const homeGenerated1 = {
   "components.mainPage.StickySearchBar.sbrosit_usloviya_c412986e": "Скінуць умовы",
   "components.mainPage.StickySearchBar.sbrosit_vse_filtry_i_poisk_96874bf6": "Скінуць усе фільтры і пошук",
   "components.mainPage.StickySearchBar.skryt_idei_puteshestviy_7fd2b644": "Схаваць ідэі падарожжаў",
-  "components.mainPage.StickySearchBar.udalit_da76c0e4": "Выдаліць",
   "components.mainPage.StickySearchBar.udalit_iz_istorii_value1_f59529ef": "Выдаліць з гісторыі: {{value1}}",
   "components.roulette.useRoulette.bez_filtrov_d6910ca1": "Без фільтраў",
   "components.roulette.useRoulette.value1_i_esche_value2_6f94ef8e": "{{value1}} і яшчэ {{value2}}",

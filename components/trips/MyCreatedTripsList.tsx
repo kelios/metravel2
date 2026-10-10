@@ -111,8 +111,8 @@ function MyCreatedTripsList({ role = 'organized' }: Props) {
       const confirmed = await confirmAction({
         title: i18nT('trips:components.trips.MyCreatedTripsList.udalit_poezdku_79cfdd61'),
         message: i18nT('trips:components.trips.MyCreatedTripsList.udalit_poezdku_value1_deystvie_nelzya_otmeni_0f47f75c', { value1: trip.title }),
-        confirmText: i18nT('trips:components.trips.MyCreatedTripsList.udalit_637a3cde'),
-        cancelText: i18nT('trips:components.trips.MyCreatedTripsList.otmena_3721efb3'),
+        confirmText: i18nT('common:action.delete'),
+        cancelText: i18nT('common:action.cancel'),
       });
       if (!confirmed) return;
 

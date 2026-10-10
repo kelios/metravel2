@@ -229,7 +229,7 @@ export default function RoutePointEditForm({
           testID="route-builder-edit-save"
         />
         <Button
-          label={i18nT('trips:components.trips.planning.RouteBuilder.otmena_cb0c29f2')}
+          label={i18nT('common:action.cancel')}
           onPress={onCancel}
           variant="ghost"
           testID="route-builder-edit-cancel"

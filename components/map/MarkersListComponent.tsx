@@ -550,7 +550,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                 />
                                 <HoverIconButton
                                     iconName="trash-2"
-                                    label={i18nT('map:components.map.MarkersListComponent.udalit_316dc2c9')}
+                                    label={i18nT('common:action.delete')}
                                     color={colors.textMuted}
                                     hoverColor={colors.dangerDark}
                                     style={styles.iconAction as React.CSSProperties}

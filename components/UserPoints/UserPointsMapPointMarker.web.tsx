@@ -358,11 +358,11 @@ export const UserPointsMapPointMarkerWeb = React.memo(function UserPointsMapPoin
     if (onDeletePoint) {
       actions.push({
         key: 'delete',
-        label: i18nT('map:components.UserPoints.UserPointsMapPointMarker.udalit_976107ea'),
+        label: i18nT('common:action.delete'),
         icon: 'trash-2',
         onPress: handleDeletePoint,
-        accessibilityLabel: i18nT('map:components.UserPoints.UserPointsMapPointMarker.udalit_976107ea'),
-        tooltip: i18nT('map:components.UserPoints.UserPointsMapPointMarker.udalit_976107ea'),
+        accessibilityLabel: i18nT('common:action.delete'),
+        tooltip: i18nT('common:action.delete'),
       })
     }
     // No inline «Закрыть» action — the card's top-right ✕ (onClose) already closes.

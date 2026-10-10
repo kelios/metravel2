@@ -151,7 +151,7 @@ export function NativeModalFooter({
   return (
     <View style={styles.footer} testID="book-settings-footer">
       <Button
-        label={i18nT('profile:components.export.BookSettingsModal_parts.otmena_7c664a0f')}
+        label={i18nT('common:action.cancel')}
         variant="outline"
         onPress={onClose}
         fullWidth
