@@ -1,0 +1,238 @@
+diff --git a/docker-compose.book-export-worker.yaml b/docker-compose.book-export-worker.yaml
+--- a/docker-compose.book-export-worker.yaml
++++ b/docker-compose.book-export-worker.yaml
+@@ -36,7 +36,7 @@
+     command: ["run_book_export_worker"]
+     mem_limit: ${BOOK_EXPORT_WORKER_MEMORY_LIMIT:-256m}
+     cpus: ${BOOK_EXPORT_WORKER_CPU_LIMIT:-0.25}
+-    pids_limit: 64
++    pids_limit: ${BOOK_EXPORT_WORKER_PIDS_LIMIT:-64}
+     stop_grace_period: 90s
+     environment:
+       - APP_ENVIRONMENT=${APP_ENVIRONMENT:-prod}
+diff --git a/docs/book-exports/durable-worker.md b/docs/book-exports/durable-worker.md
+--- a/docs/book-exports/durable-worker.md
++++ b/docs/book-exports/durable-worker.md
+@@ -161,3 +161,7 @@
+ It verifies bounded rows/bytes before releasing `awaiting_renderer`; it never rewrites
+ the existing hash, checkpoint or counters. Corruption, changed manifest count/hash,
+ revoked source access and lost fencing authority prevent reuse.
++
++## Candidate PDF resource envelope (#2356, 2026-10-10)
++
++The owner explicitly authorized preparing/testing an isolated PDF envelope up to1GiB RAM and128 processes/threads, with CPU0.25 unchanged. Select it with BOOK_EXPORT_WORKER_MEMORY_LIMIT=1g and BOOK_EXPORT_WORKER_PIDS_LIMIT=128; legacy defaults256m/64 remain unchanged. This is preparation authorization only. The worker remains disabled and PDF capability false until exact deployed renderer/browser/font/composer identity, full1000/5000 PDF measurements and continuous external app-health evidence match the new numeric profile hash. Preserve all other approved portion/disk/API thresholds, source ACLs and concurrency one. A local LinuxARM64 startup probe cannot certify productionAMD64.
+diff --git a/openspec/changes/add-canonical-book-pdf-worker/.openspec.yaml b/openspec/changes/add-canonical-book-pdf-worker/.openspec.yaml
+new file mode 100644
+--- /dev/null
++++ b/openspec/changes/add-canonical-book-pdf-worker/.openspec.yaml
+@@ -0,0 +1,2 @@
++schema: spec-driven
++created: 2026-10-10
+diff --git a/openspec/changes/add-canonical-book-pdf-worker/README.md b/openspec/changes/add-canonical-book-pdf-worker/README.md
+new file mode 100644
+--- /dev/null
++++ b/openspec/changes/add-canonical-book-pdf-worker/README.md
+@@ -0,0 +1,3 @@
++# add-canonical-book-pdf-worker
++
++Task #2356: canonical bounded renderer, resumable complete PDF composition and private download tickets under accepted B2 budgets
+diff --git a/openspec/changes/add-canonical-book-pdf-worker/design.md b/openspec/changes/add-canonical-book-pdf-worker/design.md
+new file mode 100644
+--- /dev/null
++++ b/openspec/changes/add-canonical-book-pdf-worker/design.md
+@@ -0,0 +1,43 @@
++## Context
++
++Task #2356 builds on accepted B1/B2, backend master 083d45cc264f458d8399aeb7d18ec8b2c29d8daa. The dedicated read-only frontend mirror is c98e6b7c834e876b167ec41afdb4a7323d63ad0f. Exact F1 schema5/recipe3/descriptor3 interface compatibility passes, but bounded restartable planning and persisted measured PDF pages are missing; #2354 is active again. See proposal.md for user motivation.
++
++## Goals / Non-Goals
++
++Produce a single complete certified file without memory growing with the archive. Use the owner's explicitly approved isolated PDF profile (2026-10-10): up to1GiB RAM and128 processes/threads, unchanged CPU.25 and concurrency one. Preserve every other explicit portion/profile threshold across Python, Node, browser, decoder and composer descendants. B2's existing256MiB/64pid defaults remain compatible; the new profile is an explicit opt-in and requires new matching capacity evidence. No synthetic total-count restriction, hidden budget increase or alternate template renderer.
++
++## Decisions
++
++1. Canonical F1 ports. Require a versioned bounded plan-step with checksummed private checkpoint references and exact measured-PDF output. Persist tokenizer/writer/context/UTF8/record offsets through an owned, licensed vendor-derived public checkpoint port with exact semantic/decode-table pins and disk-backed foreign context. Public open-stack reconstruction was independently disproved by the executed <svg><foreignobject></svg> control (changed close-callback ordering); it is rejected. Never serialize undocumented upstream private fields or replay an entire huge field as one portion. Indexing, anchor discovery, planning, front matter and coverage each have bounded cursors. A portable incremental canonical hash state or bounded replay must retain B1's exact hash, not substitute a Merkle digest. F1 public DTO/source5 replay remains compatible; the additive artifact receives a new content pin. Reject a second Python renderer and whole diagnostic runWorker integration.
++
++2. Lifecycle and writes. book_exports owns every job/checkpoint write. BookJobLifecycleService claims render with the existing global slot/lease/epoch; a rendering service supervises exact artifact/runtime identity and bounded subprocesses. BookRenderPublicationService verifies ordered immutable outputs and independently fenced receipts. Views only validate/authorize and delegate. Private files use owned attempt paths, 0700 directories, 0600 exclusive writes, checksums and atomic publication; crash orphans are reclaimed by existing cleanup. Database checkpoints stay <=4096 bytes; growing ledgers/cursors reside on private disk. No migration, cross-app model writes or async-schema changes are planned.
++
++3. Exact page bytes. The F1 physical adapter persists the exact successful one-A4 <=4 MiB measurement output after layout/resource/coverage checks, with checksum/length/pages in the immutable receipt. B3 does not reopen arbitrary saved HTML in another browser/network. Original media, printed derivatives, encoder/fonts and settings/snapshot hashes are independently bound to the receipt.
++
++4. Composition. Measure body/atlas, then front matter/TOC and final global folios. Use file-based bounded/hierarchical composition with a segment ledger, explicit page destinations/bookmarks/labels and document metadata. Verify final counts/source coverage and destinations before certificate publication. Candidate qpdf/runtime commands are pinned and must pass real same-profile composer spikes before adoption; a giant in-memory PDF library or unchecked concat is rejected. Complete-file verification advances bounded chunks; current whole-snapshot publication verification must not become an unbounded final portion.
++
++5. Delivery. A book_exports ticket service uses a short-lived purpose-separated signed payload bound to job, owner, immutable artifact checksum and expiry. Download-ticket POST requires normal owner authentication, an empty body and a complete retained certificate. Ticket GET uses only that purpose-specific authority; repeated/unknown parameters and mismatched jobs fail closed. Current owner/source ACL is checked before and throughout existing bounded streaming. Cancellation/expiry/revocation invalidates authority without a persistent account token. Response URLs stay same-origin; private no-store/no-referrer and checksum headers are mandatory. Existing authenticated download remains additive compatible.
++
++6. Readiness. Preserve B2 snapshot readiness separately; B3 capability requires renderer+Linux executable/font/composer identity and full render/merge/verify measurements for actual1000/5000 workloads with an external numerical app-health observer. The Linux ARM64 feasibility container is development evidence only. No readiness or capability switch precedes exact production AMD64 proof. Cache aliases are unchanged and no persistent ticket cache is introduced.
++
++## Risks / Trade-offs
++
++- [Python + Node + Chromium may exceed256MiB] -> isolated exact-runtime spike before integrating, preserve hard cap, report real failure instead of raising limits.
++- [Parser restart changes malformed HTML semantics] -> owned explicit typed public checkpoint API, disk-backed hidden foreign stack and bounded directly-addressed source spool, with unchanged licensed vendor semantics; uninterrupted/restarted/chunk-size fragment/text/media parity including ghost namespace context, entities/rawtext/implicit closes, table/list/FAQ and UTF8 boundaries. Adjacent text callback subdivision requires identical canonical writer output.
++- [Composer RSS grows with pages] -> same-profile1000/5000 hierarchical merge/destination spike; explicit bounded failure if no valid implementation fits.
++- [Foreign source changes contaminate artifact] -> publish from clean canonical task paths and refresh dedicated mirror only after reviewed commit; exact manifest/file hashes are mandatory.
++- [Cancellation races final publication] -> existing epoch fencing, source ACL and private-storage verification rechecked before short atomic commit.
++
++## Migration Plan
++
++Complete planning and additive F1 ports, review/publish/accept exact artifact, then implement B3 under the existing waiting dependency. Run canonical relevant queued Docker tests plus independent adversarial reviews. Commit explicit task paths on master, push and transition to testing. Use the authorized original-card production cycle and Compose-v2 canonical rollout; deploy worker opt-in with capability false first, capture actual complete-file/resource/ACL evidence, then enable only matching readiness. Keep original card/OpenSpec in testing until deployed revision and all acceptance pass. Rollback to prior reviewed source/runtime and disable B3 capability/worker; retained original snapshot bytes are never rewritten. Sync/archive only after all required evidence exists.
++
++## Feasibility evidence and current hold — 2026-10-10
++
++Two local Linux ARM64 diagnostics fail the unchanged profile before the first page. Django+Node+Chromium reached585461760 summed RSS bytes with a real cgroup OOM kill. Phase-local Node64 without Django reached601870336 summed RSS bytes (Chromium alone460533760) and pids64 exhaustion. The actual ARM64 executable reports149.0.7827.0 despite installer149.0.7827.55, so these are not exact production AMD64 acceptance. Parent frontend ignored reports SHA444644eef1e276cea05090521f2992f170d8edbdd0f28ff6aae0f58858fbfee1 and aa5a6efb85f17a23072193d8b1ea284ab514dc43da1da6931dfcd99d31a333df preserve complete commands/events; no PDF or composer passed. The root has requested an explicit material resource-contract decision (up to1GiB/pids128, CPU.25 unchanged). Until an actual human answer,256MiB/pids64 remain authoritative, no resource configuration is changed, no capability is enabled. Independent canonical checkpoint/PDF persistence work continues.
++
++## Explicit resource decision — 2026-10-10
++
++The owner replied “Да, подготовить новый профиль и проверить” to the exact1GiB/128pids/CPU.25 question. This authorizes preparing and testing that isolated resource envelope, not readiness or production capacity. Existing Compose memory256m and PID64 defaults stay unchanged; BOOK_EXPORT_WORKER_MEMORY_LIMIT=1g and BOOK_EXPORT_WORKER_PIDS_LIMIT=128 select the candidate explicitly. The approved numeric profile must be derived from the existing complete profile with only the authorized memory/PID changes and a new id/hash; missing portion/health/disk thresholds must not be invented. B3 must enforce the PID cgroup bound and all descendant metrics. Actual productionAMD64 runtime identity, full1000/5000 PDF/composition and continuous external app-health still gate readiness.
++
++Source inspection also found that Parser depth is not bounded by Writer depth (uppercaseIMG family). Canonical restart therefore needs an immutable linked disk tag stack with checkpointed lookup/pop/events and staged EOF. Bound work per call; never impose a new total parser-depth cap or change case/void semantics. The public bounded step returns acceptedChars and needsDrain; no new input may overtake pending semantic work.
+diff --git a/openspec/changes/add-canonical-book-pdf-worker/proposal.md b/openspec/changes/add-canonical-book-pdf-worker/proposal.md
+new file mode 100644
+--- /dev/null
++++ b/openspec/changes/add-canonical-book-pdf-worker/proposal.md
+@@ -0,0 +1,37 @@
++## Why
++
++Task #2356 must turn the accepted B1 immutable snapshot and B2 fenced queue into a complete downloadable PDF. The Luxembourg article currently exceeds the browser path's 50,000-character limit; a complete diagnostic PDF does not provide durable website delivery.
++
++## What Changes
++
++- Integrate the exact published canonical F1 artifact through bounded, restartable planning and rendering commands. Preserve all selected text, media placements, themes, settings and original snapshot bytes.
++- Persist each measured single-page PDF and independently verify its receipt before an epoch-fenced checkpoint.
++- Compose a complete file on private disk, with actual page counts, front matter, global folios, TOC destinations, bookmarks, page labels and metadata.
++- Issue short-lived job-scoped download tickets and stream authenticated or ticket-authorized downloads with current ACL checks.
++- Expose PDF capability only when exact artifact/runtime/profile capacity evidence and complete publication certificates pass.
++
++## Capabilities
++
++### New Capabilities
++
++- `exports/book-pdf-publication`: durable canonical full-PDF production, certification and private ticket delivery.
++
++### Modified Capabilities
++
++None. Existing B1 selection and B2 lifecycle requirements remain authoritative.
++
++## Impact
++
++Owned implementation areas: book_exports renderer/composer/tickets/publication/views/observation; tests/book_exports; opt-in worker runtime/container configuration and docs/book-exports. No migration or async-model change is currently planned. Node/Playwright/Chromium and a bounded disk composer are isolated worker dependencies, never web-app rendering dependencies.
++
++## Non-goals
++
++No alternate Python templates, truncation, ZIP/mandatory volumes, cap increase, editorial changes, native large sharing or infrastructure/nginx changes. The foreign add-durable-book-export-queue draft is untouched.
++
++## Frontend impact
++
++Verified read-only mirror HEAD=origin/main c98e6b7c834e876b167ec41afdb4a7323d63ad0f. api/bookExports.ts and export hooks consume capabilities/status/tickets in existing #2357; legacy limits are removed only through accepted #2358. F1 #2354 must first add durable planning and exact measured-PDF persistence and publish a new reviewed artifact; whole runWorker/planBody is not one B2 portion.
++
++## Deployment and acceptance
++
++Shared production deployment and actual complete-file/capacity/ACL acceptance are part of #2356. The human directly authorized this card on 2026-10-10; the root session follows the frontend AGENTS direct-backend exception, explicit master commits/push and canonical Compose-v2 rollout. Keep this OpenSpec active and task unfinished until exact deployed revision and bounded evidence pass. ARM64 local feasibility is explicitly not production AMD64 capacity evidence.
+diff --git a/openspec/changes/add-canonical-book-pdf-worker/specs/exports/book-pdf-publication/spec.md b/openspec/changes/add-canonical-book-pdf-worker/specs/exports/book-pdf-publication/spec.md
+new file mode 100644
+--- /dev/null
++++ b/openspec/changes/add-canonical-book-pdf-worker/specs/exports/book-pdf-publication/spec.md
+@@ -0,0 +1,65 @@
++## Purpose
++
++Produce complete canonical travel-book PDFs as durable bounded jobs and deliver verified private files without archive-wide browser memory or lost source content.
++
++## ADDED Requirements
++
++### Requirement: Complete canonical content
++
++The worker SHALL consume a pinned canonical renderer artifact and frozen B1 settings/source order. It MUST preserve every enabled source block and distinct media occurrence, the twenty themes, captions, aspect ratios, disclosure answers and locale formatting. Missing or corrupt resources MUST fail explicitly rather than disappear.
++
++#### Scenario: Luxembourg and complete large archive
++- **WHEN** the selected accessible book contains a long article or 1000/5000 enabled photo placements
++- **THEN** the output contains the complete enabled text and ordered media without a total product count cap or truncated field
++
++#### Scenario: Missing photo or incompatible renderer
++- **WHEN** frozen bytes fail integrity or the actual renderer identity differs from the pinned identity
++- **THEN** the job cannot publish a complete file and reports an explicit retryable or compatibility error
++
++### Requirement: Durable bounded planning and rendering
++
++All planning, physical rendering and composition SHALL advance bounded epoch-fenced checkpoints under the unchanged accepted B2 resource profile. Restart MUST reuse confirmed sources and page PDFs without duplicate source coverage, and stale authority MUST NOT publish progress. Whole-field or whole-book processing as one nominal portion is forbidden.
++
++#### Scenario: Restart within a huge field
++- **WHEN** a worker stops during planning or printing an oversized field and compatible execution resumes
++- **THEN** the final ordered text/media/page coverage equals uninterrupted execution and only confirmed immutable progress is reused
++
++#### Scenario: Budget exhaustion or expired lease
++- **WHEN** a phase exceeds its approved budget or attempts to commit under expired authority
++- **THEN** no false complete checkpoint is committed; divisible work is reduced or an explicit bounded failure preserves earlier progress
++
++### Requirement: Physical complete document certificate
++
++The final private PDF SHALL have actual page counts, global folios, correctly offset TOC destinations/bookmarks/page labels, and pinned document metadata. Publication MUST independently verify complete source and placement coverage, measured page receipts, settings/order/runtime identity, file checksum/length and same-profile readiness.
++
++#### Scenario: Front matter shifts chapter offsets
++- **WHEN** measured front matter spans multiple physical pages
++- **THEN** printed folios and document destinations point to the final correct physical chapter pages
++
++#### Scenario: Partial receipt or incomplete composition
++- **WHEN** a page, placement, resource binding or complete-file checksum is missing or mismatched
++- **THEN** completeness stays incomplete and no download becomes available
++
++### Requirement: Private scoped streamed delivery
++
++An authenticated owner SHALL obtain POST /api/exports/books/{job_id}/download-ticket/ returning download_url and expires_at only for a retained certified file. GET /api/exports/books/{job_id}/download/?ticket=... SHALL authorize a short-lived job/owner/artifact-scoped ticket without exposing an account token. Download MUST stream bounded chunks and enforce current source ACL, owner availability and retention. Responses MUST carry PDF content type, byte length, checksum, private no-store and no-referrer headers.
++
++#### Scenario: Owner downloads after a page reload
++- **WHEN** the owner recovers a completed job and obtains a valid ticket
++- **THEN** the direct download streams the same certified complete file without buffering the whole PDF in browser memory
++
++#### Scenario: Foreign expired revoked or replayed ticket
++- **WHEN** a ticket is altered, expires, targets another job/artifact, or its owner/source access is revoked
++- **THEN** delivery is denied without private path/content disclosure, including revocation during streaming
++
++### Requirement: Measured fail-closed availability
++
++PDF availability SHALL remain false until exact deployed renderer/runtime/profile evidence passes actual complete-PDF 1000/5000 workloads including composition and numerical external API-health observation. Local ARM64 feasibility MUST NOT stand in for production AMD64 acceptance. Existing legacy v1 consumers MUST retain compatible responses.
++
++#### Scenario: Snapshot-only or different-runtime evidence
++- **WHEN** only B2 snapshot evidence, mock evidence or another architecture/runtime measurement exists
++- **THEN** server PDF capability remains unavailable
++
++#### Scenario: Accepted complete pipeline
++- **WHEN** the exact deployed runtime passes complete source/physical/composer/ACL and same-profile load acceptance
++- **THEN** capability advertises the pinned renderer and direct private download while legacy response semantics remain compatible
+diff --git a/openspec/changes/add-canonical-book-pdf-worker/tasks.md b/openspec/changes/add-canonical-book-pdf-worker/tasks.md
+new file mode 100644
+--- /dev/null
++++ b/openspec/changes/add-canonical-book-pdf-worker/tasks.md
+@@ -0,0 +1,35 @@
++## 1. Prerequisite identity and feasibility
++
++- [ ] 1.1 Accept the reviewed F1 additive durable-planning and exact measured-PDF ports; record the new artifact/manifest/schema/font/encoder identities after #2354 acceptance.
++- [ ] 1.2 Run isolated exact-runtime Linux feasibility with all Python/Node/Chromium descendants under unchanged256MiB/.25CPU; record actual cgroup metrics, runtime architecture and negative failure evidence.
++- [ ] 1.3 Establish pinned bounded disk-composer feasibility for1000/5000 physical pages including destinations/metadata; do not adopt a composer that exceeds the accepted profile.
++
++## 2. Canonical worker integration
++
++- [ ] 2.1 Implement render-phase claims and bounded supervised planning/render/merge/verify steps using B2 leases, epochs, global slot, cancellation and immutable private outputs.
++- [ ] 2.2 Add relevant regression tests for stale epochs, retry/cancel/revoke/expiry, crash recovery, corrupt bytes, runtime mismatch and checkpoint budgets.
++- [ ] 2.3 Verify sources, exact measured-PDF receipts, independent coverage and printed-resource identities before checkpoint publication.
++- [ ] 2.4 Add forged/partial/mismatched receipt and ordered duplicate/repeated-placement regression tests.
++
++## 3. Complete document assembly and certification
++
++- [ ] 3.1 Compose physical body/atlas/front matter with actual global folios, TOC/destinations/bookmarks/page labels and pinned metadata using verified file-based stages.
++- [ ] 3.2 Add meaningful complete-document tests for offset shifts, missing pages/placements, metadata and destination validation.
++- [ ] 3.3 Make final snapshot/file/coverage verification bounded and certify only complete identical-source/settings/order outputs under current authority/readiness.
++- [ ] 3.4 Add final-certificate corruption, incomplete coverage, stale authority and same-profile readiness failure tests.
++
++## 4. Private delivery and capability
++
++- [ ] 4.1 Implement authenticated empty-body download-ticket POST and scoped-ticket GET using current retained artifact/owner/source ACL and bounded existing streams.
++- [ ] 4.2 Add expiry/tamper/foreign-job/artifact replacement/revocation-during-stream/parameter and legacy authenticated-download regression tests.
++- [ ] 4.3 Expose fail-closed B3 capability only for exact accepted renderer/runtime/profile complete-PDF evidence; preserve B2 snapshot and legacy v1 behavior.
++- [ ] 4.4 Add snapshot-only, mismatched-runtime and incomplete-composer evidence rejection tests.
++
++## 5. Validation, reviewed publication and production acceptance
++
++- [ ] 5.1 Run relevant queued Docker validation once via make test-relevant TESTS=tests/book_exports; preserve logs/fingerprint and inspect each result. No model/nginx changes planned: migrations/nginx validators apply only if scope changes.
++- [ ] 5.2 Perform independent full-task adversarial review, required fixes and explicit-path master commit gate/post-commit review; record reviewed SHA and authorized push.
++- [ ] 5.3 Validate opt-in Compose/runtime configuration and perform canonical authorized Compose-v2 production rollout on original#2356; preserve exact deployed revision and rollback evidence.
++- [ ] 5.4 Accept full real Luxembourg PDF and complete1000/5000 workloads under unchangedB2 profile with all descendant/composer peaks and external numerical app-health observation.
++- [ ] 5.5 Accept production cancellation/restart/retry/revoke/expiry/cleanup, physical complete-file navigation and scoped streaming download; F2/F3 coordination remains on existing cards.
++- [ ] 5.6 Only after all requirements pass: strict OpenSpec validation, sync canonical specs, archive and explicit-path reviewed docs commit; record original-card Done evidence.
