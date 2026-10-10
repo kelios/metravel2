@@ -5,7 +5,7 @@
   cover — {"type": "cover", "image", "kicker", "title", "subtitle"}
   list  — {"type": "list", "image"?, "kicker", "title", "items": [...]}
   map   — {"type": "map", "title", "note", "points": [{"name", "lat", "lng"}], "line"?: false — без ломаной между точками}
-  cta   — {"type": "cta", "image", "title", "text"}
+  cta   — {"type": "cta", "image", "title", "text", "top"?: y начала текста, по умолчанию 430; для кадра с объектом по центру — небо сверху}
 
 Фото — локальный путь или URL (только свои фото автора 1). Карта — плитки OpenStreetMap,
 подпись об авторстве ставится на слайд. Тексты — только из статьи.
@@ -49,7 +49,7 @@ def photo(src, size):
 
 def wrap(draw, text, fnt, width):
     lines, line = [], ""
-    for word in text.split():
+    for word in (w for w in text.split(" ") if w):  # \u00a0 не разрываем
         probe = f"{line} {word}".strip()
         if draw.textlength(probe, font=fnt) <= width or not line:
             line = probe
@@ -194,7 +194,7 @@ def slide_cta(spec):
     img = photo(spec["image"], (W, H))
     img = Image.blend(img, Image.new("RGB", (W, H), (0, 0, 0)), 0.45)
     draw = ImageDraw.Draw(img)
-    y = 430
+    y = spec.get("top", 430)
     for line in wrap(draw, spec["title"], font("serif", 80), W - 2 * PAD):
         draw.text(((W - draw.textlength(line, font=font("serif", 80))) / 2, y), line, font=font("serif", 80), fill=WHITE)
         y += 96
