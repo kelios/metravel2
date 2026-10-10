@@ -10,6 +10,7 @@ import type { BookExportV2Counter, BookExportV2Job, BookExportV2JobStatus } from
 import UIButton from '@/components/ui/Button';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import {
+  fullBookErrorCode,
   isFullBookJobActive,
   isFullBookJobDownloadable,
   type FullBookExportController,
@@ -126,7 +127,11 @@ function FullBookJobStatus({ controller }: Props) {
   const downloadable = isFullBookJobDownloadable(job);
   const progress = active ? progressCounter(job) : null;
   const ratio = progress ? Math.min(1, progress.completed / (progress.expected as number)) : 0;
-  const actionError = controller.cancelError || controller.retryError;
+  // REBUILD_REQUIRED от retry — окончательный ответ: повтор того же задания
+  // невозможен, поэтому кнопка «Повторить» скрывается, а причина видна явно.
+  const retryRebuildRequired = fullBookErrorCode(controller.retryError) === 'REBUILD_REQUIRED';
+  const canRetry = job.status === 'failed' && job.retryable && !retryRebuildRequired;
+  const actionError = controller.cancelError || (retryRebuildRequired ? null : controller.retryError);
   const iconName = downloadable ? 'check-circle' : job.status === 'failed' ? 'alert-circle' : active ? 'loader' : 'info';
   const iconColor = downloadable ? colors.success : job.status === 'failed' ? colors.danger : colors.textMuted;
   const sizeBytes = job.download?.size_bytes ?? null;
@@ -177,7 +182,13 @@ function FullBookJobStatus({ controller }: Props) {
           {i18nT('export:components.export.FullBookExport.reconnecting')}
         </Text>
       ) : null}
-      {job.status === 'failed' ? <Text style={styles.error}>{failureHint(job)}</Text> : null}
+      {job.status === 'failed' ? (
+        <Text style={styles.error} accessibilityLiveRegion="polite">
+          {retryRebuildRequired
+            ? i18nT('export:components.export.FullBookExport.error.rebuildRequired')
+            : failureHint(job)}
+        </Text>
+      ) : null}
       {job.status === 'expired' ? (
         <Text style={styles.hint}>{i18nT('export:components.export.FullBookExport.expiredHint')}</Text>
       ) : null}
@@ -223,7 +234,7 @@ function FullBookJobStatus({ controller }: Props) {
             size="sm"
           />
         ) : null}
-        {job.status === 'failed' && job.retryable ? (
+        {canRetry ? (
           <UIButton
             label={i18nT('export:components.export.FullBookExport.retry')}
             onPress={controller.retry}

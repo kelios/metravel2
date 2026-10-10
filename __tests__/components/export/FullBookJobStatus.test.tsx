@@ -5,6 +5,7 @@ import React from 'react'
 import { fireEvent, render, screen } from '@testing-library/react-native'
 
 import type { BookExportV2Job } from '@/api/bookExportApi'
+import { ApiError } from '@/api/clientErrors'
 import FullBookJobStatus from '@/components/export/FullBookJobStatus'
 import type { FullBookExportController } from '@/hooks/useFullBookExport'
 
@@ -115,5 +116,15 @@ describe('FullBookJobStatus', () => {
     screen.unmount()
     render(<FullBookJobStatus controller={makeController(makeJob(), { isReconnecting: true })} />)
     expect(screen.getByText('Нет связи с сервером — переподключаемся. Сборка продолжается на сервере.')).toBeTruthy()
+  })
+
+  it('stops offering retry once the server answers REBUILD_REQUIRED', () => {
+    const retryError = new ApiError(409, 'Rebuild', { error_code: 'REBUILD_REQUIRED' })
+    const failed = makeController(makeJob({ status: 'failed', retryable: true, error_code: 'RENDER_FAILED' }), { retryError })
+    render(<FullBookJobStatus controller={failed} />)
+    expect(screen.getByText('Материалы книги больше не хранятся. Соберите книгу заново.')).toBeTruthy()
+    expect(screen.queryByText('Повторить')).toBeNull()
+    expect(screen.queryByText('Не удалось выполнить действие. Попробуйте ещё раз.')).toBeNull()
+    expect(screen.getByText('Скрыть')).toBeTruthy()
   })
 })

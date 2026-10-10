@@ -9,12 +9,12 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
-import { ApiError } from '@/api/clientErrors';
 import BookSettingsModal from '@/components/export/BookSettingsModal';
 import UIButton from '@/components/ui/Button';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import {
   FULL_BOOK_DEFAULT_SORT_ORDER,
+  fullBookErrorCode,
   isFullBookJobActive,
   useFullBookExport,
   type FullBookExportController,
@@ -24,12 +24,6 @@ import { translate as i18nT, translatePlural } from '@/i18n';
 import { FULL_BOOK_MIN_YEAR, isValidFullBookPeriod } from '@/services/book/fullBookExportSubmission';
 import type { BookSettings } from '@/types/bookSettings';
 import FullBookJobStatus from './FullBookJobStatus';
-
-const errorCodeOf = (error: unknown): string | null => {
-  if (!(error instanceof ApiError)) return null;
-  const code = (error.data as { error_code?: unknown } | undefined)?.error_code;
-  return typeof code === 'string' ? code : null;
-};
 
 const sanitizeYear = (text: string) => text.replace(/[^0-9]/g, '').slice(0, 4);
 
@@ -55,7 +49,7 @@ export function FullBookExportPanel({ controller, baseSettings, userName }: Prop
   const isPeriodValid = isValidFullBookPeriod(period, currentYear);
   const { draft, job } = controller;
   const jobActive = isFullBookJobActive(job) || controller.isObservingJob;
-  const findErrorCode = errorCodeOf(controller.findPeriodError);
+  const findErrorCode = fullBookErrorCode(controller.findPeriodError);
 
   const handleFind = useCallback(() => {
     if (!isPeriodValid) return;
@@ -192,7 +186,7 @@ export function FullBookExportPanel({ controller, baseSettings, userName }: Prop
       ) : null}
       {controller.submitError ? (
         <Text style={styles.error} accessibilityLiveRegion="polite">
-          {errorCodeOf(controller.submitError) === 'REVISION_CONFLICT'
+          {fullBookErrorCode(controller.submitError) === 'REVISION_CONFLICT'
             ? i18nT('export:components.export.FullBookExport.error.revisionConflict')
             : i18nT('export:components.export.FullBookExport.error.submit')}
         </Text>

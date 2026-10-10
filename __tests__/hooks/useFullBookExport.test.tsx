@@ -254,6 +254,39 @@ describe('useFullBookExport', () => {
     expect(new Set(keys).size).toBe(1)
   })
 
+  it('shows a job created behind lost responses and does not start a second one', async () => {
+    let created = false
+    const lostJob = makeJob({ job_id: 'job-lost', status: 'queued' })
+    mockedGet.mockImplementation((endpoint: string) => {
+      if (endpoint === '/exports/books/capabilities/') return Promise.resolve(readyCapabilities)
+      if (endpoint.startsWith('/exports/books/?')) return Promise.resolve({ results: created ? [lostJob] : [], next_cursor: null })
+      if (endpoint === '/exports/books/job-lost/') return Promise.resolve(lostJob)
+      return Promise.reject(new Error(`unexpected GET ${endpoint}`))
+    })
+    let createCalls = 0
+    mockedPost.mockImplementation((endpoint: string) => {
+      if (endpoint === '/exports/books/selections/') return Promise.resolve({ selection_id: 'sel-1', state: 'draft', travel_count: 23 })
+      if (endpoint.endsWith('/finalize/')) return Promise.resolve({ selection_id: 'sel-1', state: 'finalized', travel_count: 23, selection_hash: 'h' })
+      if (endpoint === '/exports/books/') {
+        createCalls++
+        created = true
+        return Promise.reject(new ApiError(504, 'Gateway Timeout'))
+      }
+      return Promise.reject(new Error('Unexpected endpoint'))
+    })
+    const { Wrapper } = createWrapper()
+    const { result } = renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
+    await waitFor(() => expect(result.current.isAvailable).toBe(true))
+    act(() => result.current.findPeriod({ yearFrom: 2012, yearTo: 2013 }))
+    await waitFor(() => expect(result.current.draft).not.toBeNull())
+    const settings = { ...DEFAULT_BOOK_SETTINGS, sortOrder: 'date-asc' as const }
+    await act(async () => { await expect(result.current.submit(settings)).rejects.toThrow('Gateway Timeout') })
+    await waitFor(() => expect(result.current.job?.job_id).toBe('job-lost'))
+    expect(createCalls).toBe(3)
+    await act(async () => { await result.current.submit({ ...settings, title: 'Changed' }) })
+    expect(createCalls).toBe(3)
+  }, 10_000)
+
   it('keeps observing a newly accepted job when every initial detail attempt failed', async () => {
     let detailReads = 0
     mockedGet.mockImplementation((endpoint: string) => {
@@ -280,6 +313,34 @@ describe('useFullBookExport', () => {
     await waitFor(() => expect(result.current.job?.job_id).toBe('job-new'), { timeout: 5000 })
     expect(result.current.isObservingJob).toBe(false)
   }, 10_000)
+  it('keeps an action error with the job it belongs to, not with the next job', async () => {
+    const failedA = makeJob({ job_id: 'job-a', status: 'failed', retryable: true, error_code: 'RENDER_FAILED' })
+    const failedB = makeJob({ job_id: 'job-b', status: 'failed', retryable: true, error_code: 'RENDER_FAILED' })
+    let listed = [failedA]
+    mockedGet.mockImplementation((endpoint: string) => {
+      if (endpoint === '/exports/books/capabilities/') return Promise.resolve(readyCapabilities)
+      if (endpoint.startsWith('/exports/books/?')) return Promise.resolve({ results: listed, next_cursor: null })
+      if (endpoint === '/exports/books/job-a/') return Promise.resolve(failedA)
+      if (endpoint === '/exports/books/job-b/') return Promise.resolve(failedB)
+      return Promise.reject(new Error(`unexpected GET ${endpoint}`))
+    })
+    mockedPost.mockRejectedValueOnce(new ApiError(409, 'Rebuild', { error_code: 'REBUILD_REQUIRED' }))
+    const { client, Wrapper } = createWrapper()
+    const { result } = renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
+    await waitFor(() => expect(result.current.job?.job_id).toBe('job-a'))
+
+    act(() => result.current.retry())
+    await waitFor(() => expect(result.current.retryError).toBeInstanceOf(ApiError))
+
+    act(() => result.current.dismiss())
+    listed = [failedB]
+    await act(async () => {
+      await client.refetchQueries({ queryKey: ['full-book-export', 'owner-1', 'latest-job'] })
+    })
+
+    await waitFor(() => expect(result.current.job?.job_id).toBe('job-b'))
+    expect(result.current.retryError).toBeNull()
+  })
 })
 
 describe('full book job predicates', () => {

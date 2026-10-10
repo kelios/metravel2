@@ -59,6 +59,13 @@ export function isFullBookJobDownloadable(job: BookExportV2Job | null | undefine
   )
 }
 
+// Код контракта из тела ответа (`{error_code}`), если он есть.
+export const fullBookErrorCode = (error: unknown): string | null => {
+  if (!(error instanceof ApiError)) return null
+  const code = (error.data as { error_code?: unknown } | undefined)?.error_code
+  return typeof code === 'string' ? code : null
+}
+
 const isMissingJobError = (error: unknown): boolean =>
   error instanceof ApiError && (error.status === 403 || error.status === 404)
 
@@ -156,6 +163,13 @@ export function useFullBookExport({ enabled }: UseFullBookExportOptions) {
       setDraftState((current) => current?.owner === variables.owner ? null : current)
       void queryClient.invalidateQueries({ queryKey: queryKeys.fullBookExportLatestJob(variables.owner) })
     },
+    // Потерянный ответ мог уже создать задание: перечитываем owner job list,
+    // чтобы панель увидела его и не дала начать вторую сборку другим ключом.
+    onError: (error, variables) => {
+      if (isUncertainSubmitError(error)) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.fullBookExportLatestJob(variables.owner) })
+      }
+    },
   })
 
   const cancelMutation = useMutation({
@@ -167,8 +181,16 @@ export function useFullBookExport({ enabled }: UseFullBookExportOptions) {
     onSuccess: storeJob,
   })
   const downloadMutation = useMutation({
-    mutationFn: (id: string) => downloadFullBookFile(id),
+    mutationFn: ({ jobId }: { owner: string; jobId: string }) => downloadFullBookFile(jobId),
   })
+
+  // Ошибка действия принадлежит заданию, над которым оно выполнялось: после
+  // «Скрыть» и нового задания ошибка прежнего не показывается и не прячет кнопки.
+  const scopedActionError = (mutation: { error: unknown; variables?: { jobId: string } }): unknown =>
+    mutation.error && job && mutation.variables?.jobId === job.job_id ? mutation.error : null
+  const cancelError = scopedActionError(cancelMutation)
+  const retryError = scopedActionError(retryMutation)
+  const downloadError = scopedActionError(downloadMutation)
 
   const { mutate: findPeriodMutate } = findPeriodMutation
   const { mutateAsync: submitMutateAsync } = submitMutation
@@ -189,7 +211,7 @@ export function useFullBookExport({ enabled }: UseFullBookExportOptions) {
   // сам запрос защищён ключом идемпотентности, а здесь — от второй операции.
   const submit = useCallback(
     async (settings: BookSettings) => {
-      if (!owner || !draft || submitLockRef.current) return
+      if (!owner || !draft || submitLockRef.current || isFullBookJobActive(job)) return
       submitLockRef.current = true
       const locale = toBookLocale()
       const signature = JSON.stringify({ draft, settings, locale })
@@ -214,7 +236,7 @@ export function useFullBookExport({ enabled }: UseFullBookExportOptions) {
         submitLockRef.current = false
       }
     },
-    [draft, owner, submitMutateAsync],
+    [draft, job, owner, submitMutateAsync],
   )
 
   const cancel = useCallback(() => {
@@ -226,8 +248,8 @@ export function useFullBookExport({ enabled }: UseFullBookExportOptions) {
   }, [job, owner, retryMutate])
 
   const download = useCallback(() => {
-    if (job && isFullBookJobDownloadable(job)) downloadMutate(job.job_id)
-  }, [downloadMutate, job])
+    if (owner && job && isFullBookJobDownloadable(job)) downloadMutate({ owner, jobId: job.job_id })
+  }, [downloadMutate, job, owner])
 
   // Скрыть можно завершённое задание и задание, которого больше нет на сервере.
   const dismiss = useCallback(() => {
@@ -260,13 +282,13 @@ export function useFullBookExport({ enabled }: UseFullBookExportOptions) {
       isJobMissing,
       isReconnecting,
       isCancelling: cancelMutation.isPending,
-      cancelError: cancelMutation.error,
+      cancelError,
       cancel,
       isRetrying: retryMutation.isPending,
-      retryError: retryMutation.error,
+      retryError,
       retry,
       isDownloading: downloadMutation.isPending,
-      downloadError: downloadMutation.error,
+      downloadError,
       download,
       dismiss,
     }),
@@ -289,13 +311,13 @@ export function useFullBookExport({ enabled }: UseFullBookExportOptions) {
       isJobMissing,
       isReconnecting,
       cancelMutation.isPending,
-      cancelMutation.error,
+      cancelError,
       cancel,
       retryMutation.isPending,
-      retryMutation.error,
+      retryError,
       retry,
       downloadMutation.isPending,
-      downloadMutation.error,
+      downloadError,
       download,
       dismiss,
     ],

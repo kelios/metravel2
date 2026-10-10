@@ -139,6 +139,11 @@ export async function submitFullBookExport({
     return finalizeBookSelection(orderedDraft.selectionId)
   })
   checkpoint.selection = selection
+  // Подтверждаем число: пересозданный по другому порядку выбор обязан содержать
+  // ровно те путешествия, что видел автор. Иначе — явный конфликт, не тихая замена.
+  if (selection.travel_count !== draft.travelCount) {
+    throw new ApiError(409, 'BOOK_SELECTION_COUNT_CHANGED', { error_code: 'REVISION_CONFLICT' })
+  }
   const payload = {
     contract_version: 2 as const,
     selection_id: selection.selection_id,

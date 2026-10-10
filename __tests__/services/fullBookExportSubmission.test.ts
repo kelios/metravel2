@@ -111,6 +111,17 @@ describe('fullBookExportSubmission', () => {
     expect(mockedPost.mock.calls[2][1]).toMatchObject({ selection_id: 'sel-2', settings: { sortOrder: 'alphabetical' } })
   })
 
+  it('refuses a reordered selection whose confirmed count differs from the one the author saw', async () => {
+    mockedPost
+      .mockResolvedValueOnce({ selection_id: 'sel-2', state: 'draft', travel_count: 22, next_sequence: 1 })
+      .mockResolvedValueOnce({ ...finalized, selection_id: 'sel-2', travel_count: 22 })
+
+    await expect(
+      submitFullBookExport({ draft, settings: { ...settings, sortOrder: 'alphabetical' }, locale: 'RU', operationKey: 'op-3' }),
+    ).rejects.toMatchObject({ status: 409, data: { error_code: 'REVISION_CONFLICT' } })
+    expect(mockedPost).toHaveBeenCalledTimes(2)
+  })
+
   it('retries an uncertain job creation with the same key and body, never a second operation', async () => {
     jest.useFakeTimers()
     mockedPost
