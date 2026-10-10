@@ -74,11 +74,12 @@ const shouldFallbackToMock = (error: unknown): boolean => {
 };
 
 // In-memory мок-стор: мутации в DEV видны до перезагрузки страницы.
-const mockStore: PlannedTrip[] = MOCK_PLANNED_TRIPS.map(cloneTrip);
-const mockSuggestions: TripSuggestion[] = MOCK_TRIP_SUGGESTIONS.map((s) => ({
+const hasDevFixtures = __DEV__ || process.env.NODE_ENV === 'test';
+const mockStore: PlannedTrip[] = hasDevFixtures ? MOCK_PLANNED_TRIPS.map(cloneTrip) : [];
+const mockSuggestions: TripSuggestion[] = hasDevFixtures ? MOCK_TRIP_SUGGESTIONS.map((s) => ({
   ...s,
   point: { ...s.point },
-}));
+})) : [];
 let mockIdSeq = 9000;
 
 const findMock = (tripId: number | string): PlannedTrip | undefined =>

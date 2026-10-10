@@ -153,6 +153,15 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
 // Set EXPO_PUBLIC_RNW_SLIM=1 to enable cherry-picked react-native-web imports.
 const RNW_SLIM_ENABLED = process.env.EXPO_PUBLIC_RNW_SLIM === '1'
 const QUILL_SOURCE_DIR_RE = /[\\/]node_modules[\\/]quill[\\/]/
+// Runtime mock flags reject production use, but Metro still follows fixture
+// imports (including import()) and emits their catalogs. Keep that dev data out
+// of production web artifacts, with a throwing boundary if a caller regresses.
+const DEV_FIXTURE_PATHS = new Set([
+  'api/publicTripsMock.ts',
+  'api/plannedTripsMock.ts',
+  'api/achievementsMock.ts',
+  'api/gamificationMock.ts',
+].map((file) => path.resolve(__dirname, file)))
 config.resolver.resolveRequest = ((orig) => {
   return (context, moduleName, platform) => {
     const resolverEnvironment = context.customResolverOptions?.environment
@@ -244,7 +253,20 @@ config.resolver.resolveRequest = ((orig) => {
         type: 'sourceFile',
       }
     }
-    return orig(context, moduleName, platform)
+    const resolved = orig(context, moduleName, platform)
+    if (
+      platform === 'web' &&
+      context.dev === false &&
+      process.env.NODE_ENV !== 'test' &&
+      resolved.type === 'sourceFile' &&
+      DEV_FIXTURE_PATHS.has(resolved.filePath)
+    ) {
+      return {
+        filePath: path.resolve(__dirname, 'metro-stubs/dev-fixtures.production.js'),
+        type: 'sourceFile',
+      }
+    }
+    return resolved
   }
 })(config.resolver.resolveRequest)
 
