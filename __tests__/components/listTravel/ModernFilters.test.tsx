@@ -134,6 +134,37 @@ describe('ModernFilters Component', () => {
     expect(screen.getByText('5 путешествий')).toBeTruthy();
   });
 
+  // #2375: группы, совпадающие с выбором по умолчанию экрана, не считаются активными
+  it('does not count groups equal to defaultSelectedFilters as active', () => {
+    renderWithProviders(
+      <ModernFilters
+        filterGroups={mockFilterGroups}
+        selectedFilters={{ categories: ['1', '2'] }}
+        defaultSelectedFilters={{ categories: [2, 1] }}
+        onFilterChange={mockOnFilterChange}
+        onClearAll={mockOnClearAll}
+        resultsCount={10}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: /Очистить все фильтры/ })).toBeNull();
+  });
+
+  it('counts a group that deviates from defaultSelectedFilters', () => {
+    renderWithProviders(
+      <ModernFilters
+        filterGroups={mockFilterGroups}
+        selectedFilters={{ categories: ['1'] }}
+        defaultSelectedFilters={{ categories: ['1', '2'] }}
+        onFilterChange={mockOnFilterChange}
+        onClearAll={mockOnClearAll}
+        resultsCount={10}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Очистить все фильтры (1)' })).toBeTruthy();
+  });
+
   it('calls onClearAll when clear button is pressed', () => {
     renderWithProviders(
       <ModernFilters

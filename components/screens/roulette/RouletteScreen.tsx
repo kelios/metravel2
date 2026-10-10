@@ -96,7 +96,14 @@ const CompassDial = memo(function CompassDial({
 // ---------------------------------------------------------------------------
 type FiltersPanelProps = Pick<
   ReturnType<typeof useRouletteLogic>,
-  'filter' | 'filterGroups' | 'handleFilterChange' | 'handleClearAll' | 'filtersLoading' | 'resultsLoading' | 'resultsError'
+  | 'filter'
+  | 'defaultFilter'
+  | 'filterGroups'
+  | 'handleFilterChange'
+  | 'handleClearAll'
+  | 'filtersLoading'
+  | 'resultsLoading'
+  | 'resultsError'
 > & {
   resultsCount?: number;
   onYearChange: (value: unknown) => void;
@@ -106,6 +113,7 @@ type FiltersPanelProps = Pick<
 
 const FiltersPanel = memo(function FiltersPanel({
   filter,
+  defaultFilter,
   filterGroups,
   handleFilterChange,
   handleClearAll,
@@ -121,6 +129,7 @@ const FiltersPanel = memo(function FiltersPanel({
     <ModernFilters
       filterGroups={filterGroups}
       selectedFilters={filter as never}
+      defaultSelectedFilters={defaultFilter as never}
       onFilterChange={handleFilterChange}
       onClearAll={handleClearAll}
       resultsCount={resultsCount}
@@ -165,6 +174,7 @@ export default function RouletteScreen() {
 
   const {
     filter,
+    defaultFilter,
     filterGroups,
     filtersSummary,
     activeFiltersCount,
@@ -255,6 +265,7 @@ export default function RouletteScreen() {
           <View style={styles.sidebar}>
             <FiltersPanel
               filter={filter}
+              defaultFilter={defaultFilter}
               filterGroups={filterGroups}
               handleFilterChange={handleFilterChange}
               handleClearAll={handleClearAll}
@@ -519,6 +530,7 @@ export default function RouletteScreen() {
           <View style={[styles.filtersModalShell, { paddingTop: insets.top }]}>
             <FiltersPanel
               filter={filter}
+              defaultFilter={defaultFilter}
               filterGroups={filterGroups}
               handleFilterChange={handleFilterChange}
               handleClearAll={handleClearAll}

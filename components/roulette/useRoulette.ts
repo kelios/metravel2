@@ -138,6 +138,13 @@ export function useRoulette() {
     return { ...filter, countries: defaultCountries };
   }, [filter, defaultCountries]);
 
+  // Выбор по умолчанию для панели: страны по умолчанию не считаются активным
+  // фильтром, кнопка «Очистить» появляется только при отклонении от него.
+  const defaultFilter = useMemo(
+    () => (defaultCountries.length > 0 ? { countries: defaultCountries } : {}),
+    [defaultCountries],
+  );
+
   const { data: facetsData, isFetching: resultsLoading, isError: resultsError } = useQuery({
     queryKey: queryKeys.rouletteTravelFacets(rouletteQueryParams),
     queryFn: ({ signal }) =>
@@ -277,6 +284,7 @@ export function useRoulette() {
 
   return {
     filter: effectiveFilter,
+    defaultFilter,
     filterGroups,
     filtersSummary,
     activeFiltersCount,

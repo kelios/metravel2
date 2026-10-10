@@ -67,13 +67,22 @@ function getModernFiltersViewportState(width: number) {
   };
 }
 
-function getModernFiltersActiveCount(selectedFilters: FilterState) {
-  return Object.values(selectedFilters).reduce<number>((sum, filters) => {
-    if (Array.isArray(filters)) {
-      return sum + filters.length;
-    }
+const isSameSelection = (selected: unknown[], defaults: unknown[]) =>
+  selected.length === defaults.length &&
+  selected.every((value) => defaults.some((candidate) => String(candidate) === String(value)));
 
-    return sum;
+// #2375: группы, чей выбор совпадает с умолчанием экрана (рулетка подставляет
+// Беларусь и Польшу), активными не считаются — иначе при умолчаниях видна
+// кнопка «Очистить (2)», а нажатие на неё ничего не меняет.
+export function getModernFiltersActiveCount(
+  selectedFilters: FilterState,
+  defaultSelectedFilters?: Partial<FilterState>,
+) {
+  return Object.entries(selectedFilters).reduce<number>((sum, [groupKey, filters]) => {
+    if (!Array.isArray(filters)) return sum;
+    const defaults = (defaultSelectedFilters as Record<string, unknown> | undefined)?.[groupKey];
+    if (Array.isArray(defaults) && isSameSelection(filters, defaults)) return sum;
+    return sum + filters.length;
   }, selectedFilters.allAuthorsUnpublishedOnly === true ? 1 : 0);
 }
 
@@ -129,6 +138,8 @@ function getOrderedModernFilterOptions(group: FilterGroup, selectedFilters: Filt
 interface ModernFiltersProps {
   filterGroups: FilterGroup[];
   selectedFilters: FilterState;
+  /** Выбор по умолчанию экрана: совпадающие с ним группы не считаются активными. */
+  defaultSelectedFilters?: Partial<FilterState>;
   onFilterChange: (groupKey: string, optionId: string) => void;
   onClearAll: () => void;
   resultsCount?: number;
@@ -159,6 +170,7 @@ interface ModernFiltersProps {
 const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   filterGroups,
   selectedFilters,
+  defaultSelectedFilters,
   onFilterChange,
   onClearAll,
   resultsCount,
@@ -259,7 +271,10 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
     });
   }, [animatedValues]);
 
-  const activeFiltersCount = useMemo(() => getModernFiltersActiveCount(selectedFilters), [selectedFilters]);
+  const activeFiltersCount = useMemo(
+    () => getModernFiltersActiveCount(selectedFilters, defaultSelectedFilters),
+    [selectedFilters, defaultSelectedFilters],
+  );
   const { groupsWithoutSort, sortGroup } = useMemo(() => splitModernFilterGroups(filterGroups), [filterGroups]);
   const useStackedHeader = Platform.OS === 'web' && useOverlayChrome;
   // Icon-only toggle on native: the «Развернуть/Свернуть» label widens headerRight and
