@@ -7,13 +7,18 @@ import {
   type MapFilterValues,
   type StorageLike,
 } from '@/utils/mapFiltersStorage';
-import { fetchFiltersMap } from '@/api/map';
+import { fetchFiltersMap, type MapFiltersResponse } from '@/api/map';
 import { DEFAULT_RADIUS_KM, RADIUS_OPTIONS } from '@/constants/mapConfig';
 import { translate as i18nT } from '@/i18n'
 
 
 export interface FiltersData {
+  /**
+   * Словарь категорий путешествий (`where.categories`). `/api/filterformap/` его
+   * не отдаёт, поэтому на карте он пуст — не путать со словарём типов мест.
+   */
   categories: { id: string; name: string }[];
+  /** Единственный словарь чипов «тип места»: имя чипа → ID для сервера. */
   categoryTravelAddress: { id: string; name: string }[];
   radius: { id: string; name: string }[];
   address: string;
@@ -33,7 +38,7 @@ function getWebStorage(): StorageLike | null {
   return localStorage;
 }
 
-function normalizeCategory(cat: unknown, idx: number): { id: string; name: string } | null {
+function normalizeCategory(cat: unknown): { id: string; name: string } | null {
   if (cat == null) return null;
 
   const rec = cat && typeof cat === 'object' ? (cat as Record<string, unknown>) : null;
@@ -50,16 +55,44 @@ function normalizeCategory(cat: unknown, idx: number): { id: string; name: strin
     rec?.id ??
     rec?.value ??
     rec?.category_id ??
-    rec?.pk ??
-    idx;
+    rec?.pk;
 
   const normalizedName = String(name ?? cat ?? '').trim();
   if (!normalizedName) return null;
 
+  // Без реального ID имя остаётся ключом: позиционный индекс выдавался бы за ID
+  // чужой категории и уходил серверу. Нечисловой id `mapCategoryNamesToIds` пропустит.
   return {
-    id: String(realId),
+    id: String(realId ?? normalizedName),
     name: normalizedName,
   };
+}
+
+/**
+ * Единственный источник словаря чипов «тип места» карты (#2374). Живой
+ * `/api/filterformap/` отдаёт его под ключом `categories`; legacy-ключ
+ * `categoryTravelAddress` дочитывается только как fallback. Дубли по ID и имени
+ * схлопываются, чтобы `mapCategoryNamesToIds` получал однозначное имя → ID.
+ */
+export function resolveMapPointCategoryDictionary(
+  data: Partial<MapFiltersResponse> | null | undefined,
+): { id: string; name: string }[] {
+  const raw = [
+    ...(Array.isArray(data?.categories) ? data.categories : []),
+    ...(Array.isArray(data?.categoryTravelAddress) ? data.categoryTravelAddress : []),
+  ];
+  const seen = new Set<string>();
+  const dictionary: { id: string; name: string }[] = [];
+  raw.forEach((cat) => {
+    const normalized = normalizeCategory(cat);
+    if (!normalized) return;
+    const nameKey = normalized.name.toLowerCase();
+    if (seen.has(`id:${normalized.id}`) || seen.has(`name:${nameKey}`)) return;
+    seen.add(`id:${normalized.id}`);
+    seen.add(`name:${nameKey}`);
+    dictionary.push(normalized);
+  });
+  return dictionary;
 }
 
 export interface UseMapFiltersOptions {
@@ -97,7 +130,11 @@ export function useMapFilters(options?: UseMapFiltersOptions) {
       transportMode: stored.transportMode,
       lastMode: stored.lastMode,
       searchQuery: '',
-      ...(options?.initialCategories?.length ? { categories: options.initialCategories } : {}),
+      // `?categories=` в URL /map — имена типов мест (как `placeCategory`), поэтому
+      // идут в тот же канал чипов, что и выбор в панели, и резолвятся одним словарём.
+      ...(options?.initialCategories?.length
+        ? { categoryTravelAddress: options.initialCategories }
+        : {}),
       ...(options?.initialRadius ? { radius: options.initialRadius } : {}),
     };
   });
@@ -119,16 +156,9 @@ export function useMapFilters(options?: UseMapFiltersOptions) {
 
         if (!isMounted) return;
 
-        const categories = (data.categories || [])
-          .map((cat, idx) => normalizeCategory(cat, idx))
-          .filter((cat): cat is { id: string; name: string } => cat !== null);
-        const categoryTravelAddress = (data.categoryTravelAddress || [])
-          .map((cat, idx) => normalizeCategory(cat, idx))
-          .filter((cat): cat is { id: string; name: string } => cat !== null);
-
         setFilters({
-          categories,
-          categoryTravelAddress,
+          categories: [],
+          categoryTravelAddress: resolveMapPointCategoryDictionary(data),
           radius: [...RADIUS_OPTIONS],
           address: '',
         });

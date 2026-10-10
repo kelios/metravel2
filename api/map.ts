@@ -991,19 +991,25 @@ export const fetchAllMapPlaceSources = async (
   return results;
 };
 
-type MapFiltersResponse = {
+/**
+ * Контракт `GET /api/filterformap/` (бэк `MapFilterView`): `categories` — словарь
+ * типов мест (TravelCategoryAddress, те же ID, что `where.categoryTravelAddress`
+ * гео-выдачи и `?category=` кластеров), `radius` — варианты радиуса. Ключа
+ * `categoryTravelAddress` живой ответ не содержит: он оставлен опциональным только
+ * для обратной совместимости. Читать словарь — через `resolveMapPointCategoryDictionary`.
+ */
+export type MapFiltersResponse = {
   categories: unknown[];
-  categoryTravelAddress: unknown[];
+  radius?: unknown[];
+  /** @deprecated отсутствует в живом ответе; читается только как legacy-fallback. */
+  categoryTravelAddress?: unknown[];
 };
 
 export const fetchFiltersMap = async (options?: ApiOptions): Promise<MapFiltersResponse> => {
   try {
     const res = await fetchWithTimeout(GET_FILTER_FOR_MAP, { signal: options?.signal }, DEFAULT_TIMEOUT);
     // Возвращаем пустой объект фильтров вместо неправильного типа assertion
-    const emptyFilters: MapFiltersResponse = {
-      categories: [],
-      categoryTravelAddress: [],
-    };
+    const emptyFilters: MapFiltersResponse = { categories: [] };
     if (!res.ok) {
       const err = new Error(`HTTP ${res.status}: ${res.statusText}`);
       if (options?.throwOnError) throw err;
@@ -1015,10 +1021,7 @@ export const fetchFiltersMap = async (options?: ApiOptions): Promise<MapFiltersR
       throw e;
     }
     devWarn('Error fetching filters:', e);
-    const emptyFilters: MapFiltersResponse = {
-      categories: [],
-      categoryTravelAddress: [],
-    };
+    const emptyFilters: MapFiltersResponse = { categories: [] };
     if (options?.throwOnError) throw e;
     return emptyFilters;
   }

@@ -182,17 +182,10 @@ export function useMapScreenController() {
     urlSelectedPlace,
   ]);
 
-  // Счётчик мест в боковом меню: показываем общее число (backend total), а не
-  // длину загруженной страницы. Текстовый поиск теперь серверный (where.query,
-  // BE #695) и УЧТЁН в total — поэтому при поиске тоже берём backend total.
-  // Фильтр категорий по имени (когда имя не смапилось в ID) остаётся клиентским
-  // и в total не попадает — только для него показываем длину отфильтрованного
-  // набора, чтобы бейдж не расходился с картой (#335).
-  const hasCategoryFilter = Array.isArray(filterValues.categoryTravelAddress)
-    && filterValues.categoryTravelAddress.length > 0;
-  const travelsCount = hasCategoryFilter
-    ? travelsData.length
-    : Math.max(total ?? 0, travelsData.length);
+  // Счётчик мест в боковом меню — `total` из useMapTravels: серверный total по всей
+  // выдаче радиуса (поиск и чип типа места уже учтены бэкендом), а при клиентском
+  // фильтре (нерезолвленный чип, офлайн) — длина отфильтрованного набора (#335, #2374).
+  const travelsCount = Math.max(total ?? 0, travelsData.length);
 
   const {
     enabledOverlays,

@@ -496,34 +496,22 @@ export function useMapTravels({
     return dedupeMapTravels(source);
   }, [isConnected, offlineMapPoints, rawTravelsData]);
 
-  // Общее число мест по бэкенду (а не длина загруженной страницы). Бэкенд отдаёт
-  // total в первой странице — счётчик в UI должен показывать его, иначе при
-  // смене радиуса (50/100/200) число залипает на размере страницы (30).
-  const total = useMemo(() => {
-    if (!isConnected && offlineMapPoints != null) return allTravelsData.length;
-    if (queryParams.mode === 'radius') {
-      if (!enabledRadius) return 0;
-      const t = radiusQuery.data?.pages?.[0]?.total;
-      return typeof t === 'number' ? t : allTravelsData.length;
-    }
-    if (!enabledRoute) return 0;
-    return allTravelsData.length;
-  }, [
-    queryParams.mode,
-    enabledRadius,
-    enabledRoute,
-    radiusQuery.data?.pages,
-    allTravelsData,
-    isConnected,
-    offlineMapPoints,
-  ]);
+  const usesOfflineIndex = !isConnected && offlineMapPoints != null;
+  // Категорию по ID фильтрует только радиус-выдача (`where.categoryTravelAddress`):
+  // `travels/near-route` категорий не принимает, офлайн-индекс — локальный. Во всех
+  // остальных случаях (маршрут, офлайн, имя чипа не нашлось в словаре
+  // `/api/filterformap/`) чип фильтрует клиент по загруженным точкам.
+  const serverAppliesCategoryFilter =
+    !usesOfflineIndex && queryParams.mode === 'radius' && normalizedCategoryTravelAddressIds.length > 0;
+  const isClientCategoryFilter =
+    (filterValues.categoryTravelAddress?.length ?? 0) > 0 && !serverAppliesCategoryFilter;
 
   // Текстовый поиск теперь серверный (where.query, BE #695) — выдача и total уже
   // отфильтрованы бэкендом. Клиентского text-фильтра в render-path НЕТ: он резал бы
   // валидные FTS-совпадения (сервер матчит по полному тексту, а не по видимому
   // address) и искажал бы счётчик «На карте подходит».
   const filteredTravelsData = useMemo(() => {
-    if (!isConnected && offlineMapPoints != null) {
+    if (usesOfflineIndex) {
       const query = searchQuery.toLocaleLowerCase();
       const searched = !query
         ? allTravelsData
@@ -537,21 +525,42 @@ export function useMapTravels({
     }
     // Категории уже отфильтрованы бэкендом по ID (queryKey включает их) —
     // повторный клиентский фильтр по точному имени резал бы валидные точки при
-    // расхождении формулировок. Клиентский фильтр — только fallback, когда
-    // имена не смапились в ID и бэкенд фильтр не получил.
-    return normalizedCategoryTravelAddressIds.length
+    // расхождении формулировок. Клиентский фильтр — только когда бэкенд фильтр
+    // не получил (маршрут или имя без ID).
+    return serverAppliesCategoryFilter
       ? allTravelsData
       : filterTravelsByCategories(allTravelsData, filterValues.categoryTravelAddress);
   }, [
     allTravelsData,
-    normalizedCategoryTravelAddressIds.length,
+    serverAppliesCategoryFilter,
     filterValues.categoryTravelAddress,
-    isConnected,
-    offlineMapPoints,
+    usesOfflineIndex,
     searchQuery,
   ]);
 
-  const usesOfflineIndex = !isConnected && offlineMapPoints != null;
+  // Единственный источник счётчика мест. Бэкенд отдаёт total по всей выдаче радиуса
+  // (с учётом where.query и where.categoryTravelAddress) — UI показывает его, иначе
+  // число залипает на размере страницы (30). Длина набора — только когда фильтровал
+  // клиент (офлайн-индекс или нерезолвленный чип), чтобы бейдж не расходился с картой.
+  const total = useMemo(() => {
+    if (usesOfflineIndex || isClientCategoryFilter) return filteredTravelsData.length;
+    if (queryParams.mode === 'radius') {
+      if (!enabledRadius) return 0;
+      const t = radiusQuery.data?.pages?.[0]?.total;
+      return typeof t === 'number' ? t : allTravelsData.length;
+    }
+    if (!enabledRoute) return 0;
+    return allTravelsData.length;
+  }, [
+    usesOfflineIndex,
+    isClientCategoryFilter,
+    filteredTravelsData.length,
+    queryParams.mode,
+    enabledRadius,
+    enabledRoute,
+    radiusQuery.data?.pages,
+    allTravelsData.length,
+  ]);
 
   return useMemo(() => ({
     allTravelsData,
