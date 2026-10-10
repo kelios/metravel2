@@ -41,6 +41,27 @@ describe('bounded print DOM visibility', () => {
     expect(hasPrintedPageOverflow(100)).toBe(true)
   })
 
+  it('accepts a deliberate one-line ellipsis header while still rejecting other horizontal clipping', () => {
+    fixture('visible', 150, 70)
+    const caption = document.querySelector<HTMLElement>('#caption')!
+    caption.style.overflowX = 'hidden'
+    caption.style.textOverflow = 'ellipsis'
+    caption.style.whiteSpace = 'nowrap'
+    expect(hasPrintedPageOverflow(100)).toBe(false)
+    caption.style.whiteSpace = 'normal'
+    expect(hasPrintedPageOverflow(100)).toBe(true)
+    caption.style.whiteSpace = 'nowrap'
+    caption.style.textOverflow = 'clip'
+    expect(hasPrintedPageOverflow(100)).toBe(true)
+    // Vertical clipping is never a deliberate truncation.
+    caption.style.textOverflow = 'ellipsis'
+    caption.style.overflowY = 'hidden'
+    jest.mocked(document.createRange).mockReturnValue({
+      selectNodeContents: jest.fn(), getClientRects: () => [rectangle(90, 95)],
+    } as unknown as Range)
+    expect(hasPrintedPageOverflow(100)).toBe(true)
+  })
+
   it('enforces the DOM budget before scanning source text', () => {
     fixture('visible')
     expect(() => hasPrintedPageOverflow(1)).toThrow('WORKER_DOM_BUDGET_EXCEEDED')

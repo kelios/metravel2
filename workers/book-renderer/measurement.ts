@@ -88,7 +88,10 @@ export function hasPrintedPageOverflow(domBudget: number): boolean {
           const clip = ancestor.getBoundingClientRect()
           if (/^(hidden|clip|auto|scroll)$/.test(style.overflowY)
             && (textBounds.top < clip.top - 1 || textBounds.bottom > clip.bottom + 1)) return true
-          if (/^(hidden|clip|auto|scroll)$/.test(style.overflowX)
+          // A deliberate one-line ellipsis (running header title) keeps its text visible as "…";
+          // it is layout, not lost content, and depends on the runtime's fallback font widths.
+          const ellipsized = style.textOverflow === 'ellipsis' && style.whiteSpace === 'nowrap'
+          if (!ellipsized && /^(hidden|clip|auto|scroll)$/.test(style.overflowX)
             && (textBounds.left < clip.left - 1 || textBounds.right > clip.right + 1)) return true
           if (ancestor === section) break
         }
