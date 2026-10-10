@@ -3,6 +3,7 @@ import type { Travel } from '@/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import { ExportStage } from '@/types/pdf-export';
 import type { ExportConfig } from '@/types/pdf-export';
+import { appBelievesAuthenticated } from '@/api/authInvalidation';
 import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
 import type { BookExportFormat, BookExportSettingsPayload } from '@/api/bookExportApi';
 import { downloadBookExportArtifact, requestServerBookExport } from '@/api/bookExportApi';
@@ -119,6 +120,11 @@ async function tryServerBookExport(
   // (`saveArtifactBlob`: <a download>). В приложениях книгу собирает клиентский
   // рантайм; серверный путь на native — вне #2119.
   if (typeof document === 'undefined') return null;
+  // #2369: `/exports/books/` — auth-only эндпоинт: гостю он отвечает 401, а транспорт
+  // на 401 ещё и пробует сессию (`/user/me/verifications/`) — две ошибки в консоли на
+  // каждый экспорт. Тот же признак гостя, что у согласий (#2361): гость сразу собирает
+  // книгу клиентским рантаймом, серверный путь остаётся вошедшему пользователю.
+  if (!appBelievesAuthenticated()) return null;
 
   const travelIds = collectServerExportTravelIds(selected);
   if (!travelIds) return null;

@@ -4,6 +4,7 @@ import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { Platform, Alert } from 'react-native';
 import { showToast } from '@/utils/toast';
 import { downloadBookExportArtifact, requestServerBookExport } from '@/api/bookExportApi';
+import { setAuthSessionProbe } from '@/api/authInvalidation';
 import * as printBoundary from '@/utils/printHtml';
 import { usePdfExport } from '@/hooks/usePdfExport';
 import { ExportStage } from '@/types/pdf-export';
@@ -157,6 +158,9 @@ describe('usePdfExport', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // #2369: серверный путь книги — только вошедшему; по умолчанию сценарии ниже
+    // идут под сессией, гостевой случай выставляет пробу сам.
+    setAuthSessionProbe(() => true);
     if (typeof window !== 'undefined') {
       (window as any).open = jest.fn(() => ({
         opener: {},
@@ -650,9 +654,58 @@ describe('usePdfExport', () => {
       expect(mockDiscardPendingBookPreviewWindow).not.toHaveBeenCalled();
     });
   });
+
+  // #2369: `/exports/books/` отвечает гостю 401 и тянет пробу сессии — гость в
+  // серверный путь не ходит вовсе, книга собирается клиентским рантаймом.
+  describe('#2369: гость не вызывает серверный экспорт', () => {
+    it('гость — 0 вызовов requestServerBookExport, книга напечатана в зарезервированное окно', async () => {
+      setAuthSessionProbe(() => false);
+      const reserved = { closed: false };
+      mockOpenPendingBookPreviewWindow.mockReturnValueOnce(reserved);
+      const { result } = renderHook(() => usePdfExport(mockTravels));
+
+      await act(async () => {
+        await result.current.openPrintBook(mockSettings);
+      });
+
+      expect(mockRequestServerBookExport).not.toHaveBeenCalled();
+      expect(mockDownloadBookExportArtifact).not.toHaveBeenCalled();
+      expect(mockGenerateTravelsHtml).toHaveBeenCalledTimes(1);
+      expect(mockOpenBookPreviewWindow).toHaveBeenCalledTimes(1);
+      expect(mockOpenBookPreviewWindow.mock.calls[0][1]).toBe(reserved);
+      expect(mockShowToast).not.toHaveBeenCalled();
+      await waitFor(() => expect(result.current.currentStage).toBe(ExportStage.COMPLETE));
+    });
+
+    it('без зарегистрированной пробы сессии пользователь считается гостем', async () => {
+      setAuthSessionProbe(null);
+      const { result } = renderHook(() => usePdfExport(mockTravels));
+
+      await act(async () => {
+        await result.current.openPrintBook(mockSettings);
+      });
+
+      expect(mockRequestServerBookExport).not.toHaveBeenCalled();
+      expect(mockOpenBookPreviewWindow).toHaveBeenCalledTimes(1);
+    });
+
+    it('вошедший пользователь — прежний серверный путь: POST /exports/books/ уходит', async () => {
+      setAuthSessionProbe(() => true);
+      const { result } = renderHook(() => usePdfExport(mockTravels));
+
+      await act(async () => {
+        await result.current.openPrintBook(mockSettings);
+      });
+
+      expect(mockRequestServerBookExport).toHaveBeenCalledTimes(1);
+      // `null` от сервера (capability недоступна) — штатный фолбэк в клиентский рантайм.
+      expect(mockOpenBookPreviewWindow).toHaveBeenCalledTimes(1);
+    });
+  });
 });
 
 afterAll(() => {
+  setAuthSessionProbe(null);
   Object.defineProperty(Platform, 'OS', {
     configurable: true,
     value: originalPlatformOS,
