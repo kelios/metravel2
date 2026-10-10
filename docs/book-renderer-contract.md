@@ -144,6 +144,16 @@ publication. После каждого подготовленного/rendered p
 cgroup budget и только затем публикует checkpoint/receipt; restart не должен
 выдавать неподтверждённые промежуточные файлы за готовые страницы.
 
+## Internal links on standalone pages
+
+Страница измеряется и печатается отдельным документом, поэтому Chromium не
+создаёт аннотацию для `href="#travel-section-<id>"` (якоря нет в документе).
+`setHtml` переписывает такие ссылки в `https://book-snapshot.invalid/#travel-section-<id>`:
+в `page.pdf` они становятся URI-аннотациями, а composer B3 (`book_exports/pdf_composer.py`)
+перепривязывает их к именованным destinations первой страницы главы и отвергает
+непривязанную ссылку этого origin. Resource routing этот origin по-прежнему не обслуживает
+для навигации — href не загружается.
+
 ## Encoder identity on Linux
 
 `print_encoder_pin` фиксирует `chromium_version` из `browsers.json` Playwright

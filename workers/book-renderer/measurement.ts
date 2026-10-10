@@ -219,7 +219,11 @@ export async function physicalMeasurer(root: string, out: string, fontsDir: stri
       denied = false
       routeError = undefined; served = new Map(); decodedPixels = 0; encodedBytes = 0; resources = new Set()
       // The artifact supplies the exact frozen font faces; never fetch Google/live assets here.
+      // A standalone measured page has no target for same-document anchors, so Chromium would drop
+      // TOC links entirely; printed as snapshot-origin URLs they survive as URI annotations that the
+      // B3 composer rebinds to the chapter destinations of the complete file.
       const pinnedHtml = html.replace(/<link\b[^>]*https:\/\/fonts\.[^>]*>/g, '')
+        .replace(/href="#(travel-section-\d+)"/g, `href="${SNAPSHOT_ASSET_ORIGIN}/#$1"`)
         .replace('</head>', `<style>${fontCss}</style></head>`)
       await page!.setContent(pinnedHtml, { waitUntil: 'load' })
       if (routeError) throw routeError
