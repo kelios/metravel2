@@ -113,9 +113,24 @@ describe('measured source subdivision', () => {
       locations: [{ id: '1', address: 'Address', coord: '53.9;27.56' }] }, blocks: ['point'], occurrences: [] }
     expect((await collect(source)).some(page => page.page.type === 'map-text' && page.page.field === 'coord')).toBe(false)
     await expect(collect({ ...source, source_schema_version: 1 })).rejects.toThrow('SEGMENT_SOURCE_SCHEMA_UNSUPPORTED')
-    await expect(collect({ ...source, source_schema_version: 5 } as unknown as BookSegmentSource)).rejects.toThrow('SEGMENT_SOURCE_SCHEMA_UNSUPPORTED')
+    await expect(collect({ ...source, source_schema_version: 6 } as unknown as BookSegmentSource)).rejects.toThrow('SEGMENT_SOURCE_SCHEMA_UNSUPPORTED')
     await expect(collect({ ...source, source_schema_version: 4 })).rejects.toThrow('SEGMENT_RESOURCE_BINDING_INVALID')
     await expect(collect({ ...source, source_schema_version: 3 })).rejects.toThrow('SEGMENT_RESOURCE_BINDING_INVALID')
+  })
+
+  it.each([4, 5] as const)('expands nested FAQ before clearing prepared schema%s bindings, preserving text/media/anchors', async source_schema_version => {
+    const answer = 'Complete nested answer '.repeat(80)
+    const source: BookSegmentSource = { source_schema_version, resource_bindings: [], resource_bindings_hash: 'a'.repeat(64),
+      resource_policy_hash: 'b'.repeat(64), encoder_identity_hash: 'c'.repeat(64), page: { type: 'content', travel: { id: 1, name: 'FAQ' }, field: 'description', first: true, last: true, qr: '',
+        html: `<details id="faq"><summary>Outer question</summary><details id="inner"><summary>Inner question</summary><p>${answer}</p><img src="https://example.com/original.png"></details></details>` }, blocks: ['faq'], occurrences: ['source-image'] }
+    const children = await collect(source, 512)
+    const html = children.map(child => child.page.type === 'content' ? child.page.html : '').join('')
+    expect(children.length).toBeGreaterThan(1)
+    expect(html).not.toMatch(/<(?:details|summary)\b/)
+    expect(html.replace(/<[^>]+>/g, '')).toBe(`Outer questionInner question${answer}`)
+    expect(html).toContain('id="faq"'); expect(html).toContain('id="inner"')
+    expect(children.flatMap(child => child.occurrences)).toEqual(['source-image'])
+    expect(children.every(child => child.source_schema_version === 2 && child.resource_bindings === undefined)).toBe(true)
   })
 
 })

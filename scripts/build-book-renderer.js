@@ -233,8 +233,10 @@ function buildBookRenderer(options = {}) {
     document_schema_version: schemaVersion(root, 'types/bookDocument.ts', 'BOOK_DOCUMENT_SCHEMA_VERSION'),
     print_asset_recipe: printAssetRecipe(root),
     print_variant_recipe: printAssetRecipe(root, 'PRINT_VARIANT_RECIPE'),
+    print_oriented_variant_recipe: printAssetRecipe(root, 'PRINT_ORIENTED_VARIANT_RECIPE'),
     legacy_print_resource_policy_hash: sha256(JSON.stringify(Object.fromEntries(Object.entries(printAssetRecipe(root)).sort(comparePaths)))),
-    print_resource_policy_hash: sha256(JSON.stringify(Object.fromEntries(Object.entries(printAssetRecipe(root, 'PRINT_VARIANT_RECIPE')).sort(comparePaths)))),
+    print_variant_resource_policy_hash: sha256(JSON.stringify(Object.fromEntries(Object.entries(printAssetRecipe(root, 'PRINT_VARIANT_RECIPE')).sort(comparePaths)))),
+    print_resource_policy_hash: sha256(JSON.stringify(Object.fromEntries(Object.entries(printAssetRecipe(root, 'PRINT_ORIENTED_VARIANT_RECIPE')).sort(comparePaths)))),
     print_encoder_pin: (() => {
       const info = JSON.parse(fs.readFileSync(require.resolve('playwright-core/package.json'), 'utf8'));
       const browsers = JSON.parse(fs.readFileSync(path.join(path.dirname(require.resolve('playwright-core/package.json')), 'browsers.json'), 'utf8')).browsers;

@@ -8,15 +8,24 @@ import type { Browser, BrowserContext, Page } from 'playwright'
 import { imageSize } from 'image-size'
 import { Parser } from 'htmlparser2'
 import { BOOK_SEGMENT_LIMITS } from '@/services/pdf-export/segments/types'
-import { PRINT_ASSET_RECIPE, PRINT_VARIANT_RECIPE, assertPrintVariantBinding, assertPrintResourceBinding, type PreparedPrintResources, type PrintEncoderIdentity, type PrintResourceBinding } from '@/services/pdf-export/segments/printAssetsTypes'
+import { PRINT_ASSET_RECIPE, PRINT_VARIANT_RECIPE, PRINT_ORIENTED_VARIANT_RECIPE, assertPrintOrientedBinding, assertNoPrintOrientationBinding, assertPrintVariantBinding, assertPrintResourceBinding, type PrintSourcePolicy, type PreparedPrintResources, type PrintEncoderIdentity, type PrintResourceBinding } from '@/services/pdf-export/segments/printAssetsTypes'
 import type { BookSegmentSource } from '@/services/pdf-export/segments/renderSegment'
 import { canonicalJson, makePrivateDirectory, privatePath, readBoundedBytes, sha256, verifyFile } from './filesystem'
 import { loadAssetDescriptor, SNAPSHOT_ASSET_ORIGIN } from './snapshot'
 import type { RendererResourceProfile } from './measurement'
+import { normalizePrintOrientation, readPrintOrientation, orientedPrintDimensions, printOrientationMatrix } from './printOrientation'
 
 const SOURCE_URL = /https:\/\/book-snapshot\.invalid\/assets\/([a-f0-9]{64})/g
 export const PRINT_RESOURCE_POLICY_HASH = sha256(canonicalJson(PRINT_ASSET_RECIPE))
 export const PRINT_VARIANT_POLICY_HASH = sha256(canonicalJson(PRINT_VARIANT_RECIPE))
+export const PRINT_ORIENTED_VARIANT_POLICY_HASH = sha256(canonicalJson(PRINT_ORIENTED_VARIANT_RECIPE))
+export function printRecipe(policy: PrintSourcePolicy): typeof PRINT_ASSET_RECIPE | typeof PRINT_VARIANT_RECIPE | typeof PRINT_ORIENTED_VARIANT_RECIPE {
+  if (policy === 5) return PRINT_ORIENTED_VARIANT_RECIPE
+  if (policy === 4) return PRINT_VARIANT_RECIPE
+  if (policy === 3) return PRINT_ASSET_RECIPE
+  throw new Error('PRINT_RESOURCE_POLICY_UNSUPPORTED')
+}
+export const printPolicyHash = (policy: PrintSourcePolicy): string => sha256(canonicalJson(printRecipe(policy)))
 const requireRuntime = createRequire(__filename)
 // Native filesystem errors may cross a VM realm; instanceof Error is not a reliable errno test.
 const hasErrno = (error: unknown, code: string): boolean => typeof error === 'object' && error !== null &&
@@ -73,17 +82,24 @@ export function printDimensions(width: number, height: number): { width: number;
 }
 
 /** Reject active/animated containers before any worker page (including cover analysis) decodes them. */
-export function printImageHeader(bytes: Buffer, profile: RendererResourceProfile) {
+export function printImageHeader(bytes: Buffer, profile: RendererResourceProfile, policy: PrintSourcePolicy = 3) {
   if (bytes.length > profile.encoded_resource_bytes) throw new Error('SNAPSHOT_IMAGE_ENCODED_BUDGET_EXCEEDED')
-  const dimensions = imageSize(bytes.subarray(0, 65_536))
+  const explicitOrientation = policy === 5 ? readPrintOrientation(bytes) : undefined
+  let dimensions: { width?: number; height?: number; type?: string; orientation?: number }
+  try { dimensions = imageSize(bytes.subarray(0, 65_536)) }
+  catch (error) {
+    if (policy === 5) throw new Error(bytes.length > 65_536 ? 'PRINT_IMAGE_HEADER_BUDGET_EXCEEDED' : 'PRINT_IMAGE_DIMENSIONS_INVALID')
+    throw error
+  }
   if (!['jpg', 'png', 'webp'].includes(dimensions.type || '')) throw new Error('PRINT_IMAGE_FORMAT_UNSUPPORTED')
   const width = dimensions.width || 0, height = dimensions.height || 0
   if (!Number.isSafeInteger(width) || !Number.isSafeInteger(height) || width < 1 || height < 1 || width * height > profile.decoded_resource_pixels) throw new Error('SNAPSHOT_IMAGE_DECODE_BUDGET_EXCEEDED')
   const alpha = encodedAlphaPolicy(bytes)
   if (alpha.animated) throw new Error('PRINT_IMAGE_ANIMATION_UNSUPPORTED')
-  const rotated = dimensions.orientation !== undefined && dimensions.orientation >= 5 && dimensions.orientation <= 8
+  const orientation = explicitOrientation ?? dimensions.orientation
+  const rotated = orientation !== undefined && orientation >= 5 && orientation <= 8
   return { ...alpha, width, height, orientedWidth: rotated ? height : width, orientedHeight: rotated ? width : height,
-    decoderOrientation: dimensions.type !== 'jpg' && dimensions.orientation === undefined }
+    orientation, decoderOrientation: policy !== 5 && dimensions.type !== 'jpg' && dimensions.orientation === undefined }
 }
 
 export function assertPrintOrientation(header: ReturnType<typeof printImageHeader>, width: number, height: number): void {
@@ -92,7 +108,7 @@ export function assertPrintOrientation(header: ReturnType<typeof printImageHeade
   if (!expected && !swapped) throw new Error('PRINT_IMAGE_DIMENSIONS_INVALID')
 }
 interface PrintDescriptor {
-  schema_version: 1 | 2
+  schema_version: 1 | 2 | 3
   original_checksum: string
   original_file_ref: string
   original_width: number
@@ -102,7 +118,7 @@ interface PrintDescriptor {
   alpha_possible: boolean
   has_source_alpha: boolean
   has_output_alpha: boolean
-  recipe: typeof PRINT_ASSET_RECIPE | typeof PRINT_VARIANT_RECIPE
+  recipe: typeof PRINT_ASSET_RECIPE | typeof PRINT_VARIANT_RECIPE | typeof PRINT_ORIENTED_VARIANT_RECIPE
   encoder_identity: PrintEncoderIdentity
   binding: Omit<PrintResourceBinding, 'descriptor_ref' | 'descriptor_checksum'>
 }
@@ -112,10 +128,12 @@ export function checkPrintWorkingBudget(bindings: PrintResourceBinding[], profil
   if (bindings.length > 64) throw new Error('WORKER_PAGE_IMAGE_BUDGET_EXCEEDED')
   let encoded = 0, pixels = 0
   for (const item of bindings) {
-    if ([item.variant_hash, item.effect, item.filter_working_pixels].some(value => value !== undefined)) assertPrintVariantBinding(item); else assertPrintResourceBinding(item)
+    if (item.original_orientation !== undefined) assertPrintOrientedBinding(item)
+    else if ([item.variant_hash, item.effect, item.filter_working_pixels].some(value => value !== undefined)) assertPrintVariantBinding(item)
+    else { assertPrintResourceBinding(item); assertNoPrintOrientationBinding(item) }
     if (item.original_encoded_bytes > profile.encoded_resource_bytes || item.encoded_bytes > profile.encoded_resource_bytes) throw new Error('PRINT_IMAGE_ENCODED_BUDGET_EXCEEDED')
     if (item.original_pixels > profile.decoded_resource_pixels || item.served_pixels > profile.decoded_resource_pixels || item.canvas_pixels > profile.decoded_resource_pixels) throw new Error('PRINT_IMAGE_DECODE_BUDGET_EXCEEDED')
-    encoded += 2 * item.original_encoded_bytes + 2 * item.encoded_bytes + 4 * (item.original_transfer_bytes + item.transfer_bytes)
+    encoded += 2 * item.original_encoded_bytes + 2 * item.encoded_bytes + 4 * (item.original_transfer_bytes + item.transfer_bytes) + 2 * (item.normalization_working_bytes ?? 0)
     pixels += (item.filter_working_pixels ?? 0) + item.original_pixels + item.alpha_canvas_pixels + Math.ceil(item.alpha_scratch_bytes / 4) + item.canvas_pixels + item.encoder_pixels + item.served_pixels + Math.ceil(item.pixel_scratch_bytes / 4)
   }
   if (encoded > profile.encoded_portion_bytes || pixels > profile.decoded_portion_pixels) throw new Error('WORKER_PAGE_IMAGE_BUDGET_EXCEEDED')
@@ -154,7 +172,7 @@ export function transformPrintResourceUrls(html: string, transform: (hash: strin
   return html
 }
 
-export async function encodePrintImage({ width, height, alphaPossible, quality, maxBytes, colorFilter = 'none' }: { width: number; height: number; alphaPossible: boolean; quality: number; maxBytes: number; colorFilter?: WorkerColorFilter }): Promise<{ data: string; mime: string; hasAlpha: boolean; sourceHasAlpha: boolean }> {
+export async function encodePrintImage({ width, height, alphaPossible, quality, maxBytes, colorFilter = 'none', orientationTransform }: { width: number; height: number; alphaPossible: boolean; quality: number; maxBytes: number; colorFilter?: WorkerColorFilter; orientationTransform?: { matrix: [number, number, number, number, number, number]; rawWidth: number; rawHeight: number } }): Promise<{ data: string; mime: string; hasAlpha: boolean; sourceHasAlpha: boolean }> {
   if (!['none', 'sepia(1)', 'grayscale(1)'].includes(colorFilter)) throw new Error('PRINT_IMAGE_EFFECT_UNSUPPORTED')
   const image = document.querySelector<HTMLImageElement>('#source')!
   const canvas = document.createElement('canvas')
@@ -177,7 +195,11 @@ export async function encodePrintImage({ width, height, alphaPossible, quality, 
   const ctx = canvas.getContext('2d', { alpha: true, colorSpace: 'srgb' })!
   ctx.filter = colorFilter
   if (ctx.filter !== colorFilter) throw new Error('PRINT_IMAGE_EFFECT_UNSUPPORTED')
-  ctx.drawImage(image, 0, 0, width, height)
+  if (orientationTransform) {
+    ctx.setTransform(...orientationTransform.matrix)
+    ctx.drawImage(image, 0, 0, orientationTransform.rawWidth, orientationTransform.rawHeight)
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+  } else ctx.drawImage(image, 0, 0, width, height)
   let hasAlpha = false
   for (let row = 0; row < height && !hasAlpha; row += 16) {
     const tile = ctx.getImageData(0, row, width, Math.min(16, height - row)).data
@@ -198,7 +220,7 @@ export class PrintAssetCache {
   private activeBytes?: Buffer
   private activeChecksum?: string
   private routeError?: Error
-  readonly policyHash = PRINT_VARIANT_POLICY_HASH
+  readonly policyHash = PRINT_ORIENTED_VARIANT_POLICY_HASH
   get identityHash(): string { return sha256(canonicalJson(this.identity)) }
 
   static async create(browser: Browser, executable: string, root: string, indexRoot: string, profile: RendererResourceProfile): Promise<PrintAssetCache> {
@@ -213,7 +235,7 @@ export class PrintAssetCache {
     const cache = new PrintAssetCache(root, indexRoot, context, page, identity, profile)
     await context.route('**/*', async route => {
       const url = new URL(route.request().url())
-      if (cache.activeBytes && url.href === `${SNAPSHOT_ASSET_ORIGIN}/assets/${cache.activeChecksum}`) {
+      if (cache.activeBytes && url.href === `${SNAPSHOT_ASSET_ORIGIN}/${cache.activeChecksum}`) {
         await route.fulfill({ body: cache.activeBytes, headers: { 'Access-Control-Allow-Origin': '*' } })
       } else if (url.protocol === 'about:' || url.protocol === 'data:') await route.continue()
       else { cache.routeError = new Error('SNAPSHOT_MUTABLE_RESOURCE_REQUEST'); await route.abort() }
@@ -223,19 +245,23 @@ export class PrintAssetCache {
 
   async close(): Promise<void> { await this.context.close() }
 
-  private async source(checksum: string) {
+  private async source(checksum: string, policy: PrintSourcePolicy = 3) {
     const chunk = await loadAssetDescriptor(this.indexRoot, checksum)
     if (chunk.checksum !== checksum || chunk.size_bytes > this.profile.encoded_resource_bytes) throw new Error('SNAPSHOT_IMAGE_ENCODED_BUDGET_EXCEEDED')
     const file = await verifyFile(this.root, chunk)
     const bytes = await readBoundedBytes(file, this.profile.encoded_resource_bytes)
     if (sha256(bytes) !== checksum) throw new Error('SNAPSHOT_INTEGRITY_FAILED')
-    return { chunk, bytes, ...printImageHeader(bytes, this.profile) }
+    return { chunk, bytes, ...printImageHeader(bytes, this.profile, policy) }
   }
 
   async load(binding: PrintResourceBinding): Promise<Buffer> {
     const variant = [binding.variant_hash, binding.effect, binding.filter_working_pixels].some(value => value !== undefined)
-    if (variant) assertPrintVariantBinding(binding); else assertPrintResourceBinding(binding)
-    const policyHash = variant ? PRINT_VARIANT_POLICY_HASH : PRINT_RESOURCE_POLICY_HASH
+    const oriented = binding.original_orientation !== undefined
+    if (oriented) assertPrintOrientedBinding(binding)
+    else if (variant) assertPrintVariantBinding(binding)
+    else { assertPrintResourceBinding(binding); assertNoPrintOrientationBinding(binding) }
+    const policy: PrintSourcePolicy = oriented ? 5 : variant ? 4 : 3
+    const policyHash = printPolicyHash(policy)
     const key = sha256(canonicalJson(variant ? [binding.original_checksum, binding.effect, policyHash, this.identityHash] : [binding.original_checksum, policyHash, this.identityHash]))
     if ((variant && binding.variant_hash !== key) || binding.descriptor_ref !== `print-cache/${key}.json`) throw new Error('PRINT_RESOURCE_BINDING_MISMATCH')
     if (binding.recipe_hash !== policyHash || binding.encoder_identity_hash !== this.identityHash) throw new Error('PRINT_RESOURCE_BINDING_MISMATCH')
@@ -244,16 +270,27 @@ export class PrintAssetCache {
     const descriptor = JSON.parse(descriptorBytes.toString('utf8')) as PrintDescriptor
     const expected = { ...binding } as Partial<PrintResourceBinding>
     delete expected.descriptor_ref; delete expected.descriptor_checksum
-    if (descriptor.schema_version !== (variant ? 2 : 1) || canonicalJson(descriptor.binding) !== canonicalJson(expected) || descriptor.original_checksum !== binding.original_checksum ||
-      canonicalJson(descriptor.recipe) !== canonicalJson(variant ? PRINT_VARIANT_RECIPE : PRINT_ASSET_RECIPE) || canonicalJson(descriptor.encoder_identity) !== canonicalJson(this.identity)) throw new Error('PRINT_RESOURCE_BINDING_MISMATCH')
-    const source = await this.source(binding.original_checksum)
+    if (descriptor.schema_version !== (oriented ? 3 : variant ? 2 : 1) || canonicalJson(descriptor.binding) !== canonicalJson(expected) || descriptor.original_checksum !== binding.original_checksum ||
+      canonicalJson(descriptor.recipe) !== canonicalJson(printRecipe(policy)) || canonicalJson(descriptor.encoder_identity) !== canonicalJson(this.identity)) throw new Error('PRINT_RESOURCE_BINDING_MISMATCH')
+    const source = await this.source(binding.original_checksum, policy)
     if (descriptor.original_file_ref !== source.chunk.file_ref || descriptor.original_width !== source.width || descriptor.original_height !== source.height || binding.original_encoded_bytes !== source.bytes.length || binding.original_pixels !== source.width * source.height) throw new Error('PRINT_RESOURCE_BINDING_MISMATCH')
     assertPrintOrientation(source, descriptor.oriented_width, descriptor.oriented_height)
+    if (oriented && (binding.original_orientation !== source.orientation || binding.raw_width !== source.width || binding.raw_height !== source.height ||
+      binding.oriented_width !== source.orientedWidth || binding.oriented_height !== source.orientedHeight || binding.normalized_decode_bytes !== source.bytes.length ||
+      binding.normalization_working_bytes !== (source.orientation === 1 ? 0 : source.bytes.length))) throw new Error('PRINT_RESOURCE_BINDING_MISMATCH')
+    checkPrintWorkingBudget([binding], this.profile)
+    if (oriented) {
+      const normalized = normalizePrintOrientation(source.bytes, this.profile.encoded_resource_bytes)
+      if (binding.original_orientation !== normalized.orientation || binding.normalized_decode_checksum !== normalized.checksum ||
+        binding.normalized_decode_bytes !== normalized.carrier.length || binding.normalization_working_bytes !== normalized.working_bytes ||
+        binding.raw_width !== source.width || binding.raw_height !== source.height || binding.oriented_width !== source.orientedWidth || binding.oriented_height !== source.orientedHeight ||
+        (binding.mode === 'passthrough' && normalized.orientation !== 1)) throw new Error('PRINT_RESOURCE_BINDING_MISMATCH')
+    }
     const target = printDimensions(descriptor.oriented_width, descriptor.oriented_height)
     const alpha = source
     if (descriptor.alpha_possible !== alpha.alpha_possible || typeof descriptor.has_output_alpha !== 'boolean' || typeof descriptor.has_source_alpha !== 'boolean' || (!alpha.alpha_possible && descriptor.has_source_alpha) || alpha.animated ||
       (binding.mode === 'passthrough' && (source.bytes[0] !== 0xff || source.bytes[1] !== 0xd8 || source.bytes.length > PRINT_ASSET_RECIPE.jpeg_passthrough_bytes || Math.max(source.orientedWidth, source.orientedHeight) > PRINT_ASSET_RECIPE.max_long_edge || binding.width !== source.orientedWidth || binding.height !== source.orientedHeight)) ||
-      (binding.mode === 'encoded' && (binding.width !== target.width || binding.height !== target.height || binding.mime !== (descriptor.has_source_alpha || descriptor.has_output_alpha ? 'image/png' : 'image/jpeg') || binding.alpha_canvas_pixels !== (alpha.alpha_possible ? Math.min(2400, descriptor.oriented_width) * Math.min(16, descriptor.oriented_height) : 0) || binding.alpha_scratch_bytes !== (alpha.alpha_possible ? Math.min(2400, descriptor.oriented_width) * Math.min(16, descriptor.oriented_height) * 4 : 0)))) throw new Error('PRINT_RESOURCE_BINDING_MISMATCH')
+      (binding.mode === 'encoded' && (binding.width !== target.width || binding.height !== target.height || binding.mime !== (descriptor.has_source_alpha || descriptor.has_output_alpha ? 'image/png' : 'image/jpeg') || binding.alpha_canvas_pixels !== (alpha.alpha_possible ? Math.min(2400, oriented ? source.width : descriptor.oriented_width) * Math.min(16, oriented ? source.height : descriptor.oriented_height) : 0) || binding.alpha_scratch_bytes !== binding.alpha_canvas_pixels * 4))) throw new Error('PRINT_RESOURCE_BINDING_MISMATCH')
     checkPrintWorkingBudget([binding], this.profile)
     const bytes = await readBoundedBytes(await privatePath(this.indexRoot, binding.served_file_ref), this.profile.encoded_resource_bytes)
     const dimensions = imageSize(bytes.subarray(0, 65_536))
@@ -263,9 +300,11 @@ export class PrintAssetCache {
     return bytes
   }
 
-  private async ensure(checksum: string, effect?: WorkerImageEffect): Promise<PrintResourceBinding> {
+  private async ensure(checksum: string, effect?: WorkerImageEffect, policy: PrintSourcePolicy = 3): Promise<PrintResourceBinding> {
     if (effect) assertWorkerImageEffect(effect)
-    const policyHash = effect ? PRINT_VARIANT_POLICY_HASH : PRINT_RESOURCE_POLICY_HASH
+    if ((policy === 3) !== (effect === undefined)) throw new Error('PRINT_RESOURCE_BINDING_MISMATCH')
+    const oriented = policy === 5
+    const policyHash = printPolicyHash(policy)
     // A new leaf does not exist yet; validate both cache ancestors before encoding.
     await privatePath(this.indexRoot, 'print-assets')
     await privatePath(this.indexRoot, 'print-cache')
@@ -282,36 +321,45 @@ export class PrintAssetCache {
       await this.load(binding)
       return binding
     }
-    const source = await this.source(checksum)
+    const source = await this.source(checksum, policy)
     const alpha = source
     const expectedTarget = printDimensions(source.orientedWidth, source.orientedHeight)
-    const eligiblePassthrough = (!effect || effect.filter === 'none') && source.bytes[0] === 0xff && source.bytes[1] === 0xd8 && source.bytes.length <= PRINT_ASSET_RECIPE.jpeg_passthrough_bytes && Math.max(source.orientedWidth, source.orientedHeight) <= PRINT_ASSET_RECIPE.max_long_edge
+    const eligiblePassthrough = (!oriented || source.orientation === 1) && (!effect || effect.filter === 'none') && source.bytes[0] === 0xff && source.bytes[1] === 0xd8 && source.bytes.length <= PRINT_ASSET_RECIPE.jpeg_passthrough_bytes && Math.max(source.orientedWidth, source.orientedHeight) <= PRINT_ASSET_RECIPE.max_long_edge
     const predictedCanvas = eligiblePassthrough ? 0 : expectedTarget.width * expectedTarget.height
-    const alphaCanvas = alpha.alpha_possible ? Math.max(Math.min(2400, source.orientedWidth) * Math.min(16, source.orientedHeight),
+    const alphaCanvas = alpha.alpha_possible ? oriented ? Math.min(2400, source.width) * Math.min(16, source.height) : Math.max(Math.min(2400, source.orientedWidth) * Math.min(16, source.orientedHeight),
       source.decoderOrientation ? Math.min(2400, source.orientedHeight) * Math.min(16, source.orientedWidth) : 0) : 0
     const alphaScratch = alphaCanvas
     const scratchPixels = eligiblePassthrough ? 0 : Math.max(expectedTarget.width * Math.min(16, expectedTarget.height),
       source.decoderOrientation ? expectedTarget.height * Math.min(16, expectedTarget.width) : 0)
-    if (source.width * source.height + alphaCanvas + alphaScratch + (effect && effect.filter !== 'none' ? 4 : 3) * predictedCanvas + scratchPixels > this.profile.decoded_portion_pixels || 2 * source.bytes.length + 4 * Math.ceil(source.bytes.length / 3) * 4 > this.profile.encoded_portion_bytes) throw new Error('WORKER_PAGE_IMAGE_BUDGET_EXCEEDED')
-    const maxBlobBytes = Math.min(this.profile.encoded_resource_bytes, Math.floor((this.profile.encoded_portion_bytes - 2 * source.bytes.length - 4 * Math.ceil(source.bytes.length / 3) * 4) / (2 + 16 / 3)))
+    const normalizationWorkingBytes = oriented && source.orientation !== 1 ? source.bytes.length : 0
+    const sourceWorkingBytes = 2 * source.bytes.length + 4 * Math.ceil(source.bytes.length / 3) * 4 + 2 * normalizationWorkingBytes
+    if (source.width * source.height + alphaCanvas + alphaScratch + (effect && effect.filter !== 'none' ? 4 : 3) * predictedCanvas + scratchPixels > this.profile.decoded_portion_pixels || sourceWorkingBytes > this.profile.encoded_portion_bytes) throw new Error('WORKER_PAGE_IMAGE_BUDGET_EXCEEDED')
+    const maxBlobBytes = Math.min(this.profile.encoded_resource_bytes, Math.floor((this.profile.encoded_portion_bytes - sourceWorkingBytes) / (2 + 16 / 3)))
     if (maxBlobBytes < 1) throw new Error('WORKER_PAGE_IMAGE_BUDGET_EXCEEDED')
-    this.activeBytes = source.bytes; this.activeChecksum = checksum; this.routeError = undefined
+    const normalized = oriented ? normalizePrintOrientation(source.bytes, this.profile.encoded_resource_bytes) : undefined
+    this.activeBytes = normalized?.carrier ?? source.bytes; this.activeChecksum = normalized ? `decode-assets/${checksum}/${normalized.checksum}` : `assets/${checksum}`; this.routeError = undefined
     try {
-      await this.page.setContent(`<img id="source" crossorigin="anonymous" src="${SNAPSHOT_ASSET_ORIGIN}/assets/${checksum}">`, { waitUntil: 'load' })
+      await this.page.setContent(`<img id="source" crossorigin="anonymous" src="${SNAPSHOT_ASSET_ORIGIN}/${this.activeChecksum}">`, { waitUntil: 'load' })
       if (this.routeError) throw this.routeError
       const dimensions = await this.page.evaluate(async () => {
         const image = document.querySelector<HTMLImageElement>('#source')!
         await image.decode()
         return { width: image.naturalWidth, height: image.naturalHeight }
       })
-      assertPrintOrientation(source, dimensions.width, dimensions.height)
-      const target = printDimensions(dimensions.width, dimensions.height)
-      const passthrough = (!effect || effect.filter === 'none') && source.bytes[0] === 0xff && source.bytes[1] === 0xd8 && source.bytes.length <= PRINT_ASSET_RECIPE.jpeg_passthrough_bytes && Math.max(dimensions.width, dimensions.height) <= PRINT_ASSET_RECIPE.max_long_edge
+      if (oriented) { if (dimensions.width !== source.width || dimensions.height !== source.height) throw new Error('PRINT_IMAGE_DIMENSIONS_INVALID') }
+      else assertPrintOrientation(source, dimensions.width, dimensions.height)
+      const orientedDimensions = normalized ? orientedPrintDimensions(dimensions.width, dimensions.height, normalized.orientation) : dimensions
+      const target = printDimensions(orientedDimensions.width, orientedDimensions.height)
+      const passthrough = eligiblePassthrough && Math.max(dimensions.width, dimensions.height) <= PRINT_ASSET_RECIPE.max_long_edge
       const canvasPixels = passthrough ? 0 : target.width * target.height
-      const result = passthrough ? undefined : await this.page.evaluate(encodePrintImage, { ...target, alphaPossible: alpha.alpha_possible, quality: PRINT_ASSET_RECIPE.jpeg_quality, maxBytes: maxBlobBytes, colorFilter: effect?.filter })
+      const scaledRaw = normalized ? orientedPrintDimensions(target.width, target.height, normalized.orientation) : undefined
+      const result = passthrough ? undefined : await this.page.evaluate(encodePrintImage, { ...target, alphaPossible: alpha.alpha_possible, quality: PRINT_ASSET_RECIPE.jpeg_quality, maxBytes: maxBlobBytes, colorFilter: effect?.filter,
+        ...(normalized && scaledRaw ? { orientationTransform: { matrix: printOrientationMatrix(normalized.orientation, scaledRaw.width, scaledRaw.height), rawWidth: scaledRaw.width, rawHeight: scaledRaw.height } } : {}) })
       const bytes = result ? Buffer.from(result.data.slice(result.data.indexOf(',') + 1), 'base64') : source.bytes
       const servedChecksum = sha256(bytes), servedRef = `print-assets/${servedChecksum}`
-      const binding: PrintDescriptor['binding'] = { ...(effect ? { variant_hash: key, effect, filter_working_pixels: effect.filter === 'none' ? 0 : canvasPixels } : {}), original_checksum: checksum, served_checksum: servedChecksum, served_file_ref: servedRef,
+      const binding: PrintDescriptor['binding'] = { ...(effect ? { variant_hash: key, effect, filter_working_pixels: effect.filter === 'none' ? 0 : canvasPixels } : {}),
+        ...(normalized ? { original_orientation: normalized.orientation, raw_width: source.width, raw_height: source.height, oriented_width: orientedDimensions.width, oriented_height: orientedDimensions.height,
+          normalized_decode_checksum: normalized.checksum, normalized_decode_bytes: normalized.carrier.length, normalization_working_bytes: normalized.working_bytes } : {}), original_checksum: checksum, served_checksum: servedChecksum, served_file_ref: servedRef,
         mode: passthrough ? 'passthrough' : 'encoded', mime: result ? result.mime as 'image/jpeg' | 'image/png' : 'image/jpeg',
         width: passthrough ? dimensions.width : target.width, height: passthrough ? dimensions.height : target.height,
         encoded_bytes: bytes.length, original_encoded_bytes: source.bytes.length, original_transfer_bytes: Math.ceil(source.bytes.length / 3) * 4, original_pixels: source.width * source.height,
@@ -331,9 +379,9 @@ export class PrintAssetCache {
         const existing = await readBoundedBytes(await privatePath(this.indexRoot, servedRef), this.profile.encoded_resource_bytes)
         if (sha256(existing) !== servedChecksum) throw new Error('PRINT_RESOURCE_INTEGRITY_FAILED')
       }
-      const descriptor: PrintDescriptor = { schema_version: effect ? 2 : 1, original_checksum: checksum, original_file_ref: source.chunk.file_ref,
-        original_width: source.width, original_height: source.height, oriented_width: dimensions.width, oriented_height: dimensions.height,
-        alpha_possible: alpha.alpha_possible, has_source_alpha: result?.sourceHasAlpha ?? false, has_output_alpha: result?.hasAlpha ?? false, recipe: effect ? PRINT_VARIANT_RECIPE : PRINT_ASSET_RECIPE, encoder_identity: this.identity, binding }
+      const descriptor: PrintDescriptor = { schema_version: oriented ? 3 : effect ? 2 : 1, original_checksum: checksum, original_file_ref: source.chunk.file_ref,
+        original_width: source.width, original_height: source.height, oriented_width: orientedDimensions.width, oriented_height: orientedDimensions.height,
+        alpha_possible: alpha.alpha_possible, has_source_alpha: result?.sourceHasAlpha ?? false, has_output_alpha: result?.hasAlpha ?? false, recipe: printRecipe(policy), encoder_identity: this.identity, binding }
       const descriptorBytes = canonicalJson(descriptor)
       await writeFile(resolve(await privatePath(this.indexRoot, 'print-cache'), `${key}.json`), descriptorBytes, { flag: 'wx', mode: 0o600 })
       return { ...binding, descriptor_ref: descriptorRef, descriptor_checksum: sha256(descriptorBytes) }
@@ -343,9 +391,14 @@ export class PrintAssetCache {
     }
   }
 
-  async prepareHtml(html: string, pinned?: BookSegmentSource, variants = false): Promise<PreparedPrintResources> {
-    if (pinned) variants = pinned.source_schema_version === 4
-    const policyHash = variants ? PRINT_VARIANT_POLICY_HASH : PRINT_RESOURCE_POLICY_HASH
+  async prepareHtml(html: string, pinned?: BookSegmentSource, policy: PrintSourcePolicy = 3): Promise<PreparedPrintResources> {
+    if (pinned) {
+      const version = pinned.source_schema_version
+      if (version !== 3 && version !== 4 && version !== 5) throw new Error('PRINT_RESOURCE_BINDING_MISMATCH')
+      policy = version
+    }
+    const variants = policy === 4 || policy === 5
+    const policyHash = printPolicyHash(policy)
     if (Buffer.byteLength(html) > BOOK_SEGMENT_LIMITS.html_bytes) throw new Error('WORKER_HTML_BUDGET_EXCEEDED')
     const discovered = new Map<string, { hash: string; effect?: WorkerImageEffect }>()
     const identityFor = (hash: string, effect?: WorkerImageEffect) => effect ? sha256(canonicalJson([hash, effect, policyHash, this.identityHash])) : hash
@@ -359,7 +412,7 @@ export class PrintAssetCache {
       if (pinned.resource_policy_hash !== policyHash || pinned.encoder_identity_hash !== this.identityHash || !pinned.resource_bindings ||
         pinned.resource_bindings_hash !== sha256(canonicalJson(pinned.resource_bindings)) || canonicalJson(pinned.resource_bindings.map(value => value.variant_hash ?? value.original_checksum)) !== canonicalJson(keys)) throw new Error('PRINT_RESOURCE_BINDING_MISMATCH')
       for (const item of pinned.resource_bindings) { await this.load(item); bindings.push(item) }
-    } else for (const key of keys) { const item = discovered.get(key)!; bindings.push(await this.ensure(item.hash, item.effect)) }
+    } else for (const key of keys) { const item = discovered.get(key)!; bindings.push(await this.ensure(item.hash, item.effect, policy)) }
     checkPrintWorkingBudget(bindings, this.profile)
     const bySource = new Map(bindings.map(value => [value.variant_hash ?? value.original_checksum, value]))
     return { html: transformPrintResourceUrls(html, (hash, effect) => {

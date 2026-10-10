@@ -5,7 +5,7 @@ import { assertBookDocument } from '@/services/pdf-export/segments/snapshotAdapt
 import { assertBookSegmentSourceSchema, renderSegment, type BookSegmentSource, type SegmentRenderRequest, type SegmentRenderResult } from '@/services/pdf-export/segments/renderSegment'
 import { CanonicalPageRenderer } from '@/services/pdf-export/segments/CanonicalPageRenderer'
 import type { BookPageContext } from '@/services/pdf-export/segments/types'
-import type { PrintEncoderIdentity, PrintServedResource } from '@/services/pdf-export/segments/printAssetsTypes'
+import type { PrintSourcePolicy, PrintEncoderIdentity, PrintServedResource } from '@/services/pdf-export/segments/printAssetsTypes'
 import { BOOK_SEGMENT_LIMITS } from '@/services/pdf-export/segments/types'
 import { canonicalJson, privatePath, readBoundedBytes, sha256 } from './filesystem'
 import { DEFAULT_RENDERER_RESOURCE_PROFILE, physicalMeasurer, validateRendererResourceProfile, type MeasurePage, type RendererResourceProfile, type PhysicalMeasurer } from './measurement'
@@ -42,13 +42,23 @@ export interface PreparedPageReceipt extends SegmentRenderResult {
   served_resources?: PrintServedResource[]
 }
 
+export function printReplayPolicy(version: BookSegmentSource['source_schema_version']): PrintSourcePolicy {
+  switch (version) {
+    case undefined: case 1: case 2: case 3: return 3
+    case 4: return 4
+    case 5: return 5
+    default: throw new Error('SEGMENT_SOURCE_SCHEMA_UNSUPPORTED')
+  }
+}
+
 /** B3 must commit the returned source/checksum before consuming the bounded portion adapter. */
 export async function prepareSegmentSource(source: BookSegmentSource, pinned: BookDocument, page: BookPageContext, physical: PhysicalMeasurer): Promise<BookSegmentSource> {
   assertBookSegmentSourceSchema(source)
   if ((source.source_schema_version ?? 1) === 1 && source.page.type === 'map') throw new Error('SEGMENT_SOURCE_SCHEMA_UPGRADE_REQUIRED')
-  const html = await new CanonicalPageRenderer(pinned.settings.template).renderBoundedPage(source.page, page, pinned, source.source_schema_version !== 3)
-  const prepared = await physical.prepareHtml(html, (source.source_schema_version ?? 1) >= 3 ? source : undefined, source.source_schema_version !== 3)
-  return { ...source, source_schema_version: source.source_schema_version === 3 ? 3 : 4, resource_bindings: prepared.resource_bindings,
+  const policy: PrintSourcePolicy = (source.source_schema_version ?? 1) >= 3 ? printReplayPolicy(source.source_schema_version) : 5
+  const html = await new CanonicalPageRenderer(pinned.settings.template).renderBoundedPage(source.page, page, pinned, policy === 4 || policy === 5)
+  const prepared = await physical.prepareHtml(html, (source.source_schema_version ?? 1) >= 3 ? source : undefined, policy)
+  return { ...source, source_schema_version: policy, resource_bindings: prepared.resource_bindings,
     resource_bindings_hash: prepared.resource_bindings_hash, resource_policy_hash: prepared.resource_policy_hash, encoder_identity_hash: prepared.encoder_identity_hash }
 }
 
@@ -75,7 +85,8 @@ export async function renderPreparedPage(
   if (out === resolve(jobRoot) || out === resolve(planRoot)) throw new Error('WORKER_OUTPUT_CONFLICT')
   await mkdir(out, { mode: 0o700 })
   const fontsDir = options.fonts_dir ?? resolve(__dirname, '../../fonts')
-  const physical = options.measure ? undefined : await physicalMeasurer(jobRoot, planRoot, fontsDir, resourceProfile)
+  const policy = printReplayPolicy(source.source_schema_version)
+  const physical = options.measure ? undefined : await physicalMeasurer(jobRoot, planRoot, fontsDir, resourceProfile, policy)
   try {
     const fontCss = physical ? (await readBoundedBytes(resolve(fontsDir, 'fonts.css'), 512 * 1024)).toString('utf8') : ''
     const execute = async () => {

@@ -3,8 +3,9 @@ import { workerImageFilterStyle } from '@/services/pdf-export/segments/workerIma
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { Page, BrowserContext } from 'playwright'
-import { assertPrintResourceBinding, assertPrintVariantBinding, PRINT_VARIANT_RECIPE, PRINT_ASSET_RECIPE, type PrintResourceBinding } from '@/services/pdf-export/segments/printAssetsTypes'
-import { PrintAssetCache, PRINT_RESOURCE_POLICY_HASH, checkPrintWorkingBudget, encodePrintImage, printDimensions, transformPrintResourceUrls } from '@/workers/book-renderer/printAssets'
+import { assertPrintOrientedBinding, assertPrintResourceBinding, assertPrintVariantBinding, PRINT_ORIENTED_VARIANT_RECIPE, PRINT_VARIANT_RECIPE, PRINT_ASSET_RECIPE, type PrintResourceBinding } from '@/services/pdf-export/segments/printAssetsTypes'
+import { PrintAssetCache, PRINT_RESOURCE_POLICY_HASH, PRINT_ORIENTED_VARIANT_POLICY_HASH, checkPrintWorkingBudget, encodePrintImage, printDimensions, transformPrintResourceUrls } from '@/workers/book-renderer/printAssets'
+import { normalizePrintOrientation, printOrientationMatrix, type PrintOrientation } from '@/workers/book-renderer/printOrientation'
 import { canonicalJson, readBoundedBytes, sha256 } from '@/workers/book-renderer/filesystem'
 import { DEFAULT_RENDERER_RESOURCE_PROFILE } from '@/workers/book-renderer/measurement'
 import { subdivideSource } from '@/services/pdf-export/segments/subdivideSource'
@@ -133,6 +134,78 @@ describe('print cache integrity with a mocked codec port', () => {
   })
   afterEach(async () => { await rm(scratch, { recursive: true, force: true }) })
   const html = () => `<img src="https://book-snapshot.invalid/assets/${checksum}">`
+  const orientedJpeg = (orientation: number) => {
+    const jpeg = Buffer.from('ffd8ffe00002ffc00011080002000303011100021101031101ffd9', 'hex')
+    const tiff = Buffer.from('4d4d002a00000008000101120003000000010001000000000000', 'hex'); tiff.writeUInt16BE(orientation, 18)
+    const header = Buffer.from([255, 225, 0, 34])
+    return Buffer.concat([jpeg.subarray(0, 2), header, Buffer.from('Exif\0\0'), tiff, jpeg.subarray(2)])
+  }
+  async function addOriginal(bytes: Buffer) {
+    const key = sha256(bytes)
+    await writeFile(path.join(root, key), bytes)
+    await writeFile(path.join(index, 'assets', `${key}.json`), canonicalJson({ checksum: key, file_ref: key, size_bytes: bytes.length }))
+    return `<img src="https://book-snapshot.invalid/assets/${key}">`
+  }
+  it.each([1, 2, 3, 4, 5, 6, 7, 8] as PrintOrientation[])('schema5 orientation%s requires raw neutral decode and encodes every nonidentity JPEG with one affine transform', async orientation => {
+    const bytes = orientedJpeg(orientation), sourceHtml = await addOriginal(bytes)
+    const output = Buffer.from('ffd8ffe00002ffc00011080002000303011100021101031101ffd9', 'hex')
+    const swapped = orientation >= 5
+    if (swapped) { output.writeUInt16BE(3, 11); output.writeUInt16BE(2, 13) }
+    page.evaluate.mockReset().mockResolvedValueOnce({ width: 3, height: 2 }).mockResolvedValueOnce({ data: `data:image/jpeg;base64,${output.toString('base64')}`, mime: 'image/jpeg', hasAlpha: false, sourceHasAlpha: false })
+    const prepared = await cache.prepareHtml(sourceHtml, undefined, 5), bound = prepared.resource_bindings[0]
+    expect(() => assertPrintOrientedBinding(bound)).not.toThrow()
+    expect(bound).toMatchObject({ original_orientation: orientation, raw_width: 3, raw_height: 2, oriented_width: swapped ? 2 : 3, oriented_height: swapped ? 3 : 2,
+      normalized_decode_checksum: normalizePrintOrientation(bytes, bytes.length).checksum, normalized_decode_bytes: bytes.length, normalization_working_bytes: orientation === 1 ? 0 : bytes.length,
+      mode: orientation === 1 ? 'passthrough' : 'encoded', recipe_hash: PRINT_ORIENTED_VARIANT_POLICY_HASH })
+    expect(page.setContent.mock.calls[0][0]).toContain(`/decode-assets/${sha256(bytes)}/${bound.normalized_decode_checksum}`)
+    const descriptor = JSON.parse(await readFile(path.join(index, bound.descriptor_ref), 'utf8'))
+    expect(descriptor.schema_version).toBe(3); expect(descriptor.recipe).toEqual(PRINT_ORIENTED_VARIANT_RECIPE)
+    if (orientation !== 1) expect(page.evaluate.mock.calls[1][1].orientationTransform).toEqual({ matrix: printOrientationMatrix(orientation, 3, 2), rawWidth: 3, rawHeight: 2 })
+    expect(await cache.prepareHtml(sourceHtml, { ...prepared, source_schema_version: 5, page: { type: 'checklists' }, blocks: [], occurrences: [] })).toEqual(prepared)
+    expect(await readFile(path.join(root, sha256(bytes)))).toEqual(bytes)
+    expect(page.evaluate).toHaveBeenCalledTimes(orientation === 1 ? 1 : 2)
+    expect(() => assertPrintVariantBinding(bound)).toThrow('SEGMENT_RESOURCE_BINDING_INVALID')
+  })
+  it('rejects a swapped decoder after carrier normalization before any encoding (no double rotation)', async () => {
+    const sourceHtml = await addOriginal(orientedJpeg(6))
+    page.evaluate.mockReset().mockResolvedValueOnce({ width: 2, height: 3 })
+    await expect(cache.prepareHtml(sourceHtml, undefined, 5)).rejects.toThrow('PRINT_IMAGE_DIMENSIONS_INVALID')
+    expect(page.evaluate).toHaveBeenCalledTimes(1)
+  })
+  it.each(['original_orientation', 'normalized_decode_checksum', 'normalization_working_bytes'] as const)('rejects self-consistently rehashed forged descriptor %s against the original', async field => {
+    const sourceHtml = await addOriginal(orientedJpeg(2)), output = Buffer.from('ffd8ffe00002ffc00011080002000303011100021101031101ffd9', 'hex')
+    page.evaluate.mockReset().mockResolvedValueOnce({ width: 3, height: 2 }).mockResolvedValueOnce({ data: `data:image/jpeg;base64,${output.toString('base64')}`, mime: 'image/jpeg', hasAlpha: false, sourceHasAlpha: false })
+    const prepared = await cache.prepareHtml(sourceHtml, undefined, 5), bound = prepared.resource_bindings[0]
+    const file = path.join(index, bound.descriptor_ref), descriptor = JSON.parse(await readFile(file, 'utf8'))
+    descriptor.binding[field] = field === 'original_orientation' ? 3 : field === 'normalized_decode_checksum' ? 'f'.repeat(64) : 0
+    const changed = canonicalJson(descriptor); await writeFile(file, changed)
+    const forged = { ...bound, ...descriptor.binding, descriptor_checksum: sha256(changed) }
+    await expect(cache.load(forged)).rejects.toThrow(field === 'normalization_working_bytes' ? 'SEGMENT_RESOURCE_BINDING_INVALID' : 'PRINT_RESOURCE_BINDING_MISMATCH')
+  })
+  it('charges carrier copies before page decode and respects one-byte-too-small portion budgets', async () => {
+    const bytes = orientedJpeg(2), sourceHtml = await addOriginal(bytes)
+    const charge = 4 * bytes.length + 4 * Math.ceil(bytes.length / 3) * 4
+    const constrained = Reflect.construct(PrintAssetCache, [root, index, {} as BrowserContext, page as unknown as Page, identity, { ...DEFAULT_RENDERER_RESOURCE_PROFILE, encoded_portion_bytes: charge - 1 }]) as PrintAssetCache
+    await expect(constrained.prepareHtml(sourceHtml, undefined, 5)).rejects.toThrow('WORKER_PAGE_IMAGE_BUDGET_EXCEEDED')
+    expect(page.setContent).not.toHaveBeenCalled()
+  })
+  it('rejects forged identity on a mirrored source before allocating its uncharged carrier', async () => {
+    const bytes = orientedJpeg(2), sourceHtml = await addOriginal(bytes), output = Buffer.from('ffd8ffe00002ffc00011080002000303011100021101031101ffd9', 'hex')
+    page.evaluate.mockReset().mockResolvedValueOnce({ width: 3, height: 2 }).mockResolvedValueOnce({ data: `data:image/jpeg;base64,${output.toString('base64')}`, mime: 'image/jpeg', hasAlpha: false, sourceHasAlpha: false })
+    const prepared = await cache.prepareHtml(sourceHtml, undefined, 5), bound = prepared.resource_bindings[0]
+    const descriptor = JSON.parse(await readFile(path.join(index, bound.descriptor_ref), 'utf8'))
+    Object.assign(descriptor.binding, { original_orientation: 1, normalized_decode_checksum: bound.original_checksum, normalization_working_bytes: 0 })
+    const changed = canonicalJson(descriptor); await writeFile(path.join(index, bound.descriptor_ref), changed)
+    const forged = { ...bound, ...descriptor.binding, descriptor_checksum: sha256(changed) }
+    expect(() => assertPrintOrientedBinding(forged)).not.toThrow()
+    const tight = Reflect.construct(PrintAssetCache, [root, index, {} as BrowserContext, page as unknown as Page, identity, { ...DEFAULT_RENDERER_RESOURCE_PROFILE,
+      encoded_portion_bytes: 2 * forged.original_encoded_bytes + 2 * forged.encoded_bytes + 4 * (forged.original_transfer_bytes + forged.transfer_bytes) }]) as PrintAssetCache
+    const normalizer = jest.spyOn(require('@/workers/book-renderer/printOrientation'), 'normalizePrintOrientation')
+    try {
+      await expect(tight.load(forged)).rejects.toThrow('PRINT_RESOURCE_BINDING_MISMATCH')
+      expect(normalizer).not.toHaveBeenCalled()
+    } finally { normalizer.mockRestore() }
+  })
   it('pins actual served bytes to unchanged original and reuses only reverified cache bytes', async () => {
     const first = await cache.prepareHtml(html())
     expect(first.resource_bindings[0].original_checksum).toBe(checksum)
@@ -232,7 +305,7 @@ describe('print cache integrity with a mocked codec port', () => {
   it('keeps unfiltered and baked occurrences distinct even when codec produces identical bytes', async () => {
     page.evaluate.mockResolvedValueOnce({ width: 1, height: 1 }).mockResolvedValueOnce({ data: `data:image/png;base64,${png.toString('base64')}`, mime: 'image/png', hasAlpha: true, sourceHasAlpha: true })
     const mixed = html() + `<img src="https://book-snapshot.invalid/assets/${checksum}" style="filter: blur(28px); ${workerImageFilterStyle('sepia(100%)', 'sepia')}">`
-    const first = await cache.prepareHtml(mixed, undefined, true)
+    const first = await cache.prepareHtml(mixed, undefined, 4)
     expect(first.resource_bindings).toHaveLength(2)
     expect(new Set(first.resource_bindings.map(item => item.variant_hash)).size).toBe(2)
     expect(new Set(first.resource_bindings.map(item => item.served_checksum)).size).toBe(1)
@@ -244,7 +317,7 @@ describe('print cache integrity with a mocked codec port', () => {
       expect(descriptor.binding.effect).toEqual(item.effect)
     }
     expect(page.evaluate.mock.calls.filter(call => call[0] === encodePrintImage).map(call => call[1].colorFilter).sort()).toEqual(['none', 'sepia(1)'])
-    expect(await cache.prepareHtml(mixed, undefined, true)).toEqual(first)
+    expect(await cache.prepareHtml(mixed, undefined, 4)).toEqual(first)
     expect(page.evaluate).toHaveBeenCalledTimes(4)
     const source: BookSegmentSource = { ...first, source_schema_version: 4, page: { type: 'checklists' }, blocks: [], occurrences: [] }
     await expect(cache.prepareHtml(mixed, source)).resolves.toEqual(first)
@@ -253,10 +326,10 @@ describe('print cache integrity with a mocked codec port', () => {
     const descriptorPath = path.join(index, colored.descriptor_ref)
     const descriptor = JSON.parse(await readFile(descriptorPath, 'utf8')); descriptor.binding.effect.filter = 'grayscale(1)'
     await writeFile(descriptorPath, canonicalJson(descriptor))
-    await expect(cache.prepareHtml(mixed, undefined, true)).rejects.toThrow('PRINT_IMAGE_EFFECT_UNSUPPORTED')
+    await expect(cache.prepareHtml(mixed, undefined, 4)).rejects.toThrow('PRINT_IMAGE_EFFECT_UNSUPPORTED')
     descriptor.binding.effect.theme_id = 'black-white'
     await writeFile(descriptorPath, canonicalJson(descriptor))
-    await expect(cache.prepareHtml(mixed, undefined, true)).rejects.toThrow('PRINT_RESOURCE_BINDING_MISMATCH')
+    await expect(cache.prepareHtml(mixed, undefined, 4)).rejects.toThrow('PRINT_RESOURCE_BINDING_MISMATCH')
   })
   it('forces an otherwise safe JPEG through the encoder when its occurrence needs color transformation', async () => {
     const jpeg = Buffer.from('ffd8ffe00002ffc00011080002000303011100021101031101ffd9', 'hex'), key = sha256(jpeg)
@@ -265,7 +338,7 @@ describe('print cache integrity with a mocked codec port', () => {
     page.evaluate.mockReset().mockResolvedValueOnce({ width: 3, height: 2 })
       .mockResolvedValueOnce({ data: `data:image/jpeg;base64,${jpeg.toString('base64')}`, mime: 'image/jpeg', hasAlpha: false, sourceHasAlpha: false })
     const coloredHtml = `<img src="https://book-snapshot.invalid/assets/${key}" style="${workerImageFilterStyle('sepia(100%)', 'sepia')}">`
-    const prepared = await cache.prepareHtml(coloredHtml, undefined, true)
+    const prepared = await cache.prepareHtml(coloredHtml, undefined, 4)
     expect(prepared.resource_bindings[0]).toMatchObject({ mode: 'encoded', effect: { theme_id: 'sepia', filter: 'sepia(1)' }, filter_working_pixels: 6 })
     expect(() => assertPrintVariantBinding({ ...prepared.resource_bindings[0], mode: 'passthrough' })).toThrow('SEGMENT_RESOURCE_BINDING_INVALID')
     expect(page.evaluate.mock.calls[1][1].colorFilter).toBe('sepia(1)')

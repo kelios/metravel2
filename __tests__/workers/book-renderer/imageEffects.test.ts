@@ -66,7 +66,9 @@ it('keeps schema3 separate and requires effect bindings for schema4', () => {
     resource_bindings: [], resource_bindings_hash: 'a'.repeat(64), resource_policy_hash: 'b'.repeat(64), encoder_identity_hash: 'c'.repeat(64) }
   expect(() => assertBookSegmentSourceSchema(source)).not.toThrow()
   expect(() => assertBookSegmentSourceSchema({ ...source, source_schema_version: 4, resource_bindings: [{} as never] })).toThrow('SEGMENT_RESOURCE_BINDING_INVALID')
-  expect(() => assertBookSegmentSourceSchema({ ...source, source_schema_version: 5 as never })).toThrow('SEGMENT_SOURCE_SCHEMA_UNSUPPORTED')
+  expect(() => assertBookSegmentSourceSchema({ ...source, source_schema_version: 5, resource_bindings: [{} as never] })).toThrow('SEGMENT_RESOURCE_BINDING_INVALID')
+  expect(() => assertBookSegmentSourceSchema({ ...source, source_schema_version: 5 })).not.toThrow()
+  expect(() => assertBookSegmentSourceSchema({ ...source, source_schema_version: 6 as never })).toThrow('SEGMENT_SOURCE_SCHEMA_UNSUPPORTED')
 })
 
 it('marks canonical foreground only in worker4 and restores byte-identical default markup on reuse', async () => {

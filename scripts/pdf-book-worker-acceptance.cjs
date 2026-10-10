@@ -73,7 +73,7 @@ async function verifyArtifact(directory, expectedHash) {
   assert(artifact.startsWith(path.join(ROOT, '.codex-temp') + path.sep), 'Artifact must be in ignored .codex-temp/')
   assert.equal(await fsp.realpath(artifact), artifact, 'Artifact root/ancestor must not be a symlink')
   const manifest = JSON.parse(await fsp.readFile(privateRef(artifact, 'renderer-manifest.json'), 'utf8'))
-  assert.equal(manifest.prepared_source_schema_version, 4, 'Unsupported prepared source artifact')
+  assert([3, 4, 5].includes(manifest.prepared_source_schema_version), 'Unsupported prepared source artifact')
   assert.equal(manifest.content_hash, expectedHash, 'Artifact differs from reviewed content hash')
   const digest = crypto.createHash('sha256')
   const files = [...manifest.files].sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0)
@@ -314,9 +314,10 @@ async function verifyPrintResources(fixture, out, row, html, certificate, manife
   const sourceBytes = await fsp.readFile(privateRef(out, row.segment_ref))
   assert.equal(hash(sourceBytes), row.source_checksum, 'Prepared source differs from committed plan')
   const source = JSON.parse(sourceBytes)
-  assert([3, 4].includes(source.source_schema_version))
-  const variants = source.source_schema_version === 4
-  const recipe = variants ? manifest.print_variant_recipe : manifest.print_asset_recipe
+  assert([3, 4, 5].includes(source.source_schema_version))
+  const oriented = source.source_schema_version === 5
+  const variants = oriented || source.source_schema_version === 4
+  const recipe = oriented ? manifest.print_oriented_variant_recipe : variants ? manifest.print_variant_recipe : manifest.print_asset_recipe
   assert.equal(source.resource_bindings_hash, hash(canonical(source.resource_bindings)))
   assert.equal(source.resource_policy_hash, hash(canonical(recipe)))
   assert.equal(source.encoder_identity_hash, hash(canonical(certificate.print_encoder_identity)))
@@ -362,10 +363,27 @@ async function verifyPrintResources(fixture, out, row, html, certificate, manife
     assert.equal(hash(encoded), binding.served_checksum, 'Saved served bytes differ from lineage')
     assert.equal(encoded.length, binding.encoded_bytes)
     const raw = imageSize(original), dimensions = imageSize(encoded)
-    const rotated = raw.orientation >= 5 && raw.orientation <= 8
-    const exactOrientation = descriptor.oriented_width === (rotated ? raw.height : raw.width) && descriptor.oriented_height === (rotated ? raw.width : raw.height)
-    const decoderWitness = ['png', 'webp'].includes(raw.type) && raw.orientation === undefined && descriptor.oriented_width === raw.height && descriptor.oriented_height === raw.width
-    assert(exactOrientation || decoderWitness, 'Oriented dimensions are outside immutable header bounds')
+    if (oriented) {
+      // This oracle comes from known fixture construction, never the production EXIF reader.
+      const expected = fixture.expected?.print_orientation_by_checksum?.[binding.original_checksum]
+      assert(expected, 'Schema5 requires an independent original/carrier orientation oracle')
+      assert.equal(descriptor.schema_version, 3)
+      for (const key of ['original_orientation', 'raw_width', 'raw_height', 'normalized_decode_checksum', 'normalized_decode_bytes', 'normalization_working_bytes']) {
+        assert.equal(binding[key], expected[key], `Orientation/carrier differs from independent fixture: ${key}`)
+      }
+      assert.equal(binding.raw_width, raw.width); assert.equal(binding.raw_height, raw.height)
+      const swapped = expected.original_orientation >= 5
+      const width = swapped ? expected.raw_height : expected.raw_width, height = swapped ? expected.raw_width : expected.raw_height
+      assert.equal(binding.oriented_width, width); assert.equal(binding.oriented_height, height)
+      assert.equal(descriptor.oriented_width, width); assert.equal(descriptor.oriented_height, height)
+      if (binding.mode === 'passthrough') assert.equal(expected.original_orientation, 1, 'Oriented JPEG cannot pass through')
+    } else {
+      for (const key of ['original_orientation', 'raw_width', 'raw_height', 'oriented_width', 'oriented_height', 'normalized_decode_checksum', 'normalized_decode_bytes', 'normalization_working_bytes']) assert.equal(binding[key], undefined, 'Legacy recipe contains new orientation fields')
+      const rotated = raw.orientation >= 5 && raw.orientation <= 8
+      const exactOrientation = descriptor.oriented_width === (rotated ? raw.height : raw.width) && descriptor.oriented_height === (rotated ? raw.width : raw.height)
+      const decoderWitness = ['png', 'webp'].includes(raw.type) && raw.orientation === undefined && descriptor.oriented_width === raw.height && descriptor.oriented_height === raw.width
+      assert(exactOrientation || decoderWitness, 'Oriented dimensions are outside immutable header bounds')
+    }
     assert.equal(binding.original_pixels, raw.width * raw.height)
     const mime = encoded[0] === 255 && encoded[1] === 216 ? 'image/jpeg' : encoded.subarray(1, 4).toString() === 'PNG' ? 'image/png' : null
     assert.equal(mime, binding.mime)
@@ -432,9 +450,9 @@ async function verifyResult(fixture, out, manifest, artifact, profile) {
   const theme = PDF_THEMES[fixture.document.settings.template]
   assert(theme, 'Unknown pinned theme')
   const certificate = JSON.parse(await fsp.readFile(path.join(out, 'certificate.json'), 'utf8'))
-  assert.equal(certificate.prepared_source_schema_version, 4, 'Certificate source schema differs from artifact')
+  assert.equal(certificate.prepared_source_schema_version, manifest.prepared_source_schema_version, 'Certificate source schema differs from artifact')
   assert.equal(certificate.print_resource_policy_hash, manifest.print_resource_policy_hash)
-  assert.equal(manifest.print_resource_policy_hash, hash(fixtureHelper().fixtureCanonicalJson(manifest.print_variant_recipe)))
+  assert.equal(manifest.print_resource_policy_hash, hash(fixtureHelper().fixtureCanonicalJson(manifest.prepared_source_schema_version === 5 ? manifest.print_oriented_variant_recipe : manifest.prepared_source_schema_version === 4 ? manifest.print_variant_recipe : manifest.print_asset_recipe)))
   assert.equal(certificate.measured, true, 'Injected measurements cannot pass physical acceptance')
   if (profile) assert.deepEqual(certificate.resource_profile, profile.limits.renderer_resources, 'Renderer ignored supplied B2 resource profile')
   assert.equal(certificate.renderer_version, manifest.renderer_version)
@@ -532,7 +550,7 @@ async function verifyResult(fixture, out, manifest, artifact, profile) {
     }
     const source = await verifyPrintResources(fixture, out, row, bytes.toString('utf8'), certificate, manifest)
     if (!row.frontmatter) {
-      assert.equal(source.source_schema_version, 4, 'Plan source omitted pinned schema')
+      assert.equal(source.source_schema_version, manifest.prepared_source_schema_version, 'Plan source omitted pinned schema')
       for (const point of renderedMapPoints(bytes.toString('utf8'), (served, url) => {
         const original = new URL(url).pathname.split('/')[2]
         const bound = source.resource_bindings.find(value => value.original_checksum === original && value.served_checksum === served)

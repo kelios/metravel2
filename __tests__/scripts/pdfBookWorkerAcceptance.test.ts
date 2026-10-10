@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promis
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import { buildSnapshotFixture, fixtureCanonicalJson } from '../fixtures/pdfBook/buildSnapshotFixture'
-import { PRINT_ASSET_RECIPE, PRINT_VARIANT_RECIPE } from '@/services/pdf-export/segments/printAssetsTypes'
+import { PRINT_ASSET_RECIPE, PRINT_VARIANT_RECIPE, PRINT_ORIENTED_VARIANT_RECIPE } from '@/services/pdf-export/segments/printAssetsTypes'
 
 const ROOT = path.resolve(__dirname, '../..')
 const nativeRequire = createRequire(__filename)
@@ -180,6 +180,38 @@ describe('physical book acceptance evidence boundaries (no browser)', () => {
       expect(sha256(bytes)).toBe(chunk.checksum)
       expect(bytes.includes(Buffer.from(mediaFixture === 'rotated-png' ? 'eXIf' : 'EXIF'))).toBe(true)
     }
+  })
+
+  it('requires per-original independent schema5 orientation/carrier facts and rejects a rehashed square-image mirror forgery', async () => {
+    const fixture = await buildSnapshotFixture(path.join(scratch, 'orientation-proof-input'), { travels: [{ id: 41, title: 'Orientation proof' }] })
+    const chunk = fixture.manifest.find(value => value.kind === 'media')!, original = await readFile(path.join(fixture.jobDir, chunk.file_ref))
+    const out = path.join(scratch, 'orientation-proof-output'); await mkdir(out)
+    const identity = { executable_sha256: 'c'.repeat(64) }, identityHash = sha256(fixtureCanonicalJson(identity))
+    const effect = { theme_id: 'unfiltered', filter: 'none' }, policyHash = sha256(fixtureCanonicalJson(PRINT_ORIENTED_VARIANT_RECIPE))
+    const variant = sha256(fixtureCanonicalJson([chunk.checksum, effect, policyHash, identityHash]))
+    const body = { ...fixture.expected.print_orientation_by_checksum[chunk.checksum], oriented_width: 1, oriented_height: 1,
+      original_checksum: chunk.checksum, served_checksum: chunk.checksum, variant_hash: variant, effect, filter_working_pixels: 0,
+      served_file_ref: 'derived.png', mode: 'encoded', mime: 'image/png', width: 1, height: 1, encoded_bytes: original.length,
+      original_encoded_bytes: original.length, original_pixels: 1, served_pixels: 1, recipe_hash: policyHash, encoder_identity_hash: identityHash }
+    const descriptor = { schema_version: 3, original_checksum: chunk.checksum, oriented_width: 1, oriented_height: 1,
+      has_source_alpha: true, has_output_alpha: true, recipe: PRINT_ORIENTED_VARIANT_RECIPE, encoder_identity: identity, binding: body }
+    await writeFile(path.join(out, 'derived.png'), original)
+    const persist = async () => {
+      const descriptorBytes = fixtureCanonicalJson(descriptor); await writeFile(path.join(out, 'descriptor.json'), descriptorBytes)
+      const bindings = [{ ...body, descriptor_ref: 'descriptor.json', descriptor_checksum: sha256(descriptorBytes) }]
+      const source = { source_schema_version: 5, resource_bindings: bindings, resource_bindings_hash: sha256(fixtureCanonicalJson(bindings)), resource_policy_hash: policyHash, encoder_identity_hash: identityHash }
+      const sourceBytes = fixtureCanonicalJson(source); await writeFile(path.join(out, 'source.json'), sourceBytes)
+      return { segment_ref: 'source.json', source_checksum: sha256(sourceBytes), resource_bindings_hash: source.resource_bindings_hash, resource_policy_hash: policyHash, encoder_identity_hash: identityHash,
+        served_resources: [{ original_checksum: chunk.checksum, served_checksum: chunk.checksum, variant_hash: variant }] }
+    }
+    const row = await persist(), certificate = { print_encoder_identity: identity }, manifest = { print_oriented_variant_recipe: PRINT_ORIENTED_VARIANT_RECIPE, print_encoder_pin: {} }
+    const html = `<img src="https://book-snapshot.invalid/print-assets/${chunk.checksum}/${variant}/${chunk.checksum}">`
+    await expect(verifyPrintResources(fixture, out, row, html, certificate, manifest)).resolves.toMatchObject({ source_schema_version: 5 })
+    await expect(verifyPrintResources({ ...fixture, expected: { ...fixture.expected, print_orientation_by_checksum: { ['f'.repeat(64)]: body } } }, out, row, html, certificate, manifest)).rejects.toThrow('independent original/carrier')
+    Object.assign(body, { original_orientation: 2, normalized_decode_checksum: 'f'.repeat(64), normalization_working_bytes: original.length })
+    await expect(verifyPrintResources(fixture, out, await persist(), html, certificate, manifest)).rejects.toThrow('independent fixture: original_orientation')
+    Object.assign(body, { original_orientation: 1, normalization_working_bytes: 0 })
+    await expect(verifyPrintResources(fixture, out, await persist(), html, certificate, manifest)).rejects.toThrow('independent fixture: normalized_decode_checksum')
   })
 
   it('verifies reviewed artifact bytes and rejects changed bytes or a symlinked artifact root', async () => {

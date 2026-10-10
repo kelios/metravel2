@@ -14,8 +14,9 @@ import { frontmatter, planBody, type BodyRecord } from './planner'
 import { withWorkerLocale } from './locale'
 import { withImageAnalysis } from './imageAnalysis'
 
-export { PRINT_ASSET_RECIPE, PRINT_VARIANT_RECIPE, assertPrintVariantBinding, assertPrintResourceBinding } from '@/services/pdf-export/segments/printAssetsTypes'
-export { PRINT_RESOURCE_POLICY_HASH, PRINT_VARIANT_POLICY_HASH, transformPrintResourceUrls, checkPrintWorkingBudget } from './printAssets'
+export { PRINT_ASSET_RECIPE, PRINT_VARIANT_RECIPE, PRINT_ORIENTED_VARIANT_RECIPE, assertPrintOrientedBinding, assertPrintVariantBinding, assertPrintResourceBinding } from '@/services/pdf-export/segments/printAssetsTypes'
+export { PRINT_RESOURCE_POLICY_HASH, PRINT_VARIANT_POLICY_HASH, PRINT_ORIENTED_VARIANT_POLICY_HASH, transformPrintResourceUrls, checkPrintWorkingBudget } from './printAssets'
+export { normalizePrintOrientation, readPrintOrientation, printOrientationMatrix } from './printOrientation'
 export { physicalMeasurer, DEFAULT_RENDERER_RESOURCE_PROFILE } from './measurement'
 export { prepareSegmentSource } from './portion'
 export { renderPreparedPage, type PreparedPageRequest, type PreparedPageReceipt } from './portion'
@@ -30,7 +31,7 @@ export { getFixedTranslator } from './locale'
 
 export interface WorkerCertificate {
   renderer_version: string
-  prepared_source_schema_version: 4
+  prepared_source_schema_version: 5
   print_resource_policy_hash?: string
   print_encoder_identity?: PrintEncoderIdentity
   snapshot_hash: string
@@ -77,7 +78,7 @@ export async function runWorker(jobDir: string, outDir: string, options: WorkerO
     const fit = options.measure ?? physical!.fit
     const execute = async () => {
       const body = await planBody(root, out, pinned, summary, fit, readBytes, resourceProfile, physical?.prepareHtml, physical?.assertResourceServing)
-      const certificate: WorkerCertificate = { prepared_source_schema_version: 4, renderer_version: BOOK_RENDERER_VERSION,
+      const certificate: WorkerCertificate = { prepared_source_schema_version: 5, renderer_version: BOOK_RENDERER_VERSION,
         snapshot_hash: pinned.snapshot_hash, settings_hash: pinned.settings_hash, measured: !options.measure,
         expected: { travels: summary.travels, blocks: body.blocks, mediaOccurrences: body.occurrences, pages: body.pages },
         completed: { travels: summary.travels, blocks: 0, mediaOccurrences: 0, pages: 0 },
@@ -87,13 +88,13 @@ export async function runWorker(jobDir: string, outDir: string, options: WorkerO
       let order = 0
       const fontCss = options.measure ? '' : (await readBoundedBytes(resolve(fontsDir, 'fonts.css'), 512 * 1024)).toString('utf8')
       const emit = async (source: BookSegmentSource, ref: string, front: boolean) => {
-        if (source.source_schema_version !== 4) {
+        if (source.source_schema_version !== 5) {
           source = { ...source, source_schema_version: 2 }
           if (physical) {
             const html = await new CanonicalPageRenderer(pinned.settings.template).renderBoundedPage(source.page, { start_page: order + 1, folio_area_mm: 12 }, pinned, true)
-            const prepared = await physical.prepareHtml(html, undefined, true)
+            const prepared = await physical.prepareHtml(html, undefined, 5)
             source = { ...source, resource_bindings: prepared.resource_bindings, resource_bindings_hash: prepared.resource_bindings_hash,
-              resource_policy_hash: prepared.resource_policy_hash, encoder_identity_hash: prepared.encoder_identity_hash, source_schema_version: 4 }
+              resource_policy_hash: prepared.resource_policy_hash, encoder_identity_hash: prepared.encoder_identity_hash, source_schema_version: 5 }
           }
         }
         // Front matter also has a committed bounded prepared source, not a transient name.

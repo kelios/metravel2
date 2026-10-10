@@ -12,6 +12,13 @@ export const PRINT_VARIANT_RECIPE = {
   color_transform: 'canonical-theme-color-only-v1',
 } as const
 
+export const PRINT_ORIENTED_VARIANT_RECIPE = {
+  version: 3, max_long_edge: 2400, max_pixels: 5_760_000, jpeg_quality: 0.92,
+  jpeg_passthrough_bytes: 2097152, upscale: false, crop: false, alpha: 'preserve-png', color_space: 'srgb',
+  color_transform: 'canonical-theme-color-only-v1', orientation: 'bounded-ifd0-neutral-carrier-affine-1-8-v1',
+} as const
+export type PrintSourcePolicy = 3 | 4 | 5
+
 export interface PrintEncoderIdentity {
   browser_name: 'chromium'
   playwright_version: string
@@ -23,6 +30,14 @@ export interface PrintEncoderIdentity {
 }
 
 export interface PrintResourceBinding {
+  original_orientation?: number
+  raw_width?: number
+  raw_height?: number
+  oriented_width?: number
+  oriented_height?: number
+  normalized_decode_checksum?: string
+  normalized_decode_bytes?: number
+  normalization_working_bytes?: number
   variant_hash?: string
   effect?: WorkerImageEffect
   filter_working_pixels?: number
@@ -74,12 +89,32 @@ export function assertPrintResourceBinding(value: PrintResourceBinding): void {
     (value.mode === 'encoded' && (value.canvas_pixels !== value.served_pixels || value.encoder_pixels !== value.canvas_pixels || value.transfer_bytes !== Math.ceil(value.encoded_bytes / 3) * 4 || value.pixel_scratch_bytes !== value.width * Math.min(16, value.height) * 4))) throw new Error('SEGMENT_RESOURCE_BINDING_INVALID')
 }
 
-export function assertPrintVariantBinding(value: PrintResourceBinding): void {
+const ORIENTATION_FIELDS = ['original_orientation', 'raw_width', 'raw_height', 'oriented_width', 'oriented_height', 'normalized_decode_checksum', 'normalized_decode_bytes', 'normalization_working_bytes'] as const
+export function assertNoPrintOrientationBinding(value: PrintResourceBinding): void {
+  if (ORIENTATION_FIELDS.some(field => value[field] !== undefined)) throw new Error('SEGMENT_RESOURCE_BINDING_INVALID')
+}
+export function assertPrintVariantBinding(value: PrintResourceBinding, oriented = false): void {
   assertPrintResourceBinding(value)
+  if (!oriented) assertNoPrintOrientationBinding(value)
   if (typeof value.variant_hash !== 'string' || !/^[a-f0-9]{64}$/.test(value.variant_hash) || !value.effect ||
     !Number.isSafeInteger(value.filter_working_pixels) || value.filter_working_pixels !== (value.effect.filter === 'none' ? 0 : value.served_pixels) ||
     (value.effect.filter !== 'none' && value.mode === 'passthrough')) throw new Error('SEGMENT_RESOURCE_BINDING_INVALID')
   assertWorkerImageEffect(value.effect)
+}
+
+export function assertPrintOrientedBinding(value: PrintResourceBinding): void {
+  assertPrintVariantBinding(value, true)
+  if (!Number.isInteger(value.original_orientation) || value.original_orientation! < 1 || value.original_orientation! > 8 ||
+    typeof value.normalized_decode_checksum !== 'string' || !/^[a-f0-9]{64}$/.test(value.normalized_decode_checksum)) throw new Error('SEGMENT_RESOURCE_BINDING_INVALID')
+  for (const field of ['raw_width', 'raw_height', 'oriented_width', 'oriented_height', 'normalized_decode_bytes'] as const) {
+    if (!Number.isSafeInteger(value[field]) || value[field]! < 1) throw new Error('SEGMENT_RESOURCE_BINDING_INVALID')
+  }
+  const rotated = value.original_orientation! >= 5
+  if (value.raw_width! * value.raw_height! !== value.original_pixels ||
+    value.oriented_width !== (rotated ? value.raw_height : value.raw_width) || value.oriented_height !== (rotated ? value.raw_width : value.raw_height) ||
+    value.normalized_decode_bytes !== value.original_encoded_bytes || value.normalization_working_bytes !== (value.original_orientation === 1 ? 0 : value.original_encoded_bytes) ||
+    (value.original_orientation === 1 && value.normalized_decode_checksum !== value.original_checksum) ||
+    (value.original_orientation !== 1 && (value.mode === 'passthrough' || value.normalized_decode_checksum === value.original_checksum))) throw new Error('SEGMENT_RESOURCE_BINDING_INVALID')
 }
 
 export interface PrintServedResource { original_checksum: string; served_checksum: string; variant_hash?: string }

@@ -2,7 +2,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import crypto from 'node:crypto'
-import { PRINT_ASSET_RECIPE, PRINT_VARIANT_RECIPE } from '@/services/pdf-export/segments/printAssetsTypes'
+import { PRINT_ASSET_RECIPE, PRINT_VARIANT_RECIPE, PRINT_ORIENTED_VARIANT_RECIPE } from '@/services/pdf-export/segments/printAssetsTypes'
 
 const ROOT = path.resolve(__dirname, '../../..')
 const { buildBookRenderer, moduleCalls } = require('../../../scripts/build-book-renderer')
@@ -39,15 +39,17 @@ describe('versioned Node book renderer artifact', () => {
     expect(artifact.manifest).toMatchObject({
       renderer_version: 'metravel-book-renderer/1.0.0',
       document_schema_version: 1,
-      prepared_source_schema_version: 4,
+      prepared_source_schema_version: 5,
       settings_schema_version: 1,
     })
     expect(artifact.manifest.print_asset_recipe).toEqual(PRINT_ASSET_RECIPE)
     expect(artifact.manifest.print_variant_recipe).toEqual(PRINT_VARIANT_RECIPE)
-    const canonicalRecipe = (recipe: typeof PRINT_ASSET_RECIPE | typeof PRINT_VARIANT_RECIPE) =>
+    const canonicalRecipe = (recipe: typeof PRINT_ASSET_RECIPE | typeof PRINT_VARIANT_RECIPE | typeof PRINT_ORIENTED_VARIANT_RECIPE) =>
       JSON.stringify(Object.fromEntries(Object.entries(recipe).sort(([left], [right]) => left.localeCompare(right))))
     expect(artifact.manifest.legacy_print_resource_policy_hash).toBe(hash(canonicalRecipe(PRINT_ASSET_RECIPE)))
-    expect(artifact.manifest.print_resource_policy_hash).toBe(hash(canonicalRecipe(PRINT_VARIANT_RECIPE)))
+    expect(artifact.manifest.print_variant_resource_policy_hash).toBe(hash(canonicalRecipe(PRINT_VARIANT_RECIPE)))
+    expect(artifact.manifest.print_oriented_variant_recipe).toEqual(PRINT_ORIENTED_VARIANT_RECIPE)
+    expect(artifact.manifest.print_resource_policy_hash).toBe(hash(canonicalRecipe(PRINT_ORIENTED_VARIANT_RECIPE)))
     expect(artifact.manifest.print_encoder_pin.chromium_version).toMatch(/^\d+\.\d+\.\d+\.\d+$/)
     expect(artifact.manifest.content_hash).toMatch(/^[a-f0-9]{64}$/)
     expect(artifact.manifest.source_hash).toMatch(/^[a-f0-9]{64}$/)

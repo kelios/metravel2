@@ -405,3 +405,64 @@ placements. Testing additionally requires the real Luxembourg photo in all
 full Luxembourg source/placements, and the existing contextless web/native goldens.
 A noisy/transparent or residual spatial-filter portion may still honestly fail
 fixed resource/PDF limits; no guard is raised to turn that failure into PASS.
+
+## Prepared source schema 5: authoritative EXIF orientation
+
+New plans use private source 5, `PRINT_ORIENTED_VARIANT_RECIPE` version 3,
+descriptor schema 3 and their own policy/cache identity. Public B1 document,
+settings version 1 and renderer version remain unchanged. Recipes 1 and 2,
+source 1/2 markup, source 3 resources and source 4 color/disclosure replay retain
+their original semantics. `prepareHtml` takes an explicit policy 3/4/5;
+its cache default is legacy 3. New planning and unbound preparation select 5.
+Pinned sources 3/4 keep their policy. `physicalMeasurer` selects 5 by default;
+legacy replay must explicitly select 3/4, as the bounded portion adapter does.
+B3 must repin the accepted new artifact rather than substitute it into old jobs.
+
+Schema 5 parses orientation before decoding using a bounded JPEG APP1, PNG
+eXIf or WebP EXIF container/IFD0 reader. The compressed source limit stays
+8 MiB; metadata TIFF payloads are limited to 65,536 bytes. Container scans may
+reach late PNG/WebP metadata without retaining arbitrary payload copies.
+TIFF requires II/MM, magic 42, a complete in-bounds IFD0 table and at most one
+SHORT/count-1/inline orientation in 1..8. Missing orientation is identity only
+after complete metadata inspection. Duplicate/conflicting EXIF, truncated
+chunks/markers, bad PNG CRC, inconsistent WebP EXIF flags, malformed metadata,
+unsupported metadata budgets and animation fail closed with typed errors.
+WebP accepts raw TIFF or the standard optional Exif-NUL-NUL prefix. JPEG
+inspection ends at the first valid SOS and does not interpret entropy bytes.
+
+Original snapshot bytes and hashes remain immutable. For orientations 2..8,
+a temporary bounded compressed carrier changes only the orientation value
+to 1 and, for PNG, repairs the eXIf CRC. JPEG/WebP lengths, flags, ICC, alpha
+and compressed raster bytes remain unchanged. Its private decode URL binds
+original and carrier hashes; it never replaces the original `/assets` resource.
+The neutral carrier must decode to exactly the original raw width/height.
+Swapped decoder dimensions are forbidden. Mirrored and square frames are
+proven by their authoritative orientation, never inferred from dimensions.
+
+One explicit full-frame affine transform performs orientation 1..8 directly
+in the existing bounded target canvas, followed by the canonical color effect
+and fixed JPEG .92 or alpha-PNG encoding. There is no original-sized RGBA
+orientation canvas, crop, upscale or second decoder rotation. JPEG orientations
+2..8 cannot pass through. Cover composition/brightness sampling uses the same
+neutral carrier and affine coordinates in its bounded 64x64 canvas. Schema 5
+also retains schema 4 static FAQ expansion and theme-effect policy.
+
+Each binding additionally pins `original_orientation`, `raw_width`,
+`raw_height`, `oriented_width`, `oriented_height`, `normalized_decode_checksum`,
+`normalized_decode_bytes` and `normalization_working_bytes`. Identity uses no
+carrier copy and its checksum equals the original. Nonidentity charges the
+full compressed copy size. Cache loading re-derives raw/oriented/working facts
+from the original before allocating a carrier, then verifies its checksum,
+descriptor recipe, actual served bytes and all previous lineage fields.
+Legacy schema branches reject new orientation fields. Additional compressed
+carrier/Blob copies are charged before allocation and in the portion ledger;
+existing image, portion and PDF caps do not increase.
+
+Physical acceptance must use independent known fixture orientation/carrier
+facts keyed by original SHA, not the production reader as its oracle. The
+original EXIF6 WebP fixture and its expected 200x300 output remain unchanged.
+All eight orientations, asymmetric/square frames and off-center alpha require
+actual pinned-decoder pixel proof, in addition to the full existing corpus,
+chunk parity, all themes, final pages and complete Luxembourg PDF checks.
+Metadata unit tests and affine mocks alone do not certify native pixels or
+Linux capacity.

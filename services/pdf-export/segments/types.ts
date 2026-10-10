@@ -12,7 +12,7 @@ export interface BookSummary {
   photos: number
 }
 
-export const BOOK_SEGMENT_SOURCE_SCHEMA_VERSION = 4 as const
+export const BOOK_SEGMENT_SOURCE_SCHEMA_VERSION = 5 as const
 export type BookMapTextField = 'address' | 'category' | 'coord'
 
 export type BookSegmentPage =

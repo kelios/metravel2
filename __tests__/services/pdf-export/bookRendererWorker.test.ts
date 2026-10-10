@@ -91,7 +91,7 @@ describe('isolated book renderer worker protocol', () => {
 
   it('publishes a pinned artifact with a closed dependency graph and reproducible file checksums', async () => {
     expect(artifactManifest.renderer_version).toBe(BOOK_RENDERER_VERSION)
-    expect((artifactManifest as typeof artifactManifest & { prepared_source_schema_version: number }).prepared_source_schema_version).toBe(4)
+    expect((artifactManifest as typeof artifactManifest & { prepared_source_schema_version: number }).prepared_source_schema_version).toBe(5)
     expect(artifactManifest.files.some((file) => file.path.includes('ContentParser'))).toBe(true)
     expect(artifactManifest.files.some((file) => file.path.includes('EnhancedPdfGeneratorBase'))).toBe(true)
     for (const file of artifactManifest.files) {
@@ -282,10 +282,10 @@ describe('isolated book renderer worker protocol', () => {
     expect(sources.flatMap(source => source.occurrences).sort()).toEqual([...fixture.expected.media_occurrence_keys].sort())
   })
 
-  it('rejects unexpanded streamed worker4 disclosures before measuring while published/default markup stays compatible', async () => {
-    const fixture = await buildSnapshotFixture(path.join(scratch, 'faq-guard-input'), { travels: [{ id: 761, title: 'FAQ guard' }] })
+  it.each([4, 5] as const)('rejects unexpanded streamed worker%s disclosures before measuring while published/default markup stays compatible', async source_schema_version => {
+    const fixture = await buildSnapshotFixture(path.join(scratch, `faq-guard-${source_schema_version}-input`), { travels: [{ id: 761, title: 'FAQ guard' }] })
     const { renderSegment } = nativeRequire(path.join(scratch, 'artifact', 'services/pdf-export/segments/renderSegment.js')) as typeof import('@/services/pdf-export/segments/renderSegment')
-    const source: import('@/services/pdf-export/segments/renderSegment').BookSegmentSource = { source_schema_version: 4,
+    const source: import('@/services/pdf-export/segments/renderSegment').BookSegmentSource = { source_schema_version,
       resource_bindings: [], resource_bindings_hash: 'a'.repeat(64), resource_policy_hash: 'b'.repeat(64), encoder_identity_hash: 'c'.repeat(64),
       page: { type: 'content', travel: { id: 761, name: 'FAQ guard' }, field: 'description', first: false, last: false, qr: '',
         html: '<details><summary>Question</summary><p>Hidden answer</p></details>' }, blocks: ['faq'], occurrences: [] }
@@ -486,7 +486,7 @@ describe('isolated book renderer worker protocol', () => {
     const measure = jest.fn(async () => ({ pages: 1, fits: true }))
     await expect(renderPreparedPage(fixture.jobDir, planRoot, path.join(scratch, `map-schema-${source_schema_version}-output`), fixture.document,
       { segment_ref: 'page.json', snapshot_hash: fixture.document.snapshot_hash, source_checksum: sha256(bytes), page_context: { start_page: 1, folio_area_mm: 12 }, expected: { blocks: source.blocks, occurrences: [] } }, { measure }))
-      .rejects.toThrow(source_schema_version === 3 || source_schema_version === 4 ? 'SEGMENT_RESOURCE_BINDING_INVALID' : 'SEGMENT_SOURCE_SCHEMA_UNSUPPORTED')
+      .rejects.toThrow(source_schema_version === 3 || source_schema_version === 4 || source_schema_version === 5 ? 'SEGMENT_RESOURCE_BINDING_INVALID' : 'SEGMENT_SOURCE_SCHEMA_UNSUPPORTED')
     expect(measure).not.toHaveBeenCalled()
   })
 

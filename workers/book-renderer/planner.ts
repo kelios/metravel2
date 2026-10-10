@@ -65,7 +65,7 @@ async function anchorResolver(root: string, out: string, pinned: BookDocument, i
   }
 }
 
-async function rewriteFragment(root: string, fragment: SafeContentFragment, inline: AsyncIterator<BookMediaChunk>, profile: RendererResourceProfile): Promise<{ html: string; occurrences: string[] }> {
+async function rewriteFragment(root: string, fragment: SafeContentFragment, inline: AsyncIterator<BookMediaChunk>, profile: RendererResourceProfile, oriented = false): Promise<{ html: string; occurrences: string[] }> {
   const images = Array.from(fragment.html.matchAll(/<img\b[^>]*>/gi))
   if (images.length !== fragment.imageOccurrences.length) throw new Error('SNAPSHOT_INLINE_MEDIA_COVERAGE_MISMATCH')
   let html = fragment.html
@@ -75,7 +75,7 @@ async function rewriteFragment(root: string, fragment: SafeContentFragment, inli
     for (const occurrence of fragment.imageOccurrences) {
       const next = await inline.next()
       if (next.done || next.value.metadata.resource_key !== await sourceImageKey(occurrence.source)) throw new Error('SNAPSHOT_INLINE_MEDIA_ORDER_MISMATCH')
-      const dimensions = await probeFrozenImage(root, next.value, profile)
+      const dimensions = await probeFrozenImage(root, next.value, profile, oriented ? 5 : undefined)
       const originalTag = images[resolved.length][0]
       const tag = originalTag.replace(/\s(?:src|srcset|data-src|data-original|data-lazy-src|width|height)=(["']).*?\1/gi, '')
         .replace(/\/?\s*>$/, ` src="${assetUrl(next.value)}" width="${dimensions.width}" height="${dimensions.height}">`)
@@ -115,7 +115,7 @@ export async function planBody(root: string, out: string, pinned: BookDocument, 
   const renderer = new CanonicalPageRenderer(pinned.settings.template)
   const plan: BodyPlan = { pages: 0, atlas_pages: 0, toc_pages: 0, blocks: 0, occurrences: 0 }
   const fitHtml: MeasurePage = async html => {
-    try { return await measure(prepare ? (await prepare(html, undefined, true)).html : html) } catch (error) {
+    try { return await measure(prepare ? (await prepare(html, undefined, 5)).html : html) } catch (error) {
       if (error instanceof Error && ['WORKER_PAGE_IMAGE_BUDGET_EXCEEDED', 'WORKER_DOM_BUDGET_EXCEEDED', 'WORKER_HTML_BUDGET_EXCEEDED', 'WORKER_SEGMENT_PDF_BUDGET_EXCEEDED'].includes(error.message)) return { pages: 0, fits: false }
       throw error
     }
@@ -126,9 +126,9 @@ export async function planBody(root: string, out: string, pinned: BookDocument, 
     let result
     try {
       if (prepare) {
-        const prepared = await prepare(html, undefined, true)
+        const prepared = await prepare(html, undefined, 5)
         source = { ...source, resource_bindings: prepared.resource_bindings, resource_bindings_hash: prepared.resource_bindings_hash,
-          resource_policy_hash: prepared.resource_policy_hash, encoder_identity_hash: prepared.encoder_identity_hash, source_schema_version: 4 }
+          resource_policy_hash: prepared.resource_policy_hash, encoder_identity_hash: prepared.encoder_identity_hash, source_schema_version: 5 }
         html = prepared.html
       }
       result = await measure(html)
@@ -183,7 +183,7 @@ export async function planBody(root: string, out: string, pinned: BookDocument, 
         first = false; emittedContent = true; pageHtml = ''; blocks = []; occurrences = []
       }
       for await (const fragment of incrementalContent(textSource(root, out, pinned, id, field, readBytes), { headingAnchorResolver: resolver, expandDisclosures: !!prepare })) {
-        const rewritten = await rewriteFragment(root, fragment, inline, profile)
+        const rewritten = await rewriteFragment(root, fragment, inline, profile, !!prepare)
         const candidate = mergeContentContinuation(pageHtml, { ...fragment, html: rewritten.html })
         const candidateSource = { type: 'content' as const, travel: { ...travel, url: undefined }, field, html: candidate, first, last: false, qr: '' }
         const fits = candidate.length <= 24_000 && blocks.length < 128 && occurrences.length + rewritten.occurrences.length <= 32
@@ -222,7 +222,7 @@ export async function planBody(root: string, out: string, pinned: BookDocument, 
         if (row.value.kind !== 'gallery' || !row.value.metadata.image) continue
         const image = await media.next()
         if (image.done || image.value.metadata.resource_key !== row.value.metadata.image) throw new Error('SNAPSHOT_GALLERY_MEDIA_ORDER_MISMATCH')
-        const dimensions = await probeFrozenImage(root, image.value, profile)
+        const dimensions = await probeFrozenImage(root, image.value, profile, prepare ? 5 : undefined)
         if (photos.length && pixels + dimensions.width * dimensions.height > profile.decoded_portion_pixels) await flushGallery()
         pixels += dimensions.width * dimensions.height
         photos.push({ id: row.value.metadata.id, url: assetUrl(image.value), caption: row.value.metadata.caption || undefined, aspect: dimensions.aspect })
@@ -258,7 +258,7 @@ export async function planBody(root: string, out: string, pinned: BookDocument, 
         if (route.image) {
           const image = await images.next()
           if (image.done || image.value.metadata.resource_key !== route.image) throw new Error('SNAPSHOT_ROUTE_MEDIA_ORDER_MISMATCH')
-          await probeFrozenImage(root, image.value, profile)
+          await probeFrozenImage(root, image.value, profile, prepare ? 5 : undefined)
           location.thumbnailUrl = assetUrl(image.value); mapOccurrences.push(image.value.occurrence_key)
         }
         locations.push(location); mapBlocks.push(`${id}:route:${route.id}`)

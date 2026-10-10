@@ -5,15 +5,16 @@ import { imageSize } from 'image-size'
 import { BOOK_SEGMENT_LIMITS } from '@/services/pdf-export/segments/types'
 import type { BookMediaChunk } from '@/types/bookDocument'
 import { privatePath, readBoundedBytes, sha256, verifyFile } from './filesystem'
-import type { PreparedPrintResources, PrintEncoderIdentity, PrintResourceBinding, PrintServedResource } from '@/services/pdf-export/segments/printAssetsTypes'
+import type { PrintSourcePolicy, PreparedPrintResources, PrintEncoderIdentity, PrintResourceBinding, PrintServedResource } from '@/services/pdf-export/segments/printAssetsTypes'
 import type { BookSegmentSource } from '@/services/pdf-export/segments/renderSegment'
-import { PrintAssetCache, printImageHeader } from './printAssets'
+import { PrintAssetCache, printImageHeader, printPolicyHash } from './printAssets'
 import { loadAssetDescriptor, SNAPSHOT_ASSET_ORIGIN } from './snapshot'
+import { normalizePrintOrientation, printOrientationMatrix } from './printOrientation'
 
 export interface PageMeasurement { pages: number; fits: boolean }
 export type MeasurePage = (html: string) => Promise<PageMeasurement>
 export interface PhysicalMeasurer {
-  prepareHtml: (html: string, pinned?: BookSegmentSource, variants?: boolean) => Promise<PreparedPrintResources>
+  prepareHtml: (html: string, pinned?: BookSegmentSource, policy?: PrintSourcePolicy) => Promise<PreparedPrintResources>
   encoder_identity: PrintEncoderIdentity
   resource_policy_hash: string
   assertResourceServing: () => void
@@ -97,9 +98,15 @@ export function hasPrintedPageOverflow(domBudget: number): boolean {
     })
 }
 
-export async function probeFrozenImage(root: string, chunk: BookMediaChunk, profile = DEFAULT_RENDERER_RESOURCE_PROFILE): Promise<{ width: number; height: number; aspect: number }> {
+export async function probeFrozenImage(root: string, chunk: BookMediaChunk, profile = DEFAULT_RENDERER_RESOURCE_PROFILE, policy?: PrintSourcePolicy): Promise<{ width: number; height: number; aspect: number }> {
   if (chunk.size_bytes > profile.encoded_resource_bytes) throw new Error('SNAPSHOT_IMAGE_ENCODED_BUDGET_EXCEEDED')
   const file = await verifyFile(root, chunk)
+  if (policy === 5) {
+    const bytes = await readBoundedBytes(file, profile.encoded_resource_bytes)
+    if (sha256(bytes) !== chunk.checksum) throw new Error('SNAPSHOT_INTEGRITY_FAILED')
+    const header = printImageHeader(bytes, profile, policy)
+    return { width: header.orientedWidth, height: header.orientedHeight, aspect: header.orientedWidth / header.orientedHeight }
+  }
   const handle = await open(file, 'r')
   try {
     const bytes = Buffer.alloc(Math.min(chunk.size_bytes, ASSET_BUDGET.header_bytes))
@@ -112,8 +119,28 @@ export async function probeFrozenImage(root: string, chunk: BookMediaChunk, prof
   } finally { await handle.close() }
 }
 
+export function samplePrintImage({ raw, matrix }: { raw?: { width: number; height: number }; matrix?: [number, number, number, number, number, number] }): { brightness: number; composition: { topBusy: number; centerBusy: number; bottomBusy: number } } {
+  const image = document.querySelector<HTMLImageElement>('#sample')!
+  if (raw && (image.naturalWidth !== raw.width || image.naturalHeight !== raw.height)) throw new Error('PRINT_IMAGE_DIMENSIONS_INVALID')
+  const canvas = document.createElement('canvas')
+  canvas.width = 64; canvas.height = 64
+  const ctx = canvas.getContext('2d')!
+  if (matrix) ctx.setTransform(...matrix)
+  ctx.drawImage(image, 0, 0, 64, 64)
+  const pixels = ctx.getImageData(0, 0, 64, 64).data
+  const sums = [0, 0, 0]; const squares = [0, 0, 0]; const counts = [0, 0, 0]
+  let total = 0
+  for (let index = 0; index < pixels.length; index += 4) {
+    const value = .299 * pixels[index] + .587 * pixels[index + 1] + .114 * pixels[index + 2]
+    const zone = Math.min(2, Math.floor(Math.floor(index / 4 / 64) / (64 / 3)))
+    sums[zone] += value; squares[zone] += value * value; counts[zone]++; total += value
+  }
+  const busy = sums.map((sum, zone) => Math.min(1, Math.sqrt(Math.max(0, squares[zone] / counts[zone] - (sum / counts[zone]) ** 2)) / 128))
+  return { brightness: Math.round(total / (64 * 64)), composition: { topBusy: busy[0], centerBusy: busy[1], bottomBusy: busy[2] } }
+}
+
 /** Chromium is exclusively a worker adapter; no browser/Node import reaches app code. */
-export async function physicalMeasurer(root: string, out: string, fontsDir: string, profile = DEFAULT_RENDERER_RESOURCE_PROFILE): Promise<PhysicalMeasurer> {
+export async function physicalMeasurer(root: string, out: string, fontsDir: string, profile = DEFAULT_RENDERER_RESOURCE_PROFILE, policy: PrintSourcePolicy = 5): Promise<PhysicalMeasurer> {
   validateRendererResourceProfile(profile)
   const fontCss = (await readFontFile(resolve(fontsDir, 'fonts.css'), 512 * 1024, 'WORKER_FONT_STYLESHEET_BUDGET_EXCEEDED')).toString('utf8')
   let browser: Browser | undefined
@@ -128,6 +155,7 @@ export async function physicalMeasurer(root: string, out: string, fontsDir: stri
   let decodedPixels = 0
   let encodedBytes = 0
   let resources = new Set<string>()
+  let sampleCarrier: { bytes: Buffer; url: string } | undefined
   try {
     browser = await chromium.launch({ executablePath: chromium.executablePath(), headless: true, args: ['--js-flags=--max-old-space-size=256'] })
     printCache = await PrintAssetCache.create(browser, chromium.executablePath(), root, out, profile)
@@ -135,7 +163,9 @@ export async function physicalMeasurer(root: string, out: string, fontsDir: stri
     await context.route('**/*', async route => {
       try {
       const url = new URL(route.request().url())
-      if (url.origin === SNAPSHOT_ASSET_ORIGIN && /^\/print-assets\/[0-9a-f]{64}\/(?:[0-9a-f]{64}\/)?[0-9a-f]{64}$/.test(url.pathname)) {
+      if (sampleCarrier && url.href === sampleCarrier.url) {
+        await route.fulfill({ body: sampleCarrier.bytes, headers: { 'Access-Control-Allow-Origin': '*' } })
+      } else if (url.origin === SNAPSHOT_ASSET_ORIGIN && /^\/print-assets\/[0-9a-f]{64}\/(?:[0-9a-f]{64}\/)?[0-9a-f]{64}$/.test(url.pathname)) {
         const parts = url.pathname.split('/')
         const key = parts.at(-2)!
         const binding = bindings.get(key)
@@ -219,37 +249,25 @@ export async function physicalMeasurer(root: string, out: string, fontsDir: stri
       const chunk = await loadAssetDescriptor(out, match[1])
       const bytes = await readBoundedBytes(await verifyFile(root, chunk), profile.encoded_resource_bytes)
       if (sha256(bytes) !== match[1]) throw new Error('SNAPSHOT_INTEGRITY_FAILED')
-      const header = printImageHeader(bytes, profile)
+      const header = printImageHeader(bytes, profile, policy)
+      const normalizationBytes = policy === 5 && header.orientation !== 1 ? bytes.length : 0
       if (header.width * header.height + 2 * 64 * 64 > profile.decoded_portion_pixels ||
-        2 * bytes.length + 4 * Math.ceil(bytes.length / 3) * 4 > profile.encoded_portion_bytes) throw new Error('WORKER_PAGE_IMAGE_BUDGET_EXCEEDED')
+        2 * bytes.length + 4 * Math.ceil(bytes.length / 3) * 4 + 2 * normalizationBytes > profile.encoded_portion_bytes) throw new Error('WORKER_PAGE_IMAGE_BUDGET_EXCEEDED')
+      const normalized = policy === 5 ? normalizePrintOrientation(bytes, profile.encoded_resource_bytes) : undefined
+      const sampleUrl = normalized ? `${SNAPSHOT_ASSET_ORIGIN}/decode-assets/${match[1]}/${normalized.checksum}` : url
+      sampleCarrier = normalized ? { bytes: normalized.carrier, url: sampleUrl } : undefined
       preparedResources = false; bindings = new Map()
       try {
-        await setHtml(`<!DOCTYPE html><html><head></head><body><img id="sample" crossorigin="anonymous" src="${url}"></body></html>`)
-        return await page!.evaluate(() => {
-          const image = document.querySelector<HTMLImageElement>('#sample')!
-          const canvas = document.createElement('canvas')
-          canvas.width = 64; canvas.height = 64
-          const ctx = canvas.getContext('2d')!
-          ctx.drawImage(image, 0, 0, 64, 64)
-          const pixels = ctx.getImageData(0, 0, 64, 64).data
-          const sums = [0, 0, 0]; const squares = [0, 0, 0]; const counts = [0, 0, 0]
-          let total = 0
-          for (let index = 0; index < pixels.length; index += 4) {
-            const value = .299 * pixels[index] + .587 * pixels[index + 1] + .114 * pixels[index + 2]
-            const zone = Math.min(2, Math.floor(Math.floor(index / 4 / 64) / (64 / 3)))
-            sums[zone] += value; squares[zone] += value * value; counts[zone]++; total += value
-          }
-          const busy = sums.map((sum, zone) => Math.min(1, Math.sqrt(Math.max(0, squares[zone] / counts[zone] - (sum / counts[zone]) ** 2)) / 128))
-          return { brightness: Math.round(total / (64 * 64)), composition: { topBusy: busy[0], centerBusy: busy[1], bottomBusy: busy[2] } }
-        })
-      } finally { await page!.goto('about:blank'); await page!.requestGC() }
+        await setHtml(`<!DOCTYPE html><html><head></head><body><img id="sample" crossorigin="anonymous" src="${sampleUrl}"></body></html>`)
+        return await page!.evaluate(samplePrintImage, { raw: normalized ? { width: header.width, height: header.height } : undefined, matrix: normalized ? printOrientationMatrix(normalized.orientation, 64, 64) : undefined })
+      } finally { await page!.goto('about:blank'); await page!.requestGC(); sampleCarrier = undefined }
     }
-    return { prepareHtml: async (html, pinned, variants) => {
-      const prepared = await printCache!.prepareHtml(html, pinned, variants)
+    return { prepareHtml: async (html, pinned, sourcePolicy) => {
+      const prepared = await printCache!.prepareHtml(html, pinned, sourcePolicy ?? policy)
       preparedResources = true
       bindings = new Map(prepared.resource_bindings.map(value => [value.variant_hash ?? value.original_checksum, value]))
       return prepared
-    }, encoder_identity: printCache.identity, resource_policy_hash: printCache.policyHash,
+    }, encoder_identity: printCache.identity, resource_policy_hash: printPolicyHash(policy),
     assertResourceServing: () => {
       if (!preparedResources || served.size !== bindings.size) throw new Error('PRINT_RESOURCE_SERVING_INCOMPLETE')
       for (const [key, binding] of bindings) if (served.get(key)?.served_checksum !== binding.served_checksum || served.get(key)?.original_checksum !== binding.original_checksum || served.get(key)?.variant_hash !== binding.variant_hash) throw new Error('PRINT_RESOURCE_SERVING_INCOMPLETE')

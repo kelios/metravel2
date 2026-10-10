@@ -22,7 +22,7 @@ const PNG_BYTES = Buffer.from(
 )
 
 /** Synthetic RGBA fixtures exercise native alpha tiles; they are never editorial media. */
-export function printFixturePng(singleAlpha: boolean, rotated = false): Buffer {
+export function printFixturePng(singleAlpha: boolean, rotated = false, orientation = 6): Buffer {
   const width = 2501, height = 2
   const crc32 = (bytes: Buffer) => {
     let value = 0xffffffff
@@ -46,18 +46,20 @@ export function printFixturePng(singleAlpha: boolean, rotated = false): Buffer {
     pixels[offset + 3] = singleAlpha && row === 1 && column === 2400 ? 0 : 255
   }
   const exif = Buffer.from('4d4d002a00000008000101120003000000010006000000000000', 'hex')
+  exif.writeUInt16BE(orientation, 18)
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', header),
     ...(rotated ? [chunk('eXIf', exif)] : []), chunk('IDAT', deflateSync(pixels)), chunk('IEND', Buffer.alloc(0))])
 }
 
 /** Existing placeholder bytes plus fixed EXIF6 metadata; no browser/encoder needed to build the fixture. */
-async function rotatedWebpFixture(root: string): Promise<Buffer> {
+async function rotatedWebpFixture(root: string, orientation = 6): Promise<Buffer> {
   const original = await readFile(path.join(root, 'assets/no-data.webp'))
   if (sha256(original) !== '712415eb90b04c42c97526dd8daefd7a3c5049e72c76d1d761b249e7944cacf6') throw new Error('PRINT_FIXTURE_BYTES_CHANGED')
   const vp8x = Buffer.alloc(18)
   vp8x.write('VP8X'); vp8x.writeUInt32LE(10, 4); vp8x[8] = 0x08
   vp8x.writeUIntLE(299, 12, 3); vp8x.writeUIntLE(199, 15, 3)
   const exif = Buffer.from('4d4d002a00000008000101120003000000010006000000000000', 'hex')
+  exif.writeUInt16BE(orientation, 18)
   const exifHeader = Buffer.alloc(8); exifHeader.write('EXIF'); exifHeader.writeUInt32LE(exif.length, 4)
   const body = Buffer.concat([Buffer.from('WEBP'), vp8x, original.subarray(12), exifHeader, exif])
   const header = Buffer.alloc(8); header.write('RIFF'); header.writeUInt32LE(body.length, 4)
@@ -155,6 +157,7 @@ export interface SnapshotFixture {
     text_by_field: Record<number, Partial<Record<BookTextField, string>>>
     media_occurrence_keys: string[]
     unique_media_hashes: string[]
+    print_orientation_by_checksum: Record<string, { original_orientation: number; raw_width: number; raw_height: number; normalized_decode_checksum: string; normalized_decode_bytes: number; normalization_working_bytes: number }>
     print_media?: { source_has_alpha: boolean; served_mime: 'image/jpeg' | 'image/png'; oriented_width?: number; oriented_height?: number }
   }
 }
@@ -166,6 +169,9 @@ export async function buildSnapshotFixture(jobDir: string, options: SnapshotFixt
   if (!path.resolve(jobDir).startsWith(scratch)) throw new Error('Snapshot fixtures belong in ignored .codex-temp/tests/')
   const mediaBytes = options.mediaFixture === 'rotated-webp' ? await rotatedWebpFixture(root)
     : options.mediaFixture ? printFixturePng(options.mediaFixture === 'single-alpha', options.mediaFixture === 'rotated-png') : PNG_BYTES
+  const rotated = options.mediaFixture === 'rotated-png' || options.mediaFixture === 'rotated-webp'
+  const neutralBytes = options.mediaFixture === 'rotated-webp' ? await rotatedWebpFixture(root, 1)
+    : options.mediaFixture === 'rotated-png' ? printFixturePng(false, true, 1) : mediaBytes
   const namespace = options.durableTextWindow ? `${FIXTURE_ID}/attempt-1` : FIXTURE_ID
   await mkdir(path.join(jobDir, namespace), { recursive: true, mode: 0o700 })
   const settings = toBookSettingsDto({ ...DEFAULT_BOOK_SETTINGS, ...options.settings }, options.locale ?? 'RU')
@@ -188,6 +194,10 @@ export async function buildSnapshotFixture(jobDir: string, options: SnapshotFixt
     text_by_field: {},
     media_occurrence_keys: [],
     unique_media_hashes: [],
+    print_orientation_by_checksum: { [sha256(mediaBytes)]: { original_orientation: rotated ? 6 : 1,
+      raw_width: options.mediaFixture === 'rotated-webp' ? 300 : options.mediaFixture ? 2501 : 1,
+      raw_height: options.mediaFixture === 'rotated-webp' ? 200 : options.mediaFixture ? 2 : 1,
+      normalized_decode_checksum: sha256(neutralBytes), normalized_decode_bytes: neutralBytes.length, normalization_working_bytes: rotated ? neutralBytes.length : 0 } },
     ...(options.mediaFixture ? { print_media: { source_has_alpha: options.mediaFixture === 'single-alpha', served_mime: options.mediaFixture === 'single-alpha' ? 'image/png' as const : 'image/jpeg' as const,
       ...(options.mediaFixture === 'rotated-png' ? { oriented_width: 2, oriented_height: 2501 } : options.mediaFixture === 'rotated-webp' ? { oriented_width: 200, oriented_height: 300 } : {}) } } : {}),
   }

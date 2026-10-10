@@ -7,7 +7,7 @@ import { escapeHtml } from '@/services/pdf-export/utils/htmlUtils'
 /** Subdivision changes only working pages, never drops a source placement. */
 export async function* subdivideSource(source: BookSegmentSource, contentBudget = 1024): AsyncGenerator<BookSegmentSource> {
   assertBookSegmentSourceSchema(source)
-  const expandDisclosures = source.source_schema_version === 4
+  const expandDisclosures = source.source_schema_version === 4 || source.source_schema_version === 5
   if ((source.source_schema_version ?? 1) >= 3) {
     const unbound = { ...source }
     delete unbound.resource_bindings; delete unbound.resource_bindings_hash
