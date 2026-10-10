@@ -152,6 +152,9 @@ scope.
 - `docs/GROWTH_PLAN.md` — шестимесячный plan с baseline/review dates;
 - `docs/ARTICLE_ATTENTION_LOG.md` — журнал article attention cycles;
 - `docs/QUEST_DEMAND_LOG.md` — журнал quest demand cycles;
+- `docs/QUEST_LEGENDS_BY_PL.md` — сводка досье легенд областных центров Беларуси
+  и воеводских городов Польши (10.10.2026) для тематических квестов; полные досье —
+  `docs/quest-legends/legends-{by,pl-existing,pl-new}.md`;
 - `docs/QUEST_CONTENT_PLAN.md` — план контента квестов: очереди доработки
   (poi_info, утечки, финале), перелинковка квест↔статья (включая канонический
   формат блока «Квесты по городам рядом», §3.3), план новых квестов.
