@@ -112,7 +112,7 @@ test.describe('@perf Render audit: main and travel details (responsive + perf)',
       await waitForAppShell(page);
 
       // Core header/search is expected
-      const search = page.getByRole('textbox', { name: /Поиск путешествий/i });
+      const search = page.getByRole('searchbox', { name: /Поиск путешествий/i });
       await expect(search).toBeVisible({ timeout: 30_000 });
 
       // Either list skeleton, list content, or empty state should render.

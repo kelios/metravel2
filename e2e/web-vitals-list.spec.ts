@@ -210,7 +210,7 @@ test.describe('@perf Web Vitals (CLS/LCP/INP)', () => {
 
     // Trigger a simple interaction to produce an INP sample.
     // The search box exists even when the list is empty.
-    const searchBox = page.getByRole('textbox', { name: /Поиск путешествий/i });
+    const searchBox = page.getByRole('searchbox', { name: /Поиск путешествий/i });
     await searchBox.click({ timeout: 15_000 });
     // Avoid multiple delayed key events (flaky/high INP in CI/local).
     // A single "fill" produces fewer event entries and is more stable.

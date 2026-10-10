@@ -55,7 +55,7 @@ test.describe('@smoke Search', () => {
 
     const request = await requestPromise;
     expect(new URL(request.url()).searchParams.has('sort')).toBe(false);
-    const search = page.getByRole('textbox', { name: /Поиск путешествий/i });
+    const search = page.getByRole('searchbox', { name: /Поиск путешествий/i });
     await expect(search).toHaveValue('Минск', { timeout: SEARCH_TIMEOUT_MS });
     await expect.poll(() => new URL(page.url()).searchParams.get('search')).toBe('Минск');
     expect(new URL(page.url()).searchParams.has('q')).toBe(false);
@@ -91,7 +91,7 @@ test.describe('@smoke Search', () => {
       waitUntil: 'domcontentloaded',
     });
 
-    const search = page.getByRole('textbox', { name: /Поиск путешествий/i });
+    const search = page.getByRole('searchbox', { name: /Поиск путешествий/i });
     await expect(search).toHaveValue(noMatchQuery, { timeout: SEARCH_TIMEOUT_MS });
     await expect(page.getByText('Ничего не найдено', { exact: true })).toBeVisible({
       timeout: SEARCH_TIMEOUT_MS,
@@ -107,7 +107,7 @@ test.describe('@smoke Search', () => {
 
     await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
 
-    const search = page.getByRole('textbox', { name: /Поиск путешествий/i });
+    const search = page.getByRole('searchbox', { name: /Поиск путешествий/i });
     await expect(search).toBeVisible({ timeout: SEARCH_TIMEOUT_MS });
 
     await search.fill('минск');

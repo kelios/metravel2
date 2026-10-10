@@ -18,7 +18,7 @@ const waitForMainToRender = waitForMainListRender;
 function getSearchLocator(page: any) {
   // Prefer accessibility label (stable across layouts). Fallback to web id.
   return page
-    .getByRole('textbox', { name: /Поиск путешествий/i })
+    .getByRole('searchbox', { name: /Поиск путешествий/i })
     .or(page.getByRole('textbox', { name: /Поле поиска путешествий/i }))
     .or(page.locator('#search-input'));
 }
