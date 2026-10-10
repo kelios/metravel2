@@ -30,6 +30,13 @@ export const queryKeys = {
     ['my-travels-count', userId] as const,
   exportMyTravelsCount: (userId: string | number | null | undefined) =>
     ['export-my-travels-count', userId] as const,
+  // #2357: серверная полная книга — личные данные владельца, владелец в ключе.
+  fullBookExportCapabilities: (owner: string | null) =>
+    ['full-book-export', owner, 'capabilities'] as const,
+  fullBookExportLatestJob: (owner: string | null) =>
+    ['full-book-export', owner, 'latest-job'] as const,
+  fullBookExportJob: (owner: string | null, jobId: string) =>
+    ['full-book-export', owner, 'job', jobId] as const,
   travelUserRating: (travelId: number | undefined) =>
     ['travelUserRating', travelId] as const,
   // Личный отзыв принадлежит аккаунту, а не устройству: при logout/login
@@ -104,6 +111,8 @@ export const queryKeys = {
   questBundles: () => ['quest-bundle'] as const,
   questBundleAllLocales: (slug: string | null | undefined) => ['quest-bundle', slug] as const,
   questBundle: (slug: string | null | undefined, locale: string) => ['quest-bundle', slug, locale] as const,
+  questServing: (cityId: number | undefined, slug: string, locale: string) =>
+    ['quest-serving', cityId, slug, locale] as const,
   // Корень всех списков квестов: каталог, промо-срез, компактный каталог.
   // Сам по себе данных не адресует — только префикс инвалидации.
   quests: () => ['quests'] as const,

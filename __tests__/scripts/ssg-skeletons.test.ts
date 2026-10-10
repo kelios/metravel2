@@ -159,6 +159,123 @@ describe('ssg-skeletons', () => {
       expect(homeSource).toMatch(/style=\{\[styles\.container, WEB_SCROLL_STYLE\]\}/);
       expect(homeSource).toContain('web: homeWebScrollEndPadding(isMobile ? 96 : 120)');
     });
+
+    // #2359 rework: equal areas are not enough when React copies paint under the
+    // shell earlier or in the same frame (Lighthouse simulate observed trace: one
+    // frame after hydration, React hero won). The shell alone paints the first
+    // screen; only the #2216 root dock stays painted.
+    it('keeps React under the Home shell unpainted except the root dock (#2359)', () => {
+      const style = document.createElement('style');
+      style.textContent = buildSkeletonCSS().replace(/^<style[^>]*>|<\/style>$/g, '');
+      document.head.appendChild(style);
+      const rules = Array.from(style.sheet!.cssRules) as CSSStyleRule[];
+      style.remove();
+      const hidden = rules.filter((rule) => rule.style?.visibility === 'hidden' && rule.selectorText?.includes('#root'));
+      const shown = rules.filter((rule) => rule.style?.visibility === 'visible' && rule.selectorText?.includes('#root'));
+      // Top-level rules: every width, and the gate leaves with #ssg-skeleton-css.
+      expect(hidden).toHaveLength(1);
+      expect(shown).toHaveLength(1);
+      expect(shown[0].selectorText.startsWith(`${hidden[0].selectorText} `)).toBe(true);
+
+      const home = parse(injectSkeletonShell(documentWithRoot(rootWithDock), '/'));
+      expect(Array.from(home.querySelectorAll(hidden[0].selectorText))).toEqual([home.getElementById('root')]);
+      expect(Array.from(home.querySelectorAll(shown[0].selectorText))).toEqual([
+        home.querySelector('#root [data-testid="web-mobile-dock-shell"]'),
+      ]);
+      home.getElementById('ssg-skeleton')!.remove();
+      expect(home.querySelectorAll(hidden[0].selectorText)).toHaveLength(0);
+      // Travel adopts the SSG hero node into #root; search/map keep their own handoff.
+      for (const route of ['/travels/actual-article', '/search', '/map']) {
+        expect(parse(injectSkeletonShell(documentWithRoot(rootWithDock), route)).querySelectorAll(hidden[0].selectorText)).toHaveLength(0);
+      }
+    });
+
+    // #2359 rework: prod 360x740 — the React subtitle (11 676 px2) replaced the SSG
+    // one (11 340 px2) as LCP at hydration: letter-spacing .1px, the trailing space
+    // that RN-web pre-wrap keeps in the text box and a 1px narrower column. At
+    // 320x640 the small-phone container (8px) and 28/34 title gave 17 424 vs 15 246.
+    it('mirrors the React hero text twins on phones: column, typography and RN-web text model', () => {
+      const fs = require('fs');
+      const { StyleSheet } = require('react-native');
+      const { METRICS } = require('../../constants/layout');
+      const { createHomeHeroStyles } = require('../../components/home/homeHeroStyles');
+      const css = buildSkeletonCSS();
+      const declarations = (block: string, selector: string): Record<string, string> => {
+        const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const body = block.match(new RegExp(`(?:^|[}\\n])${escaped}\\{([^}]*)\\}`))?.[1];
+        if (body == null) return {};
+        return Object.fromEntries(body.split(';').filter(Boolean).map((part) => {
+          const at = part.indexOf(':');
+          return [part.slice(0, at), part.slice(at + 1)];
+        }));
+      };
+      const smallPhoneMax = METRICS.breakpoints.phone - 0.02;
+      const smallPhoneBlock = css.match(new RegExp(`@media\\(max-width:${smallPhoneMax}px\\)\\{(.*)\\}\\n`))?.[1];
+      expect(smallPhoneBlock).toBeDefined();
+      const ssg = (selector: string, smallPhone: boolean) => ({
+        ...declarations(css, selector),
+        ...(smallPhone ? declarations(smallPhoneBlock!, selector) : {}),
+      });
+      const px = (value: string) => Number(value.replace(/px$/, ''));
+      const font = (decl: Record<string, string>) => {
+        const [, weight, size, lineHeight] = decl.font.match(/^(\d+) (\d+)px\/(\d+)px /)!;
+        return {
+          fontWeight: weight,
+          fontSize: decl['font-size'] ? px(decl['font-size']) : Number(size),
+          lineHeight: decl['line-height'] ? px(decl['line-height']) : Number(lineHeight),
+        };
+      };
+      // Right side of a 1-3 value padding shorthand (both sides are symmetric here).
+      const sidePadding = (value: string) => {
+        const parts = value.split(' ').map(px);
+        return parts.length === 1 ? parts[0] : parts[1];
+      };
+
+      // The text model RN-web gives every <Text>: trailing spaces of wrapped lines stay in the box.
+      const rnWebText = fs.readFileSync(require.resolve('react-native-web/dist/cjs/exports/Text/index.js'), 'utf8');
+      const [, whiteSpace, wordWrap] = rnWebText.match(/var textStyle = \{[\s\S]*?whiteSpace: '([^']+)',\s*wordWrap: '([^']+)'/)!;
+      // Phone/small-phone container padding of ResponsiveContainer around HomeHero.
+      const container = fs.readFileSync(require.resolve('../../components/layout/ResponsiveContainer.tsx'), 'utf8');
+      expect(container).toMatch(/if \(isSmallPhone\) \{\s*return \{\s*paddingHorizontal: horizontal \? METRICS\.spacing\.s/);
+      expect(container).toMatch(/if \(isPhone \|\| isLargePhone\) \{\s*return \{\s*paddingHorizontal: horizontal \? METRICS\.spacing\.m/);
+
+      const colors = new Proxy({}, { get: () => '#123456' });
+      for (const smallPhone of [false, true]) {
+        const react = createHomeHeroStyles({
+          colors, isMobile: true, isSmallPhone: smallPhone, isNarrowLayout: true, isTablet: false, isDesktop: false,
+          viewportWidth: smallPhone ? 320 : 390, showSideSlider: false, sliderHeight: 0,
+        });
+        const title = StyleSheet.flatten(react.title);
+        const accent = StyleSheet.flatten(react.titleAccent);
+        const subtitle = StyleSheet.flatten(react.subtitle);
+        const section = StyleSheet.flatten(react.heroSection);
+
+        const ssgTitle = ssg('.ssg-home-title', smallPhone);
+        expect(font(ssgTitle)).toEqual({ fontWeight: title.fontWeight, fontSize: title.fontSize, lineHeight: title.lineHeight });
+        expect(px(ssgTitle['letter-spacing'])).toBe(title.letterSpacing);
+        // The accent line inherits the title metrics in the shell; React must keep them equal.
+        expect([accent.fontSize, accent.lineHeight, accent.letterSpacing]).toEqual([title.fontSize, title.lineHeight, title.letterSpacing]);
+        expect(ssg('.ssg-home-title .ssg-accent', smallPhone)['font-weight']).toBe(accent.fontWeight);
+
+        const ssgSub = ssg('.ssg-home-sub', smallPhone);
+        expect(font(ssgSub)).toEqual({ fontWeight: subtitle.fontWeight, fontSize: subtitle.fontSize, lineHeight: subtitle.lineHeight });
+        expect(px(ssgSub['letter-spacing'])).toBe(subtitle.letterSpacing);
+        expect(px(ssgSub['max-width'])).toBe(subtitle.maxWidth);
+
+        for (const decl of [ssgTitle, ssgSub]) {
+          expect(decl['white-space']).toBe(whiteSpace);
+          expect(decl['overflow-wrap']).toBe(wordWrap);
+        }
+
+        // Same text column: shell padding + page border + page padding == container + heroSection padding.
+        const page = ssg('.ssg-home-page', smallPhone);
+        const pageBorder = px(page.border.split(' ')[0]);
+        const ssgInset = sidePadding(ssg('.ssg-home-shell', smallPhone).padding) + pageBorder + sidePadding(page.padding);
+        const reactInset = (smallPhone ? METRICS.spacing.s : METRICS.spacing.m) + section.paddingLeft;
+        expect(section.paddingRight).toBe(section.paddingLeft);
+        expect(ssgInset).toBe(reactInset);
+      }
+    });
   });
 
   describe('buildSkeletonCSS', () => {

@@ -26,6 +26,16 @@ const quest = (over: Partial<QuestMeta> & { id: string }): QuestMeta => ({
 })
 
 describe('buildQuestCityCollection', () => {
+  it('selects the full merged collection through a retired numeric city ID', () => {
+    const merged = [
+      quest({ id: 'gomel-palace', cityId: '19', cityName: 'Гомель', countryCode: 'BY', cityAlias: 'gomel', cityLegacyIds: [92] }),
+      quest({ id: 'gomel-kids', cityId: '19', cityName: 'Гомель', countryCode: 'BY', cityAlias: 'gomel', cityLegacyIds: [92], isCompletedByMe: true }),
+      quest({ id: 'krakow-dragon', cityId: '1', cityName: 'Краков', countryCode: 'PL', cityAlias: 'krakow' }),
+    ]
+    expect(buildQuestCityCollection(merged, { cityId: '92' })).toMatchObject({
+      cityId: '19', cityName: 'Гомель', totalCount: 2, completedCount: 1,
+    })
+  })
   const catalog = [
     quest({ id: 'a', isCompletedByMe: true }),
     quest({ id: 'b' }),

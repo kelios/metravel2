@@ -120,6 +120,7 @@ describe('quest content query keys end with the locale', () => {
   /** Контентные ключи: последний элемент — локаль. */
   const CONTENT_KEYS: Record<string, () => readonly unknown[]> = {
     questBundle: () => queryKeys.questBundle('krakow-dragon', LOCALE),
+    questServing: () => queryKeys.questServing(1, 'krakow-dragon', LOCALE),
     questsCatalog: () => queryKeys.questsCatalog(LOCALE),
     questsPreview: () => queryKeys.questsPreview(6, LOCALE),
     questsCompactCatalog: () => queryKeys.questsCompactCatalog('7', LOCALE),

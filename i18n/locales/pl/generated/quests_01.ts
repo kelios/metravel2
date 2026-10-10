@@ -1,4 +1,11 @@
 export const questsGenerated1 = {
+  "localeServing.versions": "Wersje językowe questu",
+  "localeServing.unavailableTitle": "Ta wersja questu jest niedostępna",
+  "localeServing.unavailableDescription": "Tłumaczenie wycofano lub nie jest jeszcze gotowe. Otwórz wersję rosyjską albo sprawdź ponownie później.",
+  "localeServing.temporaryTitle": "Nie udało się sprawdzić wersji językowej",
+  "localeServing.temporaryDescription": "Sprawdzanie publikacji jest chwilowo niedostępne. Spróbuj ponownie.",
+  "localeServing.retry": "Sprawdź ponownie",
+  "localeServing.ruSource": "Otwórz wersję rosyjską",
   "components.quests.QuestFullMap.routeStatus.bikeBuildFailed": "Nie udało się wyznaczyć rzeczywistej trasy rowerowej.",
   "components.quests.QuestFullMap.routeStatus.bikeLoading": "Wyznaczamy trasę rowerową po drogach",
   "components.quests.QuestFullMap.routeStatus.bikeReady": "Trasa rowerowa jest gotowa",

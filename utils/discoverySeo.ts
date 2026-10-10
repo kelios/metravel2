@@ -35,6 +35,7 @@ type QuestDetailInput = {
   title: string;
   description: string;
   questId: string;
+  inLanguage?: string;
   cityId?: string;
   cityName?: string | null;
   countryCode?: string | null;
@@ -253,7 +254,7 @@ export function createQuestDetailStructuredData(input: QuestDetailInput) {
         url: input.canonical,
         name: input.title,
         description: input.description,
-        inLanguage: getActiveLocaleDefinition().htmlLang,
+        inLanguage: input.inLanguage ?? getActiveLocaleDefinition().htmlLang,
         isPartOf: { '@id': WEBSITE_ID },
         breadcrumb: { '@id': breadcrumbId },
         mainEntity: { '@id': creativeWorkId },
@@ -264,6 +265,7 @@ export function createQuestDetailStructuredData(input: QuestDetailInput) {
         name: input.title,
         description: input.description,
         url: input.canonical,
+        inLanguage: input.inLanguage ?? getActiveLocaleDefinition().htmlLang,
         ...(input.coverUrl ? { image: [toAbsoluteUrl(input.coverUrl)] } : null),
         ...(input.stepsCount ? { numberOfItems: input.stepsCount } : null),
         ...(input.cityName || input.countryCode || lat != null || lng != null

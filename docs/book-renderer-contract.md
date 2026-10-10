@@ -59,15 +59,72 @@ size_bytes, pages: 1}`. Injected `measure` остаётся диагностич
 public DTO и private source schemas 1–5 остаются совместимыми.
 Все source refs относительны приватному root; symlink refs запрещены.
 
-Добавочный `planning_protocol_version: 1` отделён от public document/settings
-и private source schemas. `preparePlanningStep` сохраняет ограниченный,
-checksummed checkpoint между вызовами; результаты становятся доступными только
-после B2 epoch/lease commit. Промежуточная фаза `indexed` означает завершение
-проверки frozen manifest и immutable индексов, а не готовность PDF.
-Каждый вызов проверяет renderer content pin, document identity и последовательную
-generation. Чтение идёт по byte offset без повторного прохода префикса; SHA-256
-имеет явное переносимое состояние. Output ledger должен независимо проверяться
-сервером перед commit; собственный checksum не доказывает происхождение данных.
+Полный план использует **private `planning_protocol_version: 2`**, отдельный от
+public document/settings, prepared source5 и parser checkpoint1. Index-only
+protocol1 checkpoints несовместимы. B3 проверяет actual artifact content hash;
+identity включает этот pin, frozen document, точный resource profile и physical
+либо fixture measurement mode. Профиль или artifact нельзя менять при resume.
+
+`preparePlanningStep(jobRoot,planRoot,pinned,request,options)` делает один bounded
+переход `index → indexed → book → descriptors → plan_ready`. В `book` сохраняются
+body/TOC/frontmatter cursors и immutable seals; архивные строки живут на диске.
+В `descriptors` каждая страница повторно измеряется с окончательным абсолютным
+folio после подсчёта frontmatter, затем по одной проверяются placement receipts
+и original-source occurrences. `plan_ready` означает полный подготовленный план,
+а не завершённый PDF. Injected fixture ports явно дают `measured:false` в summary
+и другой identity; B3 не принимает такой план для публикации.
+
+Request содержит sequential generation, предыдущий checksummed checkpoint,
+renderer content hash, profile и per-call limits. Default input65,536bytes,
+output4MiB/24records, probes1; maxima output 4MiB + `encoded_resource_bytes`
+профиля + 64KiB descriptor (`maxPlanningOutputBytes`), 128records и probes8. До работы
+резервируются index checkpoint1MiB (manifest carry), либо post-index
+checkpoint64KiB (только bounded cursors/refs), и generation-ledger64KiB. Недостаточный бюджет
+даёт `WORKER_PLANNING_OUTPUT_BUDGET_EXCEEDED` с `required_budget`, до публикации
+соответствующего bounded unit. Поля читаются по byte offsets и portable SHA256;
+нет whole-field replay. Image-dimension reads отдельно возвращаются как
+`consumed_asset_bytes`; физические HTML/resource/PDF probes дополнительно
+супервизируются B3 по общему cgroup/profile, этот счётчик не заменяет IO/RSS gate.
+
+Generation ledger содержит текущие data outputs (каждый не больше одного
+encoded resource, 8MiB; профиль планирования выше этого отклоняется) и previous ledger ref; checkpoint
+ссылается на ledger. Они не хешируют друг друга циклически. B3 independently
+проверяет receipts и атомарно epoch/lease-commits обе ссылки, checkpoint и ledger.
+Собственный checksum файла не доказывает committed происхождение.
+
+Обязательный `options.committed(ref)` — доверенный bounded backend lookup
+committed receipt по job/identity/epoch/head, через private IPC либо in-process
+adapter. `readIndex` и чтение вложенных `PlanningFile` принимают текущие admitted outputs или точный checksum/size
+из этого lookup; `null` означает подтверждённое отсутствие, не просто ENOENT.
+Физический adapter также требует synchronous `options.committed_parser(ref)`:
+parser readonly store и numbered/seen anchor lookup проверяют receipt по тем же bounded байтам,
+которые затем разбирает. Он не создаёт/sync dirs и запрещает put. Backend lookup
+не передаётся в пользовательском JSON; history/hashmap не копируется в Node
+checkpoint и не перечитывается при каждом resume.
+
+Checkpoint и ledger head тоже проверяются через committed lookup. Physical
+session перед каждой пробой привязывается к storage текущей generation:
+original asset descriptors и существующий print cache читаются через ту же
+authority; новые бинарные print-assets и JSON descriptors допускаются по
+точному размеру и включаются в outputs/ledger. Файл на диске после crash не
+объявляется committed cache. B3 подтверждает полный resource closure.
+Binary и descriptor допускаются вместе. Если целая следующая пара не входит
+после уже подготовленных пар, bounded cache-only generation сохраняет исходный
+book/descriptor cursor и commits только завершённые пары. Следующий вызов
+использует committed cache; до настоящего physical probe страницы нет. Пара,
+не входящая даже в пустое поколение, возвращает точный `required_budget` без
+записи и ложного прогресса; B3 повторяет то же поколение с этим бюджетом. Максимум
+output покрывает одну наибольшую допустимую профилем пару поверх default-конверта,
+поэтому законный ресурс не делает книгу непланируемой.
+
+Parser producer выполняет одну semantic transition в ограниченном overlay:
+не более4store writes, один bounded fragment batch/checkpoint. Точные serializer
+bytes/records допускаются до открытия writable store/публикации, без re-feed
+или rollback prefix. Дальше immutable fsynced файлы входят в ledger кандидата.
+Text transition обрабатывает не более256 UTF16 units с исходными character
+callbacks; bounded writer backpressure останавливает её при восьми готовых
+fragments. Поэтому обычный текст не создаёт fsynced generation на каждый
+символ; сложный EOF сохраняет точные canonical fragments и bounded batch.
 
 `incrementalContentStep` использует собственный публичный checkpoint-порт,
 производный от htmlparser2 10.1.0 и его entities 7.0.1. В runtime manifest

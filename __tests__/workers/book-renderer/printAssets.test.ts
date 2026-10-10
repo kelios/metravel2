@@ -1,5 +1,6 @@
 /** @jest-environment node */
 import { workerImageFilterStyle } from '@/services/pdf-export/segments/workerImageEffects'
+const filesystem: typeof import('node:fs/promises') = require('node:fs/promises')
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { Page, BrowserContext } from 'playwright'
@@ -10,6 +11,8 @@ import { canonicalJson, readBoundedBytes, sha256 } from '@/workers/book-renderer
 import { DEFAULT_RENDERER_RESOURCE_PROFILE } from '@/workers/book-renderer/measurement'
 import { subdivideSource } from '@/services/pdf-export/segments/subdivideSource'
 import type { BookSegmentSource } from '@/services/pdf-export/segments/renderSegment'
+import { PlanningStorage } from '@/workers/book-renderer/planningStorage'
+import type { PlanningFile } from '@/workers/book-renderer/planningTypes'
 
 const identity = { browser_name: 'chromium' as const, playwright_version: '1.61.1', chromium_revision: '1228', chromium_version: '149.0.7827.55', executable_sha256: 'c'.repeat(64), platform: 'fixture', arch: 'fixture' }
 const original = 'a'.repeat(64), served = 'b'.repeat(64)
@@ -125,14 +128,14 @@ describe('print cache integrity with a mocked codec port', () => {
     await mkdir(path.resolve(__dirname, '../../../.codex-temp/tests'), { recursive: true })
     scratch = await mkdtemp(path.resolve(__dirname, '../../../.codex-temp/tests/print-cache-'))
     root = path.join(scratch, 'job'); index = path.join(scratch, 'index')
-    for (const dir of [root, index, path.join(index, 'assets'), path.join(index, 'print-assets'), path.join(index, 'print-cache')]) await mkdir(dir)
+    for (const dir of [root, index, path.join(index, 'assets'), path.join(index, 'print-assets'), path.join(index, 'print-cache')]) await mkdir(dir, { mode: 0o700 })
     await writeFile(path.join(root, checksum), png)
-    await writeFile(path.join(index, 'assets', `${checksum}.json`), canonicalJson({ checksum, file_ref: checksum, size_bytes: png.length }))
+    await writeFile(path.join(index, 'assets', `${checksum}.json`), canonicalJson({ checksum, file_ref: checksum, size_bytes: png.length }), { mode: 0o600 })
     page.setContent.mockClear()
     page.evaluate.mockReset().mockResolvedValueOnce({ width: 1, height: 1 }).mockResolvedValueOnce({ data: `data:image/png;base64,${png.toString('base64')}`, mime: 'image/png', hasAlpha: true, sourceHasAlpha: true })
     cache = Reflect.construct(PrintAssetCache, [root, index, {} as BrowserContext, page as unknown as Page, identity, DEFAULT_RENDERER_RESOURCE_PROFILE]) as PrintAssetCache
   })
-  afterEach(async () => { await rm(scratch, { recursive: true, force: true }) })
+  afterEach(async () => { jest.restoreAllMocks(); await rm(scratch, { recursive: true, force: true }) })
   const html = () => `<img src="https://book-snapshot.invalid/assets/${checksum}">`
   const orientedJpeg = (orientation: number) => {
     const jpeg = Buffer.from('ffd8ffe00002ffc00011080002000303011100021101031101ffd9', 'hex')
@@ -143,9 +146,102 @@ describe('print cache integrity with a mocked codec port', () => {
   async function addOriginal(bytes: Buffer) {
     const key = sha256(bytes)
     await writeFile(path.join(root, key), bytes)
-    await writeFile(path.join(index, 'assets', `${key}.json`), canonicalJson({ checksum: key, file_ref: key, size_bytes: bytes.length }))
+    await writeFile(path.join(index, 'assets', `${key}.json`), canonicalJson({ checksum: key, file_ref: key, size_bytes: bytes.length }), { mode: 0o600 })
     return `<img src="https://book-snapshot.invalid/assets/${key}">`
   }
+  it('binds both physical files to the generation closure and refuses uncommitted cache reuse', async () => {
+    const receipts = new Map<string, PlanningFile>()
+    const ref = `assets/${checksum}.json`
+    const sourceBytes = await readFile(path.join(index, ref))
+    receipts.set(ref, { ref, checksum: sha256(sourceBytes), size_bytes: sourceBytes.length })
+    const limits = { input_bytes: 256, output_records: 24, output_bytes: 4_194_304, probes: 1 }
+    const first = new PlanningStorage(index, limits, async key => receipts.get(key) ?? null)
+    cache.bindPlanning(first)
+    const prepared = await cache.prepareHtml(html())
+    expect(first.outputs.map(file => file.ref).sort()).toEqual([prepared.resource_bindings[0].descriptor_ref, prepared.resource_bindings[0].served_file_ref].sort())
+    expect(await cache.load(prepared.resource_bindings[0])).toEqual(png)
+    const restart = new PlanningStorage(index, limits, async key => receipts.get(key) ?? null)
+    cache.bindPlanning(restart)
+    await expect(cache.load(prepared.resource_bindings[0])).rejects.toThrow('WORKER_PLANNING_COMMITTED_REFERENCE_INVALID')
+    for (const file of first.outputs) receipts.set(file.ref, file)
+    expect(await cache.prepareHtml(html())).toEqual(prepared)
+    expect(restart.outputs).toEqual([])
+    expect(page.evaluate).toHaveBeenCalledTimes(2)
+  })
+  it('retries after a descriptor publication crash using the complete immutable image and exact descriptor bytes', async () => {
+    const link = filesystem.link
+    const injected = jest.spyOn(filesystem, 'link').mockImplementation(async (source, target) => {
+      if (typeof target === 'string' && target.includes('/print-cache/')) throw new Error('SIMULATED_DESCRIPTOR_PUBLICATION_CRASH')
+      return link(source, target)
+    })
+    await expect(cache.prepareHtml(html())).rejects.toThrow('SIMULATED_DESCRIPTOR_PUBLICATION_CRASH')
+    expect(await readFile(path.join(index, 'print-assets', checksum))).toEqual(png)
+    expect(await filesystem.readdir(path.join(index, 'print-cache'))).toEqual([])
+    injected.mockRestore()
+    page.evaluate.mockReset().mockResolvedValueOnce({ width: 1, height: 1 }).mockResolvedValueOnce({
+      data: `data:image/png;base64,${png.toString('base64')}`, mime: 'image/png', hasAlpha: true, sourceHasAlpha: true,
+    })
+    const prepared = await cache.prepareHtml(html())
+    const binding = prepared.resource_bindings[0]
+    expect(binding.served_checksum).toBe(checksum)
+    expect(sha256(await readFile(path.join(index, binding.descriptor_ref)))).toBe(binding.descriptor_checksum)
+    expect(await readFile(path.join(index, binding.served_file_ref))).toEqual(png)
+  })
+
+  it('prepares fourteen distinct resources in bounded complete pairs across committed restarts', async () => {
+    const receipts = new Map<string, PlanningFile>()
+    const images: string[] = []
+    for (let ordinal = 0; ordinal < 14; ordinal++) {
+      const jpeg = Buffer.concat([orientedJpeg(1), Buffer.from([ordinal])])
+      images.push(await addOriginal(jpeg))
+      const key = sha256(jpeg); const ref = `assets/${key}.json`
+      const bytes = await readFile(path.join(index, ref))
+      receipts.set(ref, { ref, checksum: sha256(bytes), size_bytes: bytes.length })
+    }
+    page.evaluate.mockReset().mockResolvedValue({ width: 3, height: 2 })
+    const limits = { input_bytes: 256, output_records: 24, output_bytes: 4_194_304, probes: 1 }
+    let completed = false
+    let generations = 0
+    while (!completed) {
+      const storage = new PlanningStorage(index, limits, async ref => receipts.get(ref) ?? null)
+      storage.reserve(2, 131_072)
+      cache.bindPlanning(storage)
+      try {
+        const result = await cache.prepareHtml(images.join(''), undefined, 5)
+        expect(result.resource_bindings).toHaveLength(14)
+        completed = true
+      } catch (error) {
+        expect((error as Error).message).toBe('WORKER_PLANNING_OUTPUT_BUDGET_EXCEEDED')
+        expect(storage.outputs.filter(file => file.ref.startsWith('print-cache/'))).toHaveLength(11)
+        expect(storage.outputs.filter(file => file.ref.startsWith('print-assets/'))).toHaveLength(11)
+      }
+      for (const file of storage.outputs) receipts.set(file.ref, file)
+      expect(++generations).toBeLessThanOrEqual(2)
+    }
+    expect(generations).toBe(2)
+    expect(page.evaluate).toHaveBeenCalledTimes(15) // one uncommitted next-resource decode is retried
+  })
+
+  it('rejects pair admission before publishing either file when only one receipt slot remains', async () => {
+    const sourceRef = `assets/${checksum}.json`; const bytes = await readFile(path.join(index, sourceRef))
+    const storage = new PlanningStorage(index, { input_bytes: 256, output_records: 1, output_bytes: 4_194_304, probes: 1 },
+      async ref => ref === sourceRef ? { ref, checksum: sha256(bytes), size_bytes: bytes.length } : null)
+    cache.bindPlanning(storage)
+    await expect(cache.prepareHtml(html())).rejects.toThrow('WORKER_PLANNING_OUTPUT_BUDGET_EXCEEDED')
+    expect(storage.outputs).toEqual([])
+    expect(await filesystem.readdir(path.join(index, 'print-assets'))).toEqual([])
+    expect(await filesystem.readdir(path.join(index, 'print-cache'))).toEqual([])
+  })
+
+  it('rejects a pre-existing partial image without replacing or quarantining it', async () => {
+    const leaf = path.join(index, 'print-assets', checksum)
+    await writeFile(leaf, 'partial', { mode: 0o600 })
+    await expect(cache.prepareHtml(html())).rejects.toThrow('PRINT_RESOURCE_INTEGRITY_FAILED')
+    expect(await readFile(leaf, 'utf8')).toBe('partial')
+    expect(await filesystem.readdir(path.join(index, 'print-assets'))).toEqual([checksum])
+    expect(await filesystem.readdir(path.join(index, 'print-cache'))).toEqual([])
+  })
+
   it.each([1, 2, 3, 4, 5, 6, 7, 8] as PrintOrientation[])('schema5 orientation%s requires raw neutral decode and encodes every nonidentity JPEG with one affine transform', async orientation => {
     const bytes = orientedJpeg(orientation), sourceHtml = await addOriginal(bytes)
     const output = Buffer.from('ffd8ffe00002ffc00011080002000303011100021101031101ffd9', 'hex')

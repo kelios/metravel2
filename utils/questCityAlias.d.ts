@@ -18,6 +18,8 @@ export type QuestCityLandingGroup<T = unknown> = {
   alias: string | null;
   cityId: string;
   cityIds: string[];
+  /** Retired numeric IDs accepted for compatibility, never canonical. */
+  legacyCityIds: string[];
   /** Short aliases this city used to publish; resolvable, never canonical. */
   legacyAliases: string[];
   cityName: string;
@@ -34,6 +36,7 @@ export type NearbyQuestCityLandingGroup<T = unknown> = QuestCityLandingGroup<T> 
 
 export function stableTextCompare(a: unknown, b: unknown): number;
 export function questRouteKey(quest: unknown): QuestRouteKey | null;
+export function normalizeQuestCityLegacyIds(raw: unknown): number[];
 export function buildQuestCityAliasMap(quests: unknown): Map<string, string>;
 export function questCityLegacyAlias(alias: unknown): string | null;
 export function buildQuestCityLandingGroups<T = unknown>(
@@ -48,6 +51,7 @@ export function findNearbyQuestCityGroups<T = unknown>(
 export function questRouteVariants(
   quest: unknown,
   cityAliasMap?: Map<string, string> | null,
+  cityGroups?: Pick<QuestCityLandingGroup, 'cityIds' | 'legacyCityIds'>[],
 ): QuestRouteVariant[];
 export function resolveQuestCitySegment(
   cityParam: string | null | undefined,

@@ -8,7 +8,9 @@ import { QuestProgressLineageMismatch } from '@/utils/questProgressMerge';
 import {
   fetchQuestsList,
   fetchQuestsPreview,
+  fetchQuestsByCity,
   fetchQuestByQuestId,
+  withQuestMetaDefaults,
   fetchOrCreateProgress,
   withQuestProgress,
   fetchQuestProgress,
@@ -18,6 +20,7 @@ import {
   fetchAllProgress,
   fetchQuestReviews,
 } from '@/api/quests';
+import type { ApiQuestMeta, ApiQuestBundle } from '@/api/quests';
 
 // Локаль контента закреплена: ожидаемые URL ниже несут `lang=ru` (#2197).
 jest.mock('@/api/questContentLocale', () => ({
@@ -420,6 +423,109 @@ describe('api/quests', () => {
         is_completed_by_me: false,
         first_completer: null,
       });
+    });
+  });
+
+  describe('city identity compatibility (#2372)', () => {
+    const catalog = [
+      { id: 1, quest_id: 'gomel', city_id: '19', city_legacy_ids: [92] },
+      { id: 2, quest_id: 'grodno', city_id: '11', city_legacy_ids: [91] },
+      { id: 3, quest_id: 'krakow', city_id: '1' },
+    ] as ApiQuestMeta[];
+
+    it('defaults old catalog DTOs and sanitizes new legacy IDs without coercion', () => {
+      expect(withQuestMetaDefaults(catalog[2]).city_legacy_ids).toEqual([]);
+      expect(withQuestMetaDefaults({
+        ...catalog[0],
+        city_legacy_ids: [92, 92, '19', 0, -1, 1.5, null, Number.NaN, Number.MAX_SAFE_INTEGER + 1],
+      } as unknown as ApiQuestMeta).city_legacy_ids).toEqual([92]);
+    });
+
+    it.each([
+      [19, 'gomel'], [92, 'gomel'],
+      [11, 'grodno'], [91, 'grodno'],
+      [1, 'krakow'], [999, undefined],
+    ] as Array<[number, string | undefined]>)('filters offline city %s by canonical or legacy ID, preserving locale', async (cityId, questId) => {
+      mockedGet.mockRejectedValueOnce(new Error('offline'));
+      mockedReadCachedQuestsList.mockResolvedValueOnce(catalog);
+
+      const result = await fetchQuestsByCity(cityId, 'pl');
+
+      expect(mockedGet).toHaveBeenCalledWith(`/quests/by-city/${cityId}/?lang=pl`);
+      expect(mockedReadCachedQuestsList).toHaveBeenCalledWith('pl');
+      expect(result.map((quest) => quest.quest_id)).toEqual(questId ? [questId] : []);
+      if (questId === 'krakow') expect(result[0].city_legacy_ids).toEqual([]);
+    });
+
+    it('does not treat malformed cached legacy IDs as valid city membership', async () => {
+      mockedGet.mockRejectedValueOnce(new Error('offline'));
+      mockedReadCachedQuestsList.mockResolvedValueOnce([{
+        ...catalog[2], city_legacy_ids: ['92', -92, 92.5],
+      }] as unknown as ApiQuestMeta[]);
+      await expect(fetchQuestsByCity(92)).resolves.toEqual([]);
+    });
+
+    it('keeps the offline cache personal status unknown after identity normalization', async () => {
+      mockedGet.mockRejectedValueOnce(new Error('offline'));
+      mockedReadCachedQuestsList.mockResolvedValueOnce([{
+        ...catalog[0], is_completed_by_me: false, personal_status_unavailable: true,
+      }]);
+      expect(await fetchQuestsByCity(92)).toEqual([
+        expect.objectContaining({ personal_status_unavailable: true, city_legacy_ids: [92] }),
+      ]);
+    });
+
+    it('gives a live canonical city priority over another city claiming its ID', async () => {
+      mockedGet.mockRejectedValueOnce(new Error('offline'));
+      mockedReadCachedQuestsList.mockResolvedValueOnce([
+        ...catalog, { ...catalog[2], quest_id: 'other-town', city_id: '92' },
+      ]);
+      expect((await fetchQuestsByCity(92)).map((quest) => quest.quest_id)).toEqual(['other-town']);
+    });
+
+    it('rejects an ambiguous retired ID claimed by different city groups', async () => {
+      mockedGet.mockRejectedValueOnce(new Error('offline'));
+      mockedReadCachedQuestsList.mockResolvedValueOnce([
+        catalog[0], { ...catalog[1], city_legacy_ids: [92] },
+      ]);
+      await expect(fetchQuestsByCity(92)).resolves.toEqual([]);
+    });
+
+    it('returns every quest in a legacy city group when only one DTO carries the claim', async () => {
+      mockedGet.mockRejectedValueOnce(new Error('offline'));
+      mockedReadCachedQuestsList.mockResolvedValueOnce([
+        { ...catalog[0], city_alias: 'gomel' },
+        { ...catalog[0], quest_id: 'gomel-second', city_alias: 'gomel', city_legacy_ids: undefined },
+      ]);
+      expect((await fetchQuestsByCity(92)).map((quest) => quest.quest_id)).toEqual(['gomel', 'gomel-second']);
+    });
+
+    it.each([false, true])('normalizes detail identity from online or cached DTO (offline=%s)', async (offline) => {
+      const bundle = {
+        id: 1, quest_id: 'gomel', steps: [],
+        city: { id: 19, name: 'Homel', lat: 52, lng: 31, legacy_ids: [92, 92, '11', 0] },
+      } as unknown as ApiQuestBundle;
+      if (offline) {
+        mockedGet.mockRejectedValueOnce(new Error('offline'));
+        (readCachedQuestBundle as jest.Mock).mockResolvedValueOnce(bundle);
+      } else mockedGet.mockResolvedValueOnce(bundle);
+
+      const result = await fetchQuestByQuestId('gomel', { persistOffline: false, locale: 'pl' });
+
+      expect(result.city).toMatchObject({ id: 19, name: 'Homel', legacy_ids: [92] });
+      expect(mockedGet).toHaveBeenCalledWith('/quests/by-quest-id/gomel/?lang=pl', 30000);
+    });
+
+    it.each([false, true])('defaults old detail city IDs (offline=%s)', async (offline) => {
+      const bundle = {
+        id: 1, quest_id: 'krakow', steps: [], city: { id: 1, name: 'Kraków', lat: 50, lng: 19 },
+      } as unknown as ApiQuestBundle;
+      if (offline) {
+        mockedGet.mockRejectedValueOnce(new Error('offline'));
+        (readCachedQuestBundle as jest.Mock).mockResolvedValueOnce(bundle);
+      } else mockedGet.mockResolvedValueOnce(bundle);
+
+      expect((await fetchQuestByQuestId('krakow', { persistOffline: false })).city.legacy_ids).toEqual([]);
     });
   });
 

@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { findQuestLoadingGate, questLoadingOperands } from '../../helpers/questHydrationBoundary'
 
 /**
  * #1562. `useQuestWizardResponsiveModel` зовёт `useResponsive({ clientOnly: true })`,
@@ -51,9 +52,11 @@ describe('#1562 предусловие clientOnly для визарда квес
   it('маршрут складывает isLoading из бандла И ветки прогресса/гостя — questId без фокуса тоже держит загрузку', () => {
     const source = readSource(ROUTE_PATH)
 
-    expect(source).toMatch(
-      /const isLoading =\s*isQuestLoading \|\|\s*\(isAuthenticated \? progressLoading : Boolean\(questId\) && !guestFlow\.guestReady\)/,
-    )
+    expect(questLoadingOperands(source)).toEqual(expect.arrayContaining([
+      'Boolean(route&&serving.pending&&!serving.projection)',
+      'isQuestLoading',
+      '(isAuthenticated?progressLoading:Boolean(questId)&&!guestFlow.guestReady)',
+    ]))
   })
 
   it('запрос бандла не сеет данные синхронно — тёплый кэш приходит только через isPending', () => {
@@ -65,8 +68,15 @@ describe('#1562 предусловие clientOnly для визарда квес
   it('ранний return по isLoading стоит выше любой точки монтирования визарда', () => {
     const source = readSource(ROUTE_PATH)
 
-    const loadingGate = source.indexOf('if (isLoading) {\n    return <LoadingState')
+    const loadingGate = findQuestLoadingGate(source)
     expect(loadingGate).toBeGreaterThan(-1)
+
+    // A revoked/invalid prefix can bypass loading only into its unavailable
+    // screen, which mounts no wizard or clientOnly subscription subtree.
+    const unavailableGate = /if\s*\(\s*route\s*&&\s*prefixUnavailable\s*\)\s*\{\s*return\s+<QuestLocaleUnavailable\b/.exec(source)
+    expect(unavailableGate).not.toBeNull()
+    expect(unavailableGate!.index).toBeLessThan(loadingGate)
+    expect(readSource('components/quests/QuestLocaleUnavailable.tsx')).not.toMatch(/<QuestWizard|<EmailSubscriptionForm/)
 
     const mountPoints = [...source.matchAll(/<QuestWizardComponent\b/g)].map((match) => match.index ?? -1)
     expect(mountPoints.length).toBeGreaterThan(0)

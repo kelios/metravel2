@@ -2,16 +2,26 @@
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { BookDocument } from '@/types/bookDocument'
-import { preparePlanningStep } from '@/workers/book-renderer/planningStep'
+import { preparePlanningStep as prepareStep } from '@/workers/book-renderer/planningStep'
 import { PlanningStorage } from '@/workers/book-renderer/planningStorage'
-import type { PlanningCheckpoint, PlanningFile, PlanningStepResult } from '@/workers/book-renderer/planningTypes'
+import type { PlanningCheckpoint, PlanningFile, PlanningRequest, PlanningStepResult } from '@/workers/book-renderer/planningTypes'
 import { canonicalJson, sha256 } from '@/workers/book-renderer/filesystem'
 import { buildSnapshotFixture } from '../../fixtures/pdfBook/buildSnapshotFixture'
 
 const RENDERER = 'a'.repeat(64)
 describe('durable bounded frozen snapshot indexing', () => {
   let scratch: string
+  let committed: Map<string, Map<string, PlanningFile>>
+  async function preparePlanningStep(job: string, out: string, document: BookDocument, request: PlanningRequest) {
+    let receipts = committed.get(out)
+    if (!receipts) { receipts = new Map(); committed.set(out, receipts) }
+    const result = await prepareStep(job, out, document, request, { committed: async ref => receipts!.get(ref) ?? null })
+    // A failed candidate is deliberately never committed.
+    for (const file of result.outputs) receipts.set(file.ref, { ...file })
+    return result
+  }
   beforeEach(async () => {
+    committed = new Map()
     const root = path.resolve(__dirname, '../../../.codex-temp/tests')
     await mkdir(root, { recursive: true })
     scratch = await mkdtemp(path.join(root, 'book-planning-index-'))
@@ -28,7 +38,7 @@ describe('durable bounded frozen snapshot indexing', () => {
       checkpoint = JSON.parse(JSON.stringify(result.checkpoint)) as PlanningFile
       expect(result.consumed_bytes).toBeLessThanOrEqual(bytes)
       expect(result.outputs.length).toBeLessThanOrEqual(24)
-      expect(result.outputs.reduce((sum, file) => sum + file.size_bytes, 0)).toBeLessThanOrEqual(2_097_152)
+      expect(result.outputs.reduce((sum, file) => sum + file.size_bytes, 0)).toBeLessThanOrEqual(4_194_304)
       for (const key of Object.keys(totals) as Array<keyof typeof totals>) totals[key] += result.deltas[key]
       expect(calls).toBeLessThan(10_000)
     } while (result.phase !== 'indexed')
@@ -97,15 +107,16 @@ describe('durable bounded frozen snapshot indexing', () => {
     state.index.manifest!.file_size = 0
     const forged = canonicalJson(state); const hash = sha256(forged); const ref = `checkpoints/${hash}.json`
     await writeFile(path.join(out, ref), forged, { mode: 0o600 })
+    committed.get(out)!.set(ref, { ref, checksum: hash, size_bytes: Buffer.byteLength(forged) })
     await expect(preparePlanningStep(f.jobDir, out, f.document, { ...request, checkpoint: { ref, checksum: hash, size_bytes: Buffer.byteLength(forged) } })).rejects.toThrow('WORKER_PLANNING_CHECKPOINT_INVALID')
   })
 
-  it('keeps a crash-written future country marker from becoming committed membership', async () => {
+  it('rejects a conflicting crash-written country marker before it can be committed', async () => {
     const f = await buildSnapshotFixture(path.join(scratch, 'input'), { travels: [{ id: 27, title: 'Future marker' }] })
     const out = path.join(scratch, 'plan')
     await mkdir(path.join(out, 'index', 'countries'), { recursive: true, mode: 0o700 })
     await writeFile(path.join(out, 'index', 'countries', '1.json'), canonicalJson({ first_position: f.manifest.length + 1, value: 1 }), { mode: 0o600 })
-    await expect(index(f.jobDir, out, f.document, 65_536)).rejects.toThrow('WORKER_PLANNING_MEMBERSHIP_CONFLICT')
+    await expect(index(f.jobDir, out, f.document, 65_536)).rejects.toThrow('WORKER_PLANNING_CHECKSUM_MISMATCH')
   })
 
   it('rejects an unsafe aggregate before publishing the next checkpoint', async () => {
@@ -116,6 +127,7 @@ describe('durable bounded frozen snapshot indexing', () => {
     state.index.summary.days = Number.MAX_SAFE_INTEGER
     const encoded = canonicalJson(state); const hash = sha256(encoded); const ref = `checkpoints/${hash}.json`
     await writeFile(path.join(out, ref), encoded, { mode: 0o600 })
+    committed.get(out)!.set(ref, { ref, checksum: hash, size_bytes: Buffer.byteLength(encoded) })
     await expect(preparePlanningStep(f.jobDir, out, f.document, { renderer_content_hash: RENDERER, generation: 2,
       checkpoint: { ref, checksum: hash, size_bytes: Buffer.byteLength(encoded) } })).rejects.toThrow('WORKER_PLANNING_COUNTER_OVERFLOW')
   })
@@ -124,7 +136,7 @@ describe('durable bounded frozen snapshot indexing', () => {
     const f = await buildSnapshotFixture(path.join(scratch, 'input'), { travels: [{ id: 29, title: 'Private' }] })
     const out = path.join(scratch, 'plan'); await mkdir(out, { mode: 0o700 })
     await mkdir(path.join(scratch, 'elsewhere'), { mode: 0o700 }); await symlink(path.join(scratch, 'elsewhere'), path.join(out, 'index'))
-    await expect(preparePlanningStep(f.jobDir, out, f.document, { renderer_content_hash: RENDERER, generation: 1 })).rejects.toThrow('SNAPSHOT_PRIVATE_PATH_INVALID')
+    await expect(preparePlanningStep(f.jobDir, out, f.document, { renderer_content_hash: RENDERER, generation: 1 })).rejects.toThrow('WORKER_PLANNING_DIRECTORY_INVALID')
     await expect(preparePlanningStep(f.jobDir, path.join(scratch, 'small'), f.document, { renderer_content_hash: RENDERER, generation: 1, limits: { output_bytes: 1 } })).rejects.toThrow('WORKER_PLANNING_OUTPUT_BUDGET_EXCEEDED')
   })
 })

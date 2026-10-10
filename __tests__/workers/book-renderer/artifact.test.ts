@@ -43,7 +43,7 @@ describe('versioned Node book renderer artifact', () => {
       document_schema_version: 1,
       prepared_source_schema_version: 5,
       settings_schema_version: 1,
-      planning_protocol_version: 1,
+      planning_protocol_version: 2,
       html_checkpoint: { protocol_version: 1 },
     })
     expect(artifact.manifest.print_asset_recipe).toEqual(PRINT_ASSET_RECIPE)

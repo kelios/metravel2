@@ -71,6 +71,8 @@ function parsePatternObject(value) {
   }
 }
 
+const finiteOrNull = (value) => (value === null || value === undefined || value === '' || !Number.isFinite(Number(value)) ? null : Number(value))
+
 /**
  * Какое число примет сервер у `range` и `approx` — словами. Список вариантов у
  * этих типов пуст, и без правила проверяющий не может решить, достижим ли ответ
@@ -80,14 +82,54 @@ function describeAnswerRule(pattern) {
   const value = parsePatternObject(pattern.value)
   if (!value) return ''
   if (pattern.type === 'range') {
-    const [min, max] = [Number(value.min), Number(value.max)]
-    return Number.isFinite(min) && Number.isFinite(max) ? `целое число от ${min} до ${max}` : ''
+    const [min, max] = [finiteOrNull(value.min), finiteOrNull(value.max)]
+    return min !== null && max !== null ? `целое число от ${min} до ${max}` : ''
   }
   if (pattern.type === 'approx') {
-    const [target, tolerance] = [Number(value.target), Number(value.tolerance)]
-    return Number.isFinite(target) && Number.isFinite(tolerance) ? `число около ${target}, допуск ±${tolerance}` : ''
+    const [target, tolerance] = [finiteOrNull(value.target), finiteOrNull(value.tolerance)]
+    return target !== null && tolerance !== null ? `число около ${target}, допуск ±${tolerance}` : ''
   }
   return ''
+}
+
+/**
+ * Правило ответа у шагов без списка вариантов (`range`, `approx`, `any_text`,
+ * `any_number`, `any`): границы числа или порог длины, как их хранит
+ * `answer_pattern.value`. У `exact`/`exact_any` правила нет — там список.
+ * Проверяющему без этого не оценить достижимость числа: задание «сколько
+ * колонн» с `range` приходило к нему без единого принимаемого ответа
+ * (lida-castle 153, luxembourg-melusina 1483, krakow-dragon 111; 07.10.2026).
+ */
+function sourceAnswerRule(pattern) {
+  if (!pattern || EXACT_ANSWER_TYPES.has(pattern.type)) return null
+  const type = pattern.type || 'any'
+  const parsed = parsePatternObject(pattern.value)
+  const field = (name) => finiteOrNull(parsed?.[name])
+  if (type === 'range') return { type, min: field('min'), max: field('max') }
+  if (type === 'approx') return { type, target: field('target'), tolerance: field('tolerance') }
+  if (type === 'any_text') return { type, min_length: field('min_length') }
+  return { type }
+}
+
+/** Правило ответа одной строкой — то, что проверяющий читает в accepted_answers. */
+function describeStructuredAnswerRule(rule) {
+  if (!rule || !rule.type) return null
+  switch (rule.type) {
+    case 'range':
+      if (rule.min === null || rule.max === null) return 'число в диапазоне (границы в источнике не заданы)'
+      return rule.min === rule.max ? `число ${rule.min}` : `число от ${rule.min} до ${rule.max}`
+    case 'approx':
+      if (rule.target === null) return 'число около цели (цель в источнике не задана)'
+      return rule.tolerance === null ? `число около ${rule.target}` : `число около ${rule.target} (±${rule.tolerance})`
+    case 'any_number':
+      return 'любое число'
+    case 'any_text':
+      return rule.min_length === null ? 'любой текст' : `любой текст не короче ${rule.min_length} символов`
+    case 'any':
+      return 'любой ответ (шаг без проверки)'
+    default:
+      return `тип ответа «${rule.type}»`
+  }
 }
 
 function sourceStepFromBundle(step) {
@@ -105,6 +147,7 @@ function sourceStepFromBundle(step) {
     answer_type: pattern.type || 'any',
     answer_variants: sourceAnswerVariants(pattern),
     answer_rule: describeAnswerRule(pattern),
+    answer_rule_parameters: sourceAnswerRule(pattern),
     poi_opening_hours: poi.opening_hours || '',
     poi_ticket_price: poi.ticket_price || '',
   }
@@ -157,8 +200,11 @@ const QUEST_UI_KEY = /^(components\.quests\.|utils\.quest)/
 // «введи ответ и нажми Проверить») — в задании всегда, даже без кавычек в тексте:
 // иначе переводчик ищет их по i18n сам и находит не ту подпись.
 const WIZARD_UI_LABEL_KEYS = [
+  'components.quests.questWizardStepCard.nachat_kvest_2847e749',
   'components.quests.questWizardStepCard.dalee_74add698',
   'components.quests.questWizardStepCard.proverit_otvet_76814505',
+  'components.quests.questWizardStepCard.propustit_0358f4b6',
+  'components.quests.questWizardStepCard.podskazka_e3530449',
 ]
 
 function readQuestUiStrings(locale, localesDir) {
@@ -194,8 +240,8 @@ function collectUiLabels({ source, sourceLocale, locale, localesDir = path.join(
   const add = (key, value) => {
     if (target.has(key) && !labels.has(value)) labels.set(value, { source: value, target: target.get(key) })
   }
-  for (const [key, value] of origin) if (quoted.has(value)) add(key, value)
   for (const key of WIZARD_UI_LABEL_KEYS) if (origin.has(key)) add(key, origin.get(key))
+  for (const [key, value] of origin) if (quoted.has(value)) add(key, value)
   return [...labels.values()]
 }
 
@@ -307,7 +353,7 @@ function buildReviewTask({ task, translation, paths }) {
     translation_sha256: reviewDigest({ task, translation }),
     instructions: [
       `Ты независимый проверяющий: прочитай раздел «Смысловая проверка» в ${GUIDE_PATH}.`,
-      'По каждому шагу реши: (1) по переведённым заданию и подсказке игрок на месте приходит к ответу из accepted_answers — у числовых шагов (range, approx) список пуст, и верное число описывает answer_rule; (2) смысл истории и задания сохранён, надписи «как на табличке» не переведены.',
+      'По каждому шагу реши: (1) по переведённым заданию и подсказке игрок на месте приходит к ответу из accepted_answers — у шагов без списка вариантов принимаемый ответ описывает правило в accepted_answers и answer_rule, числовые параметры — в answer_rule_parameters; (2) смысл истории и задания сохранён, надписи «как на табличке» не переведены.',
       'Перевод не правь. Отказ — это ok: false и одна фраза в detail, что именно не так.',
       `Запиши вердикт в ${relative(paths.review)} в форме output_shape; translation_sha256 перенеси без изменений.`,
     ],
@@ -325,6 +371,7 @@ function buildReviewTask({ task, translation, paths }) {
       : null,
     steps: task.source.steps.map((sourceStep) => {
       const step = translatedById.get(sourceStep.step_id) || {}
+      const rule = sourceStep.answer_rule_parameters || null
       return {
         step_id: sourceStep.step_id,
         slug: sourceStep.slug,
@@ -332,9 +379,12 @@ function buildReviewTask({ task, translation, paths }) {
         source: sourceStep,
         translation: step,
         // Сервер отдаёт игроку объединение: варианты локали + варианты источника.
-        accepted_answers: [...new Set([...(step.answer_variants || []), ...sourceStep.answer_variants])],
+        accepted_answers: EXACT_ANSWER_TYPES.has(sourceStep.answer_type)
+          ? [...new Set([...(step.answer_variants || []), ...sourceStep.answer_variants])]
+          : [sourceStep.answer_rule || describeStructuredAnswerRule(rule)].filter(Boolean),
         // У range/approx вариантов нет — верное число задано правилом (задания до этого поля его не несут).
         answer_rule: sourceStep.answer_rule || '',
+        answer_rule_parameters: rule,
       }
     }),
   }
@@ -352,11 +402,14 @@ module.exports = {
   buildTask,
   collectUiLabels,
   describeAnswerRule,
+  describeStructuredAnswerRule,
   loadGlossary,
   parseGlossary,
   planSteps,
   readJsonFile,
+  readQuestUiStrings,
   relative,
+  sourceAnswerRule,
   sourceFromBundle,
   writeJsonFile,
 }

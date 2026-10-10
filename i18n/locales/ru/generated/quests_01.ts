@@ -1,4 +1,11 @@
 export const questsGenerated1 = {
+  "localeServing.versions": "Языковые версии квеста",
+  "localeServing.unavailableTitle": "Эта версия квеста недоступна",
+  "localeServing.unavailableDescription": "Перевод снят с публикации или ещё не готов. Откройте русскую версию либо повторите проверку позже.",
+  "localeServing.temporaryTitle": "Не удалось проверить языковую версию",
+  "localeServing.temporaryDescription": "Проверка публикации временно недоступна. Повторите попытку.",
+  "localeServing.retry": "Повторить проверку",
+  "localeServing.ruSource": "Открыть русскую версию",
   "components.quests.QuestFullMap.routeStatus.bikeBuildFailed": "Не удалось построить реальный велосипедный маршрут.",
   "components.quests.QuestFullMap.routeStatus.bikeLoading": "Строим велосипедный маршрут по дорогам",
   "components.quests.QuestFullMap.routeStatus.bikeReady": "Велосипедный маршрут готов",

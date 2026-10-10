@@ -1,18 +1,21 @@
 import { imageEffectFromWorkerStyle, assertWorkerImageEffect, type WorkerImageEffect, type WorkerColorFilter } from '@/services/pdf-export/segments/workerImageEffects'
 import { createReadStream } from 'node:fs'
 import { createHash } from 'node:crypto'
-import { access, writeFile } from 'node:fs/promises'
+import { access } from 'node:fs/promises'
+import { publishImmutableFile } from './immutableFile'
 import { createRequire } from 'node:module'
 import { dirname, resolve } from 'node:path'
 import type { Browser, BrowserContext, Page } from 'playwright'
 import { imageSize } from 'image-size'
 import { Parser } from 'htmlparser2'
 import { BOOK_SEGMENT_LIMITS } from '@/services/pdf-export/segments/types'
-import { PRINT_ASSET_RECIPE, PRINT_VARIANT_RECIPE, PRINT_ORIENTED_VARIANT_RECIPE, assertPrintOrientedBinding, assertNoPrintOrientationBinding, assertPrintVariantBinding, assertPrintResourceBinding, type PrintSourcePolicy, type PreparedPrintResources, type PrintEncoderIdentity, type PrintResourceBinding } from '@/services/pdf-export/segments/printAssetsTypes'
+import { PRINT_ASSET_RECIPE, PRINT_DESCRIPTOR_MAX_BYTES, PRINT_VARIANT_RECIPE, PRINT_ORIENTED_VARIANT_RECIPE, assertPrintOrientedBinding, assertNoPrintOrientationBinding, assertPrintVariantBinding, assertPrintResourceBinding, type PrintSourcePolicy, type PreparedPrintResources, type PrintEncoderIdentity, type PrintResourceBinding } from '@/services/pdf-export/segments/printAssetsTypes'
 import type { BookSegmentSource } from '@/services/pdf-export/segments/renderSegment'
 import { canonicalJson, makePrivateDirectory, privatePath, readBoundedBytes, sha256, verifyFile } from './filesystem'
 import { loadAssetDescriptor, SNAPSHOT_ASSET_ORIGIN } from './snapshot'
 import type { RendererResourceProfile } from './measurement'
+import type { PlanningStorage } from './planningStorage'
+import type { BookMediaChunk } from '@/types/bookDocument'
 import { normalizePrintOrientation, readPrintOrientation, orientedPrintDimensions, printOrientationMatrix } from './printOrientation'
 
 const SOURCE_URL = /https:\/\/book-snapshot\.invalid\/assets\/([a-f0-9]{64})/g
@@ -215,6 +218,8 @@ export async function encodePrintImage({ width, height, alphaPossible, quality, 
 }
 
 export class PrintAssetCache {
+  private planning?: PlanningStorage
+  bindPlanning(storage: PlanningStorage): void { this.planning = storage }
   private constructor(private root: string, private indexRoot: string, private context: BrowserContext, private page: Page,
     readonly identity: PrintEncoderIdentity, private profile: RendererResourceProfile) {}
   private activeBytes?: Buffer
@@ -246,7 +251,8 @@ export class PrintAssetCache {
   async close(): Promise<void> { await this.context.close() }
 
   private async source(checksum: string, policy: PrintSourcePolicy = 3) {
-    const chunk = await loadAssetDescriptor(this.indexRoot, checksum)
+    const chunk = this.planning ? await this.planning.readIndex<BookMediaChunk>(`assets/${checksum}.json`) : await loadAssetDescriptor(this.indexRoot, checksum)
+    if (!chunk) throw new Error('WORKER_PLANNING_COMMITTED_REFERENCE_INVALID')
     if (chunk.checksum !== checksum || chunk.size_bytes > this.profile.encoded_resource_bytes) throw new Error('SNAPSHOT_IMAGE_ENCODED_BUDGET_EXCEEDED')
     const file = await verifyFile(this.root, chunk)
     const bytes = await readBoundedBytes(file, this.profile.encoded_resource_bytes)
@@ -265,7 +271,7 @@ export class PrintAssetCache {
     const key = sha256(canonicalJson(variant ? [binding.original_checksum, binding.effect, policyHash, this.identityHash] : [binding.original_checksum, policyHash, this.identityHash]))
     if ((variant && binding.variant_hash !== key) || binding.descriptor_ref !== `print-cache/${key}.json`) throw new Error('PRINT_RESOURCE_BINDING_MISMATCH')
     if (binding.recipe_hash !== policyHash || binding.encoder_identity_hash !== this.identityHash) throw new Error('PRINT_RESOURCE_BINDING_MISMATCH')
-    const descriptorBytes = await readBoundedBytes(await privatePath(this.indexRoot, binding.descriptor_ref))
+    const descriptorBytes = await this.readResource(binding.descriptor_ref, binding.descriptor_checksum, PRINT_DESCRIPTOR_MAX_BYTES)
     if (sha256(descriptorBytes) !== binding.descriptor_checksum) throw new Error('PRINT_RESOURCE_INTEGRITY_FAILED')
     const descriptor = JSON.parse(descriptorBytes.toString('utf8')) as PrintDescriptor
     const expected = { ...binding } as Partial<PrintResourceBinding>
@@ -292,7 +298,7 @@ export class PrintAssetCache {
       (binding.mode === 'passthrough' && (source.bytes[0] !== 0xff || source.bytes[1] !== 0xd8 || source.bytes.length > PRINT_ASSET_RECIPE.jpeg_passthrough_bytes || Math.max(source.orientedWidth, source.orientedHeight) > PRINT_ASSET_RECIPE.max_long_edge || binding.width !== source.orientedWidth || binding.height !== source.orientedHeight)) ||
       (binding.mode === 'encoded' && (binding.width !== target.width || binding.height !== target.height || binding.mime !== (descriptor.has_source_alpha || descriptor.has_output_alpha ? 'image/png' : 'image/jpeg') || binding.alpha_canvas_pixels !== (alpha.alpha_possible ? Math.min(2400, oriented ? source.width : descriptor.oriented_width) * Math.min(16, oriented ? source.height : descriptor.oriented_height) : 0) || binding.alpha_scratch_bytes !== binding.alpha_canvas_pixels * 4))) throw new Error('PRINT_RESOURCE_BINDING_MISMATCH')
     checkPrintWorkingBudget([binding], this.profile)
-    const bytes = await readBoundedBytes(await privatePath(this.indexRoot, binding.served_file_ref), this.profile.encoded_resource_bytes)
+    const bytes = await this.readResource(binding.served_file_ref, binding.served_checksum, this.profile.encoded_resource_bytes)
     const dimensions = imageSize(bytes.subarray(0, 65_536))
     if (dimensions.type !== (binding.mime === 'image/jpeg' ? 'jpg' : 'png') || bytes.length !== binding.encoded_bytes || sha256(bytes) !== binding.served_checksum || dimensions.width !== (binding.mode === 'passthrough' ? source.width : binding.width) || dimensions.height !== (binding.mode === 'passthrough' ? source.height : binding.height) || binding.served_pixels !== binding.width * binding.height ||
       (binding.mode === 'passthrough' && binding.served_checksum !== binding.original_checksum)) throw new Error('PRINT_RESOURCE_INTEGRITY_FAILED')
@@ -311,8 +317,11 @@ export class PrintAssetCache {
     const key = sha256(canonicalJson(effect ? [checksum, effect, policyHash, this.identityHash] : [checksum, policyHash, this.identityHash]))
     const descriptorRef = `print-cache/${key}.json`
     let existing = false
-    try { await access(await privatePath(this.indexRoot, descriptorRef)); existing = true }
-    catch (error) { if (!hasErrno(error, 'ENOENT')) throw error }
+    if (this.planning) existing = !!await this.planning.readIndex<PrintDescriptor>(descriptorRef)
+    else {
+      try { await access(await privatePath(this.indexRoot, descriptorRef)); existing = true }
+      catch (error) { if (!hasErrno(error, 'ENOENT')) throw error }
+    }
     if (existing) {
       const bytes = await readBoundedBytes(await privatePath(this.indexRoot, descriptorRef))
       const descriptor = JSON.parse(bytes.toString('utf8')) as PrintDescriptor
@@ -369,26 +378,51 @@ export class PrintAssetCache {
         transfer_bytes: result ? Math.ceil(bytes.length / 3) * 4 : 0, pixel_scratch_bytes: passthrough ? 0 : target.width * Math.min(16, target.height) * 4,
         recipe_hash: policyHash, encoder_identity_hash: this.identityHash }
       checkPrintWorkingBudget([{ ...binding, descriptor_ref: descriptorRef, descriptor_checksum: '0'.repeat(64) }], this.profile)
-      // Recheck the existing directory and any existing leaf immediately before exclusive creation.
-      const servedPath = resolve(await privatePath(this.indexRoot, 'print-assets'), servedChecksum)
-      try { await privatePath(this.indexRoot, servedRef) }
-      catch (error) { if (!hasErrno(error, 'ENOENT')) throw error }
-      try { await writeFile(servedPath, bytes, { flag: 'wx', mode: 0o600 }) }
-      catch (error) {
-        if (!hasErrno(error, 'EEXIST')) throw error
-        const existing = await readBoundedBytes(await privatePath(this.indexRoot, servedRef), this.profile.encoded_resource_bytes)
-        if (sha256(existing) !== servedChecksum) throw new Error('PRINT_RESOURCE_INTEGRITY_FAILED')
-      }
       const descriptor: PrintDescriptor = { schema_version: oriented ? 3 : effect ? 2 : 1, original_checksum: checksum, original_file_ref: source.chunk.file_ref,
         original_width: source.width, original_height: source.height, oriented_width: orientedDimensions.width, oriented_height: orientedDimensions.height,
         alpha_possible: alpha.alpha_possible, has_source_alpha: result?.sourceHasAlpha ?? false, has_output_alpha: result?.hasAlpha ?? false, recipe: printRecipe(policy), encoder_identity: this.identity, binding }
       const descriptorBytes = canonicalJson(descriptor)
-      await writeFile(resolve(await privatePath(this.indexRoot, 'print-cache'), `${key}.json`), descriptorBytes, { flag: 'wx', mode: 0o600 })
+      const resourceFiles = [
+        { ref: servedRef, checksum: servedChecksum, size_bytes: bytes.length },
+        { ref: descriptorRef, checksum: sha256(descriptorBytes), size_bytes: Buffer.byteLength(descriptorBytes) },
+      ]
+      if (this.planning) {
+        let records = 0; let total = 0
+        for (const file of resourceFiles) {
+          const trusted = await this.planning.receipt(file.ref)
+          if (trusted) {
+            if (trusted.checksum !== file.checksum || trusted.size_bytes !== file.size_bytes) throw new Error('PRINT_RESOURCE_INTEGRITY_FAILED')
+          } else { records++; total += file.size_bytes }
+        }
+        // A resumable cache generation must contain complete pairs, never a
+        // binary that consumed the final slot before its descriptor was admitted.
+        this.planning.admit(records, total)
+      }
+      try { await this.publishResource(servedRef, bytes, this.profile.encoded_resource_bytes) }
+      catch (error) {
+        if (error instanceof Error && error.message === 'WORKER_IMMUTABLE_INTEGRITY_FAILED') throw new Error('PRINT_RESOURCE_INTEGRITY_FAILED')
+        throw error
+      }
+      await this.publishResource(descriptorRef, descriptorBytes, PRINT_DESCRIPTOR_MAX_BYTES)
       return { ...binding, descriptor_ref: descriptorRef, descriptor_checksum: sha256(descriptorBytes) }
     } finally {
       await this.page.goto('about:blank'); await this.page.requestGC()
       this.activeBytes = undefined; this.activeChecksum = undefined
     }
+  }
+
+  private async publishResource(ref: string, bytes: string | Buffer, maximum: number): Promise<void> {
+    const size = typeof bytes === 'string' ? Buffer.byteLength(bytes) : bytes.length
+    const trusted = await this.planning?.receipt(ref)
+    if (!trusted) this.planning?.admit(1, size)
+    const receipt = await publishImmutableFile(this.indexRoot, ref, bytes, maximum)
+    if (trusted && (trusted.checksum !== receipt.checksum || trusted.size_bytes !== receipt.size_bytes)) throw new Error('PRINT_RESOURCE_INTEGRITY_FAILED')
+    if (!trusted) this.planning?.recordExternalReceipt({ ref, ...receipt })
+  }
+
+  private async readResource(ref: string, checksum: string, maximum: number): Promise<Buffer> {
+    if (!this.planning) return readBoundedBytes(await privatePath(this.indexRoot, ref), maximum)
+    return this.planning.readByRef(ref, checksum, maximum)
   }
 
   async prepareHtml(html: string, pinned?: BookSegmentSource, policy: PrintSourcePolicy = 3): Promise<PreparedPrintResources> {

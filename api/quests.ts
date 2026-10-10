@@ -21,6 +21,7 @@ import {
 import { getActiveQueryClient } from '@/api/activeQueryClient';
 import { queryKeys } from '@/api/queryKeys';
 import { getQuestContentLocale, withQuestLang } from '@/api/questContentLocale';
+import { buildQuestCityLandingGroups, normalizeQuestCityLegacyIds } from '@/utils/questCityAlias';
 
 // ===================== ТИПЫ (соответствуют OpenAPI схеме бэкенда) =====================
 
@@ -57,6 +58,8 @@ export type ApiQuestAnswerPattern = {
 /** Город квеста (из бэкенда) */
 export type ApiQuestCity = {
     id: number;
+    /** Historical city IDs that resolve to this canonical city. Missing on old DTOs. */
+    legacy_ids?: number[];
     name: string | null;
     lat: ApiQuestCoordinate;
     lng: ApiQuestCoordinate;
@@ -138,6 +141,8 @@ export type ApiQuestMeta = {
     title: string;
     points: number | string; // readOnly from backend
     city_id: string; // readOnly
+    /** Historical city IDs that resolve to city_id. Missing on old DTOs/cache. */
+    city_legacy_ids?: number[];
     city_name: string; // readOnly
     /**
      * Публичный alias города (#2211): единственный источник `/quests/<alias>`.
@@ -217,11 +222,13 @@ export function withQuestMetaDefaults(meta: ApiQuestMeta): ApiQuestMeta {
     ]);
     return withQuestCompletionMock({
         ...meta,
+        city_legacy_ids: normalizeQuestCityLegacyIds(meta.city_legacy_ids),
         rating_avg: meta.rating_avg ?? null,
         rating_count: meta.rating_count ?? 0,
         user_rating: meta.user_rating ?? null,
         completions_count: meta.completions_count ?? 0,
-        personal_status_unavailable: typeof meta.is_completed_by_me !== 'boolean',
+        personal_status_unavailable: meta.personal_status_unavailable === true
+            || typeof meta.is_completed_by_me !== 'boolean',
         is_completed_by_me: meta.is_completed_by_me ?? false,
         first_completer: meta.first_completer ?? null,
     });
@@ -282,6 +289,7 @@ function normalizeQuestBundle(bundle: ApiQuestBundle): ApiQuestBundle {
 
     return {
         ...bundle,
+        ...(bundle.city ? { city: { ...bundle.city, legacy_ids: normalizeQuestCityLegacyIds(bundle.city.legacy_ids) } } : {}),
         cover_url: bundle.cover_url ? normalizeMediaUrl(bundle.cover_url) : bundle.cover_url,
         steps: normalizedSteps,
         intro: normalizedIntro,
@@ -809,7 +817,12 @@ export async function fetchQuestsByCity(
         return list.map(withQuestMetaDefaults);
     } catch (error) {
         const cached = await readCachedQuestsList(locale);
-        if (cached) return cached.filter((quest) => String(quest.city_id) === String(cityId));
+        if (cached) {
+            const canonical = cached.filter((quest) => String(quest.city_id) === String(cityId));
+            const cityQuests = canonical.length ? canonical : buildQuestCityLandingGroups(cached)
+                .find((group) => group.legacyCityIds.includes(String(cityId)))?.quests ?? [];
+            return cityQuests.map(withQuestMetaDefaults);
+        }
         throw error;
     }
 }
@@ -871,7 +884,7 @@ export async function fetchQuestByQuestId(
         // отдаёт своё сообщение, а не `name`), поэтому одного `name` мало.
         if (options.signal?.aborted || (err as { name?: string } | null)?.name === 'AbortError') throw err;
         const cached = await readCachedQuestBundle(questId);
-        if (cached) return cached;
+        if (cached) return normalizeQuestBundle(cached);
         throw err;
     }
 }

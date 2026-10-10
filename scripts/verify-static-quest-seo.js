@@ -497,8 +497,8 @@ function hasQuestJsonLd(html) {
 }
 
 /** Every file generate-seo-pages.js must have written for one quest */
-function expectedQuestFiles(quest, cityAliasMap) {
-  return questRouteVariants(quest, cityAliasMap).flatMap((variant) => [
+function expectedQuestFiles(quest, cityAliasMap, cityGroups) {
+  return questRouteVariants(quest, cityAliasMap, cityGroups).flatMap((variant) => [
     path.join('quests', variant.cityId, `${variant.questId}.html`),
     path.join('quests', variant.cityId, variant.questId, 'index.html'),
   ])
@@ -559,7 +559,7 @@ function missingLandingQuestLinks(html, questPaths) {
 function expectedCityLandingFiles(quests, cityAliasMap) {
   const files = new Set()
   for (const city of buildQuestCityLandingGroups(quests, cityAliasMap)) {
-    for (const segment of [...city.cityIds, city.segment, ...city.legacyAliases]) {
+    for (const segment of [...city.cityIds, ...city.legacyCityIds, city.segment, ...city.legacyAliases]) {
       files.add(path.join('quests', segment, 'index.html'))
     }
   }
@@ -737,7 +737,7 @@ async function main() {
   // 1. Every quest page (canonical route + city alias route) exists on disk.
   for (const quest of quests) {
     const route = questRouteKey(quest)
-    for (const relativePath of expectedQuestFiles(quest, cityAliasMap)) {
+    for (const relativePath of expectedQuestFiles(quest, cityAliasMap, cityGroups)) {
       if (!fs.existsSync(path.join(DIST_DIR, relativePath))) {
         failures.push(`${route.path}: missing file ${relativePath}`)
       }

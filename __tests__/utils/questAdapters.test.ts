@@ -8,7 +8,7 @@ import {
   adaptMeta,
   adaptBundle,
 } from '@/utils/questAdapters';
-import type { ApiQuestMeta } from '@/api/quests';
+import type { ApiQuestMeta, ApiQuestCity, ApiQuestBundle } from '@/api/quests';
 
 const makeQuestMeta = (overrides: Partial<ApiQuestMeta> = {}): ApiQuestMeta => ({
   id: 1,
@@ -144,7 +144,7 @@ describe('questAdapters', () => {
       expect(bullets('и 6')).toBe(false);
     });
 
-    it('exact_any: прод-словари шагов 136 и 372 принимают белорусский ввод', () => {
+    it('exact_any: текущие словари шагов 136 и 372 нормализуют ввод без добавления отсутствующих вариантов', () => {
       const fortress = require('@/scripts/brest-fortress-quest-data.js') as Array<{
         steps: Array<{ step_id: string; answer_pattern: { type: string; value: string } }>;
       }>;
@@ -159,7 +159,10 @@ describe('questAdapters', () => {
       expect(bullets('ад куль')).toBe(true);
       expect(bullets('от снега')).toBe(false);
       expect(shopCheck('кафэ і магазіны')).toBe(true);
-      expect(shopCheck('крамы і магазіны')).toBe(true);
+      expect(shopCheck('магазіны')).toBe(true);
+      // The source now asks for one establishment type and no longer lists this
+      // compound answer. Normalization must not invent semantic synonyms.
+      expect(shopCheck('крамы і магазіны')).toBe(false);
       expect(shopCheck('квартиры')).toBe(false);
     });
 
@@ -609,6 +612,28 @@ describe('questAdapters', () => {
   });
 
   describe('adaptCity', () => {
+    it('keeps the canonical ID and sanitized legacy IDs for localized cities', () => {
+      expect(adaptCity({
+        id: 19, name: 'Homel', name_canonical: 'Гомель', lat: 52, lng: 31,
+        legacy_ids: [92, 92, '11', -1, 0, null, 1.5, Number.NaN, Number.MAX_SAFE_INTEGER + 1],
+      } as unknown as ApiQuestCity)).toMatchObject({
+        id: 19, name: 'Homel', nameCanonical: 'Гомель', legacyIds: [92],
+      });
+      expect(adaptCity({ id: 1, name: 'Kraków', lat: 50, lng: 19 }).legacyIds).toEqual([]);
+    });
+
+    it('carries detail legacy IDs through the full bundle adapter', () => {
+      const bundle = {
+        id: 1, quest_id: 'grodno', title: 'Quest', steps: [], intro: null, storage_key: 'q',
+        finale: { text: '', video_url: null, poster_url: null },
+        city: { id: 11, name: 'Grodno', lat: 53, lng: 23, legacy_ids: [91] },
+        content_locale: 'pl',
+      } satisfies ApiQuestBundle;
+      expect(adaptBundle(bundle)).toMatchObject({ contentLocale: 'pl', city: { id: 11, legacyIds: [91] } });
+      const oldCity = { id: 11, name: 'Grodno', lat: 53, lng: 23 };
+      expect(adaptBundle({ ...bundle, city: oldCity }).city?.legacyIds).toEqual([]);
+    });
+
     it('converts API city with string coords', () => {
       const result = adaptCity({ name: 'Kraków', lat: '50.0617', lng: '19.9383' } as any);
       expect(result.name).toBe('Kraków');
@@ -641,6 +666,16 @@ describe('questAdapters', () => {
   });
 
   describe('adaptMeta', () => {
+    it('keeps canonical and legacy city identity across locale and old DTOs', () => {
+      expect(adaptMeta(makeQuestMeta({
+        city_id: '19', city_name: 'Homel', city_name_canonical: 'Гомель', content_locale: 'pl',
+        city_legacy_ids: [92, 92, '11', 0, -1, Number.NaN],
+      } as unknown as Partial<ApiQuestMeta>))).toMatchObject({
+        cityId: '19', cityLegacyIds: [92], cityName: 'Homel', contentLocale: 'pl',
+      });
+      expect(adaptMeta(makeQuestMeta()).cityLegacyIds).toEqual([]);
+    });
+
     it('keeps a missing personal status unknown during identity refresh', () => {
       const identityPending: Partial<ApiQuestMeta> = makeQuestMeta({ completions_count: 1 });
       delete identityPending.is_completed_by_me;

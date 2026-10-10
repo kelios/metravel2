@@ -2583,6 +2583,7 @@ function buildQuestCityLandingModel(quests, cityAliasMap, travels = [], questBun
       segment: group.segment,
       cityId: group.cityId,
       cityIds: group.cityIds,
+      legacyCityIds: group.legacyCityIds,
       legacyAliases: group.legacyAliases,
       name: group.cityName,
       countryName: group.countryName,
@@ -4385,7 +4386,7 @@ async function main() {
         const reasons = (rejectedQuestPages.get(route.path) || []).join('; ');
         noindexQuestPages.push(`${route.path} (${reasons})`);
       }
-      const routeVariants = questRouteVariants(quest, questCityAliasMap);
+      const routeVariants = questRouteVariants(quest, questCityAliasMap, cityLandingModel);
       for (const variant of routeVariants) {
         writePairedPage(path.join(DIST_DIR, 'quests', variant.cityId, `${variant.questId}.html`), path.join(DIST_DIR, 'quests', variant.cityId, variant.questId, 'index.html'), html);
       }
@@ -4474,7 +4475,7 @@ async function main() {
         const reasons = (rejectedCityPages.get(landingPath) || []).join('; ');
         noindexCityLandings.push(`${landingPath} (${city.name || city.cityId}: ${reasons})`);
       }
-      for (const segment of [...city.cityIds, city.segment, ...city.legacyAliases]) {
+      for (const segment of [...city.cityIds, ...city.legacyCityIds, city.segment, ...city.legacyAliases]) {
         const relativePath = path.join('quests', segment, 'index.html');
         if (writtenCityLandingPaths.has(relativePath)) continue;
         writeFileSafe(path.join(DIST_DIR, relativePath), cityHtml);

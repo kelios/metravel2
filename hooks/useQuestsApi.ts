@@ -152,9 +152,10 @@ export function useQuestsPreview(limit: number, opts?: { enabled?: boolean }) {
 }
 
 /** Хук для загрузки полного бандла квеста по quest_id */
-export function useQuestBundle(questId: string | undefined) {
-    const locale = useQuestContentLocale();
-    const { data, isPending, isFetching, error, refetch } = useQuestBundleQuery(questId);
+export function useQuestBundle(questId: string | undefined, routeLocale?: string) {
+    const activeLocale = useQuestContentLocale();
+    const locale = routeLocale ?? activeLocale;
+    const { data, isPending, isFetching, error, refetch } = useQuestBundleQuery(questId, routeLocale);
     // #1562/#418: маршрут по `loading` делает ранний return LoadingState, и на
     // кадре гидратации статического HTML визард (clientOnly-раскладка) не
     // должен монтироваться. `isPending` этого не гарантирует: посадочная города

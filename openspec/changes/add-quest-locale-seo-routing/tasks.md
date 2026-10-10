@@ -1,15 +1,15 @@
 ## 1. Acceptance and ownership prerequisites
 
 - [x] 1.1 Record owner acceptance of the proposed quest-only prefixes, unchanged RU numeric canonicals, RU-only city first stage and backend gateway/activation dependency (design D1–D5); do not interpret planning validation as approval. Accepted by the owner 2026-10-09: D1 language prefixes and D5 backend-owned live gateway, recorded on #2208.
-- [ ] 1.2 Backend owner confirms real shared serving root, authoritative per-response publication snapshot, private builder revision receipt, anonymous serving projection schema, cache/conditional-request chain and gateway feasibility; agree A/B/C/D interfaces before their parallel implementation and settle any contract change before apply.
+- [x] 1.2 Backend owner confirms real shared serving root, authoritative per-response publication snapshot, private builder revision receipt, anonymous serving projection schema, cache/conditional-request chain and gateway feasibility; agree A/B/C/D interfaces before their parallel implementation and settle any contract change before apply. Confirmed by the approved v1 handoff on #2364, 2026-10-10; interface/fixtures read from backend origin/master. Exposure remains disabled pending B/E release acceptance.
 - [x] 1.3 After acceptance, refresh Problem Memory and turn `implementation-cards.md` drafts into linked board cards with separate FE/BE owners; require a later explicit apply request before source work. Created 2026-10-09 after an all-status board search (no duplicates): A #2364, B #2365, C #2362, D #2363, E #2366.
 
 ## 2. Frontend route, locale and metadata model
 
-- [ ] 2.1 Implement a shared quest canonical/locale/eligible-version model preserving RU numeric paths and all existing aliases; cover Stable language-specific quest URLs scenarios.
-- [ ] 2.2 Reuse shared detail behavior behind a validated web prefixed route adapter; bind initial web boot/resources and exact bundle query to URL locale before mount; preserve native and non-quest preference lifecycle (URL-bound rendered language).
+- [x] 2.1 Implement a shared quest canonical/locale/eligible-version model preserving RU numeric paths and all existing aliases; cover Stable language-specific quest URLs scenarios. A #2364 source and regression tests added 2026-10-10; execution remains pending under 5.2.
+- [x] 2.2 Reuse shared detail behavior behind a validated web prefixed route adapter; bind initial web boot/resources and exact bundle query to URL locale before mount; preserve native and non-quest preference lifecycle (URL-bound rendered language). A #2364 uses the existing catch-all's web sibling to keep the native graph unchanged; checks/runtime remain pending under 5–6.
 - [ ] 2.3 Drive SSG and hydrated metadata/JSON-LD from the shared model; one self-canonical, effective reciprocal self-inclusive alternates and RU x-default; preserve print/parameter policy (Canonical and reciprocal alternate clusters).
-- [ ] 2.4 Add explicit current/available language anchors through the existing language control, full labels and unavailable-page RU navigation; cover all app-owned keys in RU/BE/UK/PL/EN (Explicit language navigation).
+- [x] 2.4 Add explicit current/available language anchors through the existing language control, full labels and unavailable-page RU navigation; cover all app-owned keys in RU/BE/UK/PL/EN (Explicit language navigation). A #2364 implementation and all-locale resources added; independent review and check execution are tracked separately.
 
 ## 3. Frontend SSG package and publication checks
 

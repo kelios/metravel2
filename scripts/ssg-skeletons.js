@@ -180,16 +180,29 @@ function buildSkeletonCSS() {
 /* #2216: keep the LCP shell opaque, but expose the existing root dock below it.
    A root dock must actually exist; unrelated shells and desktop keep inset:0. */
 @media(max-width:1279.98px){body:has(#root [data-testid="web-mobile-dock-shell"]) #ssg-skeleton:has(.ssg-home-bar),body:has(#root [data-testid="web-mobile-dock-shell"]) #ssg-skeleton:has(.ssg-travel-hero){bottom:calc(56px + env(safe-area-inset-bottom,0px))}}
+/* #2359: while the Home shell is up it alone paints the first screen. React copies
+   under it (same hero frame, same copy) must not paint earlier or in the same frame,
+   otherwise paint order, not size, decides the LCP entry. Only the #2216 root dock
+   stays painted; React copies paint on teardown and win only if strictly larger. */
+body:has(#ssg-skeleton .ssg-home-bar) #root{visibility:hidden}
+body:has(#ssg-skeleton .ssg-home-bar) #root [data-testid="web-mobile-dock-shell"]{visibility:visible}
 .ssg-header-more{display:none;align-items:center;justify-content:center;flex:0 0 44px;width:44px;height:44px;margin-left:auto;color:inherit;text-decoration:none}
 @media(max-width:1279.98px){.ssg-header-more{display:inline-flex}}
 .ssg-home-shell{width:100%;max-width:1200px;margin:0 auto;padding:0 16px}
 .ssg-home-book{display:flex;flex-direction:column;gap:14px;width:100%}
-.ssg-home-page{display:flex;flex-direction:column;align-items:stretch;gap:12px;padding:44px 20px 20px;border-radius:24px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border}}
+/* #2359: below 768px the text twins of the React hero keep the same column, typography
+   and RN-web Text model (19px + 1px border = heroSection padding 20; subtitle
+   letter-spacing .1px; white-space:pre-wrap keeps the trailing space of a wrapped line
+   in the text box as RN-web does; small phones: container 8px and a 28/34 title), so a
+   React copy never paints a larger LCP candidate than the shell. 768-1279px is not
+   mirrored: React text is larger there (title 36/44, subtitle 17/27). */
+.ssg-home-page{display:flex;flex-direction:column;align-items:stretch;gap:12px;padding:44px 19px 20px;border-radius:24px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border}}
 .ssg-home-chapter{display:none}
-.ssg-home-title{margin:0;font:700 32px/40px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;letter-spacing:-0.8px;color:${COLORS.light.text};max-width:640px;text-align:left}
+.ssg-home-title{margin:0;font:700 32px/40px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;letter-spacing:-0.8px;color:${COLORS.light.text};max-width:640px;text-align:left;white-space:pre-wrap;overflow-wrap:break-word}
 .ssg-home-title .ssg-accent{display:block;color:${COLORS.light.accent};font-weight:800}
 .ssg-home-sub-desktop{display:none}
-.ssg-home-sub{margin:0;font:400 16px/24px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${COLORS.light.textMuted};max-width:520px;text-align:left}
+.ssg-home-sub{margin:0;font:400 16px/24px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${COLORS.light.textMuted};max-width:520px;text-align:left;letter-spacing:.1px;white-space:pre-wrap;overflow-wrap:break-word}
+@media(max-width:359.98px){.ssg-home-shell{padding:0 8px}.ssg-home-title{font-size:28px;line-height:34px}}
 .ssg-home-search-row{display:flex;gap:8px;height:46px}
 /* Контролы шелла несут реальные подписи, а не пустые серые плашки: до гидрации
    первый экран должен читаться как страница, а не как скелетон (#1405). */

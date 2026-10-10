@@ -394,6 +394,23 @@ describe('upload', () => {
     )
   })
 
+  it.each([
+    ['range', '{"min":6,"max":8}', '{"min":6,"max":9}'],
+    ['approx', '{"target":82,"tolerance":5}', '{"target":83,"tolerance":5}'],
+    ['any_text', '{"min_length":3}', '{"min_length":4}'],
+  ])('upload --publish не принимает старый вердикт после изменения только %s', async (type, before, after) => {
+    const withPattern = (value: string) => ({ steps: makeBundle().steps.map((step) => step.id === TOWER_ID
+      ? { ...step, answer_pattern: { type, value } }
+      : step) })
+    bundlePatch = withPattern(before)
+    await prepareAndTranslate()
+    writeReview(makePolishTranslation())
+    bundlePatch = withPattern(after)
+    requests = []
+    await expect(cli(['upload', ...QUEST, '--publish'])).rejects.toThrow('задание от прежней версии источника')
+    expect(writes()).toEqual([])
+  })
+
   it('перевод с потерянным шагом не пишется даже черновиком', async () => {
     const broken = makePolishTranslation()
     broken.steps.pop()
@@ -548,6 +565,30 @@ describe('sweep', () => {
     bundlePatch = { title: 'Квест по Кракову: демо, новая редакция' }
     await cli(['sweep', 'demo-quest', '--json'])
     expect(pairOf(printed(), 'en')).toMatchObject({ status: 'no_task', details: [expect.stringContaining('прежней версии источника')] })
+  })
+
+  it('изменение только границы range после prepare запрещает публикацию прежнего вердикта', async () => {
+    await prepareAndTranslate()
+    writeReview(makePolishTranslation())
+    bundlePatch = { steps: makeBundle().steps.map((step) => step.id === TOWER_ID
+      ? { ...step, answer_pattern: { type: 'range', value: '{"min":6,"max":9}' } }
+      : step) }
+    requests = []
+    await cli(['sweep', 'demo-quest', '--json'])
+    expect(pairOf(printed(), 'pl')).toMatchObject({ status: 'no_task', details: [expect.stringContaining('прежней версии источника')] })
+    expect(writes()).toEqual([])
+  })
+
+  it('старое задание без параметров range требует prepare вместо публикации', async () => {
+    await prepareAndTranslate()
+    const task = readArtifact('.task.json')
+    for (const step of task.source.steps) delete step.answer_rule_parameters
+    writeArtifact('.task.json', task)
+    writeReview(makePolishTranslation())
+    requests = []
+    await cli(['sweep', 'demo-quest', '--json'])
+    expect(pairOf(printed(), 'pl')).toMatchObject({ status: 'no_task', details: [expect.stringContaining('прежней версии источника')] })
+    expect(writes()).toEqual([])
   })
 
   it('задание от прежней версии при полном опубликованном переводе — published, а не круг «prepare»', async () => {

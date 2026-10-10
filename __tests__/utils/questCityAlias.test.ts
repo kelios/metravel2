@@ -4,7 +4,65 @@ const {
   findNearbyQuestCityGroups,
   questRouteVariants,
   resolveQuestCitySegment,
+  normalizeQuestCityLegacyIds,
 } = require('@/utils/questCityAlias')
+
+describe('retired quest city IDs', () => {
+  const quests = [
+    { quest_id: 'gomel-palace', city_id: '19', city_alias: 'gomel', city_legacy_ids: [92] },
+    { quest_id: 'gomel-kids-lost-playbill', city_id: '19', city_alias: 'gomel', city_legacy_ids: [92] },
+    { quest_id: 'grodno-royal', city_id: '11', city_alias: 'grodno', city_legacy_ids: [91] },
+    { quest_id: 'grodno-kids-zveri', city_id: '11', city_alias: 'grodno', city_legacy_ids: [91] },
+    { quest_id: 'krakow-dragon', city_id: '1', city_alias: 'krakow' },
+  ]
+
+  it.each([['92', '19', 'gomel'], ['91', '11', 'grodno']])(
+    'resolves retired %s to the complete canonical city %s', (legacy, canonical, alias) => {
+      expect(resolveQuestCitySegment(legacy, quests)).toEqual(resolveQuestCitySegment(canonical, quests))
+      expect(resolveQuestCitySegment(alias, quests)).toEqual(resolveQuestCitySegment(canonical, quests))
+      const group = buildQuestCityLandingGroups([...quests, quests[0]])
+        .find((city: { segment: string }) => city.segment === alias)
+      expect(group.cityIds).toEqual([canonical])
+      expect(group.legacyCityIds).toEqual([legacy])
+      expect(group.quests).toHaveLength(2)
+      for (const quest of group.quests) {
+        expect(questRouteVariants(quest, buildQuestCityAliasMap(quests), buildQuestCityLandingGroups(quests)))
+          .toContainEqual({ cityId: legacy, questId: quest.quest_id, path: `/quests/${legacy}/${quest.quest_id}` })
+      }
+    },
+  )
+
+  it('reads adapted metadata and preserves a DTO predating the fields', () => {
+    const adapted = [{ id: 'gomel-palace', cityId: '19', cityAlias: 'gomel', cityLegacyIds: [92] }]
+    expect(resolveQuestCitySegment('92', adapted)).toMatchObject({ cityId: '19', segment: 'gomel' })
+    expect(resolveQuestCitySegment('1', quests)).toMatchObject({ cityId: '1', segment: 'krakow' })
+    expect(buildQuestCityLandingGroups([quests[4]])[0].legacyCityIds).toEqual([])
+  })
+
+  it('rejects malformed IDs and removes duplicates', () => {
+    expect(normalizeQuestCityLegacyIds([92, 92, 0, -1, 1.5, '91', NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]))
+      .toEqual([92])
+    expect(normalizeQuestCityLegacyIds('92')).toEqual([])
+    expect(normalizeQuestCityLegacyIds(undefined)).toEqual([])
+  })
+
+  it('gives live identities priority over stale legacy claims in resolver and SSG', () => {
+    const catalog = [...quests, { quest_id: 'other-town', city_id: '92', city_alias: 'other' }]
+    const groups = buildQuestCityLandingGroups(catalog)
+    expect(resolveQuestCitySegment('92', catalog)).toMatchObject({ cityId: '92', segment: 'other' })
+    expect(questRouteVariants(quests[0], buildQuestCityAliasMap(catalog), groups)
+      .some((route: { cityId: string }) => route.cityId === '92')).toBe(false)
+  })
+
+  it('does not choose randomly when two cities claim the same retired ID', () => {
+    expect(resolveQuestCitySegment('92', [quests[0], { ...quests[2], city_legacy_ids: [92] }])).toBeNull()
+  })
+
+  it('retains retired IDs even for cities whose explicit API alias is empty', () => {
+    expect(resolveQuestCitySegment('92', [{ ...quests[0], city_alias: '' }]))
+      .toMatchObject({ cityId: '19', segment: '19', alias: null })
+  })
+})
 
 describe('quest city landing groups', () => {
   const quests = [

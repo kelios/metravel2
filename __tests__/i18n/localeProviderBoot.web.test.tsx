@@ -45,6 +45,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 }))
 jest.mock('@/i18n/instance', () => jest.requireActual('@/i18n/instance.web'))
 jest.mock('@/i18n/bootLocale', () => jest.requireActual('@/i18n/bootLocale.web'))
+jest.mock('expo-router', () => ({ usePathname: () => globalThis.window.location.pathname }))
 jest.mock('@/i18n/translate', () => ({
   isWebLocaleLoaded: jest.fn(),
   loadWebLocale: jest.fn(),
@@ -85,6 +86,7 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
   let consoleError: jest.SpyInstance
 
   beforeEach(async () => {
+    window.history.replaceState(null, '', '/')
     await i18n.changeLanguage('ru')
     loadWebLocale.mockReset()
     // По умолчанию каталог к гидратации не загружен (асинхронный путь).
@@ -107,7 +109,7 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
     consoleError.mockRestore()
   })
 
-  const setup = (stored: string | null) => {
+  const setup = (stored: string | null, routePath?: string) => {
     const modules = loadProvider()
     const mounts: string[] = []
     const Screen = ({ label = 'screen' }: { label?: string }) => {
@@ -124,7 +126,12 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
         <Screen />
       </modules.LocaleProvider>,
     )
-    container.innerHTML = serverHtml
+    // Released translated SSG is emitted outside the bundle in its URL locale.
+    // The provider's boundary markers remain the same as the RU static tree.
+    container.innerHTML = routePath
+      ? serverHtml.replace('screen:ru', `screen:${routePath.split('/')[1]}`)
+      : serverHtml
+    if (routePath) window.history.replaceState(null, '', routePath)
     if (stored) window.localStorage.setItem(STORAGE_KEY, stored)
     new Function(getLocaleBootScript())()
     const style = document.createElement('style')
@@ -538,5 +545,165 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
 
     expect(mounts).toEqual(['ru', 'en'])
     expect(container.textContent).toBe('screen:en')
+  })
+
+  it('preloads the URL locale before hydration and mounts once despite a conflicting saved preference', async () => {
+    const preference = JSON.stringify({ version: 1, mode: 'explicit', locale: 'en' })
+    const { Screen, mounts, hydrate } = setup(preference, '/pl/quests/1/krakow-dragon?print=1')
+    const loaded = new Set(['ru'])
+    isWebLocaleLoaded.mockImplementation((locale: string) => loaded.has(locale))
+    loadWebLocale.mockImplementation(async (locale: string) => { loaded.add(locale) })
+
+    expect(getComputedStyle(container.querySelector('p')!).visibility).toBe('visible')
+    await prepareBootLocale()
+    expect(i18n.resolvedLanguage).toBe('pl')
+    await hydrate(<LocaleProvider><Screen /></LocaleProvider>)
+    expect(mounts).toEqual(['pl'])
+    expect(loadWebLocale).toHaveBeenCalledTimes(1)
+    expect(loadWebLocale).toHaveBeenCalledWith('pl')
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe(preference)
+    expect(document.documentElement.lang).toBe('pl')
+    expect(recoverableErrors).toEqual([])
+    expect(hydrationErrors()).toEqual([])
+  })
+
+  it('keeps translated SSG readable and offers localized retry plus an explicit RU address on failure', async () => {
+    const preference = JSON.stringify({ version: 1, mode: 'explicit', locale: 'en' })
+    const { Screen, mounts, hydrate } = setup(preference, '/pl/quests/1/krakow-dragon')
+    loadWebLocale.mockRejectedValue(new Error('locale chunk unavailable'))
+    await prepareBootLocale()
+    await hydrate(<LocaleProvider><Screen /></LocaleProvider>)
+    expect(mounts).toEqual([])
+    expect(container.textContent).toContain('screen:pl')
+    const staticScreen = Array.from(container.querySelectorAll('p')).find((element) => element.textContent === 'screen:pl')!
+    expect(getComputedStyle(staticScreen).visibility).toBe('visible')
+    const recovery = container.querySelector('#locale-boot-recovery')!
+    expect(recovery.getAttribute('lang')).toBe('pl')
+    expect(recovery.textContent).toContain('Nie udało się załadować języka interfejsu.')
+    expect(recovery.querySelector('a')?.getAttribute('href')).toBe('/quests/1/krakow-dragon')
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe(preference)
+    expect(i18n.resolvedLanguage).toBe('ru')
+    expect(recoverableErrors).toEqual([])
+  })
+
+  it('leaves URL-locale SSG visible and has localized recovery even before the React entry exists', () => {
+    const preference = JSON.stringify({ version: 1, mode: 'explicit', locale: 'en' })
+    setup(preference, '/pl/quests/1/krakow-dragon')
+    failChunk('entry-url-locale-broken.js')
+    const recovery = document.querySelector('[data-static-recovery="true"]')!
+    expect(recovery.getAttribute('lang')).toBe('pl')
+    expect(recovery.querySelector('a')?.getAttribute('href')).toBe('/quests/1/krakow-dragon')
+    expect(getComputedStyle(container.querySelector('p')!).visibility).toBe('visible')
+    expect(document.documentElement.classList.contains(LOCALE_BOOT_PENDING_CLASS)).toBe(false)
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe(preference)
+    releaseLocaleBootShell()
+    delete window.__metravelReloadStaleChunk
+  })
+
+  it('keeps Polish public SSG readable during a slow catalogue and mounts once when it arrives', async () => {
+    jest.useFakeTimers()
+    try {
+      const preference = JSON.stringify({ version: 1, mode: 'explicit', locale: 'en' })
+      const { Screen, mounts, hydrate } = setup(preference, '/pl/quests/1/krakow-dragon')
+      const loaded = new Set(['ru'])
+      const catalogue = createDeferred()
+      isWebLocaleLoaded.mockImplementation((locale: string) => loaded.has(locale))
+      loadWebLocale.mockImplementation(async (locale: string) => {
+        await catalogue.promise
+        loaded.add(locale)
+      })
+      const prepared = prepareBootLocale()
+      await act(async () => { jest.advanceTimersByTime(3001) })
+      await prepared
+      await hydrate(<LocaleProvider><Screen /></LocaleProvider>)
+      await act(async () => { jest.advanceTimersByTime(3001) })
+      expect(mounts).toEqual([])
+      expect(container.textContent).toContain('Ładowanie języka interfejsu…')
+      const staticScreen = Array.from(container.querySelectorAll('p')).find((element) => element.textContent === 'screen:pl')!
+      expect(getComputedStyle(staticScreen).visibility).toBe('visible')
+      expect(document.documentElement.lang).toBe('pl')
+
+      await act(async () => catalogue.resolve())
+      expect(mounts).toEqual(['pl'])
+      expect(container.textContent).toBe('screen:pl')
+      expect(window.localStorage.getItem(STORAGE_KEY)).toBe(preference)
+    } finally { jest.useRealTimers() }
+  })
+
+  it('restores the saved preference after SPA exit and suspends entry until the URL catalogue commits', async () => {
+    const preference = JSON.stringify({ version: 1, mode: 'explicit', locale: 'en' })
+    const { Screen, mounts, hydrate } = setup(preference)
+    const loaded = new Set(['ru'])
+    isWebLocaleLoaded.mockImplementation((locale: string) => loaded.has(locale))
+    loadWebLocale.mockImplementation(async (locale: string) => { loaded.add(locale) })
+    await hydrate(<LocaleProvider><Screen /></LocaleProvider>)
+    expect(mounts).toEqual(['en'])
+
+    const catalogue = createDeferred()
+    loadWebLocale.mockImplementation(async (locale: string) => {
+      await catalogue.promise
+      loaded.add(locale)
+    })
+    window.history.pushState(null, '', '/pl/quests/1/krakow-dragon')
+    await act(async () => { root!.render(<LocaleProvider><Screen label="quest" /></LocaleProvider>) })
+    expect(mounts).toEqual(['en'])
+    await act(async () => catalogue.resolve())
+    expect(mounts).toEqual(['en', 'pl'])
+    expect(container.textContent).toBe('quest:pl')
+
+    window.history.pushState(null, '', '/articles')
+    await act(async () => { root!.render(<LocaleProvider><Screen label="articles" /></LocaleProvider>) })
+    expect(mounts).toEqual(['en', 'pl', 'en'])
+    expect(container.textContent).toBe('articles:en')
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe(preference)
+  })
+
+  it('persists explicit selection on a prefixed quest without replacing its URL locale in place', async () => {
+    const { Screen, mounts, hydrate } = setup(null, '/pl/quests/1/krakow-dragon')
+    const loaded = new Set(['ru'])
+    isWebLocaleLoaded.mockImplementation((locale: string) => loaded.has(locale))
+    loadWebLocale.mockImplementation(async (locale: string) => { loaded.add(locale) })
+    await prepareBootLocale()
+    let selectLocale: (locale: 'en') => Promise<void> = async () => {}
+    const Capture = () => {
+      selectLocale = useLocale().setLocale
+      return null
+    }
+    await hydrate(<LocaleProvider><Capture /><Screen /></LocaleProvider>)
+    await act(async () => selectLocale('en'))
+    expect(mounts).toEqual(['pl'])
+    expect(container.textContent).toBe('screen:pl')
+    expect(i18n.resolvedLanguage).toBe('pl')
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY)!)).toEqual({ version: 1, mode: 'explicit', locale: 'en' })
+  })
+
+  it('can enter a URL-bound locale after abandoning a failed preference boot for RU', async () => {
+    const preference = JSON.stringify({ version: 1, mode: 'explicit', locale: 'pl' })
+    const { Screen, mounts, hydrate } = setup(preference)
+    const loaded = new Set(['ru'])
+    isWebLocaleLoaded.mockImplementation((locale: string) => loaded.has(locale))
+    loadWebLocale.mockRejectedValueOnce(new Error('first catalogue unavailable'))
+    await hydrate(<LocaleProvider><Screen /></LocaleProvider>)
+    const fallback = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Kontynuuj po rosyjsku')!
+    await act(async () => fallback.click())
+    expect(mounts).toEqual(['ru'])
+
+    loadWebLocale.mockImplementation(async (locale: string) => { loaded.add(locale) })
+    window.history.pushState(null, '', '/pl/quests/1/krakow-dragon')
+    await act(async () => { root!.render(<LocaleProvider><Screen label="quest" /></LocaleProvider>) })
+    expect(mounts).toEqual(['ru', 'pl'])
+    expect(container.textContent).toBe('quest:pl')
+    expect(document.documentElement.lang).toBe('pl')
+    expect(container.querySelector('#locale-boot-recovery')).toBeNull()
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY)!)).toEqual({ version: 1, mode: 'explicit', locale: 'ru' })
+  })
+
+  it.each(['/xx/quests/1/krakow-dragon', '/pl/quests/krakow/krakow-dragon', '/pl/quests/1', '/pl/articles/1/example'])('keeps unrelated/invalid route %s preference-driven', async (routePath) => {
+    window.history.replaceState(null, '', routePath)
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, mode: 'explicit', locale: 'en' }))
+    loadWebLocale.mockResolvedValue(undefined)
+    await prepareBootLocale()
+    expect(loadWebLocale).toHaveBeenCalledWith('en')
+    expect(i18n.resolvedLanguage).toBe('ru') // Ordinary hydration still commits later.
   })
 })

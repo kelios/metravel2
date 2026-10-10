@@ -2,8 +2,11 @@ import type { BookSnapshotChunk } from '@/types/bookDocument'
 import type { RecordCursor } from './recordCursor'
 import type { Sha256CheckpointV1 } from './checkpointHash'
 import type { IndexedBookSummary } from './snapshot'
+import type { BookPlanningState } from './planningBookTypes'
+import type { DescriptorState } from './planningDescriptors'
+import type { RendererResourceProfile } from './measurement'
 
-export const PLANNING_PROTOCOL_VERSION = 1 as const
+export const PLANNING_PROTOCOL_VERSION = 2 as const
 export const MAX_PLANNING_CHECKPOINT_BYTES = 1_048_576
 
 export interface PlanningFile {
@@ -24,6 +27,7 @@ export interface PlanningRequest {
   generation: number
   checkpoint?: PlanningFile
   limits?: Partial<PlanningLimits>
+  resource_profile?: RendererResourceProfile
 }
 
 export interface IndexCounts {
@@ -58,8 +62,11 @@ export interface PlanningCheckpoint {
   version: typeof PLANNING_PROTOCOL_VERSION
   identity: string
   generation: number
-  phase: 'index' | 'indexed'
+  phase: 'index' | 'indexed' | 'book' | 'descriptors' | 'plan_ready'
   index: SnapshotIndexState
+  ledger?: PlanningFile
+  book?: BookPlanningState
+  descriptors?: DescriptorState
 }
 
 export interface PlanningStepResult {
@@ -69,5 +76,8 @@ export interface PlanningStepResult {
   phase: PlanningCheckpoint['phase']
   outputs: PlanningFile[]
   consumed_bytes: number
+  consumed_asset_bytes: number
+  probes: number
+  ledger: PlanningFile
   deltas: { sources: number; travels: number; included_media_occurrences: number }
 }

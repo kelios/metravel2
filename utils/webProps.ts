@@ -4,6 +4,7 @@ import { Platform, type TextInputProps, type TextProps, type TextStyle, type Vie
 type Booleanish = boolean | 'false' | 'true'
 
 export type WebAccessibilityProps = {
+  'aria-current'?: 'page' | 'step' | 'location' | 'date' | 'time' | 'true' | 'false';
   id?: string
   role?: React.AriaRole
   tabIndex?: number

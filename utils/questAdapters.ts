@@ -17,6 +17,7 @@ import {
     readQuestContentLocale,
 } from '@/api/questContentLocale';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
+import { normalizeQuestCityLegacyIds } from '@/utils/questCityAlias';
 import { isSameWordForm, matchesAnyWordForm } from '@/utils/questAnswerMorphology';
 import {
     normalize,
@@ -94,6 +95,8 @@ export type QuestMeta = {
     title: string;
     points: number;
     cityId: string;
+    /** Historical numeric IDs; adapters always supply an array, old fixtures may omit it. */
+    cityLegacyIds?: number[];
     cityName?: string;
     /** Русское имя города при локализованном `cityName` (#2197). */
     cityNameCanonical?: string;
@@ -577,6 +580,7 @@ export function adaptCity(apiCity: ApiQuestCity): QuestCity {
     const cityId = Number(apiCity.id);
     return {
         id: Number.isInteger(cityId) && cityId > 0 ? cityId : undefined,
+        legacyIds: normalizeQuestCityLegacyIds(apiCity.legacy_ids),
         name: apiCity.name || undefined,
         nameCanonical: apiCity.name_canonical || undefined,
         lat,
@@ -716,6 +720,7 @@ export function adaptMeta(apiMeta: ApiQuestMeta): QuestMeta {
         title: apiMeta.title,
         points: parseInt(String(apiMeta.points), 10) || 0,
         cityId: apiMeta.city_id,
+        cityLegacyIds: normalizeQuestCityLegacyIds(apiMeta.city_legacy_ids),
         cityName: apiMeta.city_name || undefined,
         cityNameCanonical: apiMeta.city_name_canonical || undefined,
         cityAlias: apiMeta.city_alias,

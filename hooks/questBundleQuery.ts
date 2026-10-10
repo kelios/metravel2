@@ -31,6 +31,7 @@ export function questBundleQueryOptions(
   } as const
 }
 
-export function useQuestBundleQuery(questId: string | undefined) {
-  return useQuery(questBundleQueryOptions(questId, useQuestContentLocale()))
+export function useQuestBundleQuery(questId: string | undefined, routeLocale?: string) {
+  const activeLocale = useQuestContentLocale()
+  return useQuery(questBundleQueryOptions(questId, routeLocale ?? activeLocale))
 }

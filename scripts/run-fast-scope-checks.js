@@ -518,6 +518,21 @@ const main = () => {
       if (cityWalkStatus !== 0) {
         process.exit(cityWalkStatus)
       }
+
+      // Правило авторинга 4i: текст шага зовёт нажать только ту кнопку,
+      // которую мастер показывает («Далее» на шаге без проверки, «Проверить
+      // ответ» на шаге с полем ввода). Шаблон привалов «нажми „Ответить“» /
+      // «нажми „Дальше“» всплыл при переводе 07.10.2026: игрок ищет кнопку,
+      // которой нет, а перевод уносит выдуманную подпись в пять локалей.
+      // Эталон подписей — i18n, baseline не нужен: находка валит гейт сразу.
+      // Полный свип по проду — `npm run quest:scan-button-labels`.
+      const buttonLabelsStatus = runCommand('node', [
+        'scripts/scan-quest-button-labels.js',
+        `--source=${questDataFile}`,
+      ], { shell: false })
+      if (buttonLabelsStatus !== 0) {
+        process.exit(buttonLabelsStatus)
+      }
     }
 
     if (result.lintTargets.length === 0) {

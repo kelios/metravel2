@@ -62,6 +62,8 @@ export type QuestStep = {
 export type QuestCity = {
   /** Числовой id города — канонический сегмент квестового URL (#1938). */
   id?: number;
+  /** Historical IDs for this canonical city. Old locally constructed cities may omit it. */
+  legacyIds?: number[];
   name?: string;
   /** Русское имя города при локализованном `name` (#2197). */
   nameCanonical?: string;

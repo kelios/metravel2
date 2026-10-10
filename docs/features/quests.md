@@ -216,6 +216,15 @@ tripvenue резолвит по ближайшему городу каталог
   `rating_count`, `user_rating`, `completions_count`, `is_completed_by_me`,
   `first_completer`). `withQuestMetaDefaults` доставляет отсутствующие поля и
   индексирует `dominant_color` обложки (`indexMediaImage`, #1208).
+- Совместимость объединённых городов (#2372): optional `city_legacy_ids:
+  number[]` в метаданных и `city.legacy_ids: number[]` в бандле. Адаптеры
+  переносят их в `cityLegacyIds`/`city.legacyIds`, отсутствующее поле означает
+  `[]`. Общая модель `questCityAlias` хранит прежние IDs отдельно в
+  `legacyCityIds`, сохраняя `cityIds` и canonical текущими. Живые IDs имеют
+  приоритет; неоднозначный прежний ID не выбирает произвольный город.
+  Runtime resolver, offline by-city и SSG принимают прежние числовые ссылки;
+  SSG создаёт для них landing и оба файловых варианта каждого quest slug.
+  Детальный route загружает бандл по slug независимо от сегмента города.
 - `ApiQuestBundle` — деталь: `steps` (массив ИЛИ JSON-строка), `intro` (шаг,
   JSON-строка или `null`), `finale {text, video_url, poster_url}`,
   `storage_key`, `city`, `cover_url`, `media` + необязательный рейтинг-снапшот.

@@ -213,6 +213,30 @@ export async function openSystemSettings(onError?: (error: unknown) => void): Pr
   }
 }
 
+/**
+ * Web chokepoint скачивания файла в текущей вкладке (#2357): ссылка с
+ * `download` и `noreferrer`, без нового окна — блокировка popup не мешает, а
+ * ответ с `Content-Disposition: attachment` не уводит со страницы. Адрес
+ * проверяет вызывающий; здесь — только http(s).
+ */
+export function startBrowserFileDownload(url: string): boolean {
+  if (Platform.OS !== 'web' || typeof document === 'undefined') return false;
+  if (!/^https?:\/\//i.test(url)) return false;
+  try {
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.rel = 'noreferrer noopener';
+    anchor.download = '';
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function openWebWindow(rawUrl: string, options: OpenWebWindowOptions = {}): Window | null {
   if (typeof window === 'undefined' || typeof window.open !== 'function') return null;
   try {

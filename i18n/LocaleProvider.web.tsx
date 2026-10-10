@@ -9,6 +9,8 @@ import React, {
   useRef,
   useState,
 } from 'react'
+import { usePathname } from 'expo-router'
+import { parseQuestLocaleRoute } from '@/utils/questLocaleRouting'
 
 import { BOOT_LOCALE_TIMEOUT_MS, normalizeActiveLocale, resolvePendingBootLocale } from './bootLocale'
 import { getLocaleDefinition, SUPPORTED_LOCALES, type SupportedLocale } from './config'
@@ -51,6 +53,8 @@ const syncDocumentLocale = (locale: SupportedLocale) => {
  * from mounting a temporary Russian tree. Slow/failed boot exposes localized
  * recovery controls; choosing RU invalidates any older pending completion.
  * Explicit language switches after boot retain the legacy subtree revision.
+ * Canonical translated quest URLs preload/commit their own locale instead;
+ * SPA transitions suspend before any screen mounts in the previous locale.
  */
 const BOOT_LOCALE_PENDING: Promise<never> = new Promise(() => {})
 
@@ -83,6 +87,9 @@ const BootLocaleBoundary = React.memo(
 )
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  const route = parseQuestLocaleRoute(pathname)
+  const routeLocale = route?.locale ?? null
   const [locale, setLocaleState] = useState<SupportedLocale>(() =>
     normalizeActiveLocale(i18n.resolvedLanguage),
   )
@@ -95,6 +102,14 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [isBootPending, setIsBootPending] = useState(bootLocale !== null)
   const [bootRecovery, setBootRecovery] = useState<'loading' | 'slow' | 'failed'>('loading')
   const bootAbandoned = useRef(false)
+  // Navigation can change the route before an effect commits its language.
+  // Suspend that render immediately, so new screens cannot request the old
+  // locale. Entering/leaving a URL-bound page never persists a preference.
+  const targetLocale = routeLocale ?? (isHydrated ? resolveLocalePreference(preference) : bootLocale)
+  const isRoutePending = targetLocale !== null && (
+    locale !== targetLocale || (routeLocale !== null && !isWebLocaleLoaded(targetLocale))
+  )
+  const pending = isBootPending || isRoutePending
 
   // The head recovery owns failures before React arrives. Hand off in the first
   // commit, before catalogue effects can fail and render our recovery controls.
@@ -105,24 +120,24 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   // Reveal only a committed tree in its final boot locale. No reveal timer:
   // a slow catalogue must not mount Russian screens and send requests twice.
   useLayoutEffect(() => {
-    if (!isBootPending) releaseLocaleBootShell()
-  }, [isBootPending, locale])
+    if (!pending) releaseLocaleBootShell()
+  }, [pending, locale])
 
   // Подписка — в layout effect, чтобы смена языка ниже уже меняла ключ.
   useLayoutEffect(() => {
     const handleLanguageChanged = (language: string) => {
       const nextLocale = normalizeActiveLocale(language)
       setLocaleState(nextLocale)
-      syncDocumentLocale(nextLocale)
+      syncDocumentLocale(routeLocale ?? nextLocale)
       setLegacyRenderRevision((revision) => revision + 1)
     }
 
     i18n.on('languageChanged', handleLanguageChanged)
-    syncDocumentLocale(locale)
+    syncDocumentLocale(routeLocale ?? locale)
     return () => {
       i18n.off('languageChanged', handleLanguageChanged)
     }
-  }, [locale])
+  }, [locale, routeLocale])
 
   // Каталог загружен до гидратации: снятие ворот и смена ключа — в том же
   // синхронном рендере, что идёт сразу за коммитом гидратации, до того как
@@ -134,6 +149,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   }, [bootLocale])
 
   useEffect(() => {
+    bootAbandoned.current = false
     let cancelled = false
     let released = false
     const releaseBootGate = () => {
@@ -146,18 +162,21 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       if (!cancelled) setBootRecovery('slow')
     }, BOOT_LOCALE_TIMEOUT_MS)
 
+    setBootRecovery('loading')
     void readLocalePreference().then(async (storedPreference) => {
       if (cancelled) return
-      const nextLocale = resolveLocalePreference(storedPreference)
+      const nextLocale = routeLocale ?? resolveLocalePreference(storedPreference)
       let failed = false
       try {
-        if (nextLocale !== normalizeActiveLocale(i18n.resolvedLanguage)) {
-          await loadWebLocale(nextLocale)
+        if (nextLocale !== normalizeActiveLocale(i18n.resolvedLanguage) || !isWebLocaleLoaded(nextLocale)) {
+          if (!isWebLocaleLoaded(nextLocale)) await loadWebLocale(nextLocale)
           if (cancelled || bootAbandoned.current) return
           // Снятие ворот и смена ключа (обработчик `languageChanged`) идут одним
           // синхронным блоком — одним рендером, без промежуточной гидратации.
           releaseBootGate()
-          await i18n.changeLanguage(nextLocale)
+          if (nextLocale !== normalizeActiveLocale(i18n.resolvedLanguage)) {
+            await i18n.changeLanguage(nextLocale)
+          }
         }
       } catch {
         failed = true
@@ -171,30 +190,32 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       const activeLocale = normalizeActiveLocale(i18n.resolvedLanguage)
       setPreference(storedPreference)
       setLocaleState(activeLocale)
-      syncDocumentLocale(activeLocale)
+      syncDocumentLocale(routeLocale ?? activeLocale)
       setIsHydrated(true)
     })
     return () => {
       cancelled = true
       clearTimeout(recoveryTimeout)
     }
-  }, [])
+  }, [routeLocale])
 
   const setLocale = useCallback(async (nextLocale: SupportedLocale) => {
     const nextPreference: LocalePreference = { version: 1, mode: 'explicit', locale: nextLocale }
     if (!isWebLocaleLoaded(nextLocale)) await loadWebLocale(nextLocale)
     await writeLocalePreference(nextPreference)
     setPreference(nextPreference)
-    await i18n.changeLanguage(nextLocale)
-  }, [])
+    // A language control persists an explicit choice, then navigates to its
+    // canonical link. Never replace a PL URL's content with EN in between.
+    if (!routeLocale) await i18n.changeLanguage(nextLocale)
+  }, [routeLocale])
 
   const useSystemLocale = useCallback(async () => {
     const nextLocale = resolveLocalePreference(SYSTEM_LOCALE_PREFERENCE)
     await loadWebLocale(nextLocale)
     await writeLocalePreference(SYSTEM_LOCALE_PREFERENCE)
     setPreference(SYSTEM_LOCALE_PREFERENCE)
-    await i18n.changeLanguage(nextLocale)
-  }, [])
+    if (!routeLocale) await i18n.changeLanguage(nextLocale)
+  }, [routeLocale])
 
   const value = useMemo<LocaleContextValue>(
     () => ({
@@ -207,24 +228,27 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     }),
     [isHydrated, locale, preference, setLocale, useSystemLocale],
   )
-  const recoveryCopy = getBootLocaleRecoveryCopy(bootLocale ?? locale)
+  const recoveryLocale = targetLocale ?? locale
+  const recoveryCopy = getBootLocaleRecoveryCopy(recoveryLocale)
 
   return (
     <LocaleContext.Provider value={value}>
-      {isBootPending && bootRecovery !== 'loading' && (
-        <div id="locale-boot-recovery" lang={bootLocale ?? locale}>
+      {pending && bootRecovery !== 'loading' && (
+        <div id="locale-boot-recovery" lang={recoveryLocale} data-url-locale={route ? 'true' : undefined}>
           <p role="status">{bootRecovery === 'failed' ? recoveryCopy.failed : recoveryCopy.slow}</p>
           <button type="button" onClick={() => window.location.reload()}>{recoveryCopy.retry}</button>
-          <button type="button" onClick={() => {
+          {route ? (
+            <a href={`/quests/${route.cityId}/${route.questSlug}`}>{recoveryCopy.fallback}</a>
+          ) : <button type="button" onClick={() => {
             bootAbandoned.current = true
             void setLocale('ru').then(() => {
               setIsHydrated(true)
               setIsBootPending(false)
             })
-          }}>{recoveryCopy.fallback}</button>
+          }}>{recoveryCopy.fallback}</button>}
         </div>
       )}
-      <BootLocaleBoundary key={legacyRenderRevision} pending={isBootPending}>
+      <BootLocaleBoundary key={legacyRenderRevision} pending={pending}>
         {children}
       </BootLocaleBoundary>
     </LocaleContext.Provider>

@@ -106,6 +106,26 @@ describe('expectedQuestFiles', () => {
 })
 
 describe('expectedCityLandingFiles', () => {
+  it('requires retired numeric city landings and every merged quest detail in both file shapes', () => {
+    const quests = [
+      { quest_id: 'gomel-palace', city_id: '19', city_alias: 'gomel', city_legacy_ids: [92] },
+      { quest_id: 'gomel-kids-lost-playbill', city_id: '19', city_alias: 'gomel', city_legacy_ids: [92] },
+      { quest_id: 'grodno-royal', city_id: '11', city_alias: 'grodno', city_legacy_ids: [91] },
+      { quest_id: 'grodno-kids-zveri', city_id: '11', city_alias: 'grodno', city_legacy_ids: [91] },
+    ]
+    const aliases = buildQuestCityAliasMap(quests)
+    expect(expectedCityLandingFiles(quests, aliases).sort()).toEqual([
+      'quests/11/index.html', 'quests/19/index.html', 'quests/91/index.html',
+      'quests/92/index.html', 'quests/gomel/index.html', 'quests/grodno/index.html',
+    ])
+    for (const quest of quests) {
+      const legacy = quest.city_legacy_ids[0]
+      expect(expectedQuestFiles(quest, aliases)).toEqual(expect.arrayContaining([
+        `quests/${legacy}/${quest.quest_id}.html`, `quests/${legacy}/${quest.quest_id}/index.html`,
+        `quests/${quest.city_id}/${quest.quest_id}.html`,
+      ]))
+    }
+  })
   it('lists one landing per city id and per alias, deduplicated across quests', () => {
     const quests = [KRAKOW_QUEST, KRAKOW_QUEST_2, MINSK_QUEST]
     const aliasMap = buildQuestCityAliasMap(quests)

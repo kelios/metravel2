@@ -177,6 +177,35 @@ export function listBookExportV2Jobs(options: BookExportV2JobListOptions = {}): 
   return apiClient.get<BookExportV2JobPage>(`${BOOK_EXPORTS_ENDPOINT}${query ? `?${query}` : ''}`)
 }
 
+// #2357: полная книга идёт серверным v2-заданием только при полной готовности
+// конвейера — PDF, возобновляемость и прямая выдача файла. Частичная готовность
+// (например, только снимок B2 без рендера B3) считается недоступностью.
+export function isFullBookExportAvailable(capabilities: BookExportCapabilities | null | undefined): boolean {
+  return Boolean(
+    capabilities &&
+      capabilities.contract_versions.includes(2) &&
+      capabilities.settings_version === 1 &&
+      capabilities.pdf_available &&
+      capabilities.resumable &&
+      capabilities.direct_download,
+  )
+}
+
+export interface BookExportDownloadTicket {
+  download_url: string
+  expires_at: string
+}
+
+// #2356 B3: короткоживущий билет на одно задание владельца. Тело пустое —
+// задание и владелец берутся из пути и сессии; сам файл браузер забирает
+// прямым GET по download_url, без Blob в памяти страницы.
+export function requestBookExportDownloadTicket(jobId: string): Promise<BookExportDownloadTicket> {
+  return apiClient.post<BookExportDownloadTicket>(
+    `${BOOK_EXPORTS_ENDPOINT}${encodeURIComponent(jobId)}/download-ticket/`,
+    {},
+  )
+}
+
 export function cancelBookExportV2Job(jobId: string): Promise<BookExportV2Job> {
   return apiClient.post<BookExportV2Job>(`${BOOK_EXPORTS_ENDPOINT}${encodeURIComponent(jobId)}/cancel/`, {})
 }

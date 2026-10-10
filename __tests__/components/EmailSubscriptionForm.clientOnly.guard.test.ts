@@ -1,5 +1,6 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { findQuestLoadingGate } from '../helpers/questHydrationBoundary'
 
 /**
  * #1588. The form's responsive styles must use the live viewport on their first
@@ -37,6 +38,16 @@ const hasClientOnlyOptIn = (source: string) =>
   /\bclientOnly(?:\s*=\s*\{true\})?(?=\s|\/>)/.test(source)
 
 describe('#1588 EmailSubscriptionForm clientOnly precondition', () => {
+  it('rejects a conditional loading bypass and accepts additional blocking conditions', () => {
+    const screen = (condition: string) => `function QuestByIdScreen() {
+      if (${condition}) { return <LoadingState /> }
+      return <QuestWizardComponent />
+    }`
+    expect(findQuestLoadingGate(screen('isLoading'))).toBeGreaterThan(-1)
+    expect(findQuestLoadingGate(screen('isLoading || (route && !prefixAvailable)'))).toBeGreaterThan(-1)
+    expect(findQuestLoadingGate(screen('isLoading && ready'))).toBe(-1)
+    expect(findQuestLoadingGate(screen('!isLoading'))).toBe(-1)
+  })
   it('keeps clientOnly opt-in and hydration-safe by default', () => {
     const component = readSource('components/common/EmailSubscriptionForm.tsx')
 
@@ -75,9 +86,7 @@ describe('#1588 EmailSubscriptionForm clientOnly precondition', () => {
     expect(articles.indexOf('if (isLoading && !articles)')).toBeLessThan(
       articles.indexOf('<EmailSubscriptionForm'),
     )
-    const questLoadingGate = questDetail.indexOf(
-      'if (isLoading) {\n    return <LoadingState',
-    )
+    const questLoadingGate = findQuestLoadingGate(questDetail)
     expect(questLoadingGate).toBeGreaterThan(-1)
     const questWizardMounts = [...questDetail.matchAll(/<QuestWizardComponent\b/g)].map(
       (match) => match.index ?? -1,

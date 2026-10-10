@@ -2,6 +2,15 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "Full Book 2357 Web 8082",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "NODE_OPTIONS=--max-old-space-size=12288 EXPO_NO_DOTENV=1 EXPO_PUBLIC_API_URL=http://localhost:8000 EXPO_PUBLIC_IS_LOCAL_API=false npx expo start --web --port 8082"
+      ],
+      "port": 8082
+    },
+    {
       "name": "Trips Planner LocalApi 3000 (CORS allows only 8081/3000)",
       "runtimeExecutable": "sh",
       "runtimeArgs": [

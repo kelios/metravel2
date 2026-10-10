@@ -112,7 +112,9 @@ const htmlIntegrationElements = new Set([
 ]);
 
 export interface ParserOptions {
-    /** Worker-only callback subdivision uses immutable source ranges and one UTF16 unit per transition. */
+    /** Bounded consumer backpressure; runtime callback is pinned by the artifact. */
+    yieldText?: () => boolean;
+    /** Worker-only callback subdivision uses immutable source ranges and bounded text batches. */
     boundedTextCallbacks?: boolean;
     /**
      * Indicates whether special tags (`<script>`, `<style>`, and `<title>`) should get special treatment
@@ -539,6 +541,13 @@ export class Parser implements Callbacks {
             if (this.textQueue.length) { this.drainText(); used++; continue; }
             if (this.pending) { this.transition(); used++; continue; }
             if (!this.tokenizer.running && !this.tokenizer.save().finished) { this.tokenizer.resume(); if (this.pending || this.textQueue.length) continue; }
+            // end(chunk) can request EOF while write(chunk) is paused. Only
+            // finish the tokenizer after its retained input and callbacks drain;
+            // `finished` makes this exactly once across save/restore.
+            if (this.ended && !this.tokenizer.save().finished) {
+                this.tokenizer.end();
+                if (this.pending || this.textQueue.length) continue;
+            }
             break;
         }
         return used;
@@ -554,12 +563,21 @@ export class Parser implements Callbacks {
         const startIndex = this.startIndex; const endIndex = this.endIndex;
         this.startIndex = event.eventStartIndex; this.endIndex = event.eventEndIndex;
         try {
-        if (event.kind === 'source') {
-            this.cbs.ontext?.(this.getSlice(event.start, event.start + 1));
-            event.start++; if (event.start === event.end) this.textQueue.shift();
-        } else {
-            this.cbs.ontext?.(event.value.slice(0, 1));
-            event.value = event.value.slice(1); if (!event.value) this.textQueue.shift();
+        // Batch bounded text work inside a transition while preserving the canonical
+        // writer's character callbacks and its output backpressure. No whole field.
+        const batch = event.kind === 'source'
+            ? this.getSlice(event.start, Math.min(event.end, event.start + 256)) : event.value.slice(0, 256);
+        for (let consumed = 0; consumed < batch.length; consumed++) {
+            if (event.kind === 'source') {
+                this.cbs.ontext?.(batch[consumed]);
+                event.start++;
+                if (event.start === event.end) { this.textQueue.shift(); break; }
+            } else {
+                this.cbs.ontext?.(batch[consumed]);
+                event.value = event.value.slice(1);
+                if (!event.value) { this.textQueue.shift(); break; }
+            }
+            if (this.options.yieldText?.()) break;
         }
         } finally { this.startIndex = startIndex; this.endIndex = endIndex; }
     }

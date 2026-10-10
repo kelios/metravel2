@@ -3,7 +3,8 @@ import { mkdir, mkdtemp, open, readFile, readdir, rm, stat, writeFile } from 'no
 import path from 'node:path'
 import type { BookSegmentSource } from '@/services/pdf-export/segments/renderSegment'
 import { renderPreparedPage, type PreparedPageRequest } from '@/workers/book-renderer/portion'
-import { physicalMeasurer, type PhysicalMeasurer } from '@/workers/book-renderer/measurement'
+import { DEFAULT_RENDERER_RESOURCE_PROFILE, physicalMeasurer, type PhysicalMeasurer } from '@/workers/book-renderer/measurement'
+import { PlanningPhysicalSession } from '@/workers/book-renderer/planningSession'
 import { canonicalJson, sha256 } from '@/workers/book-renderer/filesystem'
 import { buildSnapshotFixture } from '../../fixtures/pdfBook/buildSnapshotFixture'
 
@@ -105,5 +106,58 @@ describe('prepared page exact measured PDF publication with a mocked physical po
     expect(receipt.measured).toBe(false)
     expect(receipt.pdf).toBeUndefined()
     expect(await readdir(f.output)).toEqual(['page.html', 'receipt.json'])
+  })
+
+  const RENDERER = 'd'.repeat(64)
+  it('reuses one borrowed schema5 session across pages and leaves its close to the job boundary', async () => {
+    const f = await fixture()
+    const session = new PlanningPhysicalSession(f.input.jobDir, f.plan, f.input.document, RENDERER, DEFAULT_RENDERER_RESOURCE_PROFILE, f.fonts)
+    const options = { fonts_dir: f.fonts, physical_session: session, renderer_content_hash: RENDERER }
+    const first = await renderPreparedPage(f.input.jobDir, f.plan, f.output, f.input.document, f.request, options)
+    const second = await renderPreparedPage(f.input.jobDir, f.plan, path.join(scratch, 'output-2'), f.input.document, f.request, options)
+    expect(second.pdf).toEqual(first.pdf)
+    expect(physicalMeasurer).toHaveBeenCalledTimes(1)
+    expect(f.physical.measurePdf).toHaveBeenCalledTimes(2)
+    expect(f.physical.close).not.toHaveBeenCalled()
+    await session.close()
+    expect(f.physical.close).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects a mismatched artifact, profile or legacy source session before launching or publishing', async () => {
+    const f = await fixture()
+    const session = new PlanningPhysicalSession(f.input.jobDir, f.plan, f.input.document, RENDERER, DEFAULT_RENDERER_RESOURCE_PROFILE, f.fonts)
+    const legacySource: BookSegmentSource = { source_schema_version: 1, page: { type: 'checklists' }, blocks: ['23:block'], occurrences: [] }
+    const legacyBytes = canonicalJson(legacySource)
+    await writeFile(path.join(f.plan, 'legacy.json'), legacyBytes)
+    const legacy = { request: { snapshot_hash: f.request.snapshot_hash, segment_ref: 'legacy.json', source_checksum: sha256(legacyBytes),
+      expected: f.request.expected, page_context: f.request.page_context } as PreparedPageRequest }
+    for (const [request, options] of [
+      [f.request, { renderer_content_hash: 'e'.repeat(64) }],
+      [f.request, { renderer_content_hash: RENDERER, resource_profile: { ...DEFAULT_RENDERER_RESOURCE_PROFILE, dom_nodes: 9_999 } }],
+      [f.request, {}],
+      [legacy.request, { renderer_content_hash: RENDERER }],
+    ] as const) {
+      await expect(renderPreparedPage(f.input.jobDir, f.plan, f.output, f.input.document, request, { fonts_dir: f.fonts, physical_session: session, ...options }))
+        .rejects.toThrow('WORKER_PLANNING_SESSION_MISMATCH')
+    }
+    await expect(readdir(f.output)).rejects.toThrow('ENOENT')
+    expect(physicalMeasurer).not.toHaveBeenCalled()
+  })
+
+  it('fsyncs every exclusive portion file and its directory before the receipt is returned', async () => {
+    const f = await fixture()
+    const actualOpen = jest.requireActual<typeof import('node:fs/promises')>('node:fs/promises').open
+    const synced: string[] = []
+    jest.mocked(open).mockImplementation(async (...args: Parameters<typeof open>) => {
+      const handle = await actualOpen(...args)
+      const sync = handle.sync.bind(handle)
+      handle.sync = async () => { synced.push(`${String(args[1])}:${path.relative(scratch, String(args[0]))}`); return sync() }
+      return handle
+    })
+    await renderPreparedPage(f.input.jobDir, f.plan, f.output, f.input.document, f.request, { fonts_dir: f.fonts })
+    const files = synced.filter(entry => entry.startsWith('wx:'))
+    expect(files).toEqual(expect.arrayContaining(['wx:output/page.pdf', 'wx:output/receipt.json']))
+    expect(synced.filter(entry => entry === 'r:output')).toHaveLength(files.length)
+    expect(synced[synced.length - 1]).toBe('r:output')
   })
 })

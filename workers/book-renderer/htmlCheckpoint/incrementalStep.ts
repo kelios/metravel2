@@ -40,7 +40,8 @@ export function incrementalContentStep(input: string, prior: unknown | undefined
   const writer = new FragmentWriter(maxFragment, maxDepth, options.headingAnchorResolver, options.preserveListStarts, options.expandDisclosures)
   const token = new TokenBudget(bound.maxCarryChars)
   const parser = new Parser({onopentag: (name, attrs) => writer.open(name, attrs), onclosetag: name => writer.close(name), ontext: value => writer.text(value),
-    onerror: error => { throw error }}, {decodeEntities: true, lowerCaseTags: false, lowerCaseAttributeNames: true, boundedTextCallbacks: true}, options.stores, bound)
+    onerror: error => { throw error }}, {decodeEntities: true, lowerCaseTags: false, lowerCaseAttributeNames: true, boundedTextCallbacks: true,
+    yieldText: () => writer.ready.length >= 8}, options.stores, bound)
   let eofRequested = false
   if (prior !== undefined) {
     const state = object(prior, ['version', 'parser', 'writer', 'token', 'done', 'eofRequested'])

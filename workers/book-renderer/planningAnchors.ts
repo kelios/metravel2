@@ -1,4 +1,4 @@
-import { lstatSync, readFileSync } from 'node:fs'
+import { lstatSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import type { BookTextField } from '@/types/bookDocument'
 import type { SafeContentFragment } from '@/services/pdf-export/parsers/incrementalContent'
@@ -8,6 +8,7 @@ import { extractAnchorTargets } from './planner'
 import type { PlanningStorage } from './planningStorage'
 import { readPlanningFile } from './planningStorage'
 import type { PlanningFile } from './planningTypes'
+import { readPrivateCheckpointFile } from './htmlCheckpoint/diskStores'
 
 const FIELD = '(?:description|plus|minus|recommendation)'
 const SCOPE = new RegExp(`^fields/[1-9][0-9]*/${FIELD}/anchors$`)
@@ -63,7 +64,7 @@ export async function advanceAnchorTarget(storage: PlanningStorage, previous: An
   const state = restoreAnchorLedger(previous)
   if (!state.pending) throw new Error('WORKER_ANCHOR_PENDING_REQUIRED')
   const pending = state.pending
-  const file = JSON.parse((await readPlanningFile(storage.root, pending.file, 262_144)).toString('utf8')) as AnchorTargetsFile
+  const file = JSON.parse((await storage.read(pending.file, 262_144)).toString('utf8')) as AnchorTargetsFile
   if (!file || file.fragment !== pending.fragment || !Array.isArray(file.targets) || file.targets.length !== pending.total ||
       file.targets.some(target => !validTarget(target)) || file.targets.reduce((total, target) => total + target.length, 0) > BOOK_SEGMENT_LIMITS.content_chars) {
     throw new Error('WORKER_ANCHOR_TARGETS_INVALID')
@@ -100,11 +101,22 @@ export async function sealAnchorLedger(storage: PlanningStorage, previous: Ancho
   return storage.put(`${state.scope}/complete.json`, { version: 1, scope: state.scope, anchors: state.anchors, fragments: state.fragments })
 }
 
-export async function sealedAnchorResolver(root: string, file: PlanningFile): Promise<{ policy: string; resolve: (ordinal: number) => string | undefined }> {
-  const state = JSON.parse((await readPlanningFile(root, file, 4096)).toString('utf8')) as { version: number; scope: string; anchors: number; fragments: number }
+export async function sealedAnchorResolver(storage: PlanningStorage | string, file: PlanningFile,
+  committed?: (ref: string) => PlanningFile | null): Promise<{ policy: string; resolve: (ordinal: number) => string | undefined }> {
+  const root = typeof storage === 'string' ? storage : storage.root
+  if (typeof storage !== 'string' && storage.hasCommittedAuthority && !committed) throw new Error('WORKER_PLANNING_COMMITTED_LOOKUP_REQUIRED')
+  const state = JSON.parse((await (typeof storage === 'string' ? readPlanningFile(root, file, 4096) : storage.read(file, 4096))).toString('utf8')) as { version: number; scope: string; anchors: number; fragments: number }
   if (!state || state.version !== 1 || !SCOPE.test(state.scope) || !count(state.anchors) || !count(state.fragments) ||
       file.ref !== `${state.scope}/complete.json`) throw new Error('WORKER_ANCHOR_SEAL_INVALID')
   const base = dirname(await privatePath(root, file.ref))
+  const verified = (path: string, ref: string): unknown => {
+    const encoded = readPrivateCheckpointFile(path, 32_768)
+    if (committed) {
+      const receipt = committed(ref)
+      if (!receipt || receipt.ref !== ref || receipt.checksum !== sha256(encoded) || receipt.size_bytes !== Buffer.byteLength(encoded)) throw new Error('WORKER_PLANNING_COMMITTED_REFERENCE_INVALID')
+    }
+    return JSON.parse(encoded) as unknown
+  }
   return { policy: file.checksum, resolve(ordinal) {
     if (!count(ordinal) || ordinal < 1) throw new Error('WORKER_ANCHOR_ORDINAL_INVALID')
     if (ordinal > state.anchors) return undefined
@@ -112,13 +124,13 @@ export async function sealedAnchorResolver(root: string, file: PlanningFile): Pr
     const directory = lstatSync(dirname(path))
     const info = lstatSync(path)
     if (!directory.isDirectory() || directory.isSymbolicLink() || (directory.mode & 0o077) || !info.isFile() || info.isSymbolicLink() || (info.mode & 0o077) || info.size > 32_768) throw new Error('WORKER_ANCHOR_FILE_INVALID')
-    const value = JSON.parse(readFileSync(path, 'utf8')) as AnchorValue
+    const value = verified(path, `${state.scope}/values/${ordinal}.json`) as AnchorValue
     if (!value || value.ordinal !== ordinal || !validTarget(value.target) || !count(value.first_fragment) || value.first_fragment >= state.fragments) throw new Error('WORKER_ANCHOR_VALUE_INVALID')
     const seenPath = resolve(base, 'seen', `${sha256(value.target)}.json`)
     const seenDirectory = lstatSync(dirname(seenPath))
     const seenInfo = lstatSync(seenPath)
     if (!seenDirectory.isDirectory() || seenDirectory.isSymbolicLink() || (seenDirectory.mode & 0o077) || !seenInfo.isFile() || seenInfo.isSymbolicLink() ||
-        (seenInfo.mode & 0o077) || seenInfo.size > 32_768 || canonicalJson(JSON.parse(readFileSync(seenPath, 'utf8')) as unknown) !== canonicalJson(value)) throw new Error('WORKER_ANCHOR_VALUE_INVALID')
+        (seenInfo.mode & 0o077) || seenInfo.size > 32_768 || canonicalJson(verified(seenPath, `${state.scope}/seen/${sha256(value.target)}.json`)) !== canonicalJson(value)) throw new Error('WORKER_ANCHOR_VALUE_INVALID')
     return value.target
   } }
 }

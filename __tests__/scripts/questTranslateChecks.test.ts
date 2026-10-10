@@ -301,7 +301,7 @@ describe('смысловая проверка и гейт публикации',
 
   it('у числового шага проверяющий получает правило ответа вместо пустого списка', () => {
     const reviewTask = buildReviewTask({ task, translation, paths })
-    expect(reviewTask.steps[2]).toMatchObject({ answer_type: 'range', accepted_answers: [], answer_rule: 'целое число от 6 до 8' })
+    expect(reviewTask.steps[2]).toMatchObject({ answer_type: 'range', accepted_answers: ['целое число от 6 до 8'], answer_rule: 'целое число от 6 до 8' })
     expect(reviewTask.steps[1].answer_rule).toBe('')
     expect(reviewTask.instructions.join('\n')).toContain('answer_rule')
     // Задание, подготовленное до появления поля, проверяется без падения.
@@ -318,6 +318,29 @@ describe('смысловая проверка и гейт публикации',
     expect(sourceDigest(retitled)).not.toBe(sourceDigest(source))
     const retyped = { ...source, steps: source.steps.map((step: Json) => (step.step_id === TOWER_ID ? { ...step, answer_type: 'any_number' } : step)) }
     expect(sourceDigest(retyped)).not.toBe(sourceDigest(source))
+  })
+
+  it.each([
+    ['range', { min: 6, max: 8 }, { min: 6, max: 9 }],
+    ['range', { min: 6, max: 8 }, { min: 5, max: 8 }],
+    ['approx', { target: 82, tolerance: 5 }, { target: 83, tolerance: 5 }],
+    ['approx', { target: 82, tolerance: 5 }, { target: 82, tolerance: 6 }],
+    ['any_text', { min_length: 3 }, { min_length: 4 }],
+  ])('хеш источника учитывает параметры %s при прежних тексте и типе', (type, before, after) => {
+    const bundle = makeBundle()
+    bundle.steps[0].answer_pattern = { type: type as string, value: JSON.stringify(before) }
+    const source = sourceFromBundle(bundle)
+    bundle.steps[0].answer_pattern.value = JSON.stringify(after)
+    expect(sourceDigest(sourceFromBundle(bundle))).not.toBe(sourceDigest(source))
+  })
+
+  it('старый снимок без параметров требует переподготовки проверяемого правила, exact/any совместимы', () => {
+    const source = sourceFromBundle(makeBundle())
+    const legacy = { ...source, steps: source.steps.map(({ answer_rule_parameters: _params, ...step }: Json) => step) }
+    expect(sourceDigest(legacy)).not.toBe(sourceDigest(source))
+    const withoutNumber = { ...source, steps: source.steps.filter((step: Json) => step.step_id !== TOWER_ID) }
+    const oldWithoutNumber = { ...legacy, steps: legacy.steps.filter((step: Json) => step.step_id !== TOWER_ID) }
+    expect(sourceDigest(oldWithoutNumber)).toBe(sourceDigest(withoutNumber))
   })
 
   it('состояние вердикта: нет файла, вынесен по другой версии, актуален', () => {
@@ -433,18 +456,23 @@ describe('локали и справочные данные', () => {
     const source = sourceFromBundle(makeBundle())
     for (const locale of targets) {
       const labels = collectUiLabels({ source, sourceLocale, locale })
-      expect(labels.map((label: { source: string }) => label.source)).toEqual(['Начать квест', 'Далее', 'Проверить ответ'])
+      expect(labels.map((label: { source: string }) => label.source)).toEqual(['Начать квест', 'Далее', 'Проверить ответ', 'Пропустить', 'Подсказка'])
       for (const label of labels) expect({ locale, source: label.source, translated: label.target !== label.source }).toEqual({ locale, source: label.source, translated: true })
     }
     expect(collectUiLabels({ source, sourceLocale, locale: 'pl' }).slice(1)).toEqual([
       { source: 'Далее', target: 'Następny' },
       { source: 'Проверить ответ', target: 'Sprawdź odpowiedź' },
+      { source: 'Пропустить', target: 'Pomiń' },
+      { source: 'Подсказка', target: 'Wskazówka' },
     ])
     // Квест без кнопки в кавычках всё равно получает кнопки карточки шага.
     const plain = { ...source, steps: source.steps.map((step: { task: string }) => ({ ...step, task: step.task.replace(/[«»]/g, '') })) }
     expect(collectUiLabels({ source: plain, sourceLocale, locale: 'en' })).toEqual([
+      { source: 'Начать квест', target: 'Start quest' },
       { source: 'Далее', target: 'Next' },
       { source: 'Проверить ответ', target: 'Check answer' },
+      { source: 'Пропустить', target: 'Skip' },
+      { source: 'Подсказка', target: 'Hint' },
     ])
   })
 })

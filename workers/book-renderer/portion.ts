@@ -11,6 +11,7 @@ import { canonicalJson, privatePath, readBoundedBytes, sha256 } from './filesyst
 import { DEFAULT_RENDERER_RESOURCE_PROFILE, physicalMeasurer, validateRendererResourceProfile, type MeasurePage, type RendererResourceProfile, type PhysicalMeasurer } from './measurement'
 import { withWorkerLocale } from './locale'
 import { withImageAnalysis } from './imageAnalysis'
+import { planningIdentity, type PlanningPhysicalSession } from './planningSession'
 
 export interface PreparedPageRequest extends SegmentRenderRequest {
   /** Canonical plan checksum and placement keys, independently committed by B3. */
@@ -21,6 +22,9 @@ export interface PreparedPageRequest extends SegmentRenderRequest {
   expected: { blocks: string[]; occurrences: string[] }
 }
 export interface PreparedPageOptions {
+  /** B3 serializes ownership and closes this borrowed schema5 session after the job/epoch. */
+  physical_session?: PlanningPhysicalSession
+  renderer_content_hash?: string
   resource_profile?: RendererResourceProfile
   fonts_dir?: string
   /** Protocol fixtures only; receipts with an injected port are measured:false. */
@@ -82,6 +86,12 @@ export async function renderPreparedPage(
   if ((source.source_schema_version ?? 1) < 3 && [request.resource_bindings_hash, request.resource_policy_hash, request.encoder_identity_hash].some(value => value !== undefined)) throw new Error('PRINT_RESOURCE_BINDING_MISMATCH')
   const resourceProfile = options.resource_profile ?? DEFAULT_RENDERER_RESOURCE_PROFILE
   validateRendererResourceProfile(resourceProfile)
+  if (options.physical_session && (options.measure || source.source_schema_version !== 5 ||
+      !/^[a-f0-9]{64}$/.test(options.renderer_content_hash ?? '') ||
+      options.physical_session.identity !== planningIdentity(pinned, options.renderer_content_hash!, resourceProfile, false) ||
+      options.physical_session.jobRoot !== resolve(jobRoot) || options.physical_session.planRoot !== resolve(planRoot))) {
+    throw new Error('WORKER_PLANNING_SESSION_MISMATCH')
+  }
   const out = resolve(portionOut)
   if (out === resolve(jobRoot) || out === resolve(planRoot)) throw new Error('WORKER_OUTPUT_CONFLICT')
   await mkdir(out, { mode: 0o700 })
@@ -92,10 +102,12 @@ export async function renderPreparedPage(
     const file = resolve(out, name)
     const handle = await open(file, 'wx', 0o600)
     created.push(file)
-    try { await handle.writeFile(bytes) } finally { await handle.close() }
+    try { await handle.writeFile(bytes); await handle.sync() } finally { await handle.close() }
+    const directory = await open(out, 'r')
+    try { await directory.sync() } finally { await directory.close() }
   }
   try {
-    const physical = options.measure ? undefined : await physicalMeasurer(jobRoot, planRoot, fontsDir, resourceProfile, policy)
+    const physical = options.measure ? undefined : options.physical_session ? await options.physical_session.get() : await physicalMeasurer(jobRoot, planRoot, fontsDir, resourceProfile, policy)
     let receipt: PreparedPageReceipt
     try {
       const fontCss = physical ? (await readBoundedBytes(resolve(fontsDir, 'fonts.css'), 512 * 1024)).toString('utf8') : ''
@@ -137,7 +149,7 @@ export async function renderPreparedPage(
         return receipt
       }
       receipt = await withWorkerLocale(pinned.settings.locale, () => physical ? withImageAnalysis(physical, execute) : execute())
-    } finally { await physical?.close() }
+    } finally { if (!options.physical_session) await physical?.close() }
     await persistExclusive('receipt.json', canonicalJson(receipt))
     return receipt
   } catch (error) {

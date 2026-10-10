@@ -67,6 +67,33 @@ const htmlCases = [
   '<p>TEXT<!-- unfinished comment',
 ]
 describe('owned durable canonical content checkpoint', () => {
+  it.each(['<p>tail &copy', '<IMG><IMG><IMG>', '<title>prefix &NotEqualTilde; suffix</title>&noti'])('completes requested end(chunk) after paused retained input with one-transition restores: %s', source => {
+    const actual: unknown[] = []; const original: unknown[] = []; const stores = memoryStores()
+    const options = {lowerCaseTags: false, lowerCaseAttributeNames: true}
+    const limits = {maxInputChars: 256, maxCarryChars: 65536, maxDepth: 32}
+    const handler = (target: unknown[]) => ({
+      onopentagname: (name: string) => target.push(['name', name]),
+      onopentag: (name: string, attrs: Record<string, string>, implied: boolean) => target.push(['open', name, attrs, implied]),
+      onclosetag: (name: string, implied: boolean) => target.push(['close', name, implied]),
+      ontext: (value: string) => target.push(['text', value]), onend: () => target.push(['end']),
+    })
+    const upstream = new OriginalParser(handler(original), options)
+    const fresh = (): CheckpointParser => new CheckpointParser(handler(actual), options, stores, limits)
+    let port = fresh(); upstream.end(source); port.end(source)
+    expect(port.save()).toMatchObject({ended: true, completed: false, tokenizer: {finished: false}})
+    let transitions = 0
+    while (port.needsDrain() && transitions++ < 1000) {
+      const checkpoint = JSON.parse(JSON.stringify(port.save())) as unknown
+      port = fresh(); port.restore(checkpoint); port.advance(1)
+    }
+    expect(transitions).toBeLessThan(1000)
+    expect(port.isComplete()).toBe(true)
+    expect(actual).toEqual(original)
+    expect(actual.filter(event => (event as unknown[])[0] === 'end')).toHaveLength(1)
+    const completed = JSON.parse(JSON.stringify(port.save())) as unknown
+    port = fresh(); port.restore(completed); port.advance(1)
+    expect(actual).toEqual(original)
+  })
   it.each(['<p>A<p>B</p>', '<img><IMG></IMG>TAIL', '<svg><g/></svg><br></br><p>', '<DIV><IMG><IMG></DIV>TAIL'])('restores a same-character opening delimiter after every transition: %s', source => {
     const actual: unknown[] = []; const original: unknown[] = []; const stores = memoryStores()
     const options = {lowerCaseTags: false, lowerCaseAttributeNames: true}
@@ -209,9 +236,31 @@ describe('owned durable canonical content checkpoint', () => {
     }
     let end = incrementalContentStep('', checkpoint, {stores, maxFragmentChars: 512, maxSemanticTransitions: 1, eof: true}); accept(end)
     while (!end.done) { end = incrementalContentStep('', checkpoint, {stores, maxFragmentChars: 512, maxSemanticTransitions: 1}); accept(end) }
-    expect(eofRange).toBe(true); expect(maxFragments).toBeLessThanOrEqual(2); expect(maxState).toBeLessThan(16000)
+    expect(eofRange).toBe(true); expect(maxFragments).toBeLessThanOrEqual(10); expect(maxState).toBeLessThan(16000)
     expect(actual).toEqual(expected)
   }, 120000)
+  it('batches plain text without a durable generation per UTF16 unit or changing canonical fragments', async () => {
+    const source = '<p>' + 'plain 😀 text '.repeat(700) + '</p>'
+    const stores = memoryStores(); const actual: SafeContentFragment[] = []
+    let checkpoint: IncrementalContentCheckpoint | undefined; let calls = 0
+    for (let offset = 0; offset < source.length; offset += 255) {
+      let step = incrementalContentStep(source.slice(offset, offset + 255), checkpoint, { stores, maxSemanticTransitions: 1 })
+      while (true) {
+        calls++; expect(step.fragments.length).toBeLessThanOrEqual(10)
+        actual.push(...step.fragments); checkpoint = JSON.parse(JSON.stringify(step.checkpoint)) as IncrementalContentCheckpoint
+        if (!step.needsDrain) break
+        step = incrementalContentStep('', checkpoint, { stores, maxSemanticTransitions: 1 })
+      }
+    }
+    let end = incrementalContentStep('', checkpoint, { stores, maxSemanticTransitions: 1, eof: true })
+    while (true) {
+      calls++; actual.push(...end.fragments)
+      if (end.done) break
+      end = incrementalContentStep('', JSON.parse(JSON.stringify(end.checkpoint)) as unknown, { stores, maxSemanticTransitions: 1 })
+    }
+    expect(calls).toBeLessThan(Math.ceil(source.length / 255) * 4)
+    expect(actual).toEqual(await legacy(source, 255, {}))
+  })
   it('retains entity fanout and original text-event source indices while draining before special-tag close/EOF', () => {
     const source = '<title>prefix &NotEqualTilde; suffix</title>TAIL &noti'
     const stores = memoryStores(); const actual: Array<[string, number, number]> = []; const original: Array<[string, number, number]> = []

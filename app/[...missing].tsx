@@ -17,7 +17,7 @@ import {
 } from '@/utils/unknownCityNotFoundHydration'
 
 
-export default function NotFoundScreen() {
+export function NotFoundContent() {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
 
@@ -50,7 +50,6 @@ export default function NotFoundScreen() {
         description={i18nT('shared:app.missing.stranitsa_ne_naydena_pereydite_na_glavnuyu_i_0cfdec3b')}
         robots="noindex, nofollow"
       />
-      <StandaloneScreen>
         <View
           nativeID={UNKNOWN_CITY_NOT_FOUND_ELEMENT_ID}
           testID={UNKNOWN_CITY_NOT_FOUND_ELEMENT_ID}
@@ -75,9 +74,12 @@ export default function NotFoundScreen() {
             onPress={() => goBackOrReplace(router, '/')}
           />
         </View>
-      </StandaloneScreen>
     </>
   )
+}
+
+export default function NotFoundScreen() {
+  return <StandaloneScreen><NotFoundContent /></StandaloneScreen>
 }
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({

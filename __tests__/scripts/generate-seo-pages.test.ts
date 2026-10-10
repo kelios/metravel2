@@ -70,6 +70,23 @@ const {
 const { injectSkeletonShell } = require('@/scripts/ssg-skeletons');
 const { questRouteKey } = require('@/utils/questCityAlias');
 
+it('keeps retired city paths separate from canonical SSG identities after a merge', () => {
+  const quests = [
+    { quest_id: 'gomel-palace', city_id: '19', city_name: 'Гомель', city_alias: 'gomel', city_legacy_ids: [92] },
+    { quest_id: 'gomel-kids-lost-playbill', city_id: '19', city_name: 'Гомель', city_alias: 'gomel', city_legacy_ids: [92] },
+    { quest_id: 'grodno-royal', city_id: '11', city_name: 'Гродно', city_alias: 'grodno', city_legacy_ids: [91] },
+  ];
+  const cities = buildQuestCityLandingModel(quests);
+  expect(cities).toHaveLength(2);
+  expect(cities.find((city: { cityId: string }) => city.cityId === '19')).toMatchObject({
+    cityIds: ['19'], legacyCityIds: ['92'], landingPath: '/quests/gomel',
+    quests: [expect.objectContaining({ path: '/quests/19/gomel-palace' }), expect.objectContaining({ path: '/quests/19/gomel-kids-lost-playbill' })],
+  });
+  expect(cities.find((city: { cityId: string }) => city.cityId === '11')).toMatchObject({
+    cityIds: ['11'], legacyCityIds: ['91'], landingPath: '/quests/grodno',
+  });
+});
+
 const fs = require('fs');
 const path = require('path');
 const { makeTempDir } = require('./cli-test-utils');

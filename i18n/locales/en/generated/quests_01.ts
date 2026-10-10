@@ -1,4 +1,11 @@
 export const questsGenerated1 = {
+  "localeServing.versions": "Quest language versions",
+  "localeServing.unavailableTitle": "This quest version is unavailable",
+  "localeServing.unavailableDescription": "The translation was withdrawn or is not ready yet. Open the Russian version or check again later.",
+  "localeServing.temporaryTitle": "Could not check the language version",
+  "localeServing.temporaryDescription": "Publication checks are temporarily unavailable. Please try again.",
+  "localeServing.retry": "Check again",
+  "localeServing.ruSource": "Open the Russian version",
   "components.quests.QuestFullMap.routeStatus.bikeBuildFailed": "Unable to build a real cycling route.",
   "components.quests.QuestFullMap.routeStatus.bikeLoading": "Building a cycling route along roads",
   "components.quests.QuestFullMap.routeStatus.bikeReady": "Cycling route ready",

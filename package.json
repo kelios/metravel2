@@ -187,6 +187,8 @@
     "quest:scan-anytext-minlen:json": "node scripts/scan-quest-anytext-minlen.js --json",
     "quest:scan-skip-promise": "node scripts/scan-quest-skip-promise.js",
     "quest:scan-skip-promise:json": "node scripts/scan-quest-skip-promise.js --json",
+    "quest:scan-button-labels": "node scripts/scan-quest-button-labels.js",
+    "quest:scan-button-labels:json": "node scripts/scan-quest-button-labels.js --json",
     "quest:scan-mixed-script-text": "node scripts/scan-quest-mixed-script-text.js",
     "quest:scan-mixed-script-text:json": "node scripts/scan-quest-mixed-script-text.js --json",
     "quest:scan-surface-answer": "node scripts/scan-quest-surface-answer.js",

@@ -533,7 +533,11 @@ async function uploadEvaluated({ api, result, quest, locale, publish, unpublish 
 async function commandUpload(args, api) {
   if (args.publish && args.unpublish) throw new UsageError('--publish и --unpublish исключают друг друга')
   const result = evaluate(args)
-  if (uploadBlockers(result.checks, { publish: args.publish }).length) printCheckReport(result)
+  const blockers = uploadBlockers(result.checks, { publish: args.publish })
+  if (blockers.length) printCheckReport(result)
+  else if (sourceDigest(result.task.source) !== sourceDigest(sourceFromBundle(await api.getBundle(args.quest)))) {
+    throw new ExpectedFailureError(`${args.quest} → ${args.locale}: задание от прежней версии источника — prepare заново`)
+  }
   const { quest, locale, publish, unpublish, force } = args
   const { document, keptHuman } = await uploadEvaluated({ api, result, quest, locale, publish, unpublish, force })
   const failed = result.checks.filter((entry) => !entry.ok).length

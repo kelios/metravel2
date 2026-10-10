@@ -10,11 +10,13 @@ import type { BookSegmentSource } from '@/services/pdf-export/segments/renderSeg
 import { PrintAssetCache, printImageHeader, printPolicyHash } from './printAssets'
 import { loadAssetDescriptor, SNAPSHOT_ASSET_ORIGIN } from './snapshot'
 import { normalizePrintOrientation, printOrientationMatrix } from './printOrientation'
+import type { PlanningStorage } from './planningStorage'
 
 export interface PageMeasurement { pages: number; fits: boolean }
 export type MeasurePage = (html: string) => Promise<PageMeasurement>
 export interface PdfPageMeasurement extends PageMeasurement { pdf?: Buffer }
 export interface PhysicalMeasurer {
+  bindPlanning?: (storage: PlanningStorage) => void
   prepareHtml: (html: string, pinned?: BookSegmentSource, policy?: PrintSourcePolicy) => Promise<PreparedPrintResources>
   encoder_identity: PrintEncoderIdentity
   resource_policy_hash: string
@@ -149,6 +151,12 @@ export async function physicalMeasurer(root: string, out: string, fontsDir: stri
   let context: BrowserContext | undefined
   let page: Page | undefined
   let printCache: PrintAssetCache | undefined
+  let planning: PlanningStorage | undefined
+  const assetDescriptor = async (hash: string): Promise<BookMediaChunk> => {
+    const chunk = planning ? await planning.readIndex<BookMediaChunk>(`assets/${hash}.json`) : await loadAssetDescriptor(out, hash)
+    if (!chunk) throw new Error('WORKER_PLANNING_COMMITTED_REFERENCE_INVALID')
+    return chunk
+  }
   let bindings = new Map<string, PrintResourceBinding>()
   let served = new Map<string, PrintServedResource>()
   let preparedResources = false
@@ -178,7 +186,7 @@ export async function physicalMeasurer(root: string, out: string, fontsDir: stri
         await route.fulfill({ body: bytes, contentType: binding.mime, headers: { 'Access-Control-Allow-Origin': '*' } })
       } else if (url.origin === SNAPSHOT_ASSET_ORIGIN && /^\/assets\/[0-9a-f]{64}$/.test(url.pathname)) {
         if (preparedResources) throw new Error('PRINT_RESOURCE_BINDING_MISMATCH')
-        const chunk = await loadAssetDescriptor(out, url.pathname.split('/').at(-1)!)
+        const chunk = await assetDescriptor(url.pathname.split('/').at(-1)!)
         const dimensions = await probeFrozenImage(root, chunk, profile)
         if (!resources.has(chunk.checksum)) {
           decodedPixels += dimensions.width * dimensions.height
@@ -252,7 +260,7 @@ export async function physicalMeasurer(root: string, out: string, fontsDir: stri
     const sample = async (url: string) => {
       const match = url.match(/^https:\/\/book-snapshot\.invalid\/assets\/([a-f0-9]{64})$/)
       if (!match) throw new Error('SNAPSHOT_MUTABLE_RESOURCE_REQUEST')
-      const chunk = await loadAssetDescriptor(out, match[1])
+      const chunk = await assetDescriptor(match[1])
       const bytes = await readBoundedBytes(await verifyFile(root, chunk), profile.encoded_resource_bytes)
       if (sha256(bytes) !== match[1]) throw new Error('SNAPSHOT_INTEGRITY_FAILED')
       const header = printImageHeader(bytes, profile, policy)
@@ -268,7 +276,7 @@ export async function physicalMeasurer(root: string, out: string, fontsDir: stri
         return await page!.evaluate(samplePrintImage, { raw: normalized ? { width: header.width, height: header.height } : undefined, matrix: normalized ? printOrientationMatrix(normalized.orientation, 64, 64) : undefined })
       } finally { await page!.goto('about:blank'); await page!.requestGC(); sampleCarrier = undefined }
     }
-    return { prepareHtml: async (html, pinned, sourcePolicy) => {
+    return { bindPlanning: storage => { planning = storage; printCache!.bindPlanning(storage) }, prepareHtml: async (html, pinned, sourcePolicy) => {
       const prepared = await printCache!.prepareHtml(html, pinned, sourcePolicy ?? policy)
       preparedResources = true
       bindings = new Map(prepared.resource_bindings.map(value => [value.variant_hash ?? value.original_checksum, value]))

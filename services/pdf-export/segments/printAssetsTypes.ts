@@ -18,6 +18,8 @@ export const PRINT_ORIENTED_VARIANT_RECIPE = {
   color_transform: 'canonical-theme-color-only-v1', orientation: 'bounded-ifd0-neutral-carrier-affine-1-8-v1',
 } as const
 export type PrintSourcePolicy = 3 | 4 | 5
+/** Canonical JSON print-cache descriptor bound; planning generations reserve it with each binary. */
+export const PRINT_DESCRIPTOR_MAX_BYTES = 65_536
 
 export interface PrintEncoderIdentity {
   browser_name: 'chromium'

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
@@ -18,6 +18,9 @@ import { getTravelLabel } from '@/utils/pluralize';
 import { useThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
 
+// #2357: полная книга за период — серверное задание, только desktop web.
+// Ленивая загрузка держит её вне общего чанка каталога /search.
+const FullBookExportSection = lazy(() => import('@/components/export/FullBookExportPanel'));
 
 type Props = {
   isMobile: boolean;
@@ -341,6 +344,12 @@ function ListTravelExportControls({
             />
           </View>
         )}
+
+        {isWeb && !isMobile ? (
+          <Suspense fallback={null}>
+            <FullBookExportSection baseSettings={baseSettings} userName={userName} />
+          </Suspense>
+        ) : null}
 
         {/* Compact order strip */}
         {hasSelection && (

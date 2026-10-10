@@ -5,6 +5,7 @@ import { beginAnchorFragment, advanceAnchorTarget, initialAnchorLedger, sealAnch
 import type { AnchorLedgerState } from '@/workers/book-renderer/planningAnchors'
 import { PlanningStorage } from '@/workers/book-renderer/planningStorage'
 import { canonicalJson, sha256 } from '@/workers/book-renderer/filesystem'
+import type { PlanningFile } from '@/workers/book-renderer/planningTypes'
 
 const LIMITS = { input_bytes: 65_536, output_bytes: 2_097_152, output_records: 24, probes: 1 }
 describe('durable numbered forward anchors', () => {
@@ -85,5 +86,21 @@ describe('durable numbered forward anchors', () => {
     expect(() => resolver.resolve(1)).toThrow()
     await rm(numbered)
     expect(() => resolver.resolve(1)).toThrow()
+  })
+
+  it('rejects a self-consistent replacement of numbered and seen targets against committed authority', async () => {
+    const receipts = new Map<string, PlanningFile>()
+    const storage = store()
+    let state = await beginAnchorFragment(storage, initialAnchorLedger(61, 'description'), { index: 0, html: '<a href="#safe">S</a>' })
+    state = await advanceAnchorTarget(storage, state)
+    const seal = await sealAnchorLedger(storage, state, { parser_done: true, produced_fragments: 1 })
+    for (const file of storage.outputs) receipts.set(file.ref, file)
+    const trusted = new PlanningStorage(scratch, LIMITS, async ref => receipts.get(ref) ?? null)
+    const resolver = await sealedAnchorResolver(trusted, seal, ref => receipts.get(ref) ?? null)
+    expect(resolver.resolve(1)).toBe('safe')
+    const forged = canonicalJson({ target: 'forged', ordinal: 1, first_fragment: 0 })
+    await writeFile(path.join(scratch, state.scope, 'values/1.json'), forged, { mode: 0o600 })
+    await writeFile(path.join(scratch, state.scope, 'seen', `${sha256('forged')}.json`), forged, { mode: 0o600 })
+    expect(() => resolver.resolve(1)).toThrow('WORKER_PLANNING_COMMITTED_REFERENCE_INVALID')
   })
 })

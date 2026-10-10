@@ -10,21 +10,38 @@ import LazyInstantSEO from '@/components/seo/LazyInstantSEO'
 import { beginPrint } from '@/utils/printHtml.web'
 import * as QuestPrintable from '@/components/quests/QuestPrintable'
 import { translate as i18nT } from '@/i18n'
+import { ACTION_CONSENT_KEY, CONSENT_TYPES } from '@/utils/actionConsent'
+import QuestConsentGate from '@/components/quests/QuestConsentGate'
 
 const mockUseIsFocused = jest.fn(() => true)
 const mockUseLocalSearchParams = jest.fn(() => ({ city: '4', questId: 'minsk-cmok' }))
 const mockRouterPush = jest.fn()
+const mockUseQuestServing = jest.fn((_options: unknown) => ({ projection: null, pending: false, offline: false, refetch: jest.fn() }))
+const mockPublishVersions = jest.fn()
+const mockTrackQuestView = jest.fn()
+jest.mock('@/utils/questFunnelAnalytics', () => ({ trackQuestView: (...args: unknown[]) => mockTrackQuestView(...args) }))
+jest.mock('@/hooks/useQuestServing', () => ({ useQuestServing: (options: unknown) => mockUseQuestServing(options) }))
+jest.mock('@/hooks/useQuestVersionNavigation', () => ({ usePublishQuestVersionNavigation: (...args: unknown[]) => mockPublishVersions(...args) }))
+jest.mock('@/components/quests/QuestVersionLinks', () => ({ __esModule: true, default: () => null }))
+jest.mock('@/components/quests/QuestLocaleUnavailable', () => ({
+  __esModule: true,
+  default: (props: { temporary: boolean }) => {
+    const { Text } = require('react-native')
+    return <Text testID="quest-locale-unavailable">{props.temporary ? 'retryable-locale' : 'unavailable-locale'}</Text>
+  },
+}))
 const mockUseAuth = jest.fn(() => ({ isAuthenticated: true }))
 const mockUseQuestBundle = jest.fn(() => ({
   bundle: {
     id: 77,
+    questId: 'minsk-cmok',
     title: 'Тайна Свислочского Цмока: Легенда оживает',
     storageKey: 'minsk-cmok',
     coverUrl: undefined as string | undefined,
     steps: [],
     finale: null,
     intro: null,
-    city: { name: 'Минск', countryCode: 'BY', lat: 53.9, lng: 27.56 },
+    city: { id: 4, name: 'Минск', countryCode: 'BY', lat: 53.9, lng: 27.56 },
   },
   loading: false,
   error: null,
@@ -218,22 +235,28 @@ describe('Quest screen title sync', () => {
 
   beforeEach(() => {
     jest.useFakeTimers()
+    window.localStorage.removeItem(ACTION_CONSENT_KEY)
     document.documentElement.removeAttribute('data-metravel-print-document')
     mockUseIsFocused.mockReturnValue(true)
     mockUseLocalSearchParams.mockReturnValue({ city: '4', questId: 'minsk-cmok' })
     mockRouterPush.mockClear()
+    mockUseQuestServing.mockReset()
+    mockUseQuestServing.mockReturnValue({ projection: null, pending: false, offline: false, refetch: jest.fn() })
+    mockPublishVersions.mockClear()
+    mockTrackQuestView.mockClear()
     mockUseAuth.mockReturnValue({ isAuthenticated: true })
     mockUseQuestBundle.mockClear()
     mockUseQuestBundle.mockReturnValue({
       bundle: {
         id: 77,
+        questId: 'minsk-cmok',
         title: 'Тайна Свислочского Цмока: Легенда оживает',
         storageKey: 'minsk-cmok',
         coverUrl: undefined,
         steps: [],
         finale: null,
         intro: null,
-        city: { name: 'Минск', countryCode: 'BY', lat: 53.9, lng: 27.56 },
+        city: { id: 4, name: 'Минск', countryCode: 'BY', lat: 53.9, lng: 27.56 },
       },
       loading: false,
       error: null,
@@ -256,7 +279,6 @@ describe('Quest screen title sync', () => {
       goToLogin: jest.fn(),
       goToRegister: jest.fn(),
     })
-    document.title = 'Energylandia - польский Диснейленд.'
     document.body.innerHTML = ''
     document.head.innerHTML = [
       '<meta name="description" content="old desc">',
@@ -269,6 +291,7 @@ describe('Quest screen title sync', () => {
       '<meta name="robots" content="noindex, nofollow">',
       '<link rel="canonical" href="https://metravel.by/travels/energylandia-polskiy-disneylend">',
     ].join('')
+    document.title = 'Energylandia - польский Диснейленд.'
   })
 
   afterEach(() => {
@@ -277,6 +300,132 @@ describe('Quest screen title sync', () => {
     })
     jest.useRealTimers()
     jest.restoreAllMocks()
+    window.localStorage.removeItem(ACTION_CONSENT_KEY)
+  })
+
+  const plRoute = { locale: 'pl', cityId: 4, questSlug: 'minsk-cmok', path: '/pl/quests/4/minsk-cmok' } as const
+  const projection = {
+    schema_version: 1, release_id: 'release-test', city_id: 4, quest_slug: 'minsk-cmok', locale: 'pl',
+    state: 'available', canonical_path: plRoute.path, ru_source_path: '/quests/4/minsk-cmok',
+    versions: [{ locale: 'ru', path: '/quests/4/minsk-cmok' }, { locale: 'pl', path: plRoute.path }],
+  }
+
+  it('gates the exact prefixed bundle query while E is pending and preserves the static head', () => {
+    mockUseQuestServing.mockReturnValue({ projection: null, pending: true, offline: false, refetch: jest.fn() })
+    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
+    const screen = render(<QuestScreen route={plRoute} />)
+    expect(mockUseQuestBundle).toHaveBeenLastCalledWith(undefined, 'pl')
+    expect(screen.UNSAFE_root.findAllByType(LazyInstantSEO)).toHaveLength(0)
+    expect(mockQuestWizard).not.toHaveBeenCalled()
+    expect(mockTrackQuestView).not.toHaveBeenCalled()
+    expect(document.title).toBe('Energylandia - польский Диснейленд.')
+  })
+
+  it('uses E for prefixed canonical, reciprocal alternates and JSON-LD language with unchanged quest identity', async () => {
+    window.localStorage.setItem(ACTION_CONSENT_KEY, JSON.stringify({
+      [CONSENT_TYPES.QUEST_START]: { version: '1', date: '2026-10-10T00:00:00Z' },
+    }))
+    const original = mockUseQuestBundle()
+    mockUseQuestBundle.mockReturnValue({ ...original, bundle: { ...original.bundle, contentLocale: 'pl', city: { ...original.bundle.city, id: 4 } } } as any)
+    mockUseQuestServing.mockReturnValue({ projection, pending: false, offline: false, refetch: jest.fn() } as any)
+    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
+    const screen = render(<QuestScreen route={plRoute} />)
+    await act(async () => { jest.advanceTimersByTime(0); await Promise.resolve() })
+    expect(mockUseQuestBundle).toHaveBeenLastCalledWith('minsk-cmok', 'pl')
+    expect(document.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(`https://metravel.by${plRoute.path}`)
+    expect([...document.querySelectorAll('link[rel="alternate"][hreflang]')].map((node) => [node.getAttribute('hreflang'), node.getAttribute('href')])).toEqual([
+      ['ru', 'https://metravel.by/quests/4/minsk-cmok'], ['pl', `https://metravel.by${plRoute.path}`], ['x-default', 'https://metravel.by/quests/4/minsk-cmok'],
+    ])
+    const { jsonLd } = readHelmetStructuredData(screen)
+    expect(jsonLd['@graph']).toContainEqual(expect.objectContaining({ '@type': 'CreativeWork', inLanguage: 'pl' }))
+    expect(mockQuestWizard).toHaveBeenCalledWith(expect.objectContaining({ questId: 'minsk-cmok', cityId: '4' }))
+    screen.rerender(<QuestScreen route={plRoute} />)
+    expect(mockTrackQuestView).toHaveBeenCalledTimes(1)
+    expect(mockTrackQuestView).toHaveBeenCalledWith({ questId: 'minsk-cmok', cityId: '4', source: 'quest_detail' })
+  })
+
+  it('keeps the authenticated quest consent gate on an available prefixed version', async () => {
+    const original = mockUseQuestBundle()
+    mockUseQuestBundle.mockReturnValue({ ...original, bundle: { ...original.bundle, contentLocale: 'pl' } } as any)
+    mockUseQuestServing.mockReturnValue({ projection, pending: false, offline: false, refetch: jest.fn() } as any)
+    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
+    const screen = render(<QuestScreen route={plRoute} />)
+    await act(async () => { jest.advanceTimersByTime(500); await Promise.resolve() })
+    expect(screen.UNSAFE_root.findByType(QuestConsentGate)).toBeTruthy()
+    expect(mockQuestWizard).not.toHaveBeenCalled()
+    expect(document.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(`https://metravel.by${plRoute.path}`)
+  })
+
+  it('removes a revoked prefix head and cancels the delayed patches that could restore it', async () => {
+    const original = mockUseQuestBundle()
+    mockUseQuestBundle.mockReturnValue({ ...original, bundle: { ...original.bundle, contentLocale: 'pl' } } as any)
+    mockUseQuestServing.mockReturnValue({ projection, pending: false, offline: false, refetch: jest.fn() } as any)
+    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
+    const screen = render(<QuestScreen route={plRoute} />)
+    await act(async () => { jest.advanceTimersByTime(0) })
+    mockUseQuestServing.mockReturnValue({ projection: { ...projection, state: 'unavailable', canonical_path: null, versions: [] }, pending: false, offline: false, refetch: jest.fn() } as any)
+    screen.rerender(<QuestScreen route={plRoute} />)
+    await act(async () => { jest.advanceTimersByTime(500) })
+    expect(screen.getByTestId('quest-locale-unavailable')).toBeTruthy()
+    expect(document.querySelector('link[rel="canonical"]')).toBeNull()
+    expect(document.querySelector('link[rel="alternate"][hreflang]')).toBeNull()
+    expect(document.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex, nofollow')
+  })
+
+  it('blocks a Russian gameplay fallback under an online PL URL', async () => {
+    mockUseQuestServing.mockReturnValue({ projection, pending: false, offline: false, refetch: jest.fn() } as any)
+    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
+    const screen = render(<QuestScreen route={plRoute} />)
+    await act(async () => { jest.advanceTimersByTime(500); await Promise.resolve() })
+    expect(screen.getByTestId('quest-locale-unavailable')).toBeTruthy()
+    expect(mockQuestWizard).not.toHaveBeenCalled()
+    expect(mockTrackQuestView).not.toHaveBeenCalled()
+    expect(document.querySelector('link[rel="canonical"]')).toBeNull()
+  })
+
+  it.each([{ questId: 'other-quest' }, { city: { id: 999 } }])('blocks a gameplay identity that drifted after E was served: %j', async (drift) => {
+    const original = mockUseQuestBundle()
+    mockUseQuestBundle.mockReturnValue({ ...original, bundle: { ...original.bundle, contentLocale: 'pl', ...drift } } as any)
+    mockUseQuestServing.mockReturnValue({ projection, pending: false, offline: false, refetch: jest.fn() } as any)
+    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
+    const screen = render(<QuestScreen route={plRoute} />)
+    await act(async () => { jest.advanceTimersByTime(500); await Promise.resolve() })
+    expect(screen.getByTestId('quest-locale-unavailable')).toBeTruthy()
+    expect(mockQuestWizard).not.toHaveBeenCalled()
+    expect(mockTrackQuestView).not.toHaveBeenCalled()
+    expect(document.querySelector('link[rel="canonical"]')).toBeNull()
+    expect(mockPublishVersions).toHaveBeenCalledWith(null, true, 'pl')
+  })
+
+  it('keeps saved offline gameplay with its actual content language while clearing all SEO eligibility', async () => {
+    window.localStorage.setItem(ACTION_CONSENT_KEY, JSON.stringify({
+      [CONSENT_TYPES.QUEST_START]: { version: '1', date: '2026-10-10T00:00:00Z' },
+    }))
+    const original = mockUseQuestBundle()
+    mockUseQuestBundle.mockReturnValue({ ...original, bundle: { ...original.bundle, contentLocale: 'ru' } } as any)
+    mockUseQuestServing.mockReturnValue({ projection: null, pending: false, offline: true, refetch: jest.fn() })
+    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
+    const screen = render(<QuestScreen route={plRoute} />)
+    await act(async () => { jest.advanceTimersByTime(500); await Promise.resolve() })
+    expect(mockUseQuestBundle).toHaveBeenLastCalledWith('minsk-cmok', 'pl')
+    expect(mockQuestWizard).toHaveBeenCalled()
+    expect(screen.UNSAFE_root.findAllByType(LazyInstantSEO)).toHaveLength(0)
+    expect(document.querySelector('link[rel="canonical"]')).toBeNull()
+    expect(document.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex, nofollow')
+  })
+
+  it('keeps print query separate from the prefix identity and gives its generator the translated canonical', async () => {
+    const original = mockUseQuestBundle()
+    mockUseLocalSearchParams.mockReturnValue({ city: '999', questId: 'unrelated-quest', print: '1' } as any)
+    mockUseQuestBundle.mockReturnValue({ ...original, bundle: { ...original.bundle, contentLocale: 'pl', tags: [] } } as any)
+    mockUseQuestServing.mockReturnValue({ projection, pending: false, offline: false, refetch: jest.fn() } as any)
+    const generate = jest.spyOn(QuestPrintable, 'generatePrintableQuest').mockResolvedValue('unavailable')
+    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
+    const screen = render(<QuestScreen route={plRoute} />)
+    await act(async () => { await Promise.resolve() })
+    expect(mockUseQuestBundle).toHaveBeenLastCalledWith('minsk-cmok', 'pl')
+    expect(generate).toHaveBeenCalledWith(expect.objectContaining({ questUrl: `https://metravel.by${plRoute.path}` }), expect.objectContaining({ inPlace: true }))
+    expect(screen.UNSAFE_root.findAllByType(LazyInstantSEO)).toHaveLength(0)
   })
 
   it('an actual in-place print document survives already scheduled route patches after 3 seconds', async () => {
@@ -442,6 +591,8 @@ describe('Quest screen title sync', () => {
       bundle: {
         ...current.bundle,
         storageKey: 'krakow-dragon',
+        questId: 'krakow-dragon',
+        city: { ...current.bundle.city, id: 1, name: 'Краков', countryCode: 'PL' },
         coverUrl: '/quest-cover/quests/78/main/next.webp',
       },
     })
@@ -582,7 +733,7 @@ describe('Quest screen title sync', () => {
 
     render(<QuestScreen />)
 
-    expect(mockUseQuestBundle).toHaveBeenCalledWith(undefined)
+    expect(mockUseQuestBundle).toHaveBeenCalledWith(undefined, undefined)
     // questId гасится фокусом, сессия — нет: иначе блюр выглядит как логаут (#1973).
     expect(mockUseQuestProgressSync).toHaveBeenCalledWith(undefined, true)
   })

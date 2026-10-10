@@ -2,6 +2,7 @@ import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from './config'
 import { LOCALE_PREFERENCE_STORAGE_KEY } from './localeStorage'
 import { DESIGN_COLORS } from '@/constants/designSystem'
 import { getBootLocaleRecoveryCopy } from './bootLocaleRecoveryCopy'
+import { getQuestLocaleRouteParserScript } from '@/utils/questLocaleRouting'
 
 export const LOCALE_BOOT_PENDING_CLASS = 'locale-boot-pending'
 
@@ -12,48 +13,57 @@ declare global {
   }
 }
 
-/** Runs in <head>, before the Russian SSG body can paint (#2327). */
+/** Hide preference-bound RU SSG; URL-bound translated SSG stays readable. */
 export const getLocaleBootScript = (): string => `
 (function(){try{
   if(window.__metravelLocaleBootErrorHandler)window.removeEventListener('error',window.__metravelLocaleBootErrorHandler,true);
-  var p=JSON.parse(window.localStorage.getItem(${JSON.stringify(LOCALE_PREFERENCE_STORAGE_KEY)}));
-  if(!p||p.version!==1)return;
+  var route=${getQuestLocaleRouteParserScript()}(window.location.pathname);
   var locales=${JSON.stringify(SUPPORTED_LOCALES)};
-  var locale=p.mode==='explicit'?p.locale:null;
-  if(p.mode==='system'){
+  var locale=route?route.locale:null;
+  if(!route){
+    var p=JSON.parse(window.localStorage.getItem(${JSON.stringify(LOCALE_PREFERENCE_STORAGE_KEY)}));
+    if(!p||p.version!==1)return;
+    locale=p.mode==='explicit'?p.locale:null;
+    if(p.mode==='system'){
     var languages=navigator.languages||[navigator.language];
     for(var i=0;i<languages.length;i++){
       var candidate=String(languages[i]).toLowerCase().replace(/_/g,'-').split('-')[0];
       if(locales.indexOf(candidate)!==-1){locale=candidate;break;}
     }
+    }
   }
   if(locale===${JSON.stringify(DEFAULT_LOCALE)}||locales.indexOf(locale)===-1)return;
-  document.documentElement.classList.add(${JSON.stringify(LOCALE_BOOT_PENDING_CLASS)});
+  // Translated public SSG is already in the URL locale. Keep it readable even
+  // when saved preference differs or catalogue loading fails.
+  if(!route)document.documentElement.classList.add(${JSON.stringify(LOCALE_BOOT_PENDING_CLASS)});
   window.__metravelLocaleBootRecoveryOwner='static';
   var copy=${JSON.stringify(Object.fromEntries(SUPPORTED_LOCALES.map((locale) => [locale, getBootLocaleRecoveryCopy(locale)])))}[locale];
   function recover(){
     if(window.__metravelLocaleBootRecoveryOwner==='react')return;
-    if(!document.documentElement.classList.contains(${JSON.stringify(LOCALE_BOOT_PENDING_CLASS)}))return;
+    function pending(){return route?${getQuestLocaleRouteParserScript()}(window.location.pathname)?.path===route.path:document.documentElement.classList.contains(${JSON.stringify(LOCALE_BOOT_PENDING_CLASS)});}
+    if(!pending())return;
     // Reuse the existing guarded stale-chunk reload; after its one retry, give
     // the visitor controls even if the React entry point never executed.
     if(window.__metravelReloadStaleChunk&&window.__metravelReloadStaleChunk())return;
     function show(){
       if(window.__metravelLocaleBootRecoveryOwner==='react')return;
-      if(!document.documentElement.classList.contains(${JSON.stringify(LOCALE_BOOT_PENDING_CLASS)}))return;
+      if(!pending())return;
       if(document.getElementById('locale-boot-recovery'))return;
       var panel=document.createElement('div');
       panel.id='locale-boot-recovery';panel.lang=locale;
+      if(route)panel.setAttribute('data-url-locale','true');
       panel.setAttribute('data-static-recovery','true');
       var status=document.createElement('p');status.setAttribute('role','status');status.textContent=copy.failed;
       var retry=document.createElement('button');retry.type='button';retry.textContent=copy.retry;
       retry.onclick=function(){window.location.reload();};
-      var fallback=document.createElement('button');fallback.type='button';fallback.textContent=copy.fallback;
-      fallback.onclick=function(){
+      var fallback=document.createElement(route?'a':'button');fallback.textContent=copy.fallback;
+      if(route){fallback.href='/quests/'+route.cityId+'/'+route.questSlug;}
+      else{fallback.type='button';fallback.onclick=function(){
         try{window.localStorage.setItem(${JSON.stringify(LOCALE_PREFERENCE_STORAGE_KEY)},JSON.stringify({version:1,mode:'explicit',locale:'ru'}));}catch(_){}
         document.documentElement.classList.remove(${JSON.stringify(LOCALE_BOOT_PENDING_CLASS)});
         var root=document.getElementById('root');if(root)root.style.setProperty('visibility','visible','important');
         panel.remove();
-      };
+      };}
       panel.appendChild(status);panel.appendChild(retry);panel.appendChild(fallback);document.body.appendChild(panel);
     }
     if(document.body)show();else document.addEventListener('DOMContentLoaded',show,{once:true});
@@ -74,7 +84,8 @@ export const getLocaleBootCss = (): string =>
   `html.${LOCALE_BOOT_PENDING_CLASS} body, html.${LOCALE_BOOT_PENDING_CLASS} body * { visibility: hidden !important; pointer-events: none; }
    html.${LOCALE_BOOT_PENDING_CLASS} #locale-boot-recovery, html.${LOCALE_BOOT_PENDING_CLASS} #locale-boot-recovery * { visibility: visible !important; pointer-events: auto; }
    #locale-boot-recovery { position: fixed; inset: 0; z-index: 2147483647; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; background: var(--color-surface, ${DESIGN_COLORS.criticalSurfaceLight}); color: var(--color-text, ${DESIGN_COLORS.criticalTextLight}); font: 16px/1.5 system-ui, sans-serif; }
-   #locale-boot-recovery button { min-height: 44px; padding: 10px 18px; cursor: pointer; color: inherit; background: var(--color-backgroundSecondary, ${DESIGN_COLORS.criticalBgSecondaryLight}); border: 1px solid currentColor; border-radius: 8px; }`
+   #locale-boot-recovery button, #locale-boot-recovery a { min-height: 44px; padding: 10px 18px; cursor: pointer; color: inherit; background: var(--color-backgroundSecondary, ${DESIGN_COLORS.criticalBgSecondaryLight}); border: 1px solid currentColor; border-radius: 8px; }
+   #locale-boot-recovery[data-url-locale="true"] { inset: auto 16px 16px; max-width: 520px; max-height: 50vh; overflow: auto; margin: 0 auto; padding: 16px; border: 1px solid currentColor; border-radius: 8px; }`
 
 /** React can now recover catalogue errors itself; never stack both panels. */
 export const claimLocaleBootRecovery = (): void => {

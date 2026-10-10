@@ -8,7 +8,8 @@ import 'expo'
 import { isSupportedLocale, DEFAULT_LOCALE, type SupportedLocale } from './config'
 import i18n from './instance'
 import { readWebLocalePreferenceSync, resolveLocalePreference } from './localeStorage'
-import { loadWebLocale } from './translate'
+import { isWebLocaleLoaded, loadWebLocale } from './translate'
+import { parseQuestLocaleRoute } from '@/utils/questLocaleRouting'
 
 /**
  * Каталог сохранённой локали — до гидратации (#2239, `I18N-LOCALE-BOOT-REMOUNT-001`).
@@ -36,8 +37,18 @@ export const BOOT_LOCALE_TIMEOUT_MS = 3000
 export const normalizeActiveLocale = (value: string | undefined): SupportedLocale =>
   isSupportedLocale(value) ? value : DEFAULT_LOCALE
 
-/** Сохранённая локаль, которую нужно применить при старте, или `null`. */
+/** URL-локаль детали либо сохранённая локаль, ожидающая boot commit. */
 export const resolvePendingBootLocale = (): SupportedLocale | null => {
+  // Only canonical, allowlisted quest details bind the UI to their URL. Other
+  // sections retain the established preference-driven boot lifecycle.
+  const routeLocale = typeof window === 'undefined'
+    ? null
+    : parseQuestLocaleRoute(window.location.pathname)?.locale
+  if (routeLocale) {
+    return routeLocale === normalizeActiveLocale(i18n.resolvedLanguage) && isWebLocaleLoaded(routeLocale)
+      ? null
+      : routeLocale
+  }
   const storedPreference = readWebLocalePreferenceSync()
   if (!storedPreference) return null
   const target = resolveLocalePreference(storedPreference)
@@ -45,11 +56,14 @@ export const resolvePendingBootLocale = (): SupportedLocale | null => {
 }
 
 /**
- * Начинает загрузку каталога сохранённой локали. Возвращает промис, который
- * не отклоняется (ошибка и таймаут = русский интерфейс), или `null`, если
- * загружать нечего.
+ * Preload before Expo hydration. A quest prefix additionally commits its URL
+ * locale, matching translated SSG. The promise never rejects: on timeout/error
+ * the provider keeps its boundary pending and exposes localized recovery.
  */
 export const prepareBootLocale = (): Promise<void> | null => {
+  const routeLocale = typeof window === 'undefined'
+    ? null
+    : parseQuestLocaleRoute(window.location.pathname)?.locale
   const target = resolvePendingBootLocale()
   if (!target) return null
   return new Promise<void>((resolve) => {
@@ -58,6 +72,14 @@ export const prepareBootLocale = (): Promise<void> | null => {
       clearTimeout(timeout)
       resolve()
     }
-    loadWebLocale(target).then(finish, finish)
+    loadWebLocale(target).then(async () => {
+      // Translated SSG must hydrate in its declared locale, including the first
+      // render/request. Ordinary RU SSG still commits preference after hydration.
+      if (routeLocale && parseQuestLocaleRoute(window.location.pathname)?.locale === routeLocale
+        && normalizeActiveLocale(i18n.resolvedLanguage) !== routeLocale) {
+        await i18n.changeLanguage(routeLocale)
+      }
+      finish()
+    }, finish).catch(finish)
   })
 }

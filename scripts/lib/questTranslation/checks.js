@@ -105,11 +105,25 @@ function contentDigest(document, stepFields) {
 const translationDigest = (translation) => contentDigest(translation, STEP_FIELDS)
 
 /**
- * Хеш русского источника по содержанию: тексты, тип и варианты ответа. Служебные
- * поля снимка (slug, is_intro, answer_rule) не входят, поэтому задание,
- * подготовленное до их появления, остаётся актуальным, пока не правили сам квест.
+ * Хеш русского источника: тексты, тип, варианты и параметры проверяемого ответа.
+ * У старого снимка без параметров числового/свободного ответа нет доказательства
+ * свежести правила — sweep потребует prepare заново. Служебные поля снимка и
+ * описание answer_rule не влияют на хеш; exact/any остаются совместимыми.
  */
-const sourceDigest = (source) => contentDigest(source, [...STEP_FIELDS, 'answer_type'])
+function sourceDigest(source) {
+  const ruleFields = { range: ['min', 'max'], approx: ['target', 'tolerance'], any_text: ['min_length'] }
+  const steps = (Array.isArray(source?.steps) ? source.steps : []).map((step) => {
+    const fields = ruleFields[step?.answer_type]
+    const rule = step?.answer_rule_parameters
+    return {
+      ...step,
+      answer_rule_parameters: fields
+        ? rule ? JSON.stringify(fields.map((field) => rule[field] ?? null)) : 'unknown'
+        : '',
+    }
+  })
+  return contentDigest({ ...source, steps }, [...STEP_FIELDS, 'answer_type', 'answer_rule_parameters'])
+}
 
 /**
  * К чему привязан вердикт смысловой проверки: к переводу И к русскому источнику,

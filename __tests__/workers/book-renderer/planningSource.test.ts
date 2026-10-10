@@ -24,10 +24,13 @@ describe('bounded original UTF8 feeds and chapter metadata', () => {
   async function fixture(text: string, window = 11) {
     const f = await buildSnapshotFixture(path.join(scratch, 'input'), { travels: [{ id: 41, title: 'Ультрафиолет 😀', description: text, photos: 2, points: 2 }], durableTextWindow: window })
     const out = path.join(scratch, 'plan')
+    const committed = new Map<string, PlanningFile>()
     let checkpoint: PlanningFile | undefined
     let generation = 0
     while (true) {
-      const result = await preparePlanningStep(f.jobDir, out, f.document, { renderer_content_hash: PIN, generation: ++generation, checkpoint })
+      const result = await preparePlanningStep(f.jobDir, out, f.document, { renderer_content_hash: PIN, generation: ++generation, checkpoint },
+        { committed: async ref => committed.get(ref) ?? null })
+      for (const file of result.outputs) committed.set(file.ref, file)
       checkpoint = result.checkpoint
       if (result.phase === 'indexed') break
     }

@@ -20,7 +20,7 @@ function syncDirectory(path: string): void {
   const handle = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW)
   try { fsyncSync(handle) } finally { closeSync(handle) }
 }
-function readPrivate(path: string, maximum: number): string {
+export function readPrivateCheckpointFile(path: string, maximum: number): string {
   const handle = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK)
   try {
     const stat = fstatSync(handle)
@@ -45,7 +45,7 @@ function immutable(path: string, value: string, maximum: number): boolean {
     const handle = openSync(temporary, constants.O_RDONLY | constants.O_NOFOLLOW)
     try { fsyncSync(handle) } finally { closeSync(handle) }
     try { linkSync(temporary, path); published = true } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'EEXIST' || readPrivate(path, maximum) !== value) throw error
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST' || readPrivateCheckpointFile(path, maximum) !== value) throw error
     }
   } finally {
     if (created) { unlinkSync(temporary); syncDirectory(dirname(path)) }
@@ -55,15 +55,21 @@ function immutable(path: string, value: string, maximum: number): boolean {
 
 /** Caller supplies an existing canonical epoch-private0700 root and binds outputs to its snapshot. */
 export interface CheckpointStoreReceipt {ref: string; checksum: string; size_bytes: number; created: boolean}
-export function createDiskCheckpointStores(root: string, options: {onwrite?: (file: CheckpointStoreReceipt) => void} = {}): {context: ContextStore; text: TextStore; tags: TagStore} {
+export function createDiskCheckpointStores(root: string, options: {onwrite?: (file: CheckpointStoreReceipt) => void; onread?: (file: Omit<CheckpointStoreReceipt, 'created'>) => void; readonly?: boolean} = {}): {context: ContextStore; text: TextStore; tags: TagStore} {
   const base = privateDirectory(root)
-  const contexts = privateDirectory(join(base, 'contexts'), true); const blocks = privateDirectory(join(base, 'text'), true)
-  const tags = privateDirectory(join(base, 'stack'), true)
-  syncDirectory(base)
+  privateDirectory(join(base, 'contexts'), !options.readonly); privateDirectory(join(base, 'text'), !options.readonly)
+  privateDirectory(join(base, 'stack'), !options.readonly)
+  if (!options.readonly) syncDirectory(base)
   const publish = (ref: string, encoded: string, maximum: number): void => {
+    if (options.readonly) throw new Error('HTML_CHECKPOINT_STORE_READONLY')
     if (Buffer.byteLength(encoded) > maximum) throw new Error('HTML_CHECKPOINT_OUTPUT_LIMIT')
     const created = immutable(join(base, ref), encoded, maximum)
     options.onwrite?.({ref, checksum: sha256(encoded), size_bytes: Buffer.byteLength(encoded), created})
+  }
+  const load = (ref: string, maximum: number): string => {
+    const encoded = readPrivateCheckpointFile(join(base, ref), maximum)
+    options.onread?.({ref, checksum: sha256(encoded), size_bytes: Buffer.byteLength(encoded)})
+    return encoded
   }
   return {
     tags: {
@@ -73,7 +79,7 @@ export function createDiskCheckpointStores(root: string, options: {onwrite?: (fi
       },
       get(hash): unknown {
         if (!/^[a-f0-9]{64}$/.test(hash)) throw new Error('HTML_CHECKPOINT_STACK_REF_INVALID')
-        const encoded = readPrivate(join(tags, `${hash}.json`), 6291712)
+        const encoded = load(`stack/${hash}.json`, 6291712)
         if (sha256(encoded) !== hash) throw new Error('HTML_CHECKPOINT_STACK_HASH_MISMATCH')
         return JSON.parse(encoded) as unknown
       },
@@ -86,7 +92,7 @@ export function createDiskCheckpointStores(root: string, options: {onwrite?: (fi
       },
       get(hash: string): unknown {
         if (!/^[a-f0-9]{64}$/.test(hash)) throw new Error('HTML_CHECKPOINT_CONTEXT_REF_INVALID')
-        const encoded = readPrivate(join(contexts, `${hash}.json`), 256)
+        const encoded = load(`contexts/${hash}.json`, 256)
         if (sha256(encoded) !== hash) throw new Error('HTML_CHECKPOINT_CONTEXT_HASH_MISMATCH')
         return JSON.parse(encoded) as unknown
       },
@@ -100,7 +106,7 @@ export function createDiskCheckpointStores(root: string, options: {onwrite?: (fi
       },
       get(ordinal: number): string {
         integer(ordinal)
-        const state = object(JSON.parse(readPrivate(join(blocks, `${ordinal}.json`), 8192)) as unknown, ['ordinal', 'text', 'sha256'])
+        const state = object(JSON.parse(load(`text/${ordinal}.json`, 8192)) as unknown, ['ordinal', 'text', 'sha256'])
         const block = text(state.text, SOURCE_BLOCK_CHARS)
         if (state.ordinal !== ordinal || block.length !== SOURCE_BLOCK_CHARS || state.sha256 !== blockSha256(block)) throw new Error('HTML_CHECKPOINT_BLOCK_HASH_MISMATCH')
         return block

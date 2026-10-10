@@ -22,6 +22,7 @@ it('preserves the cold route HTML, real catalog states and locale initialization
   ;(globalThis as { __DEV__?: boolean }).__DEV__ = false
   Object.assign((globalThis as any).expo, require(path.resolve('node_modules/expo-modules-core/src/polyfill/CoreModule.ts')))
   jest.doMock('expo-router', () => ({
+    usePathname: () => '/trips',
     useRouter: () => ({ push: () => { throw new Error('Unexpected navigation in static fixture') } }),
     useIsFocused: () => true,
     useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),

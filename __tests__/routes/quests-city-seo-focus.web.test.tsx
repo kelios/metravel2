@@ -9,6 +9,7 @@ import { render } from '@testing-library/react-native'
 const mockUseIsFocused = jest.fn(() => true)
 const mockReplace = jest.fn()
 let mockCityParam = 'rome'
+let mockLegacyCityId: number | undefined
 
 const WALK_MODEL = {
   places: [
@@ -78,7 +79,9 @@ jest.mock('@/hooks/useQuestsApi', () => {
   ]
 
   return {
-    useQuestsList: () => ({ loading: false, quests }),
+    useQuestsList: () => ({ loading: false, quests: quests.map((quest) => ({
+      ...quest, cityLegacyIds: mockLegacyCityId === undefined ? [] : [mockLegacyCityId],
+    })) }),
   }
 })
 
@@ -161,6 +164,7 @@ describe('quest city SEO focus lifecycle', () => {
     jest.useFakeTimers()
     mockUseIsFocused.mockReturnValue(true)
     mockCityParam = 'rome'
+    mockLegacyCityId = undefined
     mockReplace.mockClear()
     mockUseQuestCityWalk.mockReturnValue(WALK_MODEL)
     document.body.innerHTML = ''
@@ -177,6 +181,20 @@ describe('quest city SEO focus lifecycle', () => {
   afterEach(() => {
     document.head.innerHTML = ''
     jest.useRealTimers()
+  })
+
+  it.each(['web', 'android', 'ios'] as const)('resolves a retired city segment on %s without a server redirect', (platform) => {
+    Object.defineProperty(Platform, 'OS', { value: platform, configurable: true })
+    mockLegacyCityId = 92
+    mockCityParam = '92'
+    const screen = render(<QuestsByCityScreen />)
+    expect(mockReplace).not.toHaveBeenCalled()
+    expect(mockUseQuestCityWalk).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ cityId: '121' })]),
+      { enabled: platform === 'web' },
+    )
+    screen.unmount()
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
   })
 
   it('deduplicates focused city descriptions and restores the generic head across blur/refocus/unmount', () => {

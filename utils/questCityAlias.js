@@ -39,6 +39,19 @@ function questRouteKey(quest) {
   return { cityId, questId, path: `/quests/${cityId}/${questId}` };
 }
 
+/** Retired IDs are API identity data, never inferred from a city name. */
+function normalizeQuestCityLegacyIds(raw) {
+  return [...new Set((Array.isArray(raw) ? raw : []).filter(
+    (id) => typeof id === 'number' && Number.isSafeInteger(id) && id > 0,
+  ))];
+}
+
+function questCityLegacyIds(quest) {
+  return normalizeQuestCityLegacyIds(
+    quest?.city_legacy_ids ?? quest?.cityLegacyIds ?? quest?.city?.legacy_ids ?? quest?.city?.legacyIds,
+  ).map(String);
+}
+
 /** Leading `[a-z0-9]` tokens of a quest_id, stopping at the first odd segment. */
 function questIdTokens(questId) {
   const tokens = [];
@@ -181,7 +194,7 @@ function buildQuestCityAliasMap(quests) {
   return aliases;
 }
 
-function questRouteVariants(quest, cityAliasMap) {
+function questRouteVariants(quest, cityAliasMap, cityGroups) {
   const primary = questRouteKey(quest);
   if (!primary) return [];
 
@@ -190,6 +203,11 @@ function questRouteVariants(quest, cityAliasMap) {
   if (alias && alias !== primary.cityId) citySegments.push(alias);
   const legacyAlias = questCityLegacyAlias(alias);
   if (legacyAlias && !citySegments.includes(legacyAlias)) citySegments.push(legacyAlias);
+  const group = cityGroups?.find((candidate) => candidate.cityIds.includes(primary.cityId));
+  const legacyIds = cityGroups ? group?.legacyCityIds || [] : questCityLegacyIds(quest);
+  for (const id of legacyIds) {
+    if (!citySegments.includes(id)) citySegments.push(id);
+  }
 
   return citySegments.map((cityId) => ({
     cityId,
@@ -260,6 +278,7 @@ function buildQuestCityLandingGroups(quests, cityAliasMap) {
       alias,
       cityId: route.cityId,
       cityIds: [],
+      legacyCityIds: [],
       legacyAliases: [],
       cityName: '',
       countryName: '',
@@ -270,6 +289,9 @@ function buildQuestCityLandingGroups(quests, cityAliasMap) {
     };
 
     if (!group.cityIds.includes(route.cityId)) group.cityIds.push(route.cityId);
+    for (const id of questCityLegacyIds(quest)) {
+      if (!group.legacyCityIds.includes(id)) group.legacyCityIds.push(id);
+    }
     if (!group.cityName) group.cityName = questCityName(quest);
     if (!group.countryName) group.countryName = questCountryName(quest);
     if (!group.countryCode) group.countryCode = questCountryCode(quest);
@@ -299,6 +321,18 @@ function buildQuestCityLandingGroups(quests, cityAliasMap) {
   // The short alias a city used to publish stays addressable, but never at the
   // cost of shadowing a segment another city already owns.
   const takenSegments = new Set(groups.flatMap((group) => [group.segment, ...group.cityIds]));
+  const legacyOwners = new Map();
+  for (const group of groups) {
+    for (const id of group.legacyCityIds) {
+      legacyOwners.set(id, (legacyOwners.get(id) || 0) + 1);
+    }
+  }
+  for (const group of groups) {
+    // A live identity wins; ambiguous retired IDs must not select a random city.
+    group.legacyCityIds = group.legacyCityIds.filter(
+      (id) => !takenSegments.has(id) && legacyOwners.get(id) === 1,
+    );
+  }
   for (const group of groups) {
     const legacyAlias = questCityLegacyAlias(group.alias);
     if (!legacyAlias || takenSegments.has(legacyAlias)) continue;
@@ -362,7 +396,7 @@ function resolveQuestCitySegment(cityParam, quests) {
       candidate.segment.toLowerCase() === raw ||
       candidate.cityIds.some((cityId) => cityId.toLowerCase() === raw) ||
       candidate.legacyAliases.includes(raw),
-  );
+  ) || groups.find((candidate) => candidate.legacyCityIds.includes(raw));
   if (!group) return null;
   return {
     cityId: group.cityId,
@@ -375,6 +409,7 @@ function resolveQuestCitySegment(cityParam, quests) {
 module.exports = {
   stableTextCompare,
   questRouteKey,
+  normalizeQuestCityLegacyIds,
   buildQuestCityAliasMap,
   buildQuestCityLandingGroups,
   findNearbyQuestCityGroups,

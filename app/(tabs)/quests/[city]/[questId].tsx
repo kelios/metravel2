@@ -27,6 +27,11 @@ import {
   useQuestPrintLanding,
 } from '@/components/quests/hooks/useQuestPrintLanding';
 import { useQuestRatingMeta } from '@/hooks/useQuestRatingMeta';
+import { useQuestServing } from '@/hooks/useQuestServing';
+import { usePublishQuestVersionNavigation } from '@/hooks/useQuestVersionNavigation';
+import QuestVersionLinks from '@/components/quests/QuestVersionLinks';
+import QuestLocaleUnavailable from '@/components/quests/QuestLocaleUnavailable';
+import { questServingAlternates, type QuestLocaleRoute } from '@/utils/questLocaleRouting';
 import { useQuestCompletionMeta } from '@/hooks/useQuestCompletionMeta';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useActionConsent } from '@/hooks/useActionConsent';
@@ -161,7 +166,19 @@ const removeMeta = (selector: string) => {
   document.querySelectorAll(selector).forEach((node) => node.remove());
 };
 
-const patchQuestHead = (seo: QuestSeoModel, canonical: string, image: string) => {
+const syncQuestAlternates = (alternates: ReturnType<typeof questServingAlternates>) => {
+  document.head.querySelectorAll('link[rel="alternate"][hreflang]').forEach((node) => node.remove());
+  alternates.forEach(({ locale, href }) => {
+    const node = document.createElement('link');
+    node.setAttribute('rel', 'alternate');
+    node.setAttribute('hreflang', locale);
+    node.setAttribute('href', href);
+    node.setAttribute('data-rh', 'true');
+    document.head.appendChild(node);
+  });
+};
+
+const patchQuestHead = (seo: QuestSeoModel, canonical: string, image: string, alternates: ReturnType<typeof questServingAlternates>) => {
   if (document.documentElement.getAttribute('data-metravel-print-document') === 'true') return;
   document.title = seo.title;
   upsertMetaContent('meta[name="description"]', seo.description);
@@ -181,9 +198,10 @@ const patchQuestHead = (seo: QuestSeoModel, canonical: string, image: string) =>
   // посадочных города и страны (#1929).
   removeMeta('meta[name="robots"][content="noindex, nofollow"], meta[name="robots"][data-rh]');
   upsertCanonical(canonical);
+  syncQuestAlternates(alternates);
 };
 
-const useQuestHeadSync = (enabled: boolean, seo: QuestSeoModel, canonical: string, image: string) => {
+const useQuestHeadSync = (enabled: boolean, seo: QuestSeoModel, canonical: string, image: string, alternates: ReturnType<typeof questServingAlternates>) => {
   useEffect(() => {
     if (!enabled || Platform.OS !== 'web' || typeof document === 'undefined') return undefined;
 
@@ -209,12 +227,12 @@ const useQuestHeadSync = (enabled: boolean, seo: QuestSeoModel, canonical: strin
       handOverStructuredData();
     }
 
-    const timers = HEAD_PATCH_DELAYS_MS.map((delay) => setTimeout(() => patchQuestHead(seo, canonical, image), delay));
+    const timers = HEAD_PATCH_DELAYS_MS.map((delay) => setTimeout(() => patchQuestHead(seo, canonical, image, alternates), delay));
     return () => {
       timers.forEach(clearTimeout);
       bootstrapObserver?.disconnect();
     };
-  }, [canonical, enabled, image, seo]);
+  }, [alternates, canonical, enabled, image, seo]);
 };
 
 const Icon = ({ name, color, size = 18 }: { name: IconName; color: string; size?: number }) => (
@@ -346,23 +364,51 @@ const ErrorState = ({
   );
 };
 
-export default function QuestByIdScreen() {
+export default function QuestByIdScreen({ route }: { route?: QuestLocaleRoute } = {}) {
   const params = useLocalSearchParams<{
     city?: string | string[];
     questId?: string | string[];
     [QUEST_PRINT_PARAM]?: string | string[];
   }>();
-  const cityId = getRouteParam(params.city);
-  const questId = getRouteParam(params.questId);
+  const cityId = route ? String(route.cityId) : getRouteParam(params.city);
+  const questId = route?.questSlug ?? getRouteParam(params.questId);
   const isFocused = useIsFocused();
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const { isAuthenticated, userId } = useAuth();
-  const shouldLoadQuest = isFocused && Boolean(questId);
+  // A prefix is a content identity: a gameplay fallback or an offline copy cannot
+  // prove that this URL is a released translation. Resolve E before its query.
+  const prefixServing = useQuestServing({
+    cityId: route?.cityId,
+    questSlug: questId,
+    locale: route?.locale ?? 'ru',
+    enabled: Platform.OS === 'web' && isFocused && Boolean(route && questId),
+  });
+  const prefixAvailable = !route || prefixServing.projection?.state === 'available';
+  const offlinePrefix = Boolean(route && prefixServing.offline);
+  const shouldLoadQuest = isFocused && Boolean(questId) && (prefixAvailable || offlinePrefix);
   const { bundle, loading: isQuestLoading, error: bundleError, refetch } = useQuestBundle(
     shouldLoadQuest ? questId : undefined,
+    route?.locale,
   );
+  const ruServing = useQuestServing({
+    cityId: bundle?.city?.id,
+    questSlug: questId,
+    locale: 'ru',
+    enabled: Platform.OS === 'web' && isFocused && Boolean(!route && bundle && questId),
+  });
+  const serving = route ? prefixServing : ruServing;
+  const prefixContentMismatch = Boolean(route && !offlinePrefix && bundle && bundle.contentLocale !== route.locale);
+  const prefixIdentityMismatch = Boolean(route && !offlinePrefix && bundle
+    && (bundle.questId !== questId || bundle.city?.id !== route.cityId));
+  const prefixBundleUnavailable = Boolean(route && prefixAvailable && !isQuestLoading && !bundle);
+  const prefixUnavailable = Boolean(route && (
+    (!offlinePrefix && ((!serving.pending && !prefixAvailable) || prefixContentMismatch || prefixIdentityMismatch || prefixBundleUnavailable)) ||
+    (offlinePrefix && !isQuestLoading && !bundle)
+  ));
+  const usableBundle = (prefixAvailable && !prefixContentMismatch && !prefixIdentityMismatch) || offlinePrefix ? bundle : null;
+  usePublishQuestVersionNavigation(prefixUnavailable || offlinePrefix ? null : serving.projection, Platform.OS === 'web' && isFocused && Boolean(questId), route?.locale ?? 'ru');
   // Фокус экрана не равен сессии: `isFocused && isAuthenticated` на блюре
   // выглядело как логаут, и ответ за <2 с уходил в очередь вместо POST (#1973).
   const {
@@ -421,11 +467,11 @@ export default function QuestByIdScreen() {
   // новый, и он засчитывается.
   const viewTrackedRef = React.useRef<string | null>(null);
   useEffect(() => {
-    if (!isFocused || !questId || !bundle) return;
+    if (!isFocused || !questId || !usableBundle) return;
     if (viewTrackedRef.current === questId) return;
     viewTrackedRef.current = questId;
     trackQuestView({ questId, cityId: cityId || undefined, source: 'quest_detail' });
-  }, [bundle, cityId, isFocused, questId]);
+  }, [usableBundle, cityId, isFocused, questId]);
 
   const completionMeta = useQuestCompletionMeta(shouldLoadQuest ? questId : undefined, bundle?.id);
   // #1922 — прохождение, сделанное без сети, ждёт отправки: пометка живёт рядом
@@ -507,6 +553,7 @@ export default function QuestByIdScreen() {
   }, [progressPending, questId, reviewInvite]);
 
   const isLoading =
+    Boolean(route && serving.pending && !serving.projection) ||
     isQuestLoading ||
     (isAuthenticated ? progressLoading : Boolean(questId) && !guestFlow.guestReady);
   // #1938: canonical принадлежит квесту, а не сегменту из адресной строки.
@@ -517,15 +564,15 @@ export default function QuestByIdScreen() {
   // посадочная (`app/(tabs)/quests/[city]/index.tsx`).
   const canonicalCityId = bundle?.city?.id != null ? String(bundle.city.id) : cityId;
   const canonical = useMemo(
-    () => buildCanonicalUrl(`/quests/${canonicalCityId}/${questId}`),
-    [canonicalCityId, questId],
+    () => buildCanonicalUrl(route ? (serving.projection?.canonical_path ?? route.path) : `/quests/${canonicalCityId}/${questId}`),
+    [canonicalCityId, questId, route, serving.projection?.canonical_path],
   );
   useQuestPrintLanding({
-    enabled: isFocused && isQuestPrintRequested(params[QUEST_PRINT_PARAM]),
-    bundle,
+    enabled: isFocused && Boolean(usableBundle) && isQuestPrintRequested(params[QUEST_PRINT_PARAM]),
+    bundle: usableBundle,
     questUrl: canonical,
   });
-  const showQuestSeo = isFocused && !isQuestPrintRequested(params[QUEST_PRINT_PARAM]);
+  const showQuestSeo = isFocused && !offlinePrefix && !isQuestPrintRequested(params[QUEST_PRINT_PARAM]);
   const seo = useMemo(() => getQuestSeo(bundle, questId, isLoading), [bundle, isLoading, questId]);
   const countModel = bundle ? resolveBundleCountModel(bundle) : null;
   // SSG/Expo Head and the delayed head patches must agree on the derivative URL.
@@ -565,8 +612,9 @@ export default function QuestByIdScreen() {
     // перезаписывает: прогресс мог идти параллельно на другом устройстве.
     return snapshotFromServerProgress(backendProgress);
   }, [backendProgress, guestFlow.guestInitial, isAuthenticated, progressLoading, progressMissing]);
+  const alternates = useMemo(() => questServingAlternates(serving.projection), [serving.projection]);
   const structuredDataTags = useMemo(() => {
-    if (!bundle || !questId) return null;
+    if (!usableBundle || offlinePrefix || !questId) return null;
 
     const structuredData = createQuestDetailStructuredData({
       canonical,
@@ -574,21 +622,23 @@ export default function QuestByIdScreen() {
       description: seo.description,
       questId,
       cityId: canonicalCityId || undefined,
-      cityName: bundle.city?.name,
-      countryCode: bundle.city?.countryCode,
+      cityName: usableBundle.city?.name,
+      countryCode: usableBundle.city?.countryCode,
       coverUrl: seoImage,
       stepsCount: countModel?.total,
-      lat: bundle.city?.lat,
-      lng: bundle.city?.lng,
+      lat: usableBundle.city?.lat,
+      lng: usableBundle.city?.lng,
+      inLanguage: route?.locale ?? usableBundle.contentLocale ?? 'ru',
     });
 
     // Expo Head's Helmet processor reads inline scripts from string children.
-    return (
+    return [
       <script key={QUEST_STRUCTURED_DATA_ID} id={QUEST_STRUCTURED_DATA_ID} type="application/ld+json">
         {stringifyJsonLd(structuredData)}
-      </script>
-    );
-  }, [bundle, canonical, canonicalCityId, countModel?.total, questId, seo.description, seo.title, seoImage]);
+      </script>,
+      ...alternates.map(({ locale, href }) => <link key={`quest-alternate-${locale}`} rel="alternate" hrefLang={locale} href={href} />),
+    ];
+  }, [alternates, usableBundle, canonical, canonicalCityId, countModel?.total, offlinePrefix, questId, route?.locale, seo.description, seo.title, seoImage]);
 
   const relatedTravelsSlot = useMemo(() => {
     if (!bundle) return null;
@@ -628,20 +678,28 @@ export default function QuestByIdScreen() {
   // ветках свой InstantSEO (со своим robots/canonical), и отложенный патч его перетирал.
   // Keep image ownership during SSG/Expo reconciliation, using the same normalized
   // image as InstantSEO and JSON-LD so delayed writes cannot restore the master.
-  useQuestHeadSync(showQuestSeo && !isLoading && Boolean(bundle), seo, canonical, seoImage);
+  useQuestHeadSync(showQuestSeo && !isLoading && Boolean(usableBundle), seo, canonical, seoImage, alternates);
+
+  useWebLayoutEffect(() => {
+    if (!isFocused || Platform.OS !== 'web' || typeof document === 'undefined') return;
+    if (prefixUnavailable || offlinePrefix) {
+      document.head.querySelectorAll('link[rel="canonical"], meta[property="og:url"], link[rel="alternate"][hreflang], script#quest-structured-data, script[data-seo-jsonld="quest"]').forEach((node) => node.remove());
+      upsertMetaContent('meta[name="robots"]', 'noindex, nofollow');
+    }
+  }, [isFocused, offlinePrefix, prefixUnavailable]);
 
   // Generated quest HTML owns the no-JS H1 until the real bundle is ready.
   // Its section lives outside #root and therefore survives hydration unless the
   // route removes it explicitly, leaving two H1 nodes in the hydrated document.
   useWebLayoutEffect(() => {
-    if (!isFocused || isLoading || !bundle || Platform.OS !== 'web' || typeof document === 'undefined') return;
+    if (!isFocused || (isLoading && !prefixUnavailable) || (!usableBundle && !prefixUnavailable) || Platform.OS !== 'web' || typeof document === 'undefined') return;
     document
       .querySelectorAll('section[data-ssg-quest-intro="true"], h1[data-ssg-travel-h1="true"]')
       .forEach((node) => node.remove());
     document
       .querySelectorAll('style[data-ssg-quest-intro-style="true"]')
       .forEach((node) => node.remove());
-  }, [bundle, isFocused, isLoading]);
+  }, [usableBundle, prefixUnavailable, isFocused, isLoading]);
 
   const reviewsModal = (
     <>
@@ -650,8 +708,12 @@ export default function QuestByIdScreen() {
     </>
   );
 
-  if (isLoading) {
-    return <LoadingState canonical={canonical} colors={colors} isFocused={showQuestSeo} styles={styles} />;
+  if (route && prefixUnavailable) {
+    return <QuestLocaleUnavailable projection={serving.projection} locale={route.locale} temporary={offlinePrefix || serving.projection?.state === 'temporary_failure' || prefixContentMismatch || prefixIdentityMismatch || Boolean(bundleError)} onRetry={() => { serving.refetch(); if (shouldLoadQuest) refetch(); }} />;
+  }
+
+  if (isLoading || (route && !prefixAvailable && !offlinePrefix)) {
+    return <LoadingState canonical={canonical} colors={colors} isFocused={showQuestSeo && !route} styles={styles} />;
   }
 
   if (!bundle) {
@@ -673,6 +735,7 @@ export default function QuestByIdScreen() {
             additionalTags={structuredDataTags}
           />
         ) : null}
+        <QuestVersionLinks projection={serving.projection} currentLocale={route?.locale ?? 'ru'} />
         {Platform.OS === 'web' ? (
           <Suspense fallback={<View style={styles.wizardFallback}><ActivityIndicator color={colors.primaryDark} /></View>}>
             <QuestWizardComponent
@@ -753,6 +816,7 @@ export default function QuestByIdScreen() {
             additionalTags={structuredDataTags}
           />
         ) : null}
+        <QuestVersionLinks projection={serving.projection} currentLocale={route?.locale ?? 'ru'} />
         <QuestConsentGate
           title={bundle.title}
           coverUrl={bundle.coverUrl}
@@ -783,6 +847,7 @@ export default function QuestByIdScreen() {
           additionalTags={structuredDataTags}
         />
       ) : null}
+      <QuestVersionLinks projection={serving.projection} currentLocale={route?.locale ?? 'ru'} />
       {Platform.OS === 'web' ? (
         <Suspense fallback={<View style={styles.wizardFallback}><ActivityIndicator color={colors.primaryDark} /></View>}>
           <QuestWizardComponent
