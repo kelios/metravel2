@@ -174,7 +174,8 @@ Dated snapshots — использовать только с указанным 
 - `docs/SEO_AUDIT_2026-08-08.md` — snapshot 2026-08-08 (авария 26.07 закрыта, цель 90 дн. перевыполнена; SSG режет тело статьи на 9 000 симв.; две страницы 55.6/25.8 МБ из-за base64 в `media`; `stats:index` проверял 0 статей);
 - `docs/SEO_AUDIT_2026-09-13.md` — snapshot 2026-09-13 (индекс здоров 691/755, тревога по графику HTTPS ложная; спад авг→сен = сезон водных тем при держащихся позициях; структурное падение CTR 3.24%→2.61% год к году; страны квестов 1/18 в индексе).
 - `docs/SOCIAL_CONTENT_PACK_2026-07.md` — content pack по июльскому GSC snapshot.
-- `docs/INSTAGRAM_PLAN.md` — живой план Instagram @metravelby для агента `instagram-editor`: диагноз 04.10.2026, календарь, пакеты недель, недельные разборы (только статьи автора 1).
+- `docs/INSTAGRAM_CONTENT_SPEC.md` — ТЗ владельца (10.10.2026) для контент-агентов Instagram @metravelby: недельная сетка, сезонность, работа со статьями, фото и люди, стиль, QA; роли `instagram-planner` → `instagram-researcher` → `instagram-creator` → `instagram-visual-qa`, оператор `instagram-editor`; раздел 25 — жёсткие правила владельца 04–06.10.2026.
+- `docs/INSTAGRAM_PLAN.md` — живой план Instagram @metravelby (календарь, пакеты недель, недельные разборы, чистка) для агентов `instagram-*`; диагноз 04.10.2026 (только статьи автора 1).
 
 ## Development handoffs
 
