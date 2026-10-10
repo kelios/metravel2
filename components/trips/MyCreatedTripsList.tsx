@@ -21,6 +21,8 @@ import {
 import { useDeletePlannedTrip, useMyPlannedTrips } from '@/hooks/usePlannedTripsApi';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { breakpointLayoutProps, breakpointStyle } from '@/utils/breakpointLayout';
+import { MY_CREATED_TRIPS_LAYOUT } from '@/components/trips/myCreatedTripsLayout';
 import { confirmAction } from '@/utils/confirmAction';
 import { showToastMessage } from '@/utils/toast';
 import { translate as i18nT } from '@/i18n'
@@ -224,8 +226,20 @@ function MyCreatedTripsList({ role = 'organized' }: Props) {
     </View>
   );
 
+  // #2253: панель и кнопка «Фильтры» всегда в разметке — какая из них видна,
+  // решает реестр `MY_CREATED_TRIPS_LAYOUT` (React по живому `isDesktop`, первый
+  // кадр статического HTML — critical CSS), поэтому гидратация ничего не двигает.
+  // На телефоне открытая панель перекрывает узкое `display: none` своим стилем.
   const filterPanel = (
-    <View style={styles.filterPanel} testID="my-created-trips-filters">
+    <View
+      style={[
+        styles.filterPanel,
+        breakpointStyle(MY_CREATED_TRIPS_LAYOUT, 'filterPanel', isDesktop),
+        mobileFiltersOpen && styles.filterPanelOpen,
+      ]}
+      {...breakpointLayoutProps(MY_CREATED_TRIPS_LAYOUT, 'filterPanel')}
+      testID="my-created-trips-filters"
+    >
       <FilterGroup
         title={i18nT('trips:components.trips.MyCreatedTripsList.status_d25983af')}
         options={STATUS_ORDER.map((status) => ({
@@ -272,45 +286,51 @@ function MyCreatedTripsList({ role = 'organized' }: Props) {
     </View>
   );
 
+  const gridItemStyle = [styles.gridItem, breakpointStyle(MY_CREATED_TRIPS_LAYOUT, 'gridItem', isDesktop)];
+  const gridItemProps = breakpointLayoutProps(MY_CREATED_TRIPS_LAYOUT, 'gridItem');
+
   return (
     <View style={styles.catalog} testID="my-created-trips-list">
-      {!isDesktop ? (
-        <View style={styles.mobileControls}>
-          <View style={styles.mobileSearch}>{search}</View>
-          <Pressable
-            disabled={isLoading}
-            onPress={() => setMobileFiltersOpen((current) => !current)}
-            accessibilityRole="button"
-            accessibilityLabel={i18nT('trips:components.trips.MyCreatedTripsList.filtry_poezdok_644757e4')}
-            accessibilityState={{ expanded: mobileFiltersOpen }}
-            style={[styles.filterToggle, mobileFiltersOpen && styles.filterToggleActive]}
-            testID="my-created-trips-filter-toggle"
-          >
-            <Feather name="filter" size={19} color={colors.text} />
-            {activeFiltersCount > 0 ? (
-              <View style={styles.filterCount}>
-                <Text style={styles.filterCountText}>{activeFiltersCount}</Text>
-              </View>
-            ) : null}
-          </Pressable>
-        </View>
-      ) : null}
-
-      {!isDesktop && mobileFiltersOpen ? filterPanel : null}
-
-      <View style={styles.catalogBody}>
-        {isDesktop ? (
-          <View style={styles.sidebar}>
-            {search}
-            {filterPanel}
+      <View
+        style={[styles.catalogBody, breakpointStyle(MY_CREATED_TRIPS_LAYOUT, 'body', isDesktop)]}
+        {...breakpointLayoutProps(MY_CREATED_TRIPS_LAYOUT, 'body')}
+      >
+        <View
+          style={[styles.sidebar, breakpointStyle(MY_CREATED_TRIPS_LAYOUT, 'sidebar', isDesktop)]}
+          {...breakpointLayoutProps(MY_CREATED_TRIPS_LAYOUT, 'sidebar')}
+        >
+          <View style={styles.controlsRow}>
+            <View style={styles.controlsSearch}>{search}</View>
+            <Pressable
+              disabled={isLoading}
+              onPress={() => setMobileFiltersOpen((current) => !current)}
+              accessibilityRole="button"
+              accessibilityLabel={i18nT('trips:components.trips.MyCreatedTripsList.filtry_poezdok_644757e4')}
+              accessibilityState={{ expanded: mobileFiltersOpen }}
+              style={[
+                styles.filterToggle,
+                mobileFiltersOpen && styles.filterToggleActive,
+                breakpointStyle(MY_CREATED_TRIPS_LAYOUT, 'filterToggle', isDesktop),
+              ]}
+              {...breakpointLayoutProps(MY_CREATED_TRIPS_LAYOUT, 'filterToggle')}
+              testID="my-created-trips-filter-toggle"
+            >
+              <Feather name="filter" size={19} color={colors.text} />
+              {activeFiltersCount > 0 ? (
+                <View style={styles.filterCount}>
+                  <Text style={styles.filterCountText}>{activeFiltersCount}</Text>
+                </View>
+              ) : null}
+            </Pressable>
           </View>
-        ) : null}
+          {filterPanel}
+        </View>
 
         <View style={styles.results}>
           {isLoading ? (
             <View style={styles.grid} testID="my-created-trips-loading">
               {[0, 1].map((index) => (
-                <View key={index} style={isDesktop ? styles.gridItemDesktop : styles.gridItemMobile}>
+                <View key={index} style={gridItemStyle} {...gridItemProps}>
                   <TripPlanCardSkeleton />
                 </View>
               ))}
@@ -330,7 +350,7 @@ function MyCreatedTripsList({ role = 'organized' }: Props) {
           ) : (
             <View style={styles.grid} {...SCREEN_CONTENT_FIRST_PROPS}>
               {visibleTrips.map((trip) => (
-                <View key={trip.id} style={isDesktop ? styles.gridItemDesktop : styles.gridItemMobile}>
+                <View key={trip.id} style={gridItemStyle} {...gridItemProps}>
                   <TripPlanCard
                     trip={trip}
                     onOpenPress={openTrip}
@@ -391,14 +411,16 @@ function FilterGroup({ title, options, selected, onSelect, colors, styles }: Fil
 const createStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     catalog: { width: '100%', gap: 12 },
-    catalogBody: { flexDirection: 'row', alignItems: 'flex-start', gap: 16 },
-    sidebar: { width: 260, flexShrink: 0, gap: 12 },
+    // Направление, выравнивание и зазор тела, ширина панели и ячейки — в
+    // `MY_CREATED_TRIPS_LAYOUT` (#2253); здесь только общее для обоих видов.
+    catalogBody: {},
+    sidebar: { flexShrink: 0, gap: 12 },
     results: { flex: 1, minWidth: 0 },
     grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-    gridItemDesktop: { width: '48.8%', minWidth: 0 },
-    gridItemMobile: { width: '100%' },
-    mobileControls: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    mobileSearch: { flex: 1, minWidth: 0 },
+    gridItem: { minWidth: 0 },
+    controlsRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    controlsSearch: { flex: 1, minWidth: 0 },
+    filterPanelOpen: { display: 'flex' },
     searchBox: {
       minHeight: 44,
       flexDirection: 'row',

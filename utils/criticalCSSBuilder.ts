@@ -10,6 +10,7 @@ import { CHIP_LAYOUT } from '@/components/ui/chipLayout';
 import { HEADING_LAYOUTS } from '@/components/ui/headingLayout';
 import { WEB_DESKTOP_FOOTER_LAYOUT, WEB_MOBILE_DOCK_LAYOUT, WEB_MOBILE_DOCK_LABEL_LAYOUT, WEB_MOBILE_DOCK_RESERVE_CSS, WEB_MOBILE_DOCK_SIDE_PADDING_CSS } from '@/components/layout/webMobileDockLayout';
 import { APP_DOWNLOAD_LAYOUT } from '@/components/appDownload/appDownloadLayout';
+import { MY_CREATED_TRIPS_LAYOUT } from '@/components/trips/myCreatedTripsLayout';
 import { buildBreakpointLayoutCss } from '@/utils/breakpointLayout';
 import { getIconFontGuardCss } from '@/utils/iconFontShell';
 
@@ -256,6 +257,9 @@ export function buildCriticalCSS(): string {
     buildBreakpointLayoutCss(CHIP_LAYOUT),
     // #2258: /app — карточки возможностей в две колонки от 900 px с первого кадра.
     buildBreakpointLayoutCss(APP_DOWNLOAD_LAYOUT),
+    // #2253: /trips/my — панель фильтров слева и две колонки карточек от 1280 px
+    // уже в статическом кадре; гидратация не перекладывает список.
+    buildBreakpointLayoutCss(MY_CREATED_TRIPS_LAYOUT),
     buildBreakpointLayoutCss(WEB_MOBILE_DOCK_LAYOUT),
     WEB_MOBILE_DOCK_RESERVE_CSS,
     buildBreakpointLayoutCss(WEB_DESKTOP_FOOTER_LAYOUT),
