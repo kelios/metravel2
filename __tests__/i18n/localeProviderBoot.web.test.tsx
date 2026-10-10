@@ -109,7 +109,7 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
     consoleError.mockRestore()
   })
 
-  const setup = (stored: string | null, routePath?: string) => {
+  const setup = (stored: string | null, routePath?: string, translatedSsg = true) => {
     const modules = loadProvider()
     const mounts: string[] = []
     const Screen = ({ label = 'screen' }: { label?: string }) => {
@@ -128,9 +128,10 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
     )
     // Released translated SSG is emitted outside the bundle in its URL locale.
     // The provider's boundary markers remain the same as the RU static tree.
-    container.innerHTML = routePath
+    container.innerHTML = routePath && translatedSsg
       ? serverHtml.replace('screen:ru', `screen:${routePath.split('/')[1]}`)
       : serverHtml
+    if (routePath && translatedSsg) document.documentElement.lang = routePath.split('/')[1]
     if (routePath) window.history.replaceState(null, '', routePath)
     if (stored) window.localStorage.setItem(STORAGE_KEY, stored)
     new Function(getLocaleBootScript())()
@@ -565,6 +566,36 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
     expect(document.documentElement.lang).toBe('pl')
     expect(recoverableErrors).toEqual([])
     expect(hydrationErrors()).toEqual([])
+  })
+
+  it.each(['be', 'uk', 'pl', 'en'])('hydrates legacy RU 404 HTML at a %s URL before committing its URL locale', async (locale) => {
+    const preference = JSON.stringify({ version: 1, mode: 'explicit', locale: locale === 'en' ? 'pl' : 'en' })
+    const path = `/${locale}/quests/4/minsk-cmok?print=1`
+    const { Screen, mounts, hydrate } = setup(preference, path, false)
+    const loaded = new Set(['ru'])
+    isWebLocaleLoaded.mockImplementation((locale: string) => loaded.has(locale))
+    loadWebLocale.mockImplementation(async (locale: string) => { loaded.add(locale) })
+
+    expect(document.documentElement.lang).toBe('ru')
+    expect(container.textContent).toBe('screen:ru')
+    const initialVisibility = getComputedStyle(container.querySelector('p')!).visibility
+    await prepareBootLocale()
+    // A locale catalogue is not evidence that translated HTML was served.
+    const hydrationLocale = i18n.resolvedLanguage
+    await hydrate(<LocaleProvider><Screen /></LocaleProvider>)
+
+    expect(recoverableErrors).toEqual([])
+    expect(hydrationErrors()).toEqual([])
+    expect(hydrationLocale).toBe('ru')
+    expect(initialVisibility).toBe('hidden')
+    expect(mounts).toEqual([locale])
+    expect(container.textContent).toBe(`screen:${locale}`)
+    expect(loadWebLocale).toHaveBeenCalledTimes(1)
+    expect(loadWebLocale).toHaveBeenCalledWith(locale)
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe(preference)
+    expect(window.location.pathname + window.location.search).toBe(path)
+    expect(document.documentElement.lang).toBe(locale)
+    expect(document.documentElement.classList.contains(LOCALE_BOOT_PENDING_CLASS)).toBe(false)
   })
 
   it('keeps translated SSG readable and offers localized retry plus an explicit RU address on failure', async () => {

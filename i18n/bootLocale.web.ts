@@ -73,9 +73,11 @@ export const prepareBootLocale = (): Promise<void> | null => {
       resolve()
     }
     loadWebLocale(target).then(async () => {
-      // Translated SSG must hydrate in its declared locale, including the first
-      // render/request. Ordinary RU SSG still commits preference after hydration.
+      // A prefix can receive the legacy RU 404 document while translated
+      // serving is disabled. Only translated HTML may commit before hydration;
+      // fallback HTML uses the pending boundary and commits after hydration.
       if (routeLocale && parseQuestLocaleRoute(window.location.pathname)?.locale === routeLocale
+        && typeof document !== 'undefined' && document.documentElement.lang === routeLocale
         && normalizeActiveLocale(i18n.resolvedLanguage) !== routeLocale) {
         await i18n.changeLanguage(routeLocale)
       }

@@ -13,7 +13,7 @@ declare global {
   }
 }
 
-/** Hide preference-bound RU SSG; URL-bound translated SSG stays readable. */
+/** Hide untranslated SSG until commit; URL-bound translated SSG stays readable. */
 export const getLocaleBootScript = (): string => `
 (function(){try{
   if(window.__metravelLocaleBootErrorHandler)window.removeEventListener('error',window.__metravelLocaleBootErrorHandler,true);
@@ -33,9 +33,9 @@ export const getLocaleBootScript = (): string => `
     }
   }
   if(locale===${JSON.stringify(DEFAULT_LOCALE)}||locales.indexOf(locale)===-1)return;
-  // Translated public SSG is already in the URL locale. Keep it readable even
-  // when saved preference differs or catalogue loading fails.
-  if(!route)document.documentElement.classList.add(${JSON.stringify(LOCALE_BOOT_PENDING_CLASS)});
+  // The URL alone does not prove translated SSG was served: a disabled prefix
+  // receives the RU 404 document. Keep only matching translated HTML readable.
+  if(!route||document.documentElement.lang!==locale)document.documentElement.classList.add(${JSON.stringify(LOCALE_BOOT_PENDING_CLASS)});
   window.__metravelLocaleBootRecoveryOwner='static';
   var copy=${JSON.stringify(Object.fromEntries(SUPPORTED_LOCALES.map((locale) => [locale, getBootLocaleRecoveryCopy(locale)])))}[locale];
   function recover(){
