@@ -26,6 +26,8 @@ export interface PrintEncoderIdentity {
   playwright_version: string
   chromium_revision: string
   chromium_version: string
+  /** Exact version reported by the pinned executable; Linux builds of the same revision end in `.0`. */
+  actual_chromium_version: string
   executable_sha256: string
   platform: string
   arch: string

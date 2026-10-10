@@ -45,12 +45,20 @@ export function printEncoderPin(): { browser_name: 'chromium'; playwright_versio
   if (canonicalJson(runtime.print_encoder_pin) !== canonicalJson(pin)) throw new Error('PRINT_ENCODER_IDENTITY_MISMATCH')
   return pin
 }
+/** Playwright's Linux Chromium builds report the pinned revision as `<major.minor.build>.0`; the exact build stays in the identity. */
+export function assertPinnedChromiumVersion(actual: string, pinned: string): void {
+  const [major, minor, build, patch] = actual.split('.')
+  const [pinnedMajor, pinnedMinor, pinnedBuild, pinnedPatch] = pinned.split('.')
+  if (!/^\d+\.\d+\.\d+\.\d+$/.test(actual) || major !== pinnedMajor || minor !== pinnedMinor || build !== pinnedBuild ||
+      (patch !== pinnedPatch && patch !== '0')) throw new Error('PRINT_ENCODER_IDENTITY_MISMATCH')
+}
+
 export async function actualPrintEncoderIdentity(browser: Browser, executable: string): Promise<PrintEncoderIdentity> {
   const pin = printEncoderPin()
-  if (browser.version() !== pin.chromium_version) throw new Error('PRINT_ENCODER_IDENTITY_MISMATCH')
+  assertPinnedChromiumVersion(browser.version(), pin.chromium_version)
   const digest = createHash('sha256')
   for await (const part of createReadStream(executable, { highWaterMark: 65_536 })) digest.update(part)
-  return { ...pin, executable_sha256: digest.digest('hex'), platform: process.platform, arch: process.arch }
+  return { ...pin, actual_chromium_version: browser.version(), executable_sha256: digest.digest('hex'), platform: process.platform, arch: process.arch }
 }
 
 /** Conservative classification: unknown alpha-capable formats never become flattened JPEG. */

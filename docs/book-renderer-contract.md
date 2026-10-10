@@ -144,6 +144,16 @@ publication. После каждого подготовленного/rendered p
 cgroup budget и только затем публикует checkpoint/receipt; restart не должен
 выдавать неподтверждённые промежуточные файлы за готовые страницы.
 
+## Encoder identity on Linux
+
+`print_encoder_pin` фиксирует `chromium_version` из `browsers.json` Playwright
+(macOS-сборка revision 1228 сообщает `149.0.7827.55`). Linux-сборка той же
+revision сообщает `149.0.7827.0`: `assertPinnedChromiumVersion` принимает
+точное совпадение либо patch `.0` при равных major.minor.build, а фактическая
+строка пишется в identity как `actual_chromium_version` рядом с
+`executable_sha256`/`platform`/`arch`. Бэкенд (B3, #2356) пинует artifact по
+`content_hash` и проверяет его побайтно перед каждым запуском worker-а.
+
 ## Outputs / certificate
 
 `plan.ndjson` сохраняет порядок `pages/<order>.html`, checksum, тип,
