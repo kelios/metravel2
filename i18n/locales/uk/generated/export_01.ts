@@ -438,7 +438,6 @@ export const exportGenerated1 = {
   "services.pdf_export.generators.v2.runtime.coverPage.div_class_cover_footer_rail_style_margin_0_2_c8afe335.text01": "Книга подорожей",
   "services.pdf_export.generators.v2.runtime.coverPage.div_style_display_inline_flex_align_items_ce_cefb60e9.text01": "Книга подорожей",
   "services.pdf_export.generators.v2.runtime.coverPage.span_style_font_size_9pt_opacity_0_75_font_f_d8ae4acc.text01": "Створено {{value2}}",
-  "services.pdf_export.generators.v2.runtime.legacyGalleryLayouts.div_class_gallery_empty_net_fotografiy_dlya__c639f478.text01": "Немає фотографій для відображення",
   "services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.inlineGallery.div_style_margin_bottom_value1_div_style_dis_5459e59e.text01": "Фотогалерея",
   "services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.locationCards.div_style_width_46px_padding_6px_display_fle_e61d8410.text01": "QR точки {{value4}}",
   "services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.locationCards.div_style_width_80px_flex_shrink_0_backgroun_59c67203.text01": "Точка {{value3}}",

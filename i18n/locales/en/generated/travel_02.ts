@@ -130,7 +130,6 @@ export const travelGenerated2 = {
   "components.travel.details.TravelDeferredAuthorSection.podelitsya_marshrutom_0d380df3": "Share route",
   "components.travel.details.TravelDeferredRatingSection.reyting_puteshestviya_b462e62b": "Travel rating",
   "components.travel.details.TravelDetailsAccessibilityChrome.skip_to_main_content_e6d1fd91": "Skip to main content",
-  "components.travel.details.TravelDetailsBackButton.nazad_d576d22f": "Back",
   "components.travel.details.TravelDetailsContainer.detali_puteshestviya_value1_80d67fb7": "Travel details: {{value1}}",
   "components.travel.details.TravelDetailsErrorStates.na_glavnuyu_c35a9aeb": "Home",
   "components.travel.details.TravelDetailsErrorStates.ne_udalos_zagruzit_puteshestvie_6ea4cf0c": "Failed to load trip",

@@ -32,8 +32,6 @@ const EXCEPTIONS: Record<string, string> = {
   'components/home/HomeInspirationSection.tsx':
     'редакционная карточка главной: плашка «Пока без совпадений» и слот CTA секции, не пустой список',
   'components/home/homeInspirationStyles.ts': 'стили той же карточки главной (см. HomeInspirationSection)',
-  'components/trips/planning/TripPlanningEmptyState.tsx':
-    'онбординг вкладки поездок: список шагов и пример маршрута, а не заглушка «нет данных»',
   'components/MapPage/MapMobile/MapEmptyStateToast.tsx': 'тост поверх карты, не блок пустого состояния',
 };
 

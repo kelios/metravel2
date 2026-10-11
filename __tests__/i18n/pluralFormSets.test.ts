@@ -61,7 +61,6 @@ const SAME_FORM_SETS: Record<string, { locales: Locale[]; reason: string }> = {
   ...Object.fromEntries(
     [
       'profile:components.profile.ProfileHeaderQuickActions.value1_value2_neprochitannyh_be8896bb',
-      'profile:components.profile.ProfileQuickActions.value1_value2_neprochitannyh_c3a0b009',
       'navigation:components.layout.CustomHeaderMobileMenu.soobscheniya_value1_neprochitannyh_06035ae9',
       'messages:components.messages.ThreadList.dialog_s_value1_value2_neprochitannyh_62b679f3',
     ].map((id) => [id, { locales: ['en'] as Locale[], reason: 'EN «unread» не согласуется с числом: «1 unread», «5 unread»' }]),

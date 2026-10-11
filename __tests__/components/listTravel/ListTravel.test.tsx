@@ -39,12 +39,6 @@ jest.mock('@/components/listTravel/RecommendationsTabs', () => ({
 }));
 
 
-jest.mock('@/hooks/useKeyboardShortcuts', () => ({
-  __esModule: true,
-  useKeyboardShortcuts: () => {
-    // no-op в тестах
-  },
-}));
 
 jest.mock('@/components/ui/ConfirmDialog', () => {
   const React = require('react');

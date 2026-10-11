@@ -76,10 +76,6 @@ jest.mock('react-native-paper', () => {
   return { Card, Button };
 });
 
-jest.mock('@/components/seo/InstantSEO', () => {
-  const React = require('react');
-  return ({ children }: any) => (children ? <>{children}</> : null);
-});
 
 // Test utilities
 const renderLogin = async (mockLogin?: jest.Mock, mockSendPassword?: jest.Mock) => {

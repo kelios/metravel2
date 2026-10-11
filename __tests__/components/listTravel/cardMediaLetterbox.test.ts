@@ -172,8 +172,7 @@ const FIXED_HEIGHT_SLOT_DEBT = [
   // `mediaFit` приходит пропом, но собственный дефолт обёртки — тоже 'contain'.
   'components/listTravel/TabTravelCard.tsx',
   // `mediaFit` не задан вовсе — работает дефолт `UnifiedTravelCard`, а высоту
-  // даёт `imageHeight` (RecentViews) или дефолт `imageContainer` (PublicTripCard).
-  'components/travel/RecentViews.tsx',
+  // даёт дефолт `imageContainer` (PublicTripCard).
   'components/trips/PublicTripCard.tsx',
 ] as const
 

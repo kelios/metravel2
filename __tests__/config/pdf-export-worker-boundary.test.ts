@@ -18,7 +18,6 @@ const SHARED_DIRS = [
 ]
 const FOUNDATIONAL_ENTRYPOINTS = [
   'types/bookSettings.ts',
-  'types/book.ts',
   'services/pdf-export/parsers/contentParser/htmlTree.parse5.ts',
   'services/pdf-export/parsers/contentParser/htmlTree.ts',
 ]
@@ -108,7 +107,7 @@ describe('PDF document foundations stay outside the app UI and worker runtime', 
       ...SHARED_DIRS.flatMap(sourceFiles).filter((file) => !isPlatformAdapter(file)),
       'services/pdf-export/TravelDataTransformer.ts',
       'services/pdf-export/premiumSettingsGate.ts',
-      'types/book.ts', 'types/bookSettings.ts',
+      'types/bookSettings.ts',
     ]
     expect(files).toEqual(expect.arrayContaining([
       ...FOUNDATIONAL_ENTRYPOINTS,
@@ -117,7 +116,6 @@ describe('PDF document foundations stay outside the app UI and worker runtime', 
       'services/pdf-export/parsers/contentParser/htmlTree.native.ts',
       'services/pdf-export/parsers/contentParser/htmlTree.parse5.ts',
       'services/pdf-export/generators/v2/runtime/EnhancedPdfGeneratorBase.ts',
-      'services/pdf-export/generators/v2/runtime/legacyGalleryLayouts.ts',
       'services/pdf-export/quotes/travelQuotes.ts',
     ]))
     const violations = files.flatMap((file) =>

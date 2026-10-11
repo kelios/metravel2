@@ -92,12 +92,6 @@ jest.mock('@/components/MapPage/RouteBuilder', () => {
   };
 });
 
-jest.mock('@/components/MapPage/MapLegend', () => {
-  const { View } = require('react-native');
-  return function MockMapLegend() {
-    return <View testID="map-legend" />;
-  };
-});
 
 jest.mock('@/components/MapPage/ValidationMessage', () => {
   const { View } = require('react-native');
@@ -106,12 +100,6 @@ jest.mock('@/components/MapPage/ValidationMessage', () => {
   };
 });
 
-jest.mock('@/components/filters/CategoryChips', () => {
-  const { View } = require('react-native');
-  return function MockCategoryChips() {
-    return <View testID="category-chips" />;
-  };
-});
 
 jest.mock('@/components/ui/CollapsibleBlock', () => {
   const React = require('react');

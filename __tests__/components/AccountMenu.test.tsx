@@ -1,7 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Platform } from 'react-native';
-import RenderRightMenu from '@/components/layout/RenderRightMenu';
 import { router } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -145,14 +144,14 @@ describe('AccountMenu', () => {
   });
 
   it('shows login and registration options when not authenticated', () => {
-    const { getAllByText, getByText } = renderWithClient(<RenderRightMenu />);
+    const { getAllByText, getByText } = renderWithClient(<AccountMenu />);
 
     expect(getAllByText('Войти').length).toBeGreaterThan(0);
     expect(getByText('Зарегистрироваться')).toBeTruthy();
   });
 
   it('keeps the guest menu login a button that builds the login href on press (#2139)', () => {
-    const { getByLabelText } = renderWithClient(<RenderRightMenu />);
+    const { getByLabelText } = renderWithClient(<AccountMenu />);
 
     const loginItem = getByLabelText('Войти');
     expect(loginItem.props.accessibilityRole).toBe('button');
@@ -173,7 +172,7 @@ describe('AccountMenu', () => {
       setNewPassword: jest.fn(),
     } as any);
 
-    const { getByText } = renderWithClient(<RenderRightMenu />);
+    const { getByText } = renderWithClient(<AccountMenu />);
     expect(getByText('Мои путешествия')).toBeTruthy();
     expect(getByText('Добавить путешествие')).toBeTruthy();
   });
@@ -190,7 +189,7 @@ describe('AccountMenu', () => {
       setNewPassword: jest.fn(),
     } as any);
 
-    const { getByText } = renderWithClient(<RenderRightMenu />);
+    const { getByText } = renderWithClient(<AccountMenu />);
     expect(getByText('testuser')).toBeTruthy();
   });
 
@@ -206,7 +205,7 @@ describe('AccountMenu', () => {
       setNewPassword: jest.fn(),
     } as any);
 
-    const { queryByText } = renderWithClient(<RenderRightMenu />);
+    const { queryByText } = renderWithClient(<AccountMenu />);
     expect(queryByText('ghost-user')).toBeNull();
   });
 
@@ -238,7 +237,7 @@ describe('AccountMenu', () => {
       getRecommendations: jest.fn(),
     });
 
-    const { getByText } = renderWithClient(<RenderRightMenu />);
+    const { getByText } = renderWithClient(<AccountMenu />);
     expect(getByText('Личный кабинет (2)')).toBeTruthy();
   });
 
@@ -260,7 +259,7 @@ describe('AccountMenu', () => {
       setNewPassword: jest.fn(),
     } as any);
 
-    renderWithClient(<RenderRightMenu />);
+    renderWithClient(<AccountMenu />);
     // Signed S3 URLs should NOT get a cache-buster appended
     expect(getLastImageSourceUri()).toBe(signed);
   });
@@ -282,7 +281,7 @@ describe('AccountMenu', () => {
       setNewPassword: jest.fn(),
     } as any);
 
-    renderWithClient(<RenderRightMenu />);
+    renderWithClient(<AccountMenu />);
     expect(getLastImageSourceUri()).toBe(plain);
   });
 
@@ -298,7 +297,7 @@ describe('AccountMenu', () => {
       setNewPassword: jest.fn(),
     } as any);
 
-    const { getByText } = renderWithClient(<RenderRightMenu />);
+    const { getByText } = renderWithClient(<AccountMenu />);
 
     // Нажимаем на пункт меню "Выход" (секция "Аккаунт" раскрыта по умолчанию)
     fireEvent.press(getByText('Выход'));
@@ -373,7 +372,7 @@ describe('AccountMenu', () => {
   });
 
   it('handles window resize for mobile/desktop layout', async () => {
-    const { rerender } = renderWithClient(<RenderRightMenu />);
+    const { rerender } = renderWithClient(<AccountMenu />);
 
     rerender(
       <QueryClientProvider
@@ -381,7 +380,7 @@ describe('AccountMenu', () => {
           defaultOptions: { queries: { retry: false } },
         })}
       >
-        <RenderRightMenu />
+        <AccountMenu />
       </QueryClientProvider>
     );
     expect(rerender).toBeDefined();

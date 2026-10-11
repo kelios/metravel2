@@ -7,9 +7,6 @@ jest.mock('@/components/travel/Slider.web', () => ({
   __esModule: true,
   default: () => null,
 }))
-jest.mock('@/styles/criticalCSS', () => ({
-  injectCriticalStyles: jest.fn(),
-}))
 jest.mock('@/utils/performance', () => ({
   initPerformanceMonitoring: jest.fn(),
 }))
@@ -39,8 +36,6 @@ jest.mock('@expo/vector-icons/MaterialIcons', () => ({
   default: {},
 }))
 
-const injectCriticalStyles = jest.requireMock('@/styles/criticalCSS')
-  .injectCriticalStyles as jest.Mock
 const initPerformanceMonitoring = jest.requireMock('@/utils/performance')
   .initPerformanceMonitoring as jest.Mock
 
@@ -73,7 +68,6 @@ describe('useTravelDetailsPerformance', () => {
       jest.advanceTimersByTime(1000)
     })
 
-    expect(injectCriticalStyles).not.toHaveBeenCalled()
     expect(initPerformanceMonitoring).toHaveBeenCalled()
   })
 

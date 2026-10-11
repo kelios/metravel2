@@ -78,7 +78,6 @@ const DELETE_SURFACES = {
   'components/travel/ImageGalleryComponent.ios.tsx': ['editor', 'удалить фото в редакторе галереи'],
   'components/travel/PhotoUploadWithPreview.tsx': ['editor', 'удалить фото в загрузчике'],
   'components/travel/PublishModerationAdminPanel.tsx': ['dialog', 'админское отклонение публикации'],
-  'components/travel/RecentViews.tsx': ['row', 'очистить «Недавно смотрели», с подтверждением'],
   'components/travel/TravelStatusButton.tsx': ['sheet', '«Убрать из плана» в листе статуса маршрута'],
   'components/travel/WebMapMarkerPopup.tsx': ['sheet', 'действие попапа точки на карте'],
   'components/travel/gallery/GalleryControls.tsx': ['editor', 'удалить фото в редакторе галереи'],

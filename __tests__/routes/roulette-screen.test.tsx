@@ -89,13 +89,6 @@ jest.mock('@/components/listTravel/RenderTravelItem', () => {
     ),
   };
 });
-jest.mock('@/components/seo/InstantSEO', () => {
-  const React = require('react');
-  return {
-    __esModule: true,
-    default: () => React.createElement(React.Fragment, null),
-  };
-});
 
 jest.mock('@/api/miscOptimized', () => ({
   fetchAllFiltersOptimized: jest.fn().mockResolvedValue({

@@ -1317,7 +1317,7 @@ native-геозоны используют только координаты ш�
 
 - адаптеры и правила — `__tests__/utils/questAdapters*.test.ts`,
   `questAnswerEvaluation`, `questCompletionPolicy`, `questProgressMerge`,
-  `questAudience`, `questForLocation(+Coverage)`, `questImagePrefetch`,
+  `questAudience`, `questForLocation(+Coverage)`,
   `questSeo(.node)`, `questAnswerTelemetry`, `questPopularity` (правило
   популярности + паритет промо-блока и его SSG-двойника);
 - API — `__tests__/api/quests.test.ts`, `questBundleCache`, `questRating`,
@@ -1335,7 +1335,7 @@ native-геозоны используют только координаты ш�
 - каталог/карточки — `QuestCard`, `QuestsContentPanel`,
   `QuestsScreen.helpers`, `QuestForCityCard(.native-viewport)`,
   `QuestCompletionBadge`, `QuestGuestGate`, `QuestReviewSection`,
-  `TravelsForQuestSection`, `guestQuestFlow`, `questLocationSelection`,
+  `TravelsForQuestSection`, `guestQuestFlow`,
   `routes/quest-screen-title`;
 - скрипты/гейты — `verify-static-quest-seo`, `scanQuestHintLeak`,
   `questAnswerInsights`, `questBundles`, `quest-finale-video-profile`,

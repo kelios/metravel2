@@ -94,7 +94,6 @@ export const navigationGenerated1 = {
   "components.layout.ThemeToggle.svetlaya_246afe18": "Світла",
   "components.layout.ThemeToggle.temnaya_b882d236": "Темна",
   "components.layout.ThemeToggle.vybrat_temu_value1_2ab8849f": "Вибрати тему: {{value1}}",
-  "components.navigation.OpenInMapsSheet.otkryt_v_kartah_a12bfa2e": "Відкрити в картах",
   "components.navigation.PointNavigationMenu.otkryt_tochku_v_apple_maps_d4faa850": "Відкрити точку в Apple Maps",
   "components.navigation.PointNavigationMenu.otkryt_tochku_v_google_maps_7f67f5c3": "Відкрити точку в Google Maps",
   "components.navigation.PointNavigationMenu.otkryt_tochku_v_openstreetmap_3f6c4f7d": "Відкрити точку в OpenStreetMap",

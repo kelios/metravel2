@@ -226,7 +226,6 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 | `components/trips/planning/RouteSummaryBar.tsx` | 147 | сводка маршрута под конструктором |
 | `components/trips/planning/routeBuilderPoint.ts` | 115 | чистые хелперы точки: разбор координат, формат ввода, имя из адреса, сигнатура маршрута |
 | `components/trips/planning/TripParticipantsList.tsx` | 124 | участники и их RSVP |
-| `components/trips/planning/TripPlanningEmptyState.tsx` | 121 | пустое состояние планировщика |
 | `components/trips/PublicTripCard.tsx` | 114 | карточка публичной поездки |
 | `components/trips/TripNotificationsList.tsx` | 113 | уведомления о заявках |
 | `components/trips/planning/tripRouteExport.ts` | 110 | единая сборка GPX/KML + хук состояния экспорта |

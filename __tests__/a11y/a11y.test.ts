@@ -19,15 +19,7 @@ import {
   isGoodAltText,
 } from '@/utils/a11y';
 import { Platform } from 'react-native';
-import {
-  useKeyboardNavigation,
-  useFocusManager,
-  useAccessibilityAnnounce,
-  useReducedMotion,
-  useFocusVisible,
-} from '@/hooks/useKeyboardNavigation';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { renderHook, act } from '@testing-library/react-native';
 
 describe('a11y Utilities - Color Contrast', () => {
   it('должен вычислить контрастность между двумя цветами', () => {
@@ -127,93 +119,6 @@ describe('a11y Utilities - Alt Text Validation', () => {
     expect(isGoodAltText('image')).toBe(false);
     expect(isGoodAltText('Image of sunset')).toBe(false);
     expect(isGoodAltText('Picture of a cat')).toBe(false);
-  });
-});
-
-describe('Keyboard Navigation Hook - useKeyboardNavigation', () => {
-  it('должен создать keyboard navigation контекст', () => {
-    const { result } = renderHook(() =>
-      useKeyboardNavigation({
-        onEscape: jest.fn(),
-        onEnter: jest.fn(),
-      })
-    );
-
-    expect(result.current.containerRef).toBeDefined();
-    expect(result.current.onKeyDown).toBeDefined();
-    expect(result.current.getFocusableElements).toBeDefined();
-  });
-
-  it('должен отслеживать индекс фокуса', () => {
-    const { result } = renderHook(() => useKeyboardNavigation({}));
-
-    expect(result.current.focusedIndex).toBe(0);
-
-    act(() => {
-      result.current.setFocusedIndex(1);
-    });
-
-    expect(result.current.focusedIndex).toBe(1);
-  });
-});
-
-describe('Focus Management Hook - useFocusManager', () => {
-  it('должен сохранять и восстанавливать фокус', () => {
-    const { result } = renderHook(() => useFocusManager(true));
-
-    expect(result.current.saveFocus).toBeDefined();
-    expect(result.current.restoreFocus).toBeDefined();
-    expect(result.current.focusElement).toBeDefined();
-  });
-});
-
-describe('Accessibility Announce Hook - useAccessibilityAnnounce', () => {
-  it('должен создавать объявления', () => {
-    const { result } = renderHook(() => useAccessibilityAnnounce());
-
-    act(() => {
-      result.current.announce('Content loaded');
-    });
-
-    expect(result.current.announcement).toBe('Content loaded');
-    expect(result.current.priority).toBe('polite');
-  });
-
-  it('должен устанавливать приоритет для важных объявлений', () => {
-    const { result } = renderHook(() => useAccessibilityAnnounce());
-
-    act(() => {
-      result.current.announce('Error occurred', true);
-    });
-
-    expect(result.current.priority).toBe('assertive');
-  });
-});
-
-describe('Reduced Motion Hook - useReducedMotion', () => {
-  it('должен возвращать значения для reduced motion', () => {
-    const { result } = renderHook(() => useReducedMotion());
-
-    expect(result.current).toHaveProperty('prefersReduced');
-    expect(result.current).toHaveProperty('duration');
-    expect(result.current).toHaveProperty('easing');
-  });
-
-  it('должен устанавливать duration 0 для reduced motion', () => {
-    const { result } = renderHook(() => useReducedMotion());
-
-    // В test окружении это обычно false, но структура должна быть правильной
-    if (result.current.prefersReduced) {
-      expect(result.current.duration).toBe(0);
-    }
-  });
-});
-
-describe('Focus Visible Hook - useFocusVisible', () => {
-  it('должен отслеживать видимость фокуса', () => {
-    const { result } = renderHook(() => useFocusVisible());
-
-    expect(result.current.isFocusVisible).toBeDefined();
   });
 });
 

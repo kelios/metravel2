@@ -37,9 +37,6 @@ jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => ({ isMobile: false, width: 1440 }),
 }))
 
-jest.mock('@/hooks/useKeyboardNavigation', () => ({
-  useAccessibilityAnnounce: () => ({ announcement: '', priority: 'polite' }),
-}))
 
 jest.mock('@/hooks/useTdTrace', () => ({
   useTdTrace: () => jest.fn(),

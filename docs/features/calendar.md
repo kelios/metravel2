@@ -22,7 +22,7 @@ Authored travel без explicit статуса получает derived-стат
 | Status action | `components/travel/TravelStatusButton.tsx` |
 | Client/API merge | `stores/travelStatusStore.ts` |
 | API DTO/requests | `api/user.ts` |
-| Profile entry | `components/profile/ProfileQuickActions.tsx` |
+| Profile entry | `components/screens/profile/ProfileScreen.tsx` |
 
 `components/layout/AppProvidersDeferredRuntime.tsx` инициирует загрузку status
 store в общем runtime.

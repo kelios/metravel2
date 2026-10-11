@@ -7,7 +7,7 @@ import {
   parseCoordString,
   legacyPointToMarker,
   type LegacyMapPoint,
-} from '@/components/map-core';
+} from '@/components/map-core/types';
 
 describe('map-core', () => {
   describe('parseCoordString', () => {

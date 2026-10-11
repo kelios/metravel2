@@ -23,9 +23,6 @@ jest.mock('@/utils/analytics', () => ({
   sendAnalyticsEvent: jest.fn(),
 }));
 
-jest.mock('@/components/seo/InstantSEO', () => {
-  return () => null;
-});
 
 jest.mock('@/components/seo/LazyInstantSEO', () => {
   return () => null;

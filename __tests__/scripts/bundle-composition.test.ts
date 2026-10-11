@@ -387,11 +387,6 @@ const LAZY_DEFEATED_BY_SYNC_ALLOWLIST: Array<{ file: string; specifier: string; 
     specifier: '@/components/travel/details/TravelDetailsDeferred',
     reason: '#1552: test-only require in the unprefixed file; web uses travelDetailsDeferredLoader.web.ts',
   },
-  {
-    file: 'utils/validation/index.ts',
-    specifier: '../validation',
-    reason: 'баррель намеренно ре-экспортирует тот же модуль синхронно; await import — сахар в хелпере',
-  },
 ]
 
 /** Файлы, которых web-бандл не видит: там синхронный импорт — штатная native-ветка. */
@@ -601,7 +596,7 @@ describe('состав eager-бандла (#1148)', () => {
         'i18n/locales/en/index.ts',
         'metro-stubs/react-native-web-slim.js',
         'styles/globalFocus.ts',
-        'types/travel.ts',
+        'types/travelRoutes.ts',
         'ui/paper.web.tsx',
       ]),
     )

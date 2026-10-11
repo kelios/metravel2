@@ -36,7 +36,6 @@ describe('fix-hardcoded-colors', () => {
 
     expect(isExcludedPath(path.join(root, 'constants/designSystem.ts'))).toBe(true);
     expect(isExcludedPath(path.join(root, 'constants/modernMattePalette.ts'))).toBe(true);
-    expect(isExcludedPath(path.join(root, 'constants/theme.ts'))).toBe(true);
     expect(isExcludedPath(path.join(root, 'services/pdf-export/themes/configs/light.ts'))).toBe(true);
     expect(isExcludedPath(path.join(root, 'utils/mapSnapshot/canvasRenderer.ts'))).toBe(true);
     expect(isExcludedPath(path.join(root, 'components/ui/Button.tsx'))).toBe(false);

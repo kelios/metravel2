@@ -89,14 +89,6 @@ jest.mock('@/components/MapPage/MapMobileLayout', () => {
 })
 
 // Мокаем InstantSEO как no-op компонент
-jest.mock('@/components/seo/InstantSEO', () => {
-  const React = require('react')
-  return {
-    __esModule: true,
-    default: ({ children }: any) =>
-      children ? React.createElement(React.Fragment, null, children) : null,
-  }
-})
 
 // Мокаем тяжёлый MapPanel простой заглушкой
 jest.mock('@/components/MapPage/MapPanel', () => {

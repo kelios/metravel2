@@ -44,7 +44,6 @@ const EXCLUDED_DIRS = new Set([
 const EXCLUDED_RELATIVE_PATHS = new Set([
   'constants/designSystem.ts',
   'constants/modernMattePalette.ts',
-  'constants/theme.ts',
 ]);
 
 const EXCLUDED_RELATIVE_PREFIXES = [

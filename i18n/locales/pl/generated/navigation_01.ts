@@ -94,7 +94,6 @@ export const navigationGenerated1 = {
   "components.layout.ThemeToggle.svetlaya_246afe18": "Jasny",
   "components.layout.ThemeToggle.temnaya_b882d236": "Ciemny",
   "components.layout.ThemeToggle.vybrat_temu_value1_2ab8849f": "Wybierz motyw: {{value1}}",
-  "components.navigation.OpenInMapsSheet.otkryt_v_kartah_a12bfa2e": "Otwórz na mapach",
   "components.navigation.PointNavigationMenu.otkryt_tochku_v_apple_maps_d4faa850": "Otwórz punkt w Apple Maps",
   "components.navigation.PointNavigationMenu.otkryt_tochku_v_google_maps_7f67f5c3": "Otwórz punkt w Mapach Google",
   "components.navigation.PointNavigationMenu.otkryt_tochku_v_openstreetmap_3f6c4f7d": "Otwórz punkt w OpenStreetMap",

@@ -1,7 +1,4 @@
 export const tripsStaticResources = {
-  "planningEmpty.route": "Collect a route from MeTravel places - add points in one tap.",
-  "planningEmpty.people": "Invite subscribers and collect who is coming.",
-  "planningEmpty.export": "Export the route to your navigator and publish a report after the trip.",
   "tripApply.disclaimer": "MeTravel does not organize or participate in travel. This is a platform for meeting fellow travelers - all agreements, payment and responsibility remain with the participants.",
   "tripApply.duplicateError": "The application has already been sent. The status can be viewed in the “My trips” section.",
   "tripApply.genericError": "Failed to submit application. Please try again later.",

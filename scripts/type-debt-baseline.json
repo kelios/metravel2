@@ -12,11 +12,11 @@
     "utils"
   ],
   "totals": {
-    "styleCast": 1359,
-    "logicCast": 1164,
-    "tsIgnore": 45,
+    "styleCast": 1351,
+    "logicCast": 1141,
+    "tsIgnore": 42,
     "tsExpectError": 1,
-    "eslintDisable": 29
+    "eslintDisable": 27
   },
   "domains": {
     "app": {
@@ -27,11 +27,11 @@
       "eslintDisable": 1
     },
     "components": {
-      "styleCast": 1232,
-      "logicCast": 1001,
-      "tsIgnore": 45,
+      "styleCast": 1224,
+      "logicCast": 981,
+      "tsIgnore": 42,
       "tsExpectError": 1,
-      "eslintDisable": 17
+      "eslintDisable": 15
     },
     "context": {
       "styleCast": 0,
@@ -56,14 +56,14 @@
     },
     "services": {
       "styleCast": 0,
-      "logicCast": 9,
+      "logicCast": 7,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils": {
       "styleCast": 1,
-      "logicCast": 94,
+      "logicCast": 93,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 2
@@ -437,27 +437,6 @@
     "components/export/ThemePreview.tsx": {
       "styleCast": 5,
       "logicCast": 0,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "components/filters/CategoryChips.tsx": {
-      "styleCast": 0,
-      "logicCast": 1,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "components/forms/NumberInputComponent.tsx": {
-      "styleCast": 0,
-      "logicCast": 0,
-      "tsIgnore": 3,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "components/forms/SearchAutocomplete.tsx": {
-      "styleCast": 0,
-      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -1092,26 +1071,12 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
-    "components/map-core/MapMarkerLayer.tsx": {
-      "styleCast": 0,
-      "logicCast": 1,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
     "components/map-core/useElevation.ts": {
       "styleCast": 0,
       "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
-    },
-    "components/map-core/useMapLifecycle.ts": {
-      "styleCast": 0,
-      "logicCast": 9,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 2
     },
     "components/map-core/useMapRouting.ts": {
       "styleCast": 0,
@@ -1323,13 +1288,6 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
-    "components/MapPage/Map/styles.ts": {
-      "styleCast": 1,
-      "logicCast": 0,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
     "components/MapPage/Map/useMapApi.ts": {
       "styleCast": 0,
       "logicCast": 7,
@@ -1365,13 +1323,6 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
-    "components/MapPage/Map/useRouteBuilding.ts": {
-      "styleCast": 0,
-      "logicCast": 2,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
     "components/MapPage/MapBottomSheet.web.tsx": {
       "styleCast": 6,
       "logicCast": 3,
@@ -1389,13 +1340,6 @@
     "components/MapPage/MapErrorBoundary.tsx": {
       "styleCast": 0,
       "logicCast": 3,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "components/MapPage/MapLegend.tsx": {
-      "styleCast": 1,
-      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -1617,13 +1561,6 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
-    "components/navigation/OpenInMapsSheet.tsx": {
-      "styleCast": 3,
-      "logicCast": 0,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
     "components/navigation/PointNavigationMenu.tsx": {
       "styleCast": 2,
       "logicCast": 0,
@@ -1683,13 +1620,6 @@
     "components/profile/ProfileMenu.tsx": {
       "styleCast": 2,
       "logicCast": 2,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "components/profile/ProfileQuickActions.tsx": {
-      "styleCast": 3,
-      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -2485,13 +2415,6 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
-    "components/travel/RecentViews.tsx": {
-      "styleCast": 0,
-      "logicCast": 2,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
     "components/travel/RelatedTravelActionStack.tsx": {
       "styleCast": 0,
       "logicCast": 1,
@@ -2954,13 +2877,6 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
-    "components/ui/SortSelector.tsx": {
-      "styleCast": 0,
-      "logicCast": 1,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
     "components/ui/StaleContentBanner.tsx": {
       "styleCast": 1,
       "logicCast": 0,
@@ -3283,13 +3199,6 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
-    "services/pdf-export/generators/v2/runtime/legacyGalleryLayouts.ts": {
-      "styleCast": 0,
-      "logicCast": 2,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
     "services/pdf-export/parsers/ContentParser.ts": {
       "styleCast": 0,
       "logicCast": 1,
@@ -3489,13 +3398,6 @@
     "utils/userPointsCategories.ts": {
       "styleCast": 0,
       "logicCast": 9,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "utils/webVitalsMonitoring.ts": {
-      "styleCast": 0,
-      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0

@@ -1,7 +1,4 @@
 export const tripsStaticResources = {
-  "planningEmpty.route": "Zbieraj trasy z miejsc MeTravel i dodawaj punkty jednym dotknięciem.",
-  "planningEmpty.people": "Zaproś subskrybentów i zbieraj, kto przyjdzie.",
-  "planningEmpty.export": "Wyeksportuj trasę do nawigatora i opublikuj raport po podróży.",
   "tripApply.disclaimer": "MeTravel nie organizuje ani nie uczestniczy w podróżach. Jest to platforma do spotkań z innymi podróżnikami – wszystkie umowy, płatności i odpowiedzialność pozostają po stronie uczestników.",
   "tripApply.duplicateError": "Zgłoszenie zostało już wysłane. Status można sprawdzić w zakładce „Moje przejazdy”.",
   "tripApply.genericError": "Nie udało się przesłać wniosku. Spróbuj ponownie później.",

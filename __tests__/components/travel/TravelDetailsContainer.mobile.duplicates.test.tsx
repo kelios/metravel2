@@ -180,10 +180,6 @@ jest.mock('@/components/home/WeatherWidget', () => ({
   default: () => null,
 }));
 
-jest.mock('@/components/seo/InstantSEO', () => ({
-  __esModule: true,
-  default: () => null,
-}));
 
 import TravelDetailsContainer from '@/components/travel/details/TravelDetailsContainer';
 

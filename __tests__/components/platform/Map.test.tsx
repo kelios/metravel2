@@ -63,10 +63,6 @@ jest.mock('@/components/ui/UnifiedTravelCard', () => {
 });
 
 // Mock MapLegend
-jest.mock('@/components/MapPage/MapLegend', () => {
-  const React = require('react');
-  return () => React.createElement('div', { 'data-testid': 'map-legend' });
-});
 
 // Mock expo-location
 jest.mock('expo-location', () => ({

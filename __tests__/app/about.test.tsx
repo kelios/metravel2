@@ -30,7 +30,6 @@ jest.mock('@/utils/growthFunnelAnalytics', () => ({
   trackAppDownloadClicked: jest.fn(),
 }));
 
-jest.mock('@/components/seo/InstantSEO', () => () => null);
 jest.mock('@/components/layout/CustomHeader', () => () => null);
 jest.mock('@/utils/toast', () => ({ showToast: jest.fn() }));
 

@@ -30,7 +30,6 @@ const ALLOW_FILES = new Set([
 ])
 const SAFE_AREA_ONLY = new Set([
   'components/travel/FullscreenGallery.tsx',
-  'components/navigation/OpenInMapsSheet.tsx',
   'components/quests/ShareQuestResultSheet.tsx',
   'components/quests/QuestFullMap.tsx',
   'components/trips/planning/TripPlanRouteMap.tsx',
