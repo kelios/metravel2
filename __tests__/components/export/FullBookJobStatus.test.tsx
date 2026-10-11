@@ -72,6 +72,18 @@ describe('FullBookJobStatus', () => {
     expect(controller.cancel).toHaveBeenCalledTimes(1)
   })
 
+  it('shows Lambda runtime stages as the same phases with page progress (#2391)', () => {
+    const { unmount } = render(<FullBookJobStatus controller={makeController(makeJob({ stage: 'lambda_render' }))} />)
+    expect(screen.getByText('Идёт сборка · Сборка страниц')).toBeTruthy()
+    expect(screen.getByText('Страницы: 40 из 139')).toBeTruthy()
+    expect(screen.getByRole('progressbar')).toBeTruthy()
+    unmount()
+
+    render(<FullBookJobStatus controller={makeController(makeJob({ stage: 'awaiting_lambda' }))} />)
+    expect(screen.getByText('Идёт сборка · Ожидание сборки страниц')).toBeTruthy()
+    expect(screen.queryByRole('progressbar')).toBeNull()
+  })
+
   it('does not invent a percentage when the server does not know the total', () => {
     const job = makeJob({
       stage: 'snapshot',

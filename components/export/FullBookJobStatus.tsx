@@ -42,8 +42,14 @@ const statusLabel = (status: BookExportV2JobStatus): string => {
   }
 };
 
+// Среда сборки (#2388, AWS Lambda) добавляет к фазе свои имена: `awaiting_lambda`
+// — то же ожидание сборщика, `lambda_<фаза>` — та же фаза. Подпись и полоса
+// работают по фазе, чтобы новое имя среды не превращалось в «Обработка».
+const stagePhase = (stage: string): string =>
+  stage === 'awaiting_lambda' ? 'awaiting_renderer' : stage.replace(/^lambda_/, '');
+
 const stageLabel = (stage: string): string => {
-  switch (stage) {
+  switch (stagePhase(stage)) {
     case 'queued':
       return i18nT('export:components.export.FullBookExport.stage.queued');
     case 'snapshot':
@@ -86,7 +92,8 @@ const formatCounter = (counter: BookExportV2Counter): string =>
 
 // Полоса — только по известному ожидаемому числу текущего этапа.
 const progressCounter = (job: BookExportV2Job): BookExportV2Counter | null => {
-  const counter = job.stage === 'snapshot' ? job.counters.travels : job.stage === 'render' ? job.counters.pages : null;
+  const phase = stagePhase(job.stage);
+  const counter = phase === 'snapshot' ? job.counters.travels : phase === 'render' ? job.counters.pages : null;
   if (!counter || counter.expected === null || counter.expected <= 0) return null;
   return counter;
 };

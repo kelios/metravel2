@@ -485,7 +485,7 @@ export const exportGenerated1 = {
   "services.pdf_export.generators.v2.runtime.travelContentPage.value1_div_class_travel_online_card_style_di_2997e202.text01": "Wersja internetowa",
   "services.pdf_export.generators.v2.runtime.travelContentPage.value1_div_class_travel_online_card_style_di_2997e202.text02": "Zeskanuj kod QR, aby wyświetlić trasę",
   "components.export.FullBookExport.title": "Cała książka za okres",
-  "components.export.FullBookExport.hint": "Serwer złoży jeden plik PDF ze wszystkimi podróżami z wybranych lat — bez limitu zdjęć. Możesz zamknąć stronę: składanie będzie trwać, a status pojawi się tutaj.",
+  "components.export.FullBookExport.hint": "Serwer złoży jeden plik PDF ze wszystkimi podróżami z wybranych lat — bez limitu zdjęć. Możesz zamknąć stronę: składanie będzie trwać, status pojawi się tutaj, a gdy książka będzie gotowa, wyślemy e-mail na adres konta.",
   "components.export.FullBookExport.yearFrom": "Od roku",
   "components.export.FullBookExport.yearTo": "Do roku",
   "components.export.FullBookExport.yearFromA11y": "Pierwszy rok okresu",
