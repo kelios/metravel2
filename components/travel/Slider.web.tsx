@@ -13,6 +13,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { useThemedColors } from '@/hooks/useTheme'
 import type { SliderProps, SliderRef } from './sliderParts/types'
+import SliderCaption from './sliderParts/SliderCaption'
 import {
   DEFAULT_AR,
   MOBILE_HEIGHT_PERCENT,
@@ -253,6 +254,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     showArrows = true,
     showDots = true,
     controlsVisible = true,
+    showCaption = true,
     hideArrowsOnMobile = true,
     aspectRatio = DEFAULT_AR,
     contentAspectRatio,
@@ -605,6 +607,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           />
         )}
       </View>
+      {showCaption && <SliderCaption caption={images[currentIndex]?.caption} />}
     </View>
   )
 }

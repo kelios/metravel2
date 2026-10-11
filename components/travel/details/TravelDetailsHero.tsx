@@ -1,4 +1,4 @@
-import React, { Suspense, useMemo } from 'react'
+import React, { Suspense, useMemo, useState } from 'react'
 import { Platform, View } from 'react-native'
 
 import type { Travel } from '@/types/types'
@@ -27,6 +27,7 @@ import {
 } from './TravelHeroSlots'
 import { useTravelSsgHeroHandoff } from './useTravelSsgHeroHandoff'
 import { translate as i18nT } from '@/i18n'
+import SliderCaption from '../sliderParts/SliderCaption'
 
 // #1499: раньше выбор делался здесь — `Platform.OS === 'web' ? Lazy : Static`.
 // Статический импорт native-ветки остаётся ребром графа и в web-бандле, поэтому
@@ -70,6 +71,16 @@ function TravelHeroSectionInner({
   suppressQuickJumps = false,
 }: Props) {
   const styles = useTravelDetailsHeroStyles()
+  const [currentSlide, setCurrentSlide] = useState({ travelId: travel.id, index: 0 })
+  const currentIndex = currentSlide.travelId === travel.id ? currentSlide.index : 0
+  if (currentSlide.travelId !== travel.id) {
+    setCurrentSlide({ travelId: travel.id, index: 0 })
+  }
+  const handleIndexChanged = React.useCallback((index: number) => {
+    setCurrentSlide(previous => previous.travelId === travel.id && previous.index === index
+      ? previous
+      : { travelId: travel.id, index })
+  }, [travel.id])
   const safetyAuthorId = useMemo(() => resolveOwnerId(travel), [travel])
   const authorName = useMemo(() => resolveTravelAuthorName(travel, travel.userName), [travel])
 
@@ -221,6 +232,7 @@ function TravelHeroSectionInner({
                 <View style={sliderUnderOverlayStyle} collapsable={false} {...(sliderUnderOverlayWebProps || {})}>
                   <Suspense fallback={null}>
                     <InteractiveSliderComponent
+                      key={travel.id}
                       visible
                       galleryImages={heroSliderImages}
                       isMobile={isMobile}
@@ -230,6 +242,7 @@ function TravelHeroSectionInner({
                       onFirstImageLoad={handleSliderImageLoad}
                       firstImagePreloaded={webHeroLoaded || ssgHeroHandoffActive}
                       onImagePress={handleImagePress}
+                      onIndexChanged={handleIndexChanged}
                       onInteractionStart={releaseSsgHero}
                       skipFirstSlideImage={ssgHeroHandoffActive}
                       fullscreenVisible={fullscreenVisible}
@@ -253,7 +266,6 @@ function TravelHeroSectionInner({
                   <OptimizedLCPHero
                     img={firstImg}
                     alt={heroAlt}
-                    caption={typeof firstImg.caption === 'string' ? firstImg.caption : undefined}
                     height={heroHeight}
                     isMobile={isMobile}
                     media={findGalleryMediaImage(travel.media, firstImg.id)}
@@ -265,6 +277,7 @@ function TravelHeroSectionInner({
           ) : (
             <Suspense fallback={null}>
               <InteractiveSliderComponent
+                key={travel.id}
                 visible
                 galleryImages={heroSliderImages}
                 isMobile={isMobile}
@@ -273,6 +286,7 @@ function TravelHeroSectionInner({
                 onFirstImageLoad={onFirstImageLoad}
                 firstImagePreloaded={renderSlider && (Platform.OS === 'web')}
                 onImagePress={handleImagePress}
+                onIndexChanged={handleIndexChanged}
                 fullscreenVisible={fullscreenVisible}
                 fullscreenIndex={fullscreenIndex}
                 onCloseFullscreen={handleCloseFullscreen}
@@ -288,6 +302,7 @@ function TravelHeroSectionInner({
             </Suspense>
           )}
         </View>
+        <SliderCaption caption={heroSliderImages[currentIndex]?.caption} />
       </View>
 
       {isMobile ? <TravelAuthorQuickLink travel={travel} /> : null}

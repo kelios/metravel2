@@ -62,7 +62,7 @@ describe('TravelHeroSection mobile image fit', () => {
     mockAuthorQuickLinkSpy.mockClear()
   })
 
-  it('passes fit=contain to Slider on mobile', async () => {
+  it('keeps captions below the mobile media frame and follows the current slide', async () => {
     const travel: any = {
       id: 1,
       name: 'Mobile hero demo',
@@ -73,7 +73,10 @@ describe('TravelHeroSection mobile image fit', () => {
           height: 800,
           updated_at: '2025-01-01',
           id: 1,
+          caption: 'First caption',
         },
+        { id: 2, url: 'https://cdn.example.com/second.jpg', caption: 'Second caption' },
+        { id: 3, url: 'https://cdn.example.com/third.jpg', caption: '   ' },
       ],
       travelAddress: [],
     }
@@ -92,20 +95,22 @@ describe('TravelHeroSection mobile image fit', () => {
       excursions: { current: null },
     }
 
+    const renderHero = (heroTravel: any) => (
+      <Suspense fallback={null}>
+        <__testables.TravelHeroSection
+          travel={heroTravel}
+          anchors={anchors}
+          isMobile
+          renderSlider
+          onFirstImageLoad={() => {}}
+          sectionLinks={[]}
+          onQuickJump={() => {}}
+        />
+      </Suspense>
+    )
+    let tree: renderer.ReactTestRenderer
     await act(async () => {
-      renderer.create(
-        <Suspense fallback={null}>
-          <__testables.TravelHeroSection
-            travel={travel}
-            anchors={anchors}
-            isMobile
-            renderSlider
-            onFirstImageLoad={() => {}}
-            sectionLinks={[]}
-            onQuickJump={() => {}}
-          />
-        </Suspense>,
-      )
+      tree = renderer.create(renderHero(travel))
       await Promise.resolve()
     })
 
@@ -113,6 +118,28 @@ describe('TravelHeroSection mobile image fit', () => {
     const lastProps = mockSliderSpy.mock.calls[mockSliderSpy.mock.calls.length - 1]?.[0]
     expect(lastProps).toBeTruthy()
     expect(lastProps.fit).toBe('contain')
+    expect(lastProps.showCaption).toBe(false)
+    const caption = tree!.root.findByProps({ testID: 'slider-caption' })
+    const mediaFrame = tree!.root.findByProps({ testID: 'travel-details-hero-slider-container' })
+    const isCaptionHost = (node: renderer.ReactTestInstance) =>
+      typeof node.type === 'string' && node.props.testID === 'slider-caption'
+    expect(mediaFrame.findAll(isCaptionHost).length).toBe(0)
+    const hero = tree!.root.findByProps({ testID: 'travel-details-hero' })
+    expect(hero.findAll(isCaptionHost).length).toBe(1)
+    expect(caption.findAllByType('Text').some(node => node.props.children === 'First caption')).toBe(true)
+    await act(async () => { lastProps.onIndexChanged(1) })
+    expect(tree!.root.findAllByType('Text').some(node => node.props.children === 'Second caption')).toBe(true)
+    expect(tree!.root.findAllByType('Text').some(node => node.props.children === 'First caption')).toBe(false)
+    await act(async () => { lastProps.onIndexChanged(2) })
+    expect(tree!.root.findAll(isCaptionHost).length).toBe(0)
+    await act(async () => { tree!.update(renderHero({ ...travel, id: 4 })) })
+    expect(tree!.root.findAllByType('Text').some(node => node.props.children === 'First caption')).toBe(true)
+    await act(async () => {
+      mockSliderSpy.mock.calls[mockSliderSpy.mock.calls.length - 1][0].onIndexChanged(1)
+    })
+    await act(async () => { tree!.update(renderHero(travel)) })
+    expect(tree!.root.findAllByType('Text').some(node => node.props.children === 'First caption')).toBe(true)
+    expect(tree!.root.findAllByType('Text').some(node => node.props.children === 'Second caption')).toBe(false)
   })
 
   it('keeps hero slider height aligned with the mobile loading shell on native', async () => {

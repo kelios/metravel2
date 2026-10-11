@@ -72,13 +72,18 @@ describe('Slider', () => {
     expect(getByTestId('slider-image-0')).toBeTruthy()
   })
 
-  it('shows the place caption on its gallery slide', async () => {
-    const { getByText, getByLabelText } = await renderSlider([
+  it('shows the place caption below the gallery slide', async () => {
+    const { getByText, getByLabelText, getByTestId } = await renderSlider([
       { ...portraitImage, caption: 'Браславские озёра' },
     ])
 
     expect(getByText('Браславские озёра')).toBeTruthy()
     expect(getByLabelText(/Браславские озёра.*Фотография путешествия 1 из 1/)).toBeTruthy()
+    const isCaptionHost = (node: import('react-test-renderer').ReactTestInstance) =>
+      typeof node.type === 'string' && node.props.testID === 'slider-caption'
+    expect(getByTestId('slider-wrapper').findAll(isCaptionHost).length).toBe(0)
+    expect(getByTestId('slider-stack').findAll(isCaptionHost).length).toBe(1)
+    expect(getByText('Браславские озёра').props.numberOfLines).toBeUndefined()
   })
 
   it('applies blurred background for both portrait and landscape images when blurBackground is enabled', async () => {
@@ -189,9 +194,12 @@ describe('Slider', () => {
   it('updates counter when navigating to the next slide via arrow', async () => {
     ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 1024, height: 900 })
 
-    const { getByLabelText, getByText } = render(
+    const { getByLabelText, getByText, queryByText } = render(
       <Slider
-        images={[portraitImage, landscapeImage]}
+        images={[
+          { ...portraitImage, caption: 'First photo caption' },
+          { ...landscapeImage, caption: 'Second photo caption' },
+        ]}
         showArrows
         showDots={false}
         autoPlay={false}
@@ -201,8 +209,11 @@ describe('Slider', () => {
     )
 
     expect(getByText('1/2')).toBeTruthy()
+    expect(getByText('First photo caption')).toBeTruthy()
     fireEvent.press(getByLabelText('Next slide'))
     expect(getByText('2/2')).toBeTruthy()
+    expect(getByText('Second photo caption')).toBeTruthy()
+    expect(queryByText('First photo caption')).toBeNull()
   })
 
   it('calculates mobile slider height as 80% of viewport height', async () => {

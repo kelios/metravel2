@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Text, View } from 'react-native';
+import { Platform, View } from 'react-native';
 import ImageCardMedia, { isIOSWebKitUserAgent } from '@/components/ui/ImageCardMedia';
 import { getMediaPlaceholderData } from '@/utils/travelMediaVariants';
 import type { SliderImage } from './types';
@@ -431,11 +431,6 @@ const Slide = memo(function Slide({
           />
         </>
       )}
-      {caption ? (
-        <View style={styles.captionContainer} pointerEvents="none" testID={`slider-caption-${index}`}>
-          <Text style={styles.captionText} numberOfLines={3}>{caption}</Text>
-        </View>
-      ) : null}
     </View>
   );
 

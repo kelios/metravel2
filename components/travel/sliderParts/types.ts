@@ -15,6 +15,8 @@ export interface SliderProps {
   showArrows?: boolean;
   showDots?: boolean;
   controlsVisible?: boolean;
+  /** Disable when a fixed-height host renders the caption below its media frame. */
+  showCaption?: boolean;
   hideArrowsOnMobile?: boolean;
   aspectRatio?: number;
   /** Fallback media aspect ratio when API gallery items omit width/height. */

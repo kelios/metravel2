@@ -53,24 +53,25 @@ describe('TravelDetailsContainer performance (web)', () => {
     expect(lcpImg?.style.objectFit).toBe('contain')
   })
 
-  it('shows the first photo caption while the optimized hero owns the visible image', () => {
-    const { getByTestId, getByText } = render(
+  it('leaves visible captions to the host and preserves the optimized image alt', () => {
+    const { container, queryByTestId, queryByText } = render(
       <__testables.OptimizedLCPHero
         img={{
           url: 'https://cdn.example.com/img.jpg',
           width: 1200,
           height: 800,
           id: 1,
+          caption: 'Закат над Браславскими озёрами',
         }}
-        caption="Закат над Браславскими озёрами"
         alt="Закат над Браславскими озёрами"
         isMobile={false}
         height={600}
       />,
     )
 
-    expect(getByTestId('travel-hero-caption')).toBeTruthy()
-    expect(getByText('Закат над Браславскими озёрами')).toBeTruthy()
+    expect(queryByTestId('travel-hero-caption')).toBeNull()
+    expect(queryByText('Закат над Браславскими озёрами')).toBeNull()
+    expect(container.querySelector('img[data-lcp]')?.getAttribute('alt')).toBe('Закат над Браславскими озёрами')
   })
 
   // #1208: hero на web рисует ОДИН растр. Второго изображения (размытой копии

@@ -1,3 +1,4 @@
+import SliderCaption from './sliderParts/SliderCaption';
 import React, {
   memo,
   useCallback,
@@ -63,6 +64,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
     images,
     showArrows = true,
     showDots = true,
+    showCaption = true,
     hideArrowsOnMobile,
     aspectRatio,
     contentAspectRatio,
@@ -728,6 +730,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
           }}
         />
       </View>
+      {showCaption && <SliderCaption caption={images[currentIndex]?.caption} />}
     </View>
   );
 };

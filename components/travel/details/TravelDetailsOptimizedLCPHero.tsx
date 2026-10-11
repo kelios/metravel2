@@ -77,7 +77,6 @@ export const NeutralHeroPlaceholder: React.FC<{ height?: number; variant?: 'load
 function OptimizedLCPHeroInner({
   img,
   alt,
-  caption,
   onLoad,
   height,
   isMobile,
@@ -85,7 +84,6 @@ function OptimizedLCPHeroInner({
 }: {
   img: ImgLike;
   alt?: string;
-  caption?: string;
   onLoad?: () => void;
   height?: number;
   isMobile?: boolean;
@@ -97,7 +95,6 @@ function OptimizedLCPHeroInner({
   const imgRef = useRef<HTMLImageElement | null>(null);
   const didNotifyLoadRef = useRef(false);
   const colors = useThemedColors();
-  const visibleCaption = String(caption ?? img.caption ?? '').trim();
 
   const baseSrc = buildVersionedImageUrl(
     buildVersioned(img.url, img.updated_at ?? null, img.id),
@@ -325,42 +322,6 @@ function OptimizedLCPHeroInner({
               onLoad?.();
             }}
           />
-          {visibleCaption ? (
-            <div
-              data-testid="travel-hero-caption"
-              style={{
-                position: 'absolute',
-                left: 16,
-                right: 16,
-                bottom: 16,
-                zIndex: 2,
-                display: 'flex',
-                justifyContent: 'center',
-                pointerEvents: 'none',
-              }}
-            >
-              <div
-                style={{
-                  maxWidth: 720,
-                  boxSizing: 'border-box',
-                  padding: '10px 16px',
-                  borderRadius: 16,
-                  background: colors.overlay,
-                  color: colors.textOnDark,
-                  fontSize: 16,
-                  fontWeight: 600,
-                  lineHeight: '22px',
-                  letterSpacing: '-0.1px',
-                  textAlign: 'center',
-                  boxShadow: colors.boxShadows?.medium,
-                  backdropFilter: 'blur(16px) saturate(1.25)',
-                  WebkitBackdropFilter: 'blur(16px) saturate(1.25)',
-                }}
-              >
-                {visibleCaption}
-              </div>
-            </div>
-          ) : null}
         </div>
       )}
     </div>
