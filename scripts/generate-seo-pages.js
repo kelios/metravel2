@@ -75,6 +75,15 @@ const {
   questPointId,
 } = require('../utils/questStoryText');
 const {
+  assertCatalogMatchesReceipt,
+  buildQuestLocaleCandidate,
+  createSsgTranslator,
+  runRevisionReceiptCommand,
+  writeCandidateFile,
+} = require('./lib/questLocalePackage');
+const { canonicalPath: questCanonicalPath, insertQuestLocaleSlots } = require('./lib/questSeoContract');
+const { scoreDetailCohort } = require('./lib/questDetailCohort');
+const {
   buildQuestCityWalkModel,
   questCityWalkBundleCount,
   questCityWalkHasContent,
@@ -92,12 +101,20 @@ function getArg(name, fallback) {
 
 const DIST_DIR = path.resolve(getArg('dist', 'dist/prod'));
 const API_BASE = getArg('api', 'https://metravel.by').replace(/\/+$/, '');
+// #2365: opt-in v1 quest SEO package. Without `--quest-seo-candidate` the build
+// stays the legacy RU-only dist (no slots, no prefixed pages, no manifest).
+const QUEST_SEO_CANDIDATE = getArg('quest-seo-candidate', '');
+const QUEST_SEO_RECEIPT_COMMAND = getArg('quest-seo-receipt-command', process.env.QUEST_SEO_RECEIPT_COMMAND || '');
 const SITE_URL = 'https://metravel.by';
 const OG_IMAGE = `${SITE_URL}/assets/icons/logo_yellow_512x512.png`;
 const FALLBACK_DESC = 'Найди место для путешествия и поделись своим опытом.';
 const IMAGE_OPTIMIZATION_QUERY_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'blur', 'dpr'];
 
-const RU_I18N_CATALOG = loadI18nCatalogs(path.resolve(__dirname, '..')).catalogs.get('ru');
+const I18N_CATALOGS = loadI18nCatalogs(path.resolve(__dirname, '..')).catalogs;
+const RU_I18N_CATALOG = I18N_CATALOGS.get('ru');
+// Build-time quest labels come from the same catalogs as the app; RU values
+// are the historical literals, so RU pages stay byte-identical (#2365).
+const RU_SSG = createSsgTranslator(I18N_CATALOGS, 'ru');
 function readRequiredRuTranslation(key) {
   const value = RU_I18N_CATALOG?.get(key);
   if (typeof value !== 'string' || value.trim() === '') {
@@ -2017,14 +2034,14 @@ function finalizeTravelPageHtml(baseHtml) {
   return gateAppScriptsBehindHero(disableExpoRouterHydration(baseHtml));
 }
 
-function formatQuestDuration(durationMin) {
+function formatQuestDuration(durationMin, ssg = RU_SSG) {
   const total = Number(durationMin) || 0;
   if (total <= 0) return '';
   const hours = Math.floor(total / 60);
   const mins = total % 60;
-  if (hours > 0 && mins > 0) return `${hours} ч ${mins} мин`;
-  if (hours > 0) return `${hours} ч`;
-  return `${mins} мин`;
+  if (hours > 0 && mins > 0) return ssg.t('seo:utils.questSeo.value1_ch_value2_min_a31b9fed', { value1: hours, value2: mins });
+  if (hours > 0) return ssg.t('seo:utils.questSeo.value1_ch_d6644461', { value1: hours });
+  return ssg.t('seo:utils.questSeo.value1_min_7c081c0f', { value1: mins });
 }
 
 /**
@@ -2033,7 +2050,12 @@ function formatQuestDuration(durationMin) {
  * `task`, `hint` и `answer_pattern` сюда не попадают ни в каком виде — модель
  * несёт только название, место, отобранные предложения и практику.
  */
-function buildQuestRouteDigest(bundle) {
+function buildQuestRouteDigest(bundle, ssg = RU_SSG) {
+  // Те же подписи, что у справки точки на городской странице приложения.
+  const formatFact = (kind, value) => ssg.t(
+    kind === 'hours' ? 'quests:app.tabs.quests.city.index.walkOpeningHours' : 'quests:app.tabs.quests.city.index.walkTicket',
+    { value1: value },
+  );
   return getQuestSteps(bundle)
     .map((step, index) => {
       if (!step || typeof step !== 'object') return null;
@@ -2056,7 +2078,7 @@ function buildQuestRouteDigest(bundle) {
         title: locationCoversTitle ? location : title || location,
         location: locationCoversTitle || location === title ? '' : location,
         sentences: selectQuestSafeSentences(step.story, answerLiterals),
-        facts: buildQuestPointFacts(step.poi_info),
+        facts: buildQuestPointFacts(step.poi_info, formatFact),
       };
     })
     .filter(Boolean);
@@ -2119,7 +2141,7 @@ function findQuestSpoilerLeaks(html, bundle, digest = []) {
   return { errors, warnings };
 }
 
-function buildQuestIntroSectionModel(quest, bundle) {
+function buildQuestIntroSectionModel(quest, bundle, ssg = RU_SSG) {
   const steps = getQuestSteps(bundle);
   const intro = getQuestIntro(bundle);
   const city = String(
@@ -2129,7 +2151,7 @@ function buildQuestIntroSectionModel(quest, bundle) {
     ''
   ).trim();
   const points = Number(quest?.points) || steps.length || 0;
-  const durationLabel = formatQuestDuration(quest?.duration_min ?? quest?.durationMin ?? bundle?.duration_min);
+  const durationLabel = formatQuestDuration(quest?.duration_min ?? quest?.durationMin ?? bundle?.duration_min, ssg);
   const startLocation = String(
     intro?.location ||
     steps[0]?.location ||
@@ -2138,10 +2160,10 @@ function buildQuestIntroSectionModel(quest, bundle) {
   ).trim();
 
   const facts = [];
-  if (city) facts.push(`Город: ${city}`);
-  if (points > 0) facts.push(`Маршрут: ${points} ${pluralizeRu(points, 'точка', 'точки', 'точек')}`);
-  if (durationLabel) facts.push(`Время: примерно ${durationLabel}`);
-  if (startLocation) facts.push(`Старт: ${startLocation}`);
+  if (city) facts.push(ssg.t('seoStatic:questDetailSsg.factCity', { value1: city }));
+  if (points > 0) facts.push(ssg.tp('seoStatic:questDetailSsg.factRoute', points));
+  if (durationLabel) facts.push(ssg.t('seoStatic:questDetailSsg.factDuration', { value1: durationLabel }));
+  if (startLocation) facts.push(ssg.t('seoStatic:questDetailSsg.factStart', { value1: startLocation }));
 
   const introParagraphs = String(intro?.story || '')
     .split(/\n{2,}/)
@@ -2188,7 +2210,7 @@ function buildQuestDetailLinksIndex(cityLandingModel, { siblingLimit = 6 } = {})
  * было вовсе, и краулер видел 162–378 слов на 165 URL. Здесь появляется ответ
  * на вопрос «что это за маршрут» — без заданий, подсказок и ответов.
  */
-function buildQuestRouteDigestHtml(digest, { h2Style, h3Style, pStyle, factStyle }) {
+function buildQuestRouteDigestHtml(digest, { h2Style, h3Style, pStyle, factStyle }, ssg = RU_SSG) {
   if (!Array.isArray(digest) || !digest.length) return '';
 
   const items = digest
@@ -2208,57 +2230,61 @@ function buildQuestRouteDigestHtml(digest, { h2Style, h3Style, pStyle, factStyle
 
   return [
     '<div data-ssg-quest-route="true">',
-    `<h2 style="${h2Style}">Что на маршруте</h2>`,
-    `<p style="${pStyle}">Точки маршрута по порядку — что это за места и чем они интересны. Задания и ответы остаются в самом квесте.</p>`,
+    `<h2 style="${h2Style}">${escapeAttr(ssg.t('seoStatic:questDetailSsg.routeHeading'))}</h2>`,
+    `<p style="${pStyle}">${escapeAttr(ssg.t('seoStatic:questDetailSsg.routeLead'))}</p>`,
     `<ol style="margin:0;padding:0 0 0 18px">${items}</ol>`,
     '</div>',
   ].join('');
 }
 
 /** Блок перелинковки для секции детальной страницы квеста. */
-function buildQuestDetailLinksHtml(links, { h2Style, pStyle, ulStyle, backStyle }) {
+function buildQuestDetailLinksHtml(links, { h2Style, pStyle, ulStyle, backStyle }, ssg = RU_SSG) {
   if (!links) return '';
 
-  const item = (href, text, tail = '') =>
-    `<li style="margin:0 0 3px"><a href="${escapeAttr(href)}">${escapeAttr(text)}</a>${tail}</li>`;
+  // Перелинковка ведёт на русские страницы (города, соседние квесты, статьи):
+  // на языковой странице их названия помечены `lang="ru"` (#2365, D1).
+  const ruLang = ssg.locale === 'ru' ? '' : ' lang="ru"';
+  const t = (key, params) => ssg.t(`seoStatic:questDetailSsg.${key}`, params);
+  const item = (href, text, tail = '', lang = ruLang) =>
+    `<li style="margin:0 0 3px"><a href="${escapeAttr(href)}"${lang}>${escapeAttr(text)}</a>${tail}</li>`;
 
   const siblings = links.siblings.map((quest) => item(quest.path, quest.title)).join('');
   const nearby = links.nearbyCities
     .map((city) => item(
       `/quests/${city.segment}`,
       city.name || city.segment,
-      ` — ${city.questCount} ${pluralizeRu(city.questCount, 'квест', 'квеста', 'квестов')}, ${Math.round(city.distanceKm)} км`,
+      ` ${escapeAttr(ssg.tp('seoStatic:questDetailSsg.nearbyCity', city.questCount, { value1: Math.round(city.distanceKm) }))}`,
     ))
     .join('');
   const travels = links.travelLinks.map((travel) => item(travel.path, travel.title)).join('');
 
   return [
     `<div data-ssg-quest-links="true">`,
-    `<h2 style="${h2Style}">Куда дальше</h2>`,
-    `<p style="${pStyle}">Этот маршрут — часть городских квестов Metravel. Ниже — остальные квесты этого города и города с квестами рядом.</p>`,
+    `<h2 style="${h2Style}">${escapeAttr(t('linksHeading'))}</h2>`,
+    `<p style="${pStyle}">${escapeAttr(t('linksLead'))}</p>`,
     `<ul style="${ulStyle}">`,
-    item(links.landingPath, `Все квесты города: ${links.cityLabel}`),
+    item(links.landingPath, t('cityQuests', { value1: links.cityLabel }), '', ''),
     siblings,
     '</ul>',
     nearby
-      ? `<h2 style="${h2Style}">Квесты в соседних городах</h2><ul style="${ulStyle}">${nearby}</ul>`
+      ? `<h2 style="${h2Style}">${escapeAttr(ssg.t('quests:app.tabs.quests.city.index.nearbyTitle'))}</h2><ul style="${ulStyle}">${nearby}</ul>`
       : '',
     travels
-      ? `<h2 style="${h2Style}">Путешествия: ${escapeAttr(links.cityLabel)}</h2><p style="${pStyle}">Статьи путешественников по этому городу помогут дополнить прогулку.</p><ul style="${ulStyle}">${travels}</ul>`
+      ? `<h2 style="${h2Style}">${escapeAttr(t('travelsHeading', { value1: links.cityLabel }))}</h2><p style="${pStyle}">${escapeAttr(t('travelsLead'))}</p><ul style="${ulStyle}">${travels}</ul>`
       : '',
-    `<p style="${backStyle}"><a href="/quests">Все городские квесты</a></p>`,
+    `<p style="${backStyle}"><a href="/quests">${escapeAttr(ssg.t('quests:app.tabs.quests.city.index.back'))}</a></p>`,
     '</div>',
   ].join('');
 }
 
-function injectQuestIntroSection(baseHtml, { title, description, quest, bundle, links }) {
-  const cleanTitle = String(title || quest?.title || 'Городской квест').replace(/\s+\|\s*Metravel$/i, '').trim();
+function injectQuestIntroSection(baseHtml, { title, description, quest, bundle, links, ssg = RU_SSG }) {
+  const cleanTitle = String(title || quest?.title || ssg.t('seo:utils.questSeo.gorodskoy_kvest_2737d6fc')).replace(/\s+\|\s*Metravel$/i, '').trim();
   const cleanDescription = String(description || buildQuestSeoDescription(quest)).trim();
-  const model = buildQuestIntroSectionModel(quest, bundle);
+  const model = buildQuestIntroSectionModel(quest, bundle, ssg);
   const lead = cleanDescription || (
     model.city
-      ? `${cleanTitle} — пеший квест по городу ${model.city}.`
-      : `${cleanTitle} — пеший городской квест.`
+      ? ssg.t('seoStatic:questDetailSsg.leadWithCity', { value1: cleanTitle, value2: model.city })
+      : ssg.t('seoStatic:questDetailSsg.lead', { value1: cleanTitle })
   );
   const facts = model.facts
     .map((fact) => `<li style="margin:0;padding:0">${escapeAttr(fact)}</li>`)
@@ -2315,17 +2341,17 @@ function injectQuestIntroSection(baseHtml, { title, description, quest, bundle, 
     pStyle: 'margin:0 0 10px;color:var(--color-text,#22332c)',
     ulStyle: 'margin:0;padding:0 0 0 18px;color:var(--color-text,#22332c)',
     backStyle: 'margin:12px 0 0;font-weight:700',
-  });
-  const routeHtml = buildQuestRouteDigestHtml(buildQuestRouteDigest(bundle), {
+  }, ssg);
+  const routeHtml = buildQuestRouteDigestHtml(buildQuestRouteDigest(bundle, ssg), {
     h2Style,
     h3Style: `margin:0 0 4px;font:700 17px/1.3 ${QUESTS_SSG_FONT};color:var(--color-text,#22332c)`,
     pStyle: 'margin:0 0 6px;color:var(--color-text,#22332c)',
     factStyle: 'margin:0;font-size:14px;color:var(--color-text-muted,#5f756c)',
-  });
+  }, ssg);
 
   const section = [
-    `<section data-ssg-quest-intro="true" aria-label="Описание городского квеста" style="${sectionStyle}">`,
-    `<p style="${kickerStyle}">Городской квест Metravel</p>`,
+    `<section data-ssg-quest-intro="true" aria-label="${escapeAttr(ssg.t('seoStatic:questDetailSsg.sectionLabel'))}" style="${sectionStyle}">`,
+    `<p style="${kickerStyle}">${escapeAttr(ssg.t('seoStatic:questDetailSsg.kicker'))}</p>`,
     `<h1 style="${titleStyle}">${escapeAttr(cleanTitle)}</h1>`,
     `<p style="${textStyle}">${escapeAttr(lead)}</p>`,
     introParagraphs,
@@ -2354,7 +2380,7 @@ function pluralizeRu(n, one, few, many) {
   return many;
 }
 
-function buildQuestJsonLd({ title, description, canonical, image, quest }) {
+function buildQuestJsonLd({ title, description, canonical, image, quest, ssg = RU_SSG }) {
   if (!title || !canonical) return null;
   const payload = {
     '@context': 'https://schema.org',
@@ -2363,8 +2389,8 @@ function buildQuestJsonLd({ title, description, canonical, image, quest }) {
     description: String(description || '').trim(),
     url: canonical,
     mainEntityOfPage: canonical,
-    inLanguage: 'ru',
-    touristType: 'Городской квест, пеший маршрут',
+    inLanguage: ssg.locale,
+    touristType: ssg.t('seoStatic:questDetailSsg.touristType'),
     provider: {
       '@type': 'Organization',
       name: 'MeTravel',
@@ -2383,6 +2409,72 @@ function buildQuestJsonLd({ title, description, canonical, image, quest }) {
     payload.location = { '@type': 'City', name: city };
   }
   return payload;
+}
+
+/**
+ * Языковая оболочка детальной страницы: `<html lang>` и `og:locale` страницы,
+ * а не русского шаблона экспорта. Canonical/JSON-LD уже свои (#2365).
+ */
+function localizeQuestDocumentShell(baseHtml, ssg) {
+  return baseHtml
+    .replace(/(<html\b[^>]*?\slang=")[^"]*(")/i, `$1${ssg.locale}$2`)
+    .replace(/(<meta\b[^>]*\bproperty="og:locale"[^>]*\bcontent=")[^"]*(")/gi, `$1${ssg.ogLocale}$2`);
+}
+
+/**
+ * Одна сборка детальной страницы для RU и для языковых версий (#2365): RU
+ * берёт каталог и RU-бандл как раньше, языковая — точный `?lang=` бандл с его
+ * названием и городом. Обложка и медиа-URL — из каталога в обоих случаях,
+ * поэтому геометрия превью у версий одна.
+ */
+function buildQuestDetailPageHtml({ baseHtml, quest, bundle, route, detailLinks = null, ssg = RU_SSG }) {
+  const isRu = ssg.locale === 'ru';
+  const name = String((isRu ? quest.title : bundle?.title) || ssg.t('seo:utils.questSeo.gorodskoy_kvest_2737d6fc')).trim();
+  const cityName = isRu
+    ? quest.city_name || quest.cityName || quest.city?.name
+    : bundle?.city?.name || quest.city_name || quest.cityName;
+  const questSeo = buildQuestSeoMetadata({
+    title: name,
+    cityName,
+    points: quest.points,
+    durationMin: quest.duration_min ?? quest.durationMin,
+    ...(isRu ? {} : { translate: ssg.t, translatePlural: ssg.tp, locale: ssg.languageTag }),
+  });
+  const { title, description } = questSeo;
+  const canonical = `${SITE_URL}${isRu ? route.path : questCanonicalPath(Number(route.cityId), route.questId, ssg.locale)}`;
+  const cover = String(quest.cover_url || quest.coverUrl || '').trim();
+  const image = cover ? toAbsoluteUrl(cover) : OG_IMAGE;
+
+  let html = injectMeta(baseHtml, {
+    title,
+    description,
+    canonical,
+    image,
+    // Квест — не статья/путешествие: og:type=website (как ждёт
+    // post-deploy-seo-check). 'article' тут было копипастой из travel-блока.
+    ogType: 'website',
+  });
+  if (!isRu) html = localizeQuestDocumentShell(html, ssg);
+
+  html = injectBreadcrumbJsonLd(html, {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: ssg.t('seoStatic:structuredData.home'), item: `${SITE_URL}/` },
+      { '@type': 'ListItem', position: 2, name: ssg.t('seoStatic:structuredData.quests'), item: `${SITE_URL}/quests` },
+      { '@type': 'ListItem', position: 3, name, item: canonical },
+    ],
+  });
+
+  html = injectJsonLd(html, buildQuestJsonLd({ title, description, canonical, image, quest: isRu ? bundle || quest : bundle, ssg }), 'quest');
+  return injectQuestIntroSection(html, {
+    title: name,
+    description,
+    quest: isRu ? quest : { ...quest, title: name, city_name: cityName },
+    bundle,
+    links: detailLinks,
+    ssg,
+  });
 }
 
 /** Скрытый, но crawlable список ссылок на все квесты — для обнаружения без sitemap. */
@@ -3974,6 +4066,12 @@ async function main() {
   // --- 1b. Quest catalog ---
   // Travel SSG needs the quest catalog before travel pages are written so city
   // articles can include crawlable "quest for this city" links in the HTML.
+  // #2365: receipt R1 precedes every content read of the package build.
+  const questSeoReceipt = QUEST_SEO_CANDIDATE ? runRevisionReceiptCommand(QUEST_SEO_RECEIPT_COMMAND) : null;
+  let questSeoReceiptIndex = null;
+  if (questSeoReceipt) {
+    console.log(`\n🔏 Quest SEO receipt R1: ${questSeoReceipt.quests.length} published quests, digest ${questSeoReceipt.receipt_digest}`);
+  }
   console.log('\n🧩 Fetching quests from API...');
   let quests = [];
   const questBundleMap = new Map();
@@ -3999,6 +4097,9 @@ async function main() {
           try {
             return await fetchJson(`${API_BASE}/api/quests/by-quest-id/${encodeURIComponent(route.questId)}/`);
           } catch (err) {
+            // A package candidate cannot measure a page whose bundle it lost:
+            // a thin RU anchor would silently drop every translation (#2365).
+            if (QUEST_SEO_CANDIDATE) throw err;
             bundleFailures++;
             console.warn(`  ⚠️  Quest bundle not available for ${route.questId}: ${err.message}`);
             return null;
@@ -4023,6 +4124,7 @@ async function main() {
       }
       questPromoCatalog = buildQuestPromoCatalog(quests, questBundleMap);
     }
+    if (questSeoReceipt) questSeoReceiptIndex = assertCatalogMatchesReceipt(quests, questSeoReceipt, questRouteKey);
   } catch (err) {
     // Silently skipping quests used to ship a release without any quest page,
     // city landing or travel quest promo. Fail the build instead: build-prod.sh
@@ -4307,49 +4409,10 @@ async function main() {
       const route = questRouteKey(quest);
       if (!route) continue;
 
-      const name = String(quest.title || 'Городской квест').trim();
-      const questSeo = buildQuestSeoMetadata({
-        title: name,
-        cityName: quest.city_name || quest.cityName || quest.city?.name,
-        points: quest.points,
-        durationMin: quest.duration_min ?? quest.durationMin,
-      });
-      const { title, description } = questSeo;
-      const canonical = `${SITE_URL}${route.path}`;
-      const cover = String(quest.cover_url || quest.coverUrl || '').trim();
-      const image = cover ? toAbsoluteUrl(cover) : OG_IMAGE;
       const questBundle = questBundleMap.get(route.questId) || null;
-
-      let html = injectMeta(questBaseHtml, {
-        title,
-        description,
-        canonical,
-        image,
-        // Квест — не статья/путешествие: og:type=website (как ждёт
-        // post-deploy-seo-check). 'article' тут было копипастой из travel-блока.
-        ogType: 'website',
-      });
-
-      html = injectBreadcrumbJsonLd(html, {
-        '@context': 'https://schema.org',
-        '@type': 'BreadcrumbList',
-        itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Главная', item: `${SITE_URL}/` },
-          { '@type': 'ListItem', position: 2, name: 'Квесты', item: `${SITE_URL}/quests` },
-          { '@type': 'ListItem', position: 3, name, item: canonical },
-        ],
-      });
-
-      html = injectJsonLd(html, buildQuestJsonLd({ title, description, canonical, image, quest: questBundle || quest }), 'quest');
       const detailLinks = questDetailLinksIndex.get(route.path) || null;
       if (detailLinks) questsWithLinks++;
-      html = injectQuestIntroSection(html, {
-        title: name,
-        description,
-        quest,
-        bundle: questBundle,
-        links: detailLinks,
-      });
+      const html = buildQuestDetailPageHtml({ baseHtml: questBaseHtml, quest, bundle: questBundle, route, detailLinks });
 
       // #1763: страница уходит в индекс с пересказом маршрута, поэтому перед
       // записью она сверяется с сырыми полями бандла. Раскрытая игровая часть
@@ -4379,9 +4442,19 @@ async function main() {
     const { indexable: indexableQuestPaths, rejected: rejectedQuestPages } =
       selectIndexableBuiltQuestPages(questPagesToWrite, 'quest');
     const noindexQuestPages = [];
+    // #2365: the package records the same verdict with its numbers.
+    const questSeoRuCohort = QUEST_SEO_CANDIDATE ? scoreDetailCohort(questPagesToWrite) : null;
+    const questSeoRuPages = [];
     for (const { quest, route, html: builtHtml } of questPagesToWrite) {
       const indexable = indexableQuestPaths.has(route.path);
-      const html = indexable ? builtHtml : injectBuildOwnedRobots(builtHtml, 'noindex, follow');
+      let html = indexable ? builtHtml : injectBuildOwnedRobots(builtHtml, 'noindex, follow');
+      if (questSeoRuCohort) {
+        if (questSeoRuCohort.get(route.path)?.indexable !== indexable) {
+          throw new Error(`${route.path}: package depth verdict disagrees with the RU build verdict`);
+        }
+        html = insertQuestLocaleSlots(html);
+        questSeoRuPages.push({ quest, route, path: route.path, html });
+      }
       if (!indexable) {
         // Причина — из того же отбора: объём и шаблонность лечатся по-разному,
         // и лог обязан сказать, что именно дописывать.
@@ -4396,6 +4469,30 @@ async function main() {
       questGenerated++;
     }
     console.log(`  🧩 Quest pages: ${indexableQuestPaths.size}/${questPagesToWrite.length} indexable`);
+    if (QUEST_SEO_CANDIDATE) {
+      const candidate = await buildQuestLocaleCandidate({
+        ruPages: questSeoRuPages,
+        ruQuality: new Map([...questSeoRuCohort].map(([routePath, verdict]) => [routePath, {
+          indexable: verdict.indexable, word_count: verdict.words, own_fivegram_ratio: verdict.ratio,
+        }])),
+        receipt: questSeoReceipt,
+        receiptIndex: questSeoReceiptIndex,
+        catalogs: I18N_CATALOGS,
+        fetchLocalizedBundle: (questId, locale) =>
+          fetchJson(`${API_BASE}/api/quests/by-quest-id/${encodeURIComponent(questId)}/?lang=${encodeURIComponent(locale)}`),
+        buildLocalizedPage: ({ quest, route, bundle, translator }) => buildQuestDetailPageHtml({
+          baseHtml: questBaseHtml, quest, bundle, route, detailLinks: questDetailLinksIndex.get(route.path) || null, ssg: translator,
+        }),
+        findSpoilers: (html, bundle) => findQuestSpoilerLeaks(html, bundle, buildQuestRouteDigest(bundle)).errors,
+        writeDistFile: (relativePath, html) => writeFileSafe(path.join(DIST_DIR, relativePath), html),
+        mapBounded: (items, fn) => batchAsync(items, QUEST_DETAIL_CONCURRENCY, (item) => fn(item), {
+          minIntervalMs: BUILD_FETCH_MIN_INTERVAL_MS,
+        }),
+        log: (line) => console.log(line),
+      });
+      writeCandidateFile(path.resolve(QUEST_SEO_CANDIDATE), candidate, DIST_DIR);
+      console.log(`  🔏 Quest SEO candidate: ${candidate.clusters.length} clusters → ${QUEST_SEO_CANDIDATE} (finalize after post-processing)`);
+    }
     if (noindexQuestPages.length > 0) {
       console.warn(
         `  ⚠️  ${noindexQuestPages.length} quest pages ship noindex, follow — не берут порог #1930,` +
@@ -4766,6 +4863,9 @@ if (typeof module !== 'undefined' && module.exports) {
     buildQuestSeoDescription,
     buildQuestSeoMetadata,
     buildQuestJsonLd,
+    buildQuestDetailPageHtml,
+    localizeQuestDocumentShell,
+    injectBuildOwnedRobots,
     buildQuestCityAliasMap,
     questRouteVariants,
     buildQuestPromoCatalog,

@@ -278,14 +278,20 @@ function selectQuestSafeSentences(story, answerLiterals, options = {}) {
 }
 
 /** Практическая справка о точке: только заполненные поля, без пустых подписей. */
-function buildQuestPointFacts(poiInfo) {
+function defaultQuestPointFactLabel(kind, value) {
+  return kind === 'hours' ? `Часы работы: ${value}` : `Билет: ${value}`;
+}
+
+// `formatFact(kind, value)` — локализованная подпись факта для языковой
+// SSG-страницы (#2365); без него остаётся прежняя русская подпись.
+function buildQuestPointFacts(poiInfo, formatFact = defaultQuestPointFactLabel) {
   const poi = parseQuestJsonField(poiInfo, null);
   if (!poi || typeof poi !== 'object') return [];
   const facts = [];
   const hours = String(poi.opening_hours || poi.openingHours || '').trim();
   const price = String(poi.ticket_price || poi.ticketPrice || '').trim();
-  if (hours) facts.push(`Часы работы: ${hours}`);
-  if (price) facts.push(`Билет: ${price}`);
+  if (hours) facts.push(formatFact('hours', hours));
+  if (price) facts.push(formatFact('ticket', price));
   return facts;
 }
 

@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "release_id": "fixture-release-1",
+  "frontend_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "generated_at": "2026-10-10T00:00:00Z",
+  "source_snapshot": {
+    "receipt_schema_version": 1,
+    "before_digest": "88d7736e8e16ac6f77d843f989cfdcb8f4932fd76517c4004d3712be03cb103b",
+    "after_digest": "88d7736e8e16ac6f77d843f989cfdcb8f4932fd76517c4004d3712be03cb103b"
+  },
+  "relative_root": ".",
+  "clusters": [
+    {
+      "quest_pk": 1,
+      "city_id": 1,
+      "quest_slug": "minsk-proof",
+      "source_revision": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "members": {
+        "ru": {
+          "locale": "ru",
+          "canonical_path": "/quests/1/minsk-proof",
+          "html_path": "quests/1/minsk-proof.html",
+          "html_sha256": "e80380ca2b01c259b582ef98a4ed270f50644c34b3b82dd2302ea86b3ba6586f",
+          "content_revision": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "complete": true,
+          "quality": {
+            "indexable": true,
+            "word_count": 400,
+            "own_fivegram_ratio": 0.5
+          },
+          "released_status": 200,
+          "version_nav_label": "Language versions ru",
+          "language_labels": {
+            "ru": "Русский",
+            "be": "Беларуская",
+            "uk": "Українська",
+            "pl": "Polski",
+            "en": "English"
+          }
+        },
+        "pl": {
+          "locale": "pl",
+          "canonical_path": "/pl/quests/1/minsk-proof",
+          "html_path": "pl/quests/1/minsk-proof.html",
+          "html_sha256": "36b761132f9addb7722d427fb8335d7fe54d4783db93e0b4e59d36b4f2da1265",
+          "content_revision": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "complete": true,
+          "quality": {
+            "indexable": true,
+            "word_count": 400,
+            "own_fivegram_ratio": 0.5
+          },
+          "released_status": 200,
+          "version_nav_label": "Language versions pl",
+          "language_labels": {
+            "ru": "Русский",
+            "be": "Беларуская",
+            "uk": "Українська",
+            "pl": "Polski",
+            "en": "English"
+          }
+        }
+      }
+    }
+  ],
+  "errors": {
+    "ru": {
+      "html_path": "quest-seo-errors/ru/unavailable.html",
+      "html_sha256": "23770accc125afaa5ea3ea83c961ca93219eef6d71e96b2cc5b22091a0eb80cd",
+      "ru_link_label": "RU source ru"
+    },
+    "be": {
+      "html_path": "quest-seo-errors/be/unavailable.html",
+      "html_sha256": "dabad435f47295b94996d3cf6d3110328155a791adf637b2c9fcefddd4e91608",
+      "ru_link_label": "RU source be"
+    },
+    "uk": {
+      "html_path": "quest-seo-errors/uk/unavailable.html",
+      "html_sha256": "3620a8c18d80d94ee2d610b086e5a6a8e88ea540f4e1eb0719e8bac5dc98af43",
+      "ru_link_label": "RU source uk"
+    },
+    "pl": {
+      "html_path": "quest-seo-errors/pl/unavailable.html",
+      "html_sha256": "2dbfda160b7d910214e18280779205dcfad7c93967945c0f4914a29e1b1879bf",
+      "ru_link_label": "RU source pl"
+    },
+    "en": {
+      "html_path": "quest-seo-errors/en/unavailable.html",
+      "html_sha256": "3d7f10292bf2554e6a31e17925b046597b79e078d6704101aae2f113782f664f",
+      "ru_link_label": "RU source en"
+    }
+  }
+}

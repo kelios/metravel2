@@ -13,9 +13,9 @@
 
 ## 3. Frontend SSG package and publication checks
 
-- [ ] 3.1 Build exact-locale complete published candidates, keeping mismatch/absence separate from transport failure; apply existing depth algorithm within same-language detail cohorts and require indexable RU anchor (Translation and quality eligibility).
-- [ ] 3.2 Produce immutable base HTML with bounded head/version-anchor/bootstrap projection slots plus versioned checksum/source-revision manifest after verification; reject partial files, language mismatch or changed source snapshot; checksum stored bytes and validate final projections separately, preserving spoiler/media safeguards (Coherent actual publication and withdrawal).
-- [ ] 3.3 Extend static quest verifier to enforce prefixed status/head/body/locale/cluster contracts and candidate sitemap parity without replacing Django's production sitemap or modifying robots.
+- [x] 3.1 Build exact-locale complete published candidates, keeping mismatch/absence separate from transport failure; apply existing depth algorithm within same-language detail cohorts and require indexable RU anchor (Translation and quality eligibility). B #2365 source and tests added 2026-10-11 (`scripts/lib/questLocalePackage.js`, `questDetailCohort.js`); release pending under E.
+- [x] 3.2 Produce immutable base HTML with bounded head/version-anchor/bootstrap projection slots plus versioned checksum/source-revision manifest after verification; reject partial files, language mismatch or changed source snapshot; checksum stored bytes and validate final projections separately, preserving spoiler/media safeguards (Coherent actual publication and withdrawal). B #2365: interface v1 manifest/3 slots/errors, receipt R1/R2 fence, `scripts/finalize-quest-seo-package.js`; accepted by the backend reader locally.
+- [ ] 3.3 Extend static quest verifier to enforce prefixed status/head/body/locale/cluster contracts and candidate sitemap parity without replacing Django's production sitemap or modifying robots. B #2365: package/head/body/locale/cluster/checksum checks done in `verify-static-quest-seo.js`; sitemap parity of prefixed entries is a runtime check after E/D exposure (6.2).
 
 ## 4. Separately owned backend dependencies
 

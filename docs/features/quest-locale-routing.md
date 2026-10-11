@@ -54,3 +54,36 @@ Code-level: route/projection/anonymous transport/query/boot/detail/link tests,
 Runtime: только после review/push и общего B–E выпуска — actual SHA,
 no-JS/head/статусы, desktop/mobile screenshots/console/network, предпочтение
 EN при URL PL, прямой вход/refresh/SPA, withdrawal/retry, один quest view.
+
+## Статический пакет SSG — #2365 (B)
+
+Сборка пакета включается только явно; обычный `build-prod.sh` её не вызывает и
+выпускает прежний RU-only dist байт в байт (prefixed-страниц, слотов и манифеста
+нет, раздача и sitemap не меняются).
+
+1. `generate-seo-pages.js --quest-seo-candidate <файл вне dist>
+   --quest-seo-receipt-command "<cmd>"` (или `$QUEST_SEO_RECEIPT_COMMAND`):
+   квитанция C R1 до первого чтения контента, сверка каталога с квитанцией,
+   RU-детали со слотами `QUEST_LOCALE_HEAD_V1`/`LINKS_V1`/`BOOTSTRAP_V1`,
+   точные `?lang=` чтения только опубликованных и полных переводов, отбор по
+   `content_locale` и `available_locales`, глубина ≥300 слов / ≥30 % своих
+   5-грамм в когорте своего языка (`questPageDepth`, пороги прежние), RU-якорь
+   обязан быть индексируемым. Подписи страницы — из каталогов i18n
+   (`seoStatic:questDetailSsg.*`; справка точки, «Квесты в соседних городах»
+   и «Все городские квесты» — общие ключи городской страницы
+   `quests:app.tabs.quests.city.index.*`), RU-значения равны прежним литералам.
+2. После постобработки HTML: `finalize-quest-seo-package.js --dist <dist>
+   --candidate <файл>` берёт R2, требует R1 ≡ R2, считает checksum хранимых
+   байт, проверяет весь пакет и последним пишет `quest-seo-manifest.v1.json`.
+3. `verify-static-quest-seo.js --quest-seo-package-only` перепроверяет пакет с
+   диска; в обычном режиме prefixed-артефакты без манифеста — ошибка (флаг
+   `--quest-seo-candidate-pending` — только между шагами 1 и 2).
+
+Fail-closed: сбой/таймаут квитанции, неполный или неудачный fetch бандла,
+расхождение каталога и квитанции или R1 ≠ R2 отвергают кандидата целиком — нет
+манифеста, прежний активный пакет остаётся. Отсутствие перевода выводится
+только из квитанции и точного ответа API, не из транспортной ошибки.
+
+Активация и exposure — E #2366 / D: публиковать пакет только через
+`quest_seo_activate`; rsync пакета в legacy `static/dist` недопустим —
+закреплённый legacy nginx отдаёт `/{locale}/quests/...` по `try_files $uri.html`.

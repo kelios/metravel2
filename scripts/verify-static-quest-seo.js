@@ -11,7 +11,13 @@
  *
  * Usage:
  *   node scripts/verify-static-quest-seo.js [--dist <dir>] [--api <url>] [--sample-size <n>]
- *     [--verify-country-sitemap]
+ *     [--verify-country-sitemap] [--quest-seo-candidate-pending] [--quest-seo-package-only]
+ *
+ * #2365: a dist with `quest-seo-manifest.v1.json` is verified as a v1 package
+ * (checksums, slots, final projection, reciprocal clusters, cohort depth). A
+ * dist with prefixed quest artifacts and no manifest fails unless the caller
+ * declares that `finalize-quest-seo-package.js` still has to run.
+ * `--quest-seo-package-only` re-verifies a sealed package without the API.
  */
 
 const fs = require('fs')
@@ -20,6 +26,8 @@ const http = require('http')
 const https = require('https')
 
 const { fetchJson } = require('./lib/fetchJson')
+const { MANIFEST_NAME } = require('./lib/questSeoContract')
+const { listPrefixedQuestArtifacts, verifyQuestSeoPackage } = require('./lib/questSeoPackageVerify')
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText')
 const {
   questRouteKey,
@@ -62,6 +70,8 @@ const SITE_URL = 'https://metravel.by'
 // verify local country HTML but do not require not-yet-deployed sitemap rows.
 // Production acceptance enables this explicit flag after the coordinated deploy.
 const VERIFY_COUNTRY_SITEMAP = args.includes('--verify-country-sitemap')
+const QUEST_SEO_CANDIDATE_PENDING = args.includes('--quest-seo-candidate-pending')
+const QUEST_SEO_PACKAGE_ONLY = args.includes('--quest-seo-package-only')
 const sampleSizeArg = getArg('sample-size')
 const SAMPLE_SIZE =
   typeof sampleSizeArg === 'string' && sampleSizeArg.trim().length > 0
@@ -726,7 +736,31 @@ async function fetchQuestCatalog(fetcher = fetchJson, apiBase = API_BASE) {
   return quests
 }
 
+/**
+ * #2365: package state of a dist. Sealed → full v1 verification; prefixed
+ * artifacts without a manifest → refused, so an unsealed candidate can never
+ * ship through the legacy rsync path as servable prefixed pages.
+ */
+function verifyQuestSeoPackageState(distDir, { candidatePending = false, verify = verifyQuestSeoPackage } = {}) {
+  if (fs.existsSync(path.join(distDir, MANIFEST_NAME))) return verify(distDir).failures
+  const orphans = listPrefixedQuestArtifacts(distDir)
+  if (orphans.length && !candidatePending) {
+    return [`${orphans.length} prefixed quest artifacts without a sealed ${MANIFEST_NAME} (first: ${orphans[0]})`]
+  }
+  return []
+}
+
 async function main() {
+  if (QUEST_SEO_PACKAGE_ONLY) {
+    const { failures, manifest, manifestSha256 } = verifyQuestSeoPackage(DIST_DIR)
+    if (failures.length) {
+      throw new Error(`Quest SEO package verification failed:\n${failures.slice(0, 40).map((failure) => ` - ${failure}`).join('\n')}`)
+    }
+    const members = manifest.clusters.reduce((total, cluster) => total + Object.keys(cluster.members).length, 0)
+    console.log(`[verify-static-quest-seo] Quest SEO package ${manifest.release_id}: ${manifest.clusters.length} clusters,` +
+      ` ${members} members, manifest sha256 ${manifestSha256} in ${DIST_DIR}`)
+    return
+  }
   const [quests, sitemapXml] = await Promise.all([fetchQuestCatalog(), fetchBackendSitemap()])
 
   const cityAliasMap = buildQuestCityAliasMap(quests)
@@ -944,6 +978,9 @@ async function main() {
   const catalogPages = collectQuestSsgPages(DIST_DIR)
   failures.push(...verifyQuestPageContentDepth(catalogPages))
 
+  // 7. #2365: v1 quest SEO package (or no stray prefixed artifacts).
+  failures.push(...verifyQuestSeoPackageState(DIST_DIR, { candidatePending: QUEST_SEO_CANDIDATE_PENDING }))
+
   if (failures.length > 0) {
     const message = failures.slice(0, 20).map((failure) => ` - ${failure}`).join('\n')
     const overflow = failures.length > 20 ? `\n ... and ${failures.length - 20} more` : ''
@@ -1004,6 +1041,7 @@ if (typeof module !== 'undefined' && module.exports) {
     verifyQuestCountrySitemap,
     verifyQuestHtml,
     verifyQuestPageContentDepth,
+    verifyQuestSeoPackageState,
     warnQuestCityNoindexInSitemap,
     warnQuestCountryNoindexInSitemap,
   }

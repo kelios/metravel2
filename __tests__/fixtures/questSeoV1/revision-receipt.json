@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "receipt_digest": "88d7736e8e16ac6f77d843f989cfdcb8f4932fd76517c4004d3712be03cb103b",
+  "quests": [
+    {
+      "quest_pk": 1,
+      "city_id": 1,
+      "quest_slug": "minsk-proof",
+      "source_revision": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "locales": {
+        "ru": {
+          "content_revision": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "fence_revision": "1",
+          "published": true,
+          "complete": true
+        },
+        "be": {
+          "content_revision": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "fence_revision": "2",
+          "published": true,
+          "complete": true
+        },
+        "uk": {
+          "content_revision": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "fence_revision": "3",
+          "published": true,
+          "complete": true
+        },
+        "pl": {
+          "content_revision": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "fence_revision": "4",
+          "published": true,
+          "complete": true
+        },
+        "en": {
+          "content_revision": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "fence_revision": "5",
+          "published": true,
+          "complete": true
+        }
+      }
+    }
+  ]
+}
