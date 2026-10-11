@@ -900,18 +900,24 @@ select:focus-visible {
  * Реестр тем и окна — `constants/seasonalThemes.ts`; атрибут `data-season`
  * на <html> ставит стартовый скрипт `app/+html.tsx` и синхронизирует
  * `hooks/useTheme.ts`. Каждая тема — два блока переменных (светлая и тёмная)
- * плюс декоративный слой `body::after`: чистый CSS, без JS и бандла,
- * `pointer-events: none`, движение выключается `prefers-reduced-motion`.
+ * плюс статичный свет по краям и декор шапки: чистый CSS без движения,
+ * сетевых запросов и перехвата кликов.
  * Без `data-season` ни одно правило ниже не срабатывает — обычный вид не меняется.
  * Новая тема: блок `html[data-season="<id>"]`, блок `[data-theme="dark"]`,
- * свои `--season-decor-*`.
+ * свои `--season-*` токены.
  */
 
-/* ---- Хэллоуин: тыква + фиолет, светлая ---- */
+/* ---- Хэллоуин: лунный свет + янтарь, светлая ---- */
 html[data-season="halloween"] {
-  --color-background: #fcf8f4;
-  --color-backgroundSecondary: #f8f2ec;
-  --color-backgroundTertiary: #f3ece4;
+  --season-canopy-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%201200%2048%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%238e73b5%22%20stroke-opacity%3D%22.45%22%3E%3Cpath%20d%3D%22M0%203Q150%2022%20300%203T600%203T900%203T1200%203%22%2F%3E%3C%2Fg%3E%3Cpath%20d%3D%22M42%204v12%22%20stroke%3D%22%238e73b5%22%20stroke-opacity%3D%22.6%22%2F%3E%3Cellipse%20cx%3D%2242%22%20cy%3D%2221%22%20rx%3D%2214%22%20ry%3D%2212%22%20fill%3D%22%23e8a24c%22%20opacity%3D%22.12%22%2F%3E%3Crect%20x%3D%2239%22%20y%3D%2215%22%20width%3D%226%22%20height%3D%2210%22%20rx%3D%222%22%20fill%3D%22%23e8a24c%22%2F%3E%3Cpath%20d%3D%22M37%2014h10M38%2026h8%22%20stroke%3D%22%239a4f12%22%20stroke-opacity%3D%22.65%22%2F%3E%3Cpath%20d%3D%22M310%204v7%22%20stroke%3D%22%238e73b5%22%20stroke-opacity%3D%22.6%22%2F%3E%3Cellipse%20cx%3D%22310%22%20cy%3D%2216%22%20rx%3D%2214%22%20ry%3D%2212%22%20fill%3D%22%23e8a24c%22%20opacity%3D%22.12%22%2F%3E%3Crect%20x%3D%22307%22%20y%3D%2210%22%20width%3D%226%22%20height%3D%2210%22%20rx%3D%222%22%20fill%3D%22%23e8a24c%22%2F%3E%3Cpath%20d%3D%22M305%209h10M306%2021h8%22%20stroke%3D%22%239a4f12%22%20stroke-opacity%3D%22.65%22%2F%3E%3Cpath%20d%3D%22M595%204v10%22%20stroke%3D%22%238e73b5%22%20stroke-opacity%3D%22.6%22%2F%3E%3Cellipse%20cx%3D%22595%22%20cy%3D%2219%22%20rx%3D%2214%22%20ry%3D%2212%22%20fill%3D%22%23e8a24c%22%20opacity%3D%22.12%22%2F%3E%3Crect%20x%3D%22592%22%20y%3D%2213%22%20width%3D%226%22%20height%3D%2210%22%20rx%3D%222%22%20fill%3D%22%23e8a24c%22%2F%3E%3Cpath%20d%3D%22M590%2012h10M591%2024h8%22%20stroke%3D%22%239a4f12%22%20stroke-opacity%3D%22.65%22%2F%3E%3Cpath%20d%3D%22M910%204v7%22%20stroke%3D%22%238e73b5%22%20stroke-opacity%3D%22.6%22%2F%3E%3Cellipse%20cx%3D%22910%22%20cy%3D%2216%22%20rx%3D%2214%22%20ry%3D%2212%22%20fill%3D%22%23e8a24c%22%20opacity%3D%22.12%22%2F%3E%3Crect%20x%3D%22907%22%20y%3D%2210%22%20width%3D%226%22%20height%3D%2210%22%20rx%3D%222%22%20fill%3D%22%23e8a24c%22%2F%3E%3Cpath%20d%3D%22M905%209h10M906%2021h8%22%20stroke%3D%22%239a4f12%22%20stroke-opacity%3D%22.65%22%2F%3E%3Cpath%20d%3D%22M1160%204v12%22%20stroke%3D%22%238e73b5%22%20stroke-opacity%3D%22.6%22%2F%3E%3Cellipse%20cx%3D%221160%22%20cy%3D%2221%22%20rx%3D%2214%22%20ry%3D%2212%22%20fill%3D%22%23e8a24c%22%20opacity%3D%22.12%22%2F%3E%3Crect%20x%3D%221157%22%20y%3D%2215%22%20width%3D%226%22%20height%3D%2210%22%20rx%3D%222%22%20fill%3D%22%23e8a24c%22%2F%3E%3Cpath%20d%3D%22M1155%2014h10M1156%2026h8%22%20stroke%3D%22%239a4f12%22%20stroke-opacity%3D%22.65%22%2F%3E%3Cpath%20d%3D%22M180%208a7%207%200%201%200%2010%208A8%208%200%200%201%20180%208%22%20fill%3D%22%23b39ad6%22%2F%3E%3Cg%20fill%3D%22%23b39ad6%22%20opacity%3D%22.7%22%3E%3Ccircle%20cx%3D%22460%22%20cy%3D%2211%22%20r%3D%221.2%22%2F%3E%3Ccircle%20cx%3D%22770%22%20cy%3D%227%22%20r%3D%221.5%22%2F%3E%3Ccircle%20cx%3D%221040%22%20cy%3D%2215%22%20r%3D%221%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+  --season-header-glow: linear-gradient(110deg, rgba(142, 115, 181, 0.16), transparent 48%, rgba(232, 150, 90, 0.12));
+  --season-edge-glow: radial-gradient(ellipse at 0% 0%, rgba(142, 115, 181, 0.18), transparent 42%), radial-gradient(ellipse at 100% 0%, rgba(232, 150, 90, 0.14), transparent 38%);
+  --season-logo-glow: rgba(217, 135, 63, 0.32);
+  --season-logo-jewel: #d9873f;
+  --season-logo-wordmark: #78609e;
+  --color-background: #f8f5fc;
+  --color-backgroundSecondary: #f1ebf6;
+  --color-backgroundTertiary: #e9e1f0;
   --color-primary: #d9873f;
   --color-primary-30: #d9873f30;
   --color-primary-40: #d9873f40;
@@ -927,16 +933,14 @@ html[data-season="halloween"] {
   --color-borderAccent: rgba(217, 135, 63, 0.20);
   --color-focus: rgba(142, 115, 181, 0.40);
   --color-focusStrong: rgba(142, 115, 181, 0.55);
-  --gradient-hero: linear-gradient(135deg, #f8f2ec 0%, #f1e9f5 50%, #fcf8f4 100%);
+  --gradient-hero: radial-gradient(ellipse at 10% 0%, rgba(142, 115, 181, 0.18), transparent 55%), linear-gradient(135deg, #f1ebf6 0%, #fbefe4 100%);
   --gradient-section-bg: radial-gradient(ellipse at top, rgba(142, 115, 181, 0.08) 0%, transparent 70%);
-  --season-decor-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 480 320'%3E%3Cg fill='%233b2a4f' fill-opacity='0.22'%3E%3Cpath transform='translate(40 60)' d='M32 10C28 2 20 2 14 8 10 4 4 6 0 12 6 10 10 14 12 18 16 14 22 16 24 22L32 16 40 22C42 16 48 14 52 18 54 14 58 10 64 12 60 6 54 4 50 8 44 2 36 2 32 10Z'/%3E%3Cpath transform='translate(300 200) scale(0.7)' d='M32 10C28 2 20 2 14 8 10 4 4 6 0 12 6 10 10 14 12 18 16 14 22 16 24 22L32 16 40 22C42 16 48 14 52 18 54 14 58 10 64 12 60 6 54 4 50 8 44 2 36 2 32 10Z'/%3E%3Cpath transform='translate(180 270) scale(0.5)' d='M32 10C28 2 20 2 14 8 10 4 4 6 0 12 6 10 10 14 12 18 16 14 22 16 24 22L32 16 40 22C42 16 48 14 52 18 54 14 58 10 64 12 60 6 54 4 50 8 44 2 36 2 32 10Z'/%3E%3C/g%3E%3C/svg%3E");
-  --season-decor-size: 480px 320px;
-  --season-decor-opacity: 0.9;
-  --season-decor-animation: mt-season-drift 48s linear infinite;
 }
 
 /* ---- Хэллоуин: тёмная ---- */
 html[data-season="halloween"][data-theme="dark"] {
+  --season-logo-wordmark: #b39ad6;
+  --season-logo-jewel: #e8965a;
   --color-background: #15111a;
   --color-backgroundSecondary: #1b1621;
   --color-backgroundTertiary: #231c2b;
@@ -962,14 +966,19 @@ html[data-season="halloween"][data-theme="dark"] {
   --color-borderAccent: rgba(232, 150, 90, 0.25);
   --color-focus: rgba(179, 154, 214, 0.45);
   --color-focusStrong: rgba(179, 154, 214, 0.60);
-  --gradient-hero: linear-gradient(135deg, #1b1621 0%, #241a2e 50%, #15111a 100%);
+  --gradient-hero: radial-gradient(ellipse at 10% 0%, rgba(142, 115, 181, 0.22), transparent 55%), linear-gradient(135deg, #241a2e 0%, #15111a 100%);
   --gradient-card-featured: linear-gradient(180deg, #2d2537 0%, #241d2c 100%);
   --gradient-section-bg: radial-gradient(ellipse at top, rgba(179, 154, 214, 0.10) 0%, transparent 70%);
-  --season-decor-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 480 320'%3E%3Cg fill='%23d9c7f0' fill-opacity='0.16'%3E%3Cpath transform='translate(40 60)' d='M32 10C28 2 20 2 14 8 10 4 4 6 0 12 6 10 10 14 12 18 16 14 22 16 24 22L32 16 40 22C42 16 48 14 52 18 54 14 58 10 64 12 60 6 54 4 50 8 44 2 36 2 32 10Z'/%3E%3Cpath transform='translate(300 200) scale(0.7)' d='M32 10C28 2 20 2 14 8 10 4 4 6 0 12 6 10 10 14 12 18 16 14 22 16 24 22L32 16 40 22C42 16 48 14 52 18 54 14 58 10 64 12 60 6 54 4 50 8 44 2 36 2 32 10Z'/%3E%3Cpath transform='translate(180 270) scale(0.5)' d='M32 10C28 2 20 2 14 8 10 4 4 6 0 12 6 10 10 14 12 18 16 14 22 16 24 22L32 16 40 22C42 16 48 14 52 18 54 14 58 10 64 12 60 6 54 4 50 8 44 2 36 2 32 10Z'/%3E%3C/g%3E%3C/svg%3E");
 }
 
-/* ---- Рождество и Новый год: хвоя + клюква, светлая ---- */
+/* ---- Рождество и Новый год: хвоя + тёплые огни, светлая ---- */
 html[data-season="christmas"] {
+  --season-canopy-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%201200%2048%22%3E%3Cpath%20d%3D%22M0%202Q150%2018%20300%202T600%202T900%202T1200%202%22%20fill%3D%22none%22%20stroke%3D%22%236fa58a%22%20stroke-opacity%3D%22.7%22%2F%3E%3Cpath%20d%3D%22M24%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%2262%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%2262%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M120%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%22158%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%22158%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M216%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%22254%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%22254%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M312%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%22350%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%22350%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M408%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%22446%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%22446%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M504%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%22542%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%22542%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M600%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%22638%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%22638%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M696%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%22734%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%22734%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M792%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%22830%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%22830%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M888%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%22926%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%22926%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M984%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%221022%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%221022%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M1080%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%221118%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%221118%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M1176%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%221214%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%221214%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cg%20fill%3D%22%23c0525c%22%3E%3Ccircle%20cx%3D%22300%22%20cy%3D%2217%22%20r%3D%224%22%2F%3E%3Ccircle%20cx%3D%22900%22%20cy%3D%2217%22%20r%3D%224%22%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%22%23d4a353%22%3E%3Cpath%20d%3D%22M150%2013l2%204%204%201-3%203%201%204-4-2-4%202%201-4-3-3%204-1z%22%2F%3E%3Cpath%20d%3D%22M750%2013l2%204%204%201-3%203%201%204-4-2-4%202%201-4-3-3%204-1z%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+  --season-header-glow: linear-gradient(110deg, rgba(111, 165, 138, 0.14), transparent 48%, rgba(223, 181, 100, 0.18));
+  --season-edge-glow: radial-gradient(ellipse at 0% 0%, rgba(111, 165, 138, 0.14), transparent 42%), radial-gradient(ellipse at 100% 0%, rgba(223, 181, 100, 0.18), transparent 38%);
+  --season-logo-glow: rgba(223, 181, 100, 0.38);
+  --season-logo-jewel: #c0525c;
+  --season-logo-wordmark: #2f6b4f;
   --color-background: #f9fbfa;
   --color-backgroundSecondary: #f2f7f4;
   --color-backgroundTertiary: #ecf3ef;
@@ -988,16 +997,14 @@ html[data-season="christmas"] {
   --color-borderAccent: rgba(111, 165, 138, 0.20);
   --color-focus: rgba(192, 82, 92, 0.35);
   --color-focusStrong: rgba(192, 82, 92, 0.50);
-  --gradient-hero: linear-gradient(135deg, #f2f7f4 0%, #fbeeef 50%, #f9fbfa 100%);
+  --gradient-hero: radial-gradient(ellipse at 90% 0%, rgba(223, 181, 100, 0.18), transparent 55%), linear-gradient(135deg, #ecf3ef 0%, #f9fbfa 100%);
   --gradient-section-bg: radial-gradient(ellipse at top, rgba(192, 82, 92, 0.06) 0%, transparent 70%);
-  --season-decor-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'%3E%3Cg fill='%237898a8'%3E%3Ccircle cx='20' cy='30' r='2.2' fill-opacity='0.45'/%3E%3Ccircle cx='90' cy='70' r='1.5' fill-opacity='0.35'/%3E%3Ccircle cx='160' cy='20' r='2.8' fill-opacity='0.4'/%3E%3Ccircle cx='210' cy='110' r='1.8' fill-opacity='0.35'/%3E%3Ccircle cx='50' cy='150' r='2.5' fill-opacity='0.4'/%3E%3Ccircle cx='130' cy='190' r='1.6' fill-opacity='0.3'/%3E%3Ccircle cx='190' cy='220' r='2.3' fill-opacity='0.45'/%3E%3Ccircle cx='110' cy='120' r='1.2' fill-opacity='0.3'/%3E%3Ccircle cx='230' cy='60' r='1.4' fill-opacity='0.3'/%3E%3Ccircle cx='70' cy='225' r='1.9' fill-opacity='0.35'/%3E%3C/g%3E%3C/svg%3E");
-  --season-decor-size: 240px 240px;
-  --season-decor-opacity: 1;
-  --season-decor-animation: mt-season-fall 22s linear infinite;
 }
 
 /* ---- Рождество и Новый год: тёмная ---- */
 html[data-season="christmas"][data-theme="dark"] {
+  --season-logo-wordmark: #86c4a3;
+  --season-logo-jewel: #e07a84;
   --color-background: #101a15;
   --color-backgroundSecondary: #15211b;
   --color-backgroundTertiary: #1b2a22;
@@ -1023,48 +1030,90 @@ html[data-season="christmas"][data-theme="dark"] {
   --color-borderAccent: rgba(134, 196, 163, 0.25);
   --color-focus: rgba(224, 122, 132, 0.45);
   --color-focusStrong: rgba(224, 122, 132, 0.60);
-  --gradient-hero: linear-gradient(135deg, #15211b 0%, #1e2a24 50%, #101a15 100%);
+  --gradient-hero: radial-gradient(ellipse at 90% 0%, rgba(223, 181, 100, 0.13), transparent 55%), linear-gradient(135deg, #172b29 0%, #101a15 100%);
   --gradient-card-featured: linear-gradient(180deg, #243329 0%, #1c2a23 100%);
   --gradient-section-bg: radial-gradient(ellipse at top, rgba(224, 122, 132, 0.10) 0%, transparent 70%);
-  --season-decor-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'%3E%3Cg fill='%23ffffff'%3E%3Ccircle cx='20' cy='30' r='2.2' fill-opacity='0.75'/%3E%3Ccircle cx='90' cy='70' r='1.5' fill-opacity='0.55'/%3E%3Ccircle cx='160' cy='20' r='2.8' fill-opacity='0.7'/%3E%3Ccircle cx='210' cy='110' r='1.8' fill-opacity='0.55'/%3E%3Ccircle cx='50' cy='150' r='2.5' fill-opacity='0.7'/%3E%3Ccircle cx='130' cy='190' r='1.6' fill-opacity='0.5'/%3E%3Ccircle cx='190' cy='220' r='2.3' fill-opacity='0.75'/%3E%3Ccircle cx='110' cy='120' r='1.2' fill-opacity='0.5'/%3E%3Ccircle cx='230' cy='60' r='1.4' fill-opacity='0.5'/%3E%3Ccircle cx='70' cy='225' r='1.9' fill-opacity='0.55'/%3E%3C/g%3E%3C/svg%3E");
 }
 
-/*
- * Декоративный слой: один fixed-псевдоэлемент на весь вьюпорт с запасом 480px
- * по обеим осям, чтобы сдвиг ровно на 480px (кратно тайлу 240/480) зацикливался
- * бесшовно. Двигается только transform — композитор, без перерисовки.
- * z-index 9: над потоком страницы, под модалками и диалогами (portal ≥ 1000).
- */
-@keyframes mt-season-fall {
-  to { transform: translate3d(0, 480px, 0); }
+/* Та же компактная геометрия до гидратации, что у headerLogoImage. */
+@media (max-width: 1279.98px) {
+  [data-header-logo-frame] {
+    width: 26px !important;
+    height: 26px !important;
+  }
 }
-@keyframes mt-season-drift {
-  to { transform: translate3d(480px, 0, 0); }
-}
+
+/* Свет остаётся у верхних краёв: никаких частиц поверх области чтения. */
 html[data-season] body::after {
   content: '';
   position: fixed;
-  top: -480px;
-  left: -480px;
-  width: calc(100% + 480px);
-  height: calc(100% + 480px);
+  inset: 0 0 auto;
+  height: 160px;
   pointer-events: none;
   z-index: 9;
-  background-image: var(--season-decor-image);
-  background-repeat: repeat;
-  background-size: var(--season-decor-size);
-  opacity: var(--season-decor-opacity, 1);
-  animation: var(--season-decor-animation);
-  will-change: transform;
+  background-image: var(--season-edge-glow);
 }
-@media (prefers-reduced-motion: reduce) {
+html[data-season] [data-testid="main-header-row"] {
+  background-image: var(--season-header-glow);
+}
+html[data-season] [data-testid="main-header"]::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 28px;
+  pointer-events: none;
+  z-index: 1;
+  background-image: var(--season-canopy-image);
+  background-position: center top;
+  background-size: 1200px 48px;
+  background-repeat: repeat-x;
+}
+html[data-season] [data-header-logo-frame]::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--season-logo-glow), transparent 72%);
+  box-shadow: 0 0 14px 2px var(--season-logo-glow);
+  pointer-events: none;
+}
+html[data-season] [data-header-logo-frame]::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  top: -2px;
+  right: -3px;
+  pointer-events: none;
+}
+html[data-season="halloween"] [data-header-logo-frame]::after {
+  border-radius: 50%;
+  box-shadow: -3px 2px 0 0 var(--season-logo-jewel);
+}
+html[data-season="christmas"] [data-header-logo-frame]::after {
+  background: var(--season-logo-jewel);
+  clip-path: polygon(50% 0%, 62% 35%, 100% 38%, 72% 62%, 82% 100%, 50% 78%, 18% 100%, 28% 62%, 0% 38%, 38% 35%);
+}
+html[data-season] [data-header-logo-travel] {
+  color: var(--season-logo-wordmark) !important;
+}
+@media (max-width: 767px) {
   html[data-season] body::after {
-    animation: none;
-    will-change: auto;
+    height: 100px;
+  }
+  html[data-season] [data-testid="main-header"]::before {
+    height: 22px;
+    background-size: 900px 36px;
   }
 }
 @media print {
-  html[data-season] body::after {
+  html[data-season] [data-testid="main-header-row"] {
+    background-image: none;
+  }
+  html[data-season] body::after,
+  html[data-season] [data-testid="main-header"]::before,
+  html[data-season] [data-header-logo-frame]::before,
+  html[data-season] [data-header-logo-frame]::after {
     display: none;
   }
 }

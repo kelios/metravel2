@@ -1,3 +1,5 @@
+import type Feather from '@expo/vector-icons/Feather'
+
 /**
  * Реестр сезонного (праздничного) оформления сайта (#2376).
  *
@@ -33,8 +35,8 @@ export interface SeasonalWindow {
 
 export interface SeasonalThemeDefinition {
   id: SeasonalThemeId
-  /** Иконка `MaterialCommunityIcons` для переключателя. */
-  icon: string
+  /** Иконка `Feather` для переключателя. */
+  icon: keyof typeof Feather.glyphMap
   window: SeasonalWindow
 }
 
@@ -44,12 +46,12 @@ export const SEASONAL_THEME_DOM_ATTRIBUTE = 'data-season'
 export const SEASONAL_THEMES: readonly SeasonalThemeDefinition[] = [
   {
     id: 'halloween',
-    icon: 'halloween',
+    icon: 'moon',
     window: { from: { month: 10, day: 15 }, to: { month: 11, day: 1 } },
   },
   {
     id: 'christmas',
-    icon: 'snowflake',
+    icon: 'star',
     window: { from: { month: 12, day: 1 }, to: { month: 1, day: 14 } },
   },
 ]

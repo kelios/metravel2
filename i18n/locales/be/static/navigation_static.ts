@@ -91,7 +91,7 @@ export const navigationStaticResources = {
   "seasonalTheme.option.off": "Выключана",
   "seasonalTheme.option.off.description": "Звычайны выгляд круглы год",
   "seasonalTheme.option.halloween": "Хэлоўін",
-  "seasonalTheme.option.halloween.description": "Гарбуз, фіялет і кажаны",
+  "seasonalTheme.option.halloween.description": "Ноч, месячнае святло і бурштынавыя агні",
   "seasonalTheme.option.christmas": "Каляды і Новы год",
-  "seasonalTheme.option.christmas.description": "Ігліца, журавіны і снег",
+  "seasonalTheme.option.christmas.description": "Ігліца, гірлянды і зімовае ззянне",
 } as const

@@ -91,7 +91,7 @@ export const navigationStaticResources = {
   "seasonalTheme.option.off": "Wyłączony",
   "seasonalTheme.option.off.description": "Zwykły wygląd przez cały rok",
   "seasonalTheme.option.halloween": "Halloween",
-  "seasonalTheme.option.halloween.description": "Dynia, fiolet i nietoperze",
+  "seasonalTheme.option.halloween.description": "Noc, światło księżyca i bursztynowe lampiony",
   "seasonalTheme.option.christmas": "Boże Narodzenie i Nowy Rok",
-  "seasonalTheme.option.christmas.description": "Igliwie, żurawina i śnieg",
+  "seasonalTheme.option.christmas.description": "Iglaste gałązki, girlandy i zimowy blask",
 } as const

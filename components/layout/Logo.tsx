@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
+import { Text, StyleSheet, TouchableOpacity, Image, Platform, View } from 'react-native';
 import { router } from 'expo-router';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { webDataSetProps } from '@/utils/webProps';
@@ -16,7 +16,7 @@ type LogoProps = {
 // #1298: хуки для media-query-раскладки шапки в критическом CSS. До гидратации
 // web рисует desktop-логотип (32px + словесная часть), а ниже 1280px CSS сразу
 // приводит его к компактному виду — тому же, что поставит React после гидратации.
-const webLogoDataSet = (key: 'headerLogoImage' | 'headerLogoWordmark') =>
+const webLogoDataSet = (key: 'headerLogoImage' | 'headerLogoWordmark' | 'headerLogoFrame' | 'headerLogoTravel') =>
     Platform.OS === 'web' ? webDataSetProps({ [key]: 'true' }) : null;
 
 export default React.memo(function Logo({
@@ -43,22 +43,24 @@ export default React.memo(function Logo({
             accessibilityRole="link"
             accessibilityHint={i18nT('navigation:components.layout.Logo.pereyti_na_glavnuyu_stranitsu_98203dd9')}
         >
-            <Image
-                source={logoLoadFailed ? fallbackSource : primarySource}
-                // #2170: без defaultSource RN-Web ставит картинку только после её
-                // onLoad, то есть после гидратации — в статическом HTML логотипа
-                // не было вовсе. С ним адрес есть в разметке с первого кадра.
-                defaultSource={Platform.OS === 'web' ? primarySource : undefined}
-                style={[styles.logo, isCompact && styles.logoCompact]}
-                resizeMode="contain"
-                onError={() => setLogoLoadFailed(true)}
-                accessibilityLabel={i18nT('navigation:components.layout.Logo.metravel_logotip_14780610')}
-                alt={i18nT('navigation:components.layout.Logo.metravel_logotip_14780610')}
-                {...webLogoDataSet('headerLogoImage')}
-            />
+            <View style={[styles.logoFrame, isCompact && styles.logoCompact]} {...webLogoDataSet('headerLogoFrame')}>
+                <Image
+                    source={logoLoadFailed ? fallbackSource : primarySource}
+                    // #2170: без defaultSource RN-Web ставит картинку только после её
+                    // onLoad, то есть после гидратации — в статическом HTML логотипа
+                    // не было вовсе. С ним адрес есть в разметке с первого кадра.
+                    defaultSource={Platform.OS === 'web' ? primarySource : undefined}
+                    style={[styles.logo, isCompact && styles.logoCompact]}
+                    resizeMode="contain"
+                    onError={() => setLogoLoadFailed(true)}
+                    accessibilityLabel={i18nT('navigation:components.layout.Logo.metravel_logotip_14780610')}
+                    alt={i18nT('navigation:components.layout.Logo.metravel_logotip_14780610')}
+                    {...webLogoDataSet('headerLogoImage')}
+                />
+            </View>
             {showWordmark && (
                 <Text style={styles.logoTextRow} {...webLogoDataSet('headerLogoWordmark')}>
-                    <Text style={styles.logoTextMe}>{i18nT('navigation:components.layout.Logo.me_7e450b64')}</Text><Text style={styles.logoTextTravel}>{i18nT('navigation:components.layout.Logo.travel_6006be95')}</Text>
+                    <Text style={styles.logoTextMe}>{i18nT('navigation:components.layout.Logo.me_7e450b64')}</Text><Text style={styles.logoTextTravel} {...webLogoDataSet('headerLogoTravel')}>{i18nT('navigation:components.layout.Logo.travel_6006be95')}</Text>
                 </Text>
             )}
         </TouchableOpacity>
@@ -73,6 +75,12 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
         minWidth: 44,
         minHeight: 44,
         flexShrink: 0,
+    },
+    logoFrame: {
+        width: 32,
+        height: 32,
+        position: 'relative',
+        overflow: 'visible',
     },
     logo: { 
         width: 32, 

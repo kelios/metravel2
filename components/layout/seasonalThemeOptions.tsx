@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Feather from '@expo/vector-icons/Feather';
 import { SEASONAL_THEMES, type SeasonalThemePreference } from '@/constants/seasonalThemes';
 import { translate as i18nT } from '@/i18n'
 
@@ -11,8 +11,10 @@ export interface SeasonalThemeOption {
   renderIcon: (size: number, color: string) => ReactNode;
 }
 
-const renderMci = (name: string) => (size: number, color: string) => (
-  <MaterialCommunityIcons name={name as React.ComponentProps<typeof MaterialCommunityIcons>['name']} size={size} color={color} />
+type SeasonalIconName = keyof typeof Feather.glyphMap;
+
+const renderIcon = (name: SeasonalIconName) => (size: number, color: string) => (
+  <Feather name={name} size={size} color={color} />
 );
 
 /**
@@ -39,14 +41,14 @@ const OPTION_COPY: Record<SeasonalThemePreference, { label: () => string; descri
   },
 };
 
-const PREFERENCE_ICONS: Record<'auto' | 'off', string> = {
-  auto: 'calendar-month-outline',
-  off: 'close-circle-outline',
+const PREFERENCE_ICONS: Record<'auto' | 'off', SeasonalIconName> = {
+  auto: 'calendar',
+  off: 'x-circle',
 };
 
 /** Порядок: по календарю → выкл → темы реестра в порядке `SEASONAL_THEMES`. */
 export const getSeasonalThemeOptions = (): SeasonalThemeOption[] => {
-  const entries: Array<{ value: SeasonalThemePreference; icon: string }> = [
+  const entries: Array<{ value: SeasonalThemePreference; icon: SeasonalIconName }> = [
     { value: 'auto', icon: PREFERENCE_ICONS.auto },
     { value: 'off', icon: PREFERENCE_ICONS.off },
     ...SEASONAL_THEMES.map((theme) => ({ value: theme.id, icon: theme.icon })),
@@ -55,6 +57,6 @@ export const getSeasonalThemeOptions = (): SeasonalThemeOption[] => {
     value,
     label: OPTION_COPY[value].label(),
     description: OPTION_COPY[value].description(),
-    renderIcon: renderMci(icon),
+    renderIcon: renderIcon(icon),
   }));
 };

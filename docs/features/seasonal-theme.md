@@ -34,25 +34,35 @@
 
 | тема | окно | акценты |
 | --- | --- | --- |
-| `halloween` | 15.10 — 01.11 | тыквенный primary, фиолетовый accent, силуэты летучих мышей |
-| `christmas` | 01.12 — 14.01 | хвойный primary, клюквенный accent, снег |
+| `halloween` | 15.10 — 01.11 | тыквенный primary, фиолетовый accent, луна и янтарные фонари |
+| `christmas` | 01.12 — 14.01 | хвойный primary, клюквенный accent, хвоя и тёплая гирлянда |
 
 ## Декоративный слой
 
-Один `position: fixed` псевдоэлемент `body::after` на весь вьюпорт с запасом
-480 px по обеим осям; фон — повторяющийся SVG data-URI, анимируется только
-`transform` (композитор, без перерисовки), цикл кратен тайлу — шов не виден.
-`pointer-events: none`, `z-index: 9` (над потоком страницы, под portal-модалками).
-`prefers-reduced-motion: reduce` останавливает анимацию, `@media print` скрывает слой.
+Статичный `body::after` подсвечивает только верхние края (160 px на desktop,
+100 px на mobile). В шапке `::before` рисует небольшие фонари/луну либо хвойную
+гирлянду через SVG data-URI; центральная область чтения свободна от частиц.
+Подсветка лежит на видимой бренд-строке, а гирлянда выше непрозрачной обёртки
+шапки, чтобы фон обёртки не закрывал огни.
+Никаких тайлов на весь экран, анимаций и `will-change` нет; reduced motion
+получает тот же неподвижный вид. Все слои `pointer-events: none`, print их скрывает.
+
+`Logo.tsx` сохраняет фирменную птицу, её адрес/preload и размеры 32/26 px.
+`dataSet`-метки рамки и словесного знака дают CSS ореол и маленькую луну/звезду.
+Цвет Travel локальный: семантический `success` не переопределяется.
+До гидратации CSS уменьшает рамку на том же breakpoint 1280 px, что и изображение.
+
+Иконки переключателя — типизированный Feather (`calendar`, `x-circle`, `moon`,
+`star`). MaterialCommunityIcons на web подменяется Feather-стабом, поэтому
+имена из MCI для этого переключателя не подходят.
 
 ## Как добавить тему
 
 1. `constants/seasonalThemes.ts`: добавить id в `SeasonalThemeId` и запись в
-   `SEASONAL_THEMES` (иконка `MaterialCommunityIcons`, окно).
+   `SEASONAL_THEMES` (иконка `Feather`, окно).
 2. `app/global.css`: два блока — `html[data-season="<id>"]` (светлая) и
-   `html[data-season="<id>"][data-theme="dark"]`; задать `--season-decor-image`,
-   `--season-decor-size`, `--season-decor-opacity`, `--season-decor-animation`
-   (или не задавать декор — тогда слой пустой).
+   `html[data-season="<id>"][data-theme="dark"]`; задать `--season-canopy-image`,
+   `--season-header-glow`, `--season-edge-glow` и `--season-logo-*`.
 3. `components/layout/seasonalThemeOptions.tsx`: пара ключей в `OPTION_COPY`
    (typecheck не даст забыть — `Record` по союзу id).
 4. `i18n/locales/<locale>/static/navigation_static.ts` во всех пяти локалях:

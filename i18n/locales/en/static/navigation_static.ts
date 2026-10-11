@@ -91,7 +91,7 @@ export const navigationStaticResources = {
   "seasonalTheme.option.off": "Off",
   "seasonalTheme.option.off.description": "Regular look all year",
   "seasonalTheme.option.halloween": "Halloween",
-  "seasonalTheme.option.halloween.description": "Pumpkin, purple and bats",
+  "seasonalTheme.option.halloween.description": "Night, moonlight and amber lanterns",
   "seasonalTheme.option.christmas": "Christmas & New Year",
-  "seasonalTheme.option.christmas.description": "Fir, cranberry and snow",
+  "seasonalTheme.option.christmas.description": "Evergreen, fairy lights and winter glow",
 } as const
