@@ -34,6 +34,15 @@ export const MOBILE_VIEWPORTS: Viewport[] = [
   { name: '402x874', width: 402, height: 874 },
 ]
 
+// #2198: экран прохождения квеста меряется по своему контракту — узкий короткий
+// телефон 320×640 (короткая компоновка, маршрут в прокрутке) и 390×844 (прежняя
+// закреплённая шапка). Общий набор выше на 320×640 не расширяется: пороги
+// остальных экранов подобраны под 390/402.
+export const QUEST_RUN_VIEWPORTS: [Viewport, Viewport] = [
+  { name: '320x640', width: 320, height: 640 },
+  { name: '390x844', width: 390, height: 844 },
+]
+
 export const THEMES: Theme[] = ['light', 'dark']
 
 export type ScreenDef = {
@@ -77,6 +86,8 @@ export type ScreenDef = {
    * же квест открывается экраном согласия (`QuestConsentGate`), а не прохождением.
    */
   guest?: boolean
+  /** Собственная пара вьюпортов экрана вместо `MOBILE_VIEWPORTS`. */
+  viewports?: [Viewport, Viewport]
 }
 
 export type ScreenTarget = { path: string; title: string }
@@ -92,36 +103,44 @@ type CatalogQuest = {
   title: string
   points: number
   point_counts?: { start?: number; final?: number }
+  /** #2193: без поля (старый бэкенд) квест читается как только русский. */
+  available_locales?: string[]
 }
 
-// Эталон прохождения из карточки #2147: 14 точек, роли старта и финала.
-const QUEST_RUN_REFERENCE_ID = 'luxembourg-melusina'
+/** Язык интерфейса сценария «контент на другом языке» (#2198). */
+const FOREIGN_CONTENT_UI_LOCALE = 'pl'
 let questRunTarget: Promise<ScreenTarget> | null = null
 
 /**
- * Квест для замера экрана прохождения — из публичного каталога, без жёсткого id:
- * эталон, если он есть; иначе первый с 10+ точками и ролями старта и финала;
- * иначе первый с 10+ точками и стартом (локальная копия базы старее прода, ролей
- * финала в ней может не быть). Каталог читается один раз на воркер.
+ * Квест для замера экрана прохождения — из публичного каталога, по данным, без
+ * жёсткого id: 10+ точек со стартом, без перевода на `FOREIGN_CONTENT_UI_LOCALE`
+ * (иначе сценарий иностранного интерфейса не увидит пометку языка — эталон
+ * #2147 `luxembourg-melusina` перевели, и кейс падал на проде); из них первый с
+ * ролью финала, иначе первый (локальная копия базы старее прода, ролей финала в
+ * ней может не быть). Каталог читается один раз на воркер.
  */
 function resolveQuestRunTarget(page: Page): Promise<ScreenTarget> {
   if (!questRunTarget) {
     questRunTarget = (async () => {
-      const quests: CatalogQuest[] = []
+      const eligible: CatalogQuest[] = []
+      let read = 0
       for (let pageNo = 1; pageNo <= 30; pageNo += 1) {
         // Каталог без кэша на локальном бэке под нагрузкой отвечает до ~40 с.
         const response = await page.request.get(`/api/quests/?compact=1&page=${pageNo}`, { timeout: 90_000 })
         if (!response.ok()) break
         const body = (await response.json()) as { results?: CatalogQuest[]; next?: string | null }
-        quests.push(...(body.results ?? []))
-        if (!body.next || quests.some((q) => q.quest_id === QUEST_RUN_REFERENCE_ID)) break
+        const results = body.results ?? []
+        read += results.length
+        eligible.push(...results.filter((q) =>
+          q.points >= 10 &&
+          (q.point_counts?.start ?? 0) > 0 &&
+          !(q.available_locales ?? ['ru']).includes(FOREIGN_CONTENT_UI_LOCALE)))
+        if (!body.next || eligible.some((q) => (q.point_counts?.final ?? 0) > 0)) break
       }
-      const long = quests.filter((q) => q.points >= 10 && (q.point_counts?.start ?? 0) > 0)
-      const quest =
-        quests.find((q) => q.quest_id === QUEST_RUN_REFERENCE_ID) ??
-        long.find((q) => (q.point_counts?.final ?? 0) > 0) ??
-        long[0]
-      if (!quest) throw new Error(`каталог квестов: нет квеста с 10+ точками (прочитано ${quests.length})`)
+      const quest = eligible.find((q) => (q.point_counts?.final ?? 0) > 0) ?? eligible[0]
+      if (!quest) {
+        throw new Error(`каталог квестов: нет квеста с 10+ точками без перевода на ${FOREIGN_CONTENT_UI_LOCALE} (прочитано ${read})`)
+      }
       return { path: `/quests/${quest.city_id}/${quest.quest_id}`, title: quest.title }
     })()
     questRunTarget.catch(() => {
@@ -148,10 +167,10 @@ async function prepareQuestIntro(page: Page): Promise<void> {
 async function prepareQuestIntroForeignContent(page: Page): Promise<void> {
   const notice = page.getByTestId('quest-content-locale-notice').first()
   if (!(await notice.isVisible().catch(() => false))) {
-    await page.evaluate(() => localStorage.setItem(
+    await page.evaluate((locale) => localStorage.setItem(
       '@metravel/locale-preference:v1',
-      JSON.stringify({ version: 1, mode: 'explicit', locale: 'pl' }),
-    ))
+      JSON.stringify({ version: 1, mode: 'explicit', locale }),
+    ), FOREIGN_CONTENT_UI_LOCALE)
     await page.reload()
   }
   await prepareQuestIntro(page)
@@ -250,6 +269,7 @@ export const SCREENS: ScreenDef[] = [
     guest: true,
     resolveTarget: resolveQuestRunTarget,
     prepare,
+    viewports: QUEST_RUN_VIEWPORTS,
   })),
 ]
 

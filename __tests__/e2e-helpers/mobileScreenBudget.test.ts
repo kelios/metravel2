@@ -1,4 +1,4 @@
-import { assertWithinBudget, MOBILE_SCREEN_BUDGET, countSearchboxes, type ScreenMetrics } from '../../e2e/helpers/mobileScreenBudget'
+import { assertWithinBudget, MOBILE_SCREEN_BUDGET, SCREENS, countSearchboxes, type ScreenMetrics } from '../../e2e/helpers/mobileScreenBudget'
 import type { Page } from '@playwright/test'
 
 jest.mock('@playwright/test', () => ({ expect: jest.fn() }))
@@ -48,5 +48,35 @@ describe('mobile screen budget semantics (#2297/#2298)', () => {
     expect(await countSearchboxes({ getByRole } as unknown as Page)).toBe(1)
     expect(getByRole).toHaveBeenCalledWith('searchbox')
     expect(filter).toHaveBeenCalledWith({ visible: true })
+  })
+})
+
+describe('quest-run budget target and viewports (#2198)', () => {
+  const questScreens = SCREENS.filter((screen) => screen.key.startsWith('quest-run'))
+
+  it('measures every quest-run state on the short 320x640 phone and on 390x844', () => {
+    expect(questScreens.map((screen) => screen.key)).toEqual([
+      'quest-run-intro', 'quest-run-intro-foreign-content', 'quest-run-step1', 'quest-run-finale',
+    ])
+    for (const screen of questScreens) {
+      expect(screen.viewports?.map((viewport) => viewport.name)).toEqual(['320x640', '390x844'])
+    }
+    expect(SCREENS.filter((screen) => screen.viewports && !screen.key.startsWith('quest-run'))).toEqual([])
+  })
+
+  it('picks a long quest without the foreign UI translation from catalog data', async () => {
+    // Прод 09.10.2026: luxembourg-melusina переведён на be/uk/pl/en, minsk-dvoriki — нет.
+    const catalog = [
+      { quest_id: 'luxembourg-melusina', city_id: 117, title: 'Melusina', points: 14,
+        point_counts: { start: 1, final: 1 }, available_locales: ['ru', 'be', 'uk', 'pl', 'en'] },
+      { quest_id: 'minsk-short', city_id: 4, title: 'Short', points: 5,
+        point_counts: { start: 1, final: 1 }, available_locales: ['ru'] },
+      { quest_id: 'minsk-dvoriki', city_id: 4, title: 'Дворики', points: 10,
+        point_counts: { start: 1, final: 1 }, available_locales: ['ru'] },
+    ]
+    const get = jest.fn(async () => ({ ok: () => true, json: async () => ({ results: catalog, next: null }) }))
+    const page = { request: { get } } as unknown as Page
+    const target = await questScreens[0].resolveTarget!(page)
+    expect(target).toEqual({ path: '/quests/4/minsk-dvoriki', title: 'Дворики' })
   })
 })

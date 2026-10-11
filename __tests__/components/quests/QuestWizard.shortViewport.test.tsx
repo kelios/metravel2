@@ -1,7 +1,7 @@
 /** #2198: actual wizard composition and transient state across resize. */
 import React, { useEffect, useState } from 'react'
 import { act, cleanup, fireEvent, render } from '@testing-library/react-native'
-import { Keyboard, Platform, ScrollView, Text, TextInput, Pressable, View } from 'react-native'
+import { Keyboard, Platform, ScrollView, StyleSheet, Text, TextInput, Pressable, View } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { ReactTestInstance } from 'react-test-renderer'
 
@@ -40,11 +40,12 @@ jest.mock('@/hooks/useBreadcrumbModel', () => ({
   }),
 }))
 // Unrelated network/media sections follow the nearest guest-wizard harness.
+// The finale stays real: its own top spacing is part of the short layout.
 jest.mock('@/components/quests/questWizardSections', () => ({
   QuestDesktopMapPanel: () => null,
   QuestExcursionsInline: () => null,
   QuestExcursionsSidebar: () => null,
-  QuestFinalePanel: () => null,
+  QuestFinalePanel: jest.requireActual('@/components/quests/questWizardSections').QuestFinalePanel,
 }))
 jest.mock('@/components/quests/useQuestFinaleMedia', () => ({
   useQuestFinaleMedia: () => ({ frameW: 300, videoOk: true }),
@@ -64,6 +65,7 @@ import QuestContentLocaleNotice from '@/components/quests/QuestContentLocaleNoti
 import { getLocaleDisplayName } from '@/i18n/localeLabels'
 import HeaderContextBar from '@/components/layout/HeaderContextBar'
 import { resetScreenHeaderForTests } from '@/components/layout/ScreenHeaderContext'
+import { SPACING } from '@/components/quests/questWizardStyles/shared'
 
 const steps = ['p1', 'p2', 'p3'].map((id, index) => ({
   id, title: `Точка ${index + 1}`, location: '', story: `Story ${id}`, task: `Task ${id}`,
@@ -91,6 +93,7 @@ describe('QuestWizard short viewport (#2198)', () => {
   let mounts: number
   let unmounts: number
   let routeFocus: jest.Mock
+  let scrollY: number
 
   function ReadingState() {
     const [count, setCount] = useState(0)
@@ -115,15 +118,30 @@ describe('QuestWizard short viewport (#2198)', () => {
       : React.cloneElement(node)
     let view: WizardView | undefined
     let anchorMeasure: ((callback: AnchorMeasureCallback, y: number) => void) | undefined
+    // Measured browser geometry (#2198 prod): the reading viewport starts under
+    // the 54 px screen row (short) or under the pinned 106 px header (tall);
+    // the task card starts at 98 / 122 px when the reading scroll is at 0.
+    const flowLayout = () => {
+      const strip = view?.queryByTestId('quest-route-strip')
+      return Boolean(view && strip && isDescendant(strip, contentScroll(view)))
+    }
     // RN's Jest View ref is the component instance, whose native measurement
     // methods do not call back. Host createNodeMock does not replace that ref.
-    jest.spyOn(View.prototype, 'measureInWindow').mockImplementation(function (this: { props: { testID?: string } }, callback) {
+    // View and ScrollView mocks share one MockNativeMethods.measureInWindow
+    // jest.fn, so a single implementation answers for both hosts.
+    const measureInWindow = function (this: { props: { testID?: string; keyboardShouldPersistTaps?: string } }, callback: AnchorMeasureCallback) {
       if (this.props.testID === 'quest-main-content-anchor') {
-        const strip = view?.queryByTestId('quest-route-strip')
-        const y = view && strip && isDescendant(strip, contentScroll(view)) ? 98 : 122
+        const y = (flowLayout() ? 98 : 122) - scrollY
         if (anchorMeasure) anchorMeasure(callback, y)
         else callback(0, y, mockViewport.width, 500)
+      } else if (this.props.keyboardShouldPersistTaps === 'handled') {
+        callback(0, flowLayout() ? 54 : 106, mockViewport.width, 500)
       }
+    }
+    jest.spyOn(View.prototype, 'measureInWindow').mockImplementation(measureInWindow)
+    jest.spyOn(ScrollView.prototype, 'measureInWindow').mockImplementation(measureInWindow)
+    jest.spyOn(ScrollView.prototype, 'scrollTo').mockImplementation((options?: { y?: number } | number) => {
+      if (typeof options === 'object' && typeof options?.y === 'number') scrollY = options.y
     })
     jest.spyOn(View.prototype, 'focus').mockImplementation(function (this: { props: { testID?: string; accessibilityState?: { selected?: boolean } } }) {
       if (this.props.testID === 'quest-route-strip') routeFocus('route')
@@ -153,6 +171,7 @@ describe('QuestWizard short viewport (#2198)', () => {
     mounts = 0
     unmounts = 0
     routeFocus = jest.fn()
+    scrollY = 0
     resetScreenHeaderForTests()
     await AsyncStorage.clear()
     window.localStorage.clear()
@@ -248,22 +267,25 @@ describe('QuestWizard short viewport (#2198)', () => {
   it('defers during scrolling and compensates the reading anchor instead of resetting the step', async () => {
     jest.useFakeTimers()
     try {
-      const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo').mockImplementation(() => undefined)
       const dismiss = jest.spyOn(Keyboard, 'dismiss')
       const { view, resize } = await setup()
+      const scrollTo = jest.mocked(ScrollView.prototype.scrollTo)
       // Modern fake timers schedule requestAnimationFrame on 16 ms frames.
       await act(async () => { await jest.advanceTimersByTimeAsync(20) })
       scrollTo.mockClear()
       const scroll = contentScroll(view)
       fireEvent(scroll, 'scrollBeginDrag')
       expect(dismiss).toHaveBeenCalledTimes(1)
+      scrollY = 200
       fireEvent.scroll(scroll, { nativeEvent: { contentOffset: { y: 200, x: 0 } } })
       await resize(390, 640)
       expect(routeInContent(view)).toBe(false)
       fireEvent(scroll, 'scrollEndDrag')
       await act(async () => { await jest.advanceTimersByTimeAsync(200) })
       expect(routeInContent(view)).toBe(true)
-      expect(scrollTo).toHaveBeenCalledWith({ y: 176, animated: false })
+      // The line at the top of the visible reading area stays put: 84 px of the
+      // task were above the pinned header, they stay above the screen row.
+      expect(scrollTo).toHaveBeenCalledWith({ y: 228, animated: false })
       expect(scrollTo.mock.calls.some(([options]) => options?.y === 0)).toBe(false)
       expect(contentScroll(view) === scroll).toBe(true)
       expect([mounts, unmounts]).toEqual([1, 0])
@@ -374,8 +396,8 @@ describe('QuestWizard short viewport (#2198)', () => {
     }))
     jest.useFakeTimers()
     try {
-      const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo').mockImplementation(() => undefined)
       const { view, resize, setAnchorMeasure } = await setup(390, 640)
+      const scrollTo = jest.mocked(ScrollView.prototype.scrollTo)
       await act(async () => { await jest.advanceTimersByTimeAsync(20) })
       scrollTo.mockClear()
       let preMeasureDone = false
@@ -420,5 +442,80 @@ describe('QuestWizard short viewport (#2198)', () => {
     expect(view.queryByTestId('quest-content-locale-notice')).toBeNull()
     fireEvent.press(view.getByTestId('quest-route-strip'))
     expect(view.getByTestId('quest-route-row-p1').props.accessibilityState.selected).toBe(true)
+  })
+  it.each([
+    ['short at the start → tall shows the start under the pinned header', 320, 640, 390, 844, 0, 0],
+    ['tall at the start → short shows the route row again', 390, 844, 320, 640, 0, 0],
+    ['short inside the header row → tall shows the start', 320, 640, 390, 844, 30, 0],
+    ['short reading line → tall keeps the same line below the pinned header', 320, 640, 390, 844, 200, 172],
+  ] as const)('resize anchor: %s', async (_case, fromW, fromH, toW, toH, offset, expected) => {
+    jest.useFakeTimers()
+    try {
+      const { view, resize } = await setup(fromW, fromH)
+      await act(async () => { await jest.advanceTimersByTimeAsync(20) })
+      if (offset) {
+        scrollY = offset
+        fireEvent.scroll(contentScroll(view), { nativeEvent: { contentOffset: { y: offset, x: 0 } } })
+        await act(async () => { await jest.advanceTimersByTimeAsync(200) })
+      }
+      const scrollTo = jest.mocked(ScrollView.prototype.scrollTo)
+      scrollTo.mockClear()
+      await resize(toW, toH)
+      await act(async () => { await jest.advanceTimersByTimeAsync(200) })
+      expect(routeInContent(view)).toBe(toH < 840)
+      expect(scrollY).toBe(expected)
+      if (!expected) {
+        // The task card never starts under the pinned chrome after a resize.
+        const cardTop = (toH < 840 ? 98 : 122) - scrollY
+        expect(cardTop).toBe(toH < 840 ? 98 : 122)
+      }
+    } finally { jest.useRealTimers() }
+  })
+
+  it('the finale starts right under the route row in the short layout, like the intro/step card', async () => {
+    const finaleTop = (view: WizardView) =>
+      StyleSheet.flatten(view.getByTestId('quest-finale-panel').props.style).marginTop ?? 0
+    const { view, resize } = await setup(320, 640)
+    fireEvent.press(view.getByTestId('quest-route-strip'))
+    fireEvent.press(view.getByTestId('quest-nav-finale'))
+    await act(async () => { await Promise.resolve() })
+    expect(routeInContent(view)).toBe(true)
+    expect(finaleTop(view)).toBe(0)
+    await resize(390, 844)
+    expect(routeInContent(view)).toBe(false)
+    expect(finaleTop(view)).toBe(SPACING.xs)
+    await resize(320, 640)
+    expect(routeInContent(view)).toBe(true)
+    expect(finaleTop(view)).toBe(0)
+  })
+  it('a reader gesture during the pending relocation measurement wins over the compensation', async () => {
+    jest.useFakeTimers()
+    try {
+      const { view, resize, setAnchorMeasure } = await setup(390, 844)
+      await act(async () => { await jest.advanceTimersByTimeAsync(20) })
+      scrollY = 200
+      fireEvent.scroll(contentScroll(view), { nativeEvent: { contentOffset: { y: 200, x: 0 } } })
+      await act(async () => { await jest.advanceTimersByTimeAsync(200) })
+      // Only the first post-relocation measurement is slow; later ones answer at once.
+      let measures = 0
+      const pending: (() => void)[] = []
+      setAnchorMeasure((callback, y) => {
+        measures += 1
+        if (measures === 2) pending.push(() => callback(0, y, 390, 500))
+        else callback(0, y, 390, 500)
+      })
+      const scrollTo = jest.mocked(ScrollView.prototype.scrollTo)
+      scrollTo.mockClear()
+      await resize(390, 640)
+      expect(routeInContent(view)).toBe(true)
+      expect(pending.length).toBeGreaterThan(0)
+      fireEvent(contentScroll(view), 'touchStart')
+      scrollY = 260
+      fireEvent.scroll(contentScroll(view), { nativeEvent: { contentOffset: { y: 260, x: 0 } } })
+      fireEvent(contentScroll(view), 'touchEnd')
+      await act(async () => { pending.forEach((complete) => complete()); await jest.advanceTimersByTimeAsync(200) })
+      expect(scrollTo).not.toHaveBeenCalled()
+      expect(scrollY).toBe(260)
+    } finally { jest.useRealTimers() }
   })
 })

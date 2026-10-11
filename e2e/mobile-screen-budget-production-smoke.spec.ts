@@ -37,7 +37,7 @@ async function measureScreen(page: Page, screen: ScreenDef): Promise<void> {
     screenKey: screen.key,
     path: target.path,
     title: target.title,
-    viewports: MOBILE_VIEWPORTS,
+    viewports: screen.viewports ?? MOBILE_VIEWPORTS,
     ctaTestId: screen.ctaTestId,
     budget: MOBILE_SCREEN_BUDGET[screen.key],
     prepare: screen.prepare,

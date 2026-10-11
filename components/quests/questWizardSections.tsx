@@ -483,6 +483,7 @@ export function QuestFinalePanel({
   cityName,
   cityLat,
   cityLng,
+  headerInContentFlow = false,
 }: SharedProps & {
   finale: FinaleLike
   /** Игрок закончил маршрут: финал показываем целиком, а не приглашение вернуться к точкам. */
@@ -514,6 +515,8 @@ export function QuestFinalePanel({
   cityName?: string
   cityLat?: number
   cityLng?: number
+  /** Short layout (#2198): the route row directly precedes the finale in the reading scroll. */
+  headerInContentFlow?: boolean
 }) {
   const { t } = useTranslation()
   const mediaKey = `${questId ?? questNumericId ?? ''}:${videoUri ?? (typeof finale.video === 'string' ? finale.video : finale.video?.uri) ?? ''}:${posterUri ?? (typeof finale.poster === 'string' ? finale.poster : finale.poster?.uri) ?? ''}`
@@ -546,7 +549,7 @@ export function QuestFinalePanel({
   ) : null
 
   return (
-    <View {...SCREEN_CONTENT_FIRST_PROPS} style={styles.completionScreen} testID="quest-finale-panel">
+    <View {...SCREEN_CONTENT_FIRST_PROPS} style={[styles.completionScreen, headerInContentFlow && styles.completionScreenInContentFlow]} testID="quest-finale-panel">
       {questFinished ? (
         <View style={styles.finaleContent}>
           <Text style={styles.completionTitle}>

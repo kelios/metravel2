@@ -5,6 +5,8 @@
 export type QuestCityIdentity = {
   cityId?: string | null
   cityName?: string | null
+  /** Русское имя источника (#2197): `cityName` локализуется языком контента квеста. */
+  cityNameCanonical?: string | null
   countryCode?: string | null
 }
 
@@ -36,17 +38,21 @@ export function buildCanonicalQuestCityIndex<TQuest extends QuestCityIdentity>(
   for (const quest of quests) {
     const cityId = String(quest.cityId ?? '').trim()
     if (!cityId) continue
-    const normalizedName = normalizeCityName(quest.cityName)
+    // Группа — по имени источника: переведённый квест несёт локализованное
+    // «Homiel», непереведённый — «Гомель», а город у них один (#2198).
+    const localizedName = normalizeCityName(quest.cityName)
+    const normalizedName = normalizeCityName(quest.cityNameCanonical) || localizedName
     const countryCode = String(quest.countryCode ?? '').trim().toUpperCase()
     const groupKey = normalizedName ? `${countryCode}:${normalizedName}` : `id:${cityId}`
     const canonicalId = canonicalCityIdByGroup.get(groupKey) ?? cityId
     canonicalCityIdByGroup.set(groupKey, canonicalId)
     canonicalCityIdById[cityId] = canonicalId
     ;(questsByCityId[canonicalId] ||= []).push(quest)
-    if (normalizedName) {
-      const ids = canonicalIdsByName.get(normalizedName) ?? new Set<string>()
+    for (const name of new Set([normalizedName, localizedName])) {
+      if (!name) continue
+      const ids = canonicalIdsByName.get(name) ?? new Set<string>()
       ids.add(canonicalId)
-      canonicalIdsByName.set(normalizedName, ids)
+      canonicalIdsByName.set(name, ids)
     }
   }
 

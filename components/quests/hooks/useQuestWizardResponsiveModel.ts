@@ -104,10 +104,35 @@ const samePlacement = (a: HeaderPlacement, b: HeaderPlacement) =>
 /** Wait until the gesture/scroll momentum settles, including browser-toolbar resizing. */
 const SCROLL_IDLE_MS = 120
 
+type WindowMeasurable = { measureInWindow?: (callback: (x: number, y: number) => void) => void }
+
+/**
+ * How far the start of mainContent lies above the top of the visible reading
+ * area (the ScrollView frame). `<= 0` — the reader is at the start. The two
+ * layouts differ by what is pinned above that frame (screen row vs. screen row
+ * plus header), so a window coordinate alone is not a reading position (#2198).
+ */
+function measureReadingDepth(
+  scroller: WindowMeasurable | null,
+  content: WindowMeasurable | null,
+  done: (depth: number | null) => void,
+) {
+  if (!scroller?.measureInWindow || !content?.measureInWindow) {
+    done(null)
+    return
+  }
+  scroller.measureInWindow((_sx, viewportTop) => {
+    content.measureInWindow?.((_x, contentTop) => {
+      done(Number.isFinite(viewportTop) && Number.isFinite(contentTop) ? viewportTop - contentTop : null)
+    })
+  })
+}
+
 /**
  * Relocating a header remounts its route strip. Keep its composition until an
  * open sheet/input/keyboard/scroll ends, then apply only the latest layout.
- * mainContent and its ScrollView stay mounted; compensate their reading anchor.
+ * mainContent and its ScrollView stay mounted; the reading line at the top of
+ * the visible area is kept, and a reader at the start stays at the start.
  */
 export function useQuestHeaderPlacement(
   desired: HeaderPlacement,
@@ -132,7 +157,9 @@ export function useQuestHeaderPlacement(
   const dragging = useRef(false)
   const touching = useRef(false)
   const scrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const anchor = useRef<{ y: number; offset: number } | null>(null)
+  // `gesture`: the reader touched/dragged after the relocation started — their
+  // own position wins over the compensation.
+  const anchor = useRef<{ depth: number; gesture: boolean } | null>(null)
   const previousStepKey = useRef(stepKey)
   const stepGeneration = useRef(0)
   const stepChanged = previousStepKey.current !== stepKey
@@ -161,6 +188,7 @@ export function useQuestHeaderPlacement(
   }, [settleScroll, updateBusy])
   const onScrollBegin = useCallback(() => {
     dragging.current = true
+    if (anchor.current) anchor.current.gesture = true
     updateBusy('scroll', true)
     if (scrollTimer.current) clearTimeout(scrollTimer.current)
   }, [updateBusy])
@@ -172,6 +200,7 @@ export function useQuestHeaderPlacement(
   // an active gesture even after the scroll-tick idle timer has expired.
   const onTouchBegin = useCallback(() => {
     touching.current = true
+    if (anchor.current) anchor.current.gesture = true
     updateBusy('scroll', true)
     if (scrollTimer.current) clearTimeout(scrollTimer.current)
   }, [updateBusy])
@@ -206,36 +235,43 @@ export function useQuestHeaderPlacement(
       target?.focus?.(Platform.OS === 'web' ? { preventScroll: true } : undefined)
     }
     const previous = anchor.current
+    const scroller = scrollRef.current as unknown as WindowMeasurable | null
     if (previous) {
       const finish = () => {
         anchor.current = null
         if (!samePlacement(applied, desiredRef.current)) setApplied((current) => ({ ...current }))
         else focusRoute()
       }
-      if (mainContentRef.current?.measureInWindow) {
-        mainContentRef.current.measureInWindow((_x, y) => {
-          if (!isCurrent() || isBusy() || !Number.isFinite(y)) return
-          // A touch/scroll can begin while an asynchronous native measurement
-          // is pending. Keep that movement and compensate only the layout shift.
-          const offset = scrollOffset.current
-          const layoutDelta = y - previous.y + offset - previous.offset
-          const nextOffset = Math.max(0, offset + layoutDelta)
-          scrollOffset.current = nextOffset
-          scrollRef.current?.scrollTo({ y: nextOffset, animated: false })
+      if (previous.gesture) {
+        finish()
+        return () => { cancelled = true }
+      }
+      measureReadingDepth(scroller, mainContentRef.current, (depth) => {
+        if (!isCurrent()) return
+        if (depth === null || previous.gesture) {
           finish()
-        })
-      } else finish()
+          return
+        }
+        if (isBusy()) return
+        // Web reads the live scrollTop: a browser scroll-anchoring adjustment
+        // may land before its scroll event, and the measured depth already
+        // includes it. Native scroll position only changes through onScroll.
+        const node = scroller as unknown as { scrollTop?: unknown } | null
+        const offset = typeof node?.scrollTop === 'number' ? node.scrollTop : scrollOffset.current
+        const nextOffset = previous.depth <= 0 ? 0 : Math.max(0, offset + previous.depth - depth)
+        scrollOffset.current = nextOffset
+        scrollRef.current?.scrollTo({ y: nextOffset, animated: false })
+        finish()
+      })
     } else if (samePlacement(applied, desired)) {
       focusRoute()
     } else {
       const next = { headerInContentFlow: desired.headerInContentFlow, compactNav: desired.compactNav }
-      const apply = (y?: number) => {
+      measureReadingDepth(scroller, mainContentRef.current, (depth) => {
         if (!isCurrent() || isBusy() || !samePlacement(next, desiredRef.current)) return
-        anchor.current = !stepChanged && typeof y === 'number' && Number.isFinite(y) ? { y, offset: scrollOffset.current } : null
+        anchor.current = !stepChanged && depth !== null ? { depth, gesture: false } : null
         setApplied(next)
-      }
-      if (mainContentRef.current?.measureInWindow) mainContentRef.current.measureInWindow((_x, y) => apply(y))
-      else apply()
+      })
     }
     return () => { cancelled = true }
   }, [applied, desired.headerInContentFlow, desired.compactNav, busy, keyboardInset, scrollRef, stepKey, stepChanged])

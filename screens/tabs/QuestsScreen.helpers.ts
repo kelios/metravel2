@@ -156,6 +156,7 @@ export type QuestCatalogCity = {
 type QuestCatalogQuest = {
     cityId?: string | null;
     cityName?: string | null;
+    cityNameCanonical?: string | null;
     countryCode?: string | null;
     lat?: number | null;
     lng?: number | null;
@@ -186,6 +187,7 @@ export function buildQuestCityCatalog<TQuest extends QuestCatalogQuest>(quests: 
         if (!quest.cityId) continue;
         const cityId = quest.cityId;
         const name = (quest.cityName || '').trim();
+        const sourceName = (quest.cityNameCanonical || '').trim();
         const countryCode = (quest.countryCode || '').trim().toUpperCase();
 
         const canonicalId = canonicalCityIdById[cityId] || cityId;
@@ -199,6 +201,9 @@ export function buildQuestCityCatalog<TQuest extends QuestCatalogQuest>(quests: 
             // \u041f\u0435\u0440\u0432\u044b\u0439 \u043d\u0435\u043f\u0443\u0441\u0442\u043e\u0439 \u0430\u0442\u0440\u0438\u0431\u0443\u0442 \u0432\u044b\u0438\u0433\u0440\u044b\u0432\u0430\u0435\u0442: \u0447\u0430\u0441\u0442\u044c \u043a\u0432\u0435\u0441\u0442\u043e\u0432 \u043c\u043e\u0436\u0435\u0442 \u043f\u0440\u0438\u0439\u0442\u0438 \u0431\u0435\u0437
             // \u0438\u043c\u0435\u043d\u0438 \u0433\u043e\u0440\u043e\u0434\u0430 \u0438\u043b\u0438 \u043a\u043e\u0434\u0430 \u0441\u0442\u0440\u0430\u043d\u044b, \u0438 \u0447\u0438\u043f \u043d\u0435 \u0434\u043e\u043b\u0436\u0435\u043d \u0438\u0437-\u0437\u0430 \u044d\u0442\u043e\u0433\u043e \u043e\u043f\u0443\u0441\u0442\u0435\u0442\u044c.
             if (!city.name && name) city.name = name;
+            // #2198: непереведённый квест несёт русский источник, переведённый —
+            // имя на языке интерфейса; чип города берёт второе.
+            else if (name && sourceName && name !== sourceName && city.name === sourceName) city.name = name;
             if (!city.countryCode && countryCode) city.countryCode = countryCode;
         }
 

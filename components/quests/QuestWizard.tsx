@@ -810,6 +810,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                         cityName={city?.name}
                         cityLat={city?.lat}
                         cityLng={city?.lng}
+                        headerInContentFlow={headerPlacement.headerInContentFlow}
                     />
                 )}
             </View>

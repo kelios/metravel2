@@ -496,7 +496,8 @@ web-only градиентов и теней у состояний нет. Цве
   (шрифт, офлайн, «⋯») над заданием нет.
 - **Цель:** закреплено ≤ 110 px, верх задания ≤ 0,20 высоты окна на 390×844 и
   402×874; пороги `QUEST_RUN_BUDGET` в `e2e/helpers/mobileScreenBudget.ts`
-  ставятся по замеру (§9). Контроль: экран в `ACTION_SCREENS`
+  ставятся по замеру (§9). С #2198 экраны прохождения меряются на своей паре
+  `QUEST_RUN_VIEWPORTS` — 320×640 и 390×844 (короткая и обычная компоновка). Контроль: экран в `ACTION_SCREENS`
   (`scripts/guard-screen-actions.js`, декларация обязательна) и в
   `SCREEN_HEADER_OWNERS` (`scripts/guard-screen-header.js`).
 

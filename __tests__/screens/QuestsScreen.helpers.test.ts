@@ -201,6 +201,18 @@ describe('QuestsScreen helpers', () => {
       expect(catalog.canonicalCityIdById['minsk-kids']).toBe('minsk-main');
     });
 
+    it('names a city in the UI language when any of its quests is translated (#2198)', () => {
+      // PL: непереведённые квесты несут русский источник, переведённый — «Kraków».
+      const catalog = buildQuestCityCatalog([
+        { id: 'krakow-ghosts', cityId: 'krakow', cityName: 'Краков', cityNameCanonical: 'Краков', countryCode: 'PL', lat: 50.06, lng: 19.94 },
+        { id: 'krakow-dragon', cityId: 'krakow', cityName: 'Kraków', cityNameCanonical: 'Краков', countryCode: 'PL', lat: 50.05, lng: 19.93 },
+        { id: 'warsaw-ru', cityId: 'warsaw', cityName: 'Варшава', cityNameCanonical: 'Варшава', countryCode: 'PL', lat: 52.23, lng: 21.01 },
+      ]);
+
+      expect(catalog.cities.map((city) => [city.id, city.name])).toEqual([['krakow', 'Kraków'], ['warsaw', 'Варшава']]);
+      expect(catalog.questsByCityId.krakow.map((quest) => quest.id)).toEqual(['krakow-ghosts', 'krakow-dragon']);
+    });
+
     it('centers a city on its quest starts, including quests of the merged duplicate', () => {
       const catalog = buildQuestCityCatalog(catalogQuests);
       const minsk = catalog.cities.find((city) => city.id === 'minsk-main');
