@@ -2,12 +2,15 @@
 // Поиск места по сайту (каталог мест + путешествия MeTravel) для формы
 // добавления точки маршрута. Вынесено из RouteBuilder.tsx (#1825) дословно:
 // тот же порог длины запроса, тот же AbortController и те же статусы.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { PLACES_SEARCH_DEBOUNCE_MS } from '@/screens/tabs/PlacesScreen.helpers';
 
 import { fetchPlacesCatalog } from '@/api/places';
-import { fetchTravels } from '@/api/travelsApi';
+import { fetchTravel, fetchTravels } from '@/api/travelsApi';
+import { queryKeys } from '@/api/queryKeys';
+import { isValidCoordinate } from '@/utils/coordinates';
 import { type RoutePointType } from '@/api/plannedTrips';
 import type {
   SiteRouteOption,
@@ -16,7 +19,6 @@ import type {
 import {
   SITE_SEARCH_MIN_LENGTH,
   compactText,
-  parseNumber,
   travelCoordinates,
 } from '@/components/trips/planning/routeBuilderPoint';
 import { translate as i18nT } from '@/i18n'
@@ -30,10 +32,14 @@ export function useRouteSiteSearch({
   isAddPointOpen: boolean;
   newType: RoutePointType;
 }) {
+  const queryClient = useQueryClient();
+  const selectionToken = useRef(0);
   const [siteQuery, setSiteQuery] = useState('');
   const appliedSiteQuery = useDebouncedValue(siteQuery, PLACES_SEARCH_DEBOUNCE_MS, isBlankQuery);
   const [siteOptions, setSiteOptions] = useState<SiteRouteOption[]>([]);
   const [siteSearchStatus, setSiteSearchStatus] = useState<SiteSearchStatus>('idle');
+
+  useEffect(() => () => { selectionToken.current += 1; }, [isAddPointOpen, newType, siteQuery]);
 
   useEffect(() => {
     const query = appliedSiteQuery.trim();
@@ -53,11 +59,10 @@ export function useRouteSiteSearch({
       .then(([placesPage, travelsPage]) => {
         if (controller.signal.aborted) return;
         const placeOptions: SiteRouteOption[] = placesPage.places.map((place) => {
-          const numericId = parseNumber(place.id);
           return {
             key: `place-${place.id}`,
             kind: 'place',
-            id: numericId,
+            id: place.travelId,
             title: place.title,
             subtitle: compactText([place.category, place.country]),
             description: place.address ?? null,
@@ -92,10 +97,45 @@ export function useRouteSiteSearch({
   // Хвост `handleAddSitePoint`, относящийся к поиску: точку создаёт контейнер,
   // строка запроса и её результаты гасятся здесь — тем же порядком вызовов.
   const resetSiteSearch = useCallback(() => {
+    selectionToken.current += 1;
     setSiteQuery('');
     setSiteOptions([]);
     setSiteSearchStatus('idle');
   }, []);
 
-  return { siteQuery, setSiteQuery, siteOptions, siteSearchStatus, resetSiteSearch };
+  const resolveSiteOption = useCallback(async (
+    option: SiteRouteOption,
+    onResolved: (option: SiteRouteOption) => void,
+    onError: (error: string | null) => void,
+  ) => {
+    const token = ++selectionToken.current;
+    onError(null);
+    let coordinates = option.coordinates && isValidCoordinate(option.coordinates[1], option.coordinates[0])
+      ? option.coordinates : null;
+    if (!coordinates && option.kind === 'travel' && option.id != null) {
+      const travelId = option.id;
+      setSiteSearchStatus('loading');
+      try {
+        const travel = await queryClient.fetchQuery({
+          queryKey: queryKeys.travel(travelId),
+          queryFn: ({ signal }) => fetchTravel(travelId, { signal }),
+        });
+        coordinates = travelCoordinates(travel);
+      } catch {
+        if (token !== selectionToken.current) return;
+        setSiteSearchStatus('ready');
+        onError(i18nT('tripsStatic:plan.siteSearch.detailError'));
+        return;
+      }
+    }
+    if (token !== selectionToken.current) return;
+    setSiteSearchStatus('ready');
+    if (!coordinates) {
+      onError(i18nT('tripsStatic:plan.siteSearch.noCoordinates'));
+      return;
+    }
+    onResolved({ ...option, coordinates });
+  }, [queryClient]);
+
+  return { siteQuery, setSiteQuery, siteOptions, siteSearchStatus, resetSiteSearch, resolveSiteOption };
 }

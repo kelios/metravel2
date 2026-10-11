@@ -438,17 +438,19 @@ function RouteBuilder({
     siteOptions,
     siteSearchStatus,
     resetSiteSearch,
+    resolveSiteOption,
   } = useRouteSiteSearch({ isAddPointOpen, newType });
 
   const handleAddSitePoint = (option: SiteRouteOption) => {
     const title = option.title.trim();
     if (!title) return;
+    const type = option.id == null ? 'custom' : 'place';
 
     setRoute((prev) => [
       ...prev,
       {
         id: `${option.key}-${prev.length}`,
-        type: 'place',
+        type,
         name: title,
         description: option.description || option.subtitle || null,
         coordinates: option.coordinates,
@@ -456,7 +458,7 @@ function RouteBuilder({
         dayNumber: null,
       },
     ]);
-    trackRoutePointAdded(trip.id, 'place');
+    trackRoutePointAdded(trip.id, type);
     resetSiteSearch();
     setIsAddPointOpen(false);
   };
@@ -695,7 +697,7 @@ function RouteBuilder({
       onDescriptionChange={setNewDescription}
       onAddressSelect={handleAddAddressSelect}
       onSiteQueryChange={setSiteQuery}
-      onAddSitePoint={handleAddSitePoint}
+      onAddSitePoint={(option) => { void resolveSiteOption(option, handleAddSitePoint, setNewPointError); }}
       onAdd={handleAdd}
       onOpenAddPoint={handleOpenAddPoint}
       onCancelAddPoint={handleCancelAddPoint}

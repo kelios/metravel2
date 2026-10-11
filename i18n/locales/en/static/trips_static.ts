@@ -1,4 +1,6 @@
 export const tripsStaticResources = {
+  "plan.siteSearch.noCoordinates": "This article has no coordinates. Add a point using address search or coordinates.",
+  "plan.siteSearch.detailError": "Could not load the article coordinates. Try selecting it again.",
   "tripApply.disclaimer": "MeTravel does not organize or participate in travel. This is a platform for meeting fellow travelers - all agreements, payment and responsibility remain with the participants.",
   "tripApply.duplicateError": "The application has already been sent. The status can be viewed in the “My trips” section.",
   "tripApply.genericError": "Failed to submit application. Please try again later.",

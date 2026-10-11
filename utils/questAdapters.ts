@@ -572,6 +572,7 @@ export function adaptCity(apiCity: ApiQuestCity): QuestCity {
     const lat = coordNum(apiCity.lat);
     const lng = coordNum(apiCity.lng);
     const countryCode = normalizeQuestCountryCode(apiCity.country_code);
+    const localizedName = optionalText(apiCity.name_localized);
     // Id города — сегмент канонического адреса квеста (#1938), поэтому годится
     // только положительное целое: `Number(null)`/`Number('')` дают 0, а
     // `/quests/0/<quest>` — такая же несуществующая страница, как `/quests/null/`
@@ -581,8 +582,9 @@ export function adaptCity(apiCity: ApiQuestCity): QuestCity {
     return {
         id: Number.isInteger(cityId) && cityId > 0 ? cityId : undefined,
         legacyIds: normalizeQuestCityLegacyIds(apiCity.legacy_ids),
-        name: apiCity.name || undefined,
-        nameCanonical: apiCity.name_canonical || undefined,
+        name: localizedName || apiCity.name || undefined,
+        // Display may change independently of identity, including sparse DTOs.
+        nameCanonical: apiCity.name_canonical || (localizedName ? apiCity.name : undefined) || undefined,
         lat,
         lng,
         countryCode,
@@ -601,6 +603,7 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
     };
     // Шаги поля не несут: их язык — язык бандла.
     const contentLocale = readQuestContentLocale(apiBundle.content_locale);
+    const city = adaptCity(apiBundle.city);
 
     let rawSteps: ApiQuestStep[] = [];
     let steps: QuestStep[] = [];
@@ -656,7 +659,7 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
 
     // Fallback: always provide an intro so each quest starts with a dedicated start screen.
     if (!intro) {
-        const cityName = apiBundle.city?.name || i18nT('quests:utils.questAdapters.defaultCity');
+        const cityName = city.name || i18nT('quests:utils.questAdapters.defaultCity');
         const stepCount = steps.length;
         intro = {
             id: INTRO_STEP_ID,
@@ -692,7 +695,7 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
         intro,
         countModel,
         storageKey: apiBundle.storage_key,
-        city: adaptCity(apiBundle.city),
+        city,
         contentLocale,
         availableLocales: readQuestAvailableLocales(apiBundle.available_locales, contentLocale),
         coverUrl: fixMediaUrl(apiBundle.cover_url),
@@ -713,6 +716,7 @@ export function adaptMeta(apiMeta: ApiQuestMeta): QuestMeta {
     const tags = apiMeta.tags ? Object.keys(apiMeta.tags) : undefined;
     const squareCoverWebResponsiveSource = adaptSquareCoverMedia(apiMeta);
     const contentLocale = readQuestContentLocale(apiMeta.content_locale);
+    const localizedCityName = optionalText(apiMeta.city_name_localized);
 
     return {
         id: apiMeta.quest_id,
@@ -721,8 +725,9 @@ export function adaptMeta(apiMeta: ApiQuestMeta): QuestMeta {
         points: parseInt(String(apiMeta.points), 10) || 0,
         cityId: apiMeta.city_id,
         cityLegacyIds: normalizeQuestCityLegacyIds(apiMeta.city_legacy_ids),
-        cityName: apiMeta.city_name || undefined,
-        cityNameCanonical: apiMeta.city_name_canonical || undefined,
+        cityName: localizedCityName || apiMeta.city_name || undefined,
+        cityNameCanonical: apiMeta.city_name_canonical
+            || (localizedCityName ? apiMeta.city_name : undefined) || undefined,
         cityAlias: apiMeta.city_alias,
         contentLocale,
         availableLocales: readQuestAvailableLocales(apiMeta.available_locales, contentLocale),

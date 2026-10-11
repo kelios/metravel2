@@ -29,6 +29,52 @@ const rawResponse = (overrides: Partial<RawPlacesCatalogResponse> = {}): RawPlac
 })
 
 describe('mapPlacesCatalogResponse', () => {
+  it.each([
+    { lat: 91, lng: 27 }, { lat: 53, lng: 181 }, { lat: NaN, lng: 27 },
+    { lat: null, lng: null, coord: '91,181' },
+  ])('omits catalog points with unusable coordinates %o', (coordinates) => {
+    const page = mapPlacesCatalogResponse(rawResponse({ results: [rawItem({ coord: '', ...coordinates })] }))
+    expect(page.places).toEqual([])
+  })
+
+  it.each([
+    { lat: '', lng: '', coord: null },
+    { lat: ' \t ', lng: ' \n ', coord: null },
+    { lat: '', lng: 27, coord: null },
+    { lat: 53, lng: ' ', coord: null },
+    { lat: null, lng: null, coord: ', ' },
+    { lat: null, lng: null, coord: ',27' },
+    { lat: null, lng: null, coord: '53, ' },
+  ])('does not turn missing coordinate components into zero %o', (coordinates) => {
+    const page = mapPlacesCatalogResponse(rawResponse({ results: [rawItem(coordinates)] }))
+    expect(page.places).toEqual([])
+  })
+
+  it.each([
+    { lat: 0, lng: 0, coord: null },
+    { lat: '0', lng: ' 0 ', coord: null },
+    { lat: null, lng: null, coord: '0,0' },
+  ])('retains explicitly provided zero coordinates %o', (coordinates) => {
+    const page = mapPlacesCatalogResponse(rawResponse({ results: [rawItem(coordinates)] }))
+    expect(page.places).toHaveLength(1)
+    expect(page.places[0]).toMatchObject({ latNumber: 0, lngNumber: 0, coord: '0,0' })
+  })
+
+  it('uses valid coord fallback when direct coordinate fields are blank', () => {
+    const page = mapPlacesCatalogResponse(rawResponse({ results: [rawItem({
+      lat: '', lng: ' \t ', coord: '50.1871828,12.7546903',
+    })] }))
+    expect(page.places).toHaveLength(1)
+    expect(page.places[0]).toMatchObject({ latNumber: 50.1871828, lngNumber: 12.7546903 })
+  })
+
+  it('uses the primary article id instead of the catalog point id', () => {
+    const page = mapPlacesCatalogResponse(rawResponse({ results: [rawItem({
+      id: 701, primary_source: { travel_id: '129' }, travel_id: 98, travel: { id: 97 },
+    })] }))
+    expect(page.places[0]).toMatchObject({ id: '701', travelId: 129, relatedTravelId: 129 })
+  })
+
   it('maps the server catalog payload to CatalogPlace shape', () => {
     const page = mapPlacesCatalogResponse(rawResponse())
 

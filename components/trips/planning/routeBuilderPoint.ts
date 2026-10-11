@@ -8,6 +8,7 @@ import { ROUTE_POINT_COORDINATE_PRECISION } from '@/components/trips/planning/tr
 import { pointOvernightBooking } from '@/utils/overnightBooking';
 import { pointDayNumber } from '@/utils/routePointDay';
 import { arrivalModePayload } from '@/utils/routePointArrivalMode';
+import { isValidCoordinate } from '@/utils/coordinates';
 import { translate as i18nT } from '@/i18n'
 
 export const POINT_TYPES: RoutePointType[] = ['place', 'custom', 'rest', 'overnight'];
@@ -34,7 +35,7 @@ const parseLatLngPair = (value: unknown): { lat: number; lng: number } | null =>
   const [latRaw, lngRaw] = value.split(',').map((part) => part.trim());
   const lat = parseNumber(latRaw);
   const lng = parseNumber(lngRaw);
-  if (lat == null || lng == null) return null;
+  if (lat == null || lng == null || !isValidCoordinate(lat, lng)) return null;
   return { lat, lng };
 };
 
@@ -42,17 +43,18 @@ const travelAddressCoordinates = (point: TravelAddressItem): { lat: number; lng:
   if (typeof point === 'string') return null;
   const directLat = parseNumber(point.lat);
   const directLng = parseNumber(point.lng);
-  if (directLat != null && directLng != null) return { lat: directLat, lng: directLng };
+  if (directLat != null && directLng != null && isValidCoordinate(directLat, directLng)) {
+    return { lat: directLat, lng: directLng };
+  }
   return parseLatLngPair(point.coords);
 };
 
 export const travelCoordinates = (travel: Travel): [number, number] | null => {
-  const routePoint = travel.coordsMeTravel?.find((point) => {
+  for (const point of travel.coordsMeTravel ?? []) {
     const lat = parseNumber(point.lat);
     const lng = parseNumber(point.lng);
-    return lat != null && lng != null;
-  });
-  if (routePoint) return [Number(routePoint.lng), Number(routePoint.lat)];
+    if (lat != null && lng != null && isValidCoordinate(lat, lng)) return [lng, lat];
+  }
 
   const addressPoint = travel.travelAddress
     ?.map(travelAddressCoordinates)

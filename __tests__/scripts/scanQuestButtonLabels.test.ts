@@ -28,6 +28,15 @@ const step = (over: Record<string, unknown> = {}) => ({
 })
 
 describe('findUnknownButtonLabels — кнопка, которой нет', () => {
+  it.each(['воскликнул', 'откликнулся', 'перекликнулась', 'отжми', 'рассылку'])('не считает «%s» приглашением нажать кнопку', (word) => {
+    expect(findUnknownButtonLabels(`Он ${word}: «Чудо»`, UI)).toEqual([])
+  })
+
+  it.each(['Кликни', 'кликнуть', 'НАЖМИ', 'жми', 'тапни', 'кнопка', 'ссылка'])('сохраняет проверку настоящего обращения «%s»', (word) => {
+    expect(findUnknownButtonLabels(`${word} «Несуществующая»`, UI)).toHaveLength(1)
+    expect(findUnknownButtonLabels(`Сначала — ${word} «Несуществующая»`, UI)).toHaveLength(1)
+  })
+
   it('ловит шаблон привала «нажми «Ответить»» (gomel-palace 349 до правки)', () => {
     const hits = findUnknownButtonLabels('Точка по желанию: отдохни и перекуси, а потом нажми «Ответить» и продолжай маршрут.', UI)
     expect(hits).toHaveLength(1)

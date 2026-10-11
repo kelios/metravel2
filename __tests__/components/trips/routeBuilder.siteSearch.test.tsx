@@ -2,12 +2,14 @@ import React from 'react'
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native'
 
 import { fetchPlacesCatalog } from '@/api/places'
-import { fetchTravels } from '@/api/travelsApi'
+import { fetchTravel, fetchTravels } from '@/api/travelsApi'
 import type { PlannedTrip } from '@/api/plannedTrips'
 import RouteBuilder from '@/components/trips/planning/RouteBuilder'
 import { createQueryWrapper } from '../../helpers/testQueryClient'
-import type { PlacesCatalogPage } from '@/utils/placesCatalog'
+import { mapPlacesCatalogResponse, type PlacesCatalogPage } from '@/utils/placesCatalog'
 import type { Travel } from '@/types/types'
+import { queryKeys } from '@/api/queryKeys'
+import { travelCoordinates } from '@/components/trips/planning/routeBuilderPoint'
 
 const mockMutate = jest.fn()
 const mockTransportMutate = jest.fn()
@@ -17,6 +19,7 @@ jest.mock('@/api/places', () => ({
 }))
 
 jest.mock('@/api/travelsApi', () => ({
+  fetchTravel: jest.fn(),
   fetchTravels: jest.fn(),
 }))
 
@@ -75,6 +78,7 @@ jest.mock('@/components/trips/planning/TripPlanRouteMap', () => {
 
 const mockedFetchPlacesCatalog = fetchPlacesCatalog as jest.MockedFunction<typeof fetchPlacesCatalog>
 const mockedFetchTravels = fetchTravels as jest.MockedFunction<typeof fetchTravels>
+const mockedFetchTravel = fetchTravel as jest.MockedFunction<typeof fetchTravel>
 
 const makeTrip = (): PlannedTrip => ({
   id: 8001,
@@ -103,32 +107,24 @@ const makeTrip = (): PlannedTrip => ({
   createdAt: '2026-07-01T10:00:00.000Z',
 })
 
-const placesPage: PlacesCatalogPage = {
+const placesPage = mapPlacesCatalogResponse({
   count: 1,
-  places: [
+  results: [
     {
-      id: '42',
-      travelId: null,
+      id: 701,
+      primary_source: { travel_id: 129 },
       title: 'Несвижский замок',
-      category: 'Замок',
-      categoryId: 7,
-      country: 'Беларусь',
-      countryCode: 'BY',
-      latNumber: 53.2225,
-      lngNumber: 26.6906,
-      coord: '53.2225,26.6906',
-      lat: '53.2225',
-      lng: '26.6906',
+      category: { name: 'Замок', id: 7 },
+      country: { name: 'Беларусь', code: 'BY' },
+      lat: 53.2225,
+      lng: 26.6906,
       address: 'Несвиж, Беларусь',
-      categoryName: 'Замок',
-      travelImageThumbUrl: '/media/nesvizh.jpg',
+      image: { thumb_url: '/media/nesvizh.jpg' },
       urlTravel: '/travels/nesvizh',
-      searchText: 'несвижский замок',
+      search_text: 'несвижский замок',
     },
   ],
-  categoryFacets: [],
-  countryFacets: [],
-}
+})
 
 const travelsPage: { data: Travel[]; total: number } = {
   total: 1,
@@ -166,6 +162,7 @@ beforeEach(() => {
   mockTransportMutate.mockClear()
   mockedFetchPlacesCatalog.mockReset()
   mockedFetchTravels.mockReset()
+  mockedFetchTravel.mockReset()
   mockedFetchPlacesCatalog.mockResolvedValue(placesPage)
   mockedFetchTravels.mockResolvedValue(travelsPage)
 })
@@ -177,6 +174,20 @@ const renderRouteBuilder = (element: React.ReactElement) =>
   render(element, { wrapper: createQueryWrapper().Wrapper })
 
 describe('RouteBuilder site search', () => {
+  it('normalizes decimal-comma route coordinates instead of turning them into NaN', () => {
+    const travel = { ...travelsPage.data[0], coordsMeTravel: [{ lat: '53,9', lng: '27,56' }] } as unknown as Travel
+    expect(travelCoordinates(travel)).toEqual([27.56, 53.9])
+  })
+
+  it('skips invalid article route and address points, keeping the first usable position', () => {
+    const travel = { ...travelsPage.data[0],
+      coordsMeTravel: [{ lat: 91, lng: 27 }, { lat: 53, lng: Infinity }],
+      travelAddress: [{ lat: 53, lng: 181 }, { coords: '91,27' }, { coords: '53.9,27.56' }],
+    } as unknown as Travel
+    expect(travelCoordinates(travel)).toEqual([27.56, 53.9])
+    expect(travelCoordinates({ ...travel, travelAddress: [] })).toBeNull()
+  })
+
   it('adds a site place from search without manual coordinates', async () => {
     const { findByTestId, getByTestId, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
@@ -185,7 +196,7 @@ describe('RouteBuilder site search', () => {
     fireEvent.press(getByTestId('route-builder-add-action'))
     fireEvent.changeText(getByTestId('route-builder-site-search'), 'Несвиж')
 
-    const option = await findByTestId('route-builder-site-option-place-42')
+    const option = await findByTestId('route-builder-site-option-place-701')
     expect(mockedFetchPlacesCatalog).toHaveBeenCalledWith(
       { page: 1, perPage: 6, q: 'Несвиж' },
       expect.any(AbortSignal),
@@ -206,8 +217,139 @@ describe('RouteBuilder site search', () => {
       type: 'place',
       name: 'Несвижский замок',
       coordinates: [26.6906, 53.2225],
-      placeId: 42,
+      placeId: 129,
     })
+  })
+
+  it('adds a catalog place without an article as custom with no place id', async () => {
+    mockedFetchPlacesCatalog.mockResolvedValue({
+      ...placesPage,
+      places: [{ ...placesPage.places[0], travelId: null, relatedTravelId: null }],
+    })
+    const { findByTestId, getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    fireEvent.press(getByTestId('route-builder-add-action'))
+    fireEvent.changeText(getByTestId('route-builder-site-search'), 'Несвиж')
+    fireEvent.press(await findByTestId('route-builder-site-option-place-701'))
+    fireEvent.press(getByTestId('route-builder-save'))
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1))
+    expect(mockMutate.mock.calls[0][0].route[0]).toMatchObject({
+      type: 'custom', placeId: null, coordinates: [26.6906, 53.2225],
+    })
+    expect(mockedFetchTravel).not.toHaveBeenCalled()
+  })
+
+  it('loads the first route coordinates from travel details when the list has none', async () => {
+    mockedFetchTravels.mockResolvedValue({
+      ...travelsPage, data: [{ ...travelsPage.data[0], travelAddress: [] }],
+    })
+    mockedFetchTravel.mockResolvedValue({
+      ...travelsPage.data[0], coordsMeTravel: [{ lat: 53.4511, lng: 26.4731 }, { lat: 53, lng: 27 }],
+    })
+    const { findByTestId, getByTestId, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    fireEvent.press(getByTestId('route-builder-add-action'))
+    fireEvent.changeText(getByTestId('route-builder-site-search'), 'Маршрут')
+    const option = await findByTestId('route-builder-site-option-travel-77')
+    await act(async () => { fireEvent.press(option) })
+    expect(mockedFetchTravel).toHaveBeenCalledWith(77, { signal: expect.any(AbortSignal) })
+    expect(queryByTestId('route-builder-add-form') === null).toBe(true)
+    fireEvent.press(getByTestId('route-builder-save'))
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1))
+    expect(mockMutate.mock.calls[0][0].route[0]).toMatchObject({
+      type: 'place', placeId: 77, coordinates: [26.4731, 53.4511],
+    })
+  })
+
+  it('warns without adding a travel when its details have no coordinates', async () => {
+    const travel = { ...travelsPage.data[0], travelAddress: [] }
+    mockedFetchTravels.mockResolvedValue({ total: 1, data: [travel] })
+    mockedFetchTravel.mockResolvedValue(travel)
+    const { findByTestId, getByTestId, findByText, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    fireEvent.press(getByTestId('route-builder-add-action'))
+    fireEvent.changeText(getByTestId('route-builder-site-search'), 'Маршрут')
+    fireEvent.press(await findByTestId('route-builder-site-option-travel-77'))
+    expect(await findByText('У статьи нет координат. Добавьте точку через поиск по адресу или по координатам.')).toBeTruthy()
+    expect(getByTestId('route-builder-add-form')).toBeTruthy()
+    expect(queryByTestId('route-builder-save')).toBeNull()
+    expect(mockMutate).not.toHaveBeenCalled()
+  })
+
+  it('does not add a point after cancelling a pending travel selection', async () => {
+    mockedFetchTravels.mockResolvedValue({
+      ...travelsPage, data: [{ ...travelsPage.data[0], travelAddress: [] }],
+    })
+    let resolveDetail!: (travel: Travel) => void
+    mockedFetchTravel.mockReturnValue(new Promise((resolve) => { resolveDetail = resolve }))
+    const { findByTestId, getByTestId, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    fireEvent.press(getByTestId('route-builder-add-action'))
+    fireEvent.changeText(getByTestId('route-builder-site-search'), 'Маршрут')
+    fireEvent.press(await findByTestId('route-builder-site-option-travel-77'))
+    await waitFor(() => expect(mockedFetchTravel).toHaveBeenCalledTimes(1))
+    fireEvent.press(getByTestId('route-builder-add-cancel'))
+    await act(async () => { resolveDetail(travelsPage.data[0]) })
+    expect(queryByTestId('route-builder-save')).toBeNull()
+    expect(mockMutate).not.toHaveBeenCalled()
+  })
+
+  it.each([[181, 53], [27, 91], [NaN, 53]])('rejects invalid bound catalog coordinates %s,%s without using another article point', async (lng, lat) => {
+    mockedFetchPlacesCatalog.mockResolvedValue({
+      ...placesPage, places: [{ ...placesPage.places[0], lngNumber: lng, latNumber: lat }],
+    })
+    const screen = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    fireEvent.press(screen.getByTestId('route-builder-add-action'))
+    fireEvent.changeText(screen.getByTestId('route-builder-site-search'), 'Несвиж')
+    fireEvent.press(await screen.findByTestId('route-builder-site-option-place-701'))
+    expect(await screen.findByText('У статьи нет координат. Добавьте точку через поиск по адресу или по координатам.')).toBeTruthy()
+    expect(screen.queryByTestId('route-builder-save')).toBeNull()
+    expect(mockedFetchTravel).not.toHaveBeenCalled()
+  })
+
+  it('allows another selection after a detail request fails', async () => {
+    mockedFetchTravels.mockResolvedValue({ ...travelsPage, data: [{ ...travelsPage.data[0], travelAddress: [] }] })
+    mockedFetchTravel.mockRejectedValueOnce(new Error('network')).mockResolvedValueOnce(travelsPage.data[0])
+    const screen = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    fireEvent.press(screen.getByTestId('route-builder-add-action'))
+    fireEvent.changeText(screen.getByTestId('route-builder-site-search'), 'Маршрут')
+    const option = await screen.findByTestId('route-builder-site-option-travel-77')
+    fireEvent.press(option)
+    expect(await screen.findByText('Не удалось загрузить координаты статьи. Попробуйте выбрать её ещё раз.')).toBeTruthy()
+    expect(screen.queryByTestId('route-builder-save')).toBeNull()
+    await act(async () => { fireEvent.press(option) })
+    expect(screen.queryByTestId('route-builder-add-form') === null).toBe(true)
+    expect(mockedFetchTravel).toHaveBeenCalledTimes(2)
+    expect(screen.getByTestId('route-builder-save')).toBeTruthy()
+  })
+
+  it('reuses fresh travel details from the shared query key', async () => {
+    mockedFetchTravels.mockResolvedValue({ ...travelsPage, data: [{ ...travelsPage.data[0], travelAddress: [] }] })
+    const { queryClient, Wrapper } = createQueryWrapper()
+    queryClient.setDefaultOptions({ queries: { retry: false, staleTime: 300_000 } })
+    queryClient.setQueryData(queryKeys.travel(77), travelsPage.data[0])
+    const screen = render(<RouteBuilder trip={makeTrip()} />, { wrapper: Wrapper })
+    fireEvent.press(screen.getByTestId('route-builder-add-action'))
+    fireEvent.changeText(screen.getByTestId('route-builder-site-search'), 'Маршрут')
+    const option = await screen.findByTestId('route-builder-site-option-travel-77')
+    await act(async () => { fireEvent.press(option) })
+    expect(screen.queryByTestId('route-builder-add-form') === null).toBe(true)
+    expect(mockedFetchTravel).not.toHaveBeenCalled()
+    fireEvent.press(screen.getByTestId('route-builder-save'))
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1))
+    expect(mockMutate.mock.calls[0][0].route[0].coordinates).toEqual([26.4731, 53.4511])
+  })
+
+  it.each(['query', 'type'])('ignores pending detail when the %s changes', async (change) => {
+    mockedFetchTravels.mockResolvedValue({ ...travelsPage, data: [{ ...travelsPage.data[0], travelAddress: [] }] })
+    let resolveDetail!: (travel: Travel) => void
+    mockedFetchTravel.mockReturnValue(new Promise((resolve) => { resolveDetail = resolve }))
+    const screen = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    fireEvent.press(screen.getByTestId('route-builder-add-action'))
+    fireEvent.changeText(screen.getByTestId('route-builder-site-search'), 'Маршрут')
+    fireEvent.press(await screen.findByTestId('route-builder-site-option-travel-77'))
+    await waitFor(() => expect(mockedFetchTravel).toHaveBeenCalledTimes(1))
+    if (change === 'query') fireEvent.changeText(screen.getByTestId('route-builder-site-search'), 'Несвиж')
+    else fireEvent.press(screen.getByTestId('route-builder-type-custom'))
+    await act(async () => { resolveDetail(travelsPage.data[0]) })
+    expect(screen.queryByTestId('route-builder-save')).toBeNull()
+    expect(screen.getByTestId('route-builder-add-form')).toBeTruthy()
   })
 
   it('adds a travel from search as a route point', async () => {
@@ -442,9 +584,9 @@ describe('actual RouteBuilder site-search debounce (#2235)', () => {
     expect(mockedFetchTravels).toHaveBeenCalledTimes(1)
     expect(mockedFetchPlacesCatalog.mock.calls[0][0]).toEqual({ page: 1, perPage: 6, q: 'Нес' })
     expect(mockedFetchTravels.mock.calls[0].slice(0, 4)).toEqual([0, 6, 'Нес', {}])
-    expect(screen.getByTestId('route-builder-site-option-place-42')).toBeTruthy()
+    expect(screen.getByTestId('route-builder-site-option-place-701')).toBeTruthy()
     fireEvent.changeText(input, '')
-    expect(screen.queryByTestId('route-builder-site-option-place-42')).toBeNull()
+    expect(screen.queryByTestId('route-builder-site-option-place-701')).toBeNull()
     await tick(1000)
     expect(mockedFetchPlacesCatalog).toHaveBeenCalledTimes(1)
     expect(mockedFetchTravels).toHaveBeenCalledTimes(1)
@@ -463,7 +605,7 @@ describe('actual RouteBuilder site-search debounce (#2235)', () => {
     fireEvent.changeText(input, '')
     expect(signal.aborted).toBe(true)
     await act(async () => { resolve(placesPage); await Promise.resolve() })
-    expect(screen.queryByTestId('route-builder-site-option-place-42')).toBeNull()
+    expect(screen.queryByTestId('route-builder-site-option-place-701')).toBeNull()
     expect(mockedFetchPlacesCatalog).toHaveBeenCalledTimes(1)
     screen.unmount()
   })

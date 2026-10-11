@@ -61,6 +61,8 @@ export type ApiQuestCity = {
     /** Historical city IDs that resolve to this canonical city. Missing on old DTOs. */
     legacy_ids?: number[];
     name: string | null;
+    /** Имя на языке запроса независимо от перевода контента (#2392). */
+    name_localized?: string;
     lat: ApiQuestCoordinate;
     lng: ApiQuestCoordinate;
     country_code?: string | null;
@@ -144,6 +146,8 @@ export type ApiQuestMeta = {
     /** Historical city IDs that resolve to city_id. Missing on old DTOs/cache. */
     city_legacy_ids?: number[];
     city_name: string; // readOnly
+    /** Имя на языке запроса независимо от перевода контента (#2392). */
+    city_name_localized?: string;
     /**
      * Публичный alias города (#2211): единственный источник `/quests/<alias>`.
      * Пустая строка — у города alias нет; отсутствие поля — старый ответ/кэш,

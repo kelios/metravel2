@@ -2,6 +2,7 @@ import type { TravelCoords, TravelMediaImage } from '@/types/types'
 import { translate as i18nT } from '@/i18n'
 import { getMediaPlaceholderData } from '@/utils/travelMediaVariants'
 import { indexMediaImage } from '@/utils/mediaPlaceholderIndex'
+import { isValidCoordinate } from '@/utils/coordinates'
 
 
 /** Rating for a single external provider (2GIS, TripAdvisor, …). */
@@ -70,6 +71,7 @@ type RawCatalogImage = { thumb_url?: unknown; landscape_url?: unknown }
 type RawCatalogItem = {
   id?: unknown
   travel_id?: unknown
+  primary_source?: { travel_id?: unknown } | null
   urlTravel?: unknown
   title?: unknown
   address?: unknown
@@ -135,7 +137,9 @@ const normalizeText = (value: unknown, fallback = ''): string => {
 const parseCoordinate = (value: unknown): number | null => {
   if (typeof value === 'number' && Number.isFinite(value)) return value
   if (typeof value === 'string') {
-    const parsed = Number(value.replace(',', '.').trim())
+    const normalized = value.replace(',', '.').trim()
+    if (!normalized) return null
+    const parsed = Number(normalized)
     return Number.isFinite(parsed) ? parsed : null
   }
   return null
@@ -181,7 +185,7 @@ const readCoordinates = (
 ): { lat: number; lng: number; coord: string } | null => {
   const directLat = parseCoordinate(item.lat)
   const directLng = parseCoordinate(item.lng)
-  if (directLat != null && directLng != null) {
+  if (directLat != null && directLng != null && isValidCoordinate(directLat, directLng)) {
     return { lat: directLat, lng: directLng, coord: `${directLat},${directLng}` }
   }
 
@@ -195,6 +199,7 @@ const readCoordinates = (
   const secondLooksLat = Math.abs(second) <= 90
   const lat = !firstLooksLat && secondLooksLat ? second : first
   const lng = !firstLooksLat && secondLooksLat ? first : second
+  if (!isValidCoordinate(lat, lng)) return null
   return { lat, lng, coord: `${lat},${lng}` }
 }
 
@@ -306,7 +311,7 @@ const mapCatalogItem = (raw: unknown): CatalogPlace | null => {
   const categoryId = parseFacetId(item.category?.id)
   const country = normalizeText(item.country?.name, i18nT('shared:utils.placesCatalog.strana_ne_ukazana_2418b87a'))
   const countryCode = normalizeText(item.country?.code)
-  const travelId = parseTravelId(item.travel_id) ?? parseTravelId(item.travel?.id)
+  const travelId = parseTravelId(item.primary_source?.travel_id) ?? parseTravelId(item.travel_id) ?? parseTravelId(item.travel?.id)
   const urlTravel = buildRelatedTravelUrl(item, travelId)
   const thumbUrl = normalizeImageUrl(item.image?.thumb_url)
   const landscapeUrl = normalizeImageUrl(item.image?.landscape_url)

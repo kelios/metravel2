@@ -216,8 +216,13 @@ function questRouteVariants(quest, cityAliasMap, cityGroups) {
   }));
 }
 
-function questCityName(quest) {
+function questCityContentName(quest) {
   return String(quest?.city_name ?? quest?.cityName ?? quest?.city?.name ?? '').trim();
+}
+
+function questCityName(quest) {
+  const localized = String(quest?.city_name_localized ?? quest?.city?.name_localized ?? '').trim();
+  return localized || questCityContentName(quest);
 }
 
 /**
@@ -231,7 +236,7 @@ function questCityAliasName(quest) {
   const canonical = String(
     quest?.city_name_canonical || quest?.cityNameCanonical || quest?.city?.name_canonical || '',
   ).trim();
-  return canonical || questCityName(quest);
+  return canonical || questCityContentName(quest);
 }
 
 function questCountryName(quest) {

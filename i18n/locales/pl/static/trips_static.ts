@@ -1,4 +1,6 @@
 export const tripsStaticResources = {
+  "plan.siteSearch.noCoordinates": "Artykuł nie ma współrzędnych. Dodaj punkt przez wyszukiwanie adresu lub za pomocą współrzędnych.",
+  "plan.siteSearch.detailError": "Nie udało się pobrać współrzędnych artykułu. Spróbuj wybrać go ponownie.",
   "tripApply.disclaimer": "MeTravel nie organizuje ani nie uczestniczy w podróżach. Jest to platforma do spotkań z innymi podróżnikami – wszystkie umowy, płatności i odpowiedzialność pozostają po stronie uczestników.",
   "tripApply.duplicateError": "Zgłoszenie zostało już wysłane. Status można sprawdzić w zakładce „Moje przejazdy”.",
   "tripApply.genericError": "Nie udało się przesłać wniosku. Spróbuj ponownie później.",

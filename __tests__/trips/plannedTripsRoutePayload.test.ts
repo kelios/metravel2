@@ -1,4 +1,5 @@
 import type { RoutePoint } from '@/api/plannedTrips'
+import { mapPlacesCatalogResponse } from '@/utils/placesCatalog'
 
 const ROUTE_LENGTH = 25
 
@@ -66,6 +67,25 @@ describe('updateTripRoute payload', () => {
     jest.dontMock('@/stores/authStore')
     jest.dontMock('@/utils/logger')
     jest.resetModules()
+  })
+
+  it.each([129, null])('saves a catalog point with article identity %s and coordinates', async (travelId) => {
+    const [place] = mapPlacesCatalogResponse({ results: [{
+      id: 701, title: 'Catalog point', lat: 53.9, lng: 27.56,
+      primary_source: travelId == null ? null : { travel_id: travelId },
+    }] }).places
+    const apiClientMock = { put: jest.fn(async () => makeTripDto(1)) }
+    const { updateTripRoute } = loadApi(apiClientMock)
+    await updateTripRoute({ tripId: 42, route: [{
+      id: `place-${place.id}`, name: place.title, description: null,
+      type: place.travelId == null ? 'custom' : 'place', placeId: place.travelId,
+      coordinates: [place.lngNumber, place.latNumber],
+    }] })
+    expect(apiClientMock.put).toHaveBeenCalledWith('/trips/planned/42/route/', {
+      points: [expect.objectContaining({
+        place_id: travelId, point_type: travelId == null ? 'custom' : 'travel', lat: 53.9, lng: 27.56,
+      })],
+    })
   })
 
   it('replaces the whole route with a single PUT and never truncates a long list', async () => {

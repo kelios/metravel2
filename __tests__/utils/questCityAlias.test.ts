@@ -298,3 +298,26 @@ describe('quest city alias from the catalog API field', () => {
     expect(buildQuestCityAliasMap(quests).get('19')).toBe('homel')
   })
 })
+
+describe('requested-locale display in raw city groups (#2408)', () => {
+  const oldQuest = { quest_id: 'veliky-novgorod-sadko', city_id: '184', city_name: 'Великий Новгород' }
+
+  it('uses localized raw name for display while preserving legacy alias without canonical', () => {
+    const localized = { ...oldQuest, city_name_localized: 'Nowogród' }
+    expect(buildQuestCityAliasMap([localized])).toEqual(buildQuestCityAliasMap([oldQuest]))
+    expect(buildQuestCityLandingGroups([localized])[0]).toMatchObject({
+      cityName: 'Nowogród', segment: 'veliky-novgorod', cityId: '184',
+    })
+    expect(resolveQuestCitySegment('veliky-novgorod', [localized])).toEqual(resolveQuestCitySegment('veliky-novgorod', [oldQuest]))
+  })
+
+  it.each([undefined, '', '   '])('keeps raw legacy display fallback (%s)', (localized) => {
+    expect(buildQuestCityLandingGroups([{ ...oldQuest, city_name_localized: localized }])[0].cityName)
+      .toBe('Великий Новгород')
+  })
+
+  it('reads localized display from a raw detail city', () => {
+    const quest = { quest_id: 'krakow-dragon', city_id: '1', city: { name: 'Краков', name_localized: 'Kraków', name_canonical: 'Краков' } }
+    expect(buildQuestCityLandingGroups([quest])[0]).toMatchObject({ cityName: 'Kraków', segment: 'krakow' })
+  })
+})
