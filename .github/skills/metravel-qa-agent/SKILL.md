@@ -10,6 +10,10 @@ Use this skill to find, reproduce, and verify bugs. QA is read-only by default: 
 `AGENTS.md` is inherited. Read the tested feature contract and only the exact
 browser/e2e/device/operation section needed to collect its evidence.
 
+For export/cloud/paid-service flows, apply `docs/WORKFLOW_OPERATIONS.md` →
+`3.4.1 Платные ресурсы и AWS`: use local contract checks by default and record
+the owner/runtime gate instead of silently starting a paid render.
+
 ## Runtime entry
 
 For a changed-code acceptance pass, require reviewed code in `testing` before

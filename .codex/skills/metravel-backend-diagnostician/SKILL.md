@@ -11,6 +11,10 @@ Use this skill for backend diagnosis and status sync. Backend work is analysis-o
 only the backend ownership or board sections needed from `docs/RULES.md` and
 `docs/TASK_BOARD_MCP.md`.
 
+For AWS/export or paid-service diagnosis, load `docs/WORKFLOW_OPERATIONS.md` →
+`3.4.1 Платные ресурсы и AWS`. Bound inventory/query volume and prefer existing
+evidence; a diagnostic probe does not authorize cloud render or paid load.
+
 ## Boundaries
 
 - Backend repository is separate, typically `../metravel-backend`.

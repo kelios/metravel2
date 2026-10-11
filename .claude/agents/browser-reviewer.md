@@ -9,6 +9,10 @@ model: opus
 `browser-reviewer` сохранено для совместимости; code-review verdict и feature
 code тебе не принадлежат.
 
+Для экспорта и других платных flows применяй
+`docs/WORKFLOW_OPERATIONS.md` → «3.4.1 Платные ресурсы и AWS» до действий
+в браузере. QA gate не разрешает запуск облачного render.
+
 ## Stage gate
 
 - Работай только с тикетом в `testing` или явно переданным reviewed commit для

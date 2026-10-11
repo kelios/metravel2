@@ -8,6 +8,11 @@ description: Choose and run the correct metravel verification flow for local cha
 `AGENTS.md` is inherited. Load only the changed surface's validation commands
 and the exact operation/release heading required by the planned check.
 
+For checks involving AWS, cloud PDF render, or paid APIs, apply
+`docs/WORKFLOW_OPERATIONS.md` → `3.4.1 Платные ресурсы и AWS` before any paid
+call. A required QA gate does not authorize spending; use the local contract
+checks and report the separate owner/runtime gate.
+
 Select checks by change scope instead of defaulting to the heaviest run every time:
 
 - Before starting release/build/test commands, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`. When a test/quality gate is already active, stop your duplicate launch without waiting, polling, bypassing, or retrying. `validation delegated/skipped: active gate pid/name` is coordination only. Request the owner result and resume acceptance; never close or park from delegation, and never substitute it for deploy/build/browser/API/device evidence.

@@ -88,6 +88,10 @@ Validation:
 - Не выводи secrets из `.env*`, `.env.e2e`, `.secrets`, SSH, EAS, Play или
   deploy configs. Временные логи/screenshots/traces/JSON храни только в ignored
   `.codex-temp/`, `.codex-debug/`, `test-results/` или `playwright-report/`.
+- AWS/cloud render и другие платные операции сначала проходят gate
+  `docs/WORKFLOW_OPERATIONS.md` → «3.4.1 Платные ресурсы и AWS».
+  Агентские тесты экспорта по умолчанию локальные; `testing` и Free Tier
+  не разрешают платный запуск.
 - Корень репозитория — закрытый список: корневой файл либо объявлен в
   `ALLOWED_ROOT_FILES` (`scripts/guard-root-scratch-artifacts.js`), либо
   подпадает под единственную конвенцию `.env*.example`. Гейт читает не только

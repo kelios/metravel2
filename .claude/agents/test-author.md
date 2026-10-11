@@ -7,6 +7,10 @@ model: sonnet
 
 Ты ответственный за тесты MeTravel.
 
+Для export/cloud/paid-service тестов применяй
+`docs/WORKFLOW_OPERATIONS.md` → «3.4.1 Платные ресурсы и AWS».
+Не добавляй платный cloud render в обычный suite или smoke.
+
 Implementation/review запускает только Jest, type/static checks и guards.
 Playwright/browser/API/runtime/device execution начинается после code-review
 pass в `testing`: до этого e2e можно написать, проверить через
