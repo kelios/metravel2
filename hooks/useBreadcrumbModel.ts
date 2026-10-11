@@ -24,6 +24,7 @@ import type { PublicTrip } from '@/api/publicTrips';
 import { queryKeys } from '@/api/queryKeys';
 import { normalizeTravelRouteSegment } from '@/utils/travelRouteSegment';
 import { getActiveLocale, translate as i18nT } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider';
 import { pageTranslations, STANDALONE_NESTED_ROUTE_LABELS } from '@/hooks/breadcrumbRouteLabels';
 
 
@@ -218,6 +219,10 @@ function useCachedTravelData(cacheKey: number | string | null): Travel | undefin
 export function useBreadcrumbModel(): BreadcrumbModel {
   const pathname = usePathname();
   const resolvedPathname = getResolvedPathname(pathname);
+  const { t } = useTranslation();
+  const bookJobTitle = t('export:components.export.BookJob.title');
+  const exportNavigationTitle = pageTranslations.export;
+  const profileNavigationTitle = PROFILE_CRUMB.label;
   // expo-router mocks in unit tests often provide only useLocalSearchParams.
   // Prefer global search params when available; otherwise fall back to local params.
   const globalParams = useGlobalSearchParamsSafe();
@@ -442,6 +447,22 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     }
 
     const parts = p.split('/').filter(Boolean);
+
+    if (parts.length === 2 && parts[0] === 'book-exports') {
+      const items = [
+        { label: profileNavigationTitle, path: '/profile' },
+        { label: exportNavigationTitle, path: '/export' },
+        { label: bookJobTitle, path: p },
+      ];
+      return {
+        items,
+        depth: items.length + 1,
+        currentTitle: bookJobTitle,
+        pageContextTitle: profileNavigationTitle,
+        backToPath: '/export',
+        showBreadcrumbs: true,
+      };
+    }
 
     const standaloneLabel = STANDALONE_NESTED_ROUTE_LABELS[p];
     if (standaloneLabel) {
@@ -794,7 +815,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       backToPath,
       showBreadcrumbs: computed.length >= 1,
     };
-  }, [resolvedPathname, hasFilterQuery, normalizedReturnToParam, travelData, travelSlug, questApiTitle, questCityName, questCountryName, userProfileName, articleTitle, plannedTripData, publicTripData]);
+  }, [bookJobTitle, exportNavigationTitle, profileNavigationTitle, resolvedPathname, hasFilterQuery, normalizedReturnToParam, travelData, travelSlug, questApiTitle, questCityName, questCountryName, userProfileName, articleTitle, plannedTripData, publicTripData]);
 }
 
 export default useBreadcrumbModel;

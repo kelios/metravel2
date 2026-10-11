@@ -573,6 +573,61 @@ describe('useBreadcrumbModel', () => {
     expect(result.current.backToPath).toBe('/');
   });
 
+  it.each(['ru', 'be', 'uk', 'pl', 'en'])('localizes book-job navigation in %s without a dead parent or UUID label', async (locale) => {
+    const previousLocale = i18n.language;
+    const path = '/book-exports/00000000-0000-4000-8000-000000000000';
+    usePathname.mockReturnValue(path);
+    useLocalSearchParams.mockReturnValue({});
+    let unmount: (() => void) | undefined;
+    try {
+      await i18n.changeLanguage(locale);
+      const screen = renderHook(() => useBreadcrumbModel(), { wrapper });
+      unmount = screen.unmount;
+      const { result } = screen;
+      expect(result.current.items).toEqual([
+        { label: i18n.t('sharedStatic:hooks.useBreadcrumbModel.profil_6d96d80b'), path: '/profile' },
+        { label: i18n.t('sharedStatic:hooks.useBreadcrumbModel.eksport_33d30a64'), path: '/export' },
+        { label: i18n.t('export:components.export.BookJob.title'), path },
+      ]);
+      expect(result.current.backToPath).toBe('/export');
+      expect(result.current.items.some((item) => item.path === '/book-exports')).toBe(false);
+      expect(result.current.currentTitle).not.toContain('00000000');
+    } finally {
+      unmount?.();
+      await i18n.changeLanguage(previousLocale);
+    }
+  });
+
+  it('updates book-job labels after a language change without remounting the hook', async () => {
+    const previousLocale = i18n.language;
+    usePathname.mockReturnValue('/book-exports/00000000-0000-4000-8000-000000000000');
+    useLocalSearchParams.mockReturnValue({});
+    let unmount: (() => void) | undefined;
+    try {
+      await i18n.changeLanguage('ru');
+      const screen = renderHook(() => useBreadcrumbModel(), { wrapper });
+      unmount = screen.unmount;
+      expect(screen.result.current.currentTitle).toBe('Книга путешествий');
+      await act(async () => { await i18n.changeLanguage('en'); });
+      await waitFor(() => expect(screen.result.current.currentTitle).toBe('Travel book'));
+      expect(screen.result.current.items.map(item => item.label)).toEqual(['Profile', 'Export', 'Travel book']);
+      expect(screen.result.current.backToPath).toBe('/export');
+    } finally {
+      unmount?.();
+      await i18n.changeLanguage(previousLocale);
+    }
+  });
+
+  it('keeps book-job navigation valid with a trailing route slash', () => {
+    const path = '/book-exports/00000000-0000-4000-8000-000000000000/';
+    usePathname.mockReturnValue(path);
+    useLocalSearchParams.mockReturnValue({});
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    expect(result.current.items.map(item => item.path)).toEqual(['/profile', '/export', path]);
+    expect(result.current.backToPath).toBe('/export');
+    expect(result.current.currentTitle).toBe(i18n.t('export:components.export.BookJob.title'));
+  });
+
   it('does not show breadcrumbs on top-level navigation pages', async () => {
     usePathname.mockReturnValue('/map');
     useLocalSearchParams.mockReturnValue({});
