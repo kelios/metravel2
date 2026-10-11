@@ -1470,9 +1470,9 @@ html[data-season="christmas"] [data-testid="main-header-row"] {
 }
 html[data-season="christmas"] [data-testid="home-hero"] {
   --christmas-book-width: 1200px;
-  --christmas-scene-width: clamp(28px, calc((100vw - var(--christmas-book-width)) / 2 - 6px), 260px);
+  --christmas-scene-width: clamp(28px, calc((100% - var(--christmas-book-width)) / 2 - 6px), 260px);
   background-image: var(--christmas-tree-image), var(--christmas-village-image), var(--season-edge-glow);
-  background-position: left 6px bottom 8px, right 6px bottom 8px, center top, center top;
+  background-position: left 6px top 120px, right 6px top 120px, center top, center top;
   background-size: var(--christmas-scene-width) auto, var(--christmas-scene-width) auto, 100% 100%, 100% 100%;
   background-repeat: no-repeat;
 }

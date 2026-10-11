@@ -97,9 +97,30 @@ describe('seasonal header decoration layers', () => {
     }
   })
 
+  it('keeps complete desktop winter scenes above the fixed footer on the first frame', () => {
+    const hero = declarations(rulesFor('html[data-season="christmas"] [data-testid="home-hero"]')[0])
+    const positions = list.comma(hero['background-position']).slice(0, 2)
+    const maximumWidth = Number(hero['--christmas-scene-width'].match(/,\s*(\d+)px\)$/)![1])
+    const colors = palette('christmas', 'light')
+    for (const [index, token] of ['tree-image', 'village-image'].entries()) {
+      // Bottom anchoring hid the cottage windows under the footer when the book
+      // was taller than the first frame. Reserve header/footer in a short desktop.
+      expect(positions[index]).toMatch(/^(left|right) \d+px top \d+px$/)
+      const top = Number(positions[index].match(/top (\d+)px$/)![1])
+      const image = colors[`--christmas-${token}`].match(/^url\("data:image\/svg\+xml,(.*)"\)$/)!
+      const svg = new DOMParser().parseFromString(decodeURIComponent(image[1]), 'image/svg+xml')
+      const [, , width, height] = svg.documentElement.getAttribute('viewBox')!.split(' ').map(Number)
+      expect(top + maximumWidth * height / width).toBeLessThan(640 - 80 - 56)
+    }
+  })
+
   it('keeps winter scenes on the home background, isolates seasons and clears them for print', () => {
     const selector = 'html[data-season="christmas"] [data-testid="home-hero"]'
     const hero = declarations(rulesFor(selector)[0])
+    // A scrollbar narrows the hero without narrowing 100vw. Percentages size
+    // the scenes from the actual background area, preserving the book gutters.
+    expect(hero['--christmas-scene-width']).toContain('100%')
+    expect(hero['--christmas-scene-width']).not.toContain('vw')
     expect(hero['background-repeat']).toBe('no-repeat')
     expect(hero['background-image']).toContain('var(--christmas-tree-image)')
     expect(hero['background-image']).toContain('var(--christmas-village-image)')
