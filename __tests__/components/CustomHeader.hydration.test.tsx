@@ -44,6 +44,7 @@ jest.mock('@/context/FavoritesContext', () => ({
 }))
 
 jest.mock('@/i18n/LocaleProvider', () => ({
+  ...jest.requireActual('@/i18n/LocaleProvider'),
   useLocale: () => ({
     locale: 'ru',
     preference: { version: 1, mode: 'explicit', locale: 'ru' },

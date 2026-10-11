@@ -1,6 +1,6 @@
 # Сезонное (праздничное) оформление
 
-Карточка: #2376. Сайт «переодевается» к Хэллоуину и к Рождеству/Новому году:
+Карточка: #2376. Сайт «переодевается» к весне, Пасхе, золотой осени, Хэллоуину и Рождеству/Новому году:
 меняются акцентные токены и появляется декоративный слой. Человек выбирает
 «по календарю / выключено / конкретная тема», выбор хранится локально.
 
@@ -17,10 +17,13 @@
 
 | слой | файл | роль |
 | --- | --- | --- |
-| реестр | `constants/seasonalThemes.ts` | `SEASONAL_THEMES`: id, иконка, календарное окно; `resolveSeasonalTheme(pref, date)` |
-| состояние | `hooks/useTheme.ts` | `seasonalTheme` (настройка), `activeSeasonalTheme` (что применено), `setSeasonalTheme`; ключ хранилища `seasonal-theme`; ставит `data-season` на `<html>` |
+| реестр | `constants/seasonalThemes.ts` | `SEASONAL_THEMES`: id, иконка, приоритет, правила; `getSeasonalCalendar(date)`, `resolveSeasonalTheme(pref, date)` |
+| состояние | `hooks/useTheme.ts` | `seasonalTheme` (настройка), `activeSeasonalTheme` (что применено), `setSeasonalTheme`, `seasonalCalendar`; ключ хранилища `seasonal-theme`; ставит `data-season` на `<html>` |
 | визуал | `app/global.css` → блок «Сезонное (праздничное) оформление» | `html[data-season="<id>"]` и `html[data-season="<id>"][data-theme="dark"]` переопределяют `--color-*`/`--gradient-*`; `body::after` — декор |
-| без мигания | `utils/seasonalThemeBootScript.ts` → `app/+html.tsx` | ES5-сниппет ставит `data-season` до гидратации по тем же окнам |
+| календарь | `utils/seasonalCalendarCore.ts` | самодостаточный pure core: фиксированные и пасхальные окна, приоритеты и гражданские даты |
+| полночь | `utils/seasonalThemeClock.ts` → `hooks/useTheme.ts` | один таймер до следующей местной полуночи, пересчёт на focus/visibility/pageshow |
+| статус | `components/layout/SeasonalThemeStatus.tsx` | общий локализованный текущий/следующий период в меню и настройках |
+| без мигания | `utils/seasonalThemeBootScript.ts` → `app/+html.tsx` | ES5-сниппет встраивает тот же pure core и ставит `data-season` до гидратации по живому году клиента |
 | контролы | `components/layout/SeasonalThemeToggle.tsx`, `components/layout/seasonalThemeOptions.tsx`, `components/settings/ThemeSection.tsx` | ряд в меню аккаунта (гость и авторизованный), в мобильном меню шапки и карточка в настройках |
 
 Настройка `seasonalTheme`:
@@ -30,17 +33,34 @@
 - `<id>` — тема включена принудительно, независимо от даты.
 
 Окна включают обе границы и могут переходить через Новый год (`to < from`).
-Окна тем не пересекаются — это проверяет `__tests__/constants/seasonalThemes.test.ts`.
+При пересечении выбирается больший приоритет (Пасха 30, Хэллоуин/Новый год 20, весна/осень 10). Неоднозначное пересечение разных тем одинакового приоритета запрещено проверкой реестра. Проверки обходят все реальные даты, включая дни 29–31.
 
 | тема | окно | акценты |
 | --- | --- | --- |
+| `spring` | 01.03 — 10.03 | цветущие ветви и розово-зелёное свечение |
+| `easter` | −7…+2 дня от каждой даты Пасхи | пастельные яйца и цветущие веточки |
+| `autumn` | 15.09 — 14.10 | медные листья и янтарные огни |
 | `halloween` | 15.10 — 01.11 | тыквенный primary, фиолетовый accent, луна и янтарные фонари |
 | `christmas` | 01.12 — 14.01 | хвойный primary, клюквенный accent, хвоя и тёплая гирлянда |
+
+Пасха вычисляется ежегодно по западному и православному календарям с переводом
+в гражданские Gregorian-даты. Совпадающие/перекрывающиеся окна объединяются;
+если окна разделены, промежуток сохраняет обычное оформление либо другую
+календарную тему. Локаль не определяет календарь или религию посетителя.
+Статус показывает конкретное активное либо ближайшее окно, а не один диапазон
+через промежуток между двумя Пасхами. Даты форматируются через `i18n/format.ts`.
+
+В постоянно видимой вкладке дата пересчитывается в местную полночь. Следующая
+полночь вычисляется календарно, а не прибавлением 24 часов (DST: 23/25 часов).
+После сна/возврата/BFCache дата пересчитывается на focus, visibilitychange и
+pageshow; таймер и слушатели снимаются при unmount. Ручной выбор и off остаются
+приоритетнее календаря. Недоступное хранилище/неизвестное значение дают auto;
+до чтения настроек статус не рисуется, чтобы не создавать SSR-расхождение.
 
 ## Декоративный слой
 
 Статичный `body::after` подсвечивает только верхние края (160 px на desktop,
-100 px на mobile). В шапке `::before` рисует небольшие фонари/луну либо хвойную
+100 px на mobile). В шапке `::before` рисует цветущие ветви, пасхальные детали, листья, фонари/луну либо хвойную
 гирлянду через SVG data-URI; центральная область чтения свободна от частиц.
 Подсветка лежит на видимой бренд-строке, а гирлянда выше непрозрачной обёртки
 шапки, чтобы фон обёртки не закрывал огни.
@@ -48,18 +68,18 @@
 получает тот же неподвижный вид. Все слои `pointer-events: none`, print их скрывает.
 
 `Logo.tsx` сохраняет фирменную птицу, её адрес/preload и размеры 32/26 px.
-`dataSet`-метки рамки и словесного знака дают CSS ореол и маленькую луну/звезду.
+`dataSet`-метки рамки и словесного знака дают CSS ореол и маленькую луну/звезду/цветок/яйцо/лист.
 Цвет Travel локальный: семантический `success` не переопределяется.
 До гидратации CSS уменьшает рамку на том же breakpoint 1280 px, что и изображение.
 
 Иконки переключателя — типизированный Feather (`calendar`, `x-circle`, `moon`,
-`star`). MaterialCommunityIcons на web подменяется Feather-стабом, поэтому
+`star`, `sun`, `gift`, `feather`). MaterialCommunityIcons на web подменяется Feather-стабом, поэтому
 имена из MCI для этого переключателя не подходят.
 
 ## Как добавить тему
 
 1. `constants/seasonalThemes.ts`: добавить id в `SeasonalThemeId` и запись в
-   `SEASONAL_THEMES` (иконка `Feather`, окно).
+   `SEASONAL_THEMES` (иконка `Feather`, приоритет и fixedAnnual/easterRelative правила).
 2. `app/global.css`: два блока — `html[data-season="<id>"]` (светлая) и
    `html[data-season="<id>"][data-theme="dark"]`; задать `--season-canopy-image`,
    `--season-header-glow`, `--season-edge-glow` и `--season-logo-*`.
@@ -74,7 +94,8 @@
 ## Проверки
 
 - `npx jest __tests__/constants/seasonalThemes.test.ts __tests__/utils/seasonalThemeBootScript.test.ts __tests__/hooks/useTheme.test.tsx`
+- `npx jest __tests__/utils/seasonalThemeClock.test.ts __tests__/components/SeasonalThemeStatus.test.tsx __tests__/utils/questThemes.test.ts`
 - `npm run test:i18n`
-- браузер: меню аккаунта → «Праздничное оформление» → четыре состояния;
+- браузер: меню аккаунта → «Праздничное оформление» → auto/off/пять тем;
   `document.documentElement.dataset.season`; перезагрузка без мигания; тёмная
   тема; `prefers-reduced-motion`.

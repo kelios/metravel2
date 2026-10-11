@@ -71,6 +71,7 @@ export default function ThemeOptionGroup<T extends string>({
           borderWidth: 1,
           borderColor: colors.border,
           minWidth: layout === 'horizontal' ? (compact ? 70 : 80) : undefined,
+          maxWidth: '100%',
           justifyContent: 'center',
         },
         buttonActive: {
@@ -84,6 +85,7 @@ export default function ThemeOptionGroup<T extends string>({
           fontSize: compact ? 13 : 14,
           fontWeight: '500',
           color: colors.text,
+          flexShrink: 1,
         },
         labelActive: {
           color: colors.textOnPrimary,
@@ -93,6 +95,7 @@ export default function ThemeOptionGroup<T extends string>({
           height: compact ? 16 : 20,
           alignItems: 'center',
           justifyContent: 'center',
+          flexShrink: 0,
         },
       }),
     [colors, compact, layout]
@@ -101,7 +104,7 @@ export default function ThemeOptionGroup<T extends string>({
   const iconSize = compact ? 16 : 20;
 
   return (
-    <View style={styles.container} testID={testID}>
+    <View style={styles.container} testID={testID} accessibilityRole="radiogroup">
       {options.map((option) => {
         const isActive = value === option.value;
         const accessibilityLabel = getAccessibilityLabel(option);

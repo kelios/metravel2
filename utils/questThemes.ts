@@ -1,6 +1,6 @@
 import { translate as i18nT } from '@/i18n';
 import type { NavigationIconName } from '@/constants/navigationIcons';
-import { SEASONAL_THEMES, isMonthDayInWindow, type SeasonalThemeId } from '@/constants/seasonalThemes';
+import { getSeasonalThemeByCalendar, type SeasonalThemeId } from '@/constants/seasonalThemes';
 import { normalizeQuestTag } from '@/utils/questAudience';
 
 /**
@@ -86,9 +86,7 @@ export function getQuestThemeById(id: string | null | undefined): QuestTheme | n
  */
 export function isQuestThemeActive(theme: QuestTheme, now: Date = new Date()): boolean {
     if (!theme.season) return true;
-    const window = SEASONAL_THEMES.find((seasonal) => seasonal.id === theme.season)?.window;
-    if (!window) return false;
-    return isMonthDayInWindow({ month: now.getMonth() + 1, day: now.getDate() }, window);
+    return getSeasonalThemeByCalendar(now) === theme.season;
 }
 
 export function getActiveQuestThemes(now: Date = new Date()): QuestTheme[] {

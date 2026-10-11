@@ -6,6 +6,7 @@ import NavigationIcon from '@/components/layout/NavigationIcon'
 import { TASK_BOARD_URL } from '@/components/layout/accountMenuModel'
 
 jest.mock('@/i18n/LocaleProvider', () => ({
+  ...jest.requireActual('@/i18n/LocaleProvider'),
   useLocale: () => ({ locale: 'ru', supportedLocales: ['ru'], setLocale: jest.fn() }),
 }))
 

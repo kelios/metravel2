@@ -39,6 +39,18 @@ const OPTION_COPY: Record<SeasonalThemePreference, { label: () => string; descri
     label: () => i18nT('navigationStatic:seasonalTheme.option.christmas'),
     description: () => i18nT('navigationStatic:seasonalTheme.option.christmas.description'),
   },
+  spring: {
+    label: () => i18nT('navigationStatic:seasonalTheme.option.spring'),
+    description: () => i18nT('navigationStatic:seasonalTheme.option.spring.description'),
+  },
+  easter: {
+    label: () => i18nT('navigationStatic:seasonalTheme.option.easter'),
+    description: () => i18nT('navigationStatic:seasonalTheme.option.easter.description'),
+  },
+  autumn: {
+    label: () => i18nT('navigationStatic:seasonalTheme.option.autumn'),
+    description: () => i18nT('navigationStatic:seasonalTheme.option.autumn.description'),
+  },
 };
 
 const PREFERENCE_ICONS: Record<'auto' | 'off', SeasonalIconName> = {

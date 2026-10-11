@@ -149,11 +149,78 @@ describe('useTheme web contract', () => {
   })
 
   it('ignores an unknown persisted seasonal value and stays on auto', async () => {
-    localStorage.setItem('seasonal-theme', 'easter')
+    localStorage.setItem('seasonal-theme', 'unknown-theme')
 
     const { result } = renderHook(() => useTheme(), { wrapper })
 
     await waitFor(() => expect(result.current.theme).toBe('auto'))
     expect(result.current.seasonalTheme).toBe('auto')
+  })
+})
+
+describe('seasonal calendar lifecycle', () => {
+  beforeEach(() => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
+    localStorage.clear()
+    installMatchMedia(false)
+    document.documentElement.removeAttribute('data-season')
+    jest.useFakeTimers()
+    jest.setSystemTime(new Date(2026, 9, 14, 23, 59, 59))
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  it.each([
+    [new Date(2026, 9, 14, 23, 59, 59), 'autumn', 'halloween'],
+    [new Date(2026, 10, 1, 23, 59, 59), 'halloween', null],
+    [new Date(2026, 0, 14, 23, 59, 59), 'christmas', null],
+    [new Date(2026, 1, 28, 23, 59, 59), null, 'spring'],
+  ])('switches at visible midnight on %s', (date, before, after) => {
+    jest.setSystemTime(date)
+    const { result, unmount } = renderHook(() => useTheme(), { wrapper })
+    expect(result.current.activeSeasonalTheme).toBe(before)
+    act(() => jest.advanceTimersByTime(1000))
+    expect(result.current.activeSeasonalTheme).toBe(after)
+    expect(document.documentElement.getAttribute('data-season')).toBe(after)
+    unmount()
+    expect(jest.getTimerCount()).toBe(0)
+  })
+
+  it.each(['focus', 'pageshow', 'visibilitychange'])('catches up on %s without reload', event => {
+    const { result, unmount } = renderHook(() => useTheme(), { wrapper })
+    jest.setSystemTime(new Date(2026, 11, 25, 12))
+    act(() => {
+      if (event === 'visibilitychange') {
+        Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
+        document.dispatchEvent(new Event(event))
+      } else window.dispatchEvent(new Event(event))
+    })
+    expect(result.current.activeSeasonalTheme).toBe('christmas')
+    expect(result.current.seasonalCalendar?.currentPeriod?.id).toBe('christmas')
+    expect(jest.getTimerCount()).toBe(1)
+    unmount()
+    expect(jest.getTimerCount()).toBe(0)
+  })
+
+  it.each(['halloween', 'off'] as const)('preserves explicit %s and dark mode over midnight', preference => {
+    localStorage.setItem('seasonal-theme', preference)
+    localStorage.setItem('theme', 'dark')
+    jest.setSystemTime(new Date(2026, 11, 1, 23, 59, 59))
+    const { result, unmount } = renderHook(() => useTheme(), { wrapper })
+    act(() => jest.advanceTimersByTime(1000))
+    expect(result.current.seasonalTheme).toBe(preference)
+    expect(result.current.activeSeasonalTheme).toBe(preference === 'off' ? null : preference)
+    expect(result.current.isDark).toBe(true)
+    expect(localStorage.getItem('seasonal-theme')).toBe(preference)
+    unmount()
+  })
+
+  it('does not arm a calendar timer on native', () => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' })
+    const { unmount } = renderHook(() => useTheme(), { wrapper })
+    expect(jest.getTimerCount()).toBe(0)
+    unmount()
   })
 })

@@ -6,10 +6,12 @@
 import { useEffect, useMemo, useRef, useState, useCallback, createContext, useContext, createElement, type Context } from 'react';
 import { Appearance, Platform, useColorScheme } from 'react-native';
 import { DESIGN_COLORS, getThemedColors } from '@/constants/designSystem';
+import { millisecondsUntilLocalMidnight } from '@/utils/seasonalThemeClock';
 import {
   SEASONAL_THEME_DOM_ATTRIBUTE,
   SEASONAL_THEME_STORAGE_KEY,
   isSeasonalThemePreference,
+  getSeasonalCalendar,
   resolveSeasonalTheme,
   type SeasonalThemeId,
   type SeasonalThemePreference,
@@ -38,6 +40,8 @@ export interface ThemeContextType {
   seasonalTheme: SeasonalThemePreference;
   /** Фактически применённая праздничная тема (`null` — обычный вид). */
   activeSeasonalTheme: SeasonalThemeId | null;
+  /** Календарный период для общего статуса меню/настроек; null до чтения настроек. */
+  seasonalCalendar: ReturnType<typeof getSeasonalCalendar> | null;
   setSeasonalTheme: (preference: SeasonalThemePreference) => void;
 }
 
@@ -156,6 +160,7 @@ export function useTheme(): ThemeContextType {
       toggleTheme: () => undefined,
       seasonalTheme: 'auto',
       activeSeasonalTheme: null,
+      seasonalCalendar: null,
       setSeasonalTheme: () => undefined,
     };
   }
@@ -182,21 +187,37 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // `app/+html.tsx` уже поставил `data-season` по тем же окнам, здесь атрибут
   // лишь синхронизируется с настройкой после чтения хранилища.
   const [seasonalTheme, setSeasonalThemeState] = useState<SeasonalThemePreference>('auto');
-  // Вкладка, открытая через границу окна (14.10 → 15.10), пересчитывает сезон при
-  // возврате к ней: дата обновляется на visibilitychange и пересобирает memo.
+  // Местная календарная дата обновляется в полночь и после восстановления вкладки.
   const [calendarDate, setCalendarDate] = useState(() => new Date());
+  const calendar = useMemo(() => getSeasonalCalendar(calendarDate), [calendarDate]);
   const activeSeasonalTheme = useMemo(
-    () => resolveSeasonalTheme(seasonalTheme, calendarDate),
-    [seasonalTheme, calendarDate],
+    () => seasonalTheme === 'auto' ? calendar.activeId : resolveSeasonalTheme(seasonalTheme, calendarDate),
+    [seasonalTheme, calendarDate, calendar],
   );
 
   useEffect(() => {
-    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') setCalendarDate(new Date());
+    if (Platform.OS !== 'web' || typeof document === 'undefined' || typeof window === 'undefined') return;
+    let midnightTimer: ReturnType<typeof setTimeout>;
+    const refresh = () => {
+      clearTimeout(midnightTimer);
+      const now = new Date();
+      setCalendarDate(now);
+      // Следующая гражданская дата: сутки на границе DST могут длиться 23/25 часов.
+      midnightTimer = setTimeout(refresh, millisecondsUntilLocalMidnight(now));
     };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    refresh();
     document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', refresh);
+    window.addEventListener('pageshow', refresh);
+    return () => {
+      clearTimeout(midnightTimer);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener('pageshow', refresh);
+    };
   }, []);
 
   // До чтения хранилища атрибуты `<html>` не трогаем (#2376, #2381): SSR-дефолты
@@ -205,6 +226,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // противоположной темы на каждой загрузке. На web чтение синхронное, поэтому
   // сохранённые значения, итоговая схема и флаг попадают в один рендер.
   const [prefsRead, setPrefsRead] = useState(false);
+  const seasonalCalendar = prefsRead ? calendar : null;
   // Системная схема на момент чтения; дальше её ведёт свой эффект, а чтение — одноразовое.
   const systemColorSchemeRef = useRef(systemColorScheme);
   systemColorSchemeRef.current = systemColorScheme;
@@ -298,8 +320,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     toggleTheme,
     seasonalTheme,
     activeSeasonalTheme,
+    seasonalCalendar,
     setSeasonalTheme,
-  }), [savedTheme, isDark, setTheme, toggleTheme, seasonalTheme, activeSeasonalTheme, setSeasonalTheme]);
+  }), [savedTheme, isDark, setTheme, toggleTheme, seasonalTheme, activeSeasonalTheme, seasonalCalendar, setSeasonalTheme]);
 
   return createElement(ThemeContext.Provider, { value }, children);
 }

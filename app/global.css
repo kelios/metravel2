@@ -907,40 +907,301 @@ select:focus-visible {
  * свои `--season-*` токены.
  */
 
-/* ---- Хэллоуин: лунный свет + янтарь, светлая ---- */
-html[data-season="halloween"] {
-  --season-canopy-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%201200%2048%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%238e73b5%22%20stroke-opacity%3D%22.45%22%3E%3Cpath%20d%3D%22M0%203Q150%2022%20300%203T600%203T900%203T1200%203%22%2F%3E%3C%2Fg%3E%3Cpath%20d%3D%22M42%204v12%22%20stroke%3D%22%238e73b5%22%20stroke-opacity%3D%22.6%22%2F%3E%3Cellipse%20cx%3D%2242%22%20cy%3D%2221%22%20rx%3D%2214%22%20ry%3D%2212%22%20fill%3D%22%23e8a24c%22%20opacity%3D%22.12%22%2F%3E%3Crect%20x%3D%2239%22%20y%3D%2215%22%20width%3D%226%22%20height%3D%2210%22%20rx%3D%222%22%20fill%3D%22%23e8a24c%22%2F%3E%3Cpath%20d%3D%22M37%2014h10M38%2026h8%22%20stroke%3D%22%239a4f12%22%20stroke-opacity%3D%22.65%22%2F%3E%3Cpath%20d%3D%22M310%204v7%22%20stroke%3D%22%238e73b5%22%20stroke-opacity%3D%22.6%22%2F%3E%3Cellipse%20cx%3D%22310%22%20cy%3D%2216%22%20rx%3D%2214%22%20ry%3D%2212%22%20fill%3D%22%23e8a24c%22%20opacity%3D%22.12%22%2F%3E%3Crect%20x%3D%22307%22%20y%3D%2210%22%20width%3D%226%22%20height%3D%2210%22%20rx%3D%222%22%20fill%3D%22%23e8a24c%22%2F%3E%3Cpath%20d%3D%22M305%209h10M306%2021h8%22%20stroke%3D%22%239a4f12%22%20stroke-opacity%3D%22.65%22%2F%3E%3Cpath%20d%3D%22M595%204v10%22%20stroke%3D%22%238e73b5%22%20stroke-opacity%3D%22.6%22%2F%3E%3Cellipse%20cx%3D%22595%22%20cy%3D%2219%22%20rx%3D%2214%22%20ry%3D%2212%22%20fill%3D%22%23e8a24c%22%20opacity%3D%22.12%22%2F%3E%3Crect%20x%3D%22592%22%20y%3D%2213%22%20width%3D%226%22%20height%3D%2210%22%20rx%3D%222%22%20fill%3D%22%23e8a24c%22%2F%3E%3Cpath%20d%3D%22M590%2012h10M591%2024h8%22%20stroke%3D%22%239a4f12%22%20stroke-opacity%3D%22.65%22%2F%3E%3Cpath%20d%3D%22M910%204v7%22%20stroke%3D%22%238e73b5%22%20stroke-opacity%3D%22.6%22%2F%3E%3Cellipse%20cx%3D%22910%22%20cy%3D%2216%22%20rx%3D%2214%22%20ry%3D%2212%22%20fill%3D%22%23e8a24c%22%20opacity%3D%22.12%22%2F%3E%3Crect%20x%3D%22907%22%20y%3D%2210%22%20width%3D%226%22%20height%3D%2210%22%20rx%3D%222%22%20fill%3D%22%23e8a24c%22%2F%3E%3Cpath%20d%3D%22M905%209h10M906%2021h8%22%20stroke%3D%22%239a4f12%22%20stroke-opacity%3D%22.65%22%2F%3E%3Cpath%20d%3D%22M1160%204v12%22%20stroke%3D%22%238e73b5%22%20stroke-opacity%3D%22.6%22%2F%3E%3Cellipse%20cx%3D%221160%22%20cy%3D%2221%22%20rx%3D%2214%22%20ry%3D%2212%22%20fill%3D%22%23e8a24c%22%20opacity%3D%22.12%22%2F%3E%3Crect%20x%3D%221157%22%20y%3D%2215%22%20width%3D%226%22%20height%3D%2210%22%20rx%3D%222%22%20fill%3D%22%23e8a24c%22%2F%3E%3Cpath%20d%3D%22M1155%2014h10M1156%2026h8%22%20stroke%3D%22%239a4f12%22%20stroke-opacity%3D%22.65%22%2F%3E%3Cpath%20d%3D%22M180%208a7%207%200%201%200%2010%208A8%208%200%200%201%20180%208%22%20fill%3D%22%23b39ad6%22%2F%3E%3Cg%20fill%3D%22%23b39ad6%22%20opacity%3D%22.7%22%3E%3Ccircle%20cx%3D%22460%22%20cy%3D%2211%22%20r%3D%221.2%22%2F%3E%3Ccircle%20cx%3D%22770%22%20cy%3D%227%22%20r%3D%221.5%22%2F%3E%3Ccircle%20cx%3D%221040%22%20cy%3D%2215%22%20r%3D%221%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
-  --season-header-glow: linear-gradient(110deg, rgba(142, 115, 181, 0.16), transparent 48%, rgba(232, 150, 90, 0.12));
-  --season-edge-glow: radial-gradient(ellipse at 0% 0%, rgba(142, 115, 181, 0.18), transparent 42%), radial-gradient(ellipse at 100% 0%, rgba(232, 150, 90, 0.14), transparent 38%);
-  --season-logo-glow: rgba(217, 135, 63, 0.32);
-  --season-logo-jewel: #d9873f;
-  --season-logo-wordmark: #78609e;
-  --color-background: #f8f5fc;
-  --color-backgroundSecondary: #f1ebf6;
-  --color-backgroundTertiary: #e9e1f0;
-  --color-primary: #d9873f;
-  --color-primary-30: #d9873f30;
-  --color-primary-40: #d9873f40;
-  --color-primary-50: #d9873f50;
-  --color-primaryDark: #c27030;
-  --color-primaryText: #9a4f12;
-  --color-primaryLight: #fbefe4;
-  --color-primarySoft: rgba(217, 135, 63, 0.08);
-  --color-accent: #8e73b5;
-  --color-accentDark: #78609e;
-  --color-accentLight: #f1edf7;
-  --color-accentSoft: rgba(142, 115, 181, 0.10);
-  --color-borderAccent: rgba(217, 135, 63, 0.20);
-  --color-focus: rgba(142, 115, 181, 0.40);
-  --color-focusStrong: rgba(142, 115, 181, 0.55);
-  --gradient-hero: radial-gradient(ellipse at 10% 0%, rgba(142, 115, 181, 0.18), transparent 55%), linear-gradient(135deg, #f1ebf6 0%, #fbefe4 100%);
-  --gradient-section-bg: radial-gradient(ellipse at top, rgba(142, 115, 181, 0.08) 0%, transparent 70%);
+/* ---- Весна: цветущие ветви + розовый сад: светлая ---- */
+html[data-season="spring"] {
+  --season-canopy-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201200%2048'%3E%3Cg%20transform='translate%2812%200%29'%20stroke='%23446d57'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%23446d57'%20opacity='.7'/%3E%3Cg%20fill='%23b47687'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cg%20transform='translate%28214%200%29'%20stroke='%23446d57'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%23446d57'%20opacity='.7'/%3E%3Cg%20fill='%23b47687'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cg%20transform='translate%28410%200%29'%20stroke='%23446d57'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%23446d57'%20opacity='.7'/%3E%3Cg%20fill='%23b47687'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cg%20transform='translate%28610%200%29'%20stroke='%23446d57'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%23446d57'%20opacity='.7'/%3E%3Cg%20fill='%23b47687'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cg%20transform='translate%28816%200%29'%20stroke='%23446d57'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%23446d57'%20opacity='.7'/%3E%3Cg%20fill='%23b47687'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cg%20transform='translate%281016%200%29'%20stroke='%23446d57'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%23446d57'%20opacity='.7'/%3E%3Cg%20fill='%23b47687'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cpath%20d='M124%205q14%203%2018%2012'%20stroke='%23446d57'%20stroke-opacity='.35'%20fill='none'/%3E%3Ccircle%20cx='142'%20cy='17'%20r='2'%20fill='%23b47687'%20opacity='.65'/%3E%3Cpath%20d='M328%205q14%203%2018%2012'%20stroke='%23446d57'%20stroke-opacity='.35'%20fill='none'/%3E%3Ccircle%20cx='346'%20cy='17'%20r='2'%20fill='%23b47687'%20opacity='.65'/%3E%3Cpath%20d='M530%205q14%203%2018%2012'%20stroke='%23446d57'%20stroke-opacity='.35'%20fill='none'/%3E%3Ccircle%20cx='548'%20cy='17'%20r='2'%20fill='%23b47687'%20opacity='.65'/%3E%3Cpath%20d='M730%205q14%203%2018%2012'%20stroke='%23446d57'%20stroke-opacity='.35'%20fill='none'/%3E%3Ccircle%20cx='748'%20cy='17'%20r='2'%20fill='%23b47687'%20opacity='.65'/%3E%3Cpath%20d='M930%205q14%203%2018%2012'%20stroke='%23446d57'%20stroke-opacity='.35'%20fill='none'/%3E%3Ccircle%20cx='948'%20cy='17'%20r='2'%20fill='%23b47687'%20opacity='.65'/%3E%3Cpath%20d='M1134%205q14%203%2018%2012'%20stroke='%23446d57'%20stroke-opacity='.35'%20fill='none'/%3E%3Ccircle%20cx='1152'%20cy='17'%20r='2'%20fill='%23b47687'%20opacity='.65'/%3E%3C/svg%3E");
+  --season-header-glow: linear-gradient(110deg, rgba(68, 109, 87, 0.1), transparent 48%, rgba(180, 118, 135, 0.1));
+  --season-edge-glow: radial-gradient(ellipse at 0% 0%, rgba(68, 109, 87, 0.08), transparent 42%), radial-gradient(ellipse at 100% 0%, rgba(180, 118, 135, 0.08), transparent 38%);
+  --season-logo-glow: rgba(180, 118, 135, 0.3);
+  --season-logo-jewel: #b47687;
+  --season-logo-wordmark: #5f6d61;
+  --color-background: #fff9f8;
+  --color-backgroundSecondary: #fcf5f4;
+  --color-backgroundTertiary: #f7efef;
+  --color-surface: #ffffff;
+  --color-surface-40: #ffffff40;
+  --color-surfaceMuted: rgba(255, 255, 255, 0.75);
+  --color-surfaceElevated: #fffafa;
+  --color-card: #ffffff;
+  --color-cardMuted: #fcf5f4;
+  --color-dockBackground: #ffffff;
+  --color-text: #39343b;
+  --color-textMuted: #655b64;
+  --color-textSubtle: #706571;
+  --color-primary: #ad7580;
+  --color-primary-30: #ad758030;
+  --color-primary-40: #ad758040;
+  --color-primary-50: #ad758050;
+  --color-primaryDark: #a9717c;
+  --color-primaryText: #864d5c;
+  --color-primaryLight: #f9e8ec;
+  --color-primarySoft: rgba(173, 117, 128, 0.08);
+  --color-accent: #446d57;
+  --color-accentDark: #385b48;
+  --color-accentLight: #eaf3ed;
+  --color-accentSoft: rgba(68, 109, 87, 0.1);
+  --color-borderAccent: rgba(173, 117, 128, 0.2);
+  --color-focus: #864d5c;
+  --color-focusStrong: #446d57;
+  --gradient-hero: radial-gradient(ellipse at 10% 0%, rgba(68, 109, 87, 0.14), transparent 55%), linear-gradient(135deg, #fcf5f4 0%, #f9e8ec 100%);
+  --gradient-card-featured: linear-gradient(180deg, #fffafa 0%, #ffffff 100%);
+  --gradient-section-bg: radial-gradient(ellipse at top, rgba(68, 109, 87, 0.08), transparent 70%);
 }
 
-/* ---- Хэллоуин: тёмная ---- */
+/* ---- Весна: цветущие ветви + розовый сад: тёмная ---- */
+html[data-season="spring"][data-theme="dark"] {
+  --season-canopy-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201200%2048'%3E%3Cg%20transform='translate%2812%200%29'%20stroke='%23a2c9ae'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%23a2c9ae'%20opacity='.7'/%3E%3Cg%20fill='%23edb6c4'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cg%20transform='translate%28214%200%29'%20stroke='%23a2c9ae'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%23a2c9ae'%20opacity='.7'/%3E%3Cg%20fill='%23edb6c4'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cg%20transform='translate%28410%200%29'%20stroke='%23a2c9ae'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%23a2c9ae'%20opacity='.7'/%3E%3Cg%20fill='%23edb6c4'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cg%20transform='translate%28610%200%29'%20stroke='%23a2c9ae'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%23a2c9ae'%20opacity='.7'/%3E%3Cg%20fill='%23edb6c4'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cg%20transform='translate%28816%200%29'%20stroke='%23a2c9ae'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%23a2c9ae'%20opacity='.7'/%3E%3Cg%20fill='%23edb6c4'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cg%20transform='translate%281016%200%29'%20stroke='%23a2c9ae'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%23a2c9ae'%20opacity='.7'/%3E%3Cg%20fill='%23edb6c4'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cpath%20d='M124%205q14%203%2018%2012'%20stroke='%23a2c9ae'%20stroke-opacity='.35'%20fill='none'/%3E%3Ccircle%20cx='142'%20cy='17'%20r='2'%20fill='%23edb6c4'%20opacity='.65'/%3E%3Cpath%20d='M328%205q14%203%2018%2012'%20stroke='%23a2c9ae'%20stroke-opacity='.35'%20fill='none'/%3E%3Ccircle%20cx='346'%20cy='17'%20r='2'%20fill='%23edb6c4'%20opacity='.65'/%3E%3Cpath%20d='M530%205q14%203%2018%2012'%20stroke='%23a2c9ae'%20stroke-opacity='.35'%20fill='none'/%3E%3Ccircle%20cx='548'%20cy='17'%20r='2'%20fill='%23edb6c4'%20opacity='.65'/%3E%3Cpath%20d='M730%205q14%203%2018%2012'%20stroke='%23a2c9ae'%20stroke-opacity='.35'%20fill='none'/%3E%3Ccircle%20cx='748'%20cy='17'%20r='2'%20fill='%23edb6c4'%20opacity='.65'/%3E%3Cpath%20d='M930%205q14%203%2018%2012'%20stroke='%23a2c9ae'%20stroke-opacity='.35'%20fill='none'/%3E%3Ccircle%20cx='948'%20cy='17'%20r='2'%20fill='%23edb6c4'%20opacity='.65'/%3E%3Cpath%20d='M1134%205q14%203%2018%2012'%20stroke='%23a2c9ae'%20stroke-opacity='.35'%20fill='none'/%3E%3Ccircle%20cx='1152'%20cy='17'%20r='2'%20fill='%23edb6c4'%20opacity='.65'/%3E%3C/svg%3E");
+  --season-header-glow: linear-gradient(110deg, rgba(162, 201, 174, 0.1), transparent 48%, rgba(237, 182, 196, 0.1));
+  --season-edge-glow: radial-gradient(ellipse at 0% 0%, rgba(162, 201, 174, 0.08), transparent 42%), radial-gradient(ellipse at 100% 0%, rgba(237, 182, 196, 0.08), transparent 38%);
+  --season-logo-glow: rgba(237, 182, 196, 0.3);
+  --season-logo-jewel: #edb6c4;
+  --season-logo-wordmark: #b8d7c0;
+  --color-background: #141e19;
+  --color-backgroundSecondary: #1a2520;
+  --color-backgroundTertiary: #243027;
+  --color-surface: #243027;
+  --color-surface-40: #24302740;
+  --color-surfaceMuted: rgba(36, 48, 39, 0.75);
+  --color-surfaceElevated: #2b372e;
+  --color-card: #243027;
+  --color-cardMuted: #1a2520;
+  --color-dockBackground: #243027;
+  --color-text: #eee9e3;
+  --color-textMuted: #c5bcc9;
+  --color-textSubtle: #b4aab8;
+  --color-primary: #d69fac;
+  --color-primary-30: #d69fac30;
+  --color-primary-40: #d69fac40;
+  --color-primary-50: #d69fac50;
+  --color-primaryDark: #ca929f;
+  --color-primaryText: #edb6c4;
+  --color-primaryLight: #392b32;
+  --color-primarySoft: rgba(214, 159, 172, 0.12);
+  --color-accent: #a2c9ae;
+  --color-accentDark: #94bda1;
+  --color-accentLight: #293a30;
+  --color-accentSoft: rgba(162, 201, 174, 0.12);
+  --color-borderAccent: rgba(214, 159, 172, 0.25);
+  --color-focus: #edb6c4;
+  --color-focusStrong: #a2c9ae;
+  --gradient-hero: radial-gradient(ellipse at 10% 0%, rgba(162, 201, 174, 0.14), transparent 55%), linear-gradient(135deg, #1a2520 0%, #392b32 100%);
+  --gradient-card-featured: linear-gradient(180deg, #2b372e 0%, #243027 100%);
+  --gradient-section-bg: radial-gradient(ellipse at top, rgba(162, 201, 174, 0.08), transparent 70%);
+}
+
+/* ---- Пасха: пастельные яйца + цветущие ветви: светлая ---- */
+html[data-season="easter"] {
+  --season-canopy-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201200%2048'%3E%3Cg%20transform='translate%2812%200%29'%20stroke='%23457169'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%23457169'%20opacity='.7'/%3E%3Cg%20fill='%23a38ab9'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cg%20transform='translate%28214%200%29'%20stroke='%23457169'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%23457169'%20opacity='.7'/%3E%3Cg%20fill='%23a38ab9'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cg%20transform='translate%28410%200%29'%20stroke='%23457169'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%23457169'%20opacity='.7'/%3E%3Cg%20fill='%23a38ab9'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cg%20transform='translate%28610%200%29'%20stroke='%23457169'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%23457169'%20opacity='.7'/%3E%3Cg%20fill='%23a38ab9'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cg%20transform='translate%28816%200%29'%20stroke='%23457169'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%23457169'%20opacity='.7'/%3E%3Cg%20fill='%23a38ab9'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cg%20transform='translate%281016%200%29'%20stroke='%23457169'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%23457169'%20opacity='.7'/%3E%3Cg%20fill='%23a38ab9'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cg%20transform='translate%28124%209%29'%3E%3Cpath%20d='M0%2010C0%204%203%200%206%200s6%204%206%2010c0%207-12%207-12%200'%20fill='%23a38ab9'/%3E%3Cpath%20d='M1%207h10M2%2011l2-2%202%202%202-2%202%202'%20fill='none'%20stroke='%23cda04f'%20stroke-width='1'/%3E%3C/g%3E%3Cg%20transform='translate%28328%209%29'%3E%3Cpath%20d='M0%2010C0%204%203%200%206%200s6%204%206%2010c0%207-12%207-12%200'%20fill='%23a38ab9'/%3E%3Cpath%20d='M1%207h10M2%2011l2-2%202%202%202-2%202%202'%20fill='none'%20stroke='%23cda04f'%20stroke-width='1'/%3E%3C/g%3E%3Cg%20transform='translate%28530%209%29'%3E%3Cpath%20d='M0%2010C0%204%203%200%206%200s6%204%206%2010c0%207-12%207-12%200'%20fill='%23a38ab9'/%3E%3Cpath%20d='M1%207h10M2%2011l2-2%202%202%202-2%202%202'%20fill='none'%20stroke='%23cda04f'%20stroke-width='1'/%3E%3C/g%3E%3Cg%20transform='translate%28730%209%29'%3E%3Cpath%20d='M0%2010C0%204%203%200%206%200s6%204%206%2010c0%207-12%207-12%200'%20fill='%23a38ab9'/%3E%3Cpath%20d='M1%207h10M2%2011l2-2%202%202%202-2%202%202'%20fill='none'%20stroke='%23cda04f'%20stroke-width='1'/%3E%3C/g%3E%3Cg%20transform='translate%28930%209%29'%3E%3Cpath%20d='M0%2010C0%204%203%200%206%200s6%204%206%2010c0%207-12%207-12%200'%20fill='%23a38ab9'/%3E%3Cpath%20d='M1%207h10M2%2011l2-2%202%202%202-2%202%202'%20fill='none'%20stroke='%23cda04f'%20stroke-width='1'/%3E%3C/g%3E%3Cg%20transform='translate%281134%209%29'%3E%3Cpath%20d='M0%2010C0%204%203%200%206%200s6%204%206%2010c0%207-12%207-12%200'%20fill='%23a38ab9'/%3E%3Cpath%20d='M1%207h10M2%2011l2-2%202%202%202-2%202%202'%20fill='none'%20stroke='%23cda04f'%20stroke-width='1'/%3E%3C/g%3E%3C/svg%3E");
+  --season-header-glow: linear-gradient(110deg, rgba(69, 113, 105, 0.1), transparent 48%, rgba(163, 138, 185, 0.1));
+  --season-edge-glow: radial-gradient(ellipse at 0% 0%, rgba(69, 113, 105, 0.08), transparent 42%), radial-gradient(ellipse at 100% 0%, rgba(163, 138, 185, 0.08), transparent 38%);
+  --season-logo-glow: rgba(163, 138, 185, 0.3);
+  --season-logo-jewel: #a38ab9;
+  --season-logo-wordmark: #665681;
+  --color-background: #fcfaf6;
+  --color-backgroundSecondary: #f8f5f0;
+  --color-backgroundTertiary: #f4f0eb;
+  --color-surface: #ffffff;
+  --color-surface-40: #ffffff40;
+  --color-surfaceMuted: rgba(255, 255, 255, 0.75);
+  --color-surfaceElevated: #fffcf8;
+  --color-card: #ffffff;
+  --color-cardMuted: #f8f5f0;
+  --color-dockBackground: #ffffff;
+  --color-text: #39343b;
+  --color-textMuted: #655b64;
+  --color-textSubtle: #706571;
+  --color-primary: #947fa9;
+  --color-primary-30: #947fa930;
+  --color-primary-40: #947fa940;
+  --color-primary-50: #947fa950;
+  --color-primaryDark: #907ba5;
+  --color-primaryText: #705087;
+  --color-primaryLight: #f1eaf7;
+  --color-primarySoft: rgba(148, 127, 169, 0.08);
+  --color-accent: #457169;
+  --color-accentDark: #3c655c;
+  --color-accentLight: #e8f2ee;
+  --color-accentSoft: rgba(69, 113, 105, 0.1);
+  --color-borderAccent: rgba(148, 127, 169, 0.2);
+  --color-focus: #705087;
+  --color-focusStrong: #457169;
+  --gradient-hero: radial-gradient(ellipse at 10% 0%, rgba(69, 113, 105, 0.14), transparent 55%), linear-gradient(135deg, #f8f5f0 0%, #f1eaf7 100%);
+  --gradient-card-featured: linear-gradient(180deg, #fffcf8 0%, #ffffff 100%);
+  --gradient-section-bg: radial-gradient(ellipse at top, rgba(69, 113, 105, 0.08), transparent 70%);
+}
+
+/* ---- Пасха: пастельные яйца + цветущие ветви: тёмная ---- */
+html[data-season="easter"][data-theme="dark"] {
+  --season-canopy-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201200%2048'%3E%3Cg%20transform='translate%2812%200%29'%20stroke='%2398c9bd'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%2398c9bd'%20opacity='.7'/%3E%3Cg%20fill='%23cfbcea'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cg%20transform='translate%28214%200%29'%20stroke='%2398c9bd'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%2398c9bd'%20opacity='.7'/%3E%3Cg%20fill='%23cfbcea'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cg%20transform='translate%28410%200%29'%20stroke='%2398c9bd'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%2398c9bd'%20opacity='.7'/%3E%3Cg%20fill='%23cfbcea'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cg%20transform='translate%28610%200%29'%20stroke='%2398c9bd'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%2398c9bd'%20opacity='.7'/%3E%3Cg%20fill='%23cfbcea'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cg%20transform='translate%28816%200%29'%20stroke='%2398c9bd'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%2398c9bd'%20opacity='.7'/%3E%3Cg%20fill='%23cfbcea'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cg%20transform='translate%281016%200%29'%20stroke='%2398c9bd'%20stroke-width='1.2'%20stroke-linecap='round'%3E%3Cpath%20d='M0%206q24-4%2045%207m-31-6%204%2010m8-7%207-7m4%2010%205%207'%20fill='none'/%3E%3Cpath%20d='M10%206q2-8%208-4-1%207-8%204m19%204q3%208%2010%205-2-7-10-5'%20fill='%2398c9bd'%20opacity='.7'/%3E%3Cg%20fill='%23cfbcea'%20stroke='none'%3E%3Ccircle%20cx='18'%20cy='17'%20r='3'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='21'%20cy='15'%20r='2.2'/%3E%3Ccircle%20cx='33'%20cy='3'%20r='2.6'/%3E%3Ccircle%20cx='42'%20cy='20'%20r='2.7'/%3E%3C/g%3E%3C/g%3E%3Cg%20transform='translate%28124%209%29'%3E%3Cpath%20d='M0%2010C0%204%203%200%206%200s6%204%206%2010c0%207-12%207-12%200'%20fill='%23cfbcea'/%3E%3Cpath%20d='M1%207h10M2%2011l2-2%202%202%202-2%202%202'%20fill='none'%20stroke='%23efc878'%20stroke-width='1'/%3E%3C/g%3E%3Cg%20transform='translate%28328%209%29'%3E%3Cpath%20d='M0%2010C0%204%203%200%206%200s6%204%206%2010c0%207-12%207-12%200'%20fill='%23cfbcea'/%3E%3Cpath%20d='M1%207h10M2%2011l2-2%202%202%202-2%202%202'%20fill='none'%20stroke='%23efc878'%20stroke-width='1'/%3E%3C/g%3E%3Cg%20transform='translate%28530%209%29'%3E%3Cpath%20d='M0%2010C0%204%203%200%206%200s6%204%206%2010c0%207-12%207-12%200'%20fill='%23cfbcea'/%3E%3Cpath%20d='M1%207h10M2%2011l2-2%202%202%202-2%202%202'%20fill='none'%20stroke='%23efc878'%20stroke-width='1'/%3E%3C/g%3E%3Cg%20transform='translate%28730%209%29'%3E%3Cpath%20d='M0%2010C0%204%203%200%206%200s6%204%206%2010c0%207-12%207-12%200'%20fill='%23cfbcea'/%3E%3Cpath%20d='M1%207h10M2%2011l2-2%202%202%202-2%202%202'%20fill='none'%20stroke='%23efc878'%20stroke-width='1'/%3E%3C/g%3E%3Cg%20transform='translate%28930%209%29'%3E%3Cpath%20d='M0%2010C0%204%203%200%206%200s6%204%206%2010c0%207-12%207-12%200'%20fill='%23cfbcea'/%3E%3Cpath%20d='M1%207h10M2%2011l2-2%202%202%202-2%202%202'%20fill='none'%20stroke='%23efc878'%20stroke-width='1'/%3E%3C/g%3E%3Cg%20transform='translate%281134%209%29'%3E%3Cpath%20d='M0%2010C0%204%203%200%206%200s6%204%206%2010c0%207-12%207-12%200'%20fill='%23cfbcea'/%3E%3Cpath%20d='M1%207h10M2%2011l2-2%202%202%202-2%202%202'%20fill='none'%20stroke='%23efc878'%20stroke-width='1'/%3E%3C/g%3E%3C/svg%3E");
+  --season-header-glow: linear-gradient(110deg, rgba(152, 201, 189, 0.1), transparent 48%, rgba(207, 188, 234, 0.1));
+  --season-edge-glow: radial-gradient(ellipse at 0% 0%, rgba(152, 201, 189, 0.08), transparent 42%), radial-gradient(ellipse at 100% 0%, rgba(207, 188, 234, 0.08), transparent 38%);
+  --season-logo-glow: rgba(207, 188, 234, 0.3);
+  --season-logo-jewel: #cfbcea;
+  --season-logo-wordmark: #c5b4e4;
+  --color-background: #121d25;
+  --color-backgroundSecondary: #192630;
+  --color-backgroundTertiary: #22313c;
+  --color-surface: #22313c;
+  --color-surface-40: #22313c40;
+  --color-surfaceMuted: rgba(34, 49, 60, 0.75);
+  --color-surfaceElevated: #293947;
+  --color-card: #22313c;
+  --color-cardMuted: #192630;
+  --color-dockBackground: #22313c;
+  --color-text: #eee9e3;
+  --color-textMuted: #c5bcc9;
+  --color-textSubtle: #b4aab8;
+  --color-primary: #b7a5d7;
+  --color-primary-30: #b7a5d730;
+  --color-primary-40: #b7a5d740;
+  --color-primary-50: #b7a5d750;
+  --color-primaryDark: #ab99cb;
+  --color-primaryText: #cfbcea;
+  --color-primaryLight: #303045;
+  --color-primarySoft: rgba(183, 165, 215, 0.12);
+  --color-accent: #98c9bd;
+  --color-accentDark: #89baae;
+  --color-accentLight: #253e3a;
+  --color-accentSoft: rgba(152, 201, 189, 0.12);
+  --color-borderAccent: rgba(183, 165, 215, 0.25);
+  --color-focus: #cfbcea;
+  --color-focusStrong: #98c9bd;
+  --gradient-hero: radial-gradient(ellipse at 10% 0%, rgba(152, 201, 189, 0.14), transparent 55%), linear-gradient(135deg, #192630 0%, #303045 100%);
+  --gradient-card-featured: linear-gradient(180deg, #293947 0%, #22313c 100%);
+  --gradient-section-bg: radial-gradient(ellipse at top, rgba(152, 201, 189, 0.08), transparent 70%);
+}
+
+/* ---- Золотая осень: медные листья + янтарь: светлая ---- */
+html[data-season="autumn"] {
+  --season-canopy-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201200%2048'%3E%3Cg%20transform='translate%2814%203%29'%3E%3Cpath%20d='M0%205q20-7%2042%208m-26-6%207%2012'%20fill='none'%20stroke='%23746344'%20stroke-width='1'/%3E%3Cpath%20d='M7%205q-1-9%2011-4-1%209-11%204M21%209q1%2013%2013%208-2-10-13-8'%20fill='%23b77435'/%3E%3Cpath%20d='M7%205%2018%201m4%209%2011%207'%20stroke='%23cda04f'%20stroke-width='.8'/%3E%3C/g%3E%3Cg%20transform='translate%28220%203%29'%3E%3Cpath%20d='M0%205q20-7%2042%208m-26-6%207%2012'%20fill='none'%20stroke='%23746344'%20stroke-width='1'/%3E%3Cpath%20d='M7%205q-1-9%2011-4-1%209-11%204M21%209q1%2013%2013%208-2-10-13-8'%20fill='%23b77435'/%3E%3Cpath%20d='M7%205%2018%201m4%209%2011%207'%20stroke='%23cda04f'%20stroke-width='.8'/%3E%3C/g%3E%3Cg%20transform='translate%28420%203%29'%3E%3Cpath%20d='M0%205q20-7%2042%208m-26-6%207%2012'%20fill='none'%20stroke='%23746344'%20stroke-width='1'/%3E%3Cpath%20d='M7%205q-1-9%2011-4-1%209-11%204M21%209q1%2013%2013%208-2-10-13-8'%20fill='%23b77435'/%3E%3Cpath%20d='M7%205%2018%201m4%209%2011%207'%20stroke='%23cda04f'%20stroke-width='.8'/%3E%3C/g%3E%3Cg%20transform='translate%28622%203%29'%3E%3Cpath%20d='M0%205q20-7%2042%208m-26-6%207%2012'%20fill='none'%20stroke='%23746344'%20stroke-width='1'/%3E%3Cpath%20d='M7%205q-1-9%2011-4-1%209-11%204M21%209q1%2013%2013%208-2-10-13-8'%20fill='%23b77435'/%3E%3Cpath%20d='M7%205%2018%201m4%209%2011%207'%20stroke='%23cda04f'%20stroke-width='.8'/%3E%3C/g%3E%3Cg%20transform='translate%28824%203%29'%3E%3Cpath%20d='M0%205q20-7%2042%208m-26-6%207%2012'%20fill='none'%20stroke='%23746344'%20stroke-width='1'/%3E%3Cpath%20d='M7%205q-1-9%2011-4-1%209-11%204M21%209q1%2013%2013%208-2-10-13-8'%20fill='%23b77435'/%3E%3Cpath%20d='M7%205%2018%201m4%209%2011%207'%20stroke='%23cda04f'%20stroke-width='.8'/%3E%3C/g%3E%3Cg%20transform='translate%281028%203%29'%3E%3Cpath%20d='M0%205q20-7%2042%208m-26-6%207%2012'%20fill='none'%20stroke='%23746344'%20stroke-width='1'/%3E%3Cpath%20d='M7%205q-1-9%2011-4-1%209-11%204M21%209q1%2013%2013%208-2-10-13-8'%20fill='%23b77435'/%3E%3Cpath%20d='M7%205%2018%201m4%209%2011%207'%20stroke='%23cda04f'%20stroke-width='.8'/%3E%3C/g%3E%3Ccircle%20cx='122'%20cy='12'%20r='7'%20fill='%23cda04f'%20opacity='.14'/%3E%3Ccircle%20cx='122'%20cy='12'%20r='1.8'%20fill='%23cda04f'/%3E%3Ccircle%20cx='330'%20cy='12'%20r='7'%20fill='%23cda04f'%20opacity='.14'/%3E%3Ccircle%20cx='330'%20cy='12'%20r='1.8'%20fill='%23cda04f'/%3E%3Ccircle%20cx='532'%20cy='12'%20r='7'%20fill='%23cda04f'%20opacity='.14'/%3E%3Ccircle%20cx='532'%20cy='12'%20r='1.8'%20fill='%23cda04f'/%3E%3Ccircle%20cx='734'%20cy='12'%20r='7'%20fill='%23cda04f'%20opacity='.14'/%3E%3Ccircle%20cx='734'%20cy='12'%20r='1.8'%20fill='%23cda04f'/%3E%3Ccircle%20cx='936'%20cy='12'%20r='7'%20fill='%23cda04f'%20opacity='.14'/%3E%3Ccircle%20cx='936'%20cy='12'%20r='1.8'%20fill='%23cda04f'/%3E%3Ccircle%20cx='1138'%20cy='12'%20r='7'%20fill='%23cda04f'%20opacity='.14'/%3E%3Ccircle%20cx='1138'%20cy='12'%20r='1.8'%20fill='%23cda04f'/%3E%3C/svg%3E");
+  --season-header-glow: linear-gradient(110deg, rgba(116, 99, 68, 0.1), transparent 48%, rgba(183, 116, 53, 0.1));
+  --season-edge-glow: radial-gradient(ellipse at 0% 0%, rgba(116, 99, 68, 0.08), transparent 42%), radial-gradient(ellipse at 100% 0%, rgba(183, 116, 53, 0.08), transparent 38%);
+  --season-logo-glow: rgba(183, 116, 53, 0.3);
+  --season-logo-jewel: #b77435;
+  --season-logo-wordmark: #705333;
+  --color-background: #fdfaf4;
+  --color-backgroundSecondary: #faf5ee;
+  --color-backgroundTertiary: #f5efe5;
+  --color-surface: #ffffff;
+  --color-surface-40: #ffffff40;
+  --color-surfaceMuted: rgba(255, 255, 255, 0.75);
+  --color-surfaceElevated: #fffaf3;
+  --color-card: #ffffff;
+  --color-cardMuted: #faf5ee;
+  --color-dockBackground: #ffffff;
+  --color-text: #39343b;
+  --color-textMuted: #655b64;
+  --color-textSubtle: #706571;
+  --color-primary: #ad783f;
+  --color-primary-30: #ad783f30;
+  --color-primary-40: #ad783f40;
+  --color-primary-50: #ad783f50;
+  --color-primaryDark: #aa783f;
+  --color-primaryText: #8d5420;
+  --color-primaryLight: #f8ecda;
+  --color-primarySoft: rgba(173, 120, 63, 0.08);
+  --color-accent: #746344;
+  --color-accentDark: #655537;
+  --color-accentLight: #f1eee5;
+  --color-accentSoft: rgba(116, 99, 68, 0.1);
+  --color-borderAccent: rgba(173, 120, 63, 0.2);
+  --color-focus: #8d5420;
+  --color-focusStrong: #746344;
+  --gradient-hero: radial-gradient(ellipse at 10% 0%, rgba(116, 99, 68, 0.14), transparent 55%), linear-gradient(135deg, #faf5ee 0%, #f8ecda 100%);
+  --gradient-card-featured: linear-gradient(180deg, #fffaf3 0%, #ffffff 100%);
+  --gradient-section-bg: radial-gradient(ellipse at top, rgba(116, 99, 68, 0.08), transparent 70%);
+}
+
+/* ---- Золотая осень: медные листья + янтарь: тёмная ---- */
+html[data-season="autumn"][data-theme="dark"] {
+  --season-canopy-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201200%2048'%3E%3Cg%20transform='translate%2814%203%29'%3E%3Cpath%20d='M0%205q20-7%2042%208m-26-6%207%2012'%20fill='none'%20stroke='%23c5b38c'%20stroke-width='1'/%3E%3Cpath%20d='M7%205q-1-9%2011-4-1%209-11%204M21%209q1%2013%2013%208-2-10-13-8'%20fill='%23eab880'/%3E%3Cpath%20d='M7%205%2018%201m4%209%2011%207'%20stroke='%23efc878'%20stroke-width='.8'/%3E%3C/g%3E%3Cg%20transform='translate%28220%203%29'%3E%3Cpath%20d='M0%205q20-7%2042%208m-26-6%207%2012'%20fill='none'%20stroke='%23c5b38c'%20stroke-width='1'/%3E%3Cpath%20d='M7%205q-1-9%2011-4-1%209-11%204M21%209q1%2013%2013%208-2-10-13-8'%20fill='%23eab880'/%3E%3Cpath%20d='M7%205%2018%201m4%209%2011%207'%20stroke='%23efc878'%20stroke-width='.8'/%3E%3C/g%3E%3Cg%20transform='translate%28420%203%29'%3E%3Cpath%20d='M0%205q20-7%2042%208m-26-6%207%2012'%20fill='none'%20stroke='%23c5b38c'%20stroke-width='1'/%3E%3Cpath%20d='M7%205q-1-9%2011-4-1%209-11%204M21%209q1%2013%2013%208-2-10-13-8'%20fill='%23eab880'/%3E%3Cpath%20d='M7%205%2018%201m4%209%2011%207'%20stroke='%23efc878'%20stroke-width='.8'/%3E%3C/g%3E%3Cg%20transform='translate%28622%203%29'%3E%3Cpath%20d='M0%205q20-7%2042%208m-26-6%207%2012'%20fill='none'%20stroke='%23c5b38c'%20stroke-width='1'/%3E%3Cpath%20d='M7%205q-1-9%2011-4-1%209-11%204M21%209q1%2013%2013%208-2-10-13-8'%20fill='%23eab880'/%3E%3Cpath%20d='M7%205%2018%201m4%209%2011%207'%20stroke='%23efc878'%20stroke-width='.8'/%3E%3C/g%3E%3Cg%20transform='translate%28824%203%29'%3E%3Cpath%20d='M0%205q20-7%2042%208m-26-6%207%2012'%20fill='none'%20stroke='%23c5b38c'%20stroke-width='1'/%3E%3Cpath%20d='M7%205q-1-9%2011-4-1%209-11%204M21%209q1%2013%2013%208-2-10-13-8'%20fill='%23eab880'/%3E%3Cpath%20d='M7%205%2018%201m4%209%2011%207'%20stroke='%23efc878'%20stroke-width='.8'/%3E%3C/g%3E%3Cg%20transform='translate%281028%203%29'%3E%3Cpath%20d='M0%205q20-7%2042%208m-26-6%207%2012'%20fill='none'%20stroke='%23c5b38c'%20stroke-width='1'/%3E%3Cpath%20d='M7%205q-1-9%2011-4-1%209-11%204M21%209q1%2013%2013%208-2-10-13-8'%20fill='%23eab880'/%3E%3Cpath%20d='M7%205%2018%201m4%209%2011%207'%20stroke='%23efc878'%20stroke-width='.8'/%3E%3C/g%3E%3Ccircle%20cx='122'%20cy='12'%20r='7'%20fill='%23efc878'%20opacity='.14'/%3E%3Ccircle%20cx='122'%20cy='12'%20r='1.8'%20fill='%23efc878'/%3E%3Ccircle%20cx='330'%20cy='12'%20r='7'%20fill='%23efc878'%20opacity='.14'/%3E%3Ccircle%20cx='330'%20cy='12'%20r='1.8'%20fill='%23efc878'/%3E%3Ccircle%20cx='532'%20cy='12'%20r='7'%20fill='%23efc878'%20opacity='.14'/%3E%3Ccircle%20cx='532'%20cy='12'%20r='1.8'%20fill='%23efc878'/%3E%3Ccircle%20cx='734'%20cy='12'%20r='7'%20fill='%23efc878'%20opacity='.14'/%3E%3Ccircle%20cx='734'%20cy='12'%20r='1.8'%20fill='%23efc878'/%3E%3Ccircle%20cx='936'%20cy='12'%20r='7'%20fill='%23efc878'%20opacity='.14'/%3E%3Ccircle%20cx='936'%20cy='12'%20r='1.8'%20fill='%23efc878'/%3E%3Ccircle%20cx='1138'%20cy='12'%20r='7'%20fill='%23efc878'%20opacity='.14'/%3E%3Ccircle%20cx='1138'%20cy='12'%20r='1.8'%20fill='%23efc878'/%3E%3C/svg%3E");
+  --season-header-glow: linear-gradient(110deg, rgba(197, 179, 140, 0.1), transparent 48%, rgba(234, 184, 128, 0.1));
+  --season-edge-glow: radial-gradient(ellipse at 0% 0%, rgba(197, 179, 140, 0.08), transparent 42%), radial-gradient(ellipse at 100% 0%, rgba(234, 184, 128, 0.08), transparent 38%);
+  --season-logo-glow: rgba(234, 184, 128, 0.3);
+  --season-logo-jewel: #eab880;
+  --season-logo-wordmark: #d9c092;
+  --color-background: #211912;
+  --color-backgroundSecondary: #292017;
+  --color-backgroundTertiary: #34291e;
+  --color-surface: #34291e;
+  --color-surface-40: #34291e40;
+  --color-surfaceMuted: rgba(52, 41, 30, 0.75);
+  --color-surfaceElevated: #3b2f22;
+  --color-card: #34291e;
+  --color-cardMuted: #292017;
+  --color-dockBackground: #34291e;
+  --color-text: #eee9e3;
+  --color-textMuted: #c5bcc9;
+  --color-textSubtle: #b4aab8;
+  --color-primary: #dca76d;
+  --color-primary-30: #dca76d30;
+  --color-primary-40: #dca76d40;
+  --color-primary-50: #dca76d50;
+  --color-primaryDark: #d29d63;
+  --color-primaryText: #eab880;
+  --color-primaryLight: #463425;
+  --color-primarySoft: rgba(220, 167, 109, 0.12);
+  --color-accent: #c5b38c;
+  --color-accentDark: #b9a67e;
+  --color-accentLight: #3d3728;
+  --color-accentSoft: rgba(197, 179, 140, 0.12);
+  --color-borderAccent: rgba(220, 167, 109, 0.25);
+  --color-focus: #eab880;
+  --color-focusStrong: #c5b38c;
+  --gradient-hero: radial-gradient(ellipse at 10% 0%, rgba(197, 179, 140, 0.14), transparent 55%), linear-gradient(135deg, #292017 0%, #463425 100%);
+  --gradient-card-featured: linear-gradient(180deg, #3b2f22 0%, #34291e 100%);
+  --gradient-section-bg: radial-gradient(ellipse at top, rgba(197, 179, 140, 0.08), transparent 70%);
+}
+
+/* ---- Хэллоуин: лунный свет + янтарные фонари: светлая ---- */
+html[data-season="halloween"] {
+  --season-canopy-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201200%2048'%3E%3Cpath%20d='M0%203Q150%2020%20300%203T600%203T900%203T1200%203'%20fill='none'%20stroke='%23795b9e'%20stroke-opacity='.55'/%3E%3Cpath%20d='M42%205v5'%20stroke='%23795b9e'/%3E%3Ccircle%20cx='42'%20cy='17'%20r='11'%20fill='%23c28137'%20opacity='.16'/%3E%3Cpath%20d='M38%2010h8l2%2011h-12z'%20fill='%23c28137'/%3E%3Cpath%20d='M38%209h8m-10%2013h12m-6-11v10'%20fill='none'%20stroke='%23cda04f'%20stroke-width='1'/%3E%3Cpath%20d='M260%205v5'%20stroke='%23795b9e'/%3E%3Ccircle%20cx='260'%20cy='17'%20r='11'%20fill='%23c28137'%20opacity='.16'/%3E%3Cpath%20d='M256%2010h8l2%2011h-12z'%20fill='%23c28137'/%3E%3Cpath%20d='M256%209h8m-10%2013h12m-6-11v10'%20fill='none'%20stroke='%23cda04f'%20stroke-width='1'/%3E%3Cpath%20d='M480%205v5'%20stroke='%23795b9e'/%3E%3Ccircle%20cx='480'%20cy='17'%20r='11'%20fill='%23c28137'%20opacity='.16'/%3E%3Cpath%20d='M476%2010h8l2%2011h-12z'%20fill='%23c28137'/%3E%3Cpath%20d='M476%209h8m-10%2013h12m-6-11v10'%20fill='none'%20stroke='%23cda04f'%20stroke-width='1'/%3E%3Cpath%20d='M690%205v5'%20stroke='%23795b9e'/%3E%3Ccircle%20cx='690'%20cy='17'%20r='11'%20fill='%23c28137'%20opacity='.16'/%3E%3Cpath%20d='M686%2010h8l2%2011h-12z'%20fill='%23c28137'/%3E%3Cpath%20d='M686%209h8m-10%2013h12m-6-11v10'%20fill='none'%20stroke='%23cda04f'%20stroke-width='1'/%3E%3Cpath%20d='M910%205v5'%20stroke='%23795b9e'/%3E%3Ccircle%20cx='910'%20cy='17'%20r='11'%20fill='%23c28137'%20opacity='.16'/%3E%3Cpath%20d='M906%2010h8l2%2011h-12z'%20fill='%23c28137'/%3E%3Cpath%20d='M906%209h8m-10%2013h12m-6-11v10'%20fill='none'%20stroke='%23cda04f'%20stroke-width='1'/%3E%3Cpath%20d='M1160%205v5'%20stroke='%23795b9e'/%3E%3Ccircle%20cx='1160'%20cy='17'%20r='11'%20fill='%23c28137'%20opacity='.16'/%3E%3Cpath%20d='M1156%2010h8l2%2011h-12z'%20fill='%23c28137'/%3E%3Cpath%20d='M1156%209h8m-10%2013h12m-6-11v10'%20fill='none'%20stroke='%23cda04f'%20stroke-width='1'/%3E%3Cpath%20d='M150%205a8%208%200%201%200%2010%2011A9%209%200%200%201%20150%205'%20fill='%23795b9e'/%3E%3Cpath%20d='M176%207l1.2%202.8%203%20.4-2.2%202%20.5%203-2.5-1.5-2.5%201.5.5-3-2.2-2%203-.4z'%20fill='%23cda04f'/%3E%3Cpath%20d='M192%201l1.2%202.8%203%20.4-2.2%202%20.5%203-2.5-1.5-2.5%201.5.5-3-2.2-2%203-.4z'%20fill='%23795b9e'/%3E%3Cpath%20d='M560%205a8%208%200%201%200%2010%2011A9%209%200%200%201%20560%205'%20fill='%23795b9e'/%3E%3Cpath%20d='M586%207l1.2%202.8%203%20.4-2.2%202%20.5%203-2.5-1.5-2.5%201.5.5-3-2.2-2%203-.4z'%20fill='%23cda04f'/%3E%3Cpath%20d='M602%201l1.2%202.8%203%20.4-2.2%202%20.5%203-2.5-1.5-2.5%201.5.5-3-2.2-2%203-.4z'%20fill='%23795b9e'/%3E%3Cpath%20d='M1040%205a8%208%200%201%200%2010%2011A9%209%200%200%201%201040%205'%20fill='%23795b9e'/%3E%3Cpath%20d='M1066%207l1.2%202.8%203%20.4-2.2%202%20.5%203-2.5-1.5-2.5%201.5.5-3-2.2-2%203-.4z'%20fill='%23cda04f'/%3E%3Cpath%20d='M1082%201l1.2%202.8%203%20.4-2.2%202%20.5%203-2.5-1.5-2.5%201.5.5-3-2.2-2%203-.4z'%20fill='%23795b9e'/%3E%3C/svg%3E");
+  --season-header-glow: linear-gradient(110deg, rgba(121, 91, 158, 0.1), transparent 48%, rgba(194, 129, 55, 0.1));
+  --season-edge-glow: radial-gradient(ellipse at 0% 0%, rgba(121, 91, 158, 0.08), transparent 42%), radial-gradient(ellipse at 100% 0%, rgba(194, 129, 55, 0.08), transparent 38%);
+  --season-logo-glow: rgba(194, 129, 55, 0.3);
+  --season-logo-jewel: #c28137;
+  --season-logo-wordmark: #6e5291;
+  --color-background: #fcf9ff;
+  --color-backgroundSecondary: #f8f3fb;
+  --color-backgroundTertiary: #f4eef8;
+  --color-surface: #ffffff;
+  --color-surface-40: #ffffff40;
+  --color-surfaceMuted: rgba(255, 255, 255, 0.75);
+  --color-surfaceElevated: #fdfaff;
+  --color-card: #ffffff;
+  --color-cardMuted: #f8f3fb;
+  --color-dockBackground: #ffffff;
+  --color-text: #39343b;
+  --color-textMuted: #655b64;
+  --color-textSubtle: #706571;
+  --color-primary: #bd7938;
+  --color-primary-30: #bd793830;
+  --color-primary-40: #bd793840;
+  --color-primary-50: #bd793850;
+  --color-primaryDark: #b67434;
+  --color-primaryText: #9a4f12;
+  --color-primaryLight: #fbefe4;
+  --color-primarySoft: rgba(189, 121, 56, 0.08);
+  --color-accent: #795b9e;
+  --color-accentDark: #6a4b8d;
+  --color-accentLight: #f1edf7;
+  --color-accentSoft: rgba(121, 91, 158, 0.1);
+  --color-borderAccent: rgba(189, 121, 56, 0.2);
+  --color-focus: #9a4f12;
+  --color-focusStrong: #795b9e;
+  --gradient-hero: radial-gradient(ellipse at 10% 0%, rgba(121, 91, 158, 0.14), transparent 55%), linear-gradient(135deg, #f8f3fb 0%, #fbefe4 100%);
+  --gradient-card-featured: linear-gradient(180deg, #fdfaff 0%, #ffffff 100%);
+  --gradient-section-bg: radial-gradient(ellipse at top, rgba(121, 91, 158, 0.08), transparent 70%);
+}
+
+/* ---- Хэллоуин: лунный свет + янтарные фонари: тёмная ---- */
 html[data-season="halloween"][data-theme="dark"] {
-  --season-logo-wordmark: #b39ad6;
+  --season-canopy-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201200%2048'%3E%3Cpath%20d='M0%203Q150%2020%20300%203T600%203T900%203T1200%203'%20fill='none'%20stroke='%23b39ad6'%20stroke-opacity='.55'/%3E%3Cpath%20d='M42%205v5'%20stroke='%23b39ad6'/%3E%3Ccircle%20cx='42'%20cy='17'%20r='11'%20fill='%23e8965a'%20opacity='.16'/%3E%3Cpath%20d='M38%2010h8l2%2011h-12z'%20fill='%23e8965a'/%3E%3Cpath%20d='M38%209h8m-10%2013h12m-6-11v10'%20fill='none'%20stroke='%23efc878'%20stroke-width='1'/%3E%3Cpath%20d='M260%205v5'%20stroke='%23b39ad6'/%3E%3Ccircle%20cx='260'%20cy='17'%20r='11'%20fill='%23e8965a'%20opacity='.16'/%3E%3Cpath%20d='M256%2010h8l2%2011h-12z'%20fill='%23e8965a'/%3E%3Cpath%20d='M256%209h8m-10%2013h12m-6-11v10'%20fill='none'%20stroke='%23efc878'%20stroke-width='1'/%3E%3Cpath%20d='M480%205v5'%20stroke='%23b39ad6'/%3E%3Ccircle%20cx='480'%20cy='17'%20r='11'%20fill='%23e8965a'%20opacity='.16'/%3E%3Cpath%20d='M476%2010h8l2%2011h-12z'%20fill='%23e8965a'/%3E%3Cpath%20d='M476%209h8m-10%2013h12m-6-11v10'%20fill='none'%20stroke='%23efc878'%20stroke-width='1'/%3E%3Cpath%20d='M690%205v5'%20stroke='%23b39ad6'/%3E%3Ccircle%20cx='690'%20cy='17'%20r='11'%20fill='%23e8965a'%20opacity='.16'/%3E%3Cpath%20d='M686%2010h8l2%2011h-12z'%20fill='%23e8965a'/%3E%3Cpath%20d='M686%209h8m-10%2013h12m-6-11v10'%20fill='none'%20stroke='%23efc878'%20stroke-width='1'/%3E%3Cpath%20d='M910%205v5'%20stroke='%23b39ad6'/%3E%3Ccircle%20cx='910'%20cy='17'%20r='11'%20fill='%23e8965a'%20opacity='.16'/%3E%3Cpath%20d='M906%2010h8l2%2011h-12z'%20fill='%23e8965a'/%3E%3Cpath%20d='M906%209h8m-10%2013h12m-6-11v10'%20fill='none'%20stroke='%23efc878'%20stroke-width='1'/%3E%3Cpath%20d='M1160%205v5'%20stroke='%23b39ad6'/%3E%3Ccircle%20cx='1160'%20cy='17'%20r='11'%20fill='%23e8965a'%20opacity='.16'/%3E%3Cpath%20d='M1156%2010h8l2%2011h-12z'%20fill='%23e8965a'/%3E%3Cpath%20d='M1156%209h8m-10%2013h12m-6-11v10'%20fill='none'%20stroke='%23efc878'%20stroke-width='1'/%3E%3Cpath%20d='M150%205a8%208%200%201%200%2010%2011A9%209%200%200%201%20150%205'%20fill='%23b39ad6'/%3E%3Cpath%20d='M176%207l1.2%202.8%203%20.4-2.2%202%20.5%203-2.5-1.5-2.5%201.5.5-3-2.2-2%203-.4z'%20fill='%23efc878'/%3E%3Cpath%20d='M192%201l1.2%202.8%203%20.4-2.2%202%20.5%203-2.5-1.5-2.5%201.5.5-3-2.2-2%203-.4z'%20fill='%23b39ad6'/%3E%3Cpath%20d='M560%205a8%208%200%201%200%2010%2011A9%209%200%200%201%20560%205'%20fill='%23b39ad6'/%3E%3Cpath%20d='M586%207l1.2%202.8%203%20.4-2.2%202%20.5%203-2.5-1.5-2.5%201.5.5-3-2.2-2%203-.4z'%20fill='%23efc878'/%3E%3Cpath%20d='M602%201l1.2%202.8%203%20.4-2.2%202%20.5%203-2.5-1.5-2.5%201.5.5-3-2.2-2%203-.4z'%20fill='%23b39ad6'/%3E%3Cpath%20d='M1040%205a8%208%200%201%200%2010%2011A9%209%200%200%201%201040%205'%20fill='%23b39ad6'/%3E%3Cpath%20d='M1066%207l1.2%202.8%203%20.4-2.2%202%20.5%203-2.5-1.5-2.5%201.5.5-3-2.2-2%203-.4z'%20fill='%23efc878'/%3E%3Cpath%20d='M1082%201l1.2%202.8%203%20.4-2.2%202%20.5%203-2.5-1.5-2.5%201.5.5-3-2.2-2%203-.4z'%20fill='%23b39ad6'/%3E%3C/svg%3E");
+  --season-header-glow: linear-gradient(110deg, rgba(179, 154, 214, 0.1), transparent 48%, rgba(232, 150, 90, 0.1));
+  --season-edge-glow: radial-gradient(ellipse at 0% 0%, rgba(179, 154, 214, 0.08), transparent 42%), radial-gradient(ellipse at 100% 0%, rgba(232, 150, 90, 0.08), transparent 38%);
+  --season-logo-glow: rgba(232, 150, 90, 0.3);
   --season-logo-jewel: #e8965a;
+  --season-logo-wordmark: #c3afe0;
   --color-background: #15111a;
   --color-backgroundSecondary: #1b1621;
   --color-backgroundTertiary: #231c2b;
@@ -950,7 +1211,10 @@ html[data-season="halloween"][data-theme="dark"] {
   --color-surfaceElevated: #2d2537;
   --color-card: #241d2c;
   --color-cardMuted: #1b1621;
-  --color-dockBackground: #1b1621;
+  --color-dockBackground: #241d2c;
+  --color-text: #eee9e3;
+  --color-textMuted: #c5bcc9;
+  --color-textSubtle: #b4aab8;
   --color-primary: #e8965a;
   --color-primary-30: #e8965a30;
   --color-primary-40: #e8965a40;
@@ -964,47 +1228,62 @@ html[data-season="halloween"][data-theme="dark"] {
   --color-accentLight: #2c2438;
   --color-accentSoft: rgba(179, 154, 214, 0.12);
   --color-borderAccent: rgba(232, 150, 90, 0.25);
-  --color-focus: rgba(179, 154, 214, 0.45);
-  --color-focusStrong: rgba(179, 154, 214, 0.60);
-  --gradient-hero: radial-gradient(ellipse at 10% 0%, rgba(142, 115, 181, 0.22), transparent 55%), linear-gradient(135deg, #241a2e 0%, #15111a 100%);
+  --color-focus: #e8965a;
+  --color-focusStrong: #b39ad6;
+  --gradient-hero: radial-gradient(ellipse at 10% 0%, rgba(179, 154, 214, 0.14), transparent 55%), linear-gradient(135deg, #1b1621 0%, #352a22 100%);
   --gradient-card-featured: linear-gradient(180deg, #2d2537 0%, #241d2c 100%);
-  --gradient-section-bg: radial-gradient(ellipse at top, rgba(179, 154, 214, 0.10) 0%, transparent 70%);
+  --gradient-section-bg: radial-gradient(ellipse at top, rgba(179, 154, 214, 0.08), transparent 70%);
 }
 
-/* ---- Рождество и Новый год: хвоя + тёплые огни, светлая ---- */
+/* ---- Рождество и Новый год: хвойные гирлянды + тёплые огни: светлая ---- */
 html[data-season="christmas"] {
-  --season-canopy-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%201200%2048%22%3E%3Cpath%20d%3D%22M0%202Q150%2018%20300%202T600%202T900%202T1200%202%22%20fill%3D%22none%22%20stroke%3D%22%236fa58a%22%20stroke-opacity%3D%22.7%22%2F%3E%3Cpath%20d%3D%22M24%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%2262%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%2262%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M120%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%22158%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%22158%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M216%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%22254%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%22254%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M312%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%22350%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%22350%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M408%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%22446%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%22446%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M504%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%22542%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%22542%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M600%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%22638%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%22638%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M696%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%22734%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%22734%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M792%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%22830%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%22830%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M888%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%22926%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%22926%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M984%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%221022%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%221022%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M1080%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%221118%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%221118%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cpath%20d%3D%22M1176%203l14%2010m-7-5l-6%201m10%202l-5%203%22%20stroke%3D%22%236fa58a%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%221214%22%20cy%3D%2211%22%20r%3D%229%22%20fill%3D%22%23e7bc72%22%20opacity%3D%22.14%22%2F%3E%3Ccircle%20cx%3D%221214%22%20cy%3D%2211%22%20r%3D%222.5%22%20fill%3D%22%23e7bc72%22%2F%3E%3Cg%20fill%3D%22%23c0525c%22%3E%3Ccircle%20cx%3D%22300%22%20cy%3D%2217%22%20r%3D%224%22%2F%3E%3Ccircle%20cx%3D%22900%22%20cy%3D%2217%22%20r%3D%224%22%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%22%23d4a353%22%3E%3Cpath%20d%3D%22M150%2013l2%204%204%201-3%203%201%204-4-2-4%202%201-4-3-3%204-1z%22%2F%3E%3Cpath%20d%3D%22M750%2013l2%204%204%201-3%203%201%204-4-2-4%202%201-4-3-3%204-1z%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
-  --season-header-glow: linear-gradient(110deg, rgba(111, 165, 138, 0.14), transparent 48%, rgba(223, 181, 100, 0.18));
-  --season-edge-glow: radial-gradient(ellipse at 0% 0%, rgba(111, 165, 138, 0.14), transparent 42%), radial-gradient(ellipse at 100% 0%, rgba(223, 181, 100, 0.18), transparent 38%);
-  --season-logo-glow: rgba(223, 181, 100, 0.38);
-  --season-logo-jewel: #c0525c;
-  --season-logo-wordmark: #2f6b4f;
-  --color-background: #f9fbfa;
-  --color-backgroundSecondary: #f2f7f4;
-  --color-backgroundTertiary: #ecf3ef;
-  --color-primary: #6fa58a;
-  --color-primary-30: #6fa58a30;
-  --color-primary-40: #6fa58a40;
-  --color-primary-50: #6fa58a50;
-  --color-primaryDark: #5c9478;
+  --season-canopy-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201200%2048'%3E%3Cpath%20d='M0%203Q150%2018%20300%203T600%203T900%203T1200%203'%20fill='none'%20stroke='%23a5414e'%20stroke-opacity='.7'/%3E%3Cg%20transform='translate%2812%203%29'%20stroke='%23a5414e'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='67'%20cy='14'%20r='8'%20fill='%23cda04f'%20opacity='.18'/%3E%3Ccircle%20cx='67'%20cy='14'%20r='2.7'%20fill='%23cda04f'/%3E%3Cg%20transform='translate%28112%203%29'%20stroke='%23a5414e'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='167'%20cy='14'%20r='8'%20fill='%23cda04f'%20opacity='.18'/%3E%3Ccircle%20cx='167'%20cy='14'%20r='2.7'%20fill='%23cda04f'/%3E%3Cg%20transform='translate%28212%203%29'%20stroke='%23a5414e'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='267'%20cy='14'%20r='8'%20fill='%23cda04f'%20opacity='.18'/%3E%3Ccircle%20cx='267'%20cy='14'%20r='2.7'%20fill='%23cda04f'/%3E%3Cg%20transform='translate%28312%203%29'%20stroke='%23a5414e'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='367'%20cy='14'%20r='8'%20fill='%23cda04f'%20opacity='.18'/%3E%3Ccircle%20cx='367'%20cy='14'%20r='2.7'%20fill='%23cda04f'/%3E%3Cg%20transform='translate%28412%203%29'%20stroke='%23a5414e'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='467'%20cy='14'%20r='8'%20fill='%23cda04f'%20opacity='.18'/%3E%3Ccircle%20cx='467'%20cy='14'%20r='2.7'%20fill='%23cda04f'/%3E%3Cg%20transform='translate%28512%203%29'%20stroke='%23a5414e'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='567'%20cy='14'%20r='8'%20fill='%23cda04f'%20opacity='.18'/%3E%3Ccircle%20cx='567'%20cy='14'%20r='2.7'%20fill='%23cda04f'/%3E%3Cg%20transform='translate%28612%203%29'%20stroke='%23a5414e'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='667'%20cy='14'%20r='8'%20fill='%23cda04f'%20opacity='.18'/%3E%3Ccircle%20cx='667'%20cy='14'%20r='2.7'%20fill='%23cda04f'/%3E%3Cg%20transform='translate%28712%203%29'%20stroke='%23a5414e'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='767'%20cy='14'%20r='8'%20fill='%23cda04f'%20opacity='.18'/%3E%3Ccircle%20cx='767'%20cy='14'%20r='2.7'%20fill='%23cda04f'/%3E%3Cg%20transform='translate%28812%203%29'%20stroke='%23a5414e'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='867'%20cy='14'%20r='8'%20fill='%23cda04f'%20opacity='.18'/%3E%3Ccircle%20cx='867'%20cy='14'%20r='2.7'%20fill='%23cda04f'/%3E%3Cg%20transform='translate%28912%203%29'%20stroke='%23a5414e'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='967'%20cy='14'%20r='8'%20fill='%23cda04f'%20opacity='.18'/%3E%3Ccircle%20cx='967'%20cy='14'%20r='2.7'%20fill='%23cda04f'/%3E%3Cg%20transform='translate%281012%203%29'%20stroke='%23a5414e'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='1067'%20cy='14'%20r='8'%20fill='%23cda04f'%20opacity='.18'/%3E%3Ccircle%20cx='1067'%20cy='14'%20r='2.7'%20fill='%23cda04f'/%3E%3Cg%20transform='translate%281112%203%29'%20stroke='%23a5414e'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='1167'%20cy='14'%20r='8'%20fill='%23cda04f'%20opacity='.18'/%3E%3Ccircle%20cx='1167'%20cy='14'%20r='2.7'%20fill='%23cda04f'/%3E%3Cpath%20d='M175%2011l1.2%202.8%203%20.4-2.2%202%20.5%203-2.5-1.5-2.5%201.5.5-3-2.2-2%203-.4z'%20fill='%23cda04f'/%3E%3Cpath%20d='M207%204v7'%20stroke='%23a5414e'/%3E%3Ccircle%20cx='207'%20cy='15'%20r='3.5'%20fill='%23a5414e'%20stroke='%23cda04f'%20stroke-width='.7'/%3E%3Cpath%20d='M575%2011l1.2%202.8%203%20.4-2.2%202%20.5%203-2.5-1.5-2.5%201.5.5-3-2.2-2%203-.4z'%20fill='%23cda04f'/%3E%3Cpath%20d='M607%204v7'%20stroke='%23a5414e'/%3E%3Ccircle%20cx='607'%20cy='15'%20r='3.5'%20fill='%23a5414e'%20stroke='%23cda04f'%20stroke-width='.7'/%3E%3Cpath%20d='M975%2011l1.2%202.8%203%20.4-2.2%202%20.5%203-2.5-1.5-2.5%201.5.5-3-2.2-2%203-.4z'%20fill='%23cda04f'/%3E%3Cpath%20d='M1007%204v7'%20stroke='%23a5414e'/%3E%3Ccircle%20cx='1007'%20cy='15'%20r='3.5'%20fill='%23a5414e'%20stroke='%23cda04f'%20stroke-width='.7'/%3E%3C/svg%3E");
+  --season-header-glow: linear-gradient(110deg, rgba(165, 65, 78, 0.1), transparent 48%, rgba(185, 139, 56, 0.1));
+  --season-edge-glow: radial-gradient(ellipse at 0% 0%, rgba(165, 65, 78, 0.08), transparent 42%), radial-gradient(ellipse at 100% 0%, rgba(185, 139, 56, 0.08), transparent 38%);
+  --season-logo-glow: rgba(185, 139, 56, 0.3);
+  --season-logo-jewel: #b98b38;
+  --season-logo-wordmark: #35694f;
+  --color-background: #fcfbf6;
+  --color-backgroundSecondary: #f7f7f0;
+  --color-backgroundTertiary: #f0f3ed;
+  --color-surface: #ffffff;
+  --color-surface-40: #ffffff40;
+  --color-surfaceMuted: rgba(255, 255, 255, 0.75);
+  --color-surfaceElevated: #fffdf7;
+  --color-card: #ffffff;
+  --color-cardMuted: #f7f7f0;
+  --color-dockBackground: #ffffff;
+  --color-text: #39343b;
+  --color-textMuted: #655b64;
+  --color-textSubtle: #706571;
+  --color-primary: #609078;
+  --color-primary-30: #60907830;
+  --color-primary-40: #60907840;
+  --color-primary-50: #60907850;
+  --color-primaryDark: #5c8a73;
   --color-primaryText: #2f6b4f;
   --color-primaryLight: #eaf4ee;
-  --color-primarySoft: rgba(111, 165, 138, 0.08);
-  --color-accent: #c0525c;
-  --color-accentDark: #a8434d;
+  --color-primarySoft: rgba(96, 144, 120, 0.08);
+  --color-accent: #a5414e;
+  --color-accentDark: #913542;
   --color-accentLight: #f9ecee;
-  --color-accentSoft: rgba(192, 82, 92, 0.10);
-  --color-borderAccent: rgba(111, 165, 138, 0.20);
-  --color-focus: rgba(192, 82, 92, 0.35);
-  --color-focusStrong: rgba(192, 82, 92, 0.50);
-  --gradient-hero: radial-gradient(ellipse at 90% 0%, rgba(223, 181, 100, 0.18), transparent 55%), linear-gradient(135deg, #ecf3ef 0%, #f9fbfa 100%);
-  --gradient-section-bg: radial-gradient(ellipse at top, rgba(192, 82, 92, 0.06) 0%, transparent 70%);
+  --color-accentSoft: rgba(165, 65, 78, 0.1);
+  --color-borderAccent: rgba(96, 144, 120, 0.2);
+  --color-focus: #2f6b4f;
+  --color-focusStrong: #a5414e;
+  --gradient-hero: radial-gradient(ellipse at 10% 0%, rgba(165, 65, 78, 0.14), transparent 55%), linear-gradient(135deg, #f7f7f0 0%, #eaf4ee 100%);
+  --gradient-card-featured: linear-gradient(180deg, #fffdf7 0%, #ffffff 100%);
+  --gradient-section-bg: radial-gradient(ellipse at top, rgba(165, 65, 78, 0.08), transparent 70%);
 }
 
-/* ---- Рождество и Новый год: тёмная ---- */
+/* ---- Рождество и Новый год: хвойные гирлянды + тёплые огни: тёмная ---- */
 html[data-season="christmas"][data-theme="dark"] {
-  --season-logo-wordmark: #86c4a3;
-  --season-logo-jewel: #e07a84;
+  --season-canopy-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201200%2048'%3E%3Cpath%20d='M0%203Q150%2018%20300%203T600%203T900%203T1200%203'%20fill='none'%20stroke='%23ee8a94'%20stroke-opacity='.7'/%3E%3Cg%20transform='translate%2812%203%29'%20stroke='%23ee8a94'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='67'%20cy='14'%20r='8'%20fill='%23efc878'%20opacity='.18'/%3E%3Ccircle%20cx='67'%20cy='14'%20r='2.7'%20fill='%23efc878'/%3E%3Cg%20transform='translate%28112%203%29'%20stroke='%23ee8a94'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='167'%20cy='14'%20r='8'%20fill='%23efc878'%20opacity='.18'/%3E%3Ccircle%20cx='167'%20cy='14'%20r='2.7'%20fill='%23efc878'/%3E%3Cg%20transform='translate%28212%203%29'%20stroke='%23ee8a94'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='267'%20cy='14'%20r='8'%20fill='%23efc878'%20opacity='.18'/%3E%3Ccircle%20cx='267'%20cy='14'%20r='2.7'%20fill='%23efc878'/%3E%3Cg%20transform='translate%28312%203%29'%20stroke='%23ee8a94'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='367'%20cy='14'%20r='8'%20fill='%23efc878'%20opacity='.18'/%3E%3Ccircle%20cx='367'%20cy='14'%20r='2.7'%20fill='%23efc878'/%3E%3Cg%20transform='translate%28412%203%29'%20stroke='%23ee8a94'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='467'%20cy='14'%20r='8'%20fill='%23efc878'%20opacity='.18'/%3E%3Ccircle%20cx='467'%20cy='14'%20r='2.7'%20fill='%23efc878'/%3E%3Cg%20transform='translate%28512%203%29'%20stroke='%23ee8a94'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='567'%20cy='14'%20r='8'%20fill='%23efc878'%20opacity='.18'/%3E%3Ccircle%20cx='567'%20cy='14'%20r='2.7'%20fill='%23efc878'/%3E%3Cg%20transform='translate%28612%203%29'%20stroke='%23ee8a94'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='667'%20cy='14'%20r='8'%20fill='%23efc878'%20opacity='.18'/%3E%3Ccircle%20cx='667'%20cy='14'%20r='2.7'%20fill='%23efc878'/%3E%3Cg%20transform='translate%28712%203%29'%20stroke='%23ee8a94'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='767'%20cy='14'%20r='8'%20fill='%23efc878'%20opacity='.18'/%3E%3Ccircle%20cx='767'%20cy='14'%20r='2.7'%20fill='%23efc878'/%3E%3Cg%20transform='translate%28812%203%29'%20stroke='%23ee8a94'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='867'%20cy='14'%20r='8'%20fill='%23efc878'%20opacity='.18'/%3E%3Ccircle%20cx='867'%20cy='14'%20r='2.7'%20fill='%23efc878'/%3E%3Cg%20transform='translate%28912%203%29'%20stroke='%23ee8a94'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='967'%20cy='14'%20r='8'%20fill='%23efc878'%20opacity='.18'/%3E%3Ccircle%20cx='967'%20cy='14'%20r='2.7'%20fill='%23efc878'/%3E%3Cg%20transform='translate%281012%203%29'%20stroke='%23ee8a94'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='1067'%20cy='14'%20r='8'%20fill='%23efc878'%20opacity='.18'/%3E%3Ccircle%20cx='1067'%20cy='14'%20r='2.7'%20fill='%23efc878'/%3E%3Cg%20transform='translate%281112%203%29'%20stroke='%23ee8a94'%20stroke-width='1.3'%20stroke-linecap='round'%3E%3Cpath%20d='M0%201l32%2014m-27-12-4%205m10-3-5%205m12-2-5%205m12-2-5%205m-11-12%202-5m5%209%203-5m5%209%203-5'/%3E%3C/g%3E%3Ccircle%20cx='1167'%20cy='14'%20r='8'%20fill='%23efc878'%20opacity='.18'/%3E%3Ccircle%20cx='1167'%20cy='14'%20r='2.7'%20fill='%23efc878'/%3E%3Cpath%20d='M175%2011l1.2%202.8%203%20.4-2.2%202%20.5%203-2.5-1.5-2.5%201.5.5-3-2.2-2%203-.4z'%20fill='%23efc878'/%3E%3Cpath%20d='M207%204v7'%20stroke='%23ee8a94'/%3E%3Ccircle%20cx='207'%20cy='15'%20r='3.5'%20fill='%23ee8a94'%20stroke='%23efc878'%20stroke-width='.7'/%3E%3Cpath%20d='M575%2011l1.2%202.8%203%20.4-2.2%202%20.5%203-2.5-1.5-2.5%201.5.5-3-2.2-2%203-.4z'%20fill='%23efc878'/%3E%3Cpath%20d='M607%204v7'%20stroke='%23ee8a94'/%3E%3Ccircle%20cx='607'%20cy='15'%20r='3.5'%20fill='%23ee8a94'%20stroke='%23efc878'%20stroke-width='.7'/%3E%3Cpath%20d='M975%2011l1.2%202.8%203%20.4-2.2%202%20.5%203-2.5-1.5-2.5%201.5.5-3-2.2-2%203-.4z'%20fill='%23efc878'/%3E%3Cpath%20d='M1007%204v7'%20stroke='%23ee8a94'/%3E%3Ccircle%20cx='1007'%20cy='15'%20r='3.5'%20fill='%23ee8a94'%20stroke='%23efc878'%20stroke-width='.7'/%3E%3C/svg%3E");
+  --season-header-glow: linear-gradient(110deg, rgba(238, 138, 148, 0.1), transparent 48%, rgba(239, 200, 120, 0.1));
+  --season-edge-glow: radial-gradient(ellipse at 0% 0%, rgba(238, 138, 148, 0.08), transparent 42%), radial-gradient(ellipse at 100% 0%, rgba(239, 200, 120, 0.08), transparent 38%);
+  --season-logo-glow: rgba(239, 200, 120, 0.3);
+  --season-logo-jewel: #efc878;
+  --season-logo-wordmark: #a2cfb5;
   --color-background: #101a15;
   --color-backgroundSecondary: #15211b;
   --color-backgroundTertiary: #1b2a22;
@@ -1014,7 +1293,10 @@ html[data-season="christmas"][data-theme="dark"] {
   --color-surfaceElevated: #243329;
   --color-card: #1c2a23;
   --color-cardMuted: #15211b;
-  --color-dockBackground: #15211b;
+  --color-dockBackground: #1c2a23;
+  --color-text: #eee9e3;
+  --color-textMuted: #c5bcc9;
+  --color-textSubtle: #b4aab8;
   --color-primary: #86c4a3;
   --color-primary-30: #86c4a330;
   --color-primary-40: #86c4a340;
@@ -1023,16 +1305,16 @@ html[data-season="christmas"][data-theme="dark"] {
   --color-primaryText: #86c4a3;
   --color-primaryLight: #233a2f;
   --color-primarySoft: rgba(134, 196, 163, 0.12);
-  --color-accent: #e07a84;
-  --color-accentDark: #cc6a74;
+  --color-accent: #ee8a94;
+  --color-accentDark: #e4818b;
   --color-accentLight: #3a2428;
-  --color-accentSoft: rgba(224, 122, 132, 0.12);
+  --color-accentSoft: rgba(238, 138, 148, 0.12);
   --color-borderAccent: rgba(134, 196, 163, 0.25);
-  --color-focus: rgba(224, 122, 132, 0.45);
-  --color-focusStrong: rgba(224, 122, 132, 0.60);
-  --gradient-hero: radial-gradient(ellipse at 90% 0%, rgba(223, 181, 100, 0.13), transparent 55%), linear-gradient(135deg, #172b29 0%, #101a15 100%);
+  --color-focus: #86c4a3;
+  --color-focusStrong: #ee8a94;
+  --gradient-hero: radial-gradient(ellipse at 10% 0%, rgba(238, 138, 148, 0.14), transparent 55%), linear-gradient(135deg, #15211b 0%, #233a2f 100%);
   --gradient-card-featured: linear-gradient(180deg, #243329 0%, #1c2a23 100%);
-  --gradient-section-bg: radial-gradient(ellipse at top, rgba(224, 122, 132, 0.10) 0%, transparent 70%);
+  --gradient-section-bg: radial-gradient(ellipse at top, rgba(238, 138, 148, 0.08), transparent 70%);
 }
 
 /* Та же компактная геометрия до гидратации, что у headerLogoImage. */
@@ -1085,6 +1367,20 @@ html[data-season] [data-header-logo-frame]::after {
   top: -2px;
   right: -3px;
   pointer-events: none;
+}
+html[data-season="spring"] [data-header-logo-frame]::after {
+  background: var(--season-logo-jewel);
+  clip-path: polygon(50% 0%, 65% 25%, 95% 20%, 80% 50%, 95% 80%, 65% 75%, 50% 100%, 35% 75%, 5% 80%, 20% 50%, 5% 20%, 35% 25%);
+}
+html[data-season="easter"] [data-header-logo-frame]::after {
+  height: 12px;
+  border-radius: 50% 50% 45% 45%;
+  background: linear-gradient(180deg, var(--season-logo-jewel) 40%, var(--season-logo-wordmark) 40% 55%, var(--season-logo-jewel) 55%);
+}
+html[data-season="autumn"] [data-header-logo-frame]::after {
+  border-radius: 0 70% 0 70%;
+  background: var(--season-logo-jewel);
+  transform: rotate(-25deg);
 }
 html[data-season="halloween"] [data-header-logo-frame]::after {
   border-radius: 50%;

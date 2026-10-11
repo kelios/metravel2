@@ -1,8 +1,9 @@
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import ThemeOptionGroup from '@/components/layout/ThemeOptionGroup';
 import { getSeasonalThemeOptions } from '@/components/layout/seasonalThemeOptions';
-import { translate as i18nT } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider';
+import SeasonalThemeStatus from '@/components/layout/SeasonalThemeStatus';
 
 
 interface SeasonalThemeToggleProps {
@@ -25,19 +26,23 @@ export default function SeasonalThemeToggle({
   showLabels = true,
 }: SeasonalThemeToggleProps) {
   const { seasonalTheme, setSeasonalTheme } = useTheme();
+  const { t } = useTranslation();
 
   if (Platform.OS !== 'web') return null;
 
   return (
-    <ThemeOptionGroup
+    <View>
+      <ThemeOptionGroup
       testID="seasonal-theme-toggle"
       options={getSeasonalThemeOptions()}
       value={seasonalTheme}
       onChange={setSeasonalTheme}
-      getAccessibilityLabel={(option) => i18nT('navigationStatic:seasonalTheme.selectLabel', { value1: option.label })}
+      getAccessibilityLabel={(option) => t('navigationStatic:seasonalTheme.selectLabel', { value1: option.label })}
       compact={compact}
       layout={layout}
       showLabels={showLabels}
-    />
+      />
+      <SeasonalThemeStatus />
+    </View>
   );
 }

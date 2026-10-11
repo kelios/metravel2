@@ -33,6 +33,7 @@ import DataOwnershipSection from '@/components/settings/DataOwnershipSection';
 import ProfileSection from '@/components/settings/ProfileSection';
 import ThemeSection, { type ThemeOption } from '@/components/settings/ThemeSection';
 import { getSeasonalThemeOptions } from '@/components/layout/seasonalThemeOptions';
+import SeasonalThemeStatus from '@/components/layout/SeasonalThemeStatus';
 import BiometricSection from '@/components/settings/BiometricSection';
 import AccountSection from '@/components/settings/AccountSection';
 import DataManagementSection from '@/components/settings/DataManagementSection';
@@ -42,6 +43,7 @@ import LanguageSection from '@/components/settings/LanguageSection';
 import OfflineSettingsSection from '@/components/settings/OfflineSettingsSection';
 import NotificationSettingsSection from '@/components/settings/NotificationSettingsSection';
 import { translate as i18nT } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider';
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 
 
@@ -59,6 +61,7 @@ export default function SettingsScreen() {
     const header = useScreenHeader({ title: i18nT('profile:app.tabs.settings.nastroyki_bc351c51') });
     const favoritesContext = useFavorites();
     const { theme, setTheme, seasonalTheme, setSeasonalTheme } = useTheme();
+    const { t: translateTheme } = useTranslation();
     const colors = useThemedColors();
     const dockPadding = useScrollBottomPadding(DESIGN_TOKENS.spacing.xxxl);
     const styles = useMemo(() => createSettingsStyles(colors, dockPadding), [colors, dockPadding]);
@@ -153,7 +156,7 @@ export default function SettingsScreen() {
     );
 
     // Праздничное оформление (#2376) — только web, см. SeasonalThemeToggle.
-    const seasonalThemeOptions = useMemo(() => (Platform.OS === 'web' ? getSeasonalThemeOptions() : []), []);
+    const seasonalThemeOptions = Platform.OS === 'web' ? getSeasonalThemeOptions() : [];
 
     const messengerOptions = useMemo(
         () => [
@@ -378,10 +381,11 @@ export default function SettingsScreen() {
                             theme={seasonalTheme}
                             setTheme={setSeasonalTheme}
                             themeOptions={seasonalThemeOptions}
-                            title={i18nT('navigationStatic:seasonalTheme.title')}
-                            description={i18nT('navigationStatic:seasonalTheme.description')}
+                            title={translateTheme('navigationStatic:seasonalTheme.title')}
+                            description={translateTheme('navigationStatic:seasonalTheme.description')}
                             headerIcon="gift"
-                            accessibilityLabel={i18nT('navigationStatic:seasonalTheme.title')}
+                            accessibilityLabel={translateTheme('navigationStatic:seasonalTheme.title')}
+                            footer={<SeasonalThemeStatus />}
                         />
                     ) : null}
 

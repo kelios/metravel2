@@ -28,6 +28,7 @@ interface ThemeSectionProps<T extends string> {
     description?: string;
     headerIcon?: React.ComponentProps<typeof Feather>['name'];
     accessibilityLabel?: string;
+    footer?: ReactNode;
 }
 
 /**
@@ -44,6 +45,7 @@ export default function ThemeSection<T extends string>({
     description,
     headerIcon = 'sun',
     accessibilityLabel,
+    footer,
 }: ThemeSectionProps<T>) {
     return (
         <View style={styles.card}>
@@ -74,7 +76,7 @@ export default function ThemeSection<T extends string>({
                                 pressed && styles.themeOptionPressed,
                             ]}
                             accessibilityRole="radio"
-                            accessibilityState={{ selected: isSelected }}
+                            accessibilityState={{ checked: isSelected }}
                             accessibilityLabel={option.label}
                             {...Platform.select({ web: { cursor: 'pointer' } })}
                         >
@@ -92,6 +94,7 @@ export default function ThemeSection<T extends string>({
                     );
                 })}
             </View>
+            {footer}
         </View>
     );
 }
