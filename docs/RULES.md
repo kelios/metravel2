@@ -69,6 +69,14 @@
   Preserve deterministic web SSR/hydration and the existing native locale/storage
   lifecycle; do not add locale URL prefixes or `hreflang` without a separate SEO
   routing contract.
+- The owner accepted the quest-detail routing contract #2208 on 2026-10-09:
+  BE/UK/PL/EN use `/{locale}/quests/{numericCityId}/{slug}`, while RU numeric
+  canonicals and aliases keep their existing addresses. Membership and
+  reciprocal alternates come from the validated active v1 package and live
+  backend serving projection; prefix exposure requires the coordinated A–E
+  release gates. See `docs/features/quest-locale-routing.md` and
+  `docs/ops/quest-locale-release.md`. Other route families remain under their
+  separate SEO contracts; site-wide/article localization stays in #1332.
 - Any localization-impacting change must pass `npm run test:i18n` plus the normal
   feature checks. Common/shared copy is checked on the affected web surface;
   Android or iPhone locale lifecycle evidence is required only when the change

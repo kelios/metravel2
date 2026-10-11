@@ -359,3 +359,12 @@ See `PRODUCTION_CHECKLIST.md`.
   printed and every file remains ignored by Git.
 - macOS Keychain is only a legacy source for creating the bundle. A new
   macOS/Windows/Linux workstation builds from copied `.secrets` without Keychain.
+
+## Quest locale v1 publication
+
+For the explicitly coordinated #2363/#2366 release use the existing deploy
+entrypoint with `QUEST_SEO_MODE=ru-only|translations`. Read the
+[quest locale release runbook](ops/quest-locale-release.md) for owner-selected
+inventory budget, initial RU baseline, private evidence and CAS recovery.
+A managed root refuses legacy deploy/recovery/chunk mutation. Initial legacy
+conversion and gateway/exposure remain separate backend-owner operations.

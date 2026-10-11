@@ -57,9 +57,9 @@ EN при URL PL, прямой вход/refresh/SPA, withdrawal/retry, один 
 
 ## Статический пакет SSG — #2365 (B)
 
-Сборка пакета включается только явно; обычный `build-prod.sh` её не вызывает и
-выпускает прежний RU-only dist байт в байт (prefixed-страниц, слотов и манифеста
-нет, раздача и sitemap не меняются).
+Сборка пакета включается только явно. Режим `QUEST_SEO_MODE=legacy` в
+`build-prod.sh` выпускает прежний RU-only dist (prefixed-страниц, слотов и
+манифеста нет, раздача и sitemap не меняются). V1-режимы E описаны ниже.
 
 1. `generate-seo-pages.js --quest-seo-candidate <файл вне dist>
    --quest-seo-receipt-command "<cmd>"` (или `$QUEST_SEO_RECEIPT_COMMAND`):
@@ -88,3 +88,12 @@ Fail-closed: сбой/таймаут квитанции, неполный или
 Активация и exposure — E #2366 / D: публиковать пакет только через
 `quest_seo_activate`; rsync пакета в legacy `static/dist` недопустим —
 закреплённый legacy nginx отдаёт `/{locale}/quests/...` по `try_files $uri.html`.
+
+## Release integration — E #2366
+
+The normal release entrypoint supports full RU-only and translated v1 packages,
+private full R1/R2 fencing, pinned bounded overlay before sealing, immutable
+staging, exact receipts, CAS activation and rollback. Legacy writers refuse
+managed roots. See [release/maintenance/recovery runbook](../ops/quest-locale-release.md).
+Backend C/D owns initial conversion, Nginx and exposure; production acceptance
+remains required for A–E.

@@ -39,6 +39,10 @@ MEDIA_CHECKS_LOG=''
 STAGE_NAME=''
 STAGE_STARTED_AT=0
 STAGE_REPORT=''
+QUEST_SEO_MODE="${QUEST_SEO_MODE:-legacy}"
+QUEST_SEO_CANDIDATE=''
+QUEST_SEO_ARGS=()
+QUEST_SEO_VERIFY_ARGS=()
 
 # Время этапов (#2013). Выкат дорос до ~15 минут незаметно: длительность этапов
 # нигде не печаталась. Каждый этап закрывается строкой «⏱ этап: N с», а на
@@ -275,6 +279,10 @@ build_env() {
 
 deploy_prod() {
   local ENV="$1"
+  if [[ "$QUEST_SEO_MODE" != "legacy" ]]; then
+    bash scripts/quest-seo-operation.sh publish "dist/$ENV" "$QUEST_SEO_STATE_PATH"
+    return
+  fi
   local EXPO_OVERLAY_RETENTION_DAYS EXPO_OVERLAY_MAX_MB
   local DEPLOY_DISK_RESERVE_MB DEPLOY_BACKEND_BUILD_MB
   metravel_deploy_defaults || return 1
@@ -285,6 +293,9 @@ deploy_prod() {
   local PAYLOAD_KIB
   local CONTAINER_HELPER_B64
   local REMOTE_DONE_MARKER
+  local QUEST_SEO_TRANSPORT_B64 QUEST_SEO_LEGACY_B64
+  QUEST_SEO_TRANSPORT_B64="$(base64 < scripts/quest-seo-transport.py | tr -d '\n')"
+  QUEST_SEO_LEGACY_B64="$(base64 < scripts/quest-seo-legacy-operation.sh | tr -d '\n')"
 
   if [[ ! -f "$EXPO_OVERLAY_HELPER" ]]; then
     echo "❌ Expo overlay helper is missing: $EXPO_OVERLAY_HELPER"
@@ -356,7 +367,9 @@ deploy_prod() {
     "$CONTAINER_HELPER_B64" \
     "$EXPO_OVERLAY_MAX_MB" \
     "$DISK_GUARD_HELPER_B64" \
-    "$DEPLOY_BACKEND_BUILD_MB" <<'REMOTE_DEPLOY_SCRIPT' | tee "$REMOTE_LOG"
+    "$DEPLOY_BACKEND_BUILD_MB" \
+    "$QUEST_SEO_TRANSPORT_B64" \
+    "$QUEST_SEO_LEGACY_B64" <<'REMOTE_DEPLOY_SCRIPT' | tee "$REMOTE_LOG"
 set -e
 
 # The program itself is bash's stdin (ssh ... bash -s), read lazily while it
@@ -392,6 +405,10 @@ fi
 
 cd "$REMOTE_DIR"
 mkdir -p static
+eval "$(printf '%s' "${11}" | base64 -d)"
+app_ctr=$(metravel_resolve_container app)
+QUEST_SEO_TRANSPORT_B64="${10}"
+legacy_token=$(quest_seo_legacy_operation legacy-check)
 # static/ is bind-mounted into the app container at /app/static. Swap dirs
 # (dist.new/dist.old) get created by the container user (uid 1984) or an
 # out-of-band op, so they end up owned by a uid the host login cannot
@@ -412,7 +429,7 @@ rroot() { # rm -rf the given paths as root in the container; never abort
 }
 
 # Purge leftovers from a prior interrupted/manual deploy before the swap.
-rroot '/app/static/dist.new /app/static/dist.old /app/static/dist.old-* /app/static/dist.old.stale-* /app/static/dist.failed.*'
+quest_seo_legacy_operation legacy-prune "$legacy_token"
 
 # Nginx serves /static/* from the shared static root, while the web export
 # lives one level deeper in static/dist. Publish the canonical quest
@@ -462,19 +479,7 @@ printf '%s' "$EXPO_OVERLAY_HELPER_B64" | base64 -d | bash -s -- \
   "$EXPO_OVERLAY_RETENTION_DAYS" \
   "$EXPO_OVERLAY_MAX_MB"
 
-rollback_dir=static/dist.old
-rollback_moved=0
-if [ -d static/dist ]; then
-  mv static/dist "$rollback_dir"
-  rollback_moved=1
-fi
-if ! mv static/dist.new static/dist; then
-  echo "❌ Failed to publish the staged frontend; restoring previous static tree"
-  if [ "$rollback_moved" = 1 ] && [ ! -e static/dist ] && [ -d "$rollback_dir" ]; then
-    mv "$rollback_dir" static/dist
-  fi
-  exit 1
-fi
+legacy_token=$(quest_seo_legacy_operation legacy-commit "$legacy_token")
 readiness_deadline=$(( $(date +%s) + 30 ))
 
 if command -v docker >/dev/null 2>&1 && docker compose version </dev/null >/dev/null 2>&1; then
@@ -535,31 +540,8 @@ wait_for_public_health() {
 }
 
 rollback_static() {
-  local failed_dir="static/dist.failed.$$"
-
   echo "↩️ Restoring the previous static tree"
-  if [ -e static/dist ]; then
-    if ! mv static/dist "$failed_dir"; then
-      echo "❌ Failed to move the rejected static tree out of the live path"
-      return 1
-    fi
-  fi
-  if [ "$rollback_moved" != 1 ] || [ ! -d "$rollback_dir" ]; then
-    echo "❌ Previous static tree is unavailable; rollback cannot complete"
-    if [ -d "$failed_dir" ] && [ ! -e static/dist ]; then
-      mv "$failed_dir" static/dist || true
-    fi
-    return 1
-  fi
-  if ! mv "$rollback_dir" static/dist; then
-    echo "❌ Failed to restore the previous static tree"
-    if [ -d "$failed_dir" ] && [ ! -e static/dist ]; then
-      mv "$failed_dir" static/dist || true
-    fi
-    return 1
-  fi
-
-  rroot "/app/$failed_dir"
+  legacy_token=$(quest_seo_legacy_operation legacy-rollback "$legacy_token") || return 1
   if ! activate_nginx; then
     echo "❌ Previous static tree was restored, but Nginx reload failed"
     return 1
@@ -583,7 +565,7 @@ if ! wait_for_public_health; then
 fi
 
 # Drop the rollback copy only after graceful activation and public readiness.
-rroot '/app/static/dist.old'
+quest_seo_legacy_operation legacy-prune "$legacy_token"
 # The uploaded tree can contain top-level dot paths alongside dist/$ENV.
 # Remove staging through the same root-in-container chokepoint and verify the
 # postcondition so a successful deploy never leaves the backend checkout dirty.
@@ -642,6 +624,21 @@ for arg in "$@"; do
 done
 ENV="${ENV:-prod}"
 DEPLOY="${DEPLOY:-1}"
+case "$QUEST_SEO_MODE" in
+  legacy | ru-only | translations) ;;
+  *) echo "ERROR: QUEST_SEO_MODE must be legacy, ru-only or translations" >&2; exit 1 ;;
+esac
+if [[ "$QUEST_SEO_MODE" != "legacy" ]]; then
+  [[ "$ENV" == "prod" ]] || { echo "ERROR: v1 release requires explicit prod target" >&2; exit 1; }
+  mkdir -p .codex-temp/deploy
+  QUEST_SEO_CANDIDATE="$PWD/.codex-temp/deploy/quest-candidate-$$.json"
+  QUEST_SEO_STATE_PATH="${QUEST_SEO_STATE_PATH:-$PWD/.codex-temp/deploy/quest-state-$(date -u +%Y%m%dT%H%M%SZ)-$$.json}"
+  export QUEST_SEO_STATE_PATH
+  QUEST_SEO_RECEIPT_COMMAND="bash $(printf '%q' "$PWD/scripts/quest-seo-operation.sh") receipt"
+  export QUEST_SEO_RECEIPT_COMMAND
+  QUEST_SEO_ARGS=(--quest-seo-candidate "$QUEST_SEO_CANDIDATE" --quest-seo-publication-mode "$QUEST_SEO_MODE")
+  QUEST_SEO_VERIFY_ARGS=(--quest-seo-candidate-pending)
+fi
 
 assert_deployable_source "$ENV" "$ALLOW_DIRTY" "$DEPLOY"
 
@@ -672,7 +669,7 @@ fi
 
 stage "генерация SEO-страниц"
 echo "Генерация SEO-страниц..."
-node scripts/generate-seo-pages.js --dist "dist/$ENV" --api https://metravel.by
+node scripts/generate-seo-pages.js --dist "dist/$ENV" --api https://metravel.by ${QUEST_SEO_ARGS[@]+"${QUEST_SEO_ARGS[@]}"}
 
 stage "проверки статики"
 
@@ -712,7 +709,7 @@ node scripts/verify-static-travel-seo.js --dist "dist/$ENV" --api https://metrav
 # Транзиентный сбой API однажды молча выкинул их все из билда, а гварды выше
 # смотрят только на travel-страницы. Сверяем живой каталог с тем, что собрано.
 echo "Проверка: quest-страницы и city-лендинги в статике..."
-node scripts/verify-static-quest-seo.js --dist "dist/$ENV" --api https://metravel.by
+node scripts/verify-static-quest-seo.js --dist "dist/$ENV" --api https://metravel.by ${QUEST_SEO_VERIFY_ARGS[@]+"${QUEST_SEO_VERIFY_ARGS[@]}"}
 node scripts/guard-site-owner-name.js --dist "dist/$ENV"
 
 stage "постобработка"
@@ -740,8 +737,19 @@ if [[ "$ENV" == "prod" ]]; then
   node scripts/verify-prod-config.js --dist "dist/$ENV"
 fi
 
+if [[ "$QUEST_SEO_MODE" != "legacy" ]]; then
+  stage "quest v1: pinned overlay и финализация"
+  metravel_deploy_defaults
+  export EXPO_OVERLAY_RETENTION_DAYS EXPO_OVERLAY_MAX_MB DEPLOY_DISK_RESERVE_MB
+  bash scripts/quest-seo-operation.sh overlay "dist/$ENV" "$QUEST_SEO_STATE_PATH"
+  node scripts/verify-static-quest-seo.js --dist "dist/$ENV" --api https://metravel.by --quest-seo-candidate-pending
+  node scripts/finalize-quest-seo-package.js --dist "dist/$ENV" --candidate "$QUEST_SEO_CANDIDATE"
+  node scripts/verify-static-quest-seo.js --dist "dist/$ENV" --quest-seo-package-only
+  node scripts/quest-seo-operation.js prepare "dist/$ENV" "$QUEST_SEO_STATE_PATH"
+fi
+
 if [[ "$DEPLOY" == "1" ]]; then
-  stage "выкат (rsync + публикация)"
+  stage "выкат (загрузка + публикация)"
   echo "старт деплоя ..."
   deploy_prod "$ENV"
 

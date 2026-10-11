@@ -112,6 +112,7 @@ SHA="$(git -C "$MT" rev-parse --verify "${TARGET}^{commit}")"
 SHORT="${SHA:0:9}"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/prod-$SHORT-$(date -u +%Y%m%dT%H%M%SZ).log"
+export QUEST_SEO_STATE_PATH="$LOG.quest-seo.json"
 
 # Лок у нас, значит оставшийся worktree — след прерванного выката.
 remove_worktree

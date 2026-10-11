@@ -19,7 +19,7 @@ function deployContractViolations(remoteDeploy: string): string[] {
     '}',
   ].join('\n')
   const swapIndex = remoteDeploy.indexOf(
-    'if ! mv static/dist.new static/dist; then',
+    'legacy_token=$(quest_seo_legacy_operation legacy-commit "$legacy_token")',
   )
   const deadlineIndex = remoteDeploy.indexOf('readiness_deadline=')
   const activationIndex = remoteDeploy.indexOf(
@@ -30,7 +30,7 @@ function deployContractViolations(remoteDeploy: string): string[] {
     'if ! wait_for_public_health; then',
   )
   const finalCleanupIndex = remoteDeploy.indexOf(
-    "rroot '/app/static/dist.old'",
+    'quest_seo_legacy_operation legacy-prune "$legacy_token"', swapIndex,
   )
   const stagingCleanupIndex = remoteDeploy.indexOf("rroot '/app/dist'")
   const stagingPostconditionIndex = remoteDeploy.indexOf(
@@ -333,7 +333,7 @@ describe('normal deploy Expo overlay retention', () => {
     expect(source).not.toContain('scripts/fix-prod.sh')
     expect(
       source.indexOf("printf '%s' \"$EXPO_OVERLAY_HELPER_B64\""),
-    ).toBeLessThan(source.indexOf('mv static/dist.new static/dist'))
+    ).toBeLessThan(source.indexOf('quest_seo_legacy_operation legacy-commit'))
   })
 
   // Web builds inline RU catalog text into the calling modules at transform
@@ -400,7 +400,7 @@ describe('normal deploy Expo overlay retention', () => {
     const remoteDeploy = extractRemoteDeploy()
     const unsafeDeploy = remoteDeploy.replace(
       'if ! wait_for_public_health; then',
-      "rroot '/app/static/dist.old'\nif ! wait_for_public_health; then",
+      'quest_seo_legacy_operation legacy-prune "$legacy_token"\nif ! wait_for_public_health; then',
     )
 
     expect(deployContractViolations(unsafeDeploy)).toContain(

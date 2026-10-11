@@ -22,7 +22,7 @@
 - [ ] 4.1 Backend owner implements per-response live effective-cluster/static gateway, anonymous serving projection and internal revisions/private builder receipt without changing #2193 gameplay/write semantics; preserve RU body/status on source drift, ensure missing/changed/withdrawn translations cannot serve old indexable HTML, and distinguish resolver failure from absence.
 - [ ] 4.2 Backend owner makes production sitemap and available-version projection consume the same effective resolver and active physical package; preserve other sitemap sections and legacy RU listing policy.
 - [ ] 4.3 Backend owner implements constrained production Nginx gateway routing, exact noindex 404 for absent prefixes/landings, safe conditional/cache handling and atomic package activation/rollback; no frontend Nginx edits.
-- [ ] 4.4 Frontend release handoff stages validated package via normal deploy tooling and checks the backend activation contract, under operation gates; no prefixed exposure until both owners' dependencies pass.
+- [x] 4.4 Frontend release handoff stages validated package via normal deploy tooling and checks the backend activation contract, under operation gates; no prefixed exposure until both owners' dependencies pass. E #2366 source integration added 2026-10-11: complete export, private full R1/R2, pinned overlay before sealing, bounded transfer/inventory, exact receipts/CAS and backend-owned rollback. Initial conversion remains separately authorized D maintenance; source/quality gates are recorded in `review.md`, production acceptance remains under 6.
 
 ## 5. Code-level validation and independent review
 
@@ -42,5 +42,5 @@
 ## 7. Handoff and archive
 
 - [ ] 7.1 Record all implementation card Done gates and real production evidence, actual available-language set and remaining content-quality exclusions; no mock-only or SKIPPED pass.
-- [ ] 7.2 Document quest-only localization exception, feature contract, activation/revocation runbook and #1332 boundary; record optional 28-day search follow-up separately from functional acceptance.
+- [x] 7.2 Document quest-only localization exception, feature contract, activation/revocation runbook and #1332 boundary; record optional 28-day search follow-up separately from functional acceptance. E #2366: `docs/RULES.md`, `docs/features/quest-locale-routing.md`, `docs/RELEASE.md` and `docs/ops/quest-locale-release.md`; live withdrawal and optional search follow-up remain separate from source completion.
 - [ ] 7.3 Run `openspec validate --all`, sync accepted delta and archive only when implementation is complete and separately authorized; planning #2208 closes only after owner acceptance and linked implementation cards exist.

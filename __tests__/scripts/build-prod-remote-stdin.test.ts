@@ -109,7 +109,10 @@ function makeRemoteSandbox(root: string): { sandbox: string; stubBin: string } {
     '    echo "metravel-app-1"',
     '    ;;',
     '  exec)',
-    '    shift 4',
+    '    shift',
+    '    if [ "$1" = -u ]; then shift 2; fi',
+    '    shift',
+    '    if [ "$1" = python ]; then shift; exec python3 "$@"; fi',
     '    cmd="$3"',
     '    sh -c "${cmd//\\/app/$SANDBOX_ROOT}"',
     '    ;;',
@@ -177,7 +180,7 @@ function runPayload(
     '#!/bin/bash',
     // Seven to nine: overlay byte budget, disk guard helper and the free
     // space the backend image build needs (#2186).
-    'exec bash -s -- prod 14 "$HELPER_B64" "$SANDBOX_ROOT" "$MARKER" "$CONTAINER_B64" 256 "$DISK_GUARD_B64" 1536 < "$PAYLOAD"',
+    'exec bash -s -- prod 14 "$HELPER_B64" "$SANDBOX_ROOT" "$MARKER" "$CONTAINER_B64" 256 "$DISK_GUARD_B64" 1536 "$QUEST_TRANSPORT_B64" "$QUEST_LEGACY_B64" < "$PAYLOAD"',
   ])
 
   return runCli('bash', [harnessPath], {
@@ -189,6 +192,9 @@ function runPayload(
       CONTAINER_B64: Buffer.from(containerSnippet, 'utf8').toString('base64'),
       MARKER,
       PAYLOAD: payloadPath,
+      REMOTE_ROOT: sandbox,
+      QUEST_TRANSPORT_B64: Buffer.from(fs.readFileSync(path.resolve('scripts/quest-seo-transport.py'), 'utf8').replace("root = Path('/app/static')", "root = Path(os.environ['REMOTE_ROOT']) / 'static'")).toString('base64'),
+      QUEST_LEGACY_B64: Buffer.from(fs.readFileSync(path.resolve('scripts/quest-seo-legacy-operation.sh'))).toString('base64'),
     },
   })
 }
@@ -216,7 +222,7 @@ function runDeployProdHarness(
   fs.mkdirSync(path.join(cwd, 'dist/prod'), { recursive: true })
   fs.writeFileSync(path.join(cwd, 'dist/prod/index.html'), 'payload')
   fs.mkdirSync(path.join(cwd, 'scripts'), { recursive: true })
-  for (const helper of ['deploy-expo-overlay.sh', 'deploy-disk-guard.sh']) {
+  for (const helper of ['deploy-expo-overlay.sh', 'deploy-disk-guard.sh', 'quest-seo-transport.py', 'quest-seo-legacy-operation.sh']) {
     fs.copyFileSync(
       path.resolve(process.cwd(), 'scripts', helper),
       path.join(cwd, 'scripts', helper),
@@ -227,6 +233,7 @@ function runDeployProdHarness(
   writeExecutable(harnessPath, [
     '#!/bin/bash',
     'set -Eeuo pipefail',
+    'QUEST_SEO_MODE=legacy',
     "IFS=$'\\n\\t'",
     `DEPLOY_ENV_FILE=/nonexistent source '${path.resolve(process.cwd(), 'scripts/deploy-target.sh')}'`,
     'PROD_SSH_TARGET="stub@host"',
@@ -312,7 +319,7 @@ describe('build-prod.sh remote stdin transport', () => {
       const result = runPayload(root, extractRemoteDeploy())
       const sandbox = path.join(root, 'remote')
 
-      expect(result.status).toBe(0)
+      expect({ status: result.status, stderr: result.stderr }).toEqual({ status: 0, stderr: '' })
       expect(result.stdout).toContain('Public readiness confirmed')
       expect(result.stdout).toContain(MARKER)
       expect(fs.existsSync(path.join(sandbox, 'dist'))).toBe(false)
@@ -342,7 +349,7 @@ describe('build-prod.sh remote stdin transport', () => {
     try {
       const publishedAt = Date.now()
       const result = runPayload(root, extractRemoteDeploy(), {}, true)
-      expect(result.status).toBe(0)
+      expect({ status: result.status, stderr: result.stderr }).toEqual({ status: 0, stderr: '' })
       const current = path.join(root, 'remote/static/dist/_expo/static')
       for (const chunk of ['cached.js', 'cached.css']) {
         expect(fs.statSync(path.join(current, 'js/web', chunk)).mtimeMs).toBeGreaterThanOrEqual(publishedAt - 1000)
@@ -367,7 +374,7 @@ describe('build-prod.sh remote stdin transport', () => {
         df: ['#!/bin/bash', 'exit 1'],
       })
 
-      expect(result.status).toBe(0)
+      expect({ status: result.status, stderr: result.stderr }).toEqual({ status: 0, stderr: '' })
       expect(result.stdout).toContain(
         '⚠️ Disk usage report failed; the deploy itself is published',
       )
@@ -392,7 +399,7 @@ describe('build-prod.sh remote stdin transport', () => {
       // The incident shape: bash exits 0 at EOF while readiness, the marker
       // and both cleanups never ran. This is what the marker contract and
       // the isolation guard above must keep impossible on the real script.
-      expect(result.status).toBe(0)
+      expect({ status: result.status, stderr: result.stderr }).toEqual({ status: 0, stderr: '' })
       expect(result.stdout).not.toContain('Public readiness confirmed')
       expect(result.stdout).not.toContain(MARKER)
       expect(fs.existsSync(path.join(sandbox, 'dist'))).toBe(true)

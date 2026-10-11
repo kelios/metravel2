@@ -105,6 +105,8 @@ const API_BASE = getArg('api', 'https://metravel.by').replace(/\/+$/, '');
 // stays the legacy RU-only dist (no slots, no prefixed pages, no manifest).
 const QUEST_SEO_CANDIDATE = getArg('quest-seo-candidate', '');
 const QUEST_SEO_RECEIPT_COMMAND = getArg('quest-seo-receipt-command', process.env.QUEST_SEO_RECEIPT_COMMAND || '');
+const QUEST_SEO_PUBLICATION_MODE = getArg('quest-seo-publication-mode', 'translations');
+if (!['ru-only', 'translations'].includes(QUEST_SEO_PUBLICATION_MODE)) throw new Error('Unknown quest SEO publication mode');
 const SITE_URL = 'https://metravel.by';
 const OG_IMAGE = `${SITE_URL}/assets/icons/logo_yellow_512x512.png`;
 const FALLBACK_DESC = 'Найди место для путешествия и поделись своим опытом.';
@@ -4472,6 +4474,7 @@ async function main() {
     console.log(`  🧩 Quest pages: ${indexableQuestPaths.size}/${questPagesToWrite.length} indexable`);
     if (QUEST_SEO_CANDIDATE) {
       const candidate = await buildQuestLocaleCandidate({
+        publicationMode: QUEST_SEO_PUBLICATION_MODE,
         ruPages: questSeoRuPages,
         ruQuality: new Map([...questSeoRuCohort].map(([routePath, verdict]) => [routePath, {
           indexable: verdict.indexable, word_count: verdict.words, own_fivegram_ratio: verdict.ratio,

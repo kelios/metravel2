@@ -213,15 +213,18 @@ function memberEntry({ cluster, locale, translator, record, quality }) {
 async function buildQuestLocaleCandidate(input) {
   const {
     ruPages, ruQuality, receipt, receiptIndex, catalogs, fetchLocalizedBundle, buildLocalizedPage,
-    findSpoilers, writeDistFile, mapBounded, log = () => {},
+    findSpoilers, writeDistFile, mapBounded, log = () => {}, publicationMode = 'translations',
   } = input
+  if (!['ru-only', 'translations'].includes(publicationMode)) throw new Error('Unknown quest SEO publication mode')
   const translators = new Map(LOCALES.map((locale) => [locale, createSsgTranslator(catalogs, locale)]))
 
   const tasks = []
   for (const page of ruPages) {
     const record = receiptIndex.get(`${Number(page.route.cityId)}/${page.route.questId}`)
     if (!record) throw new Error(`quest ${page.route.path}: missing from revision receipt — candidate rejected`)
-    for (const locale of publishedTranslatedLocales(record)) tasks.push({ page, record, locale })
+    if (publicationMode === 'translations') {
+      for (const locale of publishedTranslatedLocales(record)) tasks.push({ page, record, locale })
+    }
   }
   log(`  🌐 Exact-lang reads: ${tasks.length} published+complete translations`)
   // Any rejection propagates: a failed read is never "absent".

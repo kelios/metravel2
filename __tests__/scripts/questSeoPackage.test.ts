@@ -118,7 +118,7 @@ function ruPages(quests: Q[], ruBundles: Record<string, unknown>) {
 
 async function buildCase(options: {
   published?: Record<string, string[]>; localized?: (quest: Q, locale: string, i: number) => unknown;
-  fetchError?: Error; ruWords?: Record<string, number>;
+  fetchError?: Error; ruWords?: Record<string, number>; publicationMode?: string;
 } = {}) {
   const root = makeTempDir('quest-seo-package-')
   const dist = path.join(root, 'dist')
@@ -136,6 +136,7 @@ async function buildCase(options: {
   const receipt = contract.parseRevisionReceipt(receiptText)
   const fetched: string[] = []
   const candidate = await buildQuestLocaleCandidate({
+    publicationMode: options.publicationMode,
     ruPages: pages,
     ruQuality: quality,
     receipt,
@@ -302,6 +303,16 @@ describe('exact-lang candidate and finalized package', () => {
   it('never fetches an unpublished or incomplete translation', async () => {
     const c = await buildCase({ published: { 'quest-alpha': ['pl'] } })
     expect(c.fetched).toEqual(['quest-alpha:pl'])
+  })
+
+  it('builds a full RU baseline with all errors and an unchanged complete private receipt', async () => {
+    const c = await buildCase({ publicationMode: 'ru-only', fetchError: new Error('must not fetch translations') })
+    expect(c.fetched).toEqual([])
+    expect(c.candidate.clusters).toHaveLength(QUESTS.length)
+    for (const cluster of c.candidate.clusters) expect(Object.keys(cluster.members)).toEqual(['ru'])
+    expect(Object.keys(c.candidate.errors).sort()).toEqual(['be', 'en', 'pl', 'ru', 'uk'])
+    expect(c.candidate.receipt_before.quests[0].locales.pl.published).toBe(true)
+    expect(c.candidate.receipt_before.quests[0].locales.en.published).toBe(true)
   })
 
   it('keeps thin translations and translations of a noindex RU anchor out of the package', async () => {

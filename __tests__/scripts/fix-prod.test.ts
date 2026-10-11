@@ -39,6 +39,15 @@ if [ "$1" = ps ]; then printf 'metravel-app-1\nmetravel-nginx-1\n'; exit 0; fi
 shift
 if [ "$1" = -u ]; then shift 2; fi
 ctr="$1"; shift
+if [ "$1" = python ]; then
+  shift
+  if [ "\${FAIL_RENAME:-}" = 1 ] && [ "$3" = legacy-commit ]; then
+    # Refuse the same critical command before mutation; swap rollback itself
+    # is covered by the transport syscall/crash tests.
+    exit 28
+  fi
+  exec python3 "$@"
+fi
 # Faithful stdin consumer: without isolation the outer program is truncated.
 cat >/dev/null
 if [ "$ctr" = metravel-nginx-1 ]; then printf '%s\n' "$*" >> "$REMOTE_ROOT/nginx-events"; exit 0; fi
@@ -74,9 +83,11 @@ function runRecovery(root: string, { previous = true, failure = '', cached = fal
   return {
     ...fixture,
     ...runCli('bash', ['-s', '--', 'prod', fixture.remote, Buffer.from(containerSnippet).toString('base64'),
-      encoded('deploy-expo-overlay.sh'), '14', '256', encoded('deploy-disk-guard.sh'), '1536', 'FIX-TEST-DONE'], {
+      encoded('deploy-expo-overlay.sh'), '14', '256', encoded('deploy-disk-guard.sh'), '1536', 'FIX-TEST-DONE',
+      Buffer.from(helper('quest-seo-transport.py').replace("root = Path('/app/static')", "root = Path(os.environ['REMOTE_ROOT']) / 'static'")).toString('base64'),
+      encoded('quest-seo-legacy-operation.sh')], {
       input: payload,
-      env: { PATH: `${fixture.bin}:${process.env.PATH}`, REMOTE_ROOT: fixture.remote },
+      env: { PATH: `${fixture.bin}:${process.env.PATH}`, REMOTE_ROOT: fixture.remote, FAIL_RENAME: failure === 'rename' ? '1' : '0' },
     }),
   }
 }
@@ -130,7 +141,7 @@ rsync
     const root = makeTempDir('fix-prod-success-')
     try {
       const result = runRecovery(root, { previous })
-      expect(result.status).toBe(0)
+      expect({ status: result.status, stderr: result.stderr }).toEqual({ status: 0, stderr: '' })
       expect(result.stdout).toContain('FIX-TEST-DONE')
       expect(result.stdout).toContain('Диск прода после выката')
       expect(fs.readFileSync(path.join(result.remote, 'static/dist/index.html'), 'utf8')).toBe('new release')
@@ -142,7 +153,7 @@ rsync
       expect([flat.dev, flat.ino]).toEqual([index.dev, index.ino])
       expect(flat.nlink).toBe(2)
       expect(fs.statSync(path.join(result.remote, 'static/dist')).uid).toBe(process.getuid!())
-      expect(fs.readFileSync(path.join(result.remote, 'ownership-events'), 'utf8')).toContain(`${process.getuid!()}:${process.getgid!()}`)
+      expect(fs.statSync(path.join(result.remote, 'static/dist')).gid).toBe(process.getgid!())
       const events = fs.readFileSync(path.join(result.remote, 'nginx-events'), 'utf8')
       expect(events.indexOf(' -t ')).toBeLessThan(events.indexOf(' -s reload '))
       expect(fs.existsSync(path.join(result.remote, 'static/dist.old'))).toBe(false)
@@ -155,7 +166,7 @@ rsync
     try {
       const publishedAt = Date.now()
       const result = runRecovery(root, { previous: false, cached: true })
-      expect(result.status).toBe(0)
+      expect({ status: result.status, stderr: result.stderr }).toEqual({ status: 0, stderr: '' })
       const current = path.join(result.remote, 'static/dist/_expo/static')
       for (const chunk of ['fresh.js', 'fresh.css']) {
         expect(fs.statSync(path.join(current, 'js/web', chunk)).mtimeMs).toBeGreaterThanOrEqual(publishedAt - 1000)
@@ -189,8 +200,8 @@ printf '%s/%s/%s/%s' "$EXPO_OVERLAY_RETENTION_DAYS" "$EXPO_OVERLAY_MAX_MB" "$DEP
     expect(payload).not.toContain('|| true')
     expect(payload).not.toContain('disk_pct')
     const dockerLines = payload.split('\n').filter((line) => /^docker exec/.test(line))
-    expect(dockerLines).toHaveLength(5)
-    expect(payload.match(/<\/dev\/null/g)).toHaveLength(5)
+    expect(dockerLines).toHaveLength(2)
+    expect(payload.match(/<\/dev\/null/g)).toHaveLength(2)
     expect(payload.trim().endsWith('printf \'\\n%s\\n\' "$DEPLOY_SUCCESS_MARKER"')).toBe(true)
     expect(source).toContain('grep -qxF -- "$REMOTE_DONE_MARKER"')
   })

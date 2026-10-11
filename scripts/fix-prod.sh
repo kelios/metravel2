@@ -128,6 +128,8 @@ fi
 EXPO_OVERLAY_HELPER_B64="$(base64 < "$EXPO_OVERLAY_HELPER" | tr -d '\n')"
 DISK_GUARD_HELPER_B64="$(base64 < "$DISK_GUARD_HELPER" | tr -d '\n')"
 CONTAINER_HELPER_B64="$(metravel_container_remote_snippet | base64 | tr -d '\n')"
+QUEST_SEO_TRANSPORT_B64="$(base64 < scripts/quest-seo-transport.py | tr -d '\n')"
+QUEST_SEO_LEGACY_B64="$(base64 < scripts/quest-seo-legacy-operation.sh | tr -d '\n')"
 
 echo "Uploading build payload to server..."
 # Preserve paired SSG hardlinks; omit build-orchestration dotdirs.
@@ -144,7 +146,8 @@ echo "Applying release atomically on server..."
 REMOTE_DONE_MARKER="MT_FIX_PROD_OK:$(date +%s).$$.$RANDOM"
 if ! REMOTE_OUTPUT=$(ssh "$SERVER" bash -s -- "$ENV" "$REMOTE_DIR" "$CONTAINER_HELPER_B64" \
   "$EXPO_OVERLAY_HELPER_B64" "$EXPO_OVERLAY_RETENTION_DAYS" "$EXPO_OVERLAY_MAX_MB" \
-  "$DISK_GUARD_HELPER_B64" "$DEPLOY_BACKEND_BUILD_MB" "$REMOTE_DONE_MARKER" <<'REMOTE_FIX_SCRIPT'
+  "$DISK_GUARD_HELPER_B64" "$DEPLOY_BACKEND_BUILD_MB" "$REMOTE_DONE_MARKER" \
+  "$QUEST_SEO_TRANSPORT_B64" "$QUEST_SEO_LEGACY_B64" <<'REMOTE_FIX_SCRIPT'
 set -euo pipefail
 ENV="$1"
 REMOTE_DIR="$2"
@@ -161,16 +164,10 @@ test -d "dist/$ENV"
 eval "$(printf '%s' "$CONTAINER_HELPER_B64" | base64 -d)"
 app_ctr="$(metravel_resolve_container app)"
 nginx_ctr="$(metravel_resolve_container nginx)"
-# Retain existing top-level ownership normalization; the new permission change
-# applies only to dist.new. Host writes never rely on tools in the app image.
-docker exec -u 0 "$app_ctr" sh -c '
-  set -eu
-  chown 1984:1000 /app/static
-  chmod 2775 /app/static
-  rm -rf /app/static/dist.new /app/static/dist.old
-  mkdir /app/static/dist.new
-  chown "$1:$2" /app/static/dist.new
-' sh "$(id -u)" "$(id -g)" </dev/null
+eval "$(printf '%s' "${11}" | base64 -d)"
+QUEST_SEO_TRANSPORT_B64="${10}"
+legacy_token=$(quest_seo_legacy_operation legacy-check)
+quest_seo_legacy_operation legacy-prepare "$legacy_token" "$(id -u)" "$(id -g)"
 rsync -aH "dist/$ENV/" static/dist.new/
 find static/dist.new/_expo/static/js/web -type f -name '*.js' >/dev/null
 mkdir -p static/dist.new/assets/icons static/dist.new/assets/images
@@ -183,19 +180,11 @@ printf '%s' "$EXPO_OVERLAY_HELPER_B64" | base64 -d | bash -s -- \
   "$EXPO_OVERLAY_RETENTION_DAYS" "$EXPO_OVERLAY_MAX_MB"
 # No copy/link/write failure above can reach the swap; an absent first release
 # is allowed explicitly, while rename failures restore the previous tree.
-docker exec "$app_ctr" sh -c '
-  set -eu
-  cd /app
-  if [ -d static/dist ]; then mv static/dist static/dist.old; fi
-  if ! mv static/dist.new static/dist; then
-    if [ ! -e static/dist ] && [ -d static/dist.old ]; then mv static/dist.old static/dist; fi
-    exit 1
-  fi
-' </dev/null
+legacy_token=$(quest_seo_legacy_operation legacy-commit "$legacy_token")
 # Preserve the recovery activation order: validate then gracefully reload.
 docker exec "$nginx_ctr" /etc/nginx/sbin/nginx -t -c /etc/nginx/conf/nginx.conf </dev/null
 docker exec "$nginx_ctr" /etc/nginx/sbin/nginx -s reload -c /etc/nginx/conf/nginx.conf </dev/null
-docker exec -u 0 "$app_ctr" sh -c 'rm -rf /app/static/dist.old' </dev/null
+quest_seo_legacy_operation legacy-prune "$legacy_token"
 rm -rf dist icons images
 rm -f /tmp/dist-prod-upload.tar.gz dist-prod-upload.tar.gz
 if ! printf '%s' "$DISK_GUARD_HELPER_B64" | base64 -d | bash -s -- \

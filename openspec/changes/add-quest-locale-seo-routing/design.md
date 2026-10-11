@@ -1,6 +1,6 @@
 ## Context
 
-See `proposal.md` for motivation and `specs/quest-locale-seo-routing/spec.md` for observable requirements. This is a proposed contract for #2208; owner acceptance and a separate apply request are pending. #1332 retains site-wide/article SEO routing and the owner's 2026-08-08 decision to defer article translations. This change proposes a quest-only exception to `docs/RULES.md:63`, not site-wide language prefixes.
+See `proposal.md` for motivation and `specs/quest-locale-seo-routing/spec.md` for observable requirements. The owner accepted the #2208 routing and backend gateway contract on 2026-10-09; A/B implementation and the separately authorized E #2366 apply on 2026-10-11 follow it. #1332 retains site-wide/article SEO routing and the owner's 2026-08-08 decision to defer article translations. The accepted exception covers quest details in `docs/RULES.md` → Localization; coordinated production release and acceptance remain open.
 
 Current mechanisms and reuse:
 
@@ -146,6 +146,21 @@ Security: locale allowlist, positive numeric city IDs, existing validated quest 
 Analytics: preserve quest ID/view/completion semantics and consent; prefixed paths are new page paths, not new quest IDs. Answer attempts keep actual step content locale. No event removals or user data in SEO artifacts; check one quest view per direct/SPA entry.
 
 ## Migration Plan
+
+E #2366 release implementation (owner authorized 2026-10-11): retain the normal
+`scripts/deploy-prod.sh` entrypoint. Explicit `QUEST_SEO_MODE=ru-only|translations`
+builds full v1 exports, keeping complete private R1/R2 receipts. Download old
+assets under a release reader pin, apply the existing bounded overlay locally,
+run the full RU verifier, then finalize; no write follows sealing. Stage a new
+app-owned generation and use the backend command for validate/CAS activation and
+rollback. Activation owns its lock; do not wrap it in another flock. Legacy
+publication and recovery perform each critical mutation inside the same Python
+process that owns the operation lock, recheck legacy directory identity, refuse
+a managed pointer, and never perform initial conversion.
+Persist private release state outside the disposable deployment worktree; after
+an ambiguous failure inspect the actual pointer and retain all generations.
+Initial legacy conversion, gateway release, retention budgets and exposure are
+the separately owned D operational gate. E never edits backend/Nginx configuration.
 
 1. Record owner acceptance of D1 city boundary and D5 backend handoff/topology; refresh Problem Memory, create linked implementation cards, then wait for explicit apply request. This planning session does not ship anything.
 2. Backend owner establishes serving/revision/cache contract with prefix exposure disabled; frontend implements shared model/adapter/SSG package and read-only verifier. Independently review full diffs and satisfy static/unit/i18n checks.

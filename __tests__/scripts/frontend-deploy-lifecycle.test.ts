@@ -72,10 +72,8 @@ describe('frontend deploy container lifecycle contract', () => {
     const source = readRecoveryDeploy()
     const remote = source.match(/<<'REMOTE_FIX_SCRIPT'[^\n]*\n([\s\S]*?)\nREMOTE_FIX_SCRIPT/)?.[1] || ''
     expect(remote).not.toBe('')
-    const swapIndex = remote.indexOf(
-      'docker exec "$app_ctr" sh -c \'',
-    )
-    const swapEnd = remote.indexOf("' </dev/null", swapIndex)
+    const swapIndex = remote.indexOf('quest_seo_legacy_operation legacy-commit')
+    const swapEnd = remote.indexOf('\n', swapIndex)
     const validationIndex = remote.indexOf(
       'docker exec "$nginx_ctr" /etc/nginx/sbin/nginx -t -c /etc/nginx/conf/nginx.conf',
     )
@@ -85,7 +83,7 @@ describe('frontend deploy container lifecycle contract', () => {
 
     expect(swapIndex).toBeGreaterThan(-1)
     expect(swapEnd).toBeGreaterThan(swapIndex)
-    expect(remote.slice(swapIndex, swapEnd)).toContain('if ! mv static/dist.new static/dist; then')
+    expect(remote.slice(swapIndex, swapEnd)).toContain('legacy-commit')
     expect(validationIndex).toBeGreaterThan(swapEnd)
     expect(reloadIndex).toBeGreaterThan(validationIndex)
   })
