@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Применяет патчи квест-контента (.quest-audit/patches-*.json) на прод.
+ * Применяет патчи квест-контента (.codex-temp/quest-audit/patches-*.json) на прод.
  * Формат патча ШАГА:   {quest_id, step_db_id, step_id, changes:{task?,hint?,answer_pattern?,lat?,lng?,maps_url?,story?}}
  * Формат патча КВЕСТА: {quest_id, quest_db_id, changes:{title}}
  * Куда идёт PATCH, решает ключ: `step_db_id` → /api/quest-steps/<id>/,
@@ -10,8 +10,8 @@
  *
  * Режим запуска называется явно — дефолта нет ни в одну сторону (#1934):
  *
- * node scripts/apply-quest-patches.js --dry-run .quest-audit/patches-*.json
- * node scripts/apply-quest-patches.js --apply .quest-audit/patches-by-west.json
+ * node scripts/apply-quest-patches.js --dry-run .codex-temp/quest-audit/patches-*.json
+ * node scripts/apply-quest-patches.js --apply .codex-temp/quest-audit/patches-by-west.json
  * Токен: --token=, env METRAVEL_TOKEN или ~/.metravel_token (нужен для --apply)
  */
 
@@ -42,8 +42,8 @@ Options:
   --help, -h            напечатать эту справку и выйти
 
 Examples:
-  node scripts/apply-quest-patches.js --dry-run .quest-audit/patches-*.json
-  node scripts/apply-quest-patches.js --apply .quest-audit/patches-by-west.json`
+  node scripts/apply-quest-patches.js --dry-run .codex-temp/quest-audit/patches-*.json
+  node scripts/apply-quest-patches.js --apply .codex-temp/quest-audit/patches-by-west.json`
 
 const CLI_SPEC = {
   name: 'apply-quest-patches',
@@ -69,7 +69,7 @@ const CLI_SPEC = {
     missing: 'Режим не выбран: --dry-run (репетиция) или --apply (боевая правка) — явно',
   },
   // Патч-файлы приходят позиционно, обычно раскрытым shell-глобом
-  // (`.quest-audit/patches-*.json`), и этот способ вызова сохранён. Но
+  // (`.codex-temp/quest-audit/patches-*.json`), и этот способ вызова сохранён. Но
   // позиционалом становится только токен, который НЕ начинается с `-`: всё
   // остальное остаётся ошибкой распознавания флага. Раньше список файлов
   // собирался фильтром `!a.startsWith('--')`, и `--dryrun` (или любой другой
@@ -173,7 +173,7 @@ async function main() {
   const files = requireNonEmptySelection(args.files, {
     what: 'патч-файлов',
     source: 'позиционные аргументы',
-    hint: 'глоб .quest-audit/patches-*.json мог не раскрыться',
+    hint: 'глоб .codex-temp/quest-audit/patches-*.json мог не раскрыться',
   })
 
   const dryRun = args.mode === 'dry-run'

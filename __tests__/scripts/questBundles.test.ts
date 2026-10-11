@@ -8,10 +8,28 @@
 jest.mock('@/scripts/lib/fetchJson', () => ({ fetchJson: jest.fn() }))
 
 const { fetchJson } = require('@/scripts/lib/fetchJson')
-const { fetchAllQuestIds, fetchQuestBundles, loadLocalBundles, parseSteps } = require('@/scripts/lib/questBundles')
+const { fetchAllQuestIds, fetchQuestBundles, fetchQuestCatalog, loadLocalBundles, parseSteps } = require('@/scripts/lib/questBundles')
 
 beforeEach(() => {
   ;(fetchJson as jest.Mock).mockReset()
+})
+
+describe('fetchQuestCatalog — строки каталога целиком', () => {
+  it('отдаёт строки всех страниц как есть и срезает хвостовой слэш базы', async () => {
+    ;(fetchJson as jest.Mock)
+      .mockResolvedValueOnce({ results: [{ quest_id: 'a', city: 'Минск' }, { title: 'без id' }], next: '/api/quests/?page=2' })
+      .mockResolvedValueOnce([{ quest_id: 'b', city: 'Гродно' }])
+
+    await expect(fetchQuestCatalog('https://metravel.by/', 'ua-test')).resolves.toEqual([
+      { quest_id: 'a', city: 'Минск' },
+      { title: 'без id' },
+      { quest_id: 'b', city: 'Гродно' },
+    ])
+    expect((fetchJson as jest.Mock).mock.calls).toEqual([
+      ['https://metravel.by/api/quests/', { userAgent: 'ua-test' }],
+      ['https://metravel.by/api/quests/?page=2', { userAgent: 'ua-test' }],
+    ])
+  })
 })
 
 describe('fetchAllQuestIds — обход страниц каталога', () => {

@@ -45,7 +45,7 @@ const fs = require('fs')
 const path = require('path')
 const { spawnSync } = require('child_process')
 
-const { fetchJson } = require('./lib/fetchJson')
+const { fetchQuestCatalog } = require('./lib/questBundles')
 const {
   parseCliArgs,
   parseCliTokens,
@@ -281,21 +281,6 @@ function checkCityAlias(quest, catalog, sitemapAliases) {
   return { cityName, predicted, existing: cityRows.length > 0, problems }
 }
 
-async function fetchCatalog(apiUrl) {
-  const base = apiUrl.replace(/\/+$/, '')
-  const rows = []
-  const seen = new Set()
-  let url = `${base}/api/quests/`
-  while (url && !seen.has(url)) {
-    seen.add(url)
-    const page = await fetchJson(url, { userAgent: USER_AGENT })
-    rows.push(...(Array.isArray(page) ? page : page.data || page.results || []))
-    const next = Array.isArray(page) ? null : page.next_page_url || page.next || null
-    url = next ? (next.startsWith('http') ? next : `${base}${next}`) : null
-  }
-  return rows
-}
-
 async function fetchSitemapAliases(apiUrl) {
   const response = await fetch(`${apiUrl.replace(/\/+$/, '')}/sitemap.xml`, { headers: { 'User-Agent': USER_AGENT } })
   if (!response.ok) throw new Error(`sitemap.xml: HTTP ${response.status}`)
@@ -410,7 +395,7 @@ async function main() {
   if (!args.offline) {
     // Недоступный прод краснит гейт alias, но не отменяет проверки текста ниже.
     try {
-      catalog = await fetchCatalog(args.apiUrl)
+      catalog = await fetchQuestCatalog(args.apiUrl, USER_AGENT)
       sitemapAliases = await fetchSitemapAliases(args.apiUrl)
     } catch (error) {
       networkError = `прод недоступен (${error.message}); повтори или запусти с --offline`

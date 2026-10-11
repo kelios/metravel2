@@ -1309,8 +1309,11 @@ native-геозоны используют только координаты ш�
 - Роутинг маршрута квеста: `api/external/serverRouting.ts` → Valhalla-фолбэк
   (`questRouteGeometry.ts`), режимы `foot`/`bike`.
 - Тайлы/атрибуция карты — общий контракт `config/mapWebTileContract.ts`.
-- Контент квестов: `scripts/<city>-quest-data.js` + `migrate-<city>-quest.js`
-  (идемпотентные миграции), `apply-quest-patches.js`, `sync-quest-to-prod.js`,
+- Контент квестов: `scripts/<city>-quest-data.js` + универсальная идемпотентная
+  миграция `node scripts/migrate-quest-from-file.js --source-file=… --dry-run|--apply`
+  (отдельный `migrate-<city>-quest.js` — только для нестандартной логики),
+  гейт data-файла `npm run quest:gates -- --source=…`,
+  `apply-quest-patches.js` (патчи в `.codex-temp/quest-audit/`), `sync-quest-to-prod.js`,
   `upload-quest-media*.js`, `generate-quest-finale-videos.js`,
   `audit-quest-coordinates.js`, `quest-geocheck.js`, `quest-poi-suggest.js`.
 

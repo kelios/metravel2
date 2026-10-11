@@ -28,24 +28,28 @@ function parseSteps(bundle) {
 }
 
 /**
- * Все `quest_id` каталога. Список пагинируется (`{ data | results, next_page_url | next }`),
+ * Строки каталога `/api/quests/` целиком. Список пагинируется (`{ data | results, next_page_url | next }`),
  * поэтому идём по страницам, а не берём первую: `page_size` на этом API кламится.
  */
-async function fetchAllQuestIds(base, userAgent = DEFAULT_USER_AGENT) {
-  const ids = []
+async function fetchQuestCatalog(base, userAgent = DEFAULT_USER_AGENT) {
+  const root = base.replace(/\/+$/, '')
+  const rows = []
   const seen = new Set()
-  let url = `${base}/api/quests/`
+  let url = `${root}/api/quests/`
   while (url && !seen.has(url)) {
     seen.add(url)
     const page = await fetchJson(url, { userAgent })
-    const rows = Array.isArray(page) ? page : page.data || page.results || []
-    for (const quest of rows) {
-      if (quest?.quest_id) ids.push(quest.quest_id)
-    }
+    rows.push(...(Array.isArray(page) ? page : page.data || page.results || []))
     const next = Array.isArray(page) ? null : page.next_page_url || page.next || null
-    url = next ? (next.startsWith('http') ? next : `${base}${next}`) : null
+    url = next ? (next.startsWith('http') ? next : `${root}${next}`) : null
   }
-  return ids
+  return rows
+}
+
+/** Все `quest_id` каталога — поверх `fetchQuestCatalog`. */
+async function fetchAllQuestIds(base, userAgent = DEFAULT_USER_AGENT) {
+  const rows = await fetchQuestCatalog(base, userAgent)
+  return rows.filter((quest) => quest?.quest_id).map((quest) => quest.quest_id)
 }
 
 /** Бандлы квестов с API: один `questId` или весь каталог. */
@@ -91,6 +95,7 @@ module.exports = {
   DEFAULT_USER_AGENT,
   fetchAllQuestIds,
   fetchQuestBundles,
+  fetchQuestCatalog,
   loadLocalBundles,
   parseSteps,
 }
