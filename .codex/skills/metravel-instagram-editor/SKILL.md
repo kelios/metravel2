@@ -12,6 +12,14 @@ Where historical rows conflict, use the latest explicit owner decision; an old
 approval recorded in the plan is not authorization for a new publication.
 For examples of scoped requests, read [references/prompts.md](references/prompts.md).
 
+## Story first, not fragments
+
+Owner rule (11.10.2026): every post is one coherent story, not fragments of an article.
+Lead with the subject and its context (a castle: where, what, its history; a practical topic:
+the reader's question and all the options), then the authors' impressions and what happened
+to them. A viewer who never read the article must understand what the post is about and
+why it is told. Canonical text: `docs/INSTAGRAM_CONTENT_SPEC.md` section 18.
+
 ## Identify and source
 
 - Resolve "today" from the client date and `Europe/Warsaw`. Read the actual
