@@ -89,6 +89,33 @@ folio после подсчёта frontmatter, затем по одной про
 а не завершённый PDF. Injected fixture ports явно дают `measured:false` в summary
 и другой identity; B3 не принимает такой план для публикации.
 
+Один `planRoot` принадлежит одному последовательному runner/session на весь
+job/epoch. Параллельные harness/bridge-процессы не разделяют этот root, даже
+при одинаковых frozen document, renderer pin и profile: generation и admitted
+receipts локальны одному storage, а rollback оставляет незакоммиченные файлы.
+Для каждого диагностического повтора создаётся отдельный новый root; исходный
+snapshot и предыдущие результаты монтируются read-only. Сравнивать результаты
+параллельных записей в общий root как эквивалентность renderer нельзя.
+
+Диагностика #2394 (11.10.2026), frozen travels 147/148, 63 страницы:
+до запуска выбран порог значимости parser-read откатов **>5% попыток semantic
+transitions** (index/indexed/book/descriptors). На принятом artifact #2384
+`0729d522a99c10b23333c6b52c7c13a802fb4eba999cafbf6ab7492f8ede8f60`
+получено 106 `WORKER_PLANNING_COMMITTED_REFERENCE_INVALID` из 4901 попытки
+(2.1628%; всего 108 откатов, ещё два — output budget). Однопереходный контроль
+завершил 4793 перехода без откатов; plan-summary, data и descriptor digests,
+222 blocks/42 occurrences совпали. Порог не достигнут: parser authority не меняется.
+
+Три полных печатных повтора frozen baseline до #2384
+(`c667edd16685306bf97bf8d1e558cd84988e7e551a56653c51400be84f546dbf`)
+при одинаковых source/HTML checksum и image XObjects дали число фоновых серых
+прямоугольников на странице 37 **0/1/0**. Отличается paint-последовательность
+`.9529 .9569 .9647 rg`, `95 938 80 72 re`, `f`; raster 96dpi отличается только
+25 пикселями в скруглении фотографии. Исчезновение воспроизводится на baseline
+и подтверждает наблюдаемую недетерминированность печати на baseline до #2384.
+Точная причина внутри Chromium не установлена; отдельное исследование — #2407.
+Эта диагностика не меняет B3/publication, image encoding или planning protocol 2.
+
 Request содержит sequential generation, предыдущий checksummed checkpoint,
 renderer content hash, profile и per-call limits. Default input65,536bytes,
 output4MiB/128records (generation envelope: 126 ledgered outputs + ledger +
