@@ -2,7 +2,7 @@
   "_comment": "Очередь подачи URL вне индекса после retitle-волны 03–06.08 (#1326). Снято URL Inspection 2026-08-08: 203/306 в индексе, 100 URL Google не знает. Пачки по 10 подаются по одной в день: IndexNow (Bing/Yandex) — автоматически, Google — только вручную в GSC «Запросить индексирование» (API для этого не существует). После подачи проставить submittedAt (ISO-дата) и не подавать пачку повторно. Когда все пачки поданы и статус проверен — задача #1326 закрывается. 2026-08-10: клики в GSC делает агент через Claude in Chrome; квота ровно 10 принятых запросов в сутки на свойство; перед подачей URL проверяется статус — уже проиндексированные пропускаются.",
   "source": "GSC URL Inspection 2026-08-08 (306 статей user_id=1)",
   "createdAt": "2026-08-08",
-  "totalUrls": 103,
+  "totalUrls": 104,
   "batchSize": 10,
   "batches": [
     {
@@ -2931,6 +2931,14 @@
           }
         ]
       }
+    },
+    {
+      "day": 12,
+      "submittedAt": null,
+      "urls": [
+        "https://metravel.by/travels/rozhdestvenskie-iarmarki-polshi-2026-krakov-vrotslav-katovitse-gdansk-poznan-varshava-daty-adresa-i-sovety"
+      ],
+      "note": "новая статья 816 (11.10.2026), публикация до прод-выката: 404 до выката, подавать после"
     }
   ],
   "details": [
