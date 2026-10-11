@@ -2,6 +2,7 @@ import { Platform } from 'react-native'
 
 import {
   buildAccountMenuModel,
+  INSTAGRAM_SCHEDULE_URL,
   runAccountMenuTarget,
   TASK_BOARD_URL,
   type AccountMenuInput,
@@ -55,6 +56,27 @@ describe('accountMenuModel (#2139)', () => {
     }
   })
 
+  it('«Instagram: афиша» видна суперпользователю на обеих поверхностях и ведёт на внешнюю страницу', () => {
+    for (const surface of ['desktop', 'mobile'] as const) {
+      const model = buildAccountMenuModel({ ...base, surface, isSuperuser: true })
+      const schedule = model.account.find((entry) => entry.key === 'instagram-schedule')
+      expect({ surface, icon: schedule?.icon, target: schedule?.target }).toEqual({
+        surface,
+        icon: 'instagram',
+        target: { kind: 'external', url: INSTAGRAM_SCHEDULE_URL },
+      })
+    }
+  })
+
+  it('«Instagram: афиша» скрыта обычному пользователю и гостю', () => {
+    for (const surface of ['desktop', 'mobile'] as const) {
+      expect(keysOf(buildAccountMenuModel({ ...base, surface }))).not.toContain('instagram-schedule')
+      expect(
+        keysOf(buildAccountMenuModel({ ...base, surface, isAuthenticated: false, userId: null, username: null })),
+      ).not.toContain('instagram-schedule')
+    }
+  })
+
   it('в приложении «Экспорт в PDF» есть на обеих поверхностях, когда есть модуль печати (#2119)', () => {
     mockPrintAvailable = true
     try {
@@ -100,6 +122,7 @@ describe('accountMenuModel (#2139)', () => {
       'subscriptions',
       'public-profile',
       'task-board',
+      'instagram-schedule',
       'logout',
     ])
   })

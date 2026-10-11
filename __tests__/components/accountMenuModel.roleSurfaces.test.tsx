@@ -107,6 +107,11 @@ describe('ролевые пункты аккаунта на всех повер�
     expect(renderMoreList(false).queryByTestId('footer-more-item-task-board')).toBeNull()
   })
 
+  it('BottomDockMoreList рисует «Instagram: афишу» админу и не рисует обычному', () => {
+    expect(renderMoreList(true).getByTestId('footer-more-item-instagram-schedule')).toBeTruthy()
+    expect(renderMoreList(false).queryByTestId('footer-more-item-instagram-schedule')).toBeNull()
+  })
+
   it('тап по «Борду задач» в листе «Ещё» на вложенном экране открывает борд внешней ссылкой', () => {
     mockAuth.isSuperuser = true
     const { getByTestId, queryByTestId } = render(<BottomDock />)

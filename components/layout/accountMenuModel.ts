@@ -12,6 +12,7 @@ import { translate as i18nT, translatePlural } from '@/i18n'
 // Ролевые пункты (`buildAccountRoleEntries`) берёт и лист «Ещё» дока (#2152).
 
 export const TASK_BOARD_URL = 'https://metravel.by/board'
+export const INSTAGRAM_SCHEDULE_URL = 'https://claude.ai/artifact/5dsyhxSYu1eHWKNU8rzWAW'
 
 export type AccountMenuSurface = 'desktop' | 'mobile'
 
@@ -116,6 +117,12 @@ export const buildAccountRoleEntries = ({ isSuperuser }: Pick<AccountMenuInput, 
           title: i18nT('navigation:components.layout.AccountMenu.bord_zadach_c032c12d'),
           icon: 'trello',
           target: { kind: 'external', url: TASK_BOARD_URL },
+        },
+        {
+          key: 'instagram-schedule',
+          title: i18nT('navigation:components.layout.AccountMenu.instagram_afisha_d9eca921'),
+          icon: 'instagram',
+          target: { kind: 'external', url: INSTAGRAM_SCHEDULE_URL },
         },
       ]
     : []

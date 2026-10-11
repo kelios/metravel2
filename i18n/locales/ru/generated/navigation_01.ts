@@ -4,6 +4,7 @@ export const navigationGenerated1 = {
   "components.layout.AccountMenu.dokumenty_9a7a7063": "Документы",
   "components.layout.AccountMenu.eksport_v_pdf_234b675b": "Экспорт в PDF",
   "components.layout.AccountMenu.gost_3cdc2ca8": "Гость",
+  "components.layout.AccountMenu.instagram_afisha_d9eca921": "Instagram: афиша",
   "components.layout.AccountMenu.lichnyy_kabinet_value1_30ade467": "Личный кабинет{{value1}}",
   "components.layout.AccountMenu.navigatsiya_13ffe5a4": "Навигация",
   "components.layout.AccountMenu.otkryt_menyu_akkaunta_4d1ebb59": "Открыть меню аккаунта",
