@@ -18,13 +18,22 @@ let RightColumnListStatus: React.ComponentType<any>
 let useRightColumnStyles: (args: Record<string, unknown>) => { rowLayout: Record<string, any> }
 let TravelTmlRound: React.ComponentType<any>
 let TravelTmlRoundSkeleton: React.ComponentType<any>
-let SidebarSectionSkeleton: typeof import('@/components/travel/TravelDetailSkeletons').SidebarSectionSkeleton
+let SidebarSectionSkeleton: typeof import('@/components/travel/NearTravelListSkeleton').SidebarSectionSkeleton
 let TravelListItemSkeleton: typeof import('@/components/listTravel/TravelListItemSkeleton').default
 let mockSidebarWidth = 390
 
 beforeAll(() => {
   jest.resetModules()
-  jest.doMock('react-native', () => jest.requireActual('react-native-web'))
+  jest.doMock('react-native', () => {
+    const rnw = jest.requireActual('react-native-web')
+    // Ряд «Рядом» (NearTravelListSkeleton) берёт ширину так же, как NearTravelList.
+    return new Proxy(rnw, {
+      get: (target, key) =>
+        key === 'useWindowDimensions'
+          ? () => ({ width: mockSidebarWidth, height: 900, scale: 1, fontScale: 1 })
+          : target[key],
+    })
+  })
   jest.doMock('@/hooks/useResponsive', () => ({ ...jest.requireActual('@/hooks/useResponsive'), useResponsiveWidth: () => mockSidebarWidth }))
   jest.doMock('expo-router', () => ({ router: { push: jest.fn() } }))
   // Место карточки в списке задаёт обёртка TravelTmlRound; содержимое карточки
@@ -43,8 +52,7 @@ beforeAll(() => {
   RightColumnListStatus = require('@/components/listTravel/RightColumnListStatus').default
   ;({ useRightColumnStyles } = require('@/components/listTravel/useRightColumnStyles'))
   TravelTmlRound = require('@/components/travel/TravelTmlRound').default
-  ;({ TravelTmlRoundSkeleton } = require('@/components/travel/TravelTmlRound'))
-  ;({ SidebarSectionSkeleton } = require('@/components/travel/TravelDetailSkeletons'))
+  ;({ TravelTmlRoundSkeleton, SidebarSectionSkeleton } = require('@/components/travel/NearTravelListSkeleton'))
   TravelListItemSkeleton = require('@/components/listTravel/TravelListItemSkeleton').default
 })
 
@@ -161,7 +169,12 @@ describe('actual web sidebar skeleton families (#2253 Near/Popular correction)',
     expect(popularCard).not.toBeNull()
     expect(geometryOf(popularCard)).toBe(geometryOf(catalog))
     expect(popular.querySelector('[data-testid="travel-sidebar-round-card-skeleton"]')).toBeNull()
-    const round = near.querySelector('[data-testid="travel-sidebar-round-card-skeleton"]')
+    // #2367: «Рядом» — ряд NearTravelList (near-travel-rail), сверка с секцией —
+    // NearTravelList.sidebarSkeleton.
+    expect(near.querySelector('[data-testid="travel-sidebar-round-card-skeleton"]')).toBeNull()
+    const rail = near.querySelector('[data-testid="near-travel-rail"]')!
+    expect(rail).not.toBeNull()
+    const round = rail.querySelector('[data-testid="travel-tml-round-skeleton"]')
     if (width < 768) {
       const realNearSkeleton = toHost(createElement(TravelTmlRoundSkeleton)).firstElementChild!
       expect(round).not.toBeNull()
@@ -170,11 +183,12 @@ describe('actual web sidebar skeleton families (#2253 Near/Popular correction)',
       const media = (card: Element) => [card, ...card.querySelectorAll('*')].find(node => geometryOf(node).includes('height:170px'))!
       expect(media(round!)).toBeTruthy()
       expect(geometryOf(media(round!))).toBe(geometryOf(media(realNearSkeleton)))
-      expect(near.querySelector('[data-testid="travel-list-item-skeleton"]')).toBeNull()
+      expect(rail.querySelector('[data-testid="travel-list-item-skeleton"]')).toBeNull()
     } else {
       expect(round).toBeNull()
-      const nearCatalog = near.querySelector('[data-testid="travel-list-item-skeleton"]')!
-      expect(geometryOf(nearCatalog)).toBe(geometryOf(catalog))
+      const nearCatalog = rail.querySelectorAll('[data-testid="travel-list-item-skeleton"]')
+      expect(nearCatalog.length).toBe(width < 1024 ? 2 : 3)
+      expect(geometryOf(nearCatalog[0])).toBe(geometryOf(catalog))
     }
   })
 })

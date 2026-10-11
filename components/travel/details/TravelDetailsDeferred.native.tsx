@@ -7,8 +7,8 @@ import {
   FooterSectionSkeleton,
   MapSectionSkeleton,
   RatingSectionSkeleton,
-  SidebarSectionSkeleton,
 } from '@/components/travel/TravelDetailSkeletons'
+import { SidebarSectionSkeleton } from '@/components/travel/NearTravelListSkeleton'
 import { CommentsSection } from '@/components/travel/CommentsSection'
 
 import type { AnchorsMap } from './TravelDetailsTypes'

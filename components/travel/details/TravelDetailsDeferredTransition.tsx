@@ -1,15 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Platform, StyleSheet, View, type LayoutChangeEvent } from 'react-native'
 
-import {
-  AuthorSectionSkeleton,
-  CommentsSkeleton,
-  FooterSectionSkeleton,
-  MapSectionSkeleton,
-  RatingSectionSkeleton,
-  SidebarSectionSkeleton,
-} from '@/components/travel/TravelDetailSkeletons'
-
 // Shared by every reserved deferred section (footer #1604, sidebar and comments
 // #1642). Resolving a short frame can still move a visible following section
 // when the user has reached the bottom. Release uses its measured viewport
@@ -555,29 +546,6 @@ export function TravelDetailsDeferredTransition({
         </View>
       ) : null}
     </View>
-  )
-}
-
-export function TravelDetailsDeferredSectionsSkeleton({ isMobile }: { isMobile: boolean }) {
-  return (
-    <>
-      <View>{isMobile ? <AuthorSectionSkeleton /> : null}</View>
-      <View>
-        <RatingSectionSkeleton />
-      </View>
-      <View>
-        <MapSectionSkeleton />
-      </View>
-      <View>
-        <SidebarSectionSkeleton />
-      </View>
-      <View>
-        <CommentsSkeleton />
-      </View>
-      <View style={{ minHeight: TRAVEL_DETAILS_FOOTER_RESERVE_HEIGHT } as never}>
-        <FooterSectionSkeleton isMobile={isMobile} />
-      </View>
-    </>
   )
 }
 

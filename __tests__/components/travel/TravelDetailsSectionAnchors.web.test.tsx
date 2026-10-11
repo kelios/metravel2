@@ -89,7 +89,6 @@ jest.mock('@/components/travel/TravelDetailSkeletons', () => ({
   QuickFactsSkeleton: () => null,
   QuickJumpSkeleton: () => null,
   RatingSectionSkeleton: () => null,
-  SidebarSectionSkeleton: () => null,
 }))
 jest.mock('@/components/travel/details/TravelAuthorQuickLink', () => () => null)
 jest.mock('@/components/travel/details/TravelHeroSlots', () => ({

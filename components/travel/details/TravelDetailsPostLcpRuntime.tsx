@@ -11,10 +11,8 @@ import {
   loadDeferredSectionsComponent,
   type DeferredSectionsComponentType,
 } from './travelDetailsDeferredLoader';
-import {
-  TravelDetailsDeferredSectionsSkeleton,
-  TravelDetailsDeferredTransition,
-} from './TravelDetailsDeferredTransition';
+import { TravelDetailsDeferredSectionsSkeleton } from '@/components/travel/NearTravelListSkeleton';
+import { TravelDetailsDeferredTransition } from './TravelDetailsDeferredTransition';
 
 type TravelDetailsPostLcpRuntimeProps = {
   travel: Travel;

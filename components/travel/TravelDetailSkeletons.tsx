@@ -1,18 +1,10 @@
-import TravelListItemSkeleton from '@/components/listTravel/TravelListItemSkeleton'
 import React, { useMemo } from 'react'
-import { Platform, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
-import { useResponsiveWidth } from '@/hooks/useResponsive'
-import { METRICS } from '@/constants/layout'
-import { translate as i18nT } from '@/i18n'
-import { getNearbyTravelsSubtitle } from '@/constants/nearby'
-import { NEAR_RAIL_PADDING_VERTICAL } from '@/components/travel/nearTravelRailLayout'
-import { createTravelDetailsSectionHeaderStyles } from './details/styles/travelDetailsSectionHeaderStyles'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import ReservedSpace from '@/components/ui/ReservedSpace'
-import { createTravelTmlRoundStyles, TRAVEL_TML_ROUND_IMAGE_HEIGHT } from './TravelTmlRound.styles'
 
 const LINE_HEIGHT = 18
 const LINE_GAP = 8
@@ -108,14 +100,6 @@ const staticStyles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   ratingBox: { flex: 1, minWidth: 220, gap: DESIGN_TOKENS.spacing.sm },
-  sidebarContainer: { width: '100%', gap: DESIGN_TOKENS.spacing.xl },
-  sidebarSection: { width: '100%', gap: DESIGN_TOKENS.spacing.sm },
-  sidebarWebSection: { width: '100%' },
-  sidebarCardContent: { marginTop: 8 },
-  // #2367: ряд «Рядом» несёт вертикальный отступ под тени — каркас повторяет его.
-  sidebarNearRailContent: { paddingVertical: NEAR_RAIL_PADDING_VERTICAL },
-  sidebarIconPlaceholder: { width: 18, height: 18, flexShrink: 0 },
-  sidebarDecorativeText: { color: 'transparent' },
   // marginTop повторяет отступ первой секции футера (leadSection в
   // TravelDetailsFooterSection), чтобы подмена скелетона на реальный футер
   // не сдвигала страницу.
@@ -294,72 +278,6 @@ export const RatingSectionSkeleton: React.FC = () => (
     </View>
   </View>
 )
-
-// Mobile Near and native Popular use the actual lightweight TravelTmlRound frame.
-// The critical skeleton does not import the loaded card's actions/share graph.
-const RoundSidebarCardSkeleton: React.FC = () => {
-  const colors = useThemedColors()
-  const styles = useMemo(() => createTravelTmlRoundStyles(colors), [colors])
-  return (
-    <View style={styles.container} testID="travel-sidebar-round-card-skeleton" aria-hidden>
-      <View style={[styles.card, styles.skeletonCard]}>
-        <SkeletonLoader width="100%" height={TRAVEL_TML_ROUND_IMAGE_HEIGHT} borderRadius={0} />
-      </View>
-    </View>
-  )
-}
-
-export const SidebarSectionSkeleton: React.FC = () => {
-  const width = useResponsiveWidth()
-  const colors = useThemedColors()
-  const headers = useMemo(() => createTravelDetailsSectionHeaderStyles(colors), [colors])
-  const isNearMobile = width < METRICS.breakpoints.tablet
-  if (Platform.OS !== 'web') {
-    return (
-    <View style={staticStyles.sidebarContainer}>
-      <View style={staticStyles.sidebarSection} testID="travel-sidebar-near-skeleton">
-        <SkeletonLoader width={220} height={26} borderRadius={8} />
-        <SkeletonLoader width="52%" height={18} borderRadius={6} />
-        {isNearMobile ? <RoundSidebarCardSkeleton /> : <TravelListItemSkeleton />}
-      </View>
-      <View style={staticStyles.sidebarSection} testID="travel-sidebar-popular-skeleton">
-        <SkeletonLoader width={210} height={26} borderRadius={8} />
-        <SkeletonLoader width="58%" height={18} borderRadius={6} />
-        <RoundSidebarCardSkeleton />
-      </View>
-    </View>
-  )
-  }
-  // Real strings with real lightweight typography preserve natural wrapping;
-  // these decorative headers announce no duplicate content to screen readers.
-  const header = (kind: 'near' | 'popular', title: string, subtitle: string) => (
-    <View aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <View style={headers.sectionHeaderRow}>
-        <View style={[staticStyles.sidebarIconPlaceholder, { backgroundColor: colors.borderLight }]} />
-        <Text testID={`travel-sidebar-${kind}-skeleton-title`}
-          style={[headers.sectionHeaderText, staticStyles.sidebarDecorativeText, { backgroundColor: colors.borderLight }]}>{title}</Text>
-      </View>
-      <Text testID={`travel-sidebar-${kind}-skeleton-subtitle`}
-        style={[headers.sectionSubtitle, staticStyles.sidebarDecorativeText, { backgroundColor: colors.borderLight }]}>{subtitle}</Text>
-    </View>
-  )
-  return (
-    <View style={staticStyles.sidebarContainer}>
-      <View style={staticStyles.sidebarWebSection} testID="travel-sidebar-near-skeleton">
-        {header('near', i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.ryadom_mozhno_posmotret_3f015f94'), getNearbyTravelsSubtitle())}
-        <View style={[staticStyles.sidebarCardContent, staticStyles.sidebarNearRailContent]}>
-          {isNearMobile ? <RoundSidebarCardSkeleton /> : <TravelListItemSkeleton />}
-        </View>
-      </View>
-      <View style={staticStyles.sidebarWebSection} testID="travel-sidebar-popular-skeleton">
-        {header('popular', i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.populyarnye_marshruty_e9bc8e8c'), i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.samye_prosmatrivaemye_napravleniya_za_nedely_e8d2c61d'))}
-        <View style={staticStyles.sidebarCardContent}>
-          {Platform.OS === 'web' ? <TravelListItemSkeleton /> : <RoundSidebarCardSkeleton />}
-        </View>
-      </View>
-    </View>
-  )
-}
 
 export const FooterSectionSkeleton: React.FC<{ isMobile?: boolean }> = ({
   isMobile = false,

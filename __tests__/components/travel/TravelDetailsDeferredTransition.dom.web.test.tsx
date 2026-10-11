@@ -22,12 +22,6 @@ beforeAll(() => {
   Object.defineProperty(window, 'ResizeObserver', { configurable: true, value: MeasuredResizeObserver })
   jest.resetModules()
   jest.doMock('react-native', () => jest.requireActual('react-native-web'))
-  // Deferred content leaves only: the actual transition/layout effects render.
-  jest.doMock('@/components/travel/TravelDetailSkeletons', () => ({
-    AuthorSectionSkeleton: () => null, CommentsSkeleton: () => null,
-    FooterSectionSkeleton: () => null, MapSectionSkeleton: () => null,
-    RatingSectionSkeleton: () => null, SidebarSectionSkeleton: () => null,
-  }))
   ;({ createElement, act, useLayoutEffect } = require('react'))
   ;({ createRoot } = require('react-dom/client'))
   ;({ Platform } = require('react-native'))

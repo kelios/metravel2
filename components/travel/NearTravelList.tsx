@@ -11,17 +11,22 @@ import {
   Text,
   View,
   Platform,
-  useWindowDimensions,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { getNearbyTravelsSubtitle } from '@/constants/nearby';
-import { NEAR_RAIL_PADDING_VERTICAL } from '@/components/travel/nearTravelRailLayout';
 import { Title } from '@/ui/paper';
 
 import { Travel } from '@/types/types';
-import TravelTmlRound, { TravelTmlRoundSkeleton } from '@/components/travel/TravelTmlRound';
+import TravelTmlRound from '@/components/travel/TravelTmlRound';
 import TravelListItem from '@/components/listTravel/TravelListItem';
-import TravelListItemSkeleton from '@/components/listTravel/TravelListItemSkeleton';
+import {
+  NEAR_RAIL_PADDING_VERTICAL,
+  nearTravelRailStyles,
+  nearTravelSkeletonSlots,
+  useNearTravelRailLayout,
+  useNearTravelRailSlotStyle,
+  type NearTravelRailLayout,
+} from '@/components/travel/NearTravelListSkeleton';
 import { getTravelDetailsListColumnWidth } from '@/components/travel/utils/travelDetailsListLayout';
 import { METRICS } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -41,12 +46,72 @@ const MapClientSideComponent = React.lazy(() =>
 );
 const MapComponent = Platform.OS === 'web' ? MapClientSideComponent : TravelMap;
 
-type Segment = 'list' | 'map';
-
-const MOBILE_RAIL_CARD_MAX_WIDTH = 340;
 // Карточка в горизонтальном ряду: по умолчанию UnifiedTravelCard ставит 'pan-y',
 // и на тач-вебе свайп ряда, начатый на карточке, гасится.
 const RAIL_CARD_TOUCH_ACTION = 'pan-x pan-y';
+
+type NearTravelViewMode = 'list' | 'map';
+
+type NearTravelViewToggle = {
+  value: NearTravelViewMode;
+  onChange: (mode: NearTravelViewMode) => void;
+};
+
+type NearTravelListFrameProps = {
+  layout: NearTravelRailLayout;
+  toggle: NearTravelViewToggle | null;
+  // Режим «Карта»: вместо ряда.
+  map?: React.ReactNode;
+  slots: React.ReactElement[];
+};
+
+// #2367: переключатель и ряд — общий кадр загрузки и данных, поэтому смена
+// каркаса на карточки не перемонтирует ряд. Геометрия — из NearTravelListSkeleton,
+// его же повторяет каркас сайдбара.
+function NearTravelListFrame({ layout, toggle, map, slots }: NearTravelListFrameProps) {
+  const options = useMemo(
+    () => [
+      { key: 'list', label: i18nT('travel:components.travel.NearTravelList.spisok_80236245'), icon: 'view-list', iconSource: 'material' as const },
+      { key: 'map', label: i18nT('travel:components.travel.NearTravelList.karta_14701f05'), icon: 'map', iconSource: 'material' as const },
+    ],
+    [],
+  );
+  const slotStyle = useNearTravelRailSlotStyle(layout);
+  return (
+    <>
+      {toggle ? (
+        <SegmentedControl
+          options={options}
+          value={toggle.value}
+          onChange={(key) => toggle.onChange(key as NearTravelViewMode)}
+          accessibilityLabel={i18nT('travel:components.travel.NearTravelList.pereklyuchatel_vida_fe04e58c')}
+          compact={layout.isMobile}
+          tone={layout.isMobile ? 'subtle' : 'default'}
+        />
+      ) : null}
+      {map != null ? (
+        <View style={nearTravelRailStyles.mapColumn}>{map}</View>
+      ) : (
+        <View style={layout.isMobile ? nearTravelRailStyles.mobileListContent : nearTravelRailStyles.listColumn}>
+          <CardRail
+            gap={layout.gap}
+            contentPaddingHorizontal={0}
+            contentPaddingVertical={NEAR_RAIL_PADDING_VERTICAL}
+            contentStyle={layout.contentStyle}
+            hideArrows={layout.isMobile}
+            testID="near-travel-rail"
+          >
+            {slots.map((card) => (
+              <View key={card.key} style={slotStyle} testID="near-travel-rail-slot">
+                {card}
+              </View>
+            ))}
+          </CardRail>
+        </View>
+      )}
+    </>
+  );
+}
 
 type NearTravelListProps = {
   travel: Pick<Travel, 'id'> & Partial<Pick<Travel, 'travelAddress' | 'coordsMeTravel'>>;
@@ -146,9 +211,9 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
      embedded = false,
      fetchEnabled = true,
    }) => {
-    const [viewMode, setViewMode] = useState<Segment>('list');
-    const { width } = useWindowDimensions();
-    const isMobile = width < METRICS.breakpoints.tablet;
+    const [viewMode, setViewMode] = useState<NearTravelViewMode>('list');
+    const railLayout = useNearTravelRailLayout();
+    const { width, isMobile, numColumns } = railLayout;
     const isTablet =
       width >= METRICS.breakpoints.tablet &&
       width < METRICS.breakpoints.largeTablet;
@@ -159,11 +224,6 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       return embedded ? 580 : 500;
     }, [embedded, isMobile, isTablet]);
 
-    const numColumns = useMemo(() => {
-      if (width < METRICS.breakpoints.tablet) return 1;
-      if (width < METRICS.breakpoints.largeTablet) return 2;
-      return 3;
-    }, [width]);
     const travelId = useMemo(() => {
       const id = Number(travel.id);
       return Number.isFinite(id) && id > 0 ? id : null;
@@ -191,12 +251,9 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
     }, [refetchMapPoints]);
     const canShowMapMode = mapPoints.length > 0 || mapOrigin !== null;
 
-    const segmentOptions = useMemo(
-      () => [
-        { key: 'list', label: i18nT('travel:components.travel.NearTravelList.spisok_80236245'), icon: 'view-list', iconSource: 'material' as const },
-        { key: 'map', label: i18nT('travel:components.travel.NearTravelList.karta_14701f05'), icon: 'map', iconSource: 'material' as const },
-      ],
-      [],
+    const viewToggle = useMemo<NearTravelViewToggle | null>(
+      () => (canShowMapMode ? { value: viewMode, onChange: setViewMode } : null),
+      [canShowMapMode, viewMode],
     );
     // ✅ РЕДИЗАЙН: Стили с поддержкой темной темы
     const styles = useMemo(() => StyleSheet.create({
@@ -242,19 +299,6 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
         color: colors.textSecondary,
         textAlign: 'center',
         fontWeight: '500',
-      },
-      listColumn: {
-        width: '100%',
-        // Боковой отступ ряда снаружи прокрутки: внутри неё snap съедал бы его.
-        paddingHorizontal: 8,
-      },
-      mobileMapColumn: {
-        width: '100%',
-        minHeight: 300,
-        overflow: 'visible',
-      },
-      mobileListContent: {
-        paddingBottom: DESIGN_TOKENS.spacing.lg,
       },
       loadingOverlay: {
         ...StyleSheet.absoluteFillObject,
@@ -310,17 +354,6 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
         fontSize: DESIGN_TOKENS.typography.sizes.md,
         fontWeight: '600',
       },
-      railCard: {
-        flex: 1,
-        minWidth: 0,
-      },
-      railSlot: {
-        minWidth: 0,
-        ...Platform.select({
-          web: { scrollSnapAlign: 'start' } as any,
-          default: {},
-        }),
-      },
       emptyState: {
         alignItems: 'center',
         paddingVertical: DESIGN_TOKENS.spacing.xl,
@@ -336,7 +369,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
     const keyExtractor = useCallback((item: Travel) => `travel-${item.id}`, []);
 
     const renderWebSearchLikeTravelItem = useCallback((item: Travel, index: number) => (
-      <View key={keyExtractor(item)} style={styles.railCard}>
+      <View key={keyExtractor(item)} style={nearTravelRailStyles.railCard}>
         <TravelListItem
           travel={item}
           isFirst={index === 0}
@@ -353,7 +386,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
           webTouchAction={RAIL_CARD_TOUCH_ACTION}
         />
       </View>
-    ), [keyExtractor, numColumns, styles.railCard, width]);
+    ), [keyExtractor, numColumns, width]);
 
     // #2367: число похожих (1–6) неизвестно до ответа /near/, поэтому каркас и
     // карточки — один ряд одной высоты. Пока ответа нет (в том числе пока запрос
@@ -361,61 +394,13 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
     // компактное сообщение (#164), единственный осознанный сдвиг.
     const isAwaitingNear = !isError && travelsNear.length === 0 && (isLoading || !fetchEnabled);
     const isEmptyNear = !isError && !isAwaitingNear && travelsNear.length === 0;
-    const placeholderCount = isAwaitingNear ? (isMobile ? 1 : numColumns) : 0;
-    const isWebGrid = Platform.OS === 'web' && !isMobile;
-    // Web: колонка — доля ширины ряда, как в прежней сетке; телефон и native —
-    // фиксированная ширина слота.
-    const slotWidth = isWebGrid
-      ? undefined
-      : isMobile
-        ? Math.round(Math.min(width * 0.8, MOBILE_RAIL_CARD_MAX_WIDTH))
-        : getTravelDetailsListColumnWidth(width, numColumns);
-    const railGap = isMobile ? 12 : DESIGN_TOKENS.spacing.md;
 
-    const railContentStyle = useMemo(() => (isWebGrid ? ({
-      width: '100%',
-      display: 'grid',
-      gridAutoFlow: 'column',
-      gridAutoColumns: `calc((100% - ${railGap * (numColumns - 1)}px) / ${numColumns})`,
-      alignItems: 'stretch',
-    } as any) : undefined), [isWebGrid, numColumns, railGap]);
-
-    const railSlotStyle = useMemo(
-      () => [styles.railSlot, slotWidth != null ? { width: slotWidth } : null],
-      [slotWidth, styles.railSlot],
-    );
-
-    const railSlots = useMemo(() => {
-      const cards = displayedTravels.length > 0
-        ? (isMobile
-          ? displayedTravels.map((item) => (
-            <TravelTmlRound key={keyExtractor(item)} travel={item} webTouchAction={RAIL_CARD_TOUCH_ACTION} />
-          ))
-          : displayedTravels.map((item, index) => renderWebSearchLikeTravelItem(item, index)))
-        : Array.from({ length: placeholderCount }, (_, i) => (
-          isMobile
-            ? <TravelTmlRoundSkeleton key={`skeleton-${i}`} />
-            : <View key={`skeleton-${i}`} style={styles.railCard}><TravelListItemSkeleton /></View>
-        ));
-      return cards.map((card) => (
-        <View key={card.key} style={railSlotStyle}>
-          {card}
-        </View>
-      ));
-    }, [displayedTravels, isMobile, keyExtractor, placeholderCount, railSlotStyle, renderWebSearchLikeTravelItem, styles.railCard]);
-
-    const rail = (
-      <CardRail
-        gap={railGap}
-        contentPaddingHorizontal={0}
-        contentPaddingVertical={NEAR_RAIL_PADDING_VERTICAL}
-        contentStyle={railContentStyle}
-        hideArrows={isMobile}
-        testID="near-travel-rail"
-      >
-        {railSlots}
-      </CardRail>
-    );
+    const cards = useMemo(() => (isMobile
+      ? displayedTravels.map((item) => (
+        <TravelTmlRound key={keyExtractor(item)} travel={item} webTouchAction={RAIL_CARD_TOUCH_ACTION} />
+      ))
+      : displayedTravels.map((item, index) => renderWebSearchLikeTravelItem(item, index))
+    ), [displayedTravels, isMobile, keyExtractor, renderWebSearchLikeTravelItem]);
 
     const header = showHeader ? (
       <View style={styles.header}>
@@ -423,6 +408,18 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
         <Text style={styles.subtitle}>{getNearbyTravelsSubtitle()}</Text>
       </View>
     ) : null;
+
+    const mapView = viewMode === 'map' ? (
+      <MapContainer
+        points={mapPoints}
+        height={mapHeight}
+        showRoute={false}
+        isLoading={isLoading || isMapLoading}
+        isError={isMapError}
+        onRetry={handleRetryMap}
+        colors={colors}
+      />
+    ) : undefined;
 
     if (isError) {
       return (
@@ -465,67 +462,13 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       <View style={embedded ? styles.embeddedSection : styles.section} onLayout={onLayout}>
         {header}
 
-        {!isMobile ? (
-          <>
-            {canShowMapMode ? (
-              <SegmentedControl
-                options={segmentOptions}
-                value={viewMode}
-                onChange={(key) => setViewMode(key as Segment)}
-                accessibilityLabel={i18nT('travel:components.travel.NearTravelList.pereklyuchatel_vida_fe04e58c')}
-              />
-            ) : null}
-
-            {viewMode === 'map' ? (
-              <View style={styles.mobileMapColumn}>
-                <MapContainer
-                  points={mapPoints}
-                  height={mapHeight}
-                  showRoute={false}
-                  isLoading={isLoading || isMapLoading}
-                  isError={isMapError}
-                  onRetry={handleRetryMap}
-                  colors={colors}
-                />
-              </View>
-            ) : (
-              <View style={styles.listColumn}>
-                {rail}
-              </View>
-            )}
-          </>
-        ) : (
-          <>
-            {canShowMapMode ? (
-              <SegmentedControl
-                options={segmentOptions}
-                value={viewMode}
-                onChange={(key) => setViewMode(key as Segment)}
-                accessibilityLabel={i18nT('travel:components.travel.NearTravelList.pereklyuchatel_vida_fe04e58c')}
-                compact
-                tone="subtle"
-              />
-            ) : null}
-
-            {viewMode === 'list' ? (
-              <View style={styles.mobileListContent}>
-                {rail}
-              </View>
-            ) : (
-              <View style={styles.mobileMapColumn}>
-                <MapContainer
-                  points={mapPoints}
-                  height={mapHeight}
-                  showRoute={false}
-                  isLoading={isLoading || isMapLoading}
-                  isError={isMapError}
-                  onRetry={handleRetryMap}
-                  colors={colors}
-                />
-              </View>
-            )}
-          </>
-        )}
+        {/* Тот же кадр, что каркас сайдбара: смена каркаса на карточки не перемонтирует ряд. */}
+        <NearTravelListFrame
+          layout={railLayout}
+          toggle={viewToggle}
+          map={mapView}
+          slots={cards.length > 0 ? cards : nearTravelSkeletonSlots(railLayout)}
+        />
 
         {/* Индикатор загрузки при первоначальной загрузке */}
         {isLoading && travelsNear.length === 0 && (

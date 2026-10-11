@@ -45,7 +45,6 @@ jest.mock('@/components/listTravel/TravelListItem', () => ({
 jest.mock('@/components/travel/TravelTmlRound', () => ({
   __esModule: true,
   default: (props: any) => mockTravelTmlRound(props),
-  TravelTmlRoundSkeleton: () => null,
 }))
 
 jest.mock('@/components/MapPage/TravelMap', () => ({

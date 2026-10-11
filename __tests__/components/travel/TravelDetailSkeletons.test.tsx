@@ -5,10 +5,10 @@ import {
   DescriptionSkeleton,
   MapSkeleton,
   PointListSkeleton,
-  SidebarSectionSkeleton,
   SectionSkeleton,
   VideoSkeleton,
 } from '@/components/travel/TravelDetailSkeletons';
+import { SidebarSectionSkeleton } from '@/components/travel/NearTravelListSkeleton';
 import { StyleSheet } from 'react-native';
 import TravelTmlRound from '@/components/travel/TravelTmlRound';
 import { createTravelTmlRoundStyles, TRAVEL_TML_ROUND_IMAGE_HEIGHT } from '@/components/travel/TravelTmlRound.styles';

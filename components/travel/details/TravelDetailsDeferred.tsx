@@ -7,8 +7,8 @@ import {
   FooterSectionSkeleton,
   MapSectionSkeleton,
   RatingSectionSkeleton,
-  SidebarSectionSkeleton,
 } from '@/components/travel/TravelDetailSkeletons'
+import { SidebarSectionSkeleton } from '@/components/travel/NearTravelListSkeleton'
 
 import type { AnchorsMap } from './TravelDetailsTypes'
 import { withLazy } from './TravelDetailsLazy'

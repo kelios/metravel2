@@ -46,6 +46,8 @@ jest.mock('@/components/travel/TravelDetailSkeletons', () => ({
   FooterSectionSkeleton: () => null,
   MapSectionSkeleton: () => null,
   RatingSectionSkeleton: () => null,
+}))
+jest.mock('@/components/travel/NearTravelListSkeleton', () => ({
   SidebarSectionSkeleton: () => null,
 }))
 
