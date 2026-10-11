@@ -4,7 +4,7 @@
 const fs = require('node:fs')
 const path = require('node:path')
 const ts = require('typescript')
-const CACHE = /(?:\.?metravel_(?:editor_)?token(?:\.qa104|\.profiles\.json)?|metravel-token\.json|mcp_token\.json)(?![-\w])/
+const CACHE = /(?:\.?metravel_(?:editor_)?token(?:\.qa104|\.owner|\.profiles\.json)?|metravel-token\.json|mcp_token\.json)(?![-\w])/
 const KERNEL = new Set(['scripts/lib/metravel-token.js', 'scripts/lib/metravel-token-cache.js'])
 const ACTIVE_GUIDANCE = [
   '.agents/skills/metravel-quest/SKILL.md', '.claude/skills/metravel-quest/SKILL.md',

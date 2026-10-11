@@ -326,6 +326,14 @@ editor120 (or the existing explicitly selected user ID). Every authenticated
 request verifies strict numeric `GET /api/user/me/` identity before a write.
 Author/editor channels never substitute the QA account or log in automatically.
 
+Each identity has its own dedicated home cache, so owner1 and QA104 never share
+the legacy `~/.metravel_token` alias: owner1 reads `~/.metravel_token.owner`,
+QA104 (and `staff-readonly`) reads `~/.metravel_token.qa104`. The dedicated cache
+is read after the `METRAVEL_TOKEN` env override and before every alias file; one
+identity never sees the other's dedicated cache, and `profile: 'owner'` with any
+user other than 1 gets no dedicated cache. Put a working owner1 token into
+`~/.metravel_token.owner` (mode 0600) instead of overwriting `~/.metravel_token`.
+
 QA104 alone can renew an absent/401 credential from primary `.env.e2e` credentials.
 `node scripts/get-quest-token.js` outputs status only; never capture its stdout as
 a token. Existing home, editor, JSON, MCP and browser caches remain readonly

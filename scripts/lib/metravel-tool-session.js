@@ -12,7 +12,7 @@ function createToolSession({ origin = 'https://metravel.by', profile = 'qa104', 
     if (!session) {
       session = createTokenSession({
         ...options, origin: target.origin, profile, expectedUserId,
-        sources: options.sources || (target.local ? [{ kind: 'value', value: explicit }] : toolTokenSources({ explicit, order, ...options })),
+        sources: options.sources || (target.local ? [{ kind: 'value', value: explicit }] : toolTokenSources({ explicit, order, profile, expectedUserId, ...options })),
         refreshPolicy: profile === 'qa104' && target.production ? 'primary-qa' : 'never',
       })
     }

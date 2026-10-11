@@ -15,9 +15,14 @@ function qaTokenSources({ explicit, env = process.env, homeDir = os.homedir(), e
   ]
 }
 
+// Each identity owns one dedicated home cache, so owner1 and QA104 never share
+// the legacy ~/.metravel_token alias. It is read after env overrides and before
+// every alias file; another identity's dedicated cache is never a candidate.
+const DEDICATED_CACHES = { owner: [1, '.metravel_token.owner'], qa104: [104, '.metravel_token.qa104'], 'staff-readonly': [104, '.metravel_token.qa104'] }
+
 // Cache names and their historical precedence live only at this boundary.
 // An alias is a candidate, never authority to overwrite another identity.
-function toolTokenSources({ explicit, order = ['env', 'home'], env = process.env, homeDir = os.homedir(), rootDir = process.cwd() } = {}) {
+function toolTokenSources({ explicit, order = ['env', 'home'], env = process.env, homeDir = os.homedir(), rootDir = process.cwd(), profile, expectedUserId } = {}) {
   const known = {
     env: { kind: 'env', name: 'METRAVEL_TOKEN', env },
     home: { kind: 'file', path: path.join(homeDir, '.metravel_token'), format: 'plain' },
@@ -27,7 +32,10 @@ function toolTokenSources({ explicit, order = ['env', 'home'], env = process.env
     editorHome: { kind: 'file', path: path.join(homeDir, '.metravel_editor_token'), format: 'plain' },
   }
   if (!Array.isArray(order) || order.some((name) => !Object.prototype.hasOwnProperty.call(known, name))) throw new TokenError('configuration')
-  return [{ kind: 'value', value: explicit }, ...order.map((name) => known[name])]
+  const selected = order.map((name) => known[name])
+  const [userId, file] = DEDICATED_CACHES[profile] || []
+  const dedicated = userId !== undefined && userId === expectedUserId ? [{ kind: 'file', path: path.join(homeDir, file), format: 'plain' }] : []
+  return [{ kind: 'value', value: explicit }, ...selected.filter((source) => source.kind === 'env'), ...dedicated, ...selected.filter((source) => source.kind !== 'env')]
 }
 
 function normalizeLoginCredentials(values, requireOwner = true) {
