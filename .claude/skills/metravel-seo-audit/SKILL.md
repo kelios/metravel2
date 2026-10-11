@@ -119,10 +119,10 @@ node scripts/seo-audit.js --user-id 1 --limit 50 --min-words 500
    node scripts/seo-edit.js --id <ID> --prepend-file lead.html --append-file blocks.html --dry-run
    node scripts/seo-edit.js --restore <ID>   # откатить из последнего бэкапа
    ```
-   Бэкапы — `scripts/.seo-backups/` (в .gitignore). Токен — `~/.metravel_token`,
-   секреты не логируй.
-   НЕ используй `metravel_publish.py`/`_put_with_desc` на живых статьях — он
-   снимает их с публикации (`publish=False`) и шлёт draft-placeholder'ы.
+   Бэкапы — `scripts/.seo-backups/` (в .gitignore). Токен — owner1 через общий
+   resolver (`docs/DEVELOPMENT.md` → «Operator token sessions»), секреты не логируй.
+   НЕ используй `metravel_publish.py` на живых статьях — это движок черновиков;
+   тело живой статьи пишется только через `seo-edit.js`.
    `title-too-long` (смена `name`) меняет slug и ломает URL — НЕ трогай заголовки
    в этом потоке без отдельного редиректа.
 
