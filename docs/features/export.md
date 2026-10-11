@@ -280,6 +280,43 @@ Resource Timing с видимым положительным encodedBodySize н�
 Ступени печати входят в `ALLOWED_IMAGE_WIDTHS` бэкенда, поэтому прокси
 обслуживает их без округления вверх. Общий контракт — `docs/features/images.md`.
 
+### Вся книга за период — серверный PDF, асинхронная отдача (#2352 / #2356 / #2357)
+
+Решение владельца 11.10.2026: большие архивы (1000+ фото) собираются на сервере часами,
+поэтому отдача асинхронная. Бэкенд (#2356, `docs/book-exports/pdf-worker.md` в бэк-репо):
+
+- при `done` шлёт владельцу письмо «Ваша книга готова» (RU/BE/UK/PL/EN по `settings.locale`
+  задания) со ссылкой на страницу сайта `SITE_URL + /book-exports/{job_id}` (настройка бэка
+  `BOOK_EXPORT_DOWNLOAD_PAGE_PATH`, default `/book-exports/{job_id}`); при финальном `failed` —
+  письмо «Не удалось собрать книгу» с кодом ошибки и предложением «Повторить». В письме нет
+  билета и других секретов;
+- страницы и готовый PDF лежат в приватном S3 (SSE-KMS); билет
+  (`POST /api/exports/books/{job_id}/download-ticket/` → `GET …/download/?ticket=…`) стримит из
+  S3 — контракт билета не менялся; срок хранения готовой книги 7 дней
+  (`BOOK_EXPORT_DONE_TTL_SECONDS`), после — `JOB_EXPIRED`/`REBUILD_REQUIRED`.
+
+Фронт (F2, #2357; в #2356 не реализуется):
+
+1. Страница `/book-exports/[job_id]` (web, Expo Router; shell как у приватных страниц):
+   требует входа (гость → логин с возвратом сюда), затем `GET /api/exports/books/{job_id}/`
+   того же владельца → по статусу: `done` — кнопка «Скачать книгу» (POST download-ticket →
+   прямое скачивание `download_url` через externalLinks helpers без Blob/beginPrint, как в
+   `services/book/fullBookDownload.ts`), страницы/размер/срок хранения; `failed` — код ошибки и
+   «Повторить» (POST retry) / «Собрать заново» при `REBUILD_REQUIRED`; `queued/running/retry_wait`
+   — прогресс и «пришлём письмо»; `expired/cancelled` — объяснение и ссылка на `/export`;
+   чужой/несуществующий job — 404-состояние без утечки.
+2. В панели «Вся книга за период» после создания задания — текст «Сборка идёт в фоне: когда
+   книга будет готова, пришлём письмо на <email аккаунта>» (ключи `export_01` ×5 локалей) и
+   кнопка «Открыть страницу книги» → `/book-exports/{job_id}`.
+3. Done gate #2357 дополняется: письмо получено на реальном аккаунте владельца, ссылка из письма
+   открывает страницу, скачивание по билету даёт полный PDF.
+
+Точный retest F2 после включения B3 на проде: `GET /api/exports/books/capabilities/` →
+`pdf_available/resumable/direct_download = true`; книга владельца 2012–2013 → письмо → страница →
+билет → PDF. Platform impact: desktop web + mobile web (страница из письма открывается и на
+телефоне, адаптив 320/390). Localization impact: RU/BE/UK/PL/EN — новые ключи `export_01`.
+Карточка #2357 превышает потолок описания гейта борда, поэтому контракт зафиксирован здесь.
+
 ## Контур 2 — печатная версия квеста
 
 `components/quests/QuestPrintable.tsx` (354) плюс `components/quests/printable/styles.ts`
