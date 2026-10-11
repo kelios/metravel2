@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
@@ -6,6 +6,7 @@ import { globalFocusStyles } from '@/styles/globalFocus';
 import { useThemedColors } from '@/hooks/useTheme';
 import { handleHeaderNavPress } from './customHeaderNavModel';
 import NavigationIcon from './NavigationIcon';
+import { webDataSetProps } from '@/utils/webProps';
 
 type CustomHeaderNavSectionProps = {
   activePath: string;
@@ -39,11 +40,12 @@ export default function CustomHeaderNavSection({
               isActive && styles.navItemActive,
               globalFocusStyles.focusable,
             ]}
+            {...(Platform.OS === 'web' ? webDataSetProps({ travelNavActive: String(isActive) }) : {})}
             accessibilityRole="link"
             accessibilityLabel={item.label}
             accessibilityState={{ selected: isActive }}
           >
-            <View style={styles.iconSlot18}>
+            <View style={styles.iconSlot18} {...(Platform.OS === 'web' ? webDataSetProps({ travelNavIcon: item.icon }) : {})}>
               <NavigationIcon
                 name={item.icon}
                 size={18}

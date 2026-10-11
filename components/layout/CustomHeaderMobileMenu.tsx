@@ -13,6 +13,7 @@ import NavigationIcon from './NavigationIcon'
 import { translate as i18nT } from '@/i18n'
 import { useLocale } from '@/i18n/LocaleProvider'
 import { getLocaleDisplayName } from '@/i18n/localeLabels'
+import { webDataSetProps } from '@/utils/webProps'
 
 
 type Props = {
@@ -51,6 +52,7 @@ const renderMenuItem = (
   item: MenuActionItem,
   styles: any,
   colors: ThemedColors,
+  decorateNavigation = false,
 ) => (
   <Pressable
     key={item.key}
@@ -60,11 +62,15 @@ const renderMenuItem = (
       (hovered || pressed) && styles.modalNavItemHover,
       item.active && styles.modalNavItemActive,
     ]}
+    {...(decorateNavigation && Platform.OS === 'web' ? webDataSetProps({ travelNavActive: String(Boolean(item.active)) }) : {})}
     accessibilityRole="button"
     accessibilityLabel={item.accessibilityLabel ?? item.label}
     accessibilityState={item.active ? { selected: true } : undefined}
   >
-    <View style={[styles.iconSlot20, item.iconSlotStyle]}>
+    <View
+      style={[styles.iconSlot20, item.iconSlotStyle]}
+      {...(decorateNavigation && Platform.OS === 'web' ? webDataSetProps({ travelNavIcon: item.icon }) : {})}
+    >
       <NavigationIcon
         name={item.icon}
         size={20}
@@ -239,7 +245,7 @@ export default function CustomHeaderMobileMenu({
 
             <View style={styles.modalDivider} />
             <Text style={styles.modalSectionTitle}>{i18nT('navigation:components.layout.CustomHeaderMobileMenu.navigatsiya_15727585')}</Text>
-            {navigationItems.map((item) => renderMenuItem(item, styles, colors))}
+            {navigationItems.map((item) => renderMenuItem(item, styles, colors, true))}
 
             {themeToggleNode ? (
               <>
