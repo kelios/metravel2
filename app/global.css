@@ -895,6 +895,100 @@ select:focus-visible {
   line-height: 44px !important;
 }
 
+/* Основная тема: художественный атлас. Цветовые роли остаются canonical;
+ * свет и рельеф живут только в web CSS и исключают праздничные слои. */
+html:not([data-season]) {
+  --base-atlas-canopy: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%201200%2040'%3E%3Cg%20fill%3D'none'%20stroke%3D'%23547769'%20stroke-opacity%3D'.32'%20stroke-width%3D'1'%3E%3Cpath%20d%3D'M0%2030Q65%203%20130%2020T260%2012T390%2020M810%2020Q875%203%20940%2020T1070%2012T1200%2030'%2F%3E%3Cpath%20d%3D'M0%2038Q65%2011%20130%2028T260%2020T390%2028M810%2028Q875%2011%20940%2028T1070%2020T1200%2038'%2F%3E%3Cpath%20d%3D'M20%208Q105%2028%20200%207T380%208M820%208Q905%2028%201000%207T1180%208'%20stroke-dasharray%3D'2%208'%2F%3E%3C%2Fg%3E%3Cg%20fill%3D'%23b17b38'%20opacity%3D'.72'%3E%3Ccircle%20cx%3D'62'%20cy%3D'12'%20r%3D'2'%2F%3E%3Ccircle%20cx%3D'244'%20cy%3D'7'%20r%3D'1.6'%2F%3E%3Ccircle%20cx%3D'956'%20cy%3D'7'%20r%3D'1.6'%2F%3E%3Ccircle%20cx%3D'1138'%20cy%3D'12'%20r%3D'2'%2F%3E%3C%2Fg%3E%3Cg%20stroke%3D'%23b17b38'%20stroke-opacity%3D'.65'%20fill%3D'none'%3E%3Cpath%20d%3D'M172%202v8m-4-4h8M1028%202v8m-4-4h8'%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+  --base-atlas-relief: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%201440%20720'%3E%3Cg%20fill%3D'none'%20stroke%3D'%23547769'%20stroke-opacity%3D'.015'%20stroke-width%3D'1'%3E%3Cpath%20d%3D'M-40%2074Q45%208%20150%2076T298%2098M-40%2096Q45%2030%20150%2098T298%20120M-40%20118Q45%2052%20150%20120T298%20142M-40%20140Q45%2074%20150%20142T298%20164'%2F%3E%3Cpath%20d%3D'M1142%2098Q1265%2028%201340%2092T1480%2072M1142%20120Q1265%2050%201340%20114T1480%2094M1142%20142Q1265%2072%201340%20136T1480%20116M1142%20164Q1265%2094%201340%20158T1480%20138'%2F%3E%3Cpath%20d%3D'M-20%20430Q60%20348%20132%20425T250%20478M-20%20452Q60%20370%20132%20447T250%20500M1190%20478Q1290%20380%201350%20440T1480%20426M1190%20500Q1290%20402%201350%20462T1480%20448'%2F%3E%3C%2Fg%3E%3Cg%20fill%3D'none'%20stroke%3D'%23b17b38'%20stroke-opacity%3D'.015'%20stroke-dasharray%3D'3%209'%3E%3Cpath%20d%3D'M18%20224Q125%20190%20215%20262M1225%20262Q1315%20190%201422%20224'%2F%3E%3C%2Fg%3E%3Cg%20fill%3D'%23b17b38'%20opacity%3D'.015'%3E%3Ccircle%20cx%3D'215'%20cy%3D'262'%20r%3D'3'%2F%3E%3Ccircle%20cx%3D'1225'%20cy%3D'262'%20r%3D'3'%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+  --base-atlas-header: linear-gradient(110deg, #fff9f0, #f7faf8 55%, #fffdf8);
+  --base-atlas-horizon: radial-gradient(ellipse at 8% 12%, rgba(219, 177, 110, 0.015), transparent 36%), radial-gradient(ellipse at 95% 0%, rgba(122, 157, 143, 0.02), transparent 42%), linear-gradient(140deg, #fffdf8, #ffffff 64%, #fffefb);
+  --base-atlas-logo-glow: rgba(219, 177, 110, 0.28);
+  --base-atlas-orbit: rgba(177, 123, 56, 0.5);
+}
+html:not([data-season])[data-theme="dark"] {
+  --base-atlas-canopy: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%201200%2040'%3E%3Cg%20fill%3D'none'%20stroke%3D'%238cb8a8'%20stroke-opacity%3D'.32'%20stroke-width%3D'1'%3E%3Cpath%20d%3D'M0%2030Q65%203%20130%2020T260%2012T390%2020M810%2020Q875%203%20940%2020T1070%2012T1200%2030'%2F%3E%3Cpath%20d%3D'M0%2038Q65%2011%20130%2028T260%2020T390%2028M810%2028Q875%2011%20940%2028T1070%2020T1200%2038'%2F%3E%3Cpath%20d%3D'M20%208Q105%2028%20200%207T380%208M820%208Q905%2028%201000%207T1180%208'%20stroke-dasharray%3D'2%208'%2F%3E%3C%2Fg%3E%3Cg%20fill%3D'%23efc17c'%20opacity%3D'.72'%3E%3Ccircle%20cx%3D'62'%20cy%3D'12'%20r%3D'2'%2F%3E%3Ccircle%20cx%3D'244'%20cy%3D'7'%20r%3D'1.6'%2F%3E%3Ccircle%20cx%3D'956'%20cy%3D'7'%20r%3D'1.6'%2F%3E%3Ccircle%20cx%3D'1138'%20cy%3D'12'%20r%3D'2'%2F%3E%3C%2Fg%3E%3Cg%20stroke%3D'%23efc17c'%20stroke-opacity%3D'.65'%20fill%3D'none'%3E%3Cpath%20d%3D'M172%202v8m-4-4h8M1028%202v8m-4-4h8'%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+  --base-atlas-relief: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%201440%20720'%3E%3Cg%20fill%3D'none'%20stroke%3D'%238cb8a8'%20stroke-opacity%3D'.02'%20stroke-width%3D'1'%3E%3Cpath%20d%3D'M-40%2074Q45%208%20150%2076T298%2098M-40%2096Q45%2030%20150%2098T298%20120M-40%20118Q45%2052%20150%20120T298%20142M-40%20140Q45%2074%20150%20142T298%20164'%2F%3E%3Cpath%20d%3D'M1142%2098Q1265%2028%201340%2092T1480%2072M1142%20120Q1265%2050%201340%20114T1480%2094M1142%20142Q1265%2072%201340%20136T1480%20116M1142%20164Q1265%2094%201340%20158T1480%20138'%2F%3E%3Cpath%20d%3D'M-20%20430Q60%20348%20132%20425T250%20478M-20%20452Q60%20370%20132%20447T250%20500M1190%20478Q1290%20380%201350%20440T1480%20426M1190%20500Q1290%20402%201350%20462T1480%20448'%2F%3E%3C%2Fg%3E%3Cg%20fill%3D'none'%20stroke%3D'%23efc17c'%20stroke-opacity%3D'.02'%20stroke-dasharray%3D'3%209'%3E%3Cpath%20d%3D'M18%20224Q125%20190%20215%20262M1225%20262Q1315%20190%201422%20224'%2F%3E%3C%2Fg%3E%3Cg%20fill%3D'%23efc17c'%20opacity%3D'.02'%3E%3Ccircle%20cx%3D'215'%20cy%3D'262'%20r%3D'3'%2F%3E%3Ccircle%20cx%3D'1225'%20cy%3D'262'%20r%3D'3'%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+  --base-atlas-header: radial-gradient(ellipse at 8% 0%, rgba(239, 193, 124, 0.12), transparent 34%), linear-gradient(110deg, #16352f, #172c2b 55%, #23322e);
+  --base-atlas-horizon: radial-gradient(ellipse at 8% 12%, rgba(239, 193, 124, 0.04), transparent 36%), radial-gradient(ellipse at 95% 0%, rgba(103, 171, 153, 0.06), transparent 42%), linear-gradient(140deg, #0c1714, #151816 64%, #101c17);
+  --base-atlas-logo-glow: rgba(239, 193, 124, 0.28);
+  --base-atlas-orbit: rgba(239, 193, 124, 0.58);
+}
+@media (prefers-color-scheme: dark) {
+  html:not([data-season]):not([data-theme]) {
+  --base-atlas-canopy: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%201200%2040'%3E%3Cg%20fill%3D'none'%20stroke%3D'%238cb8a8'%20stroke-opacity%3D'.32'%20stroke-width%3D'1'%3E%3Cpath%20d%3D'M0%2030Q65%203%20130%2020T260%2012T390%2020M810%2020Q875%203%20940%2020T1070%2012T1200%2030'%2F%3E%3Cpath%20d%3D'M0%2038Q65%2011%20130%2028T260%2020T390%2028M810%2028Q875%2011%20940%2028T1070%2020T1200%2038'%2F%3E%3Cpath%20d%3D'M20%208Q105%2028%20200%207T380%208M820%208Q905%2028%201000%207T1180%208'%20stroke-dasharray%3D'2%208'%2F%3E%3C%2Fg%3E%3Cg%20fill%3D'%23efc17c'%20opacity%3D'.72'%3E%3Ccircle%20cx%3D'62'%20cy%3D'12'%20r%3D'2'%2F%3E%3Ccircle%20cx%3D'244'%20cy%3D'7'%20r%3D'1.6'%2F%3E%3Ccircle%20cx%3D'956'%20cy%3D'7'%20r%3D'1.6'%2F%3E%3Ccircle%20cx%3D'1138'%20cy%3D'12'%20r%3D'2'%2F%3E%3C%2Fg%3E%3Cg%20stroke%3D'%23efc17c'%20stroke-opacity%3D'.65'%20fill%3D'none'%3E%3Cpath%20d%3D'M172%202v8m-4-4h8M1028%202v8m-4-4h8'%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+  --base-atlas-relief: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%201440%20720'%3E%3Cg%20fill%3D'none'%20stroke%3D'%238cb8a8'%20stroke-opacity%3D'.02'%20stroke-width%3D'1'%3E%3Cpath%20d%3D'M-40%2074Q45%208%20150%2076T298%2098M-40%2096Q45%2030%20150%2098T298%20120M-40%20118Q45%2052%20150%20120T298%20142M-40%20140Q45%2074%20150%20142T298%20164'%2F%3E%3Cpath%20d%3D'M1142%2098Q1265%2028%201340%2092T1480%2072M1142%20120Q1265%2050%201340%20114T1480%2094M1142%20142Q1265%2072%201340%20136T1480%20116M1142%20164Q1265%2094%201340%20158T1480%20138'%2F%3E%3Cpath%20d%3D'M-20%20430Q60%20348%20132%20425T250%20478M-20%20452Q60%20370%20132%20447T250%20500M1190%20478Q1290%20380%201350%20440T1480%20426M1190%20500Q1290%20402%201350%20462T1480%20448'%2F%3E%3C%2Fg%3E%3Cg%20fill%3D'none'%20stroke%3D'%23efc17c'%20stroke-opacity%3D'.02'%20stroke-dasharray%3D'3%209'%3E%3Cpath%20d%3D'M18%20224Q125%20190%20215%20262M1225%20262Q1315%20190%201422%20224'%2F%3E%3C%2Fg%3E%3Cg%20fill%3D'%23efc17c'%20opacity%3D'.02'%3E%3Ccircle%20cx%3D'215'%20cy%3D'262'%20r%3D'3'%2F%3E%3Ccircle%20cx%3D'1225'%20cy%3D'262'%20r%3D'3'%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+  --base-atlas-header: radial-gradient(ellipse at 8% 0%, rgba(239, 193, 124, 0.12), transparent 34%), linear-gradient(110deg, #16352f, #172c2b 55%, #23322e);
+  --base-atlas-horizon: radial-gradient(ellipse at 8% 12%, rgba(239, 193, 124, 0.04), transparent 36%), radial-gradient(ellipse at 95% 0%, rgba(103, 171, 153, 0.06), transparent 42%), linear-gradient(140deg, #0c1714, #151816 64%, #101c17);
+  --base-atlas-logo-glow: rgba(239, 193, 124, 0.28);
+  --base-atlas-orbit: rgba(239, 193, 124, 0.58);
+  }
+}
+html:not([data-season]) [data-testid="main-header-row"] {
+  background-image: var(--base-atlas-header);
+}
+html:not([data-season]) [data-testid="main-header"]::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 22px;
+  pointer-events: none;
+  z-index: 1;
+  background-image: var(--base-atlas-canopy);
+  background-position: center top;
+  background-size: 1200px 40px;
+  background-repeat: repeat-x;
+}
+html:not([data-season]) [data-testid="home-hero"] {
+  background-image: var(--base-atlas-relief), var(--base-atlas-horizon);
+  background-position: center top;
+  background-size: 1440px 720px, 100% 100%;
+  background-repeat: no-repeat;
+}
+html:not([data-season]) [data-header-logo-frame]::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--base-atlas-logo-glow), transparent 72%);
+  box-shadow: 0 0 14px 2px var(--base-atlas-logo-glow);
+  pointer-events: none;
+}
+html:not([data-season]) [data-header-logo-frame]::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border: 1px dashed var(--base-atlas-orbit);
+  border-radius: 50%;
+  transform: rotate(-25deg);
+  pointer-events: none;
+}
+html:not([data-season]) [data-header-logo-travel] {
+  color: var(--color-brandText) !important;
+}
+@media (max-width: 767px) {
+  html:not([data-season]) [data-testid="main-header"]::before {
+    height: 18px;
+    background-size: 900px 30px;
+  }
+  html:not([data-season]) [data-testid="home-hero"] {
+    background-size: 900px 450px, 100% 100%;
+  }
+}
+@media print {
+  html:not([data-season]) [data-testid="main-header-row"],
+  html:not([data-season]) [data-testid="home-hero"] {
+    background-image: none;
+  }
+  html:not([data-season]) [data-testid="main-header"]::before,
+  html:not([data-season]) [data-header-logo-frame]::before,
+  html:not([data-season]) [data-header-logo-frame]::after {
+    display: none;
+  }
+  html:not([data-season]) [data-header-logo-travel] {
+    color: var(--color-text) !important;
+  }
+}
+
 /*
  * Сезонное (праздничное) оформление (#2376).
  * Реестр тем и окна — `constants/seasonalThemes.ts`; атрибут `data-season`

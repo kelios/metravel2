@@ -39,6 +39,15 @@ Sources:
 - Palette values: `constants/modernMattePalette.ts`
 - Web CSS variables: `app/global.css`
 
+## Base artistic web appearance
+
+The ordinary web appearance uses an atlas motif: warm daylight, contour lines,
+an evergreen evening palette in the decorative backgrounds, and amber logo light.
+Its `--base-atlas-*` variables belong to `app/global.css`; semantic `--color-*`
+roles and their shared/native/critical fallbacks stay canonical. Art is confined
+to the header, logo and home hero background and excludes every active seasonal
+appearance with `html:not([data-season])`. See `docs/features/base-theme.md`.
+
 ## Primary foreground contrast
 
 Status: accepted, 2026-07-02.
