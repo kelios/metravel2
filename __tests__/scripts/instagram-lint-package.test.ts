@@ -127,6 +127,23 @@ describe('instagram lint-package', () => {
     expect(lint(dir)).toMatchObject({ status: 0, rules: [] })
   })
 
+  it('checks Reel title timing and length from the montage spec', () => {
+    const dir = makePackage('reel-titles', {
+      'caption.txt': CLEAN_CAPTION,
+      'spec.json': JSON.stringify({ segments: [
+        { text: 'Касина-Велька: круг 11,5 км', dur: 1.2 },
+        { text: 'Касина-Велька: круг 11,5 км', dur: 1.8 },
+        { text: 'Вода почти чёрная из-за торфа и тени от леса', dur: 2 },
+      ] }),
+    })
+    const { status, hits } = lint(dir)
+    expect(status).toBe(1)
+    expect(hits.map((h: { rule: string; source: string }) => `${h.rule} ${h.source}`)).toEqual([
+      'F2 spec.json титр 02',
+      'F2 spec.json титр 02',
+    ])
+  })
+
   it('rejects a call without a package folder', () => {
     expect(runCli('python3', [SCRIPT]).status).toBe(2)
   })

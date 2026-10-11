@@ -13,6 +13,7 @@
         локальный scripts/*-quest-data.js с answer_pattern — его читает node); совпадение, которое не
         ответ, снимается строкой `lint-allow: F10 <слово> — <причина>` в package.md;
   F11 — у reel.mp4 есть звуковая дорожка и длина 15–40 с (если есть ffprobe);
+  F2  — титры Reel из spec.json держатся ≥ 1,5 с + 0,3 с на слово и не длиннее ~7 слов;
   B1  — запрещённые по Беларуси источники, общий список
         scripts/content-source-denylist.json (тот же, что у scan-content-sources.js).
 
@@ -232,6 +233,44 @@ def check_quest_answers(package, lines, data_glob=QUEST_DATA_GLOB):
     return hits
 
 
+TITLE_MIN_S, TITLE_PER_WORD_S, TITLE_MAX_WORDS = 1.5, 0.3, 7
+
+
+def check_reel_titles(package):
+    """F2 для Reel (бриф шаг 5): титр держится ≥ 1,5 с + 0,3 с на слово, не длиннее ~7 слов."""
+    path = os.path.join(package, 'spec.json')
+    if not os.path.exists(path):
+        return []
+    try:
+        data = json.loads(read(path))
+    except ValueError:
+        return []
+    hits = []
+    items = []
+    for item in (data.get('segments') or []) if isinstance(data, dict) else []:
+        if isinstance(item, dict) and isinstance(item.get('text'), str) and item.get('dur'):
+            items.append((item['text'], float(item['dur'])))
+    for item in (data.get('texts') or []) if isinstance(data, dict) else []:
+        if isinstance(item, dict) and isinstance(item.get('text'), str) and 't0' in item and 't1' in item:
+            items.append((item['text'], float(item['t1']) - float(item['t0'])))
+    merged = []  # один титр через несколько клипов подряд — одно появление на экране
+    for text, shown in items:
+        if merged and merged[-1][0] == text:
+            merged[-1] = (text, merged[-1][1] + shown)
+        else:
+            merged.append((text, shown))
+    for index, (text, shown) in enumerate(merged, 1):
+        words = len(text.split())
+        need = TITLE_MIN_S + TITLE_PER_WORD_S * words
+        if shown + 1e-6 < need:
+            hits.append(finding('spec.json титр %02d' % index, 0, 'F2',
+                                'титр «%s» держится %.1f с, нужно ≥ %.1f с' % (text.replace('\n', ' / '), shown, need)))
+        if words > TITLE_MAX_WORDS:
+            hits.append(finding('spec.json титр %02d' % index, 0, 'F2',
+                                'титр «%s» — %d слов, предел ~%d' % (text.replace('\n', ' / '), words, TITLE_MAX_WORDS)))
+    return hits
+
+
 def check_reel(package):
     reel = os.path.join(package, 'reel.mp4')
     if not os.path.exists(reel) or not shutil.which('ffprobe'):
@@ -273,6 +312,7 @@ def lint_package(package, spec_path=SPEC_PATH, denylist_path=DENYLIST_PATH, data
     hits += scan(public + sources, belarus)
     hits += check_quest_answers(package, public, data_glob)
     hits += check_reel(package)
+    hits += check_reel_titles(package)
     return hits
 
 
