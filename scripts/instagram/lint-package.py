@@ -1,0 +1,302 @@
+#!/usr/bin/env python3
+"""Механический линт пакета поста Instagram @metravelby.
+
+Проверяет то, что можно проверить без глаз, до Visual QA:
+  V*  — шаблоны голоса (служебная речь, клише, «Юля прошла» в третьем лице);
+        регулярки читаются из блока lint-patterns в docs/INSTAGRAM_CONTENT_SPEC.md,
+        отдельной копии правил здесь нет;
+  F3  — первая строка подписи;
+  F4  — длина подписи через len() (не `wc -m`: при пустой локали он считает байты);
+  F5  — не больше 2 эмодзи;
+  F8  — 3–5 хештегов, все в конце подписи;
+  F10 — ответы на задания квеста не раскрыты (если в пакете есть quest_id и
+        локальный scripts/*-quest-data.js с answer_pattern — его читает node); совпадение, которое не
+        ответ, снимается строкой `lint-allow: F10 <слово> — <причина>` в package.md;
+  F11 — у reel.mp4 есть звуковая дорожка и длина 15–40 с (если есть ffprobe);
+  B1  — запрещённые по Беларуси источники, общий список
+        scripts/content-source-denylist.json (тот же, что у scan-content-sources.js).
+
+Текст слайдов берётся из spec.json (make-carousel.py, вместе с name точек карты) и
+slides.txt (слайды другого скрипта или титры Reel: один слайд — блок через пустую строку).
+
+  python3 scripts/instagram/lint-package.py .codex-temp/instagram/posts/<пакет>
+  python3 scripts/instagram/lint-package.py --json <пакет>
+  python3 scripts/instagram/lint-package.py --quest-data 'scripts/x-quest-data.js' <пакет>
+
+Выход 0 — находок нет, 1 — есть находки, 2 — ошибка вызова.
+"""
+import glob
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+SPEC_PATH = os.path.join(ROOT, 'docs', 'INSTAGRAM_CONTENT_SPEC.md')
+DENYLIST_PATH = os.path.join(ROOT, 'scripts', 'content-source-denylist.json')
+QUEST_DATA_GLOB = os.path.join(ROOT, 'scripts', '*-quest-data.js')
+
+CAPTION_MAX = 1800
+EMOJI_MAX = 2
+HASHTAGS_MIN, HASHTAGS_MAX = 3, 5
+REEL_MIN_S, REEL_MAX_S = 15, 40
+SLIDE_TEXT_KEYS = ('kicker', 'title', 'subtitle', 'text', 'note', 'items', 'points')
+SOURCE_FILES = ('brief.md', 'sources.md', 'package.md', 'article-edits.md')
+
+EMOJI_CHAR = ('[\U0001F300-\U0001FAFF\U00002600-\U000027BF\U0001F000-\U0001F2FF\U00002B00-\U00002BFF'
+              '\u231A\u231B\u23E9-\u23F3\u23F8-\u23FA]')
+# Модификатор тона кожи и VS16 — часть того же эмодзи, ZWJ-последовательность — одно эмодзи.
+EMOJI_TAIL = '[\U0001F3FB-\U0001F3FF]?\uFE0F?'
+EMOJI_RE = re.compile('(?:[\U0001F1E6-\U0001F1FF]{2}|[0-9#*]\uFE0F?\u20E3|%s%s(?:\u200D%s%s)*)' % (
+    EMOJI_CHAR, EMOJI_TAIL, EMOJI_CHAR, EMOJI_TAIL))
+HASHTAG_RE = re.compile(r'(?<![\w#])#[\w]+', re.U)
+QUEST_ID_RE = re.compile(r'(?:quest_id\s*[=:]\s*[`"\']?|by-quest-id/)([a-z0-9][a-z0-9-]+)', re.I)
+ALLOW_RE = re.compile(r'^\s*lint-allow:\s*(F10)\s+(.+?)\s+—\s+\S', re.M)
+BAD_FIRST_LINE_RE = re.compile(r'^\s*(?:(?:всем\s+)?привет\b|итак\b|#|\d{1,2}[./]\d{1,2})', re.I)
+
+
+def load_spec_patterns(spec_path=SPEC_PATH):
+    """Блок ```lint-patterns в ТЗ: строки `ПРАВИЛО :: регулярка :: пояснение`."""
+    with open(spec_path, encoding='utf-8') as fh:
+        text = fh.read()
+    block = re.search(r'```lint-patterns\n(.*?)\n```', text, re.S)
+    if not block:
+        raise ValueError('в %s нет блока ```lint-patterns' % spec_path)
+    patterns = []
+    for raw in block.group(1).splitlines():
+        line = raw.strip()
+        if not line or line.startswith('//'):
+            continue
+        parts = [part.strip() for part in line.split(' :: ', 2)]
+        if len(parts) != 3:
+            raise ValueError('строка lint-patterns не в формате `правило :: регулярка :: пояснение`: %s' % line)
+        rule, regex, label = parts
+        patterns.append({'rule': rule, 're': re.compile(regex, re.I | re.U), 'label': label})
+    return patterns
+
+
+def load_denylist(path=DENYLIST_PATH):
+    with open(path, encoding='utf-8') as fh:
+        data = json.load(fh)
+    return [{'rule': 'B1', 're': re.compile(p['regex'], re.I | re.U),
+             'label': 'запрещённый по Беларуси источник ' + p['label']} for p in data['patterns']]
+
+
+def read(path):
+    with open(path, encoding='utf-8-sig') as fh:
+        return fh.read()
+
+
+def slide_lines(package):
+    """[(источник, номер строки, текст)] — текст, который лежит на слайдах."""
+    spec = os.path.join(package, 'spec.json')
+    plain = os.path.join(package, 'slides.txt')
+    out = []
+    if os.path.exists(spec):
+        data = json.loads(read(spec))
+        for index, slide in enumerate(data.get('slides', []), 1):
+            for key in SLIDE_TEXT_KEYS:
+                value = slide.get(key)
+                for item in (value if isinstance(value, list) else [value]):
+                    if isinstance(item, dict):  # точка карты: на слайде печатается её name
+                        item = item.get('name')
+                    if isinstance(item, str) and item.strip():
+                        out.append(('spec.json слайд %02d' % index, 0, item))
+    if os.path.exists(plain):  # титры Reel или слайды другого скрипта — рядом со spec.json тоже
+        for number, line in enumerate(read(plain).splitlines(), 1):
+            if line.strip():
+                out.append(('slides.txt', number, line))
+    return out
+
+
+def scan(lines, patterns):
+    hits = []
+    for source, number, text in lines:
+        for p in patterns:
+            for m in p['re'].finditer(text):
+                hits.append(finding(source, number, p['rule'], '%s: «%s»' % (p['label'], m.group(0))))
+    return hits
+
+
+def finding(source, line, rule, message):
+    return {'source': source, 'line': line, 'rule': rule, 'message': message}
+
+
+def check_caption(caption):
+    hits = []
+    text = caption.strip()
+    lines = text.split('\n')
+    if BAD_FIRST_LINE_RE.search(lines[0]):
+        hits.append(finding('caption.txt', 1, 'F3', 'первая строка начинается не с места: «%s»' % lines[0][:40]))
+    if len(text) > CAPTION_MAX:
+        hits.append(finding('caption.txt', 0, 'F4', 'подпись %d знаков, предел %d' % (len(text), CAPTION_MAX)))
+    emoji = EMOJI_RE.findall(text)
+    if len(emoji) > EMOJI_MAX:
+        hits.append(finding('caption.txt', 0, 'F5', 'эмодзи %d (%s), предел %d' % (len(emoji), ' '.join(emoji), EMOJI_MAX)))
+    tags = HASHTAG_RE.findall(text)
+    if not HASHTAGS_MIN <= len(tags) <= HASHTAGS_MAX:
+        hits.append(finding('caption.txt', 0, 'F8', 'хештегов %d, нужно %d–%d' % (len(tags), HASHTAGS_MIN, HASHTAGS_MAX)))
+    # Хештеги — только последним абзацем: всё выше пустой строки перед ним — текст.
+    tail_start = len(lines)
+    while tail_start > 0 and lines[tail_start - 1].strip():
+        tail_start -= 1
+    for number, line in enumerate(lines[:tail_start], 1):
+        if HASHTAG_RE.search(line):
+            hits.append(finding('caption.txt', number, 'F8', 'хештег не в конце подписи: «%s»' % line[:50]))
+    return hits
+
+
+def quest_ids(package):
+    ids = set()
+    for name in SOURCE_FILES:
+        path = os.path.join(package, name)
+        if os.path.exists(path):
+            ids.update(m.lower() for m in QUEST_ID_RE.findall(read(path)))
+    return ids
+
+
+# Data-файл квеста — JS-модуль (`value: JSON.stringify([...])`, многострочные объекты, кавычки
+# обоих видов), поэтому ответы берёт сам node, а не регулярка по исходнику.
+NODE_ANSWERS_JS = r'''
+const [file, id] = process.argv.slice(1);
+const out = [];
+const take = (p) => {
+  if (!p || typeof p !== 'object') return;
+  if (p.type === 'exact') out.push(p.value);
+  if (p.type === 'exact_any') out.push(...(Array.isArray(p.value) ? p.value : JSON.parse(p.value)));
+};
+const walk = (node, inside) => {
+  if (Array.isArray(node)) return node.forEach((n) => walk(n, inside));
+  if (!node || typeof node !== 'object') return;
+  const here = inside || node.quest_id === id;
+  if (here && node.answer_pattern) take(node.answer_pattern);
+  Object.values(node).forEach((n) => walk(n, here));
+};
+walk(require(file), false);
+process.stdout.write(JSON.stringify(out.filter((v) => typeof v === 'string')));
+'''
+
+
+def normalize_answer_text(text):
+    """Сравнение без регистра, «ё» и дефисов: в data-файлах ответы записаны «огнем», «сине зеленый»."""
+    return re.sub(r'[\s\-‐‑]+', ' ', text.lower().replace('ё', 'е')).strip()
+
+
+def quest_answers(quest_id, data_glob=QUEST_DATA_GLOB):
+    """(ответы exact/exact_any, ошибки) из локального data-файла квеста; пусто, если файла нет."""
+    marker = re.compile(r'quest_id[\'"]?\s*:\s*[\'"]%s[\'"]' % re.escape(quest_id))
+    answers, errors = set(), []
+    for path in sorted(glob.glob(data_glob)):
+        if not marker.search(read(path)):
+            continue
+        if not shutil.which('node'):
+            errors.append('node не найден — ответы квеста %s не проверены' % quest_id)
+            continue
+        run = subprocess.run(['node', '-e', NODE_ANSWERS_JS, os.path.abspath(path), quest_id],
+                             capture_output=True, text=True, check=False)
+        if run.returncode != 0:
+            errors.append('не прочитан %s: %s' % (os.path.basename(path), (run.stderr.strip().splitlines() or ['?'])[-1]))
+            continue
+        answers.update(normalize_answer_text(v) for v in json.loads(run.stdout or '[]'))
+    # Короткие числа и однобуквенные ответы встречаются в любом тексте — шум, а не утечка.
+    return {a for a in answers if len(a) >= 4 or (a.isdigit() and len(a) >= 3)}, errors
+
+
+def allowed_answers(package):
+    """`lint-allow: F10 <слово> — <причина>` в package.md: совпадение, которое не ответ."""
+    path = os.path.join(package, 'package.md')
+    if not os.path.exists(path):
+        return set()
+    return {normalize_answer_text(word.strip('«»"\' ')) for _, word in ALLOW_RE.findall(read(path))}
+
+
+def check_quest_answers(package, lines, data_glob=QUEST_DATA_GLOB):
+    hits = []
+    allowed = allowed_answers(package)
+    for quest_id in sorted(quest_ids(package)):
+        answers, errors = quest_answers(quest_id, data_glob)
+        hits += [finding('quest-data', 0, 'F10', message) for message in errors]
+        answers -= allowed
+        for source, number, text in lines:
+            low = normalize_answer_text(text)
+            for answer in sorted(answers):
+                if re.search(r'(?<!\w)%s(?!\w)' % re.escape(answer), low):
+                    hits.append(finding(source, number, 'F10', 'ответ задания квеста %s: «%s»' % (quest_id, answer)))
+    return hits
+
+
+def check_reel(package):
+    reel = os.path.join(package, 'reel.mp4')
+    if not os.path.exists(reel) or not shutil.which('ffprobe'):
+        return []
+    probe = subprocess.run(
+        ['ffprobe', '-v', 'error', '-show_entries', 'stream=codec_type:format=duration', '-of', 'json', reel],
+        capture_output=True, text=True, check=False)
+    if probe.returncode != 0:
+        return [finding('reel.mp4', 0, 'F11', 'ffprobe не прочитал файл')]
+    data = json.loads(probe.stdout or '{}')
+    hits = []
+    if not any(s.get('codec_type') == 'audio' for s in data.get('streams', [])):
+        hits.append(finding('reel.mp4', 0, 'F11', 'нет звуковой дорожки: музыка не вшита'))
+    try:
+        duration = float(data.get('format', {}).get('duration') or 0)
+    except ValueError:  # ffprobe отдаёт «N/A», если длина не читается
+        duration = 0.0
+    if not REEL_MIN_S <= duration <= REEL_MAX_S:
+        hits.append(finding('reel.mp4', 0, 'F11', 'длина %.1f с, нужно %d–%d' % (duration, REEL_MIN_S, REEL_MAX_S)))
+    return hits
+
+
+def lint_package(package, spec_path=SPEC_PATH, denylist_path=DENYLIST_PATH, data_glob=QUEST_DATA_GLOB):
+    caption_path = os.path.join(package, 'caption.txt')
+    if not os.path.exists(caption_path):
+        return [finding('caption.txt', 0, 'F0', 'нет caption.txt')]
+    voice = load_spec_patterns(spec_path)
+    belarus = load_denylist(denylist_path)
+    caption = read(caption_path)
+    caption_lines = [('caption.txt', n, line) for n, line in enumerate(caption.splitlines(), 1)]
+    public = caption_lines + slide_lines(package)
+    sources = []
+    for name in SOURCE_FILES:
+        path = os.path.join(package, name)
+        if os.path.exists(path):
+            sources += [(name, n, line) for n, line in enumerate(read(path).splitlines(), 1)]
+    hits = check_caption(caption)
+    hits += scan(public, voice)
+    hits += scan(public + sources, belarus)
+    hits += check_quest_answers(package, public, data_glob)
+    hits += check_reel(package)
+    return hits
+
+
+def main(argv):
+    args = list(argv)
+    as_json = '--json' in args
+    data_glob = QUEST_DATA_GLOB
+    if '--quest-data' in args:
+        index = args.index('--quest-data')
+        data_glob = args[index + 1] if index + 1 < len(args) else ''
+        del args[index:index + 2]
+    targets = [a for a in args if a != '--json']
+    if len(targets) != 1 or not os.path.isdir(targets[0]) or not data_glob:
+        sys.stderr.write('usage: lint-package.py [--json] [--quest-data <glob>] <папка пакета>\n')
+        return 2
+    try:
+        hits = lint_package(targets[0], data_glob=data_glob)
+    except (OSError, ValueError, re.error) as error:  # битый spec.json, блок lint-patterns, denylist
+        sys.stderr.write('lint-package.py: %s\n' % error)
+        return 2
+    if as_json:
+        print(json.dumps(hits, ensure_ascii=False, indent=2))
+    else:
+        for h in hits:
+            where = h['source'] + (':%d' % h['line'] if h['line'] else '')
+            print('%s [%s] %s' % (where, h['rule'], h['message']))
+        print('%s: %d находок' % (os.path.basename(os.path.normpath(targets[0])), len(hits)))
+    return 1 if hits else 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

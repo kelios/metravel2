@@ -1,89 +1,64 @@
 ---
 name: metravel-instagram-editor
-description: "Prepare or audit Instagram @metravelby posts, captions, carousels, Reels, weekly content packs and metrics using author-1 articles or project quests. Use for today's post, a content plan, an approved scheduled-post edit or a weekly review."
+description: "Prepare or audit Instagram @metravelby posts, captions, carousels, Reels, weekly content packs and metrics using author-1 articles or project quests, following the planner → researcher → creator → visual-qa → operator role split. Use for today's post, a content plan, an approved scheduled-post edit or a weekly review."
 ---
 
 # Instagram Editor
 
-Use `docs/INSTAGRAM_PLAN.md` as the strategy/calendar owner. Read the relevant
-date row and headings `Цель и аудитория`, `Тематические подборки`, `Расписание
-публикаций: где смотреть и как ставить`, or `Производство роликов` as needed.
-Where historical rows conflict, use the latest explicit owner decision; an old
-approval recorded in the plan is not authorization for a new publication.
-For examples of scoped requests, read [references/prompts.md](references/prompts.md).
+The Instagram chain has five roles; their contracts live in `.claude/agents/instagram-*.md`
+and are the single source for Codex too. Read only the role you are performing, and do not
+copy rules into this skill:
 
-## Story first, not fragments
+| Step | Role contract | Writes in the post package |
+| --- | --- | --- |
+| 1. Topic and date | `.claude/agents/instagram-planner.md` | `brief.md`, calendar row in `docs/INSTAGRAM_PLAN.md` |
+| 2. Facts | `.claude/agents/instagram-researcher.md` | `sources.md`, `article-edits.md` |
+| 3. Slides / Reel / caption | `.claude/agents/instagram-creator.md` | `slides/`, `spec.json` or `slides.txt`, `caption.txt`, `package.md` |
+| 4. Review | `.claude/agents/instagram-visual-qa.md` | `qa.md`, `qa-sheet.jpg` |
+| 5. Schedule, publish, metrics, follower cleanup | `.claude/agents/instagram-editor.md` + `docs/INSTAGRAM_OPERATIONS.md` | `published.md` |
 
-Owner rule (11.10.2026): every post is one coherent story, not fragments of an article.
-Lead with the subject and its context (a castle: where, what, its history; a practical topic:
-the reader's question and all the options), then the authors' impressions and what happened
-to them. A viewer who never read the article must understand what the post is about and
-why it is told. Canonical text: `docs/INSTAGRAM_CONTENT_SPEC.md` section 18.
+The package folder, its file contract and the QA round limits are in
+`docs/INSTAGRAM_CONTENT_SPEC.md` section 0; voice and form rules are numbered V1–V10 and F1–F13
+in section 18; owner hard rules are in section 25; the accepted/rejected reference pair is
+section 26. For examples of scoped requests, read [references/prompts.md](references/prompts.md).
+For visual changes add `$metravel-instagram-visuals`.
 
-## Identify and source
+## Non-negotiables
 
-- Resolve "today" from the client date and `Europe/Warsaw`. Read the actual
-  browser post when the user refers to an open editor: account, first caption
-  line, complete carousel, schedule date/time. A screenshot identifies a
-  candidate; verify live state before changing it.
-- Travel content: public `GET https://metravel.by/api/travels/<id>/` must show
-  `userIds == "1"`, `publish == true`, `moderation == true`. Lists are discovery;
-  detail is confirmation. Never substitute guest material.
-- Project quests: `GET https://metravel.by/api/quests/` (follow pagination), then
-  `GET https://metravel.by/api/quests/by-quest-id/<quest_id>/`. Confirm title,
-  city, intro, ordered steps, finale and public quest URL.
-- Extract each claim from its source field. Durations, counts, prices and
-  distances need a quoted source fragment in the working source manifest.
-  Contradictory/unavailable claims stay out of the pack until resolved.
-  Legends are presented as legends. Do not reveal answers to quest tasks.
-- Match each photograph to the depicted place using its caption and visual
-  inspection. Personal archive material must belong to the same trip; do not
-  invent identities or a personal visit. For visual changes add
-  `$metravel-instagram-visuals`.
-
-## Produce the requested scope
-
-Prepare assets yourself using inspected existing tools and media. Do not ask
-the owner to select frames or assemble the post. Missing access/source footage
-is a concrete blocker, not an invitation to fabricate media.
-
-- `audit` / `brief`: actual scheduled post, source, mismatch per slide and a
-  concrete repair recommendation; do not rewrite captions in an image-only task.
-- `carousel` / `pack`: slide sequence, hook, caption, single CTA, geotag and
-  source manifest. Preserve the plan's current geography/season strategy.
-  Russian captions, place-first hook, 3–5 hashtags including `#metravel`;
-  choose length and slide count to fit the topic, not a fixed template.
-- `reel`: live footage from the same trip and the relevant
-  `docs/INSTAGRAM_REELS_BRIEF.md` sections. No slideshow substitute for a Reel.
-- `review`: explicit absolute period; inspect `scripts/instagram-insights.js`
-  usage before running it, or read visible Insights via CUA. Report missing
-  metrics as missing, distinguish measured effects from causal hypotheses.
-
-Store outputs and raw evidence under ignored `.codex-temp/instagram/<date>/<topic>/`.
-Keep ordered final files, caption, source manifest and reproducible visual
-prompts together. Read current `scripts/instagram/make-carousel.py` interface
-before building a spec; never invent parameters. Update only the relevant plan
-rows when maintaining the calendar is in scope.
+- Sources: only published, moderated author-1 articles (`userIds == "1"`) and project quests;
+  every claim is quoted in `sources.md`. Quest answers are never revealed (F10).
+- One coherent story in Yulia's first-person voice, never fragments or service notes (V1–V6).
+- Before handing a package to review: `python3 scripts/instagram/lint-package.py <package>` exits
+  0; Belarus packages also pass `node scripts/scan-content-sources.js <package>` with zero hits.
+  The reviewer runs both again first.
+- On request only (owner, 11.10.2026): nothing is scheduled in `scheduled_content` or published
+  without the owner's command for that post and that day, after she saw it in chat and on the
+  афиша. An approval recorded in the plan or given for another post is not authorization.
+- Hashtags: 3–5 relevant ones as the last paragraph, with a Polish geo hashtag for Poland
+  (F8); there is no mandatory brand hashtag.
+- Calendar rows belong to the planner; the operator writes only the weekly-review and cleanup
+  tables.
 
 ## Account actions and verification
 
-Use `mcp__cua_repl` to select the existing Instagram browser tab, following its
-returned API documentation. Screenshot/text/DOM evidence drives each UI action;
-do not guess selectors or invoke private Instagram endpoints. Do not log
-cookies/tokens, read `.secrets`, or expose personal account data in artifacts.
+Use `mcp__cua_repl` to select the existing Instagram browser tab, following its returned API
+documentation; the tab is the owner's logged-in session. Screenshot/text/DOM evidence drives each
+UI action; do not guess selectors or invoke private Instagram endpoints. Do not log
+cookies/tokens, read `.secrets`, or expose personal account data in artifacts. Scheduling steps
+(visible tab, real clicks, select-all before paste, caption counter N/2200 checked against
+`len()`, at most 29 days ahead) are in `docs/INSTAGRAM_OPERATIONS.md` §3.
 
-Publication, new scheduling, deletion, archive, comments, likes, follower
-cleanup and DMs are separate actions: require the user's explicit instruction
-for that action. A request to remake images authorizes generation and preparation;
-when it also authorizes editing the specific scheduled post, preserve its
-caption, account, slide order and time. Do not auto-delete/recreate the post or
-create a backup publisher. If the UI lacks media replacement, retain the
-schedule and return ready files plus the precise missing action for approval.
+Publication, new scheduling, deletion, archive, comments, likes, follower cleanup and DMs are
+separate actions: require the user's explicit instruction for that action. A request to remake
+images authorizes generation and preparation; when it also authorizes editing the specific
+scheduled post, preserve its caption, account, slide order and time. Do not auto-delete/recreate
+the post or create a backup publisher. If the UI lacks media replacement, retain the schedule and
+return ready files plus the precise missing action for approval.
 
-Before an authorized save, compare account/post identity, files/count/order,
-caption and date/time with the original. After save, reopen and verify that the
-same scheduled entry contains the expected change. On uncertain mutation outcome,
-check state before retrying; on challenge/429 stop and report the action.
+Before an authorized save, compare account/post identity, files/count/order, caption and
+date/time with the original. After save, reopen and verify that the same scheduled entry contains
+the expected change. On uncertain mutation outcome, check state before retrying; on
+challenge/429 stop and report the action.
 
-Handoff: preview/files, actual changed account state (or explicit unchanged
-state), sources, visual review results, and the remaining blocker if any.
+Handoff: preview/files, actual changed account state (or explicit unchanged state), sources,
+lint and review results, and the remaining blocker if any.

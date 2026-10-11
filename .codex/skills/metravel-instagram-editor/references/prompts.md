@@ -34,9 +34,11 @@ action is intended. They do not carry approvals between sessions.
 > Use only published, moderated author-1 articles or confirmed project quests.
 > Choose a coherent slide sequence, verify each number and each photo's place,
 > use the existing carousel builder and brand footer, and produce slides,
-> caption, one CTA, alt-text draft, geotag, source manifest and preview. If
-> illustrations are requested, use $metravel-instagram-visuals. Prepare a draft
-> without posting or changing the schedule.
+> caption, one CTA, alt-text draft, geotag, source manifest and preview. Follow
+> the planner → researcher → creator → visual-qa role contracts, run
+> `scripts/instagram/lint-package.py` before review. If illustrations are
+> requested, use $metravel-instagram-visuals. Prepare a draft without posting or
+> changing the schedule.
 
 ## Prepare a weekly content pack
 
@@ -44,10 +46,10 @@ action is intended. They do not carry approvals between sessions.
 > start–end dates, Europe/Warsaw]. Read the current calendar and strategy first;
 > preserve its latest owner decisions. Verify sources and media for each unit,
 > prepare carousels, Reel scripts/live-footage lists, captions, story ideas and
-> a proposed schedule. Record source-backed facts, ready files and precise
-> missing material; do not invent footage or a visit. Update only the relevant
-> plan rows if calendar maintenance is included. Present previews for review
-> without publishing or creating an automation.
+> proposed dates. Record source-backed facts, ready files and precise missing
+> material; do not invent footage or a visit. Calendar rows are the planner
+> role's. Present previews for review without scheduling, publishing or creating
+> an automation: each post is scheduled only on the owner's command for its day.
 
 ## Review the pack and results
 
