@@ -76,6 +76,8 @@ const BOOK_PAGE_ACCENT = '#b35900';
 // поэтому поля почти нет — но цвет обязан совпадать с React-hero, иначе на
 // гидрации меняется фон кадра.
 const HOME_HERO_FILL = '#536659';
+const HOME_ROOT_VISIBILITY_SELECTOR = 'body:has(#ssg-skeleton .ssg-home-bar) #root';
+const HOME_DOCK_VISIBILITY_SELECTOR = `${HOME_ROOT_VISIBILITY_SELECTOR} [data-testid="web-mobile-dock-shell"]`;
 
 // Системный sans-стек шелла (тот же, что у .ssg-home-title/.ssg-home-sub).
 const SANS = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
@@ -184,8 +186,8 @@ function buildSkeletonCSS() {
    under it (same hero frame, same copy) must not paint earlier or in the same frame,
    otherwise paint order, not size, decides the LCP entry. Only the #2216 root dock
    stays painted; React copies paint on teardown and win only if strictly larger. */
-body:has(#ssg-skeleton .ssg-home-bar) #root{visibility:hidden}
-body:has(#ssg-skeleton .ssg-home-bar) #root [data-testid="web-mobile-dock-shell"]{visibility:visible}
+${HOME_ROOT_VISIBILITY_SELECTOR},${HOME_ROOT_VISIBILITY_SELECTOR} *{visibility:hidden!important}
+${HOME_DOCK_VISIBILITY_SELECTOR},${HOME_DOCK_VISIBILITY_SELECTOR} *{visibility:visible!important}
 .ssg-header-more{display:none;align-items:center;justify-content:center;flex:0 0 44px;width:44px;height:44px;margin-left:auto;color:inherit;text-decoration:none}
 @media(max-width:1279.98px){.ssg-header-more{display:inline-flex}}
 .ssg-home-shell{width:100%;max-width:1200px;margin:0 auto;padding:0 16px}
@@ -631,6 +633,7 @@ function buildHomeSkeletonHtml({ heroHref } = {}) {
 </div>
 </main>
 <footer class="ssg-home-legal">© MeTravel 2020–${new Date().getFullYear()} · ${LEGAL.siteOwnerLegalName}</footer>
+<noscript><style>${HOME_ROOT_VISIBILITY_SELECTOR},${HOME_ROOT_VISIBILITY_SELECTOR} *{visibility:visible!important}</style></noscript>
 ${buildRemovalScript()}
 </div>`;
 }

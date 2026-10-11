@@ -175,13 +175,48 @@ describe('ssg-skeletons', () => {
       // Top-level rules: every width, and the gate leaves with #ssg-skeleton-css.
       expect(hidden).toHaveLength(1);
       expect(shown).toHaveLength(1);
-      expect(shown[0].selectorText.startsWith(`${hidden[0].selectorText} `)).toBe(true);
+      expect(hidden[0].style.getPropertyPriority('visibility')).toBe('important');
+      expect(shown[0].style.getPropertyPriority('visibility')).toBe('important');
 
-      const home = parse(injectSkeletonShell(documentWithRoot(rootWithDock), '/'));
-      expect(Array.from(home.querySelectorAll(hidden[0].selectorText))).toEqual([home.getElementById('root')]);
-      expect(Array.from(home.querySelectorAll(shown[0].selectorText))).toEqual([
-        home.querySelector('#root [data-testid="web-mobile-dock-shell"]'),
-      ]);
+      // Desktop's measured bookWrapper explicitly sets visibility:visible.
+      // Ancestor-only hiding is inherited, so it cannot suppress that subtree.
+      const { Platform, StyleSheet } = require('react-native');
+      const { createHomeHeroStyles } = require('../../components/home/homeHeroStyles');
+      // The jest RN preset's Platform.select is hardwired to ios; read the web branch.
+      const selectSpy = jest.spyOn(Platform, 'select')
+        .mockImplementation((spec: any) => ('web' in spec ? spec.web : spec.default));
+      let bookVisibility: string | undefined;
+      try {
+        const desktopStyles = createHomeHeroStyles({
+          colors: new Proxy({}, { get: () => '#123456' }), isMobile: false, isSmallPhone: false,
+          isNarrowLayout: false, isTablet: false, isDesktop: true, viewportWidth: 1280,
+          showSideSlider: true, sliderHeight: 640, bookHeight: 640,
+        });
+        bookVisibility = StyleSheet.flatten(desktopStyles.bookWrapper).visibility;
+      } finally {
+        selectSpy.mockRestore();
+      }
+      expect(bookVisibility).toBe('visible');
+      const root = rootWithDock.replace('</div></div></div>', `</div></div><section id="react-book" style="visibility:${bookVisibility}"><h1>React hero</h1></section></div>`);
+      const html = injectSkeletonShell(documentWithRoot(root), '/');
+      const home = parse(html);
+      const rootNode = home.getElementById('root')!;
+      for (const node of [rootNode, ...rootNode.querySelectorAll('*')]) {
+        expect(node.matches(hidden[0].selectorText)).toBe(true);
+      }
+      const dock = home.querySelector('#root [data-testid="web-mobile-dock-shell"]')!;
+      expect(Array.from(home.querySelectorAll(shown[0].selectorText))).toEqual([dock, ...dock.querySelectorAll('*')]);
+      expect(home.querySelector('#react-book')!.matches(shown[0].selectorText)).toBe(false);
+      // The stronger subtree gate preserves the existing no-JS root escape.
+      const noJsCss = html.match(/<noscript><style>([\s\S]*?)<\/style><\/noscript>/)![1];
+      const noJsStyle = document.createElement('style');
+      noJsStyle.textContent = noJsCss;
+      document.head.appendChild(noJsStyle);
+      const noJsRule = noJsStyle.sheet!.cssRules[0] as CSSStyleRule;
+      expect(noJsRule.selectorText).toBe(hidden[0].selectorText);
+      expect(noJsRule.style.visibility).toBe('visible');
+      expect(noJsRule.style.getPropertyPriority('visibility')).toBe('important');
+      noJsStyle.remove();
       home.getElementById('ssg-skeleton')!.remove();
       expect(home.querySelectorAll(hidden[0].selectorText)).toHaveLength(0);
       // Travel adopts the SSG hero node into #root; search/map keep their own handoff.
