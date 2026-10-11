@@ -19,6 +19,7 @@ import {
   PRINT_IMAGE_INLINE_WIDTH,
 } from '@/utils/printImageUrl';
 import { renderImageGallery } from './blockRenderer/galleryRenderer';
+import { resolvePhotoTextFlow } from './blockRenderer/photoTextFlow';
 
 /**
  * Цвета темы для каждого типа информационного блока
@@ -214,9 +215,19 @@ export class BlockRenderer {
    * с сохранением двух ступеней автора.
    */
   renderBlocks(blocks: ParsedContentBlock[], section: PdfRichTextSection): string {
-    return blocks
-      .map((block, index) => {
-        const options = { keepWithNext: this.shouldKeepWithNext(block, blocks[index + 1]) };
+    const flow = resolvePhotoTextFlow(blocks);
+    return flow
+      .map((item, index) => {
+        if (item.type === 'photo-text') {
+          return `<div class="pdf-photo-text-flow" style="display: flow-root; break-inside: auto; page-break-inside: auto;">
+            ${this.renderImage(item.image, { keepWithNext: true })}
+            ${this.renderParagraph(item.paragraph, { allowPageBreak: true })}
+          </div>`;
+        }
+        const block = item.block;
+        const nextItem = flow[index + 1];
+        const nextBlock = nextItem?.type === 'block' ? nextItem.block : nextItem?.image;
+        const options = { keepWithNext: this.shouldKeepWithNext(block, nextBlock) };
         if (block.type === 'heading') {
           return this.renderHeading(block.text, resolveSectionHeadingLevel(section, block.level), options);
         }
@@ -301,7 +312,7 @@ export class BlockRenderer {
    */
   private renderParagraph(
     block: ParsedContentBlock & { type: 'paragraph' },
-    options: { keepWithNext?: boolean } = {}
+    options: { keepWithNext?: boolean; allowPageBreak?: boolean } = {}
   ): string {
     const { text, html } = block;
     const style = this.theme.typography.body;
@@ -316,7 +327,7 @@ export class BlockRenderer {
         margin-bottom: ${style.marginBottom};
         color: ${this.theme.colors.text};
         font-family: ${this.theme.typography.bodyFont};
-        text-align: justify;
+        text-align: justify;${options.allowPageBreak ? '\n        break-inside: auto; page-break-inside: auto;' : ''}
         ${options.keepWithNext ? 'page-break-after: avoid; break-after: avoid-page;' : ''}
         orphans: 2;
         widows: 2;
@@ -396,7 +407,10 @@ export class BlockRenderer {
   /**
    * Рендерит изображение
    */
-  private renderImage(block: ParsedContentBlock & { type: 'image' }): string {
+  private renderImage(
+    block: ParsedContentBlock & { type: 'image' },
+    options: { keepWithNext?: boolean } = {}
+  ): string {
     const { src, alt, caption, width, height, layout } = block;
     const safeSrc = this.buildSafeImageUrl(src);
     const wrapperStyle = this.getImageAlignmentStyle(layout);
@@ -429,7 +443,7 @@ export class BlockRenderer {
         ${width ? `data-width="${width}"` : ''}
         ${height ? `data-height="${height}"` : ''}
         style="
-        ${wrapperStyle}
+        ${wrapperStyle}${options.keepWithNext ? '\n        break-after: avoid-page; page-break-after: avoid;' : ''}
         page-break-inside: avoid;
         break-inside: avoid;
         padding: 4mm;

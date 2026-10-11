@@ -1,8 +1,5 @@
-// #2275: печать WebKit (iOS, Safari) теряет альфу у цветов CSS-градиентов —
-// подложка финальной страницы с `rgba(255,255,255,0.08) → transparent`
-// печаталась непрозрачным белым кругом на чёрной странице. Градиенты финальной
-// страницы обязаны состоять из непрозрачных цветов; полупрозрачность — через
-// `mix-blend-mode: screen`.
+// #2275: финальные градиенты сохраняют только непрозрачные цветовые stops.
+// #2368: пастельный финал использует свою палитру без screen-композитинга.
 import { RuntimeFinalRenderer } from '@/services/pdf-export/generators/v2/runtime/renderers/FinalPageRenderer'
 import { PDF_THEMES } from '@/services/pdf-export/themes/PdfThemeConfig'
 import type { TravelForBook } from '@/types/pdf-export'
@@ -43,10 +40,11 @@ describe('финальная страница книги: градиенты б�
     expect(gradients.filter((body) => NON_OPAQUE_STOP.test(body))).toEqual([])
   })
 
-  it('светлые слои наложены через screen, а карточка без z-index не изолирует их', () => {
+  it('пастельный финал не зависит от screen-композитинга', () => {
     const html = new RuntimeFinalRenderer({ theme: PDF_THEMES.minimal }).render(12, travels, quote)
 
-    expect((html.match(/mix-blend-mode: screen;/g) ?? []).length).toBe(2)
+    expect(html).not.toContain('mix-blend-mode')
+    expect(html).not.toContain('background-blend-mode')
     expect(html).not.toMatch(/z-index/)
   })
 
@@ -78,14 +76,13 @@ describe('финальная страница книги: градиенты б�
     expect(style('<footer')).toContain('flex-shrink: 0;')
   })
 
-  // #2368: декор рисуется цветом текста обложки, а не белым — на светлой
-  // обложке «Иллюстрированная» белые линии не видны.
-  it('декор светлой обложки берёт тёмный цвет текста темы', () => {
+  // #2368: декор читается на пастельном листе независимо от палитры обложки.
+  it('декор использует контрастный цвет самого финального листа', () => {
     const html = new RuntimeFinalRenderer({ theme: PDF_THEMES.illustrated }).render(12, travels, quote)
 
     expect(PDF_THEMES.illustrated.colors.cover.text).toBe('#2d2d2d')
     expect(html).not.toMatch(/rgba\(255,\s*255,\s*255/)
-    expect(html).toContain('rgba(45,45,45,')
+    expect(html).toContain('rgba(51,65,85,')
   })
 
   it('регулярка ловит прежнюю подложку', () => {

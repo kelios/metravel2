@@ -17,7 +17,7 @@ import React, { memo, Suspense, useMemo, useRef, useState } from 'react';
 
 import type { ArticleBodyMediaIndex } from '@/components/travel/stableContent/articleBodyMedia';
 import { prepareStableContentHtml } from '@/components/travel/stableContent/htmlTransform';
-import { applyBackwardFloatWrap } from '@/utils/richTextImageLayout';
+import { groupInlinePhotoFlow } from '@/utils/richTextImageLayoutPhotoFlow';
 import { useStableContentWebEffects } from '@/components/travel/stableContent/useWebEffects';
 import {
   getWebRichTextStyles,
@@ -61,15 +61,15 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, fullWidth = fa
   );
   const [lightboxGallery, setLightboxGallery] = useState<LightboxGallery | null>(null);
   const webRootRef = useRef<HTMLDivElement | null>(null);
-  // #1623: backward float wrap is render-only — applied here, after
-  // `prepareStableContentHtml`/`applySmartImageLayout` have already produced
-  // the string that autosave persists and PDF export prints. `prepared` below
-  // only ever feeds `dangerouslySetInnerHTML` and is discarded after paint,
-  // so this reorder can never reach the database or the print pipeline.
+  // Photo/text ownership and backward association are resolved together, only
+  // for display. Editor persistence and PDF rendering retain canonical HTML.
   const prepared = useMemo(
-    () => applyBackwardFloatWrap(prepareStableContentHtml(html, { serverSanitized, articleBodyMedia })),
+    () => groupInlinePhotoFlow(prepareStableContentHtml(html, { serverSanitized, articleBodyMedia })),
     [html, serverSanitized, articleBodyMedia],
   );
+  // React compares this prop object by identity. Keep it stable when only the
+  // lightbox changes so the image nodes, enrichment and focus trigger survive.
+  const preparedMarkup = useMemo(() => ({ __html: prepared }), [prepared]);
 
   const scrollToHashTarget = (hash: string) => {
     try {
@@ -92,7 +92,6 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, fullWidth = fa
   useStableContentWebEffects({
     prepared,
     articleBodyMedia,
-    lightboxGallery,
     setLightboxGallery,
     webRichTextStyles,
     scrollToHashTarget,
@@ -108,7 +107,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, fullWidth = fa
       <div
         ref={webRootRef}
         className={webRichTextClassName}
-        dangerouslySetInnerHTML={{ __html: prepared }}
+        dangerouslySetInnerHTML={preparedMarkup}
       />
       {lightboxGallery ? (
         <Suspense fallback={null}>

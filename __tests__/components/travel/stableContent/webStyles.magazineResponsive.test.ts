@@ -77,6 +77,15 @@ describe('обтекание одиночного фото на desktop', () => 
     expect(desktopCss).toContain('@container (max-width: 560px)')
     expect(desktopCss).not.toContain('justify-content: flex-end')
   })
+
+  it('ограничивает только связанное фото с текстом общей мерой прозы', () => {
+    const association = desktopCss.match(/\.travel-rich-text \.rich-inline-photo-flow \{([^}]+)\}/)?.[1]
+    expect(association).toContain('display: flow-root')
+    expect(association).toContain('width: 100%')
+    expect(association).toContain('max-width: 720px')
+    expect(association).not.toMatch(/height|overflow|grid|flex|padding/)
+    expect(desktopCss).toContain('.travel-rich-text .img-single-wide')
+  })
 })
 
 describe('совместимость container queries', () => {

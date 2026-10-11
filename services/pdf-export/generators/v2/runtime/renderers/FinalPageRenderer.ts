@@ -4,6 +4,7 @@ import { escapeHtml, formatDays, getTravelLabel, type RuntimeRenderContext } fro
 import { translate as i18nT } from '@/i18n'
 import { getCountryLabel, getPhotoLabel } from '@/utils/pluralize'
 import type { BookSummary } from '../../../../segments/types'
+import { FINAL_PAGE_PALETTE } from './finalPagePalette'
 import {
   buildContourLayer,
   buildEmblemSvg,
@@ -16,31 +17,6 @@ import {
   inkWithAlpha,
 } from './finalPageArt'
 
-/**
- * #2275: печать WebKit на iOS (и в Safari/macOS) теряет альфу у цветов
- * градиента: `rgba(…, a)` и `transparent` в `linear/radial-gradient` выходят
- * непрозрачными — свечение рисовалось белым кругом на чёрной странице, тонкие
- * линии — сплошными. Однотонная `rgba` и градиенты из непрозрачных цветов
- * печатаются верно. Поэтому светлые полупрозрачные слои страницы заданы
- * непрозрачными градиентами в режиме наложения `screen`: для белого с альфой a
- * `screen(фон, серый a·255)` = `фон + a·(1 − фон)` — ровно то же, что прежнее
- * наложение, а чёрный (`#000`) в `screen` фон не меняет.
- */
-const screenGray = (alpha: number): string => {
-  const level = Math.round(alpha * 255)
-  return `rgb(${level},${level},${level})`
-}
-
-const SCREEN_LAYER = 'mix-blend-mode: screen;'
-
-/**
- * Тёплое свечение внизу было `rgba(217,115,85,0.16)`. Цветной слой через
- * `screen` точно не повторить (он только осветляет), поэтому цвет подобран под
- * средние тёмные обложки: на них отличие ≤ 1/255, на синих (`light`) свечение
- * светлее прежнего до 16/255 в синем канале.
- */
-const PASTEL_GLOW_SCREEN = 'rgb(232,214,204)'
-
 export class RuntimeFinalRenderer {
   constructor(private ctx: RuntimeRenderContext) {}
 
@@ -50,7 +26,7 @@ export class RuntimeFinalRenderer {
     finalQuote?: TravelQuote | null,
     pinned?: { summary: BookSummary; generatedAt: string },
   ): string {
-    const { colors, typography } = this.ctx.theme
+    const { typography } = this.ctx.theme
 
     const totalTravels = pinned?.summary.travels ?? travels.length
     const countryCount = pinned?.summary.countries ?? new Set(travels.map((t) => t.countryName).filter(Boolean)).size
@@ -79,12 +55,7 @@ export class RuntimeFinalRenderer {
       stats.push({ value: totalPhotos, label: getPhotoLabel(totalPhotos) })
     }
 
-    // Финальный лист — единая мягкая «открытка» для всех тем. У тёмных обложек
-    // белый cover-текст заменяем на приглушённый slate, иначе на пастели теряется
-    // контраст; светлые темы сохраняют свой канонический цвет текста.
-    const usesLightCoverText = colors.cover.text.toLowerCase() === '#ffffff'
-    const ink = usesLightCoverText ? '#52636a' : colors.cover.text
-    const secondaryInk = usesLightCoverText ? '#718086' : colors.cover.textSecondary
+    const { ink, secondaryInk, backgroundStart, backgroundEnd } = FINAL_PAGE_PALETTE
     const numberSize = stats.length > 3 ? '26pt' : '30pt'
     const statsHtml = stats.length > 0 ? `
       <div class="final-ticket" style="
@@ -145,22 +116,11 @@ export class RuntimeFinalRenderer {
         min-height: 285mm;
         text-align: center;
         color: ${ink};
-        background: linear-gradient(135deg, #f7eee9 0%, #e2efec 100%);
+        background: linear-gradient(135deg, ${backgroundStart} 0%, ${backgroundEnd} 100%);
         position: relative;
         overflow: hidden;
       ">
-        <div style="
-          position: absolute;
-          top: 0; right: 0; bottom: 0; left: 0;
-          background:
-            radial-gradient(circle at 50% 17%, ${screenGray(0.16)}, ${screenGray(0.04)} 68%),
-            radial-gradient(circle at 50% 86%, ${PASTEL_GLOW_SCREEN}, ${screenGray(0.03)} 70%);
-          background-blend-mode: screen;
-          ${SCREEN_LAYER}
-          pointer-events: none;
-        "></div>
-        ${buildContourLayer(ink)}
-        ${buildTravelBirdSvg(ink)}
+        ${buildContourLayer(ink)}${buildTravelBirdSvg(ink)}
         <div style="
           position: absolute;
           top: 10mm; right: 10mm; bottom: 10mm; left: 10mm;
@@ -173,8 +133,7 @@ export class RuntimeFinalRenderer {
           border: 1px solid ${inkWithAlpha(ink, 0.12)};
           pointer-events: none;
         "></div>
-        ${buildEmblemSvg(ink)}
-        ${buildTravelLandscapeSvg(ink)}
+        ${buildEmblemSvg(ink)}${buildTravelLandscapeSvg(ink)}
 
         <div style="
           position: relative;
@@ -185,8 +144,7 @@ export class RuntimeFinalRenderer {
           <div style="
             width: 20mm;
             height: 1px;
-            background: linear-gradient(90deg, #000, ${screenGray(0.55)}, #000);
-            ${SCREEN_LAYER}
+            background: linear-gradient(90deg, ${backgroundStart}, ${ink}, ${backgroundEnd});
             border-radius: 999px;
             margin: 0 auto 7mm auto;
           "></div>

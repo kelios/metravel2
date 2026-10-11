@@ -9,6 +9,19 @@ export const floatStyles = (
   container-type: inline-size;
 }
 
+/* One narrative measure for the photo and its own adjacent copy. Wide media
+   outside these render-only associations retain their existing breakout. */
+.${cls} .rich-inline-photo-flow {
+  display: flow-root;
+  width: 100%;
+  max-width: 720px;
+  box-sizing: border-box;
+}
+.${cls} img[role="button"]:focus-visible {
+  outline: 2px solid ${colors.focusStrong};
+  outline-offset: 2px;
+}
+
 /* ===== SINGLE WIDE IMAGE (horizontal/landscape) ===== */
 .${cls} .img-single-wide {
   display: block;

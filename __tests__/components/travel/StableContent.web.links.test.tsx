@@ -128,6 +128,80 @@ describe('StableContent (web) link styles', () => {
     expect(details.open).toBe(false);
   });
 
+  it('prepares a bounded photo association immediately and retains lightbox descendants', async () => {
+    const text = 'Река проходит вдоль старого парка, где можно гулять по тропинкам и любоваться долиной. ';
+    const { container } = render(
+      <StableContent
+        html={`<h3>Река</h3><p>${text}<a href="#next">Дальше</a></p><p class="img-float-right"><img src="https://example.com/river.jpg" alt="Речная долина" /></p><h2 id="next">Усадьбы</h2>`}
+        contentWidth={1080}
+        serverSanitized
+        fullWidth
+      />
+    );
+    const group = container.querySelector('.rich-inline-photo-flow')!;
+    expect(group).toBeTruthy();
+    expect(group.querySelectorAll('img')).toHaveLength(1);
+    expect(group.querySelectorAll('a[href="#next"]')).toHaveLength(1);
+    expect(group.querySelector('img')?.getAttribute('alt')).toBe('Речная долина');
+    expect(group.textContent).toBe(text + 'Дальше');
+    expect(group.nextElementSibling?.tagName).toBe('H2');
+    expect(group.querySelector('.rich-image-frame img')).toBeTruthy();
+    fireEvent.click(group.querySelector('img')!);
+    await waitFor(() => {
+      expect(document.querySelector('[data-testid="travel-fullscreen-gallery"]')).toBeTruthy();
+    });
+    fireEvent.keyUp(window, { key: 'Escape' });
+    await waitFor(() => {
+      expect(document.querySelector('[data-testid="travel-fullscreen-gallery"]')).toBeNull();
+    });
+  });
+
+  it.each(['Enter', ' '])('opens a grouped photo with %s and restores its keyboard focus on close', async key => {
+    const overflow = document.body.style.overflow;
+    const text = 'Река проходит вдоль парка, где можно гулять по тропинкам и любоваться долиной. ';
+    const { container } = render(<StableContent html={`<p>${text}</p><p class="img-float-right"><img src="https://example.com/river.jpg" width="600" height="900" alt="Речная долина" /></p><h2>Усадьбы</h2>`} contentWidth={1080} serverSanitized fullWidth />);
+    const image = container.querySelector('.rich-inline-photo-flow img') as HTMLImageElement;
+    expect(image.getAttribute('role')).toBe('button');
+    expect(image.tabIndex).toBe(0);
+    expect(image.getAttribute('aria-label')).toContain('Речная долина');
+    image.focus();
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+    fireEvent(image, event);
+    expect(event.defaultPrevented).toBe(true);
+    await waitFor(() => { expect(document.querySelector('[data-testid="travel-fullscreen-gallery"]')).toBeTruthy(); });
+    expect(container.querySelector('.rich-inline-photo-flow img')).toBe(image);
+    expect(image.getAttribute('role')).toBe('button');
+    expect(document.body.style.overflow).toBe('hidden');
+    fireEvent.keyUp(window, { key: 'Escape' });
+    await waitFor(() => { expect(document.querySelector('[data-testid="travel-fullscreen-gallery"]')).toBeNull(); });
+    expect(container.querySelector('.rich-inline-photo-flow img')).toBe(image);
+    expect(document.activeElement).toBe(image);
+    expect(document.body.style.overflow).toBe(overflow);
+  });
+
+  it('resolves forward ownership before any backward reorder in the production preparation pipeline', () => {
+    const paragraph = (name: string) => `<p>${name}: достаточно длинный рассказ о прогулке по старому городу и дороге вдоль речной долины.</p>`;
+    const photo = (src: string, side: string) => `<p class="img-float-${side}"><img src="https://example.com/${src}" width="600" height="900" alt="${src}" /></p>`;
+    const { container } = render(<StableContent html={photo('one.jpg', 'left') + paragraph('Первый') + paragraph('Второй') + photo('two.jpg', 'right') + '<h2>Конец</h2>'} contentWidth={1080} serverSanitized fullWidth />);
+    const groups = container.querySelectorAll('.rich-inline-photo-flow');
+    expect(groups).toHaveLength(1);
+    expect(groups[0].textContent).toContain('Первый:');
+    expect(groups[0].textContent).toContain('Второй:');
+    expect(container.querySelector('img[alt="two.jpg"]')?.closest('.rich-inline-photo-flow')).toBeNull();
+    expect(Array.from(container.querySelectorAll('img')).map(image => image.alt)).toEqual(['one.jpg', 'two.jpg']);
+    expect(container.querySelectorAll('.rich-inline-photo-flow p:not([class*="img-float"])')).toHaveLength(2);
+  });
+
+  it('keeps externally linked images as links without adding a nested lightbox button', () => {
+    const { container } = render(<StableContent html='<p><a href="https://example.com/full.jpg"><img src="https://example.com/thumb.jpg" alt="Linked photo" /></a></p>' contentWidth={700} serverSanitized />);
+    const image = container.querySelector('img')!;
+    expect(image.getAttribute('role')).toBeNull();
+    expect(image.getAttribute('tabindex')).toBeNull();
+    fireEvent.keyDown(image, { key: 'Enter' });
+    expect(document.querySelector('[data-testid="travel-fullscreen-gallery"]')).toBeNull();
+    expect(image.closest('a')?.getAttribute('href')).toBe('https://example.com/full.jpg');
+  });
+
   it('restores direct travel hash navigation with returnTo query on first render', async () => {
     const scrollIntoView = jest.fn();
     const originalScrollIntoView = Element.prototype.scrollIntoView;

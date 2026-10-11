@@ -86,7 +86,6 @@ type UseStableContentWebEffectsInput = {
   // #1256: тот же индекс, из которого построен `srcset`, — иначе префетч прогреет
   // другой URL и слот скачается дважды (#1213).
   articleBodyMedia?: ArticleBodyMediaIndex | null
-  lightboxGallery: LightboxGallery | null
   setLightboxGallery: Dispatch<SetStateAction<LightboxGallery | null>>
   webRichTextStyles: string
   scrollToHashTarget: (hash: string) => boolean
@@ -96,7 +95,6 @@ type UseStableContentWebEffectsInput = {
 export function useStableContentWebEffects({
   prepared,
   articleBodyMedia = null,
-  lightboxGallery,
   setLightboxGallery,
   webRichTextStyles,
   scrollToHashTarget,
@@ -249,30 +247,24 @@ export function useStableContentWebEffects({
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
-    const onClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement | null
-      if (!target) return
-      const image = target.closest?.(`.${WEB_RICH_TEXT_CLASS} img`) as HTMLImageElement | null
-      if (!image) return
-      if (!rootRef.current?.contains(image)) return
-      const parentLink = image.closest('a[href]') as HTMLAnchorElement | null
-      const href = parentLink?.getAttribute('href') || ''
-      if (href && !href.startsWith('#')) {
-        return
-      }
-      e.preventDefault()
-      const articleImages = Array.from(
-        rootRef.current?.querySelectorAll<HTMLImageElement>('img') ?? [],
-      ).filter((candidate) => (
-        Boolean(candidate.closest('.rich-image-frame')) &&
-        !candidate.closest('a[href]:not([href^="#"])')
-      ))
-      const galleryImages = articleImages
+    const articleImages = () => Array.from(
+      rootRef.current?.querySelectorAll<HTMLImageElement>('img') ?? [],
+    ).filter(candidate => Boolean(candidate.closest('.rich-image-frame')) && !candidate.closest('a[href]:not([href^="#"])'))
+    const controls = articleImages().filter(image => !image.closest('a[href]') && !image.getAttribute('src')?.startsWith('data:'))
+      .map((image, index) => {
+        const attributes = ['tabindex', 'role', 'aria-label'].map(name => [name, image.getAttribute(name)] as const)
+        image.tabIndex = 0
+        image.setAttribute('role', 'button')
+        image.setAttribute('aria-label', i18nT('shared:components.ui.CustomImageRenderer.otkryt_izobrazhenie_value1_f6c52942', {
+          value1: image.getAttribute('alt') || i18nT('travel:components.travel.stableContent.useWebEffects.routeImageAlt', { value1: index + 1 }),
+        }))
+        return { image, attributes }
+      })
+    const openImage = (image: HTMLImageElement, event: MouseEvent | KeyboardEvent) => {
+      const galleryImages = articleImages()
         .map((candidate, index) => {
           const resolvedSrc = candidate.currentSrc || candidate.getAttribute('src') || ''
-          // The fullscreen view is explicitly user-requested, so prefer the
-          // reliable original over the resize proxy. A cold/failed weserv
-          // request otherwise leaves the iOS overlay looking completely empty.
+          // Fullscreen is user-requested; prefer the original to a resize proxy.
           const src = originFromWeservSrc(resolvedSrc) || resolvedSrc
           if (!src || src.startsWith('data:')) return null
           return {
@@ -284,18 +276,33 @@ export function useStableContentWebEffects({
           }
         })
         .filter((entry): entry is { sourceElement: HTMLImageElement; image: LightboxImage } => Boolean(entry))
-      const initialIndex = galleryImages.findIndex((entry) => entry.sourceElement === image)
+      const initialIndex = galleryImages.findIndex(entry => entry.sourceElement === image)
       if (initialIndex < 0) return
-      setLightboxGallery({
-        images: galleryImages.map((entry) => entry.image),
-        initialIndex,
-      })
+      event.preventDefault()
+      // FullscreenGallery owns focus trapping and restores this trigger on close.
+      const trigger = image.closest<HTMLAnchorElement>('a[href]') || image
+      trigger.focus({ preventScroll: true })
+      setLightboxGallery({ images: galleryImages.map(entry => entry.image), initialIndex })
+    }
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null
+      if (!target) return
+      const image = target.closest?.(`.${WEB_RICH_TEXT_CLASS} img`) as HTMLImageElement | null
+      if (!image) return
+      if (!rootRef.current?.contains(image)) return
+      const parentLink = image.closest('a[href]') as HTMLAnchorElement | null
+      const href = parentLink?.getAttribute('href') || ''
+      if (href && !href.startsWith('#')) {
+        return
+      }
+      openImage(image, e)
     }
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setLightboxGallery(null)
-      }
+      if (e.key !== 'Enter' && e.key !== ' ') return
+      const target = e.target
+      if (!(target instanceof HTMLImageElement) || !rootRef.current?.contains(target) || target.getAttribute('role') !== 'button') return
+      openImage(target, e)
     }
 
     document.addEventListener('click', onClick)
@@ -303,22 +310,14 @@ export function useStableContentWebEffects({
     return () => {
       document.removeEventListener('click', onClick)
       document.removeEventListener('keydown', onKeyDown)
+      for (const { image, attributes } of controls) {
+        for (const [name, value] of attributes) {
+          if (value == null) image.removeAttribute(name)
+          else image.setAttribute(name, value)
+        }
+      }
     }
-  }, [rootRef, setLightboxGallery])
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return
-    if (typeof document === 'undefined') return
-    const originalOverflow = document.body.style.overflow
-    if (lightboxGallery) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = originalOverflow || ''
-    }
-    return () => {
-      document.body.style.overflow = originalOverflow
-    }
-  }, [lightboxGallery])
+  }, [prepared, rootRef, setLightboxGallery])
 
   useLayoutEffect(() => {
     if (Platform.OS !== 'web') return
