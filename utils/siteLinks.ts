@@ -111,6 +111,7 @@ export const APP_ROUTE_ROOTS: ReadonlySet<string> = new Set([
 /** Каталоги `app/` без index-экрана: экран есть только у вложенного пути `/<root>/<…>`. */
 export const APP_PARAM_ROUTE_ROOTS: ReadonlySet<string> = new Set([
   'article',
+  'book-exports',
   'subscribe',
   'travel',
   'travels',

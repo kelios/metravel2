@@ -6,7 +6,7 @@
 // задание (stores/fullBookExportStore.ts). Ошибка наблюдения — это «нет связи»,
 // а не провал сборки: задание продолжается на сервере.
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
@@ -79,6 +79,11 @@ export function useFullBookExport({ enabled }: UseFullBookExportOptions) {
   const owner = useQueryOwner()
   const ownerRef = useRef(owner)
   ownerRef.current = owner
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false }
+  }, [])
   const queryClient = useQueryClient()
   const prefs = useFullBookExportStore((state) => (owner ? state.byOwner[owner] : undefined))
   const setPeriodPref = useFullBookExportStore((state) => state.setPeriod)
@@ -181,7 +186,9 @@ export function useFullBookExport({ enabled }: UseFullBookExportOptions) {
     onSuccess: storeJob,
   })
   const downloadMutation = useMutation({
-    mutationFn: ({ jobId }: { owner: string; jobId: string }) => downloadFullBookFile(jobId),
+    mutationFn: ({ owner: operationOwner, jobId }: { owner: string; jobId: string }) => downloadFullBookFile(jobId, Date.now, () => {
+      if (!mounted.current || ownerRef.current !== operationOwner) throw new ApiError(403, 'BOOK_EXPORT_OWNER_CHANGED')
+    }),
   })
 
   // Ошибка действия принадлежит заданию, над которым оно выполнялось: после

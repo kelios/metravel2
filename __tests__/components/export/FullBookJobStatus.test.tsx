@@ -6,8 +6,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native'
 
 import type { BookExportV2Job } from '@/api/bookExportApi'
 import { ApiError } from '@/api/clientErrors'
-import FullBookJobStatus from '@/components/export/FullBookJobStatus'
-import type { FullBookExportController } from '@/hooks/useFullBookExport'
+import FullBookJobStatus, { type FullBookJobStatusController } from '@/components/export/FullBookJobStatus'
 
 jest.mock('@/hooks/useQueryOwner', () => ({ useQueryOwner: () => 'owner-1' }))
 
@@ -33,7 +32,7 @@ const makeJob = (overrides: Partial<BookExportV2Job> = {}): BookExportV2Job => (
   ...overrides,
 })
 
-const makeController = (job: BookExportV2Job | null, overrides: Partial<FullBookExportController> = {}) =>
+const makeController = (job: BookExportV2Job | null, overrides: Partial<FullBookJobStatusController> = {}): FullBookJobStatusController =>
   ({
     job,
     isJobMissing: false,
@@ -50,9 +49,24 @@ const makeController = (job: BookExportV2Job | null, overrides: Partial<FullBook
     download: jest.fn(),
     dismiss: jest.fn(),
     ...overrides,
-  }) as unknown as FullBookExportController
+  })
 
 describe('FullBookJobStatus', () => {
+  it('keeps expired ticket output unavailable with an explicit route to rebuilding', () => {
+    const job = makeJob({ status: 'done', completeness: 'complete', download: { available: true, size_bytes: 100, checksum: 'c' } })
+    const downloadError = new ApiError(410, 'expired', { error_code: 'JOB_EXPIRED' })
+    render(<FullBookJobStatus controller={makeController(job, { downloadError })} dismissLabel="Перейти к экспорту" />)
+    expect(screen.queryByText('Скачать PDF')).toBeNull()
+    expect(screen.getByText('Перейти к экспорту')).toBeTruthy()
+  })
+
+  it('does not offer retry when the job itself requires rebuilding', () => {
+    const job = makeJob({ status: 'failed', retryable: true, error_code: 'REBUILD_REQUIRED' })
+    render(<FullBookJobStatus controller={makeController(job)} showErrorCode />)
+    expect(screen.getByText('Код ошибки: REBUILD_REQUIRED')).toBeTruthy()
+    expect(screen.queryByText('Повторить')).toBeNull()
+  })
+
   it('keeps a visible observation error before any job detail is available', () => {
     render(<FullBookJobStatus controller={makeController(null, { isObservingJob: true, isReconnecting: true })} />)
     expect(screen.getByText('Нет связи с сервером — проверяем последнее задание повторно.')).toBeTruthy()
@@ -119,9 +133,9 @@ describe('FullBookJobStatus', () => {
   })
 
   it('offers retry for a retryable failure and explains the reconnect state', () => {
-    const failed = makeController(makeJob({ status: 'failed', retryable: true, error_code: 'REBUILD_REQUIRED' }))
+    const failed = makeController(makeJob({ status: 'failed', retryable: true, error_code: 'RENDER_FAILED' }))
     render(<FullBookJobStatus controller={failed} />)
-    expect(screen.getByText('Материалы книги больше не хранятся. Соберите книгу заново.')).toBeTruthy()
+    expect(screen.getByText('Сборка остановилась с ошибкой.')).toBeTruthy()
     fireEvent.press(screen.getByText('Повторить'))
     expect(failed.retry).toHaveBeenCalledTimes(1)
 

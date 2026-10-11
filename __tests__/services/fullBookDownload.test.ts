@@ -28,6 +28,19 @@ const mockedPost = apiClient.post as jest.Mock
 const mockedStart = startBrowserFileDownload as jest.Mock
 
 const JOB = '1b2f8c70-3c9e-4a65-8f44-6f8a8e1c0d11'
+
+it('checks owner identity after a delayed ticket response before starting file delivery', async () => {
+  mockedStart.mockClear()
+  let currentOwner = 'owner-1'
+  const guard = () => { if (currentOwner !== 'owner-1') throw new Error('OWNER_CHANGED') }
+  let resolveTicket: ((ticket: { download_url: string; expires_at: string }) => void) | undefined
+  mockedPost.mockImplementationOnce(() => new Promise((resolve) => { resolveTicket = resolve }))
+  const download = downloadFullBookFile(JOB, Date.now, guard)
+  currentOwner = 'owner-2'
+  resolveTicket?.({ download_url: `/api/exports/books/${JOB}/download/?ticket=secret`, expires_at: '2099-10-17T10:00:00Z' })
+  await expect(download).rejects.toThrow('OWNER_CHANGED')
+  expect(mockedStart).not.toHaveBeenCalled()
+})
 const API = 'https://metravel.by/api'
 const ORIGIN = 'https://metravel.by'
 const ticketUrl = `https://metravel.by/api/exports/books/${JOB}/download/?ticket=signed.value`

@@ -67,8 +67,10 @@ describe('siteLinks', () => {
     expect(isAppRoutePath('/quests/minsk/old-town')).toBe(true)
     expect(isAppRoutePath('/travels/forty-krakova')).toBe(true)
     expect(isAppRoutePath('/user/42')).toBe(true)
+    expect(isAppRoutePath('/book-exports/1b2f8c70-3c9e-4a65-8f44-6f8a8e1c0d11')).toBe(true)
 
     expect(isAppRoutePath('/travels')).toBe(false)
+    expect(isAppRoutePath('/book-exports')).toBe(false)
     expect(isAppRoutePath('/board')).toBe(false)
     expect(isAppRoutePath('/api/travels/1/')).toBe(false)
     expect(isAppRoutePath('/media/x.jpg')).toBe(false)
@@ -80,6 +82,9 @@ describe('siteLinks', () => {
       '/travels/slug?returnTo=%2Fsearch',
     )
     expect(resolveAppRouteForSiteUrl('https://metravel.by/#top')).toBe('/')
+    expect(resolveAppRouteForSiteUrl('https://metravel.by/book-exports/1b2f8c70-3c9e-4a65-8f44-6f8a8e1c0d11#download')).toBe(
+      '/book-exports/1b2f8c70-3c9e-4a65-8f44-6f8a8e1c0d11',
+    )
     expect(resolveAppRouteForSiteUrl('https://metravel.by/board')).toBeNull()
     expect(resolveAppRouteForSiteUrl('https://example.com/travels/slug')).toBeNull()
   })

@@ -51,9 +51,11 @@ const isExpired = (expiresAt: string, now: number): boolean => {
 // Новый билет на каждый клик: просроченный билет повторно не используется.
 // Уже истёкший к моменту ответа билет (часы клиента/сервера) запрашивается ещё
 // один раз; дальше — явная ошибка, а не тихий обходной путь.
-export async function downloadFullBookFile(jobId: string, now: () => number = Date.now): Promise<void> {
+export async function downloadFullBookFile(jobId: string, now: () => number = Date.now, assertOwner?: () => void): Promise<void> {
   for (let attempt = 0; attempt < 2; attempt += 1) {
+    assertOwner?.()
     const ticket = await requestBookExportDownloadTicket(jobId)
+    assertOwner?.()
     const url = resolveBookDownloadUrl(ticket.download_url, jobId)
     if (!url) throw new BookDownloadTicketError()
     if (isExpired(ticket.expires_at, now())) continue

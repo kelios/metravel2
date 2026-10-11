@@ -24,6 +24,7 @@ import { translate as i18nT, translatePlural } from '@/i18n';
 import { FULL_BOOK_MIN_YEAR, isValidFullBookPeriod } from '@/services/book/fullBookExportSubmission';
 import type { BookSettings } from '@/types/bookSettings';
 import FullBookJobStatus from './FullBookJobStatus';
+import BookJobBackgroundHint from '@/components/export/book-job/BookJobBackgroundHint';
 
 const sanitizeYear = (text: string) => text.replace(/[^0-9]/g, '').slice(0, 4);
 
@@ -193,6 +194,7 @@ export function FullBookExportPanel({ controller, baseSettings, userName }: Prop
       ) : null}
 
       <FullBookJobStatus controller={controller} />
+      {job ? <BookJobBackgroundHint jobId={job.job_id} showLink showBackground={isFullBookJobActive(job)} /> : null}
     </View>
   );
 }

@@ -98,11 +98,17 @@ const progressCounter = (job: BookExportV2Job): BookExportV2Counter | null => {
   return counter;
 };
 
+export type FullBookJobStatusController = Pick<FullBookExportController,
+  'job' | 'isJobMissing' | 'isObservingJob' | 'isReconnecting' | 'isCancelling' | 'cancelError' | 'cancel' |
+  'isRetrying' | 'retryError' | 'retry' | 'isDownloading' | 'downloadError' | 'download' | 'dismiss'>;
+
 type Props = {
-  controller: FullBookExportController;
+  controller: FullBookJobStatusController;
+  dismissLabel?: string;
+  showErrorCode?: boolean;
 };
 
-function FullBookJobStatus({ controller }: Props) {
+function FullBookJobStatus({ controller, dismissLabel, showErrorCode = false }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { job } = controller;
@@ -114,7 +120,7 @@ function FullBookJobStatus({ controller }: Props) {
           {i18nT('export:components.export.FullBookExport.jobMissing')}
         </Text>
         <UIButton
-          label={i18nT('export:components.export.FullBookExport.dismiss')}
+          label={dismissLabel ?? i18nT('export:components.export.FullBookExport.dismiss')}
           onPress={controller.dismiss}
           variant="ghost"
           size="sm"
@@ -131,13 +137,14 @@ function FullBookJobStatus({ controller }: Props) {
   ) : null;
 
   const active = isFullBookJobActive(job);
-  const downloadable = isFullBookJobDownloadable(job);
+  const downloadCode = fullBookErrorCode(controller.downloadError);
+  const downloadable = isFullBookJobDownloadable(job) && !['JOB_EXPIRED', 'REBUILD_REQUIRED'].includes(downloadCode ?? '');
   const progress = active ? progressCounter(job) : null;
   const ratio = progress ? Math.min(1, progress.completed / (progress.expected as number)) : 0;
   // REBUILD_REQUIRED от retry — окончательный ответ: повтор того же задания
   // невозможен, поэтому кнопка «Повторить» скрывается, а причина видна явно.
   const retryRebuildRequired = fullBookErrorCode(controller.retryError) === 'REBUILD_REQUIRED';
-  const canRetry = job.status === 'failed' && job.retryable && !retryRebuildRequired;
+  const canRetry = job.status === 'failed' && job.retryable && job.error_code !== 'REBUILD_REQUIRED' && !retryRebuildRequired;
   const actionError = controller.cancelError || (retryRebuildRequired ? null : controller.retryError);
   const iconName = downloadable ? 'check-circle' : job.status === 'failed' ? 'alert-circle' : active ? 'loader' : 'info';
   const iconColor = downloadable ? colors.success : job.status === 'failed' ? colors.danger : colors.textMuted;
@@ -196,6 +203,9 @@ function FullBookJobStatus({ controller }: Props) {
             : failureHint(job)}
         </Text>
       ) : null}
+      {showErrorCode && job.status === 'failed' && job.error_code ? (
+        <Text style={styles.hint}>{i18nT('export:components.export.BookJob.errorCode', { code: job.error_code })}</Text>
+      ) : null}
       {job.status === 'expired' ? (
         <Text style={styles.hint}>{i18nT('export:components.export.FullBookExport.expiredHint')}</Text>
       ) : null}
@@ -216,7 +226,11 @@ function FullBookJobStatus({ controller }: Props) {
       ) : null}
       {controller.downloadError ? (
         <Text style={styles.error} accessibilityLiveRegion="polite">
-          {i18nT('export:components.export.FullBookExport.error.download')}
+          {i18nT(downloadCode === 'REBUILD_REQUIRED'
+            ? 'export:components.export.FullBookExport.error.rebuildRequired'
+            : downloadCode === 'JOB_EXPIRED'
+              ? 'export:components.export.FullBookExport.expiredHint'
+              : 'export:components.export.FullBookExport.error.download')}
         </Text>
       ) : null}
 
@@ -253,7 +267,7 @@ function FullBookJobStatus({ controller }: Props) {
         ) : null}
         {!active ? (
           <UIButton
-            label={i18nT('export:components.export.FullBookExport.dismiss')}
+            label={dismissLabel ?? i18nT('export:components.export.FullBookExport.dismiss')}
             onPress={controller.dismiss}
             variant="ghost"
             size="sm"

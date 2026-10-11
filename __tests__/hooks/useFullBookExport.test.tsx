@@ -16,6 +16,7 @@ import {
 } from '@/hooks/useFullBookExport'
 import { useFullBookExportStore } from '@/stores/fullBookExportStore'
 import { DEFAULT_BOOK_SETTINGS } from '@/types/bookSettings'
+import { startBrowserFileDownload } from '@/utils/externalLinks'
 
 jest.mock('@/api/client', () => ({
   apiClient: {
@@ -28,6 +29,9 @@ jest.mock('@/api/client', () => ({
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 )
+
+jest.mock('@/utils/externalLinks', () => ({ startBrowserFileDownload: jest.fn(() => true) }))
+jest.mock('@/api/apiConfig', () => ({ API_BASE_URL: 'https://metravel.by/api' }))
 
 let mockOwner: string | null = 'owner-1'
 jest.mock('@/hooks/useQueryOwner', () => ({
@@ -95,7 +99,9 @@ describe('useFullBookExport', () => {
   beforeEach(() => {
     mockOwner = 'owner-1'
     mockedGet.mockReset()
-    mockedPost.mockReset()
+    mockedPost.mockReset();
+    (startBrowserFileDownload as jest.Mock).mockClear();
+    (apiClient.patch as jest.Mock).mockReset()
     useFullBookExportStore.setState({ byOwner: {} })
   })
 
@@ -103,6 +109,27 @@ describe('useFullBookExport', () => {
     cleanup()
     jest.useRealTimers()
   })
+
+  it.each([true, false])('known guest never queries auth-only capabilities or jobs (enabled=%s)', async (enabled) => {
+    mockOwner = null;
+    const { Wrapper } = createWrapper();
+    const { result } = renderHook(() => useFullBookExport({ enabled }), { wrapper: Wrapper });
+    await act(async () => { await Promise.resolve(); });
+    expect(result.current.capabilityState).toBe('unavailable');
+    expect(result.current.isAvailable).toBe(false);
+    expect(result.current.job).toBeNull();
+    expect(mockedGet).not.toHaveBeenCalled();
+    expect(mockedPost).not.toHaveBeenCalled();
+    expect(apiClient.patch).not.toHaveBeenCalled();
+  });
+
+  it('does not query capabilities for a disabled signed-in surface', async () => {
+    const { Wrapper } = createWrapper();
+    renderHook(() => useFullBookExport({ enabled: false }), { wrapper: Wrapper });
+    await act(async () => { await Promise.resolve(); });
+    expect(mockedGet).not.toHaveBeenCalled();
+    expect(mockedPost).not.toHaveBeenCalled();
+  });
 
   it('stays hidden and never lists jobs while the server pipeline is not ready', async () => {
     routeGet({ ...readyCapabilities, pdf_available: false, renderer_version: 'unavailable' }, [makeJob()])
@@ -206,6 +233,44 @@ describe('useFullBookExport', () => {
 
     expect(result.current.job).toBeNull()
     expect(result.current.isAvailable).toBe(false)
+  })
+
+  it('does not deliver a delayed download ticket after switching the panel owner', async () => {
+    const readyJob = makeJob({ status: 'done', completeness: 'complete', snapshot_state: 'frozen',
+      download: { available: true, size_bytes: 100, checksum: 'c' } })
+    routeGet(readyCapabilities, [readyJob])
+    let finishTicket!: (value: { download_url: string; expires_at: string }) => void
+    mockedPost.mockImplementationOnce(() => new Promise((resolve) => { finishTicket = resolve }))
+    const { Wrapper } = createWrapper()
+    const { result, rerender } = renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
+    await waitFor(() => expect(result.current.job?.status).toBe('done'))
+    act(() => result.current.download())
+    await waitFor(() => expect(mockedPost).toHaveBeenCalledWith('/exports/books/job-1/download-ticket/', {}))
+    mockOwner = 'owner-2'
+    rerender({})
+    await act(async () => {
+      finishTicket({ download_url: '/api/exports/books/job-1/download/?ticket=old-owner', expires_at: '2099-01-01T00:00:00Z' })
+    })
+    await waitFor(() => expect(result.current.isDownloading).toBe(false))
+    expect(startBrowserFileDownload).not.toHaveBeenCalled()
+  })
+
+  it('does not deliver a delayed download ticket after the panel is unmounted', async () => {
+    const readyJob = makeJob({ status: 'done', completeness: 'complete', snapshot_state: 'frozen',
+      download: { available: true, size_bytes: 100, checksum: 'c' } })
+    routeGet(readyCapabilities, [readyJob])
+    let finishTicket!: (value: { download_url: string; expires_at: string }) => void
+    mockedPost.mockImplementationOnce(() => new Promise((resolve) => { finishTicket = resolve }))
+    const { Wrapper } = createWrapper()
+    const { result, unmount } = renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
+    await waitFor(() => expect(result.current.job?.status).toBe('done'))
+    act(() => result.current.download())
+    await waitFor(() => expect(mockedPost).toHaveBeenCalledWith('/exports/books/job-1/download-ticket/', {}))
+    unmount()
+    await act(async () => {
+      finishTicket({ download_url: '/api/exports/books/job-1/download/?ticket=old-owner', expires_at: '2099-01-01T00:00:00Z' })
+    })
+    expect(startBrowserFileDownload).not.toHaveBeenCalled()
   })
 
   it('keeps a delayed selection response with the owner who started it', async () => {
