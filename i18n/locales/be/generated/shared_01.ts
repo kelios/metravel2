@@ -119,7 +119,7 @@ export const sharedGenerated1 = {
   "components.article.ArticleActivationCtaSection.openMap": "Паглядзець месцы на карце",
   "components.article.ArticleActivationCtaSection.openMapAccessibility": "Адкрыць карту з месцамі",
   "components.article.ArticleNextStepSection.heading": "Працягніце планаванне",
-  "components.article.ArticleNextStepSection.subtitle": "Адкрыйце месцы на карце або выберыце гарадскі квэст — без рэгістрацыі.",
+  "components.article.ArticleNextStepSection.subtitle": "Адкрыйце месцы на карце або выберыце гарадскі квэст для наступнай прагулкі.",
   "components.article.ArticleNextStepSection.openMap": "Месцы на карце",
   "components.article.ArticleNextStepSection.openMapAccessibility": "Адкрыць карту месцаў",
   "components.article.ArticleNextStepSection.openQuests": "Выбраць квэст",

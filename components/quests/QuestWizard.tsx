@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { generatePrintableQuest } from './QuestPrintable';
 import QuestTrustBar from './QuestTrustBar';
 import { isBikeQuest, isLoopQuest } from '@/utils/questAudience';
+import { GUEST_QUEST_FREE_STEPS } from '@/utils/guestQuestLimits';
 import { useQuestFinaleMedia } from './useQuestFinaleMedia';
 import { QuestCompactSidebar, QuestHeaderPanel } from './questWizardShell';
 import QuestFontScaleSheet from './QuestFontScaleSheet';
@@ -148,7 +149,7 @@ const useQuestWizardTheme = (isMobile: boolean, screenW: number) => {
     return { colors, styles };
 };
 // ===================== ОСНОВНОЙ КОМПОНЕНТ =====================
-export function QuestWizard({ title, steps, finale, intro, countModel, storageKey = 'quest_progress', city, coverUrl, tags, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, subscribeSlot, ratingSlot, completionSlot, screenMeta, statusSlot, contentLocaleSlot, questId, cityId, questNumericId, guestMode = false, guestFreeSteps = 2, onGuestGate, onGuestLogin, onGuestRegister }: QuestWizardProps) {
+export function QuestWizard({ title, steps, finale, intro, countModel, storageKey = 'quest_progress', city, coverUrl, tags, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, subscribeSlot, ratingSlot, completionSlot, screenMeta, statusSlot, contentLocaleSlot, questId, cityId, questNumericId, guestMode = false, guestFreeSteps = GUEST_QUEST_FREE_STEPS, onGuestGate, onGuestLogin, onGuestRegister }: QuestWizardProps) {
     const { t } = useTranslation();
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
     const resolvedCountModel = useMemo(

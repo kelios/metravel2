@@ -7,8 +7,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 export const GUEST_QUEST_PROGRESS_PREFIX = 'guestQuestProgress:v1:'
 
-// Сколько «настоящих» точек (без intro) гость может пройти до мягкого гейта.
-export const GUEST_QUEST_FREE_STEPS = 2
+// Preserve the public progress API; copy/SSG can import the storage-free leaf.
+export { GUEST_QUEST_FREE_STEPS } from './guestQuestLimits'
 
 export type GuestQuestProgress = {
   currentIndex: number

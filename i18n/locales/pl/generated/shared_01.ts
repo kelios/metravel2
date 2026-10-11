@@ -119,7 +119,7 @@ export const sharedGenerated1 = {
   "components.article.ArticleActivationCtaSection.openMap": "Zobacz miejsca na mapie",
   "components.article.ArticleActivationCtaSection.openMapAccessibility": "Otwórz mapę z miejscami",
   "components.article.ArticleNextStepSection.heading": "Kontynuuj planowanie",
-  "components.article.ArticleNextStepSection.subtitle": "Otwórz miejsca na mapie lub wybierz miejski quest — bez rejestracji.",
+  "components.article.ArticleNextStepSection.subtitle": "Otwórz miejsca na mapie lub wybierz miejski quest na kolejny spacer.",
   "components.article.ArticleNextStepSection.openMap": "Miejsca na mapie",
   "components.article.ArticleNextStepSection.openMapAccessibility": "Otwórz mapę miejsc",
   "components.article.ArticleNextStepSection.openQuests": "Wybierz quest",

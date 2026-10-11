@@ -53,7 +53,7 @@ const {
 const {
   QUESTS_INTRO_TITLE_RU,
   QUESTS_INTRO_LEAD_RU,
-  QUESTS_FAQ_RU,
+  getQuestsFaqRu,
   QUEST_SCENARIO_TITLE_RU,
   QUEST_SCENARIO_LEAD_RU,
   QUEST_SCENARIO_INCLUDES_RU,
@@ -115,6 +115,7 @@ const RU_I18N_CATALOG = I18N_CATALOGS.get('ru');
 // Build-time quest labels come from the app catalogs plus the SSG-only ones (#2399); RU values
 // are the historical literals, so RU pages stay byte-identical (#2365).
 const RU_SSG = createSsgTranslator(I18N_CATALOGS, 'ru');
+const QUESTS_FAQ_RU = getQuestsFaqRu(RU_SSG);
 function readRequiredRuTranslation(key) {
   const value = RU_I18N_CATALOG?.get(key);
   if (typeof value !== 'string' || value.trim() === '') {

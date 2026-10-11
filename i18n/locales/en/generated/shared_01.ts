@@ -119,7 +119,7 @@ export const sharedGenerated1 = {
   "components.article.ArticleActivationCtaSection.openMap": "See places on the map",
   "components.article.ArticleActivationCtaSection.openMapAccessibility": "Open the map with places",
   "components.article.ArticleNextStepSection.heading": "Keep planning",
-  "components.article.ArticleNextStepSection.subtitle": "Open places on the map or choose a city quest — no registration needed.",
+  "components.article.ArticleNextStepSection.subtitle": "Open places on the map or choose a city quest for your next walk.",
   "components.article.ArticleNextStepSection.openMap": "Places on the map",
   "components.article.ArticleNextStepSection.openMapAccessibility": "Open the places map",
   "components.article.ArticleNextStepSection.openQuests": "Choose a quest",

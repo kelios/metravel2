@@ -15,7 +15,8 @@ import Feather from '@expo/vector-icons/Feather'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useBreakpoints } from '@/hooks/useResponsive'
-import { translate as i18nT } from '@/i18n'
+import { formatInteger, translatePlural, translate as i18nT } from '@/i18n'
+import { GUEST_QUEST_FREE_STEPS } from '@/utils/guestQuestLimits'
 
 const IS_WEB = Platform.OS === 'web'
 
@@ -40,7 +41,7 @@ export function getQuestFaqItems(): QuestFaqItem[] {
     { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q2'), a: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a2') },
     { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q3'), a: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a3') },
     { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q4'), a: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a4') },
-    { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q5'), a: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a5') },
+    { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q5'), a: translatePlural('quests:screens.tabs.QuestsSeoIntroFaq.a5', GUEST_QUEST_FREE_STEPS, { freeSteps: formatInteger(GUEST_QUEST_FREE_STEPS) }) },
     { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q6'), a: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a6') },
     { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q7'), a: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a7') },
     { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q8'), a: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a8') },

@@ -119,7 +119,7 @@ export const sharedGenerated1 = {
   "components.article.ArticleActivationCtaSection.openMap": "Посмотреть места на карте",
   "components.article.ArticleActivationCtaSection.openMapAccessibility": "Открыть карту с местами",
   "components.article.ArticleNextStepSection.heading": "Продолжите планирование",
-  "components.article.ArticleNextStepSection.subtitle": "Откройте места на карте или выберите городской квест — без регистрации.",
+  "components.article.ArticleNextStepSection.subtitle": "Откройте места на карте или выберите городской квест для следующей прогулки.",
   "components.article.ArticleNextStepSection.openMap": "Места на карте",
   "components.article.ArticleNextStepSection.openMapAccessibility": "Открыть карту мест",
   "components.article.ArticleNextStepSection.openQuests": "Выбрать квест",
