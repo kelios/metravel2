@@ -96,7 +96,7 @@ def slide_lines(package):
     out = []
     if os.path.exists(spec):
         data = json.loads(read(spec))
-        for index, slide in enumerate(data.get('slides', []), 1):
+        for index, slide in enumerate(data.get('slides', []) if isinstance(data, dict) else [], 1):
             for key in SLIDE_TEXT_KEYS:
                 value = slide.get(key)
                 for item in (value if isinstance(value, list) else [value]):
@@ -104,6 +104,11 @@ def slide_lines(package):
                         item = item.get('name')
                     if isinstance(item, str) and item.strip():
                         out.append(('spec.json слайд %02d' % index, 0, item))
+        for key in ('segments', 'texts'):  # титры Reel из spec монтажа: {"text": …} или строки
+            for index, item in enumerate(data.get(key) or [], 1) if isinstance(data, dict) else []:
+                text = item.get('text') if isinstance(item, dict) else item
+                if isinstance(text, str) and text.strip():
+                    out.append(('spec.json титр %02d' % index, 0, text))
     if os.path.exists(plain):  # титры Reel или слайды другого скрипта — рядом со spec.json тоже
         for number, line in enumerate(read(plain).splitlines(), 1):
             if line.strip():
