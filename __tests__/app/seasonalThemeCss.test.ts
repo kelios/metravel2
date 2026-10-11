@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { parse, type Rule } from 'postcss'
+import { list, parse, type Rule } from 'postcss'
 import { SEASONAL_THEME_IDS } from '@/constants/seasonalThemes'
 
 describe('seasonal header decoration layers', () => {
@@ -52,7 +52,91 @@ describe('seasonal header decoration layers', () => {
     const svg = new DOMParser().parseFromString(decodeURIComponent(image![1]), 'image/svg+xml')
     expect(svg.querySelector('parsererror')).toBeNull()
     expect(svg.documentElement.getAttribute('viewBox')).toBe('0 0 1200 48')
-    expect(svg.querySelector('script, image, animate, animateTransform, set, [href], [xlink\\:href]')).toBeNull()
+    expect(svg.querySelector('script, style, foreignObject, image, animate, animateTransform, set, [href], [xlink\\:href]')).toBeNull()
+    for (const node of svg.querySelectorAll('*')) {
+      expect([...node.attributes].some(attribute => /^on/i.test(attribute.name))).toBe(false)
+    }
+  })
+
+  it.each(['light', 'dark'] as const)('keeps winter scenes self-contained and snow below header labels in %s', scheme => {
+    const colors = palette('christmas', scheme)
+    for (const token of ['tree-image', 'village-image', 'header-snow']) {
+      const image = colors[`--christmas-${token}`].match(/^url\("data:image\/svg\+xml,(.*)"\)$/)!
+      const svg = new DOMParser().parseFromString(decodeURIComponent(image[1]), 'image/svg+xml')
+      expect(svg.querySelector('parsererror')).toBeNull()
+      expect(svg.querySelector('script, style, foreignObject, image, animate, animateTransform, set, [href], [xlink\\:href]')).toBeNull()
+      for (const node of svg.querySelectorAll('*')) {
+        expect([...node.attributes].some(attribute => /^on/i.test(attribute.name))).toBe(false)
+      }
+      if (token === 'header-snow') {
+        expect(Number(svg.querySelector('#header-snow-band rect')!.getAttribute('y'))).toBeGreaterThanOrEqual(54)
+        expect([...svg.querySelectorAll('svg > g')].every(group => group.getAttribute('clip-path') === 'url(#header-snow-band)')).toBe(true)
+      } else {
+        expect(svg.documentElement.getAttribute('viewBox')).toBe('0 0 320 420')
+        expect(svg.querySelector(token === 'tree-image' ? '#festive-fir' : '#warm-cottage')).not.toBeNull()
+      }
+    }
+  })
+
+  it.each(['light', 'dark'] as const)('keeps small text legible under partial winter glows in %s', scheme => {
+    const colors = palette('christmas', scheme)
+    const rgb = (hex: string): number[] => [1, 3, 5].map(offset => Number.parseInt(hex.slice(offset, offset + 2), 16))
+    const composite = (background: number[], paint: number[], alpha: number): number[] =>
+      background.map((channel, index) => Math.round(channel * (1 - alpha) + paint[index] * alpha))
+    // Ordered subsets include bright partial overlaps without darker neighbours.
+    const layers = [...`${colors['--season-header-glow']}, ${colors['--season-edge-glow']}`.matchAll(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/g)].reverse()
+    for (const surface of ['background', 'backgroundSecondary', 'surface']) {
+      const backgrounds = layers.reduce((values, layer) => values.flatMap(value => [value, composite(value, layer.slice(1, 4).map(Number), Number(layer[4]))]), [rgb(colors[`--color-${surface}`])])
+      for (const background of backgrounds) {
+        const hex = '#' + background.map(channel => channel.toString(16).padStart(2, '0')).join('')
+        for (const foreground of ['text', 'textMuted', 'textSubtle', 'primaryText']) {
+          expect(contrast(colors[`--color-${foreground}`], hex)).toBeGreaterThanOrEqual(4.5)
+        }
+        expect(contrast(colors['--season-logo-wordmark'], hex)).toBeGreaterThanOrEqual(4.5)
+      }
+    }
+  })
+
+  it('keeps winter scenes on the home background, isolates seasons and clears them for print', () => {
+    const selector = 'html[data-season="christmas"] [data-testid="home-hero"]'
+    const hero = declarations(rulesFor(selector)[0])
+    expect(hero['background-repeat']).toBe('no-repeat')
+    expect(hero['background-image']).toContain('var(--christmas-tree-image)')
+    expect(hero['background-image']).toContain('var(--christmas-village-image)')
+    const colors = palette('christmas', 'light')
+    const images = list.comma(hero['background-image'].replace(/var\((--[\w-]+)\)/g, (_, token: string) => colors[token]))
+    // Edge glow expands to two gradients: shorter lists would repeat a scene's
+    // geometry onto the final gradient, shrinking it and moving it into a gutter.
+    expect(images).toHaveLength(4)
+    for (const property of ['background-position', 'background-size']) {
+      expect(list.comma(hero[property])).toHaveLength(images.length)
+    }
+    expect(list.comma(hero['background-position']).slice(2)).toEqual(['center top', 'center top'])
+    expect(list.comma(hero['background-size']).slice(2)).toEqual(['100% 100%', '100% 100%'])
+    const page = document.implementation.createHTMLDocument()
+    page.body.innerHTML = '<div data-testid="home-hero"></div><div data-testid="travel-details-description"></div><div data-testid="map-container"></div>'
+    for (const season of SEASONAL_THEME_IDS.filter(id => id !== 'christmas')) {
+      page.documentElement.dataset.season = season
+      expect(page.querySelector(selector)).toBeNull()
+    }
+    delete page.documentElement.dataset.season
+    expect(page.querySelector(selector)).toBeNull()
+    page.documentElement.dataset.season = 'christmas'
+    expect(page.querySelector(selector)).not.toBeNull()
+    for (const id of ['travel-details-description', 'map-container']) expect(page.querySelector(`[data-testid="${id}"]`)!.matches(selector)).toBe(false)
+    let crest: Record<string, string> | undefined
+    let print: Record<string, string> = {}
+    stylesheet.walkAtRules('media', media => media.walkRules(rule => {
+      if (!rule.selectors.includes(selector)) return
+      if (media.params === '(max-width: 1279.98px)') crest = declarations(rule)
+      if (media.params === 'print') print = { ...print, ...declarations(rule) }
+    }))
+    // The two 126px illustrations fit above the content's 136px top padding.
+    expect(crest?.['background-size']).toBe('96px 126px, 96px 126px, 100% 100%, 100% 100%')
+    expect(list.comma(crest!['background-position'])).toHaveLength(images.length)
+    expect(crest?.['padding-top']).toBe('136px')
+    expect(print['background-image']).toBe('none')
+    expect(print['padding-top']).toBe('0')
   })
 
   it.each(appearances)('keeps text, selected controls and focus legible for $theme/$scheme', ({ theme, scheme }) => {
