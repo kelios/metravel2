@@ -61,7 +61,7 @@ describe('instagram lint-package', () => {
   it('scans every package text with the shared Belarus denylist', () => {
     const dir = makePackage('belarus', {
       'caption.txt': CLEAN_CAPTION,
-      'sources.md': 'Легенда — по пересказу газеты «Наша Ніва».\n',
+      'sources.md': 'Легенда — в пересказе „Нашай Нівы“.\n',
     })
     const { status, hits } = lint(dir)
     expect(status).toBe(1)
