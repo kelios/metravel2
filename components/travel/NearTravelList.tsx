@@ -37,7 +37,7 @@ import { useNearTravelData } from '@/hooks/useNearTravelData';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
 import { TravelMap } from '@/components/MapPage/TravelMap';
 import { translate as i18nT } from '@/i18n'
-import { parseTravelCoords } from '@/utils/questForLocation';
+import { canShowNearTravelMapMode, getNearTravelMapOrigin } from '@/components/travel/utils/nearTravelMapAvailability';
 
 
 // ✅ ОПТИМИЗАЦИЯ: Lazy import для map-компонента (тяжёлый, Leaflet внутри)
@@ -228,15 +228,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       const id = Number(travel.id);
       return Number.isFinite(id) && id > 0 ? id : null;
     }, [travel.id]);
-    const mapOrigin = useMemo(() => {
-      const coordinates = parseTravelCoords([
-        ...(Array.isArray(travel.travelAddress) ? travel.travelAddress : []),
-        ...(Array.isArray(travel.coordsMeTravel) ? travel.coordsMeTravel : []),
-      ]);
-      return coordinates.find(({ lat, lng }) => (
-        Math.abs(lat) <= 90 && Math.abs(lng) <= 180
-      )) ?? null;
-    }, [travel.coordsMeTravel, travel.travelAddress]);
+    const mapOrigin = useMemo(() => getNearTravelMapOrigin(travel), [travel]);
 
     const {
       travelsNear, displayedTravels, mapPoints,
@@ -249,7 +241,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
     const handleRetryMap = useCallback(() => {
       void refetchMapPoints();
     }, [refetchMapPoints]);
-    const canShowMapMode = mapPoints.length > 0 || mapOrigin !== null;
+    const canShowMapMode = canShowNearTravelMapMode(mapOrigin, mapPoints);
 
     const viewToggle = useMemo<NearTravelViewToggle | null>(
       () => (canShowMapMode ? { value: viewMode, onChange: setViewMode } : null),

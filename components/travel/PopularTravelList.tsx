@@ -34,6 +34,8 @@ import {
   FLATLIST_CONFIG_MOBILE,
 } from '@/components/listTravel/utils/listTravelConstants';
 import { translate as i18nT } from '@/i18n'
+import { PopularTravelRail } from '@/components/travel/PopularTravelRail';
+import { PopularTravelListSkeleton } from '@/components/travel/NearTravelListSkeleton';
 
 
 type PopularTravelListProps = {
@@ -322,6 +324,9 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
       [styles.separator]);
 
     if (isLoading) {
+      if (Platform.OS === 'web' && embedded) {
+        return <View style={styles.embeddedSection} onLayout={onLayout}><PopularTravelListSkeleton /></View>;
+      }
       return (
         <View style={styles.loadingContainer} onLayout={onLayout}>
           <ActivityIndicator size="large" color={colors.primaryDark} accessibilityLabel={i18nT('travel:components.travel.PopularTravelList.zagruzka_populyarnyh_marshrutov_342c5d42')} />
@@ -373,7 +378,7 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
           </Title>
         )}
 
-        <Animated.View style={{ opacity: fadeAnim }}>
+        {Platform.OS === 'web' && embedded ? <PopularTravelRail travels={popularList} /> : <Animated.View style={{ opacity: fadeAnim }}>
           {Platform.OS === 'web' ? (
             <View>
               <View
@@ -408,7 +413,7 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
               accessibilityRole="list"
             />
           )}
-        </Animated.View>
+        </Animated.View>}
       </View>
     );
   }

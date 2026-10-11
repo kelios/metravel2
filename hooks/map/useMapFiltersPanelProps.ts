@@ -4,6 +4,7 @@ import { useRouteStore } from '@/stores/routeStore';
 import { createCollator } from '@/i18n';
 import type { TravelCoords } from '@/types/types';
 import type { MapUiApi } from '@/types/mapUi';
+import type { MapPointCountScope } from '@/utils/mapPointCount';
 import type { useMapFilters } from '@/hooks/map/useMapFilters';
 import type { useMapOverlays } from '@/hooks/map/useMapOverlays';
 import type { useRouteController } from '@/hooks/map/useRouteController';
@@ -50,6 +51,7 @@ interface UseMapFiltersPanelPropsParams extends FiltersPick, OverlaysPick, Route
   allTravelsData: TravelCoords[];
   travelsData: TravelCoords[];
   travelsCount: number;
+  resultsTotalScope?: MapPointCountScope;
   isMobile: boolean;
   mapUiApi: MapUiApi | null;
   closeRightPanel: () => void;
@@ -93,6 +95,7 @@ export function useMapFiltersPanelProps(params: UseMapFiltersPanelPropsParams) {
     routingError,
     travelsData,
     travelsCount,
+    resultsTotalScope,
     isMobile,
     mapUiApi,
     closeRightPanel,
@@ -245,6 +248,7 @@ export function useMapFiltersPanelProps(params: UseMapFiltersPanelPropsParams) {
       // «На карте подходит», чтобы он показывал полный total, а не длину загруженной
       // страницы (≤30).
       resultsTotal: travelsCount,
+      resultsTotalScope,
       isMobile,
       mapUiApi,
       closeMenu: closeRightPanel,
@@ -261,6 +265,7 @@ export function useMapFiltersPanelProps(params: UseMapFiltersPanelPropsParams) {
       allTravelsData,
       travelsData,
       travelsCount,
+      resultsTotalScope,
       isMobile,
       mapUiApi,
       closeRightPanel,

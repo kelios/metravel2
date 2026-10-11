@@ -141,7 +141,7 @@ export const createTypographyStyles = (ctx: HeroStyleContext) => {
               lineHeight: desktopBookSubtitleLineHeight,
               maxWidth: '88%',
               letterSpacing: '0.01em',
-              marginTop: '3.2%',
+              marginTop: ctx.isCompactBookLayout ? 10 : 16,
             } as any)
           : ({ fontFamily: sansSerif } as any),
       }),

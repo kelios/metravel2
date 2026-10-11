@@ -51,6 +51,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
     travelsData,
     filteredTravelsData,
     resultsTotal,
+    resultsTotalScope,
     isMobile,
     closeMenu,
     mode,
@@ -143,6 +144,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           styles={styles}
           isMobile={isMobile}
           totalPoints={totalPoints}
+          totalScope={resultsTotalScope}
           mode={mode}
           radiusValue={filterValue.radius}
           onClose={safeCloseMenu}

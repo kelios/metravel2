@@ -4,7 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
 import IconButton from '@/components/ui/IconButton';
 import type { ThemedColors } from '@/hooks/useTheme';
-import { formatPlaces } from '@/utils/pluralize';
+import { formatMapPoints, qualifyMapPointCount, type MapPointCountScope } from '@/utils/mapPointCount';
 import { DEFAULT_RADIUS_KM, formatRadiusLabel } from '@/constants/mapConfig';
 import { translate as i18nT } from '@/i18n'
 
@@ -14,6 +14,7 @@ interface FiltersPanelHeaderProps {
   styles: any;
   isMobile: boolean;
   totalPoints: number;
+  totalScope?: MapPointCountScope;
   mode: 'radius' | 'route';
   radiusValue: string;
   onClose: () => void;
@@ -25,6 +26,7 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
   styles,
   isMobile,
   totalPoints,
+  totalScope,
   mode,
   radiusValue,
   onClose,
@@ -32,7 +34,7 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
 }) => {
   const summary =
     mode === 'radius'
-      ? i18nT('map:components.MapPage.FiltersPanelHeader.value1_radius_value2_1c755c38', { value1: formatPlaces(totalPoints), value2: formatRadiusLabel(radiusValue || DEFAULT_RADIUS_KM) })
+      ? i18nT('map:components.MapPage.FiltersPanelHeader.value1_radius_value2_1c755c38', { value1: qualifyMapPointCount(formatMapPoints(totalPoints), totalScope), value2: formatRadiusLabel(radiusValue || DEFAULT_RADIUS_KM) })
       : i18nT('map:components.MapPage.FiltersPanelHeader.otmette_na_karte_start_i_finish_2e7d3bff');
   const helper =
     mode === 'radius'
@@ -41,7 +43,7 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
   const showCompactDetails = !isMobile;
   const compactSummary =
     mode === 'radius'
-      ? `${formatPlaces(totalPoints)} · ${formatRadiusLabel(radiusValue || DEFAULT_RADIUS_KM)}`
+      ? `${qualifyMapPointCount(formatMapPoints(totalPoints), totalScope)} · ${formatRadiusLabel(radiusValue || DEFAULT_RADIUS_KM)}`
       : i18nT('map:components.MapPage.FiltersPanelHeader.start_i_finish_na_karte_ff77106b');
 
   return (

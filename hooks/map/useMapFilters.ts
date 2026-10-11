@@ -10,6 +10,7 @@ import {
 import { fetchFiltersMap, type MapFiltersResponse } from '@/api/map';
 import { DEFAULT_RADIUS_KM, RADIUS_OPTIONS } from '@/constants/mapConfig';
 import { translate as i18nT } from '@/i18n'
+import { resolveMapCategorySelection, type MapCategoryDictionaryState } from '@/utils/mapCategorySelection'
 
 
 export interface FiltersData {
@@ -20,6 +21,7 @@ export interface FiltersData {
   categories: { id: string; name: string }[];
   /** Единственный словарь чипов «тип места»: имя чипа → ID для сервера. */
   categoryTravelAddress: { id: string; name: string }[];
+  categoryDictionaryState?: MapCategoryDictionaryState;
   radius: { id: string; name: string }[];
   address: string;
 }
@@ -61,7 +63,7 @@ function normalizeCategory(cat: unknown): { id: string; name: string } | null {
   if (!normalizedName) return null;
 
   // Без реального ID имя остаётся ключом: позиционный индекс выдавался бы за ID
-  // чужой категории и уходил серверу. Нечисловой id `mapCategoryNamesToIds` пропустит.
+  // чужой категории и уходил серверу. Нечисловой id resolver не выдаёт за backend-ID.
   return {
     id: String(realId ?? normalizedName),
     name: normalizedName,
@@ -72,7 +74,7 @@ function normalizeCategory(cat: unknown): { id: string; name: string } | null {
  * Единственный источник словаря чипов «тип места» карты (#2374). Живой
  * `/api/filterformap/` отдаёт его под ключом `categories`; legacy-ключ
  * `categoryTravelAddress` дочитывается только как fallback. Дубли по ID и имени
- * схлопываются, чтобы `mapCategoryNamesToIds` получал однозначное имя → ID.
+ * схлопываются, чтобы resolver получал однозначное имя или URL ID → ID.
  */
 export function resolveMapPointCategoryDictionary(
   data: Partial<MapFiltersResponse> | null | undefined,
@@ -111,6 +113,7 @@ export function useMapFilters(options?: UseMapFiltersOptions) {
   const [filters, setFilters] = useState<FiltersData>({
     categories: [],
     categoryTravelAddress: [],
+    categoryDictionaryState: 'loading',
     radius: [...RADIUS_OPTIONS],
     address: '',
   });
@@ -130,8 +133,8 @@ export function useMapFilters(options?: UseMapFiltersOptions) {
       transportMode: stored.transportMode,
       lastMode: stored.lastMode,
       searchQuery: '',
-      // `?categories=` в URL /map — имена типов мест (как `placeCategory`), поэтому
-      // идут в тот же канал чипов, что и выбор в панели, и резолвятся одним словарём.
+      // URL IDs and legacy names use the point-type channel. Preserve every
+      // token until the dictionary can resolve it, including loading/error.
       ...(options?.initialCategories?.length
         ? { categoryTravelAddress: options.initialCategories }
         : {}),
@@ -156,15 +159,22 @@ export function useMapFilters(options?: UseMapFiltersOptions) {
 
         if (!isMounted) return;
 
+        const dictionary = resolveMapPointCategoryDictionary(data);
         setFilters({
           categories: [],
-          categoryTravelAddress: resolveMapPointCategoryDictionary(data),
+          categoryTravelAddress: dictionary,
+          categoryDictionaryState: 'ready',
           radius: [...RADIUS_OPTIONS],
           address: '',
         });
+        setFilterValues((previous) => ({
+          ...previous,
+          categoryTravelAddress: resolveMapCategorySelection(previous.categoryTravelAddress, dictionary).tokens,
+        }));
       } catch (err) {
         if (isMounted) {
           logError(err, { scope: 'map', step: 'loadFilters' });
+          setFilters((previous) => ({ ...previous, categoryDictionaryState: 'error' }));
           setError(i18nT('map:hooks.map.useMapFilters.ne_udalos_zagruzit_filtry_4d480f39'));
         }
       } finally {

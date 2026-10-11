@@ -61,6 +61,12 @@ BookSettingsModal (web DOM / native RN; общий useBookSettingsForm)
 `minimal`, `dark`, `light`, `forest`, `adventure`, `illustrated`, `blackWhite`,
 `editorialLuxe`) и делятся на тиры (`themes/themeTiers.ts`).
 
+В модалке настроек видимая подпись основного действия — «Сохранить PDF»;
+полная подпись доступности — «Сохранить и создать PDF». Гостю доступен
+клиентский экспорт; auth-only capabilities полной книги читает только
+`useFullBookExport` при `enabled` и владельце из `useQueryOwner`, без запроса
+проверки сессии для выбора пути.
+
 ### Обтекание фото и контраст финала (#2410, #2368)
 
 Клиентская HTML-книга из статьи проходит через `BlockRenderer`: отображаемая

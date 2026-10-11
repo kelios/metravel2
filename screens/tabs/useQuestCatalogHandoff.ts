@@ -20,12 +20,15 @@ import { STORAGE_PENDING_CATALOG_SELECTION } from '@/utils/questCatalogSelection
 export function useQuestCatalogHandoff(params: {
     enabled: boolean;
     onApply: (selectionId: string) => void;
+    getGeneration?: () => number;
+    canApply?: () => boolean;
 }): void {
-    const { enabled, onApply } = params;
+    const { enabled, onApply, getGeneration, canApply } = params;
 
     useEffect(() => {
         if (!enabled) return undefined;
         let cancelled = false;
+        const generation = getGeneration?.();
 
         (async () => {
             try {
@@ -35,7 +38,8 @@ export function useQuestCatalogHandoff(params: {
                 // рендера), эффект переподписывается — и съеденный, но не
                 // применённый ключ означал бы каталог в прежнем срезе.
                 if (!pending || cancelled) return;
-                onApply(pending);
+                // A newer URL/manual selection owns the slot; discard the old handoff.
+                if (getGeneration?.() === generation && (canApply?.() ?? true)) onApply(pending);
                 // Удаление после применения: повторное применение того же id
                 // идемпотентно, а потерянный ключ — нет.
                 await AsyncStorage.removeItem(STORAGE_PENDING_CATALOG_SELECTION);
@@ -46,7 +50,7 @@ export function useQuestCatalogHandoff(params: {
         })();
 
         return () => { cancelled = true; };
-    }, [enabled, onApply]);
+    }, [enabled, onApply, getGeneration, canApply]);
 }
 
 export default useQuestCatalogHandoff;

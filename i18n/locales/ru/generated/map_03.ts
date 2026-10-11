@@ -1,4 +1,5 @@
 export const mapGenerated3 = {
+  "screens.tabs.PlacesScreen.filterLoadFailed": "Не удалось загрузить фильтры",
   "hooks.map.useMapMobileDerivations.marshrut_c71f4ede": "Маршрут",
   "hooks.map.useMapMobileDerivations.marshrut_gotov_mozhno_otkryt_spisok_mest_cb473cc6": "Маршрут готов, можно открыть список мест",
   "hooks.map.useMapMobileDerivations.marshrut_obnovlyaetsya_a8a3d750": "Маршрут обновляется",
@@ -48,7 +49,7 @@ export const mapGenerated3 = {
   "screens.tabs.PlacesScreen_parts.otkryt_tochku_v_waze_f566b9af": "Открыть точку в Waze",
   "screens.tabs.PlacesScreen_parts.otkryt_tochku_v_yandeks_kartah_dc0d96b1": "Открыть точку в Яндекс Картах",
   "screens.tabs.PlacesScreen_parts.otkryt_tochku_v_yandeks_navigatore_43357804": "Открыть точку в Яндекс Навигаторе",
-  "screens.tabs.PlacesScreen_parts.statya_28264f10": "Статья",
+  "screens.tabs.PlacesScreen_parts.statya_28264f10": "Прочитать",
   "screens.tabs.PlacesScreen_parts.tochka_dobavlena_v_moi_tochki_c854cbfa": "Точка добавлена в мои точки",
   "screens.tabs.PlacesScreen_parts.tochka_ubrana_iz_moih_tochek_87df65a9": "Точка убрана из моих точек",
   "screens.tabs.PlacesScreen_parts.v_tochkah_53f65e25": "В точках",
@@ -227,7 +228,7 @@ export const mapGenerated3 = {
   "components.MapPage.useRouting.osrmUnavailable": "OSRM недоступен (сетевая ошибка)",
   "components.MapPage.useRouting.valhallaUnavailable": "Valhalla недоступен (сетевая ошибка)",
   "utils.routingHelpers.requestFailedAfterRetries": "Не удалось выполнить запрос после повторных попыток",
-  "constants.mapSeo.title": "Карта маршрутов и достопримечательностей Беларуси | Metravel",
+  "constants.mapSeo.title": "Карта маршрутов и достопримечательностей | MeTravel",
   "constants.mapSeo.description": "Интерактивная карта путешествий Metravel: находите маршруты, достопримечательности и идеи поездок, фильтруйте точки и стройте свой путь.",
   "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_5b3c9f14": "Поиск по тегам",
   "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_i_kategoriyam_mest_7d41ac68": "Поиск по тегам и категориям мест",
@@ -251,4 +252,6 @@ export const mapGenerated3 = {
   "components.MapPage.Map.PlacePopupCard.PlaceSourcePager.material_current_iz_total_5f5f1d3a": "Материал {{current}} из {{total}}",
   "components.MapPage.Map.PlacePopupCard.PlaceSourcePager.predyduschiy_material_1c6a0f27": "Предыдущий материал",
   "components.MapPage.Map.PlacePopupCard.PlaceSourcePager.sleduyuschiy_material_ab7f8c04": "Следующий материал",
+  "components.MapPage.FiltersPanelRadiusSection.loadedPointCounts": "Счётчики — по загруженным точкам",
+  "utils.mapPointCount.loadedCount": "Загружено: {{value1}}",
 } as const

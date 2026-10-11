@@ -524,74 +524,76 @@ export default function HomeHeroBookLayout({
             {withBookFrame && <View style={styles.heroPageCurlLeft} />}
 
             <View testID="home-hero-left-frame" style={styles.leftPageFrame}>
-              <View>
-                {showChapterHeader && (
-                  <View style={styles.chapterHeader}>
-                    <Text style={styles.chapterLabel}>{i18nT('home:components.home.HomeHeroBookLayout.idei_puteshestviy_21ae7112')}</Text>
-                    <View style={styles.chapterDivider} />
+              <View style={styles.leftPageContent}>
+                <View>
+                  {showChapterHeader && (
+                    <View style={styles.chapterHeader}>
+                      <Text style={styles.chapterLabel}>{i18nT('home:components.home.HomeHeroBookLayout.idei_puteshestviy_21ae7112')}</Text>
+                      <View style={styles.chapterDivider} />
+                    </View>
+                  )}
+                  <View
+                    accessibilityRole="header"
+                    {...({ 'aria-level': 1 } as any)}
+                    accessibilityLabel={i18nT('home:components.home.HomeHeroBookLayout.kuda_poehat_v_eti_vyhodnye_018894bf')}
+                  >
+                    <Text style={styles.title}>
+                      {i18nT('home:components.home.HomeHeroBookLayout.kuda_poehat_07cb7b59')}{isNarrowLayout ? ' ' : '\n'}
+                    </Text>
+                    <Text style={styles.titleAccent}>{i18nT('home:components.home.HomeHeroBookLayout.v_eti_vyhodnye_c69482dd')}</Text>
                   </View>
-                )}
-                <View
-                  accessibilityRole="header"
-                  {...({ 'aria-level': 1 } as any)}
-                  accessibilityLabel={i18nT('home:components.home.HomeHeroBookLayout.kuda_poehat_v_eti_vyhodnye_018894bf')}
-                >
-                  <Text style={styles.title}>
-                    {i18nT('home:components.home.HomeHeroBookLayout.kuda_poehat_07cb7b59')}{isNarrowLayout ? ' ' : '\n'}
-                  </Text>
-                  <Text style={styles.titleAccent}>{i18nT('home:components.home.HomeHeroBookLayout.v_eti_vyhodnye_c69482dd')}</Text>
+
+                  <Text testID="home-hero-subtitle" style={styles.subtitle}>{heroSubtitle}</Text>
+
+                  {showPageNotes && (
+                    <HeroPageNotes
+                      activeKey={pendingAction}
+                      colors={colors}
+                      moodCards={moodCards}
+                      onQuickFilterPress={onQuickFilterPress}
+                      styles={styles}
+                    />
+                  )}
                 </View>
 
-                <Text style={styles.subtitle}>{heroSubtitle}</Text>
-
-                {showPageNotes && (
-                  <HeroPageNotes
-                    activeKey={pendingAction}
+                {isTabletLayout && (
+                  <TabletFeatureGrid
                     colors={colors}
-                    moodCards={moodCards}
-                    onQuickFilterPress={onQuickFilterPress}
+                    heroHighlights={heroHighlights}
                     styles={styles}
                   />
                 )}
-              </View>
 
-              {isTabletLayout && (
-                <TabletFeatureGrid
-                  colors={colors}
-                  heroHighlights={heroHighlights}
-                  styles={styles}
-                />
-              )}
-
-              <View style={styles.heroControls}>
-                <HomeHeroSearchBar
-                  colors={colors}
-                  isMobile={isMobile}
-                  onSubmit={onSearchSubmit}
-                  useBookPaperColors={withBookFrame}
-                />
-
-                <View testID="home-hero-cta-row" style={styles.buttonsContainer}>
-                  <Button
-                    onPress={onOpenSearch}
-                    label={i18nT('home:components.home.HomeHeroBookLayout.smotret_marshruty_4a0b9a63')}
-                    loading={pendingAction === 'search'}
-                    variant="primary"
-                    size="md"
-                    fullWidth={useStackedCtas}
-                    icon={
-                      <Feather
-                        name="compass"
-                        size={16}
-                        color={colors.textOnPrimary}
-                      />
-                    }
-                    style={[styles.primaryButton, styles.singleCtaButton]}
-                    labelStyle={styles.primaryButtonText}
-                    hoverStyle={styles.primaryButtonHover}
-                    pressedStyle={styles.primaryButtonHover}
-                    accessibilityLabel={i18nT('home:components.home.HomeHeroBookLayout.smotret_marshruty_4a0b9a63')}
+                <View style={styles.heroControls}>
+                  <HomeHeroSearchBar
+                    colors={colors}
+                    isMobile={isMobile}
+                    onSubmit={onSearchSubmit}
+                    useBookPaperColors={withBookFrame}
                   />
+
+                  <View testID="home-hero-cta-row" style={styles.buttonsContainer}>
+                    <Button
+                      onPress={onOpenSearch}
+                      label={i18nT('home:components.home.HomeHeroBookLayout.smotret_marshruty_4a0b9a63')}
+                      loading={pendingAction === 'search'}
+                      variant="primary"
+                      size="md"
+                      fullWidth={useStackedCtas}
+                      icon={
+                        <Feather
+                          name="compass"
+                          size={16}
+                          color={colors.textOnPrimary}
+                        />
+                      }
+                      style={[styles.primaryButton, styles.singleCtaButton]}
+                      labelStyle={styles.primaryButtonText}
+                      hoverStyle={styles.primaryButtonHover}
+                      pressedStyle={styles.primaryButtonHover}
+                      accessibilityLabel={i18nT('home:components.home.HomeHeroBookLayout.smotret_marshruty_4a0b9a63')}
+                    />
+                  </View>
                 </View>
               </View>
             </View>

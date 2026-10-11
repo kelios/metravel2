@@ -128,7 +128,9 @@ const skeletonStyles = StyleSheet.create({
  * ряд каркасов карточек той же геометрии, что `NearTravelList`. Декоративный —
  * без фокуса и вне дерева доступности.
  */
-export const NearTravelListSkeleton = memo(function NearTravelListSkeleton() {
+export const NearTravelListSkeleton = memo(function NearTravelListSkeleton({
+  canShowMapMode = false,
+}: { canShowMapMode?: boolean }) {
   const layout = useNearTravelRailLayout()
   const colors = useThemedColors()
   const slotStyle = useNearTravelRailSlotStyle(layout)
@@ -145,9 +147,9 @@ export const NearTravelListSkeleton = memo(function NearTravelListSkeleton() {
   )
   return (
     <View aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <View style={toggleStyle} testID="near-travel-toggle-skeleton">
+      {canShowMapMode && <View style={toggleStyle} testID="near-travel-toggle-skeleton">
         <View style={skeletonStyles.toggleSegment} />
-      </View>
+      </View>}
       <View style={layout.isMobile ? nearTravelRailStyles.mobileListContent : nearTravelRailStyles.listColumn}>
         <View style={skeletonStyles.rail} testID="near-travel-rail">
           <View style={contentStyle}>
@@ -165,7 +167,26 @@ export const NearTravelListSkeleton = memo(function NearTravelListSkeleton() {
 
 const SidebarRoundCardSkeleton = () => <TravelTmlRoundSkeleton testID="travel-sidebar-round-card-skeleton" />
 
-export const SidebarSectionSkeleton: React.FC = () => {
+export const PopularTravelListSkeleton = memo(function PopularTravelListSkeleton() {
+  const layout = useNearTravelRailLayout()
+  const slotStyle = useNearTravelRailSlotStyle(layout)
+  return (
+    <View aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+      style={layout.isMobile ? nearTravelRailStyles.mobileListContent : nearTravelRailStyles.listColumn}>
+      <View style={skeletonStyles.rail} testID="popular-travel-rail">
+        <View style={[skeletonStyles.railContent, { gap: layout.gap }, layout.contentStyle]}>
+          {Array.from({ length: layout.numColumns }, (_, i) => (
+            <View key={i} style={slotStyle} testID="popular-travel-rail-slot">
+              <TravelListItemSkeleton />
+            </View>
+          ))}
+        </View>
+      </View>
+    </View>
+  )
+})
+
+export const SidebarSectionSkeleton = ({ canShowMapMode = false }: { canShowMapMode?: boolean }) => {
   const width = useResponsiveWidth()
   const colors = useThemedColors()
   const headers = useMemo(() => createTravelDetailsSectionHeaderStyles(colors), [colors])
@@ -204,20 +225,20 @@ export const SidebarSectionSkeleton: React.FC = () => {
       <View style={skeletonStyles.sidebarWebSection} testID="travel-sidebar-near-skeleton">
         {header('near', i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.ryadom_mozhno_posmotret_3f015f94'), getNearbyTravelsSubtitle())}
         <View style={skeletonStyles.sidebarCardContent}>
-          <NearTravelListSkeleton />
+          <NearTravelListSkeleton canShowMapMode={canShowMapMode} />
         </View>
       </View>
       <View style={skeletonStyles.sidebarWebSection} testID="travel-sidebar-popular-skeleton">
         {header('popular', i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.populyarnye_marshruty_e9bc8e8c'), i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.samye_prosmatrivaemye_napravleniya_za_nedely_e8d2c61d'))}
         <View style={skeletonStyles.sidebarCardContent}>
-          <TravelListItemSkeleton />
+          <PopularTravelListSkeleton />
         </View>
       </View>
     </View>
   )
 }
 
-export function TravelDetailsDeferredSectionsSkeleton({ isMobile }: { isMobile: boolean }) {
+export function TravelDetailsDeferredSectionsSkeleton({ isMobile, canShowMapMode = false }: { isMobile: boolean; canShowMapMode?: boolean }) {
   return (
     <>
       <View>{isMobile ? <AuthorSectionSkeleton /> : null}</View>
@@ -228,7 +249,7 @@ export function TravelDetailsDeferredSectionsSkeleton({ isMobile }: { isMobile: 
         <MapSectionSkeleton />
       </View>
       <View>
-        <SidebarSectionSkeleton />
+        <SidebarSectionSkeleton canShowMapMode={canShowMapMode} />
       </View>
       <View>
         <CommentsSkeleton />

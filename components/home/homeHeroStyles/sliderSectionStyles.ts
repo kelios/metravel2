@@ -10,7 +10,6 @@ export const createSliderSectionStyles = (ctx: HeroStyleContext) => {
     showSideSlider,
     sliderHeight,
     isUltraWideBook,
-    isLargeDesktopBook,
     isNarrowDesktopBook,
     rightPageWidth,
     serif,
@@ -32,16 +31,8 @@ export const createSliderSectionStyles = (ctx: HeroStyleContext) => {
           ? ({
               backgroundColor: 'transparent',
               borderRadius: 0,
-              paddingTop: isUltraWideBook
-                ? '8.4%'
-                : isLargeDesktopBook
-                  ? '8.8%'
-                  : '9.3%',
-              paddingBottom: isUltraWideBook
-                ? '13.8%'
-                : isLargeDesktopBook
-                  ? '14.4%'
-                  : '14.8%',
+              paddingTop: ctx.leftPagePaddingTop,
+              paddingBottom: ctx.leftPagePaddingBottom,
               paddingLeft: isUltraWideBook
                 ? '2.8%'
                 : isNarrowDesktopBook

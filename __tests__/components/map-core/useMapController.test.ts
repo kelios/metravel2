@@ -310,4 +310,35 @@ describe('useMapController (#991 smoke)', () => {
     expect(mockSetSearchAreaCenter).toHaveBeenCalledWith(null)
     expect(mockClearRouteAndSetMode).toHaveBeenCalledWith('radius')
   })
+  it('uses registered numeric URL categories for server clusters', () => {
+    const { result } = renderHook(() => useMapController({
+      ...baseParams,
+      filters: { ...baseParams.filters, categoryTravelAddress: [{ id: '43', name: 'Замок' }], categoryDictionaryState: 'ready' },
+      filterValues: { ...baseParams.filterValues, categoryTravelAddress: ['43'] },
+    }))
+    expect(result.current.mapPanelProps.mapClusterFilters.category).toEqual([43])
+    expect(result.current.mapPanelProps.categoryFilterUnresolved).toBe(false)
+  })
+
+  it.each(['loading', 'error', 'ready'])('keeps mixed OR markers local when dictionary state is %s', (state) => {
+    const { result } = renderHook(() => useMapController({
+      ...baseParams,
+      filters: { ...baseParams.filters, categoryTravelAddress: [{ id: '43', name: 'Замок' }], categoryDictionaryState: state as any },
+      filterValues: { ...baseParams.filterValues, categoryTravelAddress: ['43', 'Unknown'] },
+    }))
+    expect(result.current.mapPanelProps.mapClusterFilters.category).toBeUndefined()
+    expect(result.current.mapPanelProps.categoryFilterUnresolved).toBe(true)
+  })
+
+  it('keeps all marker categories local when the resolved OR cannot fit the server category limit', () => {
+    const dictionary = Array.from({ length: 51 }, (_, index) => ({ id: String(index + 1), name: `Category ${index + 1}` }))
+    const { result } = renderHook(() => useMapController({
+      ...baseParams,
+      filters: { ...baseParams.filters, categoryTravelAddress: dictionary, categoryDictionaryState: 'ready' },
+      filterValues: { ...baseParams.filterValues, categoryTravelAddress: dictionary.map(({ id }) => id) },
+    }))
+    expect(result.current.mapPanelProps.mapClusterFilters.category).toBeUndefined()
+    expect(result.current.mapPanelProps.categoryFilterUnresolved).toBe(true)
+  })
+
 })

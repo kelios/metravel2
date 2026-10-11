@@ -34,7 +34,7 @@ import { useRouteStore } from '@/stores/routeStore';
 import type { Point as MapPoint } from '@/components/MapPage/Map/types';
 import type { MapUiApi } from '@/types/mapUi';
 import type { TravelCoords } from '@/types/types';
-import { mapCategoryNamesToIds, isCategoryFilterUnresolved } from '@/utils/filterQuery';
+import { resolveMapCategorySelection } from '@/utils/mapCategorySelection';
 import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig';
 import { parseWebViewJsonObject, toFiniteCoordinate } from '@/utils/webViewBridge';
 import type { MapFilterValues } from '@/utils/mapFiltersStorage';
@@ -287,6 +287,7 @@ export function useMapController({
     allTravelsData,
     travelsData,
     total,
+    totalScope,
     loading,
     isFetching,
     isPlaceholderData,
@@ -300,13 +301,16 @@ export function useMapController({
     isDebouncingFilters,
   } = dataController;
 
-  const mapClusterFilters = useMemo(() => {
-    const categoryIds = mapCategoryNamesToIds(filterValues.categories, filters.categories);
-    const categoryTravelAddressIds = mapCategoryNamesToIds(
+  const categorySelection = useMemo(
+    () => resolveMapCategorySelection(
       filterValues.categoryTravelAddress,
       filters.categoryTravelAddress,
-    );
-    const category = Array.from(new Set([...categoryIds, ...categoryTravelAddressIds]));
+      filters.categoryDictionaryState,
+    ),
+    [filterValues.categoryTravelAddress, filters.categoryTravelAddress, filters.categoryDictionaryState],
+  );
+  const mapClusterFilters = useMemo(() => {
+    const category = categorySelection.hasCompleteCoverage ? categorySelection.ids : [];
     const query = String(filterValues.searchQuery || '').trim();
     const lat = Number(queryCoordinates?.latitude);
     const lng = Number(queryCoordinates?.longitude);
@@ -319,29 +323,16 @@ export function useMapController({
       ...(Number.isFinite(radius) && radius > 0 ? { radius } : {}),
     };
   }, [
-    filterValues.categories,
-    filterValues.categoryTravelAddress,
+    categorySelection,
     filterValues.radius,
     filterValues.searchQuery,
-    filters.categories,
-    filters.categoryTravelAddress,
     queryCoordinates?.latitude,
     queryCoordinates?.longitude,
   ]);
 
-  // Категория выбрана в фильтре, но её имя не смапилось в числовой backend-ID
-  // (частый кейс: API категорий пуст → чипы берут имена из точек с id=name).
-  // Тогда серверный кластер-эндпоинт получает пустой category и возвращает ВСЁ,
-  // перекрывая клиентский name-фильтр → снятие категории не убирает маркеры.
-  // Флаг говорит карте откатиться на клиентски-отфильтрованный по имени набор.
-  const categoryFilterUnresolved = useMemo(
-    () =>
-      isCategoryFilterUnresolved(
-        [filterValues.categories, filterValues.categoryTravelAddress],
-        mapClusterFilters.category,
-      ),
-    [filterValues.categories, filterValues.categoryTravelAddress, mapClusterFilters.category],
-  );
+  // A partially resolved OR selection cannot be narrowed by server clusters:
+  // keep the same locally filtered loaded points as the radius/list path.
+  const categoryFilterUnresolved = categorySelection.hasSelection && !categorySelection.hasCompleteCoverage;
 
   // Ядерная часть композитного resetFilters экрана (#213): сброс поверх-фильтровых
   // якорей поведения. Screen добавляет resetFiltersBase + resetOverlays.
@@ -602,6 +593,7 @@ export function useMapController({
     allTravelsData,
     travelsData,
     total,
+    totalScope,
     loading,
     isFetching,
     isPlaceholderData,

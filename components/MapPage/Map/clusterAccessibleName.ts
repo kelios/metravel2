@@ -8,7 +8,7 @@
 // `ClusterLayer.tsx` (its own `applyAccessibleName` helper).
 import { useCallback } from 'react'
 import { translate as i18nT } from '@/i18n'
-import { formatPlaces } from '@/utils/pluralize'
+import { formatMapPoints } from '@/utils/mapPointCount'
 
 /**
  * Cluster bubbles built by `MarkerClusterGroup` are entirely leaflet.markercluster's
@@ -33,7 +33,7 @@ export function useApplyClusterAccessibleName(
    * #2059: чем считать детей кластера в подписи. /map — места, карта
    * конструктора поездки — точки маршрута («Кластер: 12 точек»).
    */
-  formatCount: (count: number) => string = formatPlaces,
+  formatCount: (count: number) => string = formatMapPoints,
 ): (layer: any) => void {
   return useCallback(
     (layer: any) => {

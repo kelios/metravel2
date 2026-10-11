@@ -182,7 +182,7 @@ describe('ClusterLayer', () => {
       );
 
       expect(markerInstances).toHaveLength(1);
-      expect(markerInstances[0]._icon?.getAttribute('aria-label')).toBe('Кластер: 4 места');
+      expect(markerInstances[0]._icon?.getAttribute('aria-label')).toBe('Кластер: 4 точки');
     });
 
     it('labels the icon once Leaflet fires "add", even when the ref resolved before the icon existed', () => {
@@ -205,7 +205,7 @@ describe('ClusterLayer', () => {
 
       marker.fireAdd();
 
-      expect(marker._icon?.getAttribute('aria-label')).toBe('Кластер: 4 места');
+      expect(marker._icon?.getAttribute('aria-label')).toBe('Кластер: 4 точки');
     });
 
     it('does not accumulate `once("add", ...)` subscriptions once the icon is ready, even though `ref` re-invokes on every re-render', () => {
@@ -229,7 +229,7 @@ describe('ClusterLayer', () => {
 
       // Icon becomes ready — the deferred listener fires and labels it.
       marker.fireAdd();
-      expect(marker._icon?.getAttribute('aria-label')).toBe('Кластер: 4 места');
+      expect(marker._icon?.getAttribute('aria-label')).toBe('Кластер: 4 точки');
 
       // `ref` on the cluster Marker is an inline arrow (`ref={(marker) =>
       // applyAccessibleName(marker, clusterAccessibleName)}`), so React

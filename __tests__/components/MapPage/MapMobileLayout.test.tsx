@@ -253,7 +253,7 @@ describe('MapMobileLayout', () => {
 
     expect(screen.getByText('Travel list')).toBeTruthy()
     expect(screen.getByText('Места рядом')).toBeTruthy()
-    expect(screen.getByText('9 мест')).toBeTruthy()
+    expect(screen.getByText('9 точек')).toBeTruthy()
     expect(mockTravelListPanel).toHaveBeenCalledWith(
       expect.objectContaining({
         showMobileSummary: false,

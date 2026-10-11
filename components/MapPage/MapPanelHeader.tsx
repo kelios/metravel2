@@ -7,9 +7,9 @@ import type { ThemedColors } from '@/hooks/useTheme'
 import { formatPlaceCountBadge } from '@/components/MapPage/TravelListPanel/helpers'
 import { MAP_PANEL_TAB_MAX_FONT_SCALE } from '@/screens/tabs/map.styles'
 import { globalFocusStyles } from '@/styles/globalFocus'
-import { formatInteger } from '@/i18n/format'
 import { translate as i18nT } from '@/i18n'
 import { getTabA11yProps, getTabListA11yProps } from '@/utils/a11yTabRoles'
+import { formatMapPoints, qualifyMapPointCount, type MapPointCountScope } from '@/utils/mapPointCount'
 
 
 type PanelTab = 'search' | 'route' | 'travels'
@@ -30,6 +30,7 @@ interface MapPanelHeaderProps {
   targetRegistry?: MapOnboardingTargetRegistry
   activeTab: PanelTab
   travelsCount: number
+  totalScope?: MapPointCountScope
   themedColors: ThemedColors
   styles: any
   selectSearchTab: () => void
@@ -127,6 +128,7 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
   targetRegistry,
   activeTab,
   travelsCount,
+  totalScope,
   themedColors,
   styles,
   selectSearchTab,
@@ -157,7 +159,7 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
             icon="list"
             label={placesLabel}
             accessibilityLabel={
-              travelsCount > 0 ? `${placesLabel} (${formatInteger(travelsCount)})` : placesLabel
+              travelsCount > 0 ? `${placesLabel}: ${qualifyMapPointCount(formatMapPoints(travelsCount), totalScope)}` : placesLabel
             }
             onPress={selectTravelsTab}
             themedColors={themedColors}

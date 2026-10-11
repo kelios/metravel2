@@ -9,6 +9,7 @@ import type { ThemedColors } from '@/hooks/useTheme'
 import { CATEGORY_ICONS } from './mapCategoryIcons'
 import { getCategoryName, type CategoryOption } from '@/components/MapPage/categoryName'
 import { createCollator, translate as i18nT, translatePlural } from '@/i18n'
+import { resolveMapCategorySelection } from '@/utils/mapCategorySelection'
 
 
 const COLLAPSED_UNSELECTED_LIMIT = 8
@@ -60,16 +61,26 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
     const dataset = Array.isArray(travelsData) ? travelsData : []
     for (const travel of dataset) {
       if (!travel.categoryName) continue
-      travel.categoryName
+      new Set(travel.categoryName
         .split(',')
         .map((value) => value.trim())
-        .filter(Boolean)
+        .filter(Boolean))
         .forEach((categoryName) => {
           count[categoryName] = (count[categoryName] || 0) + 1
         })
     }
     return count
   }, [travelsData])
+
+  const selectedCategoryValues = useMemo(() => {
+    const dictionary = (Array.isArray(filters.categoryTravelAddress) ? filters.categoryTravelAddress : []).map((category) => ({
+      id: typeof category === 'object' && category !== null ? category.id ?? getCategoryName(category) : category,
+      name: getCategoryName(category),
+    }))
+    return resolveMapCategorySelection(
+      (Array.isArray(filterValue.categoryTravelAddress) ? filterValue.categoryTravelAddress : []).map(getCategoryName), dictionary,
+    ).tokens
+  }, [filterValue.categoryTravelAddress, filters.categoryTravelAddress])
 
   const categoryOptions = useMemo(() => {
     const resolved =
@@ -79,7 +90,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
             .sort((left, right) => categoryCollator.compare(left, right))
             .map((name) => ({ id: name, name }))
 
-    return resolved
+    const options = resolved
       .map((category) => {
         const name = getCategoryName(category)
         if (!name) return null
@@ -93,20 +104,19 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
         (category): category is { id: string | number; value: string; count: number } =>
           category !== null,
       )
-  }, [categoryCollator, filters.categoryTravelAddress, travelCategoriesCount])
+    // Pending/unknown URL selections remain visible and removable even when
+    // the dictionary is loading, empty or unavailable.
+    const known = new Set(options.map((category) => category.value.toLowerCase()))
+    selectedCategoryValues.forEach((name) => {
+      if (known.has(name.toLowerCase())) return
+      known.add(name.toLowerCase())
+      options.push({ id: name, value: name, count: travelCategoriesCount[name] || 0 })
+    })
+    return options
+  }, [categoryCollator, filters.categoryTravelAddress, selectedCategoryValues, travelCategoriesCount])
 
   const [categoriesExpanded, setCategoriesExpanded] = useState(false)
   const [categoryQuery, setCategoryQuery] = useState('')
-
-  const selectedCategoryValues = useMemo(
-    () =>
-      Array.isArray(filterValue.categoryTravelAddress)
-        ? filterValue.categoryTravelAddress
-            .map(getCategoryName)
-            .filter((value): value is string => Boolean(value))
-        : [],
-    [filterValue.categoryTravelAddress],
-  )
 
   const selectedCategoriesCount = selectedCategoryValues.length
 
@@ -193,6 +203,9 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
           )}
         </View>
         {!isMobile && <Text style={styles.sectionHint}>{i18nT('map:components.MapPage.FiltersPanelRadiusSection.utochnite_tip_mest_f710a5c5')}</Text>}
+        <Text style={styles.sectionHint} testID="category-count-scope">
+          {i18nT('map:components.MapPage.FiltersPanelRadiusSection.loadedPointCounts')}
+        </Text>
 
         {showCategorySearch && (
           <MapSearchInput

@@ -13,6 +13,7 @@ import { useDockReservePx } from '@/components/layout/bottomChromeInset'
 import type { ThemedColors } from '@/hooks/useTheme'
 import type { MapUiApi } from '@/types/mapUi'
 import { webTitleRef } from '@/utils/webProps'
+import { qualifyMapPointCount } from '@/utils/mapPointCount'
 import { HIDDEN_FROM_SCREEN_READERS, screenReaderActivateProps } from '@/components/MapPage/screenReaderTwin'
 import { DESKTOP_LAYERS_FAB_RIGHT, DESKTOP_RADIUS_FAB_RIGHT } from '@/screens/tabs/map.styles'
 import { NO_DESKTOP_INSETS, getDesktopPopoverMaxHeight, type DesktopBranchInsets } from '@/screens/tabs/mapDesktopInsets'
@@ -196,8 +197,8 @@ export function MapScreenDesktopChrome({
           </Pressable>
           <CollapsedIconButton
             icon="list"
-            label={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.spisok_tochek_value1_3daae6f8', { value1: travelsCount })}
-            title={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.spisok_mest_value1_fc47c6bb', { value1: travelsCount })}
+            label={qualifyMapPointCount(i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.spisok_tochek_value1_3daae6f8', { value1: travelsCount }), filtersPanelProps?.contextValue?.resultsTotalScope)}
+            title={qualifyMapPointCount(i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.spisok_tochek_value1_3daae6f8', { value1: travelsCount }), filtersPanelProps?.contextValue?.resultsTotalScope)}
             onPress={() => {
               toggleDesktopCollapse()
               selectTravelsTab()
@@ -278,6 +279,7 @@ export function MapScreenDesktopChrome({
             heading={panelHeading}
             activeTab={activePanelTab}
             travelsCount={travelsCount}
+            totalScope={filtersPanelProps?.contextValue?.resultsTotalScope}
             themedColors={themedColors}
             styles={styles}
             selectSearchTab={handleSelectSearchTab}
@@ -323,6 +325,8 @@ export function MapScreenDesktopChrome({
                 <Suspense fallback={<ActivityIndicator style={{ paddingVertical: 32 }} color={themedColors.primary} />}>
                   <TravelListPanel
                     travelsData={travelsData}
+                    totalCount={travelsCount}
+                    totalScope={filtersPanelProps?.contextValue?.resultsTotalScope}
                     buildRouteTo={buildRouteTo}
                     onSelectPlace={focusPlace}
                     isMobile={isMobile}

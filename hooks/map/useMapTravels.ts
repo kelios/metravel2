@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { fetchTravelsForMap, fetchTravelsNearRoute } from '@/api/map';
-import { buildTravelQueryParams, mapCategoryNamesToIds } from '@/utils/filterQuery';
+import { buildTravelQueryParams } from '@/utils/filterQuery';
+import { filterMapPointsByCategory, resolveMapCategorySelection } from '@/utils/mapCategorySelection';
+import type { MapPointCountScope } from '@/utils/mapPointCount';
 import type { TravelCoords } from '@/types/types';
 import { logError } from '@/utils/logger';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
@@ -154,36 +156,7 @@ export function dedupeMapTravels(travels: TravelCoords[]): TravelCoords[] {
   });
 }
 
-function filterTravelsByCategories(
-  all: TravelCoords[],
-  selectedCategories: string[]
-): TravelCoords[] {
-  if (!selectedCategories.length) return all;
-
-  const selectedNormalized = selectedCategories
-    .map((c) => c.trim())
-    .filter(Boolean);
-
-  if (!selectedNormalized.length) return all;
-
-  return all.filter((travel) => {
-    if (!travel.categoryName) return false;
-
-    const travelCategories = travel.categoryName
-      .split(',')
-      .map((cat) => cat.trim())
-      .filter(Boolean);
-
-    return selectedNormalized.some((selectedCategory) =>
-      travelCategories.some(
-        (travelCategory) => travelCategory.trim() === selectedCategory.trim()
-      )
-    );
-  });
-}
-
 function parseBackendFilters(filtersKey: string): {
-  categories?: Array<number | string>;
   categoryTravelAddress?: Array<number | string>;
 } {
   try {
@@ -193,25 +166,16 @@ function parseBackendFilters(filtersKey: string): {
       return {};
     }
 
-    const categories = (parsed as { categories?: unknown }).categories;
     const categoryTravelAddress = (parsed as { categoryTravelAddress?: unknown }).categoryTravelAddress;
-    const normalizedCategories = Array.isArray(categories)
-      ? categories
-          .filter((c): c is number | string => typeof c === 'number' || typeof c === 'string')
-          .slice(0, 50)
-      : [];
     const normalizedCategoryTravelAddress = Array.isArray(categoryTravelAddress)
       ? categoryTravelAddress
           .filter((c): c is number | string => typeof c === 'number' || typeof c === 'string')
           .slice(0, 50)
       : [];
 
-    if (normalizedCategories.length || normalizedCategoryTravelAddress.length) {
+    if (normalizedCategoryTravelAddress.length) {
       return {
-        ...(normalizedCategories.length ? { categories: normalizedCategories } : {}),
-        ...(normalizedCategoryTravelAddress.length
-          ? { categoryTravelAddress: normalizedCategoryTravelAddress }
-          : {}),
+        categoryTravelAddress: normalizedCategoryTravelAddress,
       };
     }
   } catch (err) {
@@ -289,26 +253,24 @@ export function useMapTravels({
     return false;
   }, [isFocused, coordinates, dataMode, fullRouteCoords.length]);
 
-  // Вычисляем нормализованные ID категорий
-  const normalizedCategoryIds = useMemo(
-    () => mapCategoryNamesToIds(filterValues.categories, filters.categories),
-    [filterValues.categories, filters.categories]
-  );
-  const normalizedCategoryTravelAddressIds = useMemo(
-    () => mapCategoryNamesToIds(filterValues.categoryTravelAddress, filters.categoryTravelAddress),
-    [filterValues.categoryTravelAddress, filters.categoryTravelAddress]
+  const categorySelection = useMemo(
+    () => resolveMapCategorySelection(
+      filterValues.categoryTravelAddress,
+      filters.categoryTravelAddress,
+      filters.categoryDictionaryState,
+    ),
+    [filterValues.categoryTravelAddress, filters.categoryTravelAddress, filters.categoryDictionaryState]
   );
 
   // Строим параметры запроса для бэкенда
   const backendFilters = useMemo(
     () =>
       buildTravelQueryParams({
-        ...(normalizedCategoryIds.length ? { categories: normalizedCategoryIds } : {}),
-        ...(normalizedCategoryTravelAddressIds.length
-          ? { categoryTravelAddress: normalizedCategoryTravelAddressIds }
+        ...(categorySelection.hasCompleteCoverage && categorySelection.ids.length
+          ? { categoryTravelAddress: categorySelection.ids }
           : {}),
       }),
-    [normalizedCategoryIds, normalizedCategoryTravelAddressIds]
+    [categorySelection]
   );
 
   // Стабильный ключ для маршрута (для кэширования)
@@ -390,7 +352,6 @@ export function useMapTravels({
           lat: queryParams.lat!.toString(),
           lng: queryParams.lng!.toString(),
           radius: queryParams.radius,
-          categories: parsedFilters.categories,
           categoryTravelAddress: parsedFilters.categoryTravelAddress,
           query: queryParams.query,
         },
@@ -502,9 +463,10 @@ export function useMapTravels({
   // остальных случаях (маршрут, офлайн, имя чипа не нашлось в словаре
   // `/api/filterformap/`) чип фильтрует клиент по загруженным точкам.
   const serverAppliesCategoryFilter =
-    !usesOfflineIndex && queryParams.mode === 'radius' && normalizedCategoryTravelAddressIds.length > 0;
+    !usesOfflineIndex && queryParams.mode === 'radius' &&
+    categorySelection.hasCompleteCoverage && categorySelection.ids.length > 0;
   const isClientCategoryFilter =
-    (filterValues.categoryTravelAddress?.length ?? 0) > 0 && !serverAppliesCategoryFilter;
+    categorySelection.hasSelection && !serverAppliesCategoryFilter;
 
   // Текстовый поиск теперь серверный (where.query, BE #695) — выдача и total уже
   // отфильтрованы бэкендом. Клиентского text-фильтра в render-path НЕТ: он резал бы
@@ -521,7 +483,7 @@ export function useMapTravels({
             (travel as TravelCoords & { fullAddress?: string }).fullAddress,
             travel.categoryName,
           ].some((value) => String(value ?? '').toLocaleLowerCase().includes(query)));
-      return filterTravelsByCategories(searched, filterValues.categoryTravelAddress);
+      return filterMapPointsByCategory(searched, categorySelection);
     }
     // Категории уже отфильтрованы бэкендом по ID (queryKey включает их) —
     // повторный клиентский фильтр по точному имени резал бы валидные точки при
@@ -529,11 +491,11 @@ export function useMapTravels({
     // не получил (маршрут или имя без ID).
     return serverAppliesCategoryFilter
       ? allTravelsData
-      : filterTravelsByCategories(allTravelsData, filterValues.categoryTravelAddress);
+      : filterMapPointsByCategory(allTravelsData, categorySelection);
   }, [
     allTravelsData,
     serverAppliesCategoryFilter,
-    filterValues.categoryTravelAddress,
+    categorySelection,
     usesOfflineIndex,
     searchQuery,
   ]);
@@ -562,10 +524,14 @@ export function useMapTravels({
     allTravelsData.length,
   ]);
 
+  const totalScope: MapPointCountScope = usesOfflineIndex || isClientCategoryFilter || queryParams.mode !== 'radius' ||
+    typeof radiusQuery.data?.pages?.[0]?.total !== 'number' ? 'loaded' : 'radius';
+
   return useMemo(() => ({
     allTravelsData,
     filteredTravelsData,
     total,
+    totalScope,
     isLoading: usesOfflineIndex ? false : isLoading,
     isFetching: usesOfflineIndex ? false : isFetching,
     isPlaceholderData: usesOfflineIndex ? false : isPlaceholderData,
@@ -579,6 +545,7 @@ export function useMapTravels({
     allTravelsData,
     filteredTravelsData,
     total,
+    totalScope,
     isLoading,
     isFetching,
     isPlaceholderData,

@@ -257,7 +257,7 @@ describe('TravelListPanel (right list on map page)', () => {
 
     expect(getByTestId('travel-list-mobile-summary')).toBeTruthy();
     expect(getByText('Места рядом')).toBeTruthy();
-    expect(getByText('9 мест · 5 км')).toBeTruthy();
+    expect(getByText('9 точек · 5 км')).toBeTruthy();
     expect(queryByText('Фильтры')).toBeNull();
 
     fireEvent.press(getByTestId('travel-list-open-filters'));
@@ -292,7 +292,7 @@ describe('TravelListPanel (right list on map page)', () => {
         userLocation: { latitude: 53.9, longitude: 27.56 },
       })
     ).toBe(
-      '2 места в радиусе 60 км рядом с вами. Нажмите на карточку, чтобы сфокусировать карту.'
+      '2 точки в радиусе 60 км рядом с вами. Нажмите на карточку, чтобы сфокусировать карту.'
     );
   });
 });

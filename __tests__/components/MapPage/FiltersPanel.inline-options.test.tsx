@@ -1,5 +1,5 @@
 import React from 'react'
-import { fireEvent, render, waitFor } from '@testing-library/react-native'
+import { fireEvent, render, waitFor, within } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import FiltersPanel from '@/components/MapPage/FiltersPanel'
@@ -165,5 +165,50 @@ describe('FiltersPanel inline options', () => {
 
     fireEvent.press(getByLabelText('Увеличить радиус до 100 километров'))
     expect(onFilterChange).toHaveBeenCalledWith('radius', '100')
+  })
+
+  it('resolves numeric selections for display and keeps unknown members when toggling chips', () => {
+    const onFilterChange = jest.fn()
+    const { getByTestId } = renderWithTheme(<FiltersPanel />, {
+      ...defaultProps,
+      onFilterChange,
+      filterValue: { ...mockFilterValue, categoryTravelAddress: ['1', 'Unknown'] },
+    })
+    const museum = getByTestId('category-option-0')
+    const unknown = getByTestId('category-option-1')
+    expect(museum.props.accessibilityLabel).toBe('Museum')
+    expect(museum.props.accessibilityState.selected).toBe(true)
+    expect(unknown.props.accessibilityLabel).toBe('Unknown')
+    expect(unknown.props.accessibilityState.selected).toBe(true)
+    fireEvent.press(museum)
+    expect(onFilterChange).toHaveBeenLastCalledWith('categoryTravelAddress', ['Unknown'])
+    fireEvent.press(unknown)
+    expect(onFilterChange).toHaveBeenLastCalledWith('categoryTravelAddress', ['Museum'])
+  })
+
+  it.each(['loading', 'error', 'ready'])('keeps unknown URL chips removable with an empty %s dictionary', (state) => {
+    const onFilterChange = jest.fn()
+    const { getByTestId } = renderWithTheme(<FiltersPanel />, {
+      ...defaultProps,
+      onFilterChange,
+      filters: { ...mockFilters, categoryTravelAddress: [], categoryDictionaryState: state },
+      filterValue: { ...mockFilterValue, categoryTravelAddress: ['43', 'Unknown'] },
+    })
+    expect(getByTestId('category-option-0').props.accessibilityLabel).toBe('43')
+    expect(getByTestId('category-option-1').props.accessibilityLabel).toBe('Unknown')
+    fireEvent.press(getByTestId('category-option-0'))
+    expect(onFilterChange).toHaveBeenCalledWith('categoryTravelAddress', ['Unknown'])
+  })
+
+  it.each([false, true])('labels loaded point facets in the shared panel (mobile: %s)', (isMobile) => {
+    const { getByTestId } = renderWithTheme(<FiltersPanel />, {
+      ...defaultProps,
+      isMobile,
+      resultsTotal: 332,
+      travelsData: [{ categoryName: 'Museum, Museum' }, { categoryName: 'Park' }],
+    })
+    expect(getByTestId('category-count-scope').props.children).toBe('Счётчики — по загруженным точкам')
+    expect(within(getByTestId('category-option-0')).getByText('(1)')).toBeTruthy()
+    expect(within(getByTestId('category-option-1')).getByText('(1)')).toBeTruthy()
   })
 })

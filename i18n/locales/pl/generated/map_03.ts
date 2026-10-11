@@ -1,4 +1,5 @@
 export const mapGenerated3 = {
+  "screens.tabs.PlacesScreen.filterLoadFailed": "Nie udało się wczytać filtrów",
   "hooks.map.useMapMobileDerivations.marshrut_c71f4ede": "Trasa",
   "hooks.map.useMapMobileDerivations.marshrut_gotov_mozhno_otkryt_spisok_mest_cb473cc6": "Trasa jest gotowa, możesz otworzyć listę miejsc",
   "hooks.map.useMapMobileDerivations.marshrut_obnovlyaetsya_a8a3d750": "Trasa jest aktualizowana",
@@ -48,7 +49,7 @@ export const mapGenerated3 = {
   "screens.tabs.PlacesScreen_parts.otkryt_tochku_v_waze_f566b9af": "Otwórz lokalizację w Waze",
   "screens.tabs.PlacesScreen_parts.otkryt_tochku_v_yandeks_kartah_dc0d96b1": "Otwórz punkt w Yandex Maps",
   "screens.tabs.PlacesScreen_parts.otkryt_tochku_v_yandeks_navigatore_43357804": "Otwórz punkt w Yandex Navigatorze",
-  "screens.tabs.PlacesScreen_parts.statya_28264f10": "Artykuł",
+  "screens.tabs.PlacesScreen_parts.statya_28264f10": "Przeczytaj",
   "screens.tabs.PlacesScreen_parts.tochka_dobavlena_v_moi_tochki_c854cbfa": "Punkt dodany do moich punktów",
   "screens.tabs.PlacesScreen_parts.tochka_ubrana_iz_moih_tochek_87df65a9": "Punkt usunięty z moich punktów",
   "screens.tabs.PlacesScreen_parts.v_tochkah_53f65e25": "W punktach",
@@ -227,7 +228,7 @@ export const mapGenerated3 = {
   "components.MapPage.useRouting.osrmUnavailable": "OSRM niedostępny (błąd sieci)",
   "components.MapPage.useRouting.valhallaUnavailable": "Valhalla jest niedostępna (błąd sieci)",
   "utils.routingHelpers.requestFailedAfterRetries": "Żądanie nie powiodło się po wielokrotnych próbach",
-  "constants.mapSeo.title": "Mapa tras i atrakcji Białorusi | Metravel",
+  "constants.mapSeo.title": "Mapa tras i atrakcji | MeTravel",
   "constants.mapSeo.description": "Interaktywna mapa podróży Metravel: znajduj trasy, atrakcje i pomysły na wycieczki, filtruj punkty i buduj swoją ścieżkę.",
   "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_5b3c9f14": "Szukaj po tagach",
   "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_i_kategoriyam_mest_7d41ac68": "Wyszukiwanie po tagach i kategoriach miejsc",
@@ -251,4 +252,6 @@ export const mapGenerated3 = {
   "components.MapPage.Map.PlacePopupCard.PlaceSourcePager.material_current_iz_total_5f5f1d3a": "Materiał {{current}} z {{total}}",
   "components.MapPage.Map.PlacePopupCard.PlaceSourcePager.predyduschiy_material_1c6a0f27": "Poprzedni materiał",
   "components.MapPage.Map.PlacePopupCard.PlaceSourcePager.sleduyuschiy_material_ab7f8c04": "Następny materiał",
+  "components.MapPage.FiltersPanelRadiusSection.loadedPointCounts": "Liczby dotyczą wczytanych punktów",
+  "utils.mapPointCount.loadedCount": "Wczytano: {{value1}}",
 } as const

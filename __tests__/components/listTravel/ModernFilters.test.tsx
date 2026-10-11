@@ -61,6 +61,7 @@ const renderWithProviders = (component: React.ReactElement) => {
 describe('ModernFilters Component', () => {
   const mockOnFilterChange = jest.fn();
   const mockOnClearAll = jest.fn();
+  const mockOnResetGroup = jest.fn();
   const mockOnYearChange = jest.fn();
   const mockOnToggleModeration = jest.fn();
 
@@ -74,6 +75,7 @@ describe('ModernFilters Component', () => {
         filterGroups={mockFilterGroups}
         selectedFilters={{}}
         onFilterChange={mockOnFilterChange}
+        onResetGroup={mockOnResetGroup}
         onClearAll={mockOnClearAll}
         resultsCount={10}
       />
@@ -90,6 +92,7 @@ describe('ModernFilters Component', () => {
         filterGroups={mockFilterGroups}
         selectedFilters={{}}
         onFilterChange={mockOnFilterChange}
+        onResetGroup={mockOnResetGroup}
         onClearAll={mockOnClearAll}
         resultsCount={10}
       />
@@ -110,6 +113,7 @@ describe('ModernFilters Component', () => {
         filterGroups={mockFilterGroups}
         selectedFilters={{}}
         onFilterChange={mockOnFilterChange}
+        onResetGroup={mockOnResetGroup}
         onClearAll={mockOnClearAll}
         resultsCount={1}
       />
@@ -124,6 +128,7 @@ describe('ModernFilters Component', () => {
             filterGroups={mockFilterGroups}
             selectedFilters={{}}
             onFilterChange={mockOnFilterChange}
+        onResetGroup={mockOnResetGroup}
             onClearAll={mockOnClearAll}
             resultsCount={5}
           />
@@ -142,6 +147,7 @@ describe('ModernFilters Component', () => {
         selectedFilters={{ categories: ['1', '2'] }}
         defaultSelectedFilters={{ categories: [2, 1] }}
         onFilterChange={mockOnFilterChange}
+        onResetGroup={mockOnResetGroup}
         onClearAll={mockOnClearAll}
         resultsCount={10}
       />
@@ -157,6 +163,7 @@ describe('ModernFilters Component', () => {
         selectedFilters={{ categories: ['1'] }}
         defaultSelectedFilters={{ categories: ['1', '2'] }}
         onFilterChange={mockOnFilterChange}
+        onResetGroup={mockOnResetGroup}
         onClearAll={mockOnClearAll}
         resultsCount={10}
       />
@@ -165,12 +172,46 @@ describe('ModernFilters Component', () => {
     expect(screen.getByRole('button', { name: 'Очистить все фильтры (1)' })).toBeTruthy();
   });
 
+  it('keeps selected badges but hides group clear for reordered duplicate defaults', () => {
+    renderWithProviders(<ModernFilters filterGroups={mockFilterGroups}
+      selectedFilters={{ categories: ['2', '1', '1'] }}
+      defaultSelectedFilters={{ categories: ['1', '2', '2'] }}
+      onFilterChange={mockOnFilterChange} onResetGroup={mockOnResetGroup} onClearAll={mockOnClearAll} />);
+    expect(screen.queryByRole('button', { name: /Очистить.*выбранных/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Очистить все фильтры/ })).toBeNull();
+    expect(screen.getByText('3')).toBeTruthy();
+  });
+
+  it('restores changed defaults once without toggling or clearing other groups', () => {
+    renderWithProviders(<ModernFilters filterGroups={mockFilterGroups}
+      selectedFilters={{ categories: ['2'], transports: ['1'] }}
+      defaultSelectedFilters={{ categories: ['1', '2'] }}
+      onFilterChange={mockOnFilterChange} onResetGroup={mockOnResetGroup} onClearAll={mockOnClearAll} />);
+    fireEvent.press(screen.getAllByRole('button', { name: 'Очистить 1 выбранных' })[0]);
+    expect(mockOnResetGroup).toHaveBeenCalledTimes(1);
+    expect(mockOnResetGroup).toHaveBeenCalledWith('categories', ['1', '2']);
+    expect(mockOnFilterChange).not.toHaveBeenCalled();
+    expect(mockOnClearAll).not.toHaveBeenCalled();
+  });
+
+  it('offers reset when all defaults were removed, and clears ordinary groups to empty', () => {
+    renderWithProviders(<ModernFilters filterGroups={mockFilterGroups}
+      selectedFilters={{ categories: [], transports: ['1'] }}
+      defaultSelectedFilters={{ categories: ['1', '2'] }}
+      onFilterChange={mockOnFilterChange} onResetGroup={mockOnResetGroup} onClearAll={mockOnClearAll} />);
+    fireEvent.press(screen.getByRole('button', { name: 'Очистить 2 выбранных' }));
+    expect(mockOnResetGroup).toHaveBeenCalledWith('categories', ['1', '2']);
+    fireEvent.press(screen.getByRole('button', { name: 'Очистить 1 выбранных' }));
+    expect(mockOnResetGroup).toHaveBeenCalledWith('transports', []);
+  });
+
   it('calls onClearAll when clear button is pressed', () => {
     renderWithProviders(
       <ModernFilters
         filterGroups={mockFilterGroups}
         selectedFilters={{ categories: ['1'] }}
         onFilterChange={mockOnFilterChange}
+        onResetGroup={mockOnResetGroup}
         onClearAll={mockOnClearAll}
         resultsCount={10}
       />
@@ -188,6 +229,7 @@ describe('ModernFilters Component', () => {
         filterGroups={mockFilterGroups}
         selectedFilters={{}}
         onFilterChange={mockOnFilterChange}
+        onResetGroup={mockOnResetGroup}
         onClearAll={mockOnClearAll}
         resultsCount={10}
         year={2023}
@@ -204,6 +246,7 @@ describe('ModernFilters Component', () => {
         filterGroups={mockFilterGroups}
         selectedFilters={{}}
         onFilterChange={mockOnFilterChange}
+        onResetGroup={mockOnResetGroup}
         onClearAll={mockOnClearAll}
         resultsCount={10}
         year={2023}
@@ -224,6 +267,7 @@ describe('ModernFilters Component', () => {
         filterGroups={mockFilterGroups}
         selectedFilters={{}}
         onFilterChange={mockOnFilterChange}
+        onResetGroup={mockOnResetGroup}
         onClearAll={mockOnClearAll}
         resultsCount={330}
         year={2026}
@@ -267,6 +311,7 @@ describe('ModernFilters Component', () => {
           filterGroups={mockFilterGroups}
           selectedFilters={{}}
           onFilterChange={mockOnFilterChange}
+        onResetGroup={mockOnResetGroup}
           onClearAll={mockOnClearAll}
           resultsCount={385}
           onClose={jest.fn()}
@@ -301,6 +346,7 @@ describe('ModernFilters Component', () => {
         filterGroups={mockFilterGroups}
         selectedFilters={{}}
         onFilterChange={mockOnFilterChange}
+        onResetGroup={mockOnResetGroup}
         onClearAll={mockOnClearAll}
         resultsCount={10}
         showModeration={true}
@@ -318,6 +364,7 @@ describe('ModernFilters Component', () => {
         filterGroups={mockFilterGroups}
         selectedFilters={{}}
         onFilterChange={mockOnFilterChange}
+        onResetGroup={mockOnResetGroup}
         onClearAll={mockOnClearAll}
         resultsCount={10}
         showDraftsOnly={true}
@@ -338,6 +385,7 @@ describe('ModernFilters Component', () => {
         filterGroups={mockFilterGroups}
         selectedFilters={{}}
         onFilterChange={mockOnFilterChange}
+        onResetGroup={mockOnResetGroup}
         onClearAll={mockOnClearAll}
         resultsCount={10}
         showPublishedOnly={true}
@@ -364,6 +412,7 @@ describe('ModernFilters Component', () => {
           filterGroups={mockFilterGroups}
           selectedFilters={{}}
           onFilterChange={mockOnFilterChange}
+        onResetGroup={mockOnResetGroup}
           onClearAll={mockOnClearAll}
           resultsCount={10}
           showPublishedOnly={true}
@@ -393,6 +442,7 @@ describe('ModernFilters Component', () => {
         filterGroups={mockFilterGroups}
         selectedFilters={{ allAuthorsUnpublishedOnly: true } as unknown as FilterState}
         onFilterChange={mockOnFilterChange}
+        onResetGroup={mockOnResetGroup}
         onClearAll={mockOnClearAll}
         showAllAuthorsUnpublishedOnly
         allAuthorsUnpublishedOnlyValue
@@ -430,6 +480,7 @@ describe('ModernFilters Component', () => {
         filterGroups={objectGroup as any}
         selectedFilters={{ categoryTravelAddress: [84] as any }}
         onFilterChange={mockOnFilterChange}
+        onResetGroup={mockOnResetGroup}
         onClearAll={mockOnClearAll}
         resultsCount={10}
       />

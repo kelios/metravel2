@@ -15,7 +15,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { invalidateBlockSensitiveQueries } from '@/api/blockSensitiveQueries'
 import { queryKeys } from '@/api/queryKeys'
 import { usePlacesCatalogQueries } from '@/screens/tabs/usePlacesCatalogQueries'
-import { getInterestingCategoryCollections } from '@/screens/tabs/PlacesScreen.helpers'
+import { DEFAULT_CATEGORY_SELECTION, getInterestingCategoryCollections } from '@/screens/tabs/PlacesScreen.helpers'
 import { ApiError } from '@/api/clientErrors'
 import { fetchPlacesCatalog, fetchPlacesCatalogCategoryGroups } from '@/api/places'
 import { usePlacesCatalogController } from '@/screens/tabs/usePlacesCatalogController'
@@ -115,7 +115,7 @@ describe('usePlacesCatalogController — бюджет запросов ката�
   beforeEach(() => {
     jest.useFakeTimers()
     jest.clearAllMocks()
-    mockParams = {}
+    mockParams = { category: '' }
     mockedGroups.mockReset().mockResolvedValue({})
     ;(Platform as any).OS = 'web'
     mockedFetch.mockImplementation(async (params) => (params.categories?.length ? FILTERED_PAGE : CATALOG_PAGE))
@@ -124,6 +124,125 @@ describe('usePlacesCatalogController — бюджет запросов ката�
   afterEach(() => {
     queryClient?.clear()
     jest.useRealTimers()
+  })
+
+  it('preserves a malformed percent escape from the URL without crashing the catalog', async () => {
+    mockParams = { category: ' 100% nature ' }
+    const { result } = renderController()
+    await settle()
+    expect(result.current.selectedCategories).toEqual(['100% nature'])
+    expect(callParams(0).categories).toEqual(['100% nature'])
+    expect(result.current.resultsStatus).toBe('list')
+  })
+
+  it('implicit starter route makes only one filtered list calculation and leaves uncached scope idle', async () => {
+    mockParams = {}
+    const { result } = renderController()
+    await settle()
+    expect(mockedFetch).toHaveBeenCalledTimes(1)
+    expect(callParams(0)).toEqual({ page: 1, perPage: 20, categories: [...DEFAULT_CATEGORY_SELECTION], sort: 'default' })
+    expect(result.current.selectedCategories).toEqual([...DEFAULT_CATEGORY_SELECTION])
+    expect(result.current.scopeStatus).toBe('idle')
+    expect(result.current.isScopeLoading).toBe(false)
+    expect(result.current.showLoadedCounts).toBe(false)
+    expect(result.current.countryFacets).toEqual([])
+    expect(queryClient.getQueryData(queryKeys.placesCatalogScope({}))).toBeUndefined()
+    expect(result.current.collectionCards.map(({ countReady }) => countReady)).toEqual([true, false, false, false])
+    expect(result.current.collectionCards[0].count).toBe(7)
+  })
+
+  it.each(['country', 'filters', 'search'] as const)('implicit route waits for the list then requests one scope on %s intent', async (intent) => {
+    mockParams = {}
+    const list = deferred<PlacesCatalogPage>()
+    mockedFetch.mockImplementation((params) => params.categories?.length ? list.promise : Promise.resolve(CATALOG_PAGE))
+    const { result } = renderController()
+    await tick(1)
+    act(() => {
+      if (intent === 'country') result.current.setCountryMenuVisible(true)
+      else if (intent === 'filters') result.current.setFiltersOpen(true)
+      else result.current.requestCatalogScope()
+    })
+    await settle()
+    expect(mockedFetch).toHaveBeenCalledTimes(1)
+    expect(result.current.scopeStatus).toBe('loading')
+    list.resolve(FILTERED_PAGE)
+    await settle()
+    expect(mockedFetch).toHaveBeenCalledTimes(2)
+    expect(callParams(1)).toEqual({ page: 1, perPage: 1 })
+    expect(result.current.scopeStatus).toBe('ready')
+    act(() => result.current.setCountryMenuVisible(true))
+    await settle()
+    expect(mockedFetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('implicit route observes matching full-scope cache without an automatic scope request', async () => {
+    mockParams = {}
+    const { result } = renderController()
+    queryClient.setQueryData(queryKeys.placesCatalogScope({}), { count: 120, ...CATALOG_FACETS })
+    await settle()
+    expect(mockedFetch).toHaveBeenCalledTimes(1)
+    expect(result.current.catalogTotal).toBe(120)
+    expect(result.current.countryFacets).toEqual(CATALOG_FACETS.countryFacets)
+    expect(result.current.scopeStatus).toBe('ready')
+  })
+
+  it('scope timeout leaves a recoverable filter error and manual retry requests only scope', async () => {
+    mockParams = {}
+    mockedFetch.mockImplementation(async (params) => {
+      if (params.categories?.length) return FILTERED_PAGE
+      throw timeoutError()
+    })
+    const { result } = renderController()
+    await settle()
+    act(() => result.current.setCountryMenuVisible(true))
+    await settle()
+    expect(mockedFetch).toHaveBeenCalledTimes(2)
+    expect(result.current.scopeStatus).toBe('error')
+    expect(result.current.countryFacets).toEqual([])
+    expect(result.current.showLoadedCounts).toBe(false)
+    mockedFetch.mockResolvedValue(CATALOG_PAGE)
+    act(() => result.current.retryScope())
+    await settle()
+    expect(mockedFetch).toHaveBeenCalledTimes(3)
+    expect(callParams(2)).toEqual({ page: 1, perPage: 1 })
+    expect(result.current.scopeStatus).toBe('ready')
+  })
+
+  it('changing country does not present the previous country scope while the new list is pending', async () => {
+    mockParams = {}
+    const { result } = renderController()
+    queryClient.setQueryData(queryKeys.placesCatalogScope({}), { count: 120, ...CATALOG_FACETS })
+    await settle()
+    const nextList = deferred<PlacesCatalogPage>()
+    mockedFetch.mockImplementation((params) => params.categories?.length ? nextList.promise : Promise.resolve({ ...CATALOG_PAGE, count: 0, countryFacets: [], categoryFacets: [] }))
+    act(() => result.current.handleSelectCountry('pl'))
+    await tick(1)
+    expect(result.current.showLoadedCounts).toBe(false)
+    expect(result.current.countryFacets).toEqual([])
+    expect(result.current.scopeStatus).toBe('loading')
+    expect(mockedFetch).toHaveBeenCalledTimes(2)
+    nextList.resolve({ ...FILTERED_PAGE, places: [], count: 0 })
+    await settle()
+    expect(mockedFetch).toHaveBeenCalledTimes(3)
+    expect(callParams(2)).toEqual({ page: 1, perPage: 1, country: 'pl' })
+    expect(result.current.catalogTotal).toBe(0)
+    expect(result.current.showLoadedCounts).toBe(true)
+  })
+
+  it('Reset from implicit featured commits explicit All atomically and never reselects featured', async () => {
+    mockParams = {}
+    const { result, rerender } = renderController()
+    await settle()
+    mockSetParams.mockClear()
+    act(() => result.current.resetAll())
+    mockParams = { q: '', category: '', country: '' }
+    rerender({})
+    await settle()
+    expect(mockSetParams.mock.calls).toEqual([[{ q: '', category: '', country: '' }]])
+    expect(result.current.selectedCategories).toEqual([])
+    expect(mockedFetch).toHaveBeenCalledTimes(2)
+    expect(callParams(1)).toEqual({ page: 1, perPage: 20, sort: 'default' })
+    expect(result.current.catalogTotal).toBe(120)
   })
 
   it('первое открытие без фильтров: один запрос на список, итог и фасеты', async () => {
@@ -328,10 +447,13 @@ describe('usePlacesCatalogController — бюджет запросов ката�
 
     // Очищенный поиск применяется в тот же рендер, что и сброс фильтров: запрос
     // «старый поиск без категорий» не уходит, каталог без фильтров — из кэша.
+    mockSetParams.mockClear()
     act(() => result.current.resetAll())
     await settle()
 
     expect(mockedFetch).toHaveBeenCalledTimes(4)
+    expect(mockSetParams.mock.calls).toEqual([[{ q: '', category: '', country: '' }]])
+    expect(result.current.selectedCategories).toEqual([])
     expect(result.current.appliedQuery).toBe('')
     expect(result.current.totalCount).toBe(120)
   })

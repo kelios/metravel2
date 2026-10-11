@@ -100,6 +100,7 @@ type FiltersPanelProps = Pick<
   | 'defaultFilter'
   | 'filterGroups'
   | 'handleFilterChange'
+  | 'handleResetGroup'
   | 'handleClearAll'
   | 'filtersLoading'
   | 'resultsLoading'
@@ -116,6 +117,7 @@ const FiltersPanel = memo(function FiltersPanel({
   defaultFilter,
   filterGroups,
   handleFilterChange,
+  handleResetGroup,
   handleClearAll,
   filtersLoading,
   resultsCount,
@@ -131,6 +133,7 @@ const FiltersPanel = memo(function FiltersPanel({
       selectedFilters={filter as never}
       defaultSelectedFilters={defaultFilter as never}
       onFilterChange={handleFilterChange}
+      onResetGroup={handleResetGroup}
       onClearAll={handleClearAll}
       resultsCount={resultsCount}
       resultsLoading={resultsLoading}
@@ -187,6 +190,7 @@ export default function RouletteScreen() {
     handleSpin,
     handleClearAll,
     handleFilterChange,
+    handleResetGroup,
     showLoading,
     onSelect,
     filtersLoading,
@@ -268,6 +272,7 @@ export default function RouletteScreen() {
               defaultFilter={defaultFilter}
               filterGroups={filterGroups}
               handleFilterChange={handleFilterChange}
+              handleResetGroup={handleResetGroup}
               handleClearAll={handleClearAll}
               filtersLoading={filtersLoading}
               resultsCount={totalCount}
@@ -533,6 +538,7 @@ export default function RouletteScreen() {
               defaultFilter={defaultFilter}
               filterGroups={filterGroups}
               handleFilterChange={handleFilterChange}
+              handleResetGroup={handleResetGroup}
               handleClearAll={handleClearAll}
               filtersLoading={filtersLoading}
               resultsCount={totalCount}

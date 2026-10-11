@@ -47,9 +47,6 @@ export interface HeroStyleContext {
   isVeryCompactBookLayout: boolean
   useDenseBookNotes: boolean
 
-  // derived numbers
-  desktopBookViewportReserve: number
-
   // derived fluid typography
   desktopBookTitleSize: string
   desktopBookTitleLineHeight: string

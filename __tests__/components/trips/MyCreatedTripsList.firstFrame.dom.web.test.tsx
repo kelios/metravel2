@@ -24,6 +24,7 @@ let buildCriticalCSS: typeof import('@/utils/criticalCSSBuilder').buildCriticalC
 let colors: ReturnType<typeof import('@/constants/designSystem').getThemedColors>
 let mockDesktop = false
 let mockPending = true
+let mockRegions = ['', '']
 
 const makeTrip = (overrides: Partial<PlannedTrip>): PlannedTrip => ({
   id: 59,
@@ -73,7 +74,7 @@ beforeAll(() => {
   }))
   jest.doMock('@/hooks/useAuthedQuerySettled', () => ({ useAuthedQuerySettled: () => !mockPending }))
   jest.doMock('@/hooks/usePlannedTripsApi', () => ({
-    useMyPlannedTrips: () => ({ data: mockPending ? undefined : [makeTrip({ id: 59 }), makeTrip({ id: 60, slug: 'trip-60', title: 'Вторая поездка' })], isPending: mockPending, isError: false, refetch: () => undefined }),
+    useMyPlannedTrips: () => ({ data: mockPending ? undefined : [makeTrip({ id: 59, region: mockRegions[0] }), makeTrip({ id: 60, slug: 'trip-60', title: 'Вторая поездка', region: mockRegions[1] })], isPending: mockPending, isError: false, refetch: () => undefined }),
     useDeletePlannedTrip: () => ({ mutate: jest.fn(), isPending: false }),
   }))
   jest.doMock('@expo/vector-icons/Feather', () => {
@@ -166,6 +167,30 @@ describe('MyCreatedTripsList: первый кадр SSR = кадр после г
     expect(declarationsOf(ssr.querySelector('[data-bp-layout="myTrips-filterToggle"]')!)).toContain('display:flex')
     expect(declarationsOf(ssr.querySelector('[data-bp-layout="myTrips-gridItem"]')!)).toContain('width:100%')
   })
+
+  it.each([true, false])('location options replace the decorative first-frame slot without growing it (desktop=%s)', (desktop) => {
+    mockRegions = ['Беларусь', 'Польша'];
+    try {
+      const pending = render(desktop, true);
+      const loaded = render(desktop, false);
+      const pendingSlot = pending.querySelector('[data-testid="my-created-trips-location-slot"]')!;
+      const loadedSlot = loaded.querySelector('[data-testid="my-created-trips-location-slot"]')!;
+      expect(declarationsOf(pendingSlot)).toEqual(declarationsOf(loadedSlot));
+      expect(declarationsOf(loadedSlot)).toContain('height:72px');
+      expect(pendingSlot.querySelector('[role="button"]')).toBeNull();
+      expect(pendingSlot.querySelector('[aria-hidden="true"]')).not.toBeNull();
+      const options = loadedSlot.querySelectorAll('[role="button"]');
+      expect(options).toHaveLength(2);
+      expect(Array.from(options).map((option) => option.textContent)).toEqual(['Беларусь', 'Польша']);
+      expect(Array.from(options).every((option) => option.getAttribute('tabindex') === '0')).toBe(true);
+    } finally { mockRegions = ['', '']; }
+  });
+
+  it('collapses the optional location slot only after a loaded empty-region result', () => {
+    mockRegions = ['', ''];
+    expect(render(true, true).querySelector('[data-testid="my-created-trips-location-slot"]')).not.toBeNull();
+    expect(render(true, false).querySelector('[data-testid="my-created-trips-location-slot"]')).toBeNull();
+  });
 
   it('страницы для пиксельного замера в Chromium (MT_FIRST_FRAME_OUT)', () => {
     const outDir = process.env.MT_FIRST_FRAME_OUT

@@ -2,6 +2,7 @@
 import { Platform } from 'react-native'
 
 import type { HeroStyleContext } from './context'
+import { getHomeBookWidthLimit } from '../homeBookGeometry'
 
 export const createHeroShellStyles = (ctx: HeroStyleContext) => {
   const {
@@ -11,9 +12,6 @@ export const createHeroShellStyles = (ctx: HeroStyleContext) => {
     showSideSlider,
     bookHeight,
     isTabletLayout,
-    desktopBookViewportReserve,
-    isUltraWideBook,
-    isLargeDesktopBook,
     warmBg,
     leftPageWidth,
     leftPagePaddingLeft,
@@ -63,13 +61,8 @@ export const createHeroShellStyles = (ctx: HeroStyleContext) => {
               backgroundImage: 'var(--image-homeHeroBook)',
               backgroundSize: '100% 100%',
               backgroundRepeat: 'no-repeat',
-              aspectRatio: '1040 / 765',
-              maxHeight: `calc(100vh - ${desktopBookViewportReserve}px)`,
-              maxWidth: isUltraWideBook
-                ? 1520
-                : isLargeDesktopBook
-                  ? 1360
-                  : 1200,
+              maxWidth: getHomeBookWidthLimit(ctx.viewportWidth),
+              minHeight: 0,
               marginLeft: 'auto',
               marginRight: 'auto',
               overflow: 'hidden',
@@ -158,6 +151,7 @@ export const createHeroShellStyles = (ctx: HeroStyleContext) => {
               alignSelf: 'stretch',
               height: '100%',
               maxHeight: '100%',
+              minHeight: 0,
               minWidth: 0,
             } as any)
           : isTabletLayout
@@ -184,10 +178,17 @@ export const createHeroShellStyles = (ctx: HeroStyleContext) => {
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'flex-start',
+              overflowY: 'auto',
+              overflowX: 'hidden',
               maxHeight: '100%',
             } as any)
           : {},
       }),
+    },
+    leftPageContent: {
+      width: '100%',
+      flexShrink: 0,
+      minWidth: 0,
     },
     heroControls: {
       width: '100%',

@@ -16,7 +16,7 @@ let mockMobile = false;
 let mockPanelProps: ComponentProps<typeof QuestsContentPanel> | null = null;
 let mockMapProps: { coordinates?: { latitude: number; longitude: number } } | null = null;
 
-jest.mock('expo-router', () => ({ useIsFocused: () => true, useRouter: () => ({ push: () => {} }) }));
+jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({}), useIsFocused: () => true, useRouter: () => ({ push: () => {} }) }));
 jest.mock('@expo/vector-icons/Feather', () => 'Feather');
 jest.mock('@/components/MapPage/Map', () => (props: typeof mockMapProps) => {
   mockMapProps = props;

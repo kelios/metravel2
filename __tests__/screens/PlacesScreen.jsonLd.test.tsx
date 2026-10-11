@@ -12,7 +12,7 @@ import type { PlacesCatalogPage } from '@/utils/placesCatalog'
 const mockSeoProps = jest.fn()
 
 jest.mock('expo-router', () => ({
-  useLocalSearchParams: () => ({}),
+  useLocalSearchParams: () => ({ category: '' }),
   useRouter: () => ({ push: jest.fn(), setParams: jest.fn() }),
   useIsFocused: () => true,
   useFocusEffect: () => undefined,

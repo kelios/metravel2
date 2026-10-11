@@ -8,7 +8,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 
 import { buildClusterIconHtml } from './mapMarkerStyles'
 import MarkerPopup from './MarkerPopup'
-import { formatPlaces } from '@/utils/pluralize'
+import { formatMapPoints } from '@/utils/mapPointCount'
 import { getMapPlaceKey, groupMapPlaces, materializeMapPlaceRecord } from '@/api/mapPlaces'
 import { buildPlaceTitleParts } from './placeTitle'
 import { translate as i18nT } from '@/i18n'
@@ -364,7 +364,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
 
         const thumbItem = cluster.items.find((p) => p.travelImageThumbUrl)
         const icon = clusterIcon(cluster.count, thumbItem?.travelImageThumbUrl)
-        const clusterAccessibleName = i18nT('map:components.MapPage.Map.ClusterLayer.klaster_value1_01722671', { value1: formatPlaces(cluster.count) })
+        const clusterAccessibleName = i18nT('map:components.MapPage.Map.ClusterLayer.klaster_value1_01722671', { value1: formatMapPoints(cluster.count) })
         return (
           <Marker
             key={`cluster-${cluster.key}`}
@@ -404,7 +404,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
             <Popup>
               <View style={{ gap: 6, maxWidth: 260 }}>
                 <Text style={{ fontWeight: '800' }}>
-                  {i18nT('map:components.MapPage.Map.ClusterLayer.poblizosti_10effd4f', { value1: formatPlaces(cluster.count) })}</Text>
+                  {i18nT('map:components.MapPage.Map.ClusterLayer.poblizosti_10effd4f', { value1: formatMapPoints(cluster.count) })}</Text>
                 <Text style={{ color: colors.textMuted, fontSize: 12 }}>
                   {i18nT('map:components.MapPage.Map.ClusterLayer.nazhmite_chtoby_priblizit_i_raskryt_markery_ef4fc361')}</Text>
                 {cluster.items.slice(0, 6).map((p, i) => (

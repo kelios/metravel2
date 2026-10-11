@@ -1,4 +1,5 @@
 export const mapGenerated3 = {
+  "screens.tabs.PlacesScreen.filterLoadFailed": "Не вдалося завантажити фільтри",
   "hooks.map.useMapMobileDerivations.marshrut_c71f4ede": "Маршрут",
   "hooks.map.useMapMobileDerivations.marshrut_gotov_mozhno_otkryt_spisok_mest_cb473cc6": "Маршрут готовий, можна відкрити список місць",
   "hooks.map.useMapMobileDerivations.marshrut_obnovlyaetsya_a8a3d750": "Маршрут оновлюється",
@@ -48,7 +49,7 @@ export const mapGenerated3 = {
   "screens.tabs.PlacesScreen_parts.otkryt_tochku_v_waze_f566b9af": "Відкрити точку в Waze",
   "screens.tabs.PlacesScreen_parts.otkryt_tochku_v_yandeks_kartah_dc0d96b1": "Відкрити точку в Яндекс Картах",
   "screens.tabs.PlacesScreen_parts.otkryt_tochku_v_yandeks_navigatore_43357804": "Відкрити точку в Яндекс Навігаторі",
-  "screens.tabs.PlacesScreen_parts.statya_28264f10": "Стаття",
+  "screens.tabs.PlacesScreen_parts.statya_28264f10": "Прочитати",
   "screens.tabs.PlacesScreen_parts.tochka_dobavlena_v_moi_tochki_c854cbfa": "Точка додана в мої точки",
   "screens.tabs.PlacesScreen_parts.tochka_ubrana_iz_moih_tochek_87df65a9": "Точка прибрана з моїх точок",
   "screens.tabs.PlacesScreen_parts.v_tochkah_53f65e25": "У точках",
@@ -227,7 +228,7 @@ export const mapGenerated3 = {
   "components.MapPage.useRouting.osrmUnavailable": "OSRM недоступний (помилка мережі)",
   "components.MapPage.useRouting.valhallaUnavailable": "Valhalla недоступний (помилка мережі)",
   "utils.routingHelpers.requestFailedAfterRetries": "Не вдалося виконати запит після повторних спроб",
-  "constants.mapSeo.title": "Карта маршрутів та визначних пам'яток Білорусі | Metravel",
+  "constants.mapSeo.title": "Карта маршрутів і пам’яток | MeTravel",
   "constants.mapSeo.description": "Інтерактивна карта подорожей Metravel: знайдіть маршрути, пам'ятки та ідеї поїздок, фільтруйте точки та будуйте свій шлях.",
   "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_5b3c9f14": "Пошук за тегами",
   "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_i_kategoriyam_mest_7d41ac68": "Пошук за тегами та категоріями місць",
@@ -251,4 +252,6 @@ export const mapGenerated3 = {
   "components.MapPage.Map.PlacePopupCard.PlaceSourcePager.material_current_iz_total_5f5f1d3a": "Матеріал {{current}} з {{total}}",
   "components.MapPage.Map.PlacePopupCard.PlaceSourcePager.predyduschiy_material_1c6a0f27": "Попередній матеріал",
   "components.MapPage.Map.PlacePopupCard.PlaceSourcePager.sleduyuschiy_material_ab7f8c04": "Наступний матеріал",
+  "components.MapPage.FiltersPanelRadiusSection.loadedPointCounts": "Лічильники — за завантаженими точками",
+  "utils.mapPointCount.loadedCount": "Завантажено: {{value1}}",
 } as const

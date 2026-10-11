@@ -14,7 +14,7 @@ let mockLoading = false;
 let mockError: string | null = null;
 let mockMobile = false;
 
-jest.mock('expo-router', () => ({ useIsFocused: () => true }));
+jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({}), useIsFocused: () => true }));
 jest.mock('@expo/vector-icons/Feather', () => 'Feather');
 jest.mock('@/components/MapPage/Map.web', () => () => null);
 jest.mock('@/components/seo/LazyInstantSEO', () => () => null);

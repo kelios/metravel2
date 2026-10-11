@@ -655,7 +655,7 @@ describe('MarkerClusterGroup', () => {
       )
 
       expect(map.eachLayer).toHaveBeenCalled()
-      expect(clusterIcon.getAttribute('aria-label')).toBe('Кластер: 5 мест')
+      expect(clusterIcon.getAttribute('aria-label')).toBe('Кластер: 5 точек')
     })
 
     it('labels a cluster reported later through the map layeradd event, and ignores non-cluster layers', () => {
@@ -709,7 +709,7 @@ describe('MarkerClusterGroup', () => {
 
       // The actual cluster layer must be labelled.
       layerAddHandlers.forEach((handler) => handler({ layer: fakeCluster }))
-      expect(clusterIcon.getAttribute('aria-label')).toBe('Кластер: 3 места')
+      expect(clusterIcon.getAttribute('aria-label')).toBe('Кластер: 3 точки')
     })
 
     it('does not throw when `L.MarkerCluster`, `map.on` or `map.eachLayer` are unavailable (degenerate host)', () => {

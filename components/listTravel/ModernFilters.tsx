@@ -30,6 +30,8 @@ import type { FilterGroup, FilterState } from './filters/types';
 import { translate as i18nT } from '@/i18n'
 import { useTranslation } from '@/i18n/LocaleProvider'
 import { webTitleRef } from '@/utils/webProps'
+import { getFilterGroupResetState, getModernFiltersActiveCount } from '@/components/listTravel/filters/filterSelectionDefaults';
+export { getModernFiltersActiveCount } from '@/components/listTravel/filters/filterSelectionDefaults';
 
 
 function getModernFiltersReserveState(params: {
@@ -65,25 +67,6 @@ function getModernFiltersViewportState(width: number) {
     shouldReserveResultsBadge: Platform.OS !== 'web' || isNarrowWeb,
     showsStickyFooter: Platform.OS !== 'web' || isNarrowWeb,
   };
-}
-
-const isSameSelection = (selected: unknown[], defaults: unknown[]) =>
-  selected.length === defaults.length &&
-  selected.every((value) => defaults.some((candidate) => String(candidate) === String(value)));
-
-// #2375: группы, чей выбор совпадает с умолчанием экрана (рулетка подставляет
-// Беларусь и Польшу), активными не считаются — иначе при умолчаниях видна
-// кнопка «Очистить (2)», а нажатие на неё ничего не меняет.
-export function getModernFiltersActiveCount(
-  selectedFilters: FilterState,
-  defaultSelectedFilters?: Partial<FilterState>,
-) {
-  return Object.entries(selectedFilters).reduce<number>((sum, [groupKey, filters]) => {
-    if (!Array.isArray(filters)) return sum;
-    const defaults = (defaultSelectedFilters as Record<string, unknown> | undefined)?.[groupKey];
-    if (Array.isArray(defaults) && isSameSelection(filters, defaults)) return sum;
-    return sum + filters.length;
-  }, selectedFilters.allAuthorsUnpublishedOnly === true ? 1 : 0);
 }
 
 function splitModernFilterGroups(filterGroups: FilterGroup[]) {
@@ -141,6 +124,7 @@ interface ModernFiltersProps {
   /** Выбор по умолчанию экрана: совпадающие с ним группы не считаются активными. */
   defaultSelectedFilters?: Partial<FilterState>;
   onFilterChange: (groupKey: string, optionId: string) => void;
+  onResetGroup: (groupKey: string, values: string[]) => void;
   onClearAll: () => void;
   resultsCount?: number;
   resultsLoading?: boolean;
@@ -172,6 +156,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   selectedFilters,
   defaultSelectedFilters,
   onFilterChange,
+  onResetGroup,
   onClearAll,
   resultsCount,
   resultsLoading = false,
@@ -548,6 +533,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
             selectedNames,
             selectedSet,
           } = orderedOptionsByGroup[group.key];
+          const resetState = getFilterGroupResetState(selectedArray, defaultSelectedFilters?.[group.key]);
 
           return (
             <View
@@ -595,12 +581,10 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                   </View>
                 </Pressable>
                 <View style={styles.groupHeaderRight}>
-                  {selectedCount > 0 && (
+                  {resetState.isResettable && (
                     <GroupClearButton
-                      onPress={() => {
-                        selectedArray.forEach(id => onFilterChange(group.key, String(id)));
-                      }}
-                      count={selectedCount}
+                      onPress={() => onResetGroup(group.key, resetState.resetValues)}
+                      count={resetState.count}
                       colors={colors}
                     />
                   )}

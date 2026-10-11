@@ -265,6 +265,7 @@ describe('post-deploy SEO check helpers', () => {
       expect(codes(CLOSED, 'page', 'https://metravel.by/quests/country')).toEqual(['robots.noindex'])
       expect(codes(CLOSED, 'page', 'https://metravel.by/quests/scenario')).toEqual(['robots.noindex'])
       expect(codes(CLOSED, 'page', 'https://metravel.by/quests/map')).toEqual(['robots.noindex'])
+      expect(codes(CLOSED, 'page', 'https://metravel.by/quests/theme')).toEqual(['robots.noindex'])
       expect(codes(CLOSED, 'page', 'https://metravel.by/quests/grodno/castle/extra')).toEqual([
         'robots.noindex',
       ])
@@ -282,7 +283,7 @@ describe('post-deploy SEO check helpers', () => {
         .map((entry: any) => entry.name.replace(/\.tsx$/, ''))
         .filter((name: string) => name !== 'index' && !name.startsWith('[') && !name.startsWith('_'))
 
-      expect(staticSegments.sort()).toEqual(['country', 'map', 'scenario'])
+      expect(staticSegments.sort()).toEqual(['country', 'map', 'scenario', 'theme'])
       for (const segment of staticSegments) {
         expect(hasCatalogDecidedIndexability(`https://metravel.by/quests/${segment}`)).toBe(false)
       }

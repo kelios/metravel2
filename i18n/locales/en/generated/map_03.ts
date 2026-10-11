@@ -1,4 +1,5 @@
 export const mapGenerated3 = {
+  "screens.tabs.PlacesScreen.filterLoadFailed": "Failed to load filters",
   "hooks.map.useMapMobileDerivations.marshrut_c71f4ede": "Route",
   "hooks.map.useMapMobileDerivations.marshrut_gotov_mozhno_otkryt_spisok_mest_cb473cc6": "The route is ready, you can open the list of places",
   "hooks.map.useMapMobileDerivations.marshrut_obnovlyaetsya_a8a3d750": "The route is being updated",
@@ -48,7 +49,7 @@ export const mapGenerated3 = {
   "screens.tabs.PlacesScreen_parts.otkryt_tochku_v_waze_f566b9af": "Open a location in Waze",
   "screens.tabs.PlacesScreen_parts.otkryt_tochku_v_yandeks_kartah_dc0d96b1": "Open a point in Yandex Maps",
   "screens.tabs.PlacesScreen_parts.otkryt_tochku_v_yandeks_navigatore_43357804": "Open a point in Yandex Navigator",
-  "screens.tabs.PlacesScreen_parts.statya_28264f10": "Article",
+  "screens.tabs.PlacesScreen_parts.statya_28264f10": "Read",
   "screens.tabs.PlacesScreen_parts.tochka_dobavlena_v_moi_tochki_c854cbfa": "Point added to my points",
   "screens.tabs.PlacesScreen_parts.tochka_ubrana_iz_moih_tochek_87df65a9": "Point removed from my points",
   "screens.tabs.PlacesScreen_parts.v_tochkah_53f65e25": "At points",
@@ -227,7 +228,7 @@ export const mapGenerated3 = {
   "components.MapPage.useRouting.osrmUnavailable": "OSRM unavailable (network error)",
   "components.MapPage.useRouting.valhallaUnavailable": "Valhalla is unavailable (network error)",
   "utils.routingHelpers.requestFailedAfterRetries": "Request failed after repeated attempts",
-  "constants.mapSeo.title": "Map of routes and attractions of Belarus | Metravel",
+  "constants.mapSeo.title": "Map of routes and attractions | MeTravel",
   "constants.mapSeo.description": "Metravel interactive travel map: find routes, attractions and trip ideas, filter points and build your path.",
   "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_5b3c9f14": "Search by tags",
   "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_i_kategoriyam_mest_7d41ac68": "Search places by tag and category",
@@ -251,4 +252,6 @@ export const mapGenerated3 = {
   "components.MapPage.Map.PlacePopupCard.PlaceSourcePager.material_current_iz_total_5f5f1d3a": "Article {{current}} of {{total}}",
   "components.MapPage.Map.PlacePopupCard.PlaceSourcePager.predyduschiy_material_1c6a0f27": "Previous article",
   "components.MapPage.Map.PlacePopupCard.PlaceSourcePager.sleduyuschiy_material_ab7f8c04": "Next article",
+  "components.MapPage.FiltersPanelRadiusSection.loadedPointCounts": "Counts show loaded points",
+  "utils.mapPointCount.loadedCount": "Loaded: {{value1}}",
 } as const

@@ -64,6 +64,26 @@ describe('SidebarFilters publication-status rows', () => {
     expect(lastProps().resultsCount).toBe(42);
   });
 
+  it('resets a multi-select group atomically without clearing another group', () => {
+    const onSelect = jest.fn();
+    render(<SidebarFilters {...baseProps} filter={{ countries: ['1', '2'], categories: ['hike'] }}
+      filterGroups={[{ key: 'countries', title: 'Страны', options: [], multiSelect: true }]}
+      onSelect={onSelect} />);
+    lastProps().onResetGroup('countries', []);
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith('countries', []);
+  });
+
+  it('resets a single-select group to undefined rather than an array', () => {
+    const onSelect = jest.fn();
+    render(<SidebarFilters {...baseProps} filter={{ sort: 'date' }}
+      filterGroups={[{ key: 'sort', title: 'Порядок', options: [], multiSelect: false }]}
+      onSelect={onSelect} />);
+    lastProps().onResetGroup('sort', []);
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith('sort', undefined);
+  });
+
   it('hides both status rows outside "Мои путешествия"', () => {
     render(<SidebarFilters {...baseProps} filter={{}} onSelect={jest.fn()} />);
 

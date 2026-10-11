@@ -17,6 +17,10 @@ describe('book render-only photo/text flow', () => {
     expect(pair).not.toBeNull()
     expect(pair.children[0].tagName).toBe('FIGURE')
     expect(pair.children[1].tagName).toBe('P')
+    expect(pair.getAttribute('style')).toContain('break-inside: avoid;')
+    expect(pair.getAttribute('style')).toContain('page-break-inside: avoid;')
+    expect(pair.querySelector('p')?.getAttribute('style')).toContain('break-inside: auto;')
+    expect(pair.querySelector('p')?.getAttribute('style')).toContain('page-break-inside: auto;')
     expect(pair.querySelector('figure')?.getAttribute('data-layout')).toBe(`float-${side}`)
     expect(pair.querySelector('a')?.getAttribute('href')).toBe('https://example.org/route')
     expect(pair.querySelector('p')?.textContent).toBe(text)
@@ -28,17 +32,28 @@ describe('book render-only photo/text flow', () => {
     expect(source).toBe(`<h2>Раздел</h2>${paragraph}${photo(side, shape)}<h2>Следующий раздел</h2>`)
   })
 
-  it('keeps long paragraph text fragmentable and the complete image with its following text', () => {
-    const source = `<p>${text.repeat(150)}</p>${photo('right', 'p')}`
+  it.each(['left', 'right'].flatMap((side) => ['p', 'figure'].map((shape) => [side, shape])))('%s/%s: retains long text and break opportunities when the UA relaxes oversized group avoidance', (side, shape) => {
+    const longText = text.repeat(150)
+    const source = `<p><a href="https://example.org/long-route">${longText}</a><strong>Конец длинного абзаца.</strong></p>${photo(side, shape)}<h2>Следующий раздел</h2>`
     const html = new BlockRenderer(minimalTheme).renderRichText(source, 'description')
     const pair = new DOMParser().parseFromString(html, 'text/html').querySelector('.pdf-photo-text-flow')!
-    expect(pair.querySelector('p')?.textContent).toBe(text.repeat(150))
+    expect(pair.querySelector('p')?.textContent).toBe(`${longText}Конец длинного абзаца.`)
+    expect(pair.querySelector('a')?.textContent).toBe(longText)
+    expect(pair.querySelector('a')?.getAttribute('href')).toBe('https://example.org/long-route')
+    expect(pair.querySelector('strong')?.textContent).toBe('Конец длинного абзаца.')
+    expect(pair.querySelectorAll('figure')).toHaveLength(1)
+    expect(pair.querySelectorAll('img:not([aria-hidden])')).toHaveLength(1)
     expect(pair.querySelector('p')?.getAttribute('style')).toContain('break-inside: auto;')
+    expect(pair.querySelector('p')?.getAttribute('style')).toContain('page-break-inside: auto;')
     expect(pair.querySelector('figure')?.getAttribute('style')).toContain('break-after: avoid-page;')
     expect(pair.querySelector('img:not([aria-hidden])')?.getAttribute('style')).toContain('object-fit: contain;')
-    expect(pair.getAttribute('style')).toContain('break-inside: auto;')
-    expect(pair.getAttribute('style')).not.toMatch(/break-inside:\s*avoid/)
-    expect(pair.getAttribute('style')).not.toContain('overflow: hidden')
+    expect(pair.getAttribute('style')).toContain('break-inside: avoid;')
+    expect(pair.getAttribute('style')).toContain('page-break-inside: avoid;')
+    for (const element of [pair, pair.querySelector('p')!]) {
+      expect(element.getAttribute('style')).not.toMatch(/(?:^|;)\s*(?:height|min-height|max-height|overflow|break-before|break-after)\s*:/)
+    }
+    expect(pair.nextElementSibling?.textContent).toBe('Следующий раздел')
+    expect(source).toBe(`<p><a href="https://example.org/long-route">${longText}</a><strong>Конец длинного абзаца.</strong></p>${photo(side, shape)}<h2>Следующий раздел</h2>`)
   })
 
   it('does not alter existing forward ownership or steal text in interleaved source', () => {

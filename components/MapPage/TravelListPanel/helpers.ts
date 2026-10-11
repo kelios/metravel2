@@ -2,7 +2,8 @@ import { Platform } from 'react-native'
 
 import { getMapPointKey } from '@/hooks/map/useMapTravels'
 import { buildPlaceTitleParts } from '@/components/MapPage/Map/placeTitle'
-import { translatePlural, translate as i18nT } from '@/i18n'
+import { translate as i18nT } from '@/i18n'
+import { getMapPointLabel } from '@/utils/mapPointCount'
 
 
 export const IS_WEB = Platform.OS === 'web'
@@ -24,7 +25,7 @@ export const LIST_BOTTOM_PADDING = 96
 export const EMPTY_FAVORITES = new Set<string | number>()
 
 export function getPlacesLabel(count: number) {
-  return translatePlural('map:components.MapPage.TravelListPanel.helpers.placeNoun', count)
+  return getMapPointLabel(count)
 }
 
 export function buildTravelListSummaryHint({

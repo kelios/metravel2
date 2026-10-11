@@ -12,7 +12,7 @@ import { fetchPlacesCatalog } from '@/api/places'
 import type { PlacesCatalogPage } from '@/utils/placesCatalog'
 
 jest.mock('expo-router', () => ({
-  useLocalSearchParams: () => ({}),
+  useLocalSearchParams: () => ({ category: '' }),
   useRouter: () => ({ push: jest.fn(), setParams: jest.fn() }),
   useIsFocused: () => true,
   useFocusEffect: () => undefined,
@@ -105,7 +105,7 @@ describe('PlacesScreen — состояния загрузки каталога 
     mockedFetch.mockRejectedValueOnce(timeoutError())
     mockedFetch.mockResolvedValue(makePage(1, 4))
 
-    const { findByText, findByLabelText, findByTestId, getByText } = renderScreen()
+    const { findByText, findByTestId, getByText } = renderScreen()
 
     expect(await findByText('Не удалось загрузить места')).toBeTruthy()
     expect(getByText(/Сервер не отвечает/)).toBeTruthy()
@@ -116,7 +116,7 @@ describe('PlacesScreen — состояния загрузки каталога 
     const metaStyle = StyleSheet.flatten(meta.props.style)
     expect(metaStyle.minHeight).toBe(metaStyle.lineHeight)
 
-    fireEvent.press(await findByLabelText('Повторить'))
+    fireEvent.press(await findByTestId('empty-state-action'))
 
     expect(await findByTestId('places-card-place-1')).toBeTruthy()
     expect(mockedFetch).toHaveBeenCalledTimes(2)

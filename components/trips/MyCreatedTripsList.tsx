@@ -2,6 +2,7 @@ import { searchInputAccessibilityProps } from '@/utils/webProps'
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -22,7 +23,8 @@ import { useDeletePlannedTrip, useMyPlannedTrips } from '@/hooks/usePlannedTrips
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { breakpointLayoutProps, breakpointStyle } from '@/utils/breakpointLayout';
-import { MY_CREATED_TRIPS_LAYOUT } from '@/components/trips/myCreatedTripsLayout';
+import { MY_CREATED_TRIPS_LAYOUT, MY_TRIP_LOCATION_FILTER_LAYOUT, getMyTripLocationFilterState } from '@/components/trips/myCreatedTripsLayout';
+import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { confirmAction } from '@/utils/confirmAction';
 import { showToastMessage } from '@/utils/toast';
 import { translate as i18nT } from '@/i18n'
@@ -79,6 +81,7 @@ function MyCreatedTripsList({ role = 'organized' }: Props) {
     [matchingTrips],
   );
   const normalizedSearch = searchQuery.trim().toLocaleLowerCase(getFormatLocale());
+  const locationFilterState = getMyTripLocationFilterState(isLoading, regions.length);
   const visibleTrips = useMemo(
     () =>
       matchingTrips.filter((trip) => {
@@ -262,15 +265,25 @@ function MyCreatedTripsList({ role = 'organized' }: Props) {
         colors={colors}
         styles={styles}
       />
-      {regions.length > 0 ? (
-        <FilterGroup
-          title={i18nT('trips:components.trips.MyCreatedTripsList.mesto_be05be32')}
-          options={regions.map((region) => ({ value: region, label: region }))}
-          selected={filters.region}
-          onSelect={(value) => updateFilter('region', value)}
-          colors={colors}
-          styles={styles}
-        />
+      {locationFilterState !== 'empty' ? (
+        <View style={styles.locationSlot} testID="my-created-trips-location-slot">
+          {locationFilterState === 'loading' ? (
+            <View style={styles.filterGroup} aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              <Text style={[styles.filterTitle, styles.locationPlaceholderTitle]}>{i18nT('trips:components.trips.MyCreatedTripsList.mesto_be05be32')}</Text>
+              <SkeletonLoader width="100%" height={MY_TRIP_LOCATION_FILTER_LAYOUT.optionHeight} borderRadius={10} />
+            </View>
+          ) : (
+            <FilterGroup
+              title={i18nT('trips:components.trips.MyCreatedTripsList.mesto_be05be32')}
+              options={regions.map((region) => ({ value: region, label: region }))}
+              selected={filters.region}
+              onSelect={(value) => updateFilter('region', value)}
+              colors={colors}
+              styles={styles}
+              boundedOptions
+            />
+          )}
+        </View>
       ) : null}
       {hasActiveControls ? (
         <Pressable
@@ -375,13 +388,12 @@ type FilterGroupProps = {
   onSelect: (value: string) => void;
   colors: ThemedColors;
   styles: ReturnType<typeof createStyles>;
+  boundedOptions?: boolean;
 };
 
-function FilterGroup({ title, options, selected, onSelect, colors, styles }: FilterGroupProps) {
-  return (
-    <View style={styles.filterGroup}>
-      <Text style={styles.filterTitle}>{title}</Text>
-      <View style={styles.filterOptions}>
+function FilterGroup({ title, options, selected, onSelect, colors, styles, boundedOptions = false }: FilterGroupProps) {
+  const optionButtons = (
+    <View style={styles.filterOptions}>
         {options.map((option) => {
           const isSelected = selected === option.value;
           return (
@@ -403,7 +415,12 @@ function FilterGroup({ title, options, selected, onSelect, colors, styles }: Fil
             </Pressable>
           );
         })}
-      </View>
+    </View>
+  );
+  return (
+    <View style={styles.filterGroup}>
+      <Text style={styles.filterTitle}>{title}</Text>
+      {boundedOptions ? <ScrollView style={styles.locationOptions} nestedScrollEnabled>{optionButtons}</ScrollView> : optionButtons}
     </View>
   );
 }
@@ -478,8 +495,11 @@ const createStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surface,
       padding: 14,
     },
-    filterGroup: { gap: 8 },
-    filterTitle: { fontSize: 14, fontWeight: '800', color: colors.text },
+    filterGroup: { gap: MY_TRIP_LOCATION_FILTER_LAYOUT.gap },
+    filterTitle: { fontSize: 14, lineHeight: MY_TRIP_LOCATION_FILTER_LAYOUT.titleLineHeight, fontWeight: '800', color: colors.text },
+    locationSlot: { height: MY_TRIP_LOCATION_FILTER_LAYOUT.height },
+    locationOptions: { height: MY_TRIP_LOCATION_FILTER_LAYOUT.optionHeight, flexGrow: 0 },
+    locationPlaceholderTitle: { color: 'transparent' },
     filterOptions: { gap: 5 },
     filterOption: {
       minHeight: 44,

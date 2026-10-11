@@ -12,6 +12,7 @@ import type { FiltersData } from './useMapFilters';
 import type { MapFilterValues } from '@/utils/mapFiltersStorage';
 import { useMapTravels } from './useMapTravels';
 import { queryKeys } from '@/api/queryKeys';
+import type { MapPointCountScope } from '@/utils/mapPointCount';
 
 interface UseMapDataControllerOptions {
   /**
@@ -65,6 +66,7 @@ interface UseMapDataControllerResult {
    * Total number of places reported by the backend (not the loaded page length)
    */
   total: number;
+  totalScope: MapPointCountScope;
 
   /**
    * Is loading initial data
@@ -170,6 +172,7 @@ export function useMapDataController(
     allTravelsData,
     filteredTravelsData: travelsData,
     total,
+    totalScope,
     isLoading: loading,
     isFetching,
     isPlaceholderData,
@@ -199,6 +202,7 @@ export function useMapDataController(
     allTravelsData,
     travelsData,
     total,
+    totalScope,
     loading,
     isFetching,
     isPlaceholderData,
@@ -214,6 +218,7 @@ export function useMapDataController(
     allTravelsData,
     travelsData,
     total,
+    totalScope,
     loading,
     isFetching,
     isPlaceholderData,

@@ -34,6 +34,7 @@ import {
 import { getWebCardWidth } from './AddressListItem/utils'
 import { translate as i18nT } from '@/i18n'
 import { formatRadiusValue } from '@/constants/mapConfig'
+import { qualifyMapPointCount, type MapPointCountScope } from '@/utils/mapPointCount'
 
 
 export { buildTravelListSummaryHint }
@@ -43,6 +44,7 @@ type Props = {
   buildRouteTo: (item: any) => void
   onSelectPlace?: (item: any) => void
   totalCount?: number
+  totalScope?: MapPointCountScope
   onHideTravel?: (id: string | number) => void
   isMobile?: boolean
   isLoading?: boolean
@@ -70,6 +72,7 @@ const TravelListPanel: React.FC<Props> = ({
   buildRouteTo,
   onSelectPlace,
   totalCount,
+  totalScope,
   onHideTravel,
   isMobile = false,
   isLoading = false,
@@ -193,7 +196,7 @@ const TravelListPanel: React.FC<Props> = ({
             {i18nT('map:components.MapPage.TravelListPanel.mesta_ryadom_a41e7282')}</Text>
           <View pointerEvents="none" style={styles.listHeaderCountChip}>
             <Text style={styles.listHeaderCountChipText}>
-              {hasRadiusContext ? i18nT('map:components.MapPage.TravelListPanel.value1_km_ff41a766', { value1: placesCountLabel, value2: placesWord, value3: formatRadiusValue(currentRadiusKm) }) : `${placesCountLabel} ${placesWord}`}
+              {qualifyMapPointCount(hasRadiusContext ? i18nT('map:components.MapPage.TravelListPanel.value1_km_ff41a766', { value1: placesCountLabel, value2: placesWord, value3: formatRadiusValue(currentRadiusKm) }) : `${placesCountLabel} ${placesWord}`, totalScope ?? (totalCount == null ? 'loaded' : 'radius'))}
             </Text>
           </View>
           {onOpenFilters && (
@@ -217,7 +220,7 @@ const TravelListPanel: React.FC<Props> = ({
           {i18nT('map:components.MapPage.TravelListPanel.nazhmite_na_kartochku_chtoby_sfokusirovat_ka_9ec94a60')}</Text>
       </View>
     )
-  }, [compactPreview, currentRadiusKm, headerWidthStyle, isMobile, onOpenFilters, showMobileSummary, styles, themeColors, totalCount, travelsData.length])
+  }, [compactPreview, currentRadiusKm, headerWidthStyle, isMobile, onOpenFilters, showMobileSummary, styles, themeColors, totalCount, totalScope, travelsData.length])
 
   const refreshControl = useMemo(
     () =>

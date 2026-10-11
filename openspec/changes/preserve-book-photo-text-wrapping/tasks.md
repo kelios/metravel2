@@ -13,10 +13,12 @@ Evidence: regression coverage is added and the current implementation passes it.
 
 ## 3. Code review and conservation regressions
 
-- [x] 3.1 Run coordinated helper/BlockRenderer/printPageBreaks/heading/image fallback/generator/worker conservation tests plus scoped lint/typecheck, preserving all original ledgers and unrelated fixtures.
+- [ ] 3.1 Run coordinated helper/BlockRenderer/printPageBreaks/heading/image fallback/generator/worker conservation tests plus scoped lint/typecheck, preserving all original ledgers and unrelated fixtures.
 - [ ] 3.2 Complete independent review-auditor review-and-fix and separate code-review-gate over the full task-owned source/test/doc diff; repeat necessary code-level checks after findings.
 
 Evidence: all 27 urgent suites passed in the full Jest run, including typed flow, BlockRenderer, generator and worker conservation coverage. The final four-suite golden/final-page run passed 183 tests with no skips; owned ESLint/diff checks, typecheck, image/i18n/prompt guards and the three urgent strict OpenSpec validations passed. The full repository run remains non-green for six older map suites and one older quest-route assertion after the sandbox-fixture rerun; `openspec validate --all` retains one unrelated change failure. Independent review-and-fix is complete; item 3.2 stays open for the separate gate. CSS/source checks do not prove physical pagination or an ordinary server/segmented export route; those remain testing requirements.
+
+Follow-up: revision983f77b8 was reviewed, pushed and deployed; real guest and QA104 ordinary HTML exports both printed21 physical pages. Rakov wraps on page10; Priluki text on page8 and photo on page9 fail physical co-placement. Source acceptance is reopened for the advisory containing-group refinement in decision2 and its meaningful long-text conservation tests. The previous receipts remain history; fresh review, checks, push, deployment and physical pagination are required before completion.
 
 ## 4. Real export and physical pagination acceptance
 

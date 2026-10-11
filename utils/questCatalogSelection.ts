@@ -1,3 +1,7 @@
+import { getQuestThemeDefinitions, getQuestThemeDefinitionById, isQuestThemeActive } from './questThemeRegistry';
+import { SEASONAL_THEMES } from '@/constants/seasonalThemes';
+import { seasonalCalendarCore } from './seasonalCalendarCore';
+
 // Выбор среза в каталоге квестов: ключ хранилища, id виртуальных фильтров и
 // предикат личных срезов.
 //
@@ -58,6 +62,32 @@ export function parseThemeSelectionId(selectionId: string | null | undefined): s
     if (!selectionId || !selectionId.startsWith(THEME_FILTER_PREFIX)) return null;
     const id = selectionId.slice(THEME_FILTER_PREFIX.length).trim().toLowerCase();
     return id || null;
+}
+
+/** Absent query preserves storage; every explicit invalid query intentionally selects All. */
+export function resolveQuestThemeQuery(value: string | string[] | undefined, now: Date = new Date()): string | null {
+    if (value === undefined) return null;
+    if (typeof value !== 'string') return ALL_QUESTS_ID;
+    const theme = getQuestThemeDefinitionById(value.trim().toLowerCase());
+    return theme && isQuestThemeActive(theme, now) ? toThemeSelectionId(theme.id) : ALL_QUESTS_ID;
+}
+
+/** Only an app catalog navigation carries a theme selection; unrelated links stay unrelated. */
+export function getQuestThemeQueryFromNavigationUrl(url: string): string | string[] | undefined {
+    try {
+        const parsed = new URL(url);
+        const path = parsed.protocol === 'metravel:'
+            ? `/${parsed.hostname}${parsed.pathname}`.replace(/\/{2,}/g, '/')
+            : parsed.pathname;
+        if (parsed.protocol !== 'metravel:' &&
+            !((parsed.protocol === 'https:' || parsed.protocol === 'http:') &&
+                (parsed.hostname === 'metravel.by' || parsed.hostname === 'www.metravel.by'))) return undefined;
+        const alias = /^\/quests\/theme\/([^/]+)\/?$/.exec(path);
+        if (alias) return decodeURIComponent(alias[1]);
+        if (!/^\/quests\/?$/.test(path) || !parsed.searchParams.has('theme')) return undefined;
+        const values = parsed.searchParams.getAll('theme');
+        return values.length === 1 ? values[0] : values;
+    } catch { return undefined; }
 }
 
 /**
@@ -135,7 +165,9 @@ export function getQuestCatalogRestoredSelectionScript(): string {
     const key = JSON.stringify(STORAGE_SELECTED_CITY);
     const keep = JSON.stringify([ALL_QUESTS_ID, NEARBY_ID]);
     const cls = JSON.stringify(QUEST_CATALOG_RESTORED_CLASS);
-    return `(function(){try{var p=window.location.pathname.replace(/\\/+$/,'');if(p!=='/quests')return;var v=window.localStorage.getItem(${key});if(v&&${keep}.indexOf(v)<0)document.documentElement.classList.add(${cls})}catch(_){}})();`;
+    const themes = JSON.stringify(getQuestThemeDefinitions().map(({ id, season }) => ({ id, season })));
+    const seasons = JSON.stringify(SEASONAL_THEMES.map(({ id, priority, rules }) => ({ id, priority, rules })));
+    return `(function(){try{var p=window.location.pathname.replace(/\\/+$/,'');if(p!=='/quests')return;var q=new URLSearchParams(window.location.search),v=null;if(q.has('theme')){var a=q.getAll('theme'),id=a.length===1?a[0].trim().toLowerCase():'',ts=${themes},now=new Date(),calendar=${seasonalCalendarCore.toString()},active=calendar(${seasons},{year:now.getFullYear(),month:now.getMonth()+1,day:now.getDate()}).activeId;for(var i=0;i<ts.length;i++){if(ts[i].id===id&&(!ts[i].season||ts[i].season===active))v=${JSON.stringify(THEME_FILTER_PREFIX)}+id}}else{v=window.localStorage.getItem(${key})}if(v&&${keep}.indexOf(v)<0)document.documentElement.classList.add(${cls})}catch(_){}})();`;
 }
 
 export function getQuestCatalogRestoredSelectionCss(): string {

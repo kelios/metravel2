@@ -129,6 +129,21 @@ describe('MyCreatedTripsList', () => {
     expect(screen.queryByTestId('my-created-trips-filtered-empty')).toBeNull();
   });
 
+  it('keeps every region option and selecting the last option filters the actual trips', () => {
+    mockUseMyPlannedTrips.mockReturnValue({ data: [
+      makeTrip({ id: 1, title: 'Брест', region: 'Брест' }),
+      makeTrip({ id: 2, title: 'Гродно', region: 'Гродно' }),
+      makeTrip({ id: 3, title: 'Минск', region: 'Минск' }),
+    ], isLoading: false, isError: false });
+    const screen = render(<MyCreatedTripsList />);
+    expect(screen.getByTestId('my-created-trips-filter-Брест')).toBeTruthy();
+    expect(screen.getByTestId('my-created-trips-filter-Гродно')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('my-created-trips-filter-Минск'));
+    expect(screen.getByTestId('mock-trip-card-3')).toBeTruthy();
+    expect(screen.queryByTestId('mock-trip-card-1')).toBeNull();
+    expect(screen.queryByTestId('mock-trip-card-2')).toBeNull();
+  });
+
   it('announces exactly one native search field', () => {
     const screen = render(<MyCreatedTripsList />);
     expect(screen.getAllByRole('search')).toHaveLength(1);

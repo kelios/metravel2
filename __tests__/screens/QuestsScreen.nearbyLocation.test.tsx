@@ -17,7 +17,7 @@ type ContentProps = ComponentProps<typeof QuestsContentPanel>;
 let mockContentProps: ContentProps;
 const mockRequestLocation = jest.fn();
 
-jest.mock('expo-router', () => ({ useIsFocused: () => true }));
+jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({}), useIsFocused: () => true }));
 jest.mock('@expo/vector-icons/Feather', () => 'Feather');
 jest.mock('@/screens/tabs/questCatalogLocation', () => ({
     requestQuestCatalogLocation: (...args: unknown[]) => mockRequestLocation(...args),

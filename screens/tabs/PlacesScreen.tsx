@@ -33,6 +33,7 @@ import { createStyles } from './PlacesScreen.styles'
 import { usePlacesCatalogController } from './usePlacesCatalogController'
 import { translate as i18nT } from '@/i18n'
 import { usePlacesScreenHeader } from './usePlacesScreenHeader'
+import PlacesCountryMenu, { PlacesScopeStatus } from './PlacesCountryMenu'
 
 
 export default function PlacesScreen() {
@@ -73,7 +74,9 @@ export default function PlacesScreen() {
     isInitialLoading,
     isResultsRefreshing,
     hasResultCount,
-    isScopeLoading,
+    scopeStatus,
+    retryScope,
+    requestCatalogScope,
     loadErrorDescription,
     loadMoreFailed,
     loadMorePlaces,
@@ -317,6 +320,7 @@ export default function PlacesScreen() {
             {...searchInputAccessibilityProps()}
                 value={query}
                 onChangeText={handleQueryChange}
+                onFocus={requestCatalogScope}
                 placeholder={i18nT('map:screens.tabs.PlacesScreen.poisk_po_nazvaniyu_ili_adresu_ef70caf8')}
                 placeholderTextColor={colors.textMuted}
                 style={styles.searchInput}
@@ -338,70 +342,13 @@ export default function PlacesScreen() {
               ) : null}
             </View>
 
-            <Menu
-              visible={countryMenuVisible}
-              onDismiss={() => setCountryMenuVisible(false)}
-              contentStyle={styles.countryMenuContent}
-              anchor={
-                <Pressable
-                  onPress={() => setCountryMenuVisible(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.vybrat_stranu_a7b66c0c')}
-                  accessibilityState={{ expanded: countryMenuVisible, disabled: isScopeLoading }}
-                  disabled={isScopeLoading}
-                  style={({ pressed }) => [
-                    styles.countrySelect,
-                    !!selectedCountry && styles.countrySelectActive,
-                    pressed && !isScopeLoading && PRESSED_OPACITY,
-                    isScopeLoading && styles.countrySelectDisabled,
-                  ]}
-                >
-                  <View style={styles.iconSlot16}>
-                    <Feather name="globe" size={16} color={selectedCountry ? colors.primary : colors.textMuted} />
-                  </View>
-                  <View style={styles.countrySelectTextBlock}>
-                    <Text style={styles.countrySelectLabel}>{i18nT('map:screens.tabs.PlacesScreen.strana_f749c62d')}</Text>
-                    <Text style={styles.countrySelectValue} numberOfLines={1}>
-                      {selectedCountry ?? i18nT('map:screens.tabs.PlacesScreen.vse_strany_08494525')}
-                      {showLoadedCounts && !selectedCountry ? ` (${catalogTotal})` : ''}
-                    </Text>
-                  </View>
-                  <View style={styles.iconSlot16}>
-                    <Feather name="chevron-down" size={16} color={colors.textMuted} />
-                  </View>
-                </Pressable>
-              }
-            >
-              <Menu.Item
-                style={styles.countryMenuItem}
-                title={showLoadedCounts ? i18nT('map:screens.tabs.PlacesScreen.vse_strany_value1_7f58288c', { value1: catalogTotal }) : i18nT('map:screens.tabs.PlacesScreen.vse_strany_08494525')}
-                onPress={() => handleSelectCountry(null)}
-                leadingIcon={({ size }) => (
-                  <Feather
-                    name={selectedCountry ? 'circle' : 'check-circle'}
-                    size={size}
-                    color={selectedCountry ? colors.textMuted : colors.primary}
-                  />
-                )}
-                titleStyle={selectedCountry ? styles.countryMenuItemText : styles.countryMenuItemTextActive}
-              />
-              {countryFacets.map((group) => (
-                <Menu.Item
-                  style={styles.countryMenuItem}
-                  key={group.name}
-                  title={`${group.name} (${group.count})`}
-                  onPress={() => handleSelectCountry(group.name)}
-                  leadingIcon={({ size }) => (
-                    <Feather
-                      name={selectedCountry === group.name ? 'check-circle' : 'circle'}
-                      size={size}
-                      color={selectedCountry === group.name ? colors.primary : colors.textMuted}
-                    />
-                  )}
-                  titleStyle={selectedCountry === group.name ? styles.countryMenuItemTextActive : styles.countryMenuItemText}
-                />
-              ))}
-            </Menu>
+            <PlacesCountryMenu
+              visible={countryMenuVisible} selectedCountry={selectedCountry}
+              countryFacets={countryFacets} catalogTotal={catalogTotal} showLoadedCounts={showLoadedCounts}
+              scopeStatus={scopeStatus} onRetry={retryScope}
+              onShow={() => setCountryMenuVisible(true)} onDismiss={() => setCountryMenuVisible(false)}
+              onSelect={handleSelectCountry} styles={styles} colors={colors}
+            />
           </View>
         </View>
         )}
@@ -446,7 +393,8 @@ export default function PlacesScreen() {
                 <TextInput
             {...searchInputAccessibilityProps()}
                   value={categoryQuery}
-                  onChangeText={setCategoryQuery}
+                  onChangeText={(next) => { requestCatalogScope(); setCategoryQuery(next) }}
+                  onFocus={requestCatalogScope}
                   placeholder={i18nT('map:screens.tabs.PlacesScreen.nayti_kategoriyu_9e5e9459')}
                   placeholderTextColor={colors.textMuted}
                   style={styles.categorySearchInput}
@@ -533,6 +481,7 @@ export default function PlacesScreen() {
                     ? i18nT('map:screens.tabs.PlacesScreen.ili_vyberite_kategorii_vruchnuyu_11fb6a00')
                     : i18nT('map:screens.tabs.PlacesScreen.vyberite_kategorii_8717e26b')}
               </Text>
+              <PlacesScopeStatus status={scopeStatus} onRetry={retryScope} styles={styles} colors={colors} />
               <View style={styles.chipRow}>
                 <Chip
                   label={i18nT('map:screens.tabs.PlacesScreen.vse_kategorii_f1b4a07f')}
@@ -622,6 +571,7 @@ export default function PlacesScreen() {
             {...searchInputAccessibilityProps()}
             value={query}
             onChangeText={handleQueryChange}
+          onFocus={requestCatalogScope}
             placeholder={i18nT('map:screens.tabs.PlacesScreen.poisk_mesta_642f16e6')}
             placeholderTextColor={colors.textMuted}
             style={styles.searchInput}
@@ -662,72 +612,13 @@ export default function PlacesScreen() {
             resolves it against an undefined main size — the pill inflated into a
             giant oval and the country label collapsed to zero width (Android). */}
         <View style={styles.compactCountryAnchor}>
-          <Menu
-            visible={countryMenuVisible}
-            onDismiss={() => setCountryMenuVisible(false)}
-            contentStyle={styles.countryMenuContent}
-            anchor={
-              <Pressable
-                onPress={() => setCountryMenuVisible(true)}
-                accessibilityRole="button"
-                accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.vybrat_stranu_a7b66c0c')}
-                accessibilityState={{ expanded: countryMenuVisible, disabled: isScopeLoading }}
-                disabled={isScopeLoading}
-                style={({ pressed }) => [
-                  styles.compactCountrySelect,
-                  !!selectedCountry && styles.compactCountrySelectActive,
-                  pressed && !isScopeLoading && PRESSED_OPACITY,
-                  isScopeLoading && styles.countrySelectDisabled,
-                ]}
-              >
-                <View style={styles.iconSlot16}>
-                  <Feather name="globe" size={16} color={selectedCountry ? colors.primary : colors.textMuted} />
-                </View>
-                <Text
-                  style={[
-                    styles.compactCountrySelectValue,
-                    !!selectedCountry && styles.compactCountrySelectValueActive,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {selectedCountry ?? i18nT('map:screens.tabs.PlacesScreen.vse_strany_08494525')}
-                </Text>
-                <View style={styles.iconSlot16}>
-                  <Feather name="chevron-down" size={16} color={colors.textMuted} />
-                </View>
-              </Pressable>
-            }
-          >
-            <Menu.Item
-              style={styles.countryMenuItem}
-              title={showLoadedCounts ? i18nT('map:screens.tabs.PlacesScreen.vse_strany_value1_7f58288c', { value1: catalogTotal }) : i18nT('map:screens.tabs.PlacesScreen.vse_strany_08494525')}
-              onPress={() => handleSelectCountry(null)}
-              leadingIcon={({ size }) => (
-                <Feather
-                  name={selectedCountry ? 'circle' : 'check-circle'}
-                  size={size}
-                  color={selectedCountry ? colors.textMuted : colors.primary}
-                />
-              )}
-              titleStyle={selectedCountry ? styles.countryMenuItemText : styles.countryMenuItemTextActive}
-            />
-            {countryFacets.map((group) => (
-              <Menu.Item
-                style={styles.countryMenuItem}
-                key={group.name}
-                title={`${group.name} (${group.count})`}
-                onPress={() => handleSelectCountry(group.name)}
-                leadingIcon={({ size }) => (
-                  <Feather
-                    name={selectedCountry === group.name ? 'check-circle' : 'circle'}
-                    size={size}
-                    color={selectedCountry === group.name ? colors.primary : colors.textMuted}
-                  />
-                )}
-                titleStyle={selectedCountry === group.name ? styles.countryMenuItemTextActive : styles.countryMenuItemText}
-              />
-            ))}
-          </Menu>
+          <PlacesCountryMenu compact
+            visible={countryMenuVisible} selectedCountry={selectedCountry}
+            countryFacets={countryFacets} catalogTotal={catalogTotal} showLoadedCounts={showLoadedCounts}
+            scopeStatus={scopeStatus} onRetry={retryScope}
+            onShow={() => setCountryMenuVisible(true)} onDismiss={() => setCountryMenuVisible(false)}
+            onSelect={handleSelectCountry} styles={styles} colors={colors}
+          />
         </View>
 
         <Pressable

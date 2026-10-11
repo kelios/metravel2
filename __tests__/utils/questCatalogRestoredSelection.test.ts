@@ -73,3 +73,23 @@ describe('сохранённый срез каталога квестов до �
     expect(panel).toContain("webDataSetProps({ questsSeoSlot: 'faq' })")
   })
 })
+
+
+describe('explicit theme first-frame priority (#2403)', () => {
+  beforeEach(() => { jest.useFakeTimers(); jest.setSystemTime(new Date(2026, 9, 15, 12)); });
+  afterEach(() => { jest.useRealTimers(); document.documentElement.className = ''; });
+  it.each(['unknown', '', 'halloween&theme=detective'])('invalid %s ignores saved narrowing city', (value) => {
+    expect(runHeadScript(`/quests?theme=${value}`, 'minsk')).toBe(false);
+  });
+  it('active normalized URL narrows even when storage is unavailable', () => {
+    jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('denied'); });
+    expect(runHeadScript('/quests?theme=%20HALLOWEEN%20', null)).toBe(true);
+    jest.restoreAllMocks();
+  });
+  it('uses the same civil calendar at both active boundaries and natural off-season', () => {
+    for (const [date, active] of [[new Date(2026, 9, 14), false], [new Date(2026, 9, 15), true], [new Date(2026, 10, 1), true], [new Date(2026, 10, 2), false]] as const) {
+      jest.setSystemTime(date);
+      expect(runHeadScript('/quests?theme=halloween', 'minsk')).toBe(active);
+    }
+  });
+});

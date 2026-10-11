@@ -183,6 +183,14 @@ describe('PlacesScreen category search', () => {
     expect(String(lastCall?.category)).toContain('Река')
   })
 
+  it('restores the Read action on place cards and keeps the internal article route', async () => {
+    const { findAllByText, queryByText } = render(<PlacesScreen />, { wrapper: createQueryWrapper().Wrapper })
+    const readActions = await findAllByText('Прочитать')
+    expect(queryByText('Статья')).toBeNull()
+    fireEvent.press(readActions[0])
+    expect(mockPush).toHaveBeenCalledWith('/travels/parking')
+  })
+
   it('shows an empty state when no category matches the query', async () => {
     const { findByTestId } = render(<PlacesScreen />, {
       wrapper: createQueryWrapper().Wrapper,

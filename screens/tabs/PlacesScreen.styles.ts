@@ -195,8 +195,10 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     borderColor: colors.primaryAlpha30,
     backgroundColor: colors.primarySoft,
   },
-  countrySelectDisabled: {
-    opacity: 0.58,
+  countryMenuStatus: {
+    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+    padding: DESIGN_TOKENS.spacing.md,
+    gap: DESIGN_TOKENS.spacing.sm,
   },
   countrySelectTextBlock: {
     flex: 1,

@@ -219,7 +219,9 @@ export class BlockRenderer {
     return flow
       .map((item, index) => {
         if (item.type === 'photo-text') {
-          return `<div class="pdf-photo-text-flow" style="display: flow-root; break-inside: auto; page-break-inside: auto;">
+          // Keep a fitting pair together; the UA can relax avoidance for an oversized
+          // group because its paragraph remains fragmentable and no height is fixed.
+          return `<div class="pdf-photo-text-flow" style="display: flow-root; break-inside: avoid; page-break-inside: avoid;">
             ${this.renderImage(item.image, { keepWithNext: true })}
             ${this.renderParagraph(item.paragraph, { allowPageBreak: true })}
           </div>`;

@@ -29,3 +29,13 @@ export const MY_CREATED_TRIPS_LAYOUT = defineBreakpointLayout({
 })
 
 export type MyCreatedTripsLayoutKey = keyof typeof MY_CREATED_TRIPS_LAYOUT.blocks
+
+export const MY_TRIP_LOCATION_FILTER_LAYOUT = {
+  titleLineHeight: 20,
+  gap: 8,
+  optionHeight: 44,
+  height: 72,
+} as const
+
+export const getMyTripLocationFilterState = (isLoading: boolean, regionCount: number) =>
+  isLoading ? 'loading' : regionCount > 0 ? 'ready' : 'empty'

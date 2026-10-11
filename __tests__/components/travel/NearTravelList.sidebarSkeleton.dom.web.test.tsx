@@ -20,7 +20,7 @@ import type React from 'react'
 let createElement: typeof import('react').createElement
 let renderToStaticMarkup: typeof import('react-dom/server').renderToStaticMarkup
 let StyleSheet: { getSheet: () => { textContent: string } }
-let SidebarSectionSkeleton: React.ComponentType
+let SidebarSectionSkeleton: React.ComponentType<{ canShowMapMode?: boolean }>
 let TravelDetailsSidebarSection: React.ComponentType<any>
 
 type NearState = { travels: { id: number; name: string }[]; isLoading: boolean }
@@ -118,7 +118,7 @@ const toHost = (element: React.ReactElement): HTMLElement => {
 
 const renderSkeleton = (width: number) => {
   viewportWidth = width
-  return toHost(createElement(SidebarSectionSkeleton))
+  return toHost(createElement(SidebarSectionSkeleton, { canShowMapMode: true }))
 }
 
 const renderMounted = (width: number, state: NearState) => {
@@ -168,15 +168,15 @@ const inFlow = (node: Element) => Array.from(node.children).filter((child) => !i
  * Каркас сайдбара — лёгкие View (ROUTE-BUNDLE-001), секция — SegmentedControl и
  * CardRail; сравнение идёт по геометрии, а не по разметке.
  */
-const nearGeometry = (wrapper: Element, toggle: Element, column: Element) => {
+const nearGeometry = (wrapper: Element, toggle: Element | null, column: Element) => {
   const slots = Array.from(column.querySelectorAll('[data-testid="near-travel-rail-slot"]'))
   const content = slots[0].parentElement!
   const chain: string[][] = []
   for (let node = content.parentElement!; node !== column; node = node.parentElement!) chain.push(boxOf(node))
   return {
     margin: layoutDeclarations(wrapper).join(';'),
-    toggle: boxOf(toggle).join(';'),
-    segment: Array.from(new Set(inFlow(toggle).map((segment) => boxOf(segment).filter((d) => d.startsWith('min-height:')).join(';')))),
+    toggle: toggle ? boxOf(toggle).join(';') : '',
+    segment: toggle ? Array.from(new Set(inFlow(toggle).map((segment) => boxOf(segment).filter((d) => d.startsWith('min-height:')).join(';')))) : [],
     column: layoutDeclarations(column).join(';'),
     chain: chain.filter((box) => box.length > 0),
     rail: layoutDeclarations(content).filter((d) => RAIL.test(d)).join(';'),
@@ -188,14 +188,17 @@ const nearGeometry = (wrapper: Element, toggle: Element, column: Element) => {
 const skeletonContent = (host: Element) => {
   const near = host.querySelector('[data-testid="travel-sidebar-near-skeleton"]')!
   const wrapper = near.lastElementChild!
-  const [toggle, column] = inFlow(wrapper.firstElementChild!)
+  const children = inFlow(wrapper.firstElementChild!)
+  const toggle = children[0].getAttribute('data-testid') === 'near-travel-toggle-skeleton' ? children[0] : null
+  const column = children[toggle ? 1 : 0]
   return nearGeometry(wrapper, toggle, column)
 }
 
 const mountedContent = (host: Element) => {
   const loaded = host.querySelector('[data-testid="travel-details-near-loaded"]')!
-  const [toggle, column] = inFlow(loaded.firstElementChild!)
-  expect(toggle.getAttribute('role')).toBe('radiogroup')
+  const children = inFlow(loaded.firstElementChild!)
+  const toggle = children[0].getAttribute('role') === 'radiogroup' ? children[0] : null
+  const column = children[toggle ? 1 : 0]
   return nearGeometry(loaded.parentElement!, toggle, column)
 }
 
@@ -229,6 +232,18 @@ describe.each([1280, 390])('каркас сайдбара «Рядом» = см�
     expect(near.querySelector('[role], button, a, [tabindex]')).toBeNull()
   })
 })
+
+describe.each([1280, 390])('coordinate-aware sidebar on %s (#2382)', (width) => {
+  it('omits the map toggle from both placeholder and mounted loading when the route has no coordinates', () => {
+    viewportWidth = width;
+    nearState = MOUNTED.loading;
+    const skeleton = toHost(createElement(SidebarSectionSkeleton, { canShowMapMode: false }));
+    const mounted = toHost(createElement(TravelDetailsSidebarSection, { travel: { id: 8 }, anchors: {}, canRenderHeavy: true }));
+    expect(skeleton.querySelector('[data-testid="near-travel-toggle-skeleton"]')).toBeNull();
+    expect(mounted.querySelector('[role="radiogroup"]')).toBeNull();
+    expect(skeletonContent(skeleton)).toEqual(mountedContent(mounted));
+  });
+});
 
 // ROUTE-BUNDLE-001: каркас едет в ленивых travel-чанках (PostLcpRuntime,
 // TravelDetailsDeferred, NearTravelList) без интерактивного ряда; модули общего

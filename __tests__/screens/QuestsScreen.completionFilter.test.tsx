@@ -28,7 +28,7 @@ let mockQuests: QuestMeta[] = [];
 let mockMobile = false;
 let mockFocused = true;
 
-jest.mock('expo-router', () => ({ useIsFocused: () => mockFocused }));
+jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({}), useIsFocused: () => mockFocused }));
 jest.mock('@expo/vector-icons/Feather', () => 'Feather');
 jest.mock('@/components/MapPage/Map.web', () => () => null);
 jest.mock('@/components/seo/LazyInstantSEO', () => () => null);

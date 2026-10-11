@@ -1,10 +1,10 @@
 ## 1. Geometry design and implementation after separate apply approval
 
-- [ ] 1.1 Write the versioned healthy/short-book schematic in `docs/features/home-hero-book-viewport-mock.md` and link it from the ticket before code.
-- [ ] 1.2 Consolidate book width/height, reserve and usable-height geometry into a focused runtime/SSG-compatible leaf model; add tests for 2048×900, 2560×640, control sizes and positive short-height fallback.
-- [ ] 1.3 Consume reactive viewport height, including height-only resize, and use height-based vertical paper insets/spacing and bounded readable typography in the existing style groups.
-- [ ] 1.4 Make the complete left-page content normally scrollable inside paper when required; preserve controls/order/decoration/photo ratio and tablet/mobile normal flow.
-- [ ] 1.5 Update static homepage CSS from the same model and extend `ssg-skeletons.test.ts` to cover wide/short parity.
+- [x] 1.1 Write the versioned healthy/short-book schematic in `docs/features/home-hero-book-viewport-mock.md` and link it from the ticket before code.
+- [x] 1.2 Consolidate book width/height, reserve and usable-height geometry into a focused runtime/SSG-compatible leaf model; add tests for 2048×900, 2560×640, control sizes and positive short-height fallback.
+- [x] 1.3 Consume reactive viewport height, including height-only resize, and use height-based vertical paper insets/spacing and bounded readable typography in the existing style groups.
+- [x] 1.4 Make the complete left-page content normally scrollable inside paper when required; preserve controls/order/decoration/photo ratio and tablet/mobile normal flow.
+- [x] 1.5 Update static homepage CSS from the same model and extend `ssg-skeletons.test.ts` to cover wide/short parity.
 - [ ] 1.6 Add `e2e/home-hero-book-viewport.spec.ts` with all mandatory elements, clipping-ancestor intersection, normal scroll/reveal and ordinary clicks; establish that the test detects the current defect, with execution reserved for testing.
 
 ## 2. Code review
@@ -20,3 +20,5 @@
 - [ ] 3.4 Compare cold SSG bounds/order/actions with loaded application and test keyboard focus/reveal and image fallback.
 - [ ] 3.5 Run `yarn verify:slider` and `yarn verify:slider-perf` only under their operation gate in testing; preserve media ratios and performance budgets.
 - [ ] 3.6 Run `openspec validate fix-home-book-viewport-geometry --type change --strict`; before archive run `openspec validate --all` and attach actual browser/performance evidence.
+
+Implementation note: task 1.6 regression is authored; its actual pre-fix failure and post-fix execution remain a testing-stage gate. Static/unit execution and independent review have not yet run.

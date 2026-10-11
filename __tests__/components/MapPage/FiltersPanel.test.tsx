@@ -235,7 +235,7 @@ describe('FiltersPanel', () => {
     })
 
     expect(getByTestId('filters-panel-header')).toBeTruthy()
-    expect(within(getByTestId('filters-panel-header')).getByText(/3 места/i)).toBeTruthy()
+    expect(within(getByTestId('filters-panel-header')).getByText(/3 точки/i)).toBeTruthy()
     expect(queryByTestId('filters-mobile-quick-row')).toBeNull()
     expect(queryByTestId('filters-mobile-context')).toBeNull()
     expect(getByTestId('filters-panel-footer')).toBeTruthy()

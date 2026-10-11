@@ -29,7 +29,7 @@ let mockQuests: QuestMeta[] = [];
 // Режим карты живёт в ленивой секции (#2389): её пропсы — у элемента `mapSlot`.
 const mapSectionProps = () => (mockContentProps.mapSlot as ReactElement<ComponentProps<typeof QuestsMapSection>>).props;
 
-jest.mock('expo-router', () => ({ useIsFocused: () => true }));
+jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({}), useIsFocused: () => true }));
 jest.mock('@expo/vector-icons/Feather', () => 'Feather');
 jest.mock('@/components/MapPage/Map.web', () => () => null);
 jest.mock('@/screens/tabs/questCatalogLocation', () => ({ requestQuestCatalogLocation: async () => null }));

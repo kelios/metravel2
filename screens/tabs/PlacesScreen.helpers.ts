@@ -12,7 +12,7 @@ export const PLACES_SEARCH_DEBOUNCE_MS = 400
 export const LOAD_MORE_SCROLL_THRESHOLD = 420
 export const PRESSED_OPACITY = { opacity: 0.72 } as const
 
-const DEFAULT_CATEGORY_SELECTION = [
+export const DEFAULT_CATEGORY_SELECTION = [
   'Замок',
   'Руины замка',
   'Дворец',
@@ -112,9 +112,19 @@ export const parseCategoryParam = (value: unknown): string[] => {
   if (typeof value !== 'string') return []
   return value
     .split(',')
-    .map((item) => decodeURIComponent(item).trim())
+    .map((item) => {
+      // Router parameters may already contain a literal percent sign. Preserve
+      // malformed escapes as a selectable token instead of crashing the screen.
+      try { return decodeURIComponent(item).trim() }
+      catch { return item.trim() }
+    })
     .filter(Boolean)
 }
+
+// Presence is part of the route contract: missing means the starter selection,
+// whereas an explicitly empty category means the full catalog.
+export const resolvePlacesCategorySelection = (value: unknown): string[] =>
+  value === undefined ? [...DEFAULT_CATEGORY_SELECTION] : parseCategoryParam(value)
 
 export const isSameCategorySet = (left: string[], right: readonly string[]): boolean => {
   if (left.length !== right.length) return false

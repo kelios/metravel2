@@ -4,7 +4,7 @@
  */
 import { useMemo } from 'react'
 
-import { formatPlaces } from '@/utils/pluralize'
+import { formatMapPoints, qualifyMapPointCount } from '@/utils/mapPointCount'
 import { DEFAULT_RADIUS_KM, formatRadiusValue } from '@/constants/mapConfig'
 import { translate as i18nT } from '@/i18n'
 
@@ -149,7 +149,7 @@ export function useMapMobileDerivations(
     // Радиус намеренно НЕ дублируем в сводке: он уже показан отдельным
     // тап-чипом «N км» в ряду чипов и (на native) плавающей пилюлей на карте.
     const parts = [
-      travelsData.length > 999 ? i18nT('map:hooks.map.useMapMobileDerivations.999_mest_c3798c1b') : formatPlaces(travelsData.length),
+      qualifyMapPointCount(travelsData.length > 999 ? i18nT('map:hooks.map.useMapMobileDerivations.999_mest_c3798c1b') : formatMapPoints(travelsData.length), 'loaded'),
     ]
 
     if (selectedCategories.length === 1) {

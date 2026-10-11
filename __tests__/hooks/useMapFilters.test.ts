@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useMapFilters } from '@/hooks/map/useMapFilters';
 import { fetchFiltersMap } from '@/api/map';
@@ -84,5 +84,32 @@ describe('useMapFilters', () => {
         ),
       ).toEqual([43]);
     });
+  });
+
+  it('preserves numeric and unknown URL tokens during loading, then resolves only registered IDs', async () => {
+    let finish!: (value: any) => void;
+    mockedFetchFiltersMap.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+    const { result } = renderHook(() => useMapFilters({ initialCategories: ['43', 'Unknown'] }));
+    expect(result.current.filters.categoryDictionaryState).toBe('loading');
+    expect(result.current.filterValues.categoryTravelAddress).toEqual(['43', 'Unknown']);
+    await act(async () => { finish({ categories: [{ id: '43', name: 'Замок' }] }); });
+    await waitFor(() => expect(result.current.filters.categoryDictionaryState).toBe('ready'));
+    expect(result.current.filterValues.categoryTravelAddress).toEqual(['Замок', 'Unknown']);
+  });
+
+  it('retains pending tokens when the dictionary request fails', async () => {
+    mockedFetchFiltersMap.mockRejectedValue(new Error('dictionary unavailable'));
+    const { result } = renderHook(() => useMapFilters({ initialCategories: ['43', 'Unknown'] }));
+    await waitFor(() => expect(result.current.filters.categoryDictionaryState).toBe('error'));
+    expect(result.current.filterValues.categoryTravelAddress).toEqual(['43', 'Unknown']);
+    expect(result.current.error).toBeTruthy();
+  });
+
+  it('distinguishes a loaded empty dictionary from pending loading', async () => {
+    mockedFetchFiltersMap.mockResolvedValue({ categories: [] } as any);
+    const { result } = renderHook(() => useMapFilters({ initialCategories: ['43'] }));
+    await waitFor(() => expect(result.current.filters.categoryDictionaryState).toBe('ready'));
+    expect(result.current.filters.categoryTravelAddress).toEqual([]);
+    expect(result.current.filterValues.categoryTravelAddress).toEqual(['43']);
   });
 });

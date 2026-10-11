@@ -94,6 +94,7 @@ const createStyles = (
     },
     input: {
       flex: 1,
+      minHeight: useBookPaperColors ? 44 : undefined,
       fontSize: isMobile ? 14 : 15,
       ...Platform.select({ web: { outlineStyle: 'none' } as any, default: {} }),
     },

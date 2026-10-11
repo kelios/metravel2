@@ -4,7 +4,7 @@
  * не сбрасывает тему в «Все квесты», что сохранённая тема (в том числе вне
  * сезона) восстанавливается со своими квестами, а неизвестная — сбрасывается.
  */
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import type { ComponentProps } from 'react';
@@ -17,8 +17,9 @@ import QuestsScreen from '@/screens/tabs/QuestsScreen';
 type ContentProps = ComponentProps<typeof QuestsContentPanel>;
 let mockContentProps: ContentProps;
 let mockQuests: QuestMeta[] = [];
+let mockThemeQuery: string | string[] | undefined;
 
-jest.mock('expo-router', () => ({ useIsFocused: () => true }));
+jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({ theme: mockThemeQuery }), useIsFocused: () => true }));
 jest.mock('@expo/vector-icons/Feather', () => 'Feather');
 jest.mock('@/components/MapPage/Map.web', () => () => null);
 jest.mock('@/components/seo/LazyInstantSEO', () => () => null);
@@ -68,6 +69,7 @@ const CATALOG = () => [
 beforeEach(async () => {
     (Platform as { OS: string }).OS = 'web';
     mockQuests = CATALOG();
+    mockThemeQuery = undefined;
     await AsyncStorage.clear();
     jest.clearAllMocks();
 });
@@ -110,4 +112,35 @@ it('resets a stored theme that is no longer in the registry', async () => {
         expect(AsyncStorage.setItem).toHaveBeenCalledWith(STORAGE_SELECTED_CITY, ALL_QUESTS_ID);
     });
     expect(mockContentProps.questsAll).toHaveLength(3);
+});
+
+
+it('URL entry filters real catalog tags, Reset stays All and a later URL applies once', async () => {
+    mockThemeQuery = 'LEGENDS';
+    await AsyncStorage.setItem(STORAGE_SELECTED_CITY, 'minsk');
+    const view = render(<QuestsScreen />);
+    await waitFor(() => expect(mockContentProps.questsAll.map((q) => q.id)).toEqual(['ghosts', 'myths']));
+    expect(mockContentProps.selectedCityId).toBe('__theme__:legends');
+    await act(async () => { await mockContentProps.onResetFilters(); });
+    view.rerender(<QuestsScreen />);
+    await waitFor(() => expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID));
+    expect(mockContentProps.questsAll).toHaveLength(3);
+    mockThemeQuery = 'unknown';
+    view.rerender(<QuestsScreen />);
+    await waitFor(() => expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID));
+    mockThemeQuery = 'legends';
+    view.rerender(<QuestsScreen />);
+    await waitFor(() => expect(mockContentProps.selectedCityId).toBe('__theme__:legends'));
+});
+
+it('keeps newer URL intent when the same render invalidates the previous city', async () => {
+    await AsyncStorage.setItem(STORAGE_SELECTED_CITY, 'minsk');
+    const view = render(<QuestsScreen />);
+    await waitFor(() => expect(mockContentProps.selectedCityId).toBe('minsk'));
+    mockQuests = CATALOG().map((item) => ({ ...item, cityId: 'grodno', cityName: 'Гродно' }));
+    mockThemeQuery = 'legends';
+    view.rerender(<QuestsScreen />);
+    await waitFor(() => expect(mockContentProps.selectedCityId).toBe('__theme__:legends'));
+    expect(mockContentProps.questsAll.map((item) => item.id)).toEqual(['ghosts', 'myths']);
+    expect(AsyncStorage.setItem).toHaveBeenLastCalledWith(STORAGE_SELECTED_CITY, '__theme__:legends');
 });

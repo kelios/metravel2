@@ -191,7 +191,7 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 | `app/(tabs)/trips/plan/[id].tsx` | 688 | экран поездки: шапка, owner-редактор метаданных, табы планировщика, удаление |
 | `components/trips/planning/TripPlanRouteMap.web.tsx` | 661 | Leaflet/React-Leaflet карта конструктора на web, слои, fullscreen |
 | `components/trips/planning/TripCreateForm.tsx` | 653 | форма создания поездки, yup-валидация, prefill из travel |
-| `components/trips/MyCreatedTripsList.tsx` | 483 | список моих поездок (организую/участвую), фильтры, удаление |
+| `components/trips/MyCreatedTripsList.tsx`, `components/trips/myCreatedTripsLayout.ts` | — | список моих поездок (организую/участвую), фильтры, удаление и общий responsive-контракт первого кадра |
 | `components/trips/planning/TripReportForm.tsx` | 422 | пост-отчёт и публикация маршрута в сообщество |
 | `components/trips/chat/TripChatPanel.tsx` | 409 | чат поездки |
 | `components/trips/PublicTripsCatalog.tsx` | 404 | каталог: поиск, фильтры, адаптивная сетка 1/2/3 колонки |
@@ -416,6 +416,12 @@ DTO `PublicTripDto` (snake_case): `id`, `owner`, `owner_profile`, `title`,
 | `route`, `routeGeometry`, `routeSummary`, `routingState`, `participants`, `coverUrl` | `mapCommunityTrip` | **пусты/`null` по построению** — в каталоге сообщества маршрута нет |
 | `RouteTemplate.points` / `.transport` | `mapTemplate` | `points: []`, `transport: 'car'` захардкожены; «Применить шаблон» ставит пустой маршрут |
 | `report.photoUrls` | `submitTripReport` | **всегда `[]`** — форма загружает фото, ответ их не возвращает |
+
+До завершения личного запроса панель резервирует декоративный слот «Место» из
+`MY_TRIP_LOCATION_FILTER_LAYOUT`. Непустые регионы занимают тот же слот:
+заголовок и вертикальная область высотой одной кнопки 44 px, содержащая все
+варианты с доступной прокруткой и фокусом. Подтверждённый ответ без регионов
+убирает слот; он не изображает работающий фильтр во время загрузки.
 
 Фильтры `CommunityTripsFilters.minDistanceKm`/`maxDistanceKm` объявлены в типе и
 входят в ключ запроса, но `fetchCommunityTrips` кладёт в query только

@@ -4,6 +4,7 @@
 
 import { StyleSheet } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { getHomeBookPageMetrics, HOME_BOOK_GEOMETRY } from './homeBookGeometry'
 
 import type { HeroStyleContext, HeroStyleParams } from './homeHeroStyles/context'
 import { createHeroShellStyles } from './homeHeroStyles/shellStyles'
@@ -32,56 +33,24 @@ export const createHomeHeroStyles = ({
   isTabletLayout = false,
 }: HeroStyleParams) => {
   const hasBookLayout = showSideSlider && bookHeight > 0
-  const desktopBookViewportReserve = 180
   const isUltraWideBook = showSideSlider && viewportWidth >= 2560
   const isLargeDesktopBook = showSideSlider && viewportWidth >= 1920
   const isNarrowDesktopBook =
     showSideSlider && viewportWidth >= 1280 && viewportWidth < 1480
 
-  // Modern CSS 2026: fluid values via clamp() — no JS scaling math
-  // All vw-based values reference the viewport, matching how the book fills screen
-  // Book occupies ~90vw capped at 1400px. Left page ≈ 54% of that ≈ 27vw.
-  // Title: fluid 24px → 42px across 1280–2560px viewport range
-  const desktopBookTitleSize = hasBookLayout
-    ? `clamp(24px, ${isNarrowDesktopBook ? '1.9vw' : isUltraWideBook ? '2.8vw' : isLargeDesktopBook ? '2.4vw' : '2.1vw'}, ${isNarrowDesktopBook ? 32 : isUltraWideBook ? 74 : isLargeDesktopBook ? 58 : 38}px)`
-    : '54px'
-  const desktopBookTitleLineHeight = hasBookLayout
-    ? `clamp(29px, ${isNarrowDesktopBook ? '2.35vw' : isUltraWideBook ? '3.4vw' : isLargeDesktopBook ? '3vw' : '2.65vw'}, ${isNarrowDesktopBook ? 36 : isUltraWideBook ? 82 : isLargeDesktopBook ? 64 : 44}px)`
-    : '64px'
-  const desktopBookSubtitleSize = hasBookLayout
-    ? `clamp(12px, ${isNarrowDesktopBook ? '0.85vw' : isUltraWideBook ? '1.1vw' : isLargeDesktopBook ? '0.95vw' : '0.9vw'}, ${isNarrowDesktopBook ? 13 : isUltraWideBook ? 22 : isLargeDesktopBook ? 18 : 14}px)`
-    : '17px'
-  const desktopBookSubtitleLineHeight = hasBookLayout
-    ? `clamp(18px, ${isNarrowDesktopBook ? '1.4vw' : '1.6vw'}, ${isUltraWideBook ? 32 : isLargeDesktopBook ? 27 : 22}px)`
-    : '28px'
+  const pageMetrics = getHomeBookPageMetrics(viewportWidth, bookHeight)
+  const desktopBookTitleSize = hasBookLayout ? `${pageMetrics.titleSize}px` : '54px'
+  const desktopBookTitleLineHeight = hasBookLayout ? `${pageMetrics.titleLineHeight}px` : '64px'
+  const desktopBookSubtitleSize = hasBookLayout ? `${pageMetrics.subtitleSize}px` : '17px'
+  const desktopBookSubtitleLineHeight = hasBookLayout ? `${pageMetrics.subtitleLineHeight}px` : '28px'
 
-  // Left page padding: percentage-based relative to heroSection width so it scales naturally.
-  // The book image has spine/binding ~14% from left, ~6% from right, ~7% top, ~11% bottom.
-  // Percentages here are of the heroSection element (left page column = 54% of book width).
-  // 14% of left-page-width ≈ 10% of full book width — so we use ~19% to reach past spine.
-  const leftPagePaddingLeft = hasBookLayout
-    ? isUltraWideBook
-      ? '17%'
-      : isLargeDesktopBook
-        ? '18%'
-        : isNarrowDesktopBook
-          ? '16%'
-          : '17%'
-    : 100
-  const leftPagePaddingRight = hasBookLayout
-    ? isUltraWideBook
-      ? '8%'
-      : '9%'
-    : 16
-  const leftPagePaddingTop = hasBookLayout
-    ? isUltraWideBook
-      ? '8%'
-      : isLargeDesktopBook
-        ? '8.5%'
-        : isNarrowDesktopBook
-          ? '7.5%'
-          : '8%'
-    : 48
+  // CSS percentage padding resolves against the containing book row width.
+  // Convert the paper's page-relative horizontal shares to book-relative ones.
+  const leftPageShare = isNarrowDesktopBook ? 0.49 : 0.5
+  const leftInsetShare = isUltraWideBook ? 0.17 : isLargeDesktopBook ? 0.18 : isNarrowDesktopBook ? 0.16 : 0.17
+  const leftPagePaddingLeft = hasBookLayout ? `${leftPageShare * leftInsetShare * 100}%` : 100
+  const leftPagePaddingRight = hasBookLayout ? `${leftPageShare * (isUltraWideBook ? 0.08 : 0.09) * 100}%` : 16
+  const leftPagePaddingTop = hasBookLayout ? pageMetrics.topInset : 48
   const leftPageWidth = showSideSlider
     ? isNarrowDesktopBook
       ? '49%'
@@ -92,19 +61,11 @@ export const createHomeHeroStyles = ({
       ? '51%'
       : '50%'
     : 320
-  const isCompactBookLayout = hasBookLayout && bookHeight <= 760
+  const isCompactBookLayout = hasBookLayout && bookHeight <= HOME_BOOK_GEOMETRY.compactHeight
   const isVeryCompactBookLayout = hasBookLayout && bookHeight <= 640
   const useDenseBookNotes = showSideSlider && viewportWidth < 2200
 
-  const leftPagePaddingBottom = hasBookLayout
-    ? isUltraWideBook
-      ? '14%'
-      : isLargeDesktopBook
-        ? '15%'
-        : isCompactBookLayout
-          ? '17%'
-          : '18%'
-    : 110
+  const leftPagePaddingBottom = hasBookLayout ? pageMetrics.bottomInset : 110
 
   const warmBg = colors.background
   const warmBgSoft = hasBookLayout
@@ -159,7 +120,6 @@ export const createHomeHeroStyles = ({
     isCompactBookLayout,
     isVeryCompactBookLayout,
     useDenseBookNotes,
-    desktopBookViewportReserve,
     desktopBookTitleSize,
     desktopBookTitleLineHeight,
     desktopBookSubtitleSize,

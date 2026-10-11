@@ -9,7 +9,7 @@ import { Platform } from 'react-native'
 // QuestsScreen must not add a second hidden raw heading beside it. Heavy
 // children (map, content panel, sidebar) are stubbed out here.
 jest.mock('expo-router', () => ({
-  useIsFocused: () => true,
+  useLocalSearchParams: () => ({}), useIsFocused: () => true,
 }))
 jest.mock('expo-router/head', () => {
   const React = require('react') as typeof import('react')

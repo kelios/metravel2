@@ -1,4 +1,4 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useMemo, useState, type SetStateAction } from 'react'
 import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native'
 import { Platform } from 'react-native'
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
@@ -19,7 +19,7 @@ import {
   getActiveCategoryTitle,
   getCatalogLoadErrorDescription,
   isSameCategorySet,
-  parseCategoryParam,
+  resolvePlacesCategorySelection,
 } from './PlacesScreen.helpers'
 import { usePlacesCatalogQueries } from './usePlacesCatalogQueries'
 
@@ -44,13 +44,15 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
   const [categoryQuery, setCategoryQuery] = useState('')
   const deferredCategoryQuery = useDeferredValue(categoryQuery)
   const [selectedCategories, setSelectedCategories] = useState<string[]>(() =>
-    Platform.OS === 'web' ? [] : parseCategoryParam(params.category),
+    Platform.OS === 'web' ? [] : resolvePlacesCategorySelection(params.category),
   )
+  const [implicitCategorySelection, setImplicitCategorySelection] = useState(params.category === undefined)
+  const [scopeRequested, setScopeRequested] = useState(false)
   const [selectedCountry, setSelectedCountry] = useState<string | null>(() =>
     Platform.OS !== 'web' && typeof params.country === 'string' && params.country.trim() ? params.country.trim() : null,
   )
-  const [filtersOpen, setFiltersOpen] = useState(false)
-  const [countryMenuVisible, setCountryMenuVisible] = useState(false)
+  const [filtersOpen, setFiltersOpenState] = useState(false)
+  const [countryMenuVisible, setCountryMenuVisibleState] = useState(false)
   const [sortMenuVisible, setSortMenuVisible] = useState(false)
   const [sortMode, setSortMode] = useState<PlacesCatalogSort>('default')
   const [topBarHeight, setTopBarHeight] = useState(0)
@@ -66,7 +68,16 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
   // debounced search before enabling any list/scope/aggregate request.
   const queryReady = urlParamsApplied && appliedQuery === query.trim()
   const interestingCategoryCollections = useMemo(getInterestingCategoryCollections, [])
-  const { collectionCounts, isScopeLoading, placesQuery, scope } = usePlacesCatalogQueries({
+  const requestCatalogScope = useCallback(() => setScopeRequested(true), [])
+  const setCountryMenuVisible = useCallback((next: boolean) => {
+    if (next) requestCatalogScope()
+    setCountryMenuVisibleState(next)
+  }, [requestCatalogScope])
+  const setFiltersOpen = useCallback((next: SetStateAction<boolean>) => {
+    requestCatalogScope()
+    setFiltersOpenState(next)
+  }, [requestCatalogScope])
+  const { collectionCounts, isScopeLoading, placesQuery, scope, scopeStatus, retryScope } = usePlacesCatalogQueries({
     q: appliedQuery || undefined,
     categories: selectedCategories,
     country: selectedCountry,
@@ -74,6 +85,7 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
     collections: interestingCategoryCollections,
     enabled: queryReady,
     showCollections: showCollections && hasMeasuredWidth,
+    scopeRequested: !implicitCategorySelection || scopeRequested,
   })
 
   const visiblePlaces = useMemo(
@@ -109,15 +121,18 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
   }, [categoryFacets, deferredCategoryQuery, selectedCategories])
 
   const syncCategoryParams = useCallback((categories: string[]) => {
+    setImplicitCategorySelection(false)
     router.setParams(categories.length > 0 ? { category: categories.join(',') } : { category: '' })
   }, [router])
   const handleQueryChange = useCallback((next: string) => {
+    requestCatalogScope()
     setQuery(next)
     router.setParams(next ? { q: next } : { q: '' })
-  }, [router])
+  }, [router, requestCatalogScope])
 
   useEffect(() => {
-    const nextCategories = parseCategoryParam(params.category)
+    const nextCategories = resolvePlacesCategorySelection(params.category)
+    setImplicitCategorySelection(params.category === undefined)
     setSelectedCategories((current) =>
       isSameCategorySet(current, nextCategories) ? current : nextCategories,
     )
@@ -165,10 +180,11 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
     syncCategoryParams(next)
   }, [syncCategoryParams])
   const handleSelectCountry = useCallback((country: string | null) => {
+    requestCatalogScope()
     setSelectedCountry(country)
     setCountryMenuVisible(false)
     router.setParams(country ? { country } : { country: '' })
-  }, [router])
+  }, [router, requestCatalogScope, setCountryMenuVisible])
   const handleSelectSort = useCallback((next: PlacesCatalogSort) => {
     setSortMode(next)
     setSortMenuVisible(false)
@@ -207,11 +223,14 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
 
   const hasActiveFilters = selectedCategories.length > 0 || Boolean(selectedCountry) || Boolean(query)
   const resetAll = useCallback(() => {
-    handleQueryChange('')
+    setQuery('')
     setCategoryQuery('')
-    handleClearCategories()
-    handleSelectCountry(null)
-  }, [handleClearCategories, handleQueryChange, handleSelectCountry])
+    setSelectedCategories([])
+    setImplicitCategorySelection(false)
+    setSelectedCountry(null)
+    setCountryMenuVisibleState(false)
+    router.setParams({ q: '', category: '', country: '' })
+  }, [router])
   // Загруженный список остаётся на экране и при сбое фонового обновления или
   // дозагрузки: блок ошибки заменяет его, только когда показать нечего.
   const isInitialLoading = !urlParamsApplied || placesQuery.isLoading || (!queryReady && !placesQuery.data)
@@ -251,6 +270,9 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
     isResultsRefreshing,
     hasResultCount,
     isScopeLoading,
+    scopeStatus,
+    retryScope,
+    requestCatalogScope,
     loadErrorDescription: getCatalogLoadErrorDescription(placesQuery.error),
     loadMoreFailed,
     loadMorePlaces,

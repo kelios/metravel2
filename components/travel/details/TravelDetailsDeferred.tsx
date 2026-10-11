@@ -9,6 +9,7 @@ import {
   RatingSectionSkeleton,
 } from '@/components/travel/TravelDetailSkeletons'
 import { SidebarSectionSkeleton } from '@/components/travel/NearTravelListSkeleton'
+import { canShowNearTravelMapMode, getNearTravelMapOrigin } from '@/components/travel/utils/nearTravelMapAvailability'
 
 import type { AnchorsMap } from './TravelDetailsTypes'
 import { withLazy } from './TravelDetailsLazy'
@@ -43,7 +44,6 @@ const TravelDetailsMapSectionLazy = withLazy(() =>
 const AUTHOR_PLACEHOLDER = <AuthorSectionSkeleton />
 const RATING_PLACEHOLDER = <RatingSectionSkeleton />
 const MAP_PLACEHOLDER = <MapSectionSkeleton />
-const SIDEBAR_PLACEHOLDER = <SidebarSectionSkeleton />
 const COMMENTS_PLACEHOLDER = <CommentsSkeleton />
 
 type FooterRuntimeFrameProps = {
@@ -125,6 +125,7 @@ export const TravelDeferredSections: React.FC<{
   })
 
   const shouldLoadAuthor = shouldLoadAuthorSection
+  const sidebarPlaceholder = <SidebarSectionSkeleton canShowMapMode={canShowNearTravelMapMode(getNearTravelMapOrigin(travel))} />
   const shouldLoadRatingSection = shouldLoadRating
   const shouldLoadMapSection = shouldLoadMap || shouldForceLoadMapSection(forceOpenKey)
   const shouldLoadSidebarSection = shouldLoadSidebar || shouldForceLoadSidebarSection(forceOpenKey)
@@ -260,13 +261,13 @@ export const TravelDeferredSections: React.FC<{
           testID="travel-details-sidebar-transition"
           isMobile={isMobile}
           pending={!shouldLoadSidebarSection}
-          placeholder={SIDEBAR_PLACEHOLDER}
+          placeholder={sidebarPlaceholder}
           reserveHeight={TRAVEL_DETAILS_FOOTER_RESERVE_HEIGHT}
           runtimeFrameReady={sidebarSettle.settled}
           runtimeVisibilityReady={sidebarRuntimeVisibilityReady}
         >
           {shouldLoadSidebarSection ? (
-            <Suspense fallback={SIDEBAR_PLACEHOLDER}>
+            <Suspense fallback={sidebarPlaceholder}>
               <TravelDetailsSidebarSectionLazy
                 travel={travel}
                 anchors={anchors}

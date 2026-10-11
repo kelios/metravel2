@@ -22,6 +22,32 @@ const { BOTTOM_DOCK_HEIGHT: WEB_MOBILE_FOOTER_RESERVE_HEIGHT } = require('../../
 const { buildCriticalCSS } = require('../../utils/criticalCSSBuilder');
 
 describe('ssg-skeletons', () => {
+  describe('height-aware desktop book shell (#2405)', () => {
+    it('emits shared width caps, positive short-height fallback and the complete scrollable content in existing order', () => {
+      const css = buildSkeletonCSS()
+      for (const cap of [1200, 1360, 1520]) {
+        expect(css).toContain(`--home-book-width:min(calc(100vw - 80px),${cap}px)`)
+      }
+      expect(css).toContain('--home-book-height:max(240px,min(calc(100vh - 180px)')
+      expect(css).toContain('font-size:max(24px,min(2.8vw,74px,calc(var(--home-book-usable-height) * .1)))')
+      expect(css).toContain('font-size:max(12px,min(1.1vw,22px,calc(var(--home-book-usable-height) * .03)))')
+      expect(css).toContain('overflow-y:auto;overflow-x:hidden')
+      expect(css).not.toContain('top:11.0%')
+      const { homeGenerated1 } = require('../../i18n/locales/ru/generated/home_01')
+      expect(HOME_COPY.subDesktopCompact).toBe(homeGenerated1['components.home.HomeHero.realnye_marshruty_po_belarusi_i_evrope_s_fot_3bbf5fae'])
+      const dom = new DOMParser().parseFromString(buildHomeSkeletonHtml(), 'text/html')
+      const frame = dom.querySelector('.ssg-home-page-content')!
+      const children = Array.from(frame.children)
+      const title = children.findIndex((node) => node.classList.contains('ssg-home-title'))
+      const description = children.findIndex((node) => node.classList.contains('ssg-home-sub-desktop'))
+      const search = children.findIndex((node) => node.classList.contains('ssg-home-search-row'))
+      const action = children.findIndex((node) => node.classList.contains('ssg-home-cta'))
+      expect(title).toBeGreaterThanOrEqual(0)
+      expect(description).toBeGreaterThan(title)
+      expect(search).toBeGreaterThan(description)
+      expect(action).toBeGreaterThan(search)
+    })
+  })
   describe('actual SSG navigation before app JavaScript (#2216)', () => {
     const rootWithDock = '<div id="root"><div data-testid="web-mobile-dock-shell"><div data-testid="footer-dock-row"><a href="/more">Ещё</a></div></div></div>';
     const documentWithRoot = (root: string) => `<!DOCTYPE html><html><head></head><body>${root}</body></html>`;
@@ -672,7 +698,7 @@ describe('ssg-skeletons', () => {
       const shellPaddingTop = 52;
       expect(desktopBar + shellPaddingTop).toBe(130);
       const bookWidth = Math.min(1350 - 15 - 80, 1200); // вьюпорт минус скроллбар и padding шелла
-      const bookHeight = Math.min(940 - 180, (1350 - 80) / 1.3594771);
+      const bookHeight = Math.min(940 - 180, bookWidth * 765 / 1040);
       expect(bookWidth).toBe(1200);
       expect(Math.round(bookHeight)).toBe(760);
       // #1541: слот фото — ландшафт 3:2. Замер React 2026-08-25 на этом же
@@ -681,17 +707,23 @@ describe('ssg-skeletons', () => {
       // пропорции набора, отступ сверху — 29,2% высоты книги.
       expect(Math.round(bookWidth * 0.51 * 0.612)).toBe(375);
       expect(Math.round((bookWidth * 0.51 * 0.612) / 1.5)).toBe(250);
-      expect(Math.round(bookHeight * 0.292)).toBe(222);
+      const { resolveHomeBookGeometry } = require('../../components/home/homeBookGeometry');
+      const book = resolveHomeBookGeometry(1350, 940);
+      expect(book.height).toBe(bookHeight);
+      expect(book.usableHeight).toBeCloseTo(592.8);
 
       expect(css).toMatch(/@media\(min-width:1280px\)\{[^\n]*\.ssg-home-bar\{height:78px/);
       expect(css).toContain('.ssg-home-shell{max-width:none;padding:52px 40px 24px}');
       expect(css).toContain('grid-template-columns:49% 51%');
-      expect(css).toContain('width:min(100%,1200px);height:min(calc(100svh - 180px),calc((100vw - 80px)/1.3594771))');
+      expect(css).toContain('--home-book-width:min(calc(100vw - 80px),1200px)');
+      expect(css).toContain('--home-book-height:max(240px,min(calc(100vh - 180px)');
       // Прежняя привязка через aspect-ratio делала книгу на 167 px уже настоящей.
       expect(css).not.toContain('aspect-ratio:1040/765');
       expect(css).toContain('background-image:var(--image-homeHeroBook,none)');
-      expect(css).toContain('.ssg-home-page{position:relative;top:11.0%;align-self:start;');
-      expect(css).toContain('padding:0 18.4% 0 32.65%');
+      expect(css).toContain('.ssg-home-page{position:relative;align-self:stretch;min-height:0;');
+      expect(css).toContain('padding-top:calc(var(--home-book-height) * 0.08)');
+      expect(css).toContain('padding-bottom:calc(var(--home-book-height) * 0.14)');
+      expect(css).toContain('.ssg-home-page-content{display:flex;flex-direction:column;min-height:0;overflow-y:auto;overflow-x:hidden}');
       expect(css).toContain(
         '.ssg-home-week{top:29.2%;align-self:start;width:61.2%;aspect-ratio:3/2;margin:0 0 0 5.1%',
       );

@@ -14,6 +14,8 @@ import { getNearbyTravelsSubtitle } from '@/constants/nearby'
 import { translate as i18nT } from '@/i18n'
 import { TravelDetailsDeferredTransition } from '@/components/travel/details/TravelDetailsDeferredTransition'
 import { METRICS } from '@/constants/layout'
+import { NearTravelListSkeleton, PopularTravelListSkeleton } from '@/components/travel/NearTravelListSkeleton'
+import { canShowNearTravelMapMode, getNearTravelMapOrigin } from '@/components/travel/utils/nearTravelMapAvailability'
 
 
 const SIDEBAR_CONTENT_MARGIN_STYLE = { marginTop: 8 } as const
@@ -35,6 +37,7 @@ export const TravelDetailsSidebarSection: React.FC<{
   const styles = useTravelDetailsStyles()
   const colors = useThemedColors()
   const { width } = useWindowDimensions()
+  const canShowMapMode = canShowNearTravelMapMode(getNearTravelMapOrigin(travel))
   const {
     handleTravelsLoaded,
     hasValidTravelId,
@@ -99,7 +102,7 @@ export const TravelDetailsSidebarSection: React.FC<{
         <View style={SIDEBAR_CONTENT_MARGIN_STYLE}>
           {hasValidTravelId && (
             <View testID="travel-details-near-loaded">
-              <Suspense fallback={<View style={LIST_FALLBACK_STYLE} />}>
+              <Suspense fallback={Platform.OS === 'web' ? <NearTravelListSkeleton canShowMapMode={canShowMapMode} /> : <View style={LIST_FALLBACK_STYLE} />}>
                 <NearTravelListComponent
                   travel={travel}
                   onTravelsLoaded={handleTravelsLoaded}
@@ -132,7 +135,7 @@ export const TravelDetailsSidebarSection: React.FC<{
         <Text style={styles.sectionSubtitle}>{i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.samye_prosmatrivaemye_napravleniya_za_nedely_e8d2c61d')}</Text>
         <View style={SIDEBAR_CONTENT_MARGIN_STYLE}>
           <View testID="travel-details-popular-loaded">
-            <Suspense fallback={<View style={LIST_FALLBACK_STYLE} />}>
+            <Suspense fallback={Platform.OS === 'web' ? <PopularTravelListSkeleton /> : <View style={LIST_FALLBACK_STYLE} />}>
               <PopularTravelListComponent title={null} showHeader={false} embedded />
             </Suspense>
           </View>

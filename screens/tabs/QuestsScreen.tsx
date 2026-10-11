@@ -46,7 +46,6 @@ import {
     filterKidsQuests,
     filterNearbyQuests,
     filterQuestsByMapSearchArea,
-    resolveStoredQuestCatalogSelection,
     parseThemeSelectionId,
     toThemeSelectionId,
     loadExpoLocation,
@@ -57,6 +56,7 @@ import { filterQuestsByTheme, getActiveQuestThemes, getQuestThemeById } from '@/
 import { canRankQuestsByRating, sortQuestsByRating } from '@/utils/questRatingOrder';
 import type { QuestSortOrder } from './questsShared';
 import { useQuestCatalogHandoff } from './useQuestCatalogHandoff';
+import { useQuestCatalogSelection } from './useQuestCatalogSelection';
 import { useQuestCountrySelection } from './useQuestCountrySelection';
 import { translate as i18nT } from '@/i18n'
 
@@ -83,7 +83,17 @@ export default function QuestsScreen() {
     // квест и не сразу после финиша (там форма и так на экране финала).
     const { prompt: reviewPrompt, dismiss: dismissReviewPrompt } = useQuestReviewPrompt();
 
-    const [selectedCityId, setSelectedCityId] = useState<string | null>(ALL_QUESTS_ID);
+    const isFocused = useIsFocused();
+    const { selectedCityId, setSelectedCityId, select, selectionRestored, getGeneration, canApplyHandoff } =
+        useQuestCatalogSelection(isFocused, () => {
+            setSearchQuery('');
+            setGeoRequesting(false);
+            setGeoMessage(null);
+            setPendingMapAreaCenter(null);
+            setActiveMapAreaCenter(null);
+            setFilterDrawerOpen(false);
+        });
+    const selectionGeneration = getGeneration();
     // Свободный текстовый поиск по всему каталогу (название/город/страна/теги).
     // Пока строка непустая — перекрывает выбор города и «Рядом», ищем по ВСЕМ квестам.
     const [searchQuery, setSearchQuery] = useState('');
@@ -98,7 +108,6 @@ export default function QuestsScreen() {
     const [pendingMapAreaCenter, setPendingMapAreaCenter] = useState<QuestMapArea | null>(null);
     const [activeMapAreaCenter, setActiveMapAreaCenter] = useState<QuestMapArea | null>(null);
     const mapLocationAttemptedRef = useRef(false);
-    const selectionChangedRef = useRef(false);
 
     // API data
     const { quests: ALL_QUESTS, loading: questsLoading, error: questsError } = useQuestsList();
@@ -133,7 +142,6 @@ export default function QuestsScreen() {
         [selectedCityId],
     );
 
-    const isFocused = useIsFocused();
     const colors = useThemedColors();
     // Ширинно-ориентированная подписка (без ре-рендера на изменение высоты).
     // На мобильном вебе открытие клавиатуры/схлопывание адресной строки меняет
@@ -158,24 +166,6 @@ export default function QuestsScreen() {
 
     // ── Persistent city selection ──
     // #2320: восстановленный выбор отрисован — класс первого кадра больше не нужен.
-    const [selectionRestored, setSelectionRestored] = useState(false);
-    useEffect(() => {
-        (async () => {
-            try {
-                const saved = await AsyncStorage.getItem(STORAGE_SELECTED_CITY);
-                const restored = resolveStoredQuestCatalogSelection(saved);
-                if (selectionChangedRef.current) return;
-                setSelectedCityId(restored);
-                if (saved !== restored) {
-                    await AsyncStorage.setItem(STORAGE_SELECTED_CITY, restored);
-                }
-            } catch {
-                if (!selectionChangedRef.current) setSelectedCityId(ALL_QUESTS_ID);
-            } finally {
-                setSelectionRestored(true);
-            }
-        })();
-    }, []);
     // Эффект идёт после коммита, в котором вводка уже снята React-ом (срез
     // сужает каталог) или уже стоит (срез «Все квесты») — снятие класса ничего
     // не двигает.
@@ -185,8 +175,7 @@ export default function QuestsScreen() {
 
     const handleSelectCity = useCallback(async (id: string) => {
         if (id === NEARBY_ID && geoRequesting) return;
-        selectionChangedRef.current = true;
-        setSelectedCityId(id);
+        const savingSelection = select(id, id === NEARBY_ID ? ALL_QUESTS_ID : id);
         setGeoRequesting(false);
         if (id === NEARBY_ID) {
             setNearbyRequestVersion((current) => current + 1);
@@ -195,19 +184,11 @@ export default function QuestsScreen() {
         setPendingMapAreaCenter(null);
         setActiveMapAreaCenter(null);
         if (isMobile) setFilterDrawerOpen(false);
-        try {
-            // Геофильтр контекстный: после нового запуска безопаснее снова
-            // открыть весь каталог, а не запрашивать location без явного тапа.
-            const persistedId = id === NEARBY_ID ? ALL_QUESTS_ID : id;
-            await AsyncStorage.setItem(STORAGE_SELECTED_CITY, persistedId);
-        } catch (error) {
-            const { devError } = await import('@/utils/logger');
-            devError('Error saving selected city:', error);
-        }
-    }, [geoRequesting, isMobile]);
+        await savingSelection;
+    }, [geoRequesting, isMobile, select]);
 
     // Срез, переданный из профиля (#1794): применяем как обычный выбор.
-    useQuestCatalogHandoff({ enabled: isFocused, onApply: handleSelectCity });
+    useQuestCatalogHandoff({ enabled: isFocused, onApply: handleSelectCity, getGeneration, canApply: canApplyHandoff });
 
     const handleShowKidsQuests = useCallback(() => {
         void handleSelectCity(KIDS_FILTER_ID);
@@ -227,20 +208,8 @@ export default function QuestsScreen() {
     }, [geoRequesting, handleSelectCity]);
 
     const handleResetFilters = useCallback(async () => {
-        selectionChangedRef.current = true;
-        setSelectedCityId(ALL_QUESTS_ID);
-        setGeoRequesting(false);
-        setGeoMessage(null);
-        setPendingMapAreaCenter(null);
-        setActiveMapAreaCenter(null);
-        if (isMobile) setFilterDrawerOpen(false);
-        try {
-            await AsyncStorage.setItem(STORAGE_SELECTED_CITY, ALL_QUESTS_ID);
-        } catch (error) {
-            const { devError } = await import('@/utils/logger');
-            devError('Error saving selected city:', error);
-        }
-    }, [isMobile]);
+        await handleSelectCity(ALL_QUESTS_ID);
+    }, [handleSelectCity]);
 
     const handleSetViewMode = useCallback((mode: 'list' | 'map') => {
         setViewMode(mode);
@@ -258,10 +227,12 @@ export default function QuestsScreen() {
     // квесты». Оно не должно визуально маскироваться под геофильтр «Рядом».
     useEffect(() => {
         if (!dataLoaded || questsError) return;
+        // URL navigation can commit a newer selection earlier in this effect
+        // pass. Never normalize the previous render over that newer intent.
+        if (getGeneration() !== selectionGeneration) return;
         const canonicalCityId = selectedCityId ? cityCatalog.canonicalCityIdById[selectedCityId] : null;
         if (canonicalCityId && canonicalCityId !== selectedCityId) {
-            setSelectedCityId(canonicalCityId);
-            void AsyncStorage.setItem(STORAGE_SELECTED_CITY, canonicalCityId);
+            void select(canonicalCityId);
             return;
         }
         const validIds = new Set(CITIES.map((c) => c.id));
@@ -275,9 +246,8 @@ export default function QuestsScreen() {
             || Boolean(selectedTheme)
             || (selectedCityId ? validIds.has(selectedCityId) : false);
         if (isValid) return;
-        setSelectedCityId(ALL_QUESTS_ID);
-        void AsyncStorage.setItem(STORAGE_SELECTED_CITY, ALL_QUESTS_ID);
-    }, [CITIES, cityCatalog.canonicalCityIdById, dataLoaded, questsError, selectedCityId, selectedCountry, selectedTheme, reviewedQuests.length, personalSlices]);
+        void select(ALL_QUESTS_ID);
+    }, [CITIES, cityCatalog.canonicalCityIdById, dataLoaded, questsError, selectedCityId, selectionGeneration, getGeneration, select, selectedCountry, selectedTheme, reviewedQuests.length, personalSlices]);
 
     // Один владелец location-запроса: выбор «Рядом» и открытие карты не должны
     // запускать параллельные permission/current-position вызовы.
@@ -327,7 +297,7 @@ export default function QuestsScreen() {
             await AsyncStorage.setItem(STORAGE_SELECTED_CITY, ALL_QUESTS_ID).catch(() => {});
         })();
         return () => { cancelled = true; };
-    }, [selectedCityId, viewMode, nearbyRequestVersion]);
+    }, [selectedCityId, setSelectedCityId, viewMode, nearbyRequestVersion]);
 
     useEffect(() => {
         if (Platform.OS !== 'web' || !filterDrawerOpen) return undefined;
@@ -526,13 +496,11 @@ export default function QuestsScreen() {
 
     const handleSearchMapArea = useCallback(() => {
         if (!pendingMapAreaCenter) return;
-        selectionChangedRef.current = true;
         setActiveMapAreaCenter(pendingMapAreaCenter);
-        setSelectedCityId(ALL_QUESTS_ID);
+        void select(ALL_QUESTS_ID);
         setGeoMessage(null);
         setPendingMapAreaCenter(null);
-        void AsyncStorage.setItem(STORAGE_SELECTED_CITY, ALL_QUESTS_ID);
-    }, [pendingMapAreaCenter]);
+    }, [pendingMapAreaCenter, select]);
 
     // Срез без своего города центрирует карту по своим квестам, а не по игроку.
     const centerMapOnQuests = selectedCityId === KIDS_FILTER_ID

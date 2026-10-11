@@ -11,7 +11,7 @@ import {
   MAP_PANEL_TAB_MAX_FONT_SCALE,
   getStyles,
 } from '@/screens/tabs/map.styles'
-import { formatInteger } from '@/i18n/format'
+import { formatMapPoints, type MapPointCountScope } from '@/utils/mapPointCount'
 import { resources } from '@/i18n/resources'
 import { translate as i18nT } from '@/i18n'
 import { getTabRoles } from '@/utils/a11yTabRoles'
@@ -59,7 +59,7 @@ const FILTERS = () => i18nT('map:components.MapPage.MapPanelHeader.filtry_95c57b
 const selectedTabIds = (tabs: any[]) =>
   tabs.filter((tab) => tab.props.accessibilityState?.selected === true).map((tab) => tab.props.testID)
 
-const renderHeader = (activeTab: PanelTab, travelsCount = 1234) => {
+const renderHeader = (activeTab: PanelTab, travelsCount = 1234, totalScope?: MapPointCountScope) => {
   const handlers = {
     selectSearchTab: jest.fn(),
     selectRouteTab: jest.fn(),
@@ -69,6 +69,7 @@ const renderHeader = (activeTab: PanelTab, travelsCount = 1234) => {
     <MapPanelHeader
       activeTab={activeTab}
       travelsCount={travelsCount}
+      totalScope={totalScope}
       themedColors={themedColors}
       styles={getStyles(false, 0, themedColors)}
       {...handlers}
@@ -148,7 +149,7 @@ describe.each(['web', 'ios', 'android'])('MapPanelHeader on %s (#2217)', (os) =>
   it('names start with the visible label; «Места» carries the full count, the badge caps it', () => {
     const utils = renderHeader('search', 1234)
 
-    expect(utils.getByRole(tabRole, { name: `${PLACES()} (${formatInteger(1234)})` }).props.testID).toBe(
+    expect(utils.getByRole(tabRole, { name: `${PLACES()}: ${formatMapPoints(1234)}` }).props.testID).toBe(
       'map-panel-tab-travels',
     )
     expect(utils.getByRole(tabRole, { name: ROUTE() }).props.testID).toBe('map-panel-tab-route')
@@ -161,6 +162,13 @@ describe.each(['web', 'ios', 'android'])('MapPanelHeader on %s (#2217)', (os) =>
 
     expect(utils.getByRole(tabRole, { name: PLACES() }).props.testID).toBe('map-panel-tab-travels')
     expect(utils.queryByText('0')).toBeNull()
+  })
+
+  it('keeps the visible tab label in its name and discloses that fallback counts cover loaded points', () => {
+    const utils = renderHeader('travels', 3, 'loaded')
+    expect(utils.getByRole(tabRole, { name: `${PLACES()}: Загружено: 3 точки` }).props.testID)
+      .toBe('map-panel-tab-travels')
+    expect(utils.getByText(PLACES())).toBeTruthy()
   })
 
   it('labels and the badge stay on one line and cap the font scale', () => {

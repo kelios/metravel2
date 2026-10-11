@@ -1,4 +1,5 @@
-import type { MapOnboardingTargetRegistry } from './MapOnboarding'
+import type { MapMobileLayoutProps } from './MapMobileLayout.types'
+import { useMapMobilePointSummary } from '@/hooks/map/useMapMobilePointSummary'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { BackHandler, Platform, Pressable, Text as RNText, useWindowDimensions, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
@@ -22,12 +23,8 @@ import { MapMobileSheetBody } from './MapMobile/MapMobileSheetBody'
 import { MapMobileSheetHeader } from './MapMobile/nativeFiltersPanelAdapter'
 import { MapMobileTopOverlay } from './MapMobile/MapMobileTopOverlay'
 import MapPlaceBottomCard from './MapPlaceBottomCard'
-import { getNextRadiusOption, shouldShowMapEmptyState } from './mapEmptyState'
-import { isMapFilterChipsRowVisible } from './mapFilterChips'
-import { formatPlaceCountBadge, getPlacesLabel } from './TravelListPanel/helpers'
 import type { TransportMode } from './transportModes'
 import { translate as i18nT } from '@/i18n'
-import { formatRadiusValue } from '@/constants/mapConfig'
 
 
 type SheetState = 'collapsed' | 'quarter' | 'half' | 'seventy' | 'full'
@@ -35,45 +32,6 @@ type SheetState = 'collapsed' | 'quarter' | 'half' | 'seventy' | 'full'
 type SheetContentKind = 'list' | 'filters' | 'route'
 type FiltersMode = 'radius' | 'route'
 
-interface MapMobileLayoutProps {
-  targetRegistry?: MapOnboardingTargetRegistry
-  travelsData: any[]
-  hasMore?: boolean
-  onLoadMore?: () => void
-  onRefresh?: () => void
-  isLoading?: boolean
-  isRefreshing?: boolean
-  coordinates: { latitude: number; longitude: number } | null
-  transportMode: 'car' | 'bike' | 'foot'
-  buildRouteTo: (item: any) => void
-  focusPlace?: (item: any) => void
-  totalCount?: number
-  onCenterOnUser: () => void
-  // Всегда видимая кнопка «Показать всё»: сбрасывает фильтры и подгоняет карту под
-  // все точки (fit ко всем маркерам). Escape-hatch, когда карта «застряла» на
-  // Минск-fallback (геолокация отклонена/таймаут).
-  onShowAllPlaces?: () => void
-  // F-49 — Google-Maps-style "Search this area" affordance.
-  canSearchThisArea?: boolean
-  onSearchThisArea?: () => void
-  onOpenFilters: () => void
-  filtersPanelProps: any
-  onToggleFavorite?: (id: string | number) => void
-  favorites?: Set<string | number>
-  onResetFilters?: () => void
-  // True when category/search filters are active — reveals the always-visible
-  // quick reset button in the top overlay (radius excluded, it always has a value).
-  hasActiveFilters?: boolean
-  onExpandRadius?: () => void
-  // Чипы активных фильтров поверх карты при закрытой панели (общий ActiveFiltersBar).
-  activeFilterItems?: ReadonlyArray<{ key: string; label: string }>
-  onRemoveActiveFilter?: (key: string) => void
-  // #207 — selected single marker → maps.me-style bottom card.
-  selectedPlace?: any | null
-  clearSelectedPlace?: () => void
-  selectedPlaceUserLocation?: { latitude: number; longitude: number } | null
-  userLocation?: { latitude: number; longitude: number } | null
-}
 
 const IS_WEB = Platform.OS === 'web'
 const PHONE_COMPACT_LAYOUT_MAX_WIDTH = 430
@@ -321,40 +279,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const { activeRadius, quickRadiusOptions, quickOverlayOptions, quickEnabledOverlays } =
     derivations
 
-  // Бейдж на кнопке радиуса — короткое число (напр. «50»), без единиц.
-  const radiusBadge = useMemo(() => {
-    const n = Number(activeRadius)
-    return Number.isFinite(n) && n > 0 ? String(n) : ''
-  }, [activeRadius])
-
-  // Бейдж на кнопке «Список» — количество мест рядом (cap 999+). Показываем
-  // общее число (totalCount) от бэкенда, а не длину загруженной страницы.
-  const displayCount = totalCount ?? travelsData.length
-  const listBadge = useMemo(() => {
-    const n = displayCount
-    if (!n) return ''
-    return formatPlaceCountBadge(n)
-  }, [displayCount])
-  const currentRadiusKm = filtersContextProps?.filterValue?.radius ?? null
-  const listHeaderSummaryText = useMemo(() => {
-    const placesCountLabel = formatPlaceCountBadge(displayCount)
-    const hasRadiusContext =
-      currentRadiusKm != null && String(currentRadiusKm).trim() !== ''
-
-    return hasRadiusContext ? i18nT('map:components.MapPage.MapMobileLayout.value1_km_9e970651', { value1: placesCountLabel, value2: getPlacesLabel(displayCount), value3: formatRadiusValue(currentRadiusKm) }) : `${placesCountLabel} ${getPlacesLabel(displayCount)}`
-  }, [currentRadiusKm, displayCount])
-
-  // Радиус-поповер и слои-поповер переиспользуют ту же модель, что и шит:
-  // onFilterChange('radius', id) и контролируемое состояние оверлеев из контекста.
-  const onFilterChange = filtersContextProps?.onFilterChange as
-    | ((field: string, value: unknown) => void)
-    | undefined
-  const handleRadiusSelect = useCallback(
-    (id: string) => {
-      onFilterChange?.('radius', id)
-    },
-    [onFilterChange],
-  )
   const onOverlayToggle = filtersContextProps?.onOverlayToggle as
     | ((id: string, enabled: boolean) => void)
     | undefined
@@ -617,48 +541,15 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   // Условие прежнее: только в radius-режиме; сам тулбар и так скрыт при полной
   // шторке и открытой карточке места.
 
-  // Empty-state ПОВЕРХ КАРТЫ: при закрытой панели пользователь не видит
-  // `filters-empty-state` (он живёт внутри FiltersPanelBody), поэтому «Искать в
-  // этой области» с total=0 выглядел как молчание. Гейт — общий с панелью
-  // (#211: не мигать во время рефетча/дебаунса).
-  const emptyStateBusy = Boolean(filtersContextProps?.isBusy)
-  const radiusOptions = filtersContextProps?.filters?.radius
-  const nextRadiusOption = useMemo(
-    () => getNextRadiusOption(radiusOptions, currentRadiusKm),
-    [radiusOptions, currentRadiusKm],
-  )
-  const showEmptyStateToast =
-    shouldShowMapEmptyState({
-      mode: routeMode === 'route' ? 'route' : 'radius',
-      totalPoints: displayCount,
-      isBusy: emptyStateBusy,
-    }) &&
-    sheetState === 'collapsed' &&
-    !hasSelectedPlace &&
-    !activePopover
-  const handleExpandRadiusFromToast = useCallback(
-    (radiusId: string) => {
-      onFilterChange?.('radius', radiusId)
-    },
-    [onFilterChange],
-  )
-
-  // Дубль сброса не оставляем: РОВНО один явный способ сброса на экране.
-  // Пока виден ряд чипов — сброс живёт в нём («Сбросить всё» → showAllPlaces =
-  // сброс + fit ко всем точкам, строгое надмножество прежнего FAB). Когда ряда
-  // нет — остаётся безымянный круглый FAB, где он уже не «второй сброс», а
-  // escape-hatch «показать все места» (карта застряла на Минск-fallback при
-  // отклонённой геолокации).
-  //
-  // Гейт считаем по РЕАЛЬНО видимым чипам, а не по hasActiveFilters: последний
-  // true и для поиска по тексту, который чипа не даёт — иначе спрятали бы FAB,
-  // не показав ряд, и сбросить было бы нечем.
-  const activeFiltersRowVisible = isMapFilterChipsRowVisible({
-    mode: routeMode,
-    items: activeFilterItems,
-    canRemove: !!onRemoveActiveFilter,
+  const {
+    radiusBadge, listBadge, listHeaderSummaryText, handleRadiusSelect,
+    nextRadiusOption, showEmptyStateToast, handleExpandRadiusFromToast,
+    showAllPlacesButton,
+  } = useMapMobilePointSummary({
+    activeRadius, totalCount, loadedCount: travelsData.length, filtersContextProps,
+    routeMode, sheetState, hasSelectedPlace, activePopover, activeFilterItems,
+    onRemoveActiveFilter, onShowAllPlaces,
   })
-  const showAllPlacesButton = activeFiltersRowVisible ? undefined : onShowAllPlaces
   const filtersLoadingFallback = useMemo(
     () => (
       <View

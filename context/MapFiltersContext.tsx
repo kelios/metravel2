@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo, ReactNode } from 'react';
 import type { RoutePoint } from '@/types/route';
 import type { LatLng } from '@/types/coordinates';
 import type { MapUiApi } from '@/types/mapUi';
+import type { MapPointCountScope } from '@/utils/mapPointCount';
 
 type CategoryOption = string | { id?: string | number; name?: string; value?: string };
 type MapOverlayOption = { id: string; title: string };
@@ -37,6 +38,7 @@ export interface FiltersContextValue {
   // Серверный счётчик результатов (учитывает where.query, BE #695) для бейджа
   // «На карте подходит»; фолбэк — длина filteredTravelsData.
   resultsTotal?: number;
+  resultsTotalScope?: MapPointCountScope;
   // #211 — карта/список грузятся или фильтры дебаунсятся (для гейта empty-state).
   isBusy?: boolean;
 
@@ -135,6 +137,7 @@ const FILTERS_CONTEXT_KEYS = [
   'travelsData',
   'filteredTravelsData',
   'resultsTotal',
+  'resultsTotalScope',
   'isBusy',
   'isMobile',
   'closeMenu',

@@ -47,6 +47,8 @@ type PlacesCatalogListParams = {
 type PlacesCatalogQueriesInput = {
   enabled: boolean
   showCollections: boolean
+  /** False for the implicit starter selection until the user needs facets. */
+  scopeRequested?: boolean
   /** Поисковый запрос, уже обрезанный и с паузой ввода: каждое значение — запрос. */
   q: string | undefined
   categories: string[]
@@ -86,7 +88,7 @@ const primeCatalogProjections = (
   )
 }
 
-export function usePlacesCatalogQueries({ q, categories, country, sort, collections, enabled, showCollections }: PlacesCatalogQueriesInput) {
+export function usePlacesCatalogQueries({ q, categories, country, sort, collections, enabled, showCollections, scopeRequested = true }: PlacesCatalogQueriesInput) {
   const queryClient = useQueryClient()
   const listParams = useMemo<PlacesCatalogListParams>(() => ({
     q,
@@ -127,8 +129,7 @@ export function usePlacesCatalogQueries({ q, categories, country, sort, collecti
   const scopeQuery = useQuery<PlacesCatalogScope>({
     queryKey: queryKeys.placesCatalogScope(scopeParams),
     queryFn: ({ signal }) => fetchPlacesCatalog({ page: 1, perPage: 1, ...scopeParams }, signal).then(toScope),
-    enabled: (query) => listReady && (hasCategoryFilter || query.state.data === undefined),
-    placeholderData: keepPreviousData,
+    enabled: (query) => scopeRequested && listReady && (hasCategoryFilter || query.state.data === undefined),
     staleTime: Infinity,
     gcTime: CATALOG_GC_MS,
     ...heavyReadRetry,
@@ -166,8 +167,13 @@ export function usePlacesCatalogQueries({ q, categories, country, sort, collecti
     collectionCounts: collectionCountsQuery.data || selectedCollectionCountsQuery.data || currentRefinement
       ? { ...collectionCountsQuery.data, ...selectedCollectionCountsQuery.data, ...currentRefinement }
       : undefined,
-    // Объёма ещё нет, но ничего не упало — значит, он в пути (вместе со списком).
-    isScopeLoading: scope === undefined && !placesQuery.isError && !scopeQuery.isError,
+    // A disabled cache observer is idle, not an indefinitely pending request.
+    isScopeLoading: scope === undefined && scopeRequested && !placesQuery.isError && !scopeQuery.isError,
+    scopeStatus: scope !== undefined ? 'ready' as const : scopeQuery.isError || (scopeRequested && placesQuery.isError) ? 'error' as const : scopeRequested ? 'loading' as const : 'idle' as const,
+    retryScope: () => {
+      if (listReady && !scopeQuery.isFetching) void scopeQuery.refetch()
+      else if (placesQuery.isError && !placesQuery.isFetching) void placesQuery.refetch()
+    },
     placesQuery,
     scope,
   }

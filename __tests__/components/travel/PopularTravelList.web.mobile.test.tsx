@@ -58,7 +58,7 @@ describe('PopularTravelList web mobile layout', () => {
     RN.Platform.OS = originalPlatform
   })
 
-  it('renders mobile-style travel cards without fixed card width on narrow web', () => {
+  it('renders mobile-style cards with their real rail-slot width on narrow web', () => {
     renderer.act(() => {
       renderer.create(<PopularTravelList embedded showHeader={false} />)
     })
@@ -66,7 +66,7 @@ describe('PopularTravelList web mobile layout', () => {
     expect(mockTravelListItem).toHaveBeenCalled()
     const firstProps = mockTravelListItem.mock.calls[0]?.[0]
     expect(firstProps?.isMobile).toBe(true)
-    expect(firstProps?.cardWidth).toBeUndefined()
+    expect(firstProps?.cardWidth).toBe(312)
   })
 
   // #1544: на desktop (3 колонки) карточка обязана получить реальную ширину

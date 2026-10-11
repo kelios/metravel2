@@ -77,6 +77,11 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
       resetFilters()
     }, [setSearch, resetFilters])
 
+    const handleResetGroup = useCallback((groupKey: string, values: string[]) => {
+      const isMultiSelect = filterGroups.find((group) => group.key === groupKey)?.multiSelect !== false
+      onSelect(groupKey, isMultiSelect ? values : undefined)
+    }, [filterGroups, onSelect])
+
     const handleYearChange = useCallback((value?: string) => {
       onSelect('year', value)
     }, [onSelect])
@@ -113,6 +118,7 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
         filterGroups={filterGroups}
         selectedFilters={filter as unknown as ModernFilterState}
         onFilterChange={handleFilterChange}
+        onResetGroup={handleResetGroup}
         onClearAll={handleClearAll}
         resultsCount={hasResultsError ? undefined : total}
         isLoading={isLoading}

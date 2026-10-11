@@ -282,6 +282,10 @@ export function useRoulette() {
 
   const showLoading = isLoading || isFetching || filtersLoading;
 
+  const handleResetGroup = useCallback((groupKey: string, values: string[]) => {
+    onSelect(groupKey, values);
+  }, [onSelect]);
+
   return {
     filter: effectiveFilter,
     defaultFilter,
@@ -301,6 +305,7 @@ export function useRoulette() {
     handleSpin,
     handleClearAll,
     handleFilterChange,
+    handleResetGroup,
     showLoading,
     onSelect,
   };

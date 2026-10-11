@@ -136,6 +136,19 @@ describe('useRouletteLogic', () => {
     expect(onSelect).toHaveBeenCalledWith('countries', ['2']);
   });
 
+  it('resets one group with one array update and preserves other active filters', () => {
+    const onSelect = jest.fn();
+    const resetFilters = jest.fn();
+    useListTravelFilters.mockReturnValue({ filter: { countries: [2], categories: ['hike'] },
+      queryParams: { countries: [2], categories: ['hike'] }, onSelect, resetFilters });
+    const { result } = renderHook(() => useRouletteLogic());
+    act(() => result.current.handleResetGroup('countries', ['1', '2']));
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith('countries', ['1', '2']);
+    expect(resetFilters).not.toHaveBeenCalled();
+    expect(result.current.filter.categories).toEqual(['hike']);
+  });
+
   it('hides facet options with zero count unless they are selected', () => {
     fetchAllFiltersOptimized.mockReturnValueOnce({
       countries: [{ id: 1, name: 'Беларусь', title_ru: 'Беларусь' }],
