@@ -7,8 +7,10 @@ description: "Edit existing metravel quest steps, tasks, hints, answer patterns,
 
 Use this skill for quest content quality, step text, tasks, hints, answers, and answer-pattern consistency.
 
-`AGENTS.md` is inherited. Read the quest content/authority contract and only the
-affected quest artifact.
+`AGENTS.md` is inherited. Authority is the single block in
+`.claude/skills/metravel-quest/SKILL.md` → «Полномочия»; editing rules and tools
+for a published quest are in `.claude/skills/metravel-quest/references/live-edit.md`,
+question rules in `references/questions.md`. Read only the affected quest artifact.
 
 Additional conditional context:
 
@@ -19,7 +21,8 @@ Additional conditional context:
 
 - Existing quest step content from API or local quest data files.
 - Task wording, story text, hints, answer patterns, and user-facing clarity.
-- PATCH/update operations only when explicitly requested and token access is available from approved local secrets/env.
+- PATCH/update operations per the authority block (owner-ordered edits and risky-step conversions to a free answer proceed; own-initiative rewrites of published text wait for confirmation), with token access through the shared resolver.
+- Authorial `answer_pattern` vocabulary is yours; variants driven by real rejected attempts belong to the friction analysis (`$metravel-quest-playthrough-reviewer`).
 
 ## Rules
 
@@ -30,7 +33,7 @@ Additional conditional context:
 - Do not patch a structurally weak child quest step by step when its age band is missing, its climax occurs before the last core step, or its route needs replacement; return a rewrite handoff to `$metravel-quest-writer`.
 - Do not deeply validate coordinates; route that to `$metravel-quest-geo-verifier`.
 - Never print tokens or secrets.
-- Keep answers observable and fair; hints must not leak the final answer unless intentionally designed.
+- Keep answers observable and fair; hints must not leak the answer. When there is no 100% certainty in a single answer, convert the step to `any_text` within the story yourself instead of widening the vocabulary, while keeping at least 6 checkable required steps and at most 3 `any_text`.
 - Owner rule (hel-fishermen, 2026-07-31): never keep tasks built on death arithmetic — "how many are buried/died/were executed", "what year did he die", "how long did he live", "how old was he" at graves/memorials. Replace them with symbol/meaning/stable-detail tasks. Audit overall tone: at most 1–2 memorial points per quest, uplifting start and finale; if loss dominates most steps, hand the quest back for a writer-led rewrite instead of spot fixes.
 - Owner rule: an object-name task (villa/house name) is valid only when the inscription is photo-confirmed on site; otherwise the step is unanswerable and blocks completion (willa Jeannette case).
 - Take a rollback snapshot before any content write.
@@ -41,7 +44,7 @@ Additional conditional context:
 1. Load the quest source: production API, local data file, or explicit user-provided content.
 2. Audit each step for story, task, hint, answer pattern, and consistency with the described place. For child/family quests, also audit the declared age band, reading load, agency, escalation, final meta-payoff, safe route, adult role, and vocabulary: remove material/architecture jargon from tasks unless it is taught and essential.
 3. If writing changes, save a local rollback snapshot in an ignored folder and patch only the intended fields.
-4. Re-fetch and verify the changed quest content.
+4. Re-fetch and verify the changed quest content, sync the local data file (`node scripts/sync-quest-data-from-prod.js --source=scripts/<city>-quest-data.js`), and run `npm run quest:gates -- --source=…`.
 5. After an authorized Russian-source edit, update affected translations through the existing pipeline in `docs/features/quests.md` → «Перевод квеста», including before/after step and finale status, independent review, and authorized publication. An answer-variant error confined to one locale belongs in that translation pair; preserve the Russian source and other steps. Preserve `origin: human` without separately authorized overwrite.
 6. Report any coordinate uncertainty as handoff for `$metravel-quest-geo-verifier`.
 

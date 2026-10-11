@@ -11,24 +11,22 @@ Create an evidence-based walking quest that reads as one story and can be repres
 
 - `AGENTS.md` is inherited; do not reread it.
 - Load only the quest content/media/authority headings required by the request.
-- `.claude/skills/metravel-quest/SKILL.md` when present; use it as the detailed legacy authoring reference, while newer project rules and this skill win on conflicts.
+- `.claude/skills/metravel-quest/SKILL.md` — the canonical quest core: authority block, roles, hard numbers, prohibitions and pipeline. Open only the `references/*.md` file the step needs (`research-route`, `questions`, `kids`, `data-format`, `author-brief`, `upload-after`, `live-edit`). On conflict the core and its references win over this skill.
 - `references/child-quest-design.md` for any child, family, fairy-tale, park, amusement, or teen quest; select one primary age band before route or story design.
 - `$metravel-child-quest-visuals` when the request includes a child or teen cover, image prompt, or visual series.
 - The nearest current `scripts/*-quest-data.js`, migration script, quest API types, and `utils/questAdapters.ts` before producing repository data.
 
 ## Authority gate
 
-- Writing or creatively rewriting quest prose, titles, stories, tasks, hints, or finale requires a separate explicit confirmation question under `AGENTS.md`, even if the initial request appears direct. Stop before authoring until that confirmation is received.
-- Research, duplicate checks, contract inspection, route analysis, and a non-creative outline may proceed before confirmation.
-- Before confirmation, express an outline only as functional labels: audience, role type, goal type, stakes type, beat purpose, clue mechanic, route cluster, and finale function. Do not coin quest titles, character names, dialogue, story prose, task wording, hints, or finale copy.
-- Treat draft creation, repository changes, API publication, and media upload as separate actions. Do not publish, patch production, or upload media unless the user explicitly requests that action.
+- Authority is defined once in `.claude/skills/metravel-quest/SKILL.md` → «Полномочия» (with the exceptions recorded in `AGENTS.md` §4); do not restate or narrow it here. In short: an owner order to make a quest is an order for the full cycle to production; a risky question becomes a free answer without asking; confirmation is needed only for own-initiative edits of published text, unpublishing, and a new city with alias risk.
+- Quest prose is authored by the strongest model only (in Claude sessions — an Opus `general-purpose` subagent per `references/author-brief.md`); never hand authoring to a smaller model to save cost.
 - Keep tokens in approved env/secret files and never print them. Take an ignored rollback snapshot before changing an existing remote quest.
 
 ## Route and story contract
 
 - Check `GET /api/quests/` and `GET /api/quests/by-quest-id/<quest_id>/` before creating anything. Reuse the existing quest and stable identifiers when the city or `quest_id` already exists.
 - Build 8–12 meaningful must-see steps in a walkable sequence without backtracking. For a child quest, use the shorter age-specific limits in `references/child-quest-design.md` instead of padding the route to 8 steps. Put optional stops only where they naturally fit; do not make them blocking.
-- Keep the route compact: total straight-line length of consecutive legs ≤4 km for an adult walking quest (≈4.5–5 km on streets), each leg ≤1.2 km, and the whole route inside one contiguous city zone. Do not pull a distant must-see (2+ km away) into a walking quest and do not rely on "take a tram between points" — that place belongs to another quest layer. Verify with `node scripts/quest-geocheck.js` (`route length` / `max leg` warnings; thresholds `--max-route-m=4000`, `--max-leg-m=1200`) before publishing.
+- Keep the route compact: total straight-line length of consecutive legs ≤4 km for an adult walking quest (≈4.5–5 km on streets), each leg ≤1.2 km, and the whole route inside one contiguous city zone. Do not pull a distant must-see (2+ km away) into a walking quest and do not rely on "take a tram between points" — that place belongs to another quest layer. Verify with `npm run quest:gates -- --source=<draft>` (route geometry, budgets via `--max-route-m`/`--max-leg-m`) before publishing.
 - Every step marker must stand on a concrete physical object that the story/task is about — a building, monument, sign, or entrance the player actually sees on arrival. Theme-only "umbrella" points without an address (e.g. "the city's underground", "the courtyards") are a defect. If the phenomenon is hidden (underground, interiors, the past), place the step on a concrete operating visitable venue (museum, exhibition, tour entrance) with `poi_info` (hours/ticket/website) and an outside-observable task, and first verify the venue is actually open — a building closed for renovation is not a valid step object.
 - Check real pedestrian feasibility, access restrictions, opening hours, unsafe crossings, seasonal closures, and whether a place can actually be observed from the public route. State accessibility or schedule limitations instead of hiding them.
 - Give the quest one narrative thread. The intro establishes the theme and direction, each step advances it with a transition to the next place, and the finale closes the arc.
@@ -56,7 +54,7 @@ Prefer tasks that ask the player to:
 - find a stable hidden detail;
 - identify what a monument or relief depicts or symbolizes.
 
-Avoid unstable counting, obscure architectural terminology, subjective shapes or levels, internet trivia, and facts invisible on site. If no reliable observation question exists, use one purposeful `any_text` reflection instead of a brittle quiz. One or two reflective steps per quest are acceptable.
+Avoid unstable counting, obscure architectural terminology, subjective shapes or levels, internet trivia, facts invisible on site, and answers that a winter visit hides (fountains under covers, ground-level plaques, small inscriptions above 3 m, living trees, tenant signage). If no reliable observation question exists, use a purposeful `any_text` instead of a brittle quiz, but keep the quest threshold: at least 6 required steps with a checkable answer and at most 3 `any_text` among required steps. Each checkable answer is confirmed by two photos of the object, one no older than 2020. Fewer than 8 checkable anchors on a route means the place is an article, not a quest.
 
 Owner rules on tone and memorial content (hel-fishermen case, 2026-07-31):
 
@@ -71,8 +69,8 @@ Hints direct attention but never contain the answer, a synonym, a partial phrase
 
 - `any`: intro, navigation-only, or optional pause.
 - `exact`: one indisputable short value, usually a number or year.
-- `exact_any`: a stringified JSON array of accepted words/phrases; include lowercase inflections, synonyms, local names, and transliterations that the normalizer should accept.
-- `range`: a stringified `{ "min": n, "max": n }` for verified counts of 3 or more, normally with only ±1 tolerance.
+- `exact_any`: a stringified JSON array of accepted words/phrases. RU/BE case forms of words with 4+ letters are accepted by `utils/questAnswerMorphology.ts`; list synonyms, local names, transliterations, word orders, stem alternations (орёл/орла), short words, and spaced vs hyphenated spellings.
+- `range`: a stringified `{ "min": n, "max": n }` for one count confirmed by two sources; ±1 only when n ≥ 3 and the counting boundary is named in the task text.
 - `any_text`: a stringified `{ "min_length": n }` for a genuine reflective response.
 - `any_number`: any numeric observation when the exact number is intentionally irrelevant.
 - `approx`: a stringified `{ "target": n, "tolerance": n }` only when an approximate measurement is the actual task.
@@ -89,17 +87,17 @@ Match the task grammar to the checker. A prompt asking for a number must not use
 
 ## Workflow
 
-1. Classify the request as outline, authored draft, repository implementation, existing-quest rewrite, or publication. For child/family scope, also set one primary age band and classify the route as public walk, ticketed venue, or hybrid.
-2. Pass the authority gate before writing creative content.
+1. Classify the request as outline, authored draft, repository implementation, existing-quest rewrite (`references/live-edit.md`), or publication. For child/family scope, also set one primary age band and classify the route as public walk, ticketed venue, or hybrid.
+2. Apply the authority block of the core skill.
 3. Check for duplicate city/quest entries and inspect the current API/data contract.
 4. Research candidate places and sources; select the narrative theme and public walking route. For child/family scope, audit age fit, adult accompaniment, toilets/rest points, road and water hazards, paid or booked access, seasonality, and a weather fallback.
 5. Order the route, estimate realistic duration/distance, and remove backtracking or inaccessible detours.
-6. Draft intro, the general 8–12 steps or the selected child-band step count, optional non-blocking stops, and finale.
+6. Draft intro, the general 8–12 steps or the selected child-band step count, optional non-blocking stops, and finale in `.codex-temp/quests-plan/<city>/<quest_id>-quest-data.js` — never in `scripts/` until every gate is green (an unfinished data file there breaks the shared pre-commit, #2228).
 7. Audit every fact, transition, task, hint, and answer pattern. Record unresolved uncertainty instead of inventing content.
 8. Hand coordinates to `$metravel-quest-geo-verifier`; run `scripts/quest-geocheck.js` when available and resolve every real WARN/FAIL before publication.
 9. When repository implementation is requested, use the current data/migration pattern and route code/contract changes to `$metravel-quest-expert`. Keep the migration idempotent and perform its documented dry run.
-10. Validate data parsing, nested JSON values, unique IDs/orders, route continuity, answer leakage, and GET payload shape.
-11. Publish only when explicitly requested, then re-fetch the quest and verify the authenticated mobile flow and printable view. Media/finale video is a separate requested workflow.
+10. Run `npm run quest:gates -- --source=<draft>` until it exits 0 (migration dry run, every `scan-quest-*`, route, Belarus source denylist, self-leak, checkable share, short substring answers, city alias), then move the file to `scripts/` and rerun.
+11. Publish per the authority block (`migrate-quest-from-file.js --dry-run`, then `--apply`; `status=1` means published immediately), then re-fetch the quest and verify the authenticated mobile flow and printable view. Cover (`PROMPT.md` only — Codex generates the image, no placeholders) and finale video follow `references/upload-after.md`.
 12. After publishing a new Russian quest or editing its source, include translation preparation, independent review, and authorized publication for all content locales in the same authoring pass. Follow `docs/features/quests.md` → «Перевод квеста» for exact `quest:translate` commands, before/after status, manual-translation preservation, and rollback; do not report authoring complete while required translations remain stale or missing.
 
 ## Handoff

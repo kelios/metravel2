@@ -9,7 +9,7 @@ Use this reference for child, family, fairy-tale, park, amusement, or teen quest
 - Keep the self-guided route adult-accompanied unless the product and local safety review explicitly support otherwise. Never imply that a child should cross streets, approach water, enter a venue, or meet a stranger alone.
 
 Step counts, distance and time below mirror the load-bearing age grid in
-`.claude/skills/metravel-quest/SKILL.md` → `### Возрастная сетка (load-bearing)`.
+`.claude/skills/metravel-quest/references/kids.md` → `## Возрастная сетка (load-bearing)`.
 If they ever disagree, that grid wins and this table is the stale copy.
 
 | Primary age | Core steps | Target time | Walking target | Reading and puzzle contract |

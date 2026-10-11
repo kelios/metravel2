@@ -1,6 +1,6 @@
 ---
 name: quest-geo-verifier
-description: "Read-only гео-сверка quest points через OSM/Nominatim: объект, distance, coordinates и maps_url. Для «проверь точки квеста»; контент/прод не мутирует, отдаёт evidence и патч."
+description: "Read-only гео-сверка quest points и геометрии маршрута через OSM/Nominatim: объект, distance, порядок, крюк. Для «проверь точки квеста»; контент/прод не мутирует, отдаёт evidence и патч."
 prompt_mode: full
 agents_md: true
 ---

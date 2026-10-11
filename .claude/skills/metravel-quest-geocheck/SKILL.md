@@ -10,8 +10,9 @@ description: "Гео-сверка точек квеста через OSM/Nominat
 одноимённом POI в другом месте. Запускай этот скилл при **создании** квеста
 (до миграции на прод) и при **редактировании/ревизии** существующего.
 
-Исполнитель — агент `quest-geo-verifier`. Контент заданий/подсказок — отдельно
-(`quest-editor`); создание квеста — скилл `metravel-quest`.
+Исполнитель — агент `quest-geo-verifier` (роль, границы, формат ответа); правила
+— здесь. Контент заданий/подсказок — `quest-editor`; создание квеста и таблица
+жёстких чисел маршрута — скилл `metravel-quest`.
 
 ## Принципы (ОБЯЗАТЕЛЬНО)
 
@@ -23,16 +24,19 @@ description: "Гео-сверка точек квеста через OSM/Nominat
    городе расхождение 20–30 м уже уводит человека не туда. Для входов/фасадов
    целься в ≤15 м.
 3. **FAIL — это «проверь», а не «исправь».** Геокодер часто матчит не тот
-   объект (одноимённая улица/рынок в другом городе). Финальное решение — только
-   по подтверждённому OSM-объекту или reverse самой точки + веб-поиск.
+   объект («Рынок, Люблин» → рынок в 96 км). Финальное решение — только по
+   подтверждённому OSM-объекту или reverse самой точки плюс второй независимый
+   способ (Wikipedia, офиц. сайт, снимок Commons/Mapillary с датой). Не
+   подтвердилось — «нужна полевая проверка», а не координаты «примерно там».
 4. **Берегись одноимённых остановок.** `highway/*`, `*bus_stop*`, `*tram_stop*`,
    `*/parking` в кандидатах — это НЕ твой объект (так ломались Полоцк-монастырь,
    Витебск-амфитеатр, Вроцлав-Hala). Бери ближайший реальный POI-кандидат.
 5. **Опциональные точки-паузы не трогай.** Кафе/видовые (`type any`, пометки
    «по желанию») часто дают WARN «no result» — это норма, не ошибка.
 6. **Сам на прод не пиши.** Скилл только находит и предлагает координаты.
-   Применение: в локальный data-файл (новый квест) или патчем через
-   `apply-quest-patches.js` / тикетом (квест на проде).
+   Применение: в черновик/data-файл (новый квест) или патчем через
+   `apply-quest-patches.js` с синком data-файла (квест на проде, применяет
+   `quest-editor`), полевая проверка — тикетом.
 7. **Уважай Nominatim.** Публичный инстанс без ключа: `User-Agent` обязателен
    (скрипт шлёт), пауза ≥1.1 с между запросами (скрипт держит), без параллельных
    прогонов — иначе бан по IP.
@@ -44,7 +48,17 @@ description: "Гео-сверка точек квеста через OSM/Nominat
    зоне. АНТИПАТТЕРН: 1→2→3 на юг, потом 4 возвращает к точке 1, потом 5 снова на
    юг. Нашёл возврат — предложи новый `order` (greedy nearest-neighbor от старта).
    Реордер прод-квеста применяют, меняя только поле `order` (не `step_id`, прогресс
-   сохраняется) — см. `metravel-quest` шаг 5d.
+   сохраняется), двухфазно через 900+ — `metravel-quest` → `references/live-edit.md`.
+9. **Маршрут в бюджете и без крюков.** Сумма перегонов по прямым ≤4 км (зимняя
+   волна 3,5 км, детские 1,5/2,5 км), перегон ≤1,2 км (зима 1 км); `roadtrip`
+   бюджета не имеет. Для каждой точки сравни «предыдущая → следующая» и
+   «предыдущая → точка → следующая» по графу дорог (OSM `api/0.6/map?bbox=…`,
+   рёбра `highway` in path/footway/track/residential/unclassified/service/
+   cycleway/steps, Dijkstra): крюк >150 м или >25% прямого участка — точка не на
+   маршруте (кейс `sasino-stilo`: щиты в 287 м от дороги, +740 м). Решение —
+   перенести на дорогу либо «по желанию» с честными метрами в story (решает
+   редактор). Кольцо даёт ложный возврат по 1D-оси: настоящий возврат — точка i
+   ближе 120 м к точке j < i−1.
 
 ## Инструмент
 
@@ -69,8 +83,8 @@ POI (костёл/музей), адресное расхождение част�
 Read-only — редактор сам решает, что добавить как опц. точку (`type any`).
 
 ```bash
-# Новый квест: по локальному файлу данных, до заливки
-node scripts/quest-geocheck.js --source-file=scripts/<city>-quest-data.js --quest-id=<quest_id>
+# Новый квест: по черновику до заливки (после переноса — по scripts/<city>-quest-data.js)
+node scripts/quest-geocheck.js --source-file=.codex-temp/quests-plan/<city>/<quest_id>-quest-data.js --quest-id=<quest_id>
 
 # Существующий квест: с прода
 NODE_TLS_REJECT_UNAUTHORIZED=0 node scripts/quest-geocheck.js --quest-id=<quest_id>
@@ -102,7 +116,10 @@ NODE_TLS_REJECT_UNAUTHORIZED=0 node scripts/quest-geocheck.js
 
 1. **Данные.** Создание — локальный `--source-file`. Ревизия — `--quest-id`
    с прода (актуальные данные, не старые копии).
-2. **Прогон** `quest-geocheck.js`. Сохрани отчёт в `.quest-audit/` (gitignored).
+2. **Прогон** `quest-geocheck.js` (и `--route-only` для геометрии; по черновику
+   она уже входит в `npm run quest:gates`). Второй независимый инструмент —
+   `node scripts/audit-quest-coordinates.js --quest-id=<id> --threshold=100`.
+   Отчёт — в `.codex-temp/quest-audit/` (единая рабочая папка, gitignored).
 3. **Разбор** каждого WARN/FAIL вручную: подтверди объект веб-поиском и прямым
    Nominatim (`/search?format=jsonv2&q=...`, `/reverse?format=jsonv2&zoom=18&lat=..&lon=..`,
    `User-Agent`, пауза ≥1.1 с). Смотри `class/type` — не остановка ли.
@@ -113,15 +130,16 @@ NODE_TLS_REJECT_UNAUTHORIZED=0 node scripts/quest-geocheck.js
    `maps_url = https://maps.google.com/?q=<lat>,<lng>`; источник указывай в отчёте,
    а не в патче.
 5. **Применение** (не в этом скилле):
-   - новый квест → впиши `lat/lng/mapsUrl` в `scripts/<city>-quest-data.js`,
-     перепрогони geocheck по файлу → 0 реальных проблем → дальше миграция
+   - новый квест → впиши `lat/lng/mapsUrl` в черновик
+     `.codex-temp/quests-plan/<city>/<quest_id>-quest-data.js` (в `scripts/` он
+     переезжает только перед заливкой, #2228), перепрогони geocheck по файлу → 0 реальных проблем → дальше миграция
      (скилл `metravel-quest`);
-   - квест на проде → `scripts/apply-quest-patches.js` (`PATCH /api/quest-steps/<id>/`).
-     Токен из `~/.metravel_token`; если он невалиден (HTTP 401) — взять свежий
-     логином e2e: `node scripts/apply-quest-patches.js --apply .quest-audit/patches-geo-<id>.json`
-     (сначала `--dry-run`). Токен/пароль не логировать. Применяют
-     `quest-editor`/владелец, либо тикет на борде при необходимости полевой
-     проверки координат.
+   - квест на проде → `quest-editor`: `node scripts/apply-quest-patches.js
+     --dry-run .codex-temp/quest-audit/patches-geo-<id>.json`, затем `--apply`
+     (`PATCH /api/quest-steps/<id>/`), контрольный GET и синк data-файла
+     `sync-quest-data-from-prod.js`. Токен берёт общий resolver скрипта, при
+     HTTP 401 — `node scripts/get-quest-token.js` (печатает только статус);
+     токен не логировать. Полевая проверка координат — тикет на борде.
 6. **Контроль** после правок: повторный прогон geocheck — целевые точки больше
    не WARN-infra/FAIL по реальной причине.
 
@@ -129,7 +147,8 @@ NODE_TLS_REJECT_UNAUTHORIZED=0 node scripts/quest-geocheck.js
 
 - `quest-geo-verifier` — агент-исполнитель этого скилла.
 - `quest-editor` — качество заданий/подсказок/`answer_pattern` (не координаты).
-- `metravel-quest` — создание квеста; вызывай geocheck перед заливкой (шаг 4).
+- `metravel-quest` — создание квеста; geocheck по объектам — шаг 5 конвейера,
+  геометрия — внутри `npm run quest:gates`.
 - `scripts/audit-quest-coordinates.js` — более старый forward-only аудит
   (geocheck его расширяет reverse-геокодом и подсказками координат).
 

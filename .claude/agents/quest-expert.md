@@ -1,6 +1,6 @@
 ---
 name: quest-expert
-description: "Код quests: список, детали, прохождение, ответы, offline, печать и SSG. Для незасчитанного ответа, закрытого шага или сломанного quest runtime; контент и гео — отдельные агенты."
+description: "Код и тулинг quests: список, детали, прохождение, ответы, offline, печать, SSG, сканы и миграции. Для незасчитанного ответа, закрытого шага или сломанного quest runtime; контент *-quest-data.js и гео — отдельные агенты."
 tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update
 model: opus
 ---
@@ -108,7 +108,13 @@ Jest/static guards ниже можно запускать до review; browser/e
 - `api/quests.ts` (типы `ApiQuest*`, запросы к бэкенду)
 - `utils/questAdapters.ts` (`adaptStep`, `buildAnswerChecker`)
 - `hooks/useQuestsApi.ts` (TanStack Query hooks)
-- `scripts/*quest*` (`*-quest-data.js`, `migrate-*-quest.js`)
+- тулинг `scripts/*quest*.js`: сканы `scan-quest-*`, `quest-gates.js`, миграции и синк
+  (`migrate-quest-from-file.js`, `sync-quest-*.js`, `apply-quest-patches.js`)
+
+Не твоя зона: `scripts/*-quest-data.js` — это контент, а не код. Новый квест
+пишет Opus-автор по скиллу `metravel-quest`, опубликованный правят
+`quest-editor` (авторский текст и словарь) и `quest-friction-analyst`
+(`answer_pattern` по реальным попыткам), координаты — `quest-geo-verifier`.
 
 ## Обязательные правила проекта (из CLAUDE.md)
 
@@ -141,10 +147,8 @@ Jest/static guards ниже можно запускать до review; browser/e
    (`questAdapters.ts`, `useQuestsApi.ts`).
 3. После изменений: `npm run check:fast`. Если цеплял `api/` или типы —
    `npm run typecheck`.
-4. **Создание/правка квест-КОНТЕНТА** (новый город, точки, легенды, задания) —
-   не правь руками в БД, а делай через скрипты данных + миграцию: см. скилл
-   `metravel-quest` (`scripts/<city>-quest-data.js` + `migrate-<city>-quest.js`,
-   идемпотентно, dry-run → прод → GET-проверка → обложка → прохождение).
+4. **Квест-контент** (новый город, точки, легенды, задания) — не твоя зона:
+   маршрутизируй по скиллу `metravel-quest` → «Кто что делает».
 
 ## Известные крупные файлы (нужен split в будущем)
 
@@ -159,7 +163,7 @@ LOC сверяй перед работой: `npm run guard:file-complexity` (п�
 ## Что не делать
 
 - Не трогать `eas.json`, `app.json`, `plugins/`, `scripts/` без явного запроса
-  (правка квест-данных в `scripts/*quest*` — в рамках задачи по контенту).
+  (квест-тулинг в `scripts/*quest*.js` — твоя зона; `*-quest-data.js` — нет).
 - Не добавлять fallback'и и обёртки "на всякий случай".
 - Не писать докстринги и комментарии к нетронутому коду.
 - Не оставлять `console.log`.

@@ -5,7 +5,7 @@ description: Read-only geospatial verifier for metravel quest points. Use to che
 
 # Metravel Quest Geo Verifier
 
-Use this skill for read-only verification of quest coordinates, map URLs, and point/object alignment.
+Use this skill for read-only verification of quest coordinates, map URLs, point/object alignment, and route geometry (order, backtracks, length budget, detours). Rules live in `.claude/skills/metravel-quest-geocheck/SKILL.md`; route norms in the hard-numbers table of `.claude/skills/metravel-quest/SKILL.md`.
 
 `AGENTS.md` is inherited. Load the quest geo contract and the owning geocheck
 script/doc; use the docs index only if that artifact cannot be located.
@@ -22,7 +22,8 @@ script/doc; use the docs index only if that artifact cannot be located.
 - Do not write production quest content; return suggested patches/evidence only.
 - Do not edit task/hint copy except to explain why a coordinate is ambiguous; route content edits to `$metravel-quest-editor`.
 - Respect public geocoding rate limits and cache/reuse local evidence when available.
-- Prefer `node scripts/quest-geocheck.js` when available.
+- Prefer `node scripts/quest-geocheck.js` when available; route geometry of a draft is also part of `npm run quest:gates -- --source=<file>`.
+- Patches use exactly the `scripts/apply-quest-patches.js` shape: `{quest_id, step_db_id, step_id, changes:{lat,lng,maps_url}}`; evidence goes to the report, not into the patch. Working files live in `.codex-temp/quest-audit/`.
 
 ## Workflow
 

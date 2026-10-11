@@ -20,7 +20,7 @@ API/UI/media/content-authority heading implicated by the task.
 - `api/quests.ts`
 - `utils/questAdapters.ts`
 - `hooks/useQuestsApi.ts`
-- `scripts/*quest*` when the task is explicitly quest data/migration work
+- quest tooling in `scripts/*quest*.js` (scanners, `quest-gates.js`, migration and sync scripts); `scripts/*-quest-data.js` is content owned by the writer/editor, not code
 
 ## Rules
 

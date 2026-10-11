@@ -51,8 +51,12 @@ both if the diagnosis expands into frontend code or localized app UI.
 
 - Three rejected submissions are a review trigger, not automatic proof that the quest is wrong.
 - A correct, independently verified observable answer rejected by the checker is a strong defect even for
-  one player. Add only the missing morphological, synonym, or transliteration variants to
-  `answer_pattern`.
+  one player. First check whether `utils/questAnswerMorphology.ts` already accepts the RU/BE case form;
+  add only a missing form of the SAME answer (stem alternation, short word, spaced vs hyphenated,
+  transliteration) to `answer_pattern`.
+- A second correct answer or an ambiguous task is not fixed with broad synonyms: per the authority block
+  of `.claude/skills/metravel-quest/SKILL.md` («Полномочия»), convert the step to `any_text` within the
+  story (or an obviously unambiguous question) and rewrite its hint without asking the owner.
 - Repeated semantically different answers usually mean the task points players toward the wrong concept.
   Propose a task/hint clarification; do not accept a factually wrong answer just because it is frequent.
 - A checker that rejects an already configured accepted variant is a quest-code defect: hand off to
@@ -71,9 +75,10 @@ both if the diagnosis expands into frontend code or localized app UI.
 ## Fix gate
 
 - Keep the review read-only unless the user explicitly asks to correct the confirmed issue.
-- An explicit request to fix may authorize an `answer_pattern` correction after the evidence threshold is
-  met. Before writing or creatively changing `task`, `hint`, `story`, or another authored quest text, ask
-  the separate confirmation required by `AGENTS.md`, even when the initial request sounded direct.
+- An explicit request to fix authorizes an `answer_pattern` correction after the evidence threshold is
+  met and the risky-step conversion to a free answer. Other own-initiative rewrites of `task`, `hint`,
+  `story`, or authored text follow the authority block of `.claude/skills/metravel-quest/SKILL.md`
+  («Полномочия»): they wait for the owner's confirmation.
 - Use `$metravel-quest-editor` for the write: save a rollback snapshot in an ignored folder, patch only the
   intended fields, re-fetch the production bundle, and verify the quest page when visible.
 - Validate the previous rejected input, the canonical answer, and a negative input with the real answer

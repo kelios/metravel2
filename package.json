@@ -170,6 +170,7 @@
     "quest:insights": "node scripts/quest-answer-insights.js",
     "quest:funnel": "node scripts/quest-funnel.js",
     "quest:translate": "node scripts/quest-translate.js",
+    "quest:gates": "node scripts/quest-gates.js",
     "quest:translations:status": "node scripts/quest-translate.js status",
     "quest:audit-telemetry-loss": "bash scripts/audit-quest-telemetry-loss.sh",
     "quest:scan-hint-leak": "node scripts/scan-quest-hint-leak.js",

@@ -194,7 +194,12 @@ Validation:
   `window.open` или `Linking.openURL` вне chokepoint.
 - Article/quest media можно создавать по запросу. Creative prose, tasks, hints,
   titles или SEO text меняй только после отдельного явного подтверждения
-  пользователя.
+  пользователя. Исключения для квестов (владелец, 05.10 и 11.10.2026): заказанный
+  квест, его финал и обложка идут до прода и `done` без отдельного «да»;
+  рискованный вопрос (нет 100% уверенности в ответе) агент сам переводит в
+  свободный ответ, правя task/hint шага без вопроса владельцу. Подтверждение
+  остаётся для правки опубликованного текста по своей инициативе, снятия квеста
+  и нового города с alias-риском — скилл `metravel-quest` → «Полномочия».
 - Android-specific scope: после зелёного review и перехода в `testing` — сначала
   `adb devices -l`, затем local build/install и device QA. iOS-specific scope в
   `testing` выбирает simulator/physical/TestFlight layer по затронутому
