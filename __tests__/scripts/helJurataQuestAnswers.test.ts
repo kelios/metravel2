@@ -28,7 +28,6 @@ const CASES: Record<string, { ok: string[]; bad: string[] }> = {
     'wladyslawowo-hallerowka': { ok: ['дерево', 'Дерево', 'деревянный'], bad: ['кирпич', 'камень'] },
     'chalupy-przerwanie': { ok: ['1939'], bad: ['1920', '1945'] },
     'jastarnia-kosciol': { ok: ['лодка', 'Лодка', 'łódź'], bad: ['рыба', 'сеть', 'весло'] },
-    'jurata-pomnik': { ok: ['правая', 'в правой', 'правой руке'], bad: ['левая', 'в левой'] },
     'hel-latarnia': { ok: ['1905'], bad: ['1942', '1826'] },
     'hel-kopiec-kaszubow': { ok: ['гриф', 'грифон', 'Gryf'], bad: ['орёл', 'лев', 'медведь'] },
 };
@@ -61,6 +60,14 @@ describe('hel-jurata-amber: контент квеста', () => {
         CASES[stepId].bad.forEach((answer) => {
             expect(check(answer)).toBe(false);
         });
+    });
+
+    it('jurata-pomnik accepts a free description with at least four normalized characters', () => {
+        const step = steps.find((s) => s.step_id === 'jurata-pomnik')!;
+        expect(step.answer_pattern.type).toBe('any_text');
+        const check = buildAnswerChecker(step.answer_pattern.type, step.answer_pattern.value);
+        ['гнев', 'надежда', 'Она кажется печальной'].forEach(answer => expect(check(answer)).toBe(true));
+        ['', '   ', 'да', '!!!!'].forEach(answer => expect(check(answer)).toBe(false));
     });
 
     it('свободные и необязательные шаги принимают осмысленный ответ', () => {

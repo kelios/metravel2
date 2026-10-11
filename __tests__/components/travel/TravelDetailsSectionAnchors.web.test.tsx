@@ -101,7 +101,7 @@ jest.mock('@/components/travel/details/TravelDetailsOptimizedLCPHero', () => ({
   OVERLAY_TRANSITION_MS: 0,
 }))
 jest.mock('@/hooks/useTravelHeroState', () => ({
-  useTravelHeroState: () => ({ firstImg: { id: 1, url: '/image.jpg' }, heroHeight: 600, extrasReady: true }),
+  useTravelHeroState: () => ({ firstImg: { id: 1, url: '/image.jpg' }, heroSliderImages: [{ id: 1, url: '/image.jpg' }], heroHeight: 600, extrasReady: true }),
 }))
 jest.mock('@/components/travel/details/useTravelSsgHeroHandoff', () => ({
   useTravelSsgHeroHandoff: () => ({ active: false }),

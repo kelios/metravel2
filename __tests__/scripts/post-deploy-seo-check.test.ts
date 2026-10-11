@@ -266,6 +266,8 @@ describe('post-deploy SEO check helpers', () => {
       expect(codes(CLOSED, 'page', 'https://metravel.by/quests/scenario')).toEqual(['robots.noindex'])
       expect(codes(CLOSED, 'page', 'https://metravel.by/quests/map')).toEqual(['robots.noindex'])
       expect(codes(CLOSED, 'page', 'https://metravel.by/quests/theme')).toEqual(['robots.noindex'])
+      expect(hasCatalogDecidedIndexability('https://metravel.by/quests/theme/halloween')).toBe(false)
+      expect(hasCatalogDecidedIndexability('https://metravel.by/quests/theme/unknown')).toBe(false)
       expect(codes(CLOSED, 'page', 'https://metravel.by/quests/grodno/castle/extra')).toEqual([
         'robots.noindex',
       ])

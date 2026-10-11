@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import CardRail from '@/components/ui/CardRail';
 import TravelListItem from '@/components/listTravel/TravelListItem';
 import type { Travel } from '@/types/types';
@@ -26,7 +26,8 @@ export function PopularTravelRail({ travels }: { travels: readonly Travel[] }) {
         testID="popular-travel-rail"
       >
         {travels.map((travel, index) => (
-          <View key={travel.id} style={slotStyle} testID="popular-travel-rail-slot" role="listitem">
+          <View key={travel.id} style={slotStyle} testID="popular-travel-rail-slot"
+            {...(Platform.OS === 'web' ? { role: 'listitem' as const } : {})}>
             <TravelListItem
               travel={travel}
               isFirst={index === 0}

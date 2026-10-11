@@ -112,11 +112,15 @@ describe('geo modules never read anonymously by accident', () => {
   // отправил бы вошедшего как гостя. Исключения поимённо: справочник фильтров
   // карты и офлайн-точки (публичный пакет офлайн-региона, см. api/mapOffline.ts).
   const ALLOWED_RAW = {
-    'api/map.ts': ['GET_FILTER_FOR_MAP'],
+    'api/map/filters.ts': ['GET_FILTER_FOR_MAP'],
     'api/mapOffline.ts': ['url'],
   } as Record<string, string[]>
 
-  it.each(['api/map.ts', 'api/places.ts', 'api/mapOffline.ts', 'api/articles.ts'])('%s', (file) => {
+  const mapLeaves = fs.readdirSync(path.join(process.cwd(), 'api/map'))
+    .filter((file) => file.endsWith('.ts'))
+    .map((file) => `api/map/${file}`)
+
+  it.each(['api/map.ts', ...mapLeaves, 'api/places.ts', 'api/mapOffline.ts', 'api/articles.ts'])('%s', (file) => {
     const source = fs.readFileSync(path.join(process.cwd(), file), 'utf8')
     const rawCalls = [...source.matchAll(/fetchWithTimeout\(\s*([A-Za-z_`$]+)/g)].map((m) => m[1])
     expect(rawCalls).toEqual(ALLOWED_RAW[file] ?? [])

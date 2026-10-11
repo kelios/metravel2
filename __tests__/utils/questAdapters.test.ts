@@ -144,7 +144,7 @@ describe('questAdapters', () => {
       expect(bullets('и 6')).toBe(false);
     });
 
-    it('exact_any: текущие словари шагов 136 и 372 нормализуют ввод без добавления отсутствующих вариантов', () => {
+    it('current steps 136 and 372 keep their exact and free-text answer contracts', () => {
       const fortress = require('@/scripts/brest-fortress-quest-data.js') as Array<{
         steps: Array<{ step_id: string; answer_pattern: { type: string; value: string } }>;
       }>;
@@ -158,12 +158,12 @@ describe('questAdapters', () => {
 
       expect(bullets('ад куль')).toBe(true);
       expect(bullets('от снега')).toBe(false);
+      expect(shops.answer_pattern.type).toBe('any_text');
       expect(shopCheck('кафэ і магазіны')).toBe(true);
       expect(shopCheck('магазіны')).toBe(true);
-      // The source now asks for one establishment type and no longer lists this
-      // compound answer. Normalization must not invent semantic synonyms.
-      expect(shopCheck('крамы і магазіны')).toBe(false);
-      expect(shopCheck('квартиры')).toBe(false);
+      expect(shopCheck('За витринами работают кафе и магазины')).toBe(true);
+      expect(shopCheck('дома')).toBe(true);
+      ['', '   ', 'дом', '!!!!'].forEach(answer => expect(shopCheck(answer)).toBe(false));
     });
 
     it('range: checks number in range', () => {

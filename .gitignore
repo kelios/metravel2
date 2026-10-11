@@ -82,6 +82,8 @@ android-keystore.jks
 upload-keystore.jks
 
 # Local tooling artifacts
+__pycache__/
+*.pyc
 /artifacts/
 /e2e-results.json
 /jest-smoke-results.json

@@ -27,10 +27,11 @@ const collectFiles = (rootDir) => {
     for (const entry of fs.readdirSync(currentDir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
       const absolutePath = path.join(currentDir, entry.name)
       if (entry.isDirectory()) {
+        if (entry.name === '__pycache__') continue
         walk(absolutePath)
         continue
       }
-      if (!entry.isFile()) continue
+      if (!entry.isFile() || entry.name.endsWith('.pyc')) continue
       files.push({ path: toPosix(path.relative(rootDir, absolutePath)), content: fs.readFileSync(absolutePath, 'utf8') })
     }
   }

@@ -44,6 +44,8 @@ const baseIgnores = [
   ".nyc_output/",
   "tmp/",
   "output/",
+  "**/__pycache__/**",
+  "**/*.pyc",
   ".claude/",
   ".claude/**",
   // Префиксный паттерн, а не директорийный: одиночный `.codex-temp-probe.js`

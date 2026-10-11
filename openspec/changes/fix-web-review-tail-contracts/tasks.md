@@ -6,9 +6,9 @@
 
 ## 2. Separate behavior-preserving map API refactor stage
 
-- [ ] 2.1 Capture existing map facade exports and API transport/serialization/normalization test baseline; use the scoped refactor-surgeon workflow for j.
-- [ ] 2.2 Extract transport, point adapters, radius/near-route queries, cluster and place-source pagination into focused `api/map/` leaves while retaining `api/map.ts` re-exports and public types.
-- [ ] 2.3 Confirm no import cycles, payload/endpoint/retry/abort/normalization changes; run affected map API tests and independent code-only review of this stage before behavioral changes.
+- [x] 2.1 Capture existing map facade exports and API transport/serialization/normalization test baseline; use the scoped refactor-surgeon workflow for j.
+- [x] 2.2 Extract transport, point adapters, radius/near-route queries, cluster and place-source pagination into focused `api/map/` leaves while retaining `api/map.ts` re-exports and public types.
+- [x] 2.3 Confirm no import cycles, payload/endpoint/retry/abort/normalization changes; run affected map API tests and independent code-only review of this stage before behavioral changes. Evidence: 9 focused suites / 178 tests pass; all 57 declarations and external bindings match the original facade, runtime leaf cycles = 0 (2026-10-12 aggregate review). Stages 3–5 remain pending.
 
 ## 3. Shared frontend contract repairs
 

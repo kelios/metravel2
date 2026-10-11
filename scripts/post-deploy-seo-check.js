@@ -384,7 +384,7 @@ const CATALOG_DECIDED_INDEXABILITY_PREFIXES = ['/quests/country/']
 /** Посадочная города или детальная квеста: один или два сегмента после `/quests/`. */
 const QUEST_CATALOG_PAGE_RE = /^\/quests\/([^/]+)(?:\/[^/]+)?$/
 /** Первые сегменты под `/quests/`, которые городом не являются. */
-const QUEST_STATIC_SEGMENTS = new Set(['country', 'scenario', 'map'])
+const QUEST_STATIC_SEGMENTS = new Set(['country', 'scenario', 'map', 'theme'])
 
 function pathnameOf(url) {
   if (!url) return null

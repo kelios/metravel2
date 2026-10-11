@@ -30,6 +30,12 @@ const ONLY_QUEST_ID = onlyQuestIdArg ? onlyQuestIdArg.split('=').slice(1).join('
 const ASSETS_DIR = path.resolve(__dirname, '..', 'assets', 'quests');
 
 const QUEST_COVERS = [
+  { quest_id: 'minsk-batleyka-star', assetsDir: 'minskBatleykaStar', cover: 'cover.png' },
+  { quest_id: 'grodno-two-stars', assetsDir: 'grodnoTwoStars', cover: 'cover.png' },
+  { quest_id: 'vitebsk-zorka', assetsDir: 'vitebskZorka', cover: 'cover.png' },
+  { quest_id: 'mogilev-winter-evening', assetsDir: 'mogilevWinterEvening', cover: 'cover.png' },
+  { quest_id: 'brest-winter-candle', assetsDir: 'brestWinterCandle', cover: 'cover.png' },
+  { quest_id: 'gomel-winter-tale', assetsDir: 'gomelWinterTale', cover: 'cover.png' },
   { quest_id: 'oshmyany-crossroads', assetsDir: 'oshmyanyCrossroads', cover: 'cover.png' },
   { quest_id: 'grodno-royal', assetsDir: 'grodnoRoyal', cover: 'cover.png' },
   { quest_id: 'brest-fortress', assetsDir: 'brestFortress', cover: 'cover.png' },
