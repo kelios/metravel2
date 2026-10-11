@@ -2,9 +2,9 @@
 """Собирает карусель для Instagram (слайды 1080x1350) из фото и фактов статьи.
 
 Вход — JSON-спецификация: {"out_dir": "...", "slides": [...]}. Типы слайдов:
-  cover — {"type": "cover", "image", "kicker", "title", "subtitle"}
-  list  — {"type": "list", "image"?, "kicker", "title", "items": [...]}
-  map   — {"type": "map", "title", "note", "points": [{"name", "lat", "lng"}], "line"?: false — без ломаной между точками}
+  cover — {"type": "cover", "image", "kicker", "title", "subtitle", "kicker_plate"?: true — тёмная подложка под надзаголовком}
+  list  — {"type": "list", "image"?, "kicker", "title", "items": [...], "size"?: фиксированный кегль пунктов (единый на всю карусель)}
+  map   — {"type": "map", "title", "note", "points": [{"name", "lat", "lng"}], "line"?: false — без ломаной между точками, "map_h"?: высота карты (800), "row_h"?: шаг строки легенды (62), "inset"?: {"from","to","x","y","w","h"} — врезка крупным масштабом для тесного кластера точек (номера from..to, 1-based)}
   cta   — {"type": "cta", "image", "title", "text", "top"?: y начала текста, по умолчанию 430; для кадра с объектом по центру — небо сверху}
 
 Фото — локальный путь или URL (только свои фото автора 1). Карта — плитки OpenStreetMap,
@@ -108,6 +108,12 @@ def slide_cover(spec):
     title_lines = wrap(draw, spec["title"], title_font, W - 2 * PAD)
     sub_lines = wrap(draw, spec["subtitle"], sub_font, W - 2 * PAD)
     y = H - 150 - len(sub_lines) * 54 - 28 - len(title_lines) * 100 - 52
+    if spec.get("kicker_plate"):  # светлый/цветной фон под оранжевым надзаголовком гасит контраст
+        width = draw.textlength(spec["kicker"].upper(), font=font("bold", 30))
+        layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        ImageDraw.Draw(layer).rounded_rectangle((PAD - 16, y - 12, PAD + width + 16, y + 46), radius=14, fill=(0, 0, 0, 190))
+        img.paste(Image.alpha_composite(img.convert("RGBA"), layer).convert("RGB"))
+        draw = ImageDraw.Draw(img)
     y = kicker(draw, spec["kicker"], PAD, y)
     y = block(draw, spec["title"], title_font, PAD, y, W - 2 * PAD, WHITE, gap=1.14) + 28
     block(draw, spec["subtitle"], sub_font, PAD, y, W - 2 * PAD, WHITE)
@@ -124,7 +130,7 @@ def slide_list(spec):
     y = kicker(draw, spec["kicker"], PAD, y)
     y = block(draw, spec["title"], font("serif", 62), PAD, y, W - 2 * PAD, TEXT, gap=1.16) + 30
     room = H - 120 - y
-    for size in range(42, 28, -2):
+    for size in ([spec["size"]] if spec.get("size") else range(42, 28, -2)):
         item_font = font("sans", size)
         heights = [len(wrap(draw, item, item_font, W - 2 * PAD - 46)) * int(size * 1.26) for item in spec["items"]]
         gap = int(size * 0.7)
@@ -144,7 +150,8 @@ def mercator(lat, lng, zoom):
 
 
 def slide_map(spec):
-    map_h = 800
+    map_h = spec.get("map_h", 800)  # для 12 и более точек легенда не помещается: map_h 720, row_h 54
+    row_h = spec.get("row_h", 62)
     points = spec["points"]
     for zoom in range(14, 4, -1):
         xy = [mercator(p["lat"], p["lng"], zoom) for p in points]
@@ -171,10 +178,44 @@ def slide_map(spec):
     dots = [((x - left) * k, (y - top) * k) for x, y in xy]
     if spec.get("line", True):
         draw.line(dots, fill=BRAND, width=7, joint="curve")
+    inset = spec.get("inset")  # {"from": 1, "to": 8, "x", "y", "w", "h"}: тесный кластер точек — врезка крупнее
+    hidden = set(range(inset["from"] - 1, inset["to"])) if inset else set()
     for i, (x, y) in enumerate(dots, 1):
+        if i - 1 in hidden:
+            continue
         draw.ellipse([x - 24, y - 24, x + 24, y + 24], fill=WHITE, outline=BRAND, width=5)
         label = str(i)
         draw.text((x - draw.textlength(label, font=font("bold", 28)) / 2, y - 17), label, font=font("bold", 28), fill=TEXT)
+    if inset:
+        cl = [dots[i] for i in sorted(hidden)]
+        bx0, by0 = min(p[0] for p in cl) - 30, min(p[1] for p in cl) - 30
+        bx1, by1 = max(p[0] for p in cl) + 30, max(p[1] for p in cl) + 30
+        draw.rounded_rectangle([bx0, by0, bx1, by1], radius=18, outline=BRAND, width=5)
+        ix, iy, iw, ih = inset["x"], inset["y"], inset["w"], inset["h"]
+        pts = [points[i] for i in sorted(hidden)]
+        z = 17  # плитки берём на z17 и сжимаем коэффициентом f, чтобы кластер влез во врезку и метки не касались
+        q = [mercator(p["lat"], p["lng"], z) for p in pts]
+        qx, qy = [a for a, _ in q], [b for _, b in q]
+        f = min(1.0, (iw - 90) / max(1, max(qx) - min(qx)), (ih - 90) / max(1, max(qy) - min(qy)))
+        sw, sh = iw / f, ih / f
+        l2, t2 = (max(qx) + min(qx)) / 2 - sw / 2, (max(qy) + min(qy)) / 2 - sh / 2
+        mosaic = Image.new("RGB", ((int((l2 + sw) // 256) - int(l2 // 256) + 1) * 256, (int((t2 + sh) // 256) - int(t2 // 256) + 1) * 256))
+        for tx in range(int(l2 // 256), int((l2 + sw) // 256) + 1):
+            for ty in range(int(t2 // 256), int((t2 + sh) // 256) + 1):
+                tile = Image.open(fetch(f"https://tile.openstreetmap.org/{z}/{tx}/{ty}.png")).convert("RGB")
+                mosaic.paste(tile, ((tx - int(l2 // 256)) * 256, (ty - int(t2 // 256)) * 256))
+        o2x, o2y = l2 - int(l2 // 256) * 256, t2 - int(t2 // 256) * 256
+        box = mosaic.crop((int(o2x), int(o2y), int(o2x + sw), int(o2y + sh))).resize((iw, ih), Image.LANCZOS)
+        box = Image.blend(box, Image.new("RGB", (iw, ih), WHITE), 0.18)
+        img.paste(box, (ix, iy))
+        draw.rectangle([ix, iy, ix + iw, iy + ih], outline=BRAND, width=5)
+        draw.line([(bx1, (by0 + by1) / 2), (ix, iy + ih / 2)], fill=BRAND, width=4)
+        d2 = [((a - l2) * f + ix, (b - t2) * f + iy) for a, b in q]
+        draw.line(d2, fill=BRAND, width=6, joint="curve")
+        for n, (x, y) in zip(sorted(hidden), d2):
+            draw.ellipse([x - 21, y - 21, x + 21, y + 21], fill=WHITE, outline=BRAND, width=4)
+            lab = str(n + 1)
+            draw.text((x - draw.textlength(lab, font=font("bold", 26)) / 2, y - 16), lab, font=font("bold", 26), fill=TEXT)
     credit = "© OpenStreetMap"
     draw.text((W - 16 - draw.textlength(credit, font=font("sans", 22)), map_h - 34), credit, font=font("sans", 22), fill=MUTED)
     y = block(draw, spec["title"], font("serif", 58), PAD, map_h + 40, W - 2 * PAD, TEXT) + 10
@@ -182,7 +223,7 @@ def slide_map(spec):
     # Легенда в две колонки: номер в кружке и название точки.
     rows = math.ceil(len(points) / 2)
     for i, point in enumerate(points):
-        x, row_y = PAD + (i // rows) * (W - 2 * PAD) // 2, y + (i % rows) * 62
+        x, row_y = PAD + (i // rows) * (W - 2 * PAD) // 2, y + (i % rows) * row_h
         draw.ellipse([x, row_y, x + 44, row_y + 44], outline=BRAND, width=4)
         label = str(i + 1)
         draw.text((x + 22 - draw.textlength(label, font=font("bold", 26)) / 2, row_y + 6), label, font=font("bold", 26), fill=TEXT)
