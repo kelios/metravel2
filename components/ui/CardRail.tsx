@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useMemo, useRef } from 'react'
-import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native'
+import { Platform, Pressable, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { getScrollableWebNode, useHorizontalScrollEdges } from '@/hooks/useHorizontalScrollEdges'
@@ -21,6 +21,8 @@ type Props = {
   /** Внутренние отступы контента (чтобы тени/фокус-кольца не срезались). */
   contentPaddingHorizontal?: number
   contentPaddingVertical?: number
+  /** Доп. стиль контейнера карточек (например, web-грид с колонками-долями ряда). */
+  contentStyle?: StyleProp<ViewStyle>
   testID?: string
   accessibilityLabel?: string
   /** Принудительно скрыть стрелки (например, если секция сама рисует навигацию). */
@@ -67,6 +69,7 @@ function CardRail({
   gap = 16,
   contentPaddingHorizontal = 4,
   contentPaddingVertical = 4,
+  contentStyle,
   testID,
   accessibilityLabel,
   hideArrows = false,
@@ -76,6 +79,11 @@ function CardRail({
   const styles = useMemo(
     () => createStyles(colors, gap, contentPaddingHorizontal, contentPaddingVertical),
     [colors, gap, contentPaddingHorizontal, contentPaddingVertical],
+  )
+
+  const contentContainerStyle = useMemo(
+    () => (contentStyle ? [styles.content, contentStyle] : styles.content),
+    [contentStyle, styles.content],
   )
 
   const scrollRef = useRef<ScrollView>(null)
@@ -120,7 +128,7 @@ function CardRail({
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={contentContainerStyle}
         {...edgeScrollProps}
         accessibilityLabel={accessibilityLabel}
       >

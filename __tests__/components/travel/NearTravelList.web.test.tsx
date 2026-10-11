@@ -13,6 +13,8 @@ const mockTravelListItem = jest.fn((props: any) =>
   React.createElement('mock-travel-list-item', props),
 )
 
+const mockTravelTmlRound = jest.fn((_props: any) => null)
+
 const nearItem = {
   id: 1,
   name: 'Nearby route',
@@ -42,7 +44,8 @@ jest.mock('@/components/listTravel/TravelListItem', () => ({
 
 jest.mock('@/components/travel/TravelTmlRound', () => ({
   __esModule: true,
-  default: () => null,
+  default: (props: any) => mockTravelTmlRound(props),
+  TravelTmlRoundSkeleton: () => null,
 }))
 
 jest.mock('@/components/MapPage/TravelMap', () => ({
@@ -56,6 +59,7 @@ describe('NearTravelList web card width (#1544)', () => {
   beforeEach(() => {
     RN.Platform.OS = 'web'
     mockTravelListItem.mockClear()
+    mockTravelTmlRound.mockClear()
   })
 
   afterEach(() => {
@@ -80,6 +84,31 @@ describe('NearTravelList web card width (#1544)', () => {
     const firstProps = mockTravelListItem.mock.calls[0]?.[0]
     expect(firstProps?.cardWidth).toBe(getTravelDetailsListColumnWidth(1280, 3))
     expect(firstProps?.cardWidth).toBeLessThanOrEqual(640)
-    expect(tree.root.findAllByType(RN.ScrollView)).toHaveLength(0)
+    // #2367: «Рядом» — один горизонтальный ряд; вертикальной прокрутки внутри нет.
+    const scrolls = tree.root.findAllByType(RN.ScrollView)
+    expect(scrolls).toHaveLength(1)
+    expect(scrolls[0].props.horizontal).toBe(true)
+    // UnifiedTravelCard по умолчанию 'pan-y': в горизонтальном ряду свайп гасился бы.
+    expect(firstProps?.webTouchAction).toBe('pan-x pan-y')
+  })
+
+  it('phone web: cards sit in the horizontal rail and keep horizontal swipe (#2367)', () => {
+    jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({
+      width: 390,
+      height: 844,
+      scale: 1,
+      fontScale: 1,
+    } as any)
+
+    let tree!: ReturnType<typeof renderer.create>
+    renderer.act(() => {
+      tree = renderer.create(<NearTravelList travel={{ id: 1 }} embedded showHeader={false} />)
+    })
+
+    const scrolls = tree.root.findAllByType(RN.ScrollView)
+    expect(scrolls).toHaveLength(1)
+    expect(scrolls[0].props.horizontal).toBe(true)
+    expect(mockTravelTmlRound).toHaveBeenCalled()
+    expect(mockTravelTmlRound.mock.calls[0]?.[0]?.webTouchAction).toBe('pan-x pan-y')
   })
 })

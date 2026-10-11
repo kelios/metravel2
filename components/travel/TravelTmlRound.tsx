@@ -24,7 +24,11 @@ import { formatRatingValue } from '@/utils/ratingHelpers';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 
 
-type Props = { travel: Travel };
+type Props = {
+  travel: Travel;
+  /** Web: touch-action карточки; в горизонтальном ряду нужен 'pan-x pan-y', иначе свайп ряда гасится. */
+  webTouchAction?: string;
+};
 
 const resolveTravelYear = (travel: Travel): string => {
     const value = String((travel as any)?.year ?? '').trim();
@@ -41,7 +45,7 @@ const resolveTravelViews = (travel: Travel): number => {
     return Number.isFinite(value) && value > 0 ? value : 0;
 };
 
-const TravelTmlRound: React.FC<Props> = ({ travel }) => {
+const TravelTmlRound: React.FC<Props> = ({ travel, webTouchAction }) => {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
     const unknownCountry = i18nT('travel:components.travel.TravelTmlRound.strana_ne_ukazana_2e2953f1');
@@ -240,6 +244,7 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
                     !canOpen && styles.cardDisabled,
                 ]}
                 webAsView={Platform.OS === 'web'}
+                webTouchAction={webTouchAction}
                 mediaProps={{
                     blurBackground: true,
                     allowCriticalWebBlur: Platform.OS === 'web',

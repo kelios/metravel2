@@ -81,6 +81,11 @@ describe('TravelTmlRound', () => {
     expect(getByText('2,4\u00a0тыс.')).toBeTruthy();
   });
 
+  it('forwards webTouchAction so a horizontal rail keeps its swipe (#2367)', () => {
+    render(<TravelTmlRound travel={{ id: 3, name: 'Rail card' } as any} webTouchAction="pan-x pan-y" />);
+    expect(mockUnifiedTravelCard.mock.calls[0]?.[0]?.webTouchAction).toBe('pan-x pan-y');
+  });
+
   it('omits a non-positive rating', () => {
     const { queryByTestId } = render(
       <TravelTmlRound
