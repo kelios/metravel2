@@ -2,7 +2,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import ts from 'typescript'
 
-import { resources } from '@/i18n/resources'
+// Catalog quality covers SSG-only resources too (#2399): SSG prints them.
+import { catalogResources as resources } from '@/i18n/ssgResources'
 
 // Гейт наборов форм числа (#2238). Значения `generated/*` переведены машинно и
 // поштучно: форма без числа рядом ушла в словарный смысл («путешествие» →

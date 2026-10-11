@@ -69,7 +69,8 @@ EN при URL PL, прямой вход/refresh/SPA, withdrawal/retry, один 
    `content_locale` и `available_locales`, глубина ≥300 слов / ≥30 % своих
    5-грамм в когорте своего языка (`questPageDepth`, пороги прежние), RU-якорь
    обязан быть индексируемым. Подписи страницы — из каталогов i18n
-   (`seoStatic:questDetailSsg.*`; справка точки, «Квесты в соседних городах»
+   (SSG-only `seoSsg:questDetail.*` из `i18n/locales/<locale>/ssg/`, в клиентские
+   чанки не попадает, #2399; справка точки, «Квесты в соседних городах»
    и «Все городские квесты» — общие ключи городской страницы
    `quests:app.tabs.quests.city.index.*`), RU-значения равны прежним литералам.
 2. После постобработки HTML: `finalize-quest-seo-package.js --dist <dist>

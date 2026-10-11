@@ -1,7 +1,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import { resources, type TranslationKey } from '@/i18n/resources'
+// Catalog quality covers SSG-only resources too (#2399): SSG prints them.
+import { catalogResources as resources } from '@/i18n/ssgResources'
+import type { TranslationKey } from '@/i18n/resources'
 import { getFixedTranslator, hasTranslation, translate, translatePlural } from '@/i18n/translate'
 
 const SOURCE_ROOTS = [

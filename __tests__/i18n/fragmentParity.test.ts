@@ -1,4 +1,5 @@
-import { resources } from '@/i18n/resources'
+// Catalog quality covers SSG-only resources too (#2399): SSG prints them.
+import { catalogResources as resources } from '@/i18n/ssgResources'
 
 // Паритет перевода с RU по краям значения (#2237). Интерфейс местами собирает
 // фразу из кусочков: `{t('Нет аккаунта? ')}<Link>`, `{t('Версия приложения: ')}{n}`.

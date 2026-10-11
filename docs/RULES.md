@@ -59,6 +59,13 @@
   `utils/fileSize.ts`) stay the single entry point for distance, rating, and
   file size.
 - Add every new translation key to all production locales in the same change.
+- Strings printed only by the SSG generator (`scripts/generate-seo-pages.js`)
+  are SSG-only resources (#2399): `i18n/locales/<locale>/ssg/*_ssg.ts`, namespace
+  `…Ssg`, typed by `i18n/ssgResources.ts`, read through `loadSsgCatalogs`.
+  `i18n/resources.ts` never imports them, so they stay out of client locale
+  chunks; application code must not reference `…Ssg:` keys or these modules
+  (`__tests__/i18n/ssgOnlyResources.test.ts`). A key the client also reads stays
+  in runtime resources.
   Preserve deterministic web SSR/hydration and the existing native locale/storage
   lifecycle; do not add locale URL prefixes or `hreflang` without a separate SEO
   routing contract.

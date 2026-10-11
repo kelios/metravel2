@@ -1788,6 +1788,7 @@ describe('home SEO metadata parity', () => {
     expect(pluginAfterGeneratorRequire).toBe(pluginBeforeGeneratorRequire)
     expect(typeof pluginAfterGeneratorRequire).toBe('function')
     expect(typeof pluginAfterGeneratorRequire.loadCatalogs).toBe('function')
+    expect(typeof pluginAfterGeneratorRequire.loadSsgCatalogs).toBe('function')
     expect(pluginAfterGeneratorRequire({ types: {} })).toEqual(expect.objectContaining({
       name: 'metravel-inline-localized-translations',
       visitor: expect.objectContaining({ Program: expect.any(Function) }),

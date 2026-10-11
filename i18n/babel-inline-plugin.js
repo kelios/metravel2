@@ -90,8 +90,19 @@ const readObjectEntries = (filePath) => {
 const toCamelCase = (value) =>
   value.replace(/_([a-z0-9])/g, (_match, character) => character.toUpperCase())
 
-const loadCatalogs = (projectRoot) => {
-  const cached = cache.get(projectRoot)
+/**
+ * SSG-only resources (#2399) live in `i18n/locales/<locale>/ssg/*_ssg.ts`
+ * and get a `…Ssg` namespace. Runtime resources (`i18n/locales/<locale>/index.ts`)
+ * never import them, so they are absent from the client locale chunks; the web
+ * inliner reads the runtime set only, and the SSG generator reads both through
+ * `loadSsgCatalogs`.
+ */
+const SSG_ONLY_NAMESPACE_SUFFIX = 'Ssg'
+const isSsgOnlyNamespace = (namespace) => namespace.endsWith(SSG_ONLY_NAMESPACE_SUFFIX)
+
+const readCatalogs = (projectRoot, { includeSsgOnly }) => {
+  const cacheKey = `${projectRoot}\0${includeSsgOnly ? 'ssg' : 'runtime'}`
+  const cached = cache.get(cacheKey)
   if (cached) return cached
 
   const localesRoot = path.join(projectRoot, 'i18n', 'locales')
@@ -122,6 +133,13 @@ const loadCatalogs = (projectRoot) => {
         // печатался на web как «Перевод недоступен» (#1675).
         namespace: (name) => `${toCamelCase(name.replace(/_static$/, ''))}Static`,
       },
+      ...(includeSsgOnly
+        ? [{
+            directory: path.join(localeRoot, 'ssg'),
+            namespace: (name) =>
+              `${toCamelCase(name.replace(/_ssg$/, ''))}${SSG_ONLY_NAMESPACE_SUFFIX}`,
+          }]
+        : []),
     ]
 
     for (const source of sources) {
@@ -157,9 +175,15 @@ const loadCatalogs = (projectRoot) => {
   }
 
   const result = { localeCodes, catalogs }
-  cache.set(projectRoot, result)
+  cache.set(cacheKey, result)
   return result
 }
+
+/** Runtime catalogs: exactly what `i18n/resources.ts` ships to the client. */
+const loadCatalogs = (projectRoot) => readCatalogs(projectRoot, { includeSsgOnly: false })
+
+/** Runtime plus SSG-only catalogs, for the SSG generator and its tests. */
+const loadSsgCatalogs = (projectRoot) => readCatalogs(projectRoot, { includeSsgOnly: true })
 
 const getImportedName = (callPath) => {
   const callee = callPath.get('callee')
@@ -261,3 +285,5 @@ module.exports = inlineLocalizedTranslations
 // Exporting the existing catalog reader keeps static HTML and hydrated SEO copy
 // on one source without teaching a second parser about TypeScript resources.
 module.exports.loadCatalogs = loadCatalogs
+module.exports.loadSsgCatalogs = loadSsgCatalogs
+module.exports.isSsgOnlyNamespace = isSsgOnlyNamespace

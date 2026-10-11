@@ -24,14 +24,14 @@ const { verifyQuestSeoPackage, listPrefixedQuestArtifacts } = require('@/scripts
 const { scoreDetailCohort } = require('@/scripts/lib/questDetailCohort')
 const gsp = require('@/scripts/generate-seo-pages')
 const { verifyQuestSeoPackageState } = require('@/scripts/verify-static-quest-seo')
-const { loadCatalogs } = require('@/i18n/babel-inline-plugin')
+const { loadSsgCatalogs } = require('@/i18n/babel-inline-plugin')
 const { questRouteKey } = require('@/utils/questCityAlias')
 const { validateQuestServingProjection } = require('@/utils/questLocaleRouting')
 const { LOCALE_REGISTRY } = require('@/i18n/config')
 
 const FIXTURES = path.join(__dirname, '..', 'fixtures', 'questSeoV1')
 const fixture = (name: string) => fs.readFileSync(path.join(FIXTURES, name), 'utf8')
-const CATALOGS = loadCatalogs(path.resolve(__dirname, '..', '..')).catalogs
+const CATALOGS = loadSsgCatalogs(path.resolve(__dirname, '..', '..')).catalogs
 const SHA = 'a'.repeat(40)
 const COVER = 'https://metravel.by/quest-cover/quests/1/main/cover.webp'
 
@@ -469,8 +469,8 @@ describe('RU regression of the shared detail builder', () => {
 
   it('translates through the shipped catalogs and fails on a missing key', () => {
     const pl = createSsgTranslator(CATALOGS, 'pl')
-    expect(pl.tp('seoStatic:questDetailSsg.factRoute', 5)).toBe('Trasa: 5 punktów')
-    expect(() => pl.t('seoStatic:questDetailSsg.doesNotExist')).toThrow(/Missing pl translation/)
+    expect(pl.tp('seoSsg:questDetail.factRoute', 5)).toBe('Trasa: 5 punktów')
+    expect(() => pl.t('seoSsg:questDetail.doesNotExist')).toThrow(/Missing pl translation/)
   })
 
   it('marks only the target language of the catalog link on a localized error page', () => {

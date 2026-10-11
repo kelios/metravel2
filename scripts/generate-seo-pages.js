@@ -17,7 +17,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { loadCatalogs: loadI18nCatalogs } = require('../i18n/babel-inline-plugin');
+const { loadSsgCatalogs } = require('../i18n/babel-inline-plugin');
 const { fetchJson } = require('./lib/fetchJson');
 const {
   BUILD_FETCH_RATE_PER_SEC,
@@ -110,9 +110,9 @@ const OG_IMAGE = `${SITE_URL}/assets/icons/logo_yellow_512x512.png`;
 const FALLBACK_DESC = 'Найди место для путешествия и поделись своим опытом.';
 const IMAGE_OPTIMIZATION_QUERY_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'blur', 'dpr'];
 
-const I18N_CATALOGS = loadI18nCatalogs(path.resolve(__dirname, '..')).catalogs;
+const I18N_CATALOGS = loadSsgCatalogs(path.resolve(__dirname, '..')).catalogs;
 const RU_I18N_CATALOG = I18N_CATALOGS.get('ru');
-// Build-time quest labels come from the same catalogs as the app; RU values
+// Build-time quest labels come from the app catalogs plus the SSG-only ones (#2399); RU values
 // are the historical literals, so RU pages stay byte-identical (#2365).
 const RU_SSG = createSsgTranslator(I18N_CATALOGS, 'ru');
 function readRequiredRuTranslation(key) {
@@ -2160,10 +2160,10 @@ function buildQuestIntroSectionModel(quest, bundle, ssg = RU_SSG) {
   ).trim();
 
   const facts = [];
-  if (city) facts.push(ssg.t('seoStatic:questDetailSsg.factCity', { value1: city }));
-  if (points > 0) facts.push(ssg.tp('seoStatic:questDetailSsg.factRoute', points));
-  if (durationLabel) facts.push(ssg.t('seoStatic:questDetailSsg.factDuration', { value1: durationLabel }));
-  if (startLocation) facts.push(ssg.t('seoStatic:questDetailSsg.factStart', { value1: startLocation }));
+  if (city) facts.push(ssg.t('seoSsg:questDetail.factCity', { value1: city }));
+  if (points > 0) facts.push(ssg.tp('seoSsg:questDetail.factRoute', points));
+  if (durationLabel) facts.push(ssg.t('seoSsg:questDetail.factDuration', { value1: durationLabel }));
+  if (startLocation) facts.push(ssg.t('seoSsg:questDetail.factStart', { value1: startLocation }));
 
   const introParagraphs = String(intro?.story || '')
     .split(/\n{2,}/)
@@ -2230,8 +2230,8 @@ function buildQuestRouteDigestHtml(digest, { h2Style, h3Style, pStyle, factStyle
 
   return [
     '<div data-ssg-quest-route="true">',
-    `<h2 style="${h2Style}">${escapeAttr(ssg.t('seoStatic:questDetailSsg.routeHeading'))}</h2>`,
-    `<p style="${pStyle}">${escapeAttr(ssg.t('seoStatic:questDetailSsg.routeLead'))}</p>`,
+    `<h2 style="${h2Style}">${escapeAttr(ssg.t('seoSsg:questDetail.routeHeading'))}</h2>`,
+    `<p style="${pStyle}">${escapeAttr(ssg.t('seoSsg:questDetail.routeLead'))}</p>`,
     `<ol style="margin:0;padding:0 0 0 18px">${items}</ol>`,
     '</div>',
   ].join('');
@@ -2244,7 +2244,7 @@ function buildQuestDetailLinksHtml(links, { h2Style, pStyle, ulStyle, backStyle 
   // Перелинковка ведёт на русские страницы (города, соседние квесты, статьи):
   // на языковой странице их названия помечены `lang="ru"` (#2365, D1).
   const ruLang = ssg.locale === 'ru' ? '' : ' lang="ru"';
-  const t = (key, params) => ssg.t(`seoStatic:questDetailSsg.${key}`, params);
+  const t = (key, params) => ssg.t(`seoSsg:questDetail.${key}`, params);
   const item = (href, text, tail = '', lang = ruLang) =>
     `<li style="margin:0 0 3px"><a href="${escapeAttr(href)}"${lang}>${escapeAttr(text)}</a>${tail}</li>`;
 
@@ -2253,7 +2253,7 @@ function buildQuestDetailLinksHtml(links, { h2Style, pStyle, ulStyle, backStyle 
     .map((city) => item(
       `/quests/${city.segment}`,
       city.name || city.segment,
-      ` ${escapeAttr(ssg.tp('seoStatic:questDetailSsg.nearbyCity', city.questCount, { value1: Math.round(city.distanceKm) }))}`,
+      ` ${escapeAttr(ssg.tp('seoSsg:questDetail.nearbyCity', city.questCount, { value1: Math.round(city.distanceKm) }))}`,
     ))
     .join('');
   const travels = links.travelLinks.map((travel) => item(travel.path, travel.title)).join('');
@@ -2283,8 +2283,8 @@ function injectQuestIntroSection(baseHtml, { title, description, quest, bundle, 
   const model = buildQuestIntroSectionModel(quest, bundle, ssg);
   const lead = cleanDescription || (
     model.city
-      ? ssg.t('seoStatic:questDetailSsg.leadWithCity', { value1: cleanTitle, value2: model.city })
-      : ssg.t('seoStatic:questDetailSsg.lead', { value1: cleanTitle })
+      ? ssg.t('seoSsg:questDetail.leadWithCity', { value1: cleanTitle, value2: model.city })
+      : ssg.t('seoSsg:questDetail.lead', { value1: cleanTitle })
   );
   const facts = model.facts
     .map((fact) => `<li style="margin:0;padding:0">${escapeAttr(fact)}</li>`)
@@ -2350,8 +2350,8 @@ function injectQuestIntroSection(baseHtml, { title, description, quest, bundle, 
   }, ssg);
 
   const section = [
-    `<section data-ssg-quest-intro="true" aria-label="${escapeAttr(ssg.t('seoStatic:questDetailSsg.sectionLabel'))}" style="${sectionStyle}">`,
-    `<p style="${kickerStyle}">${escapeAttr(ssg.t('seoStatic:questDetailSsg.kicker'))}</p>`,
+    `<section data-ssg-quest-intro="true" aria-label="${escapeAttr(ssg.t('seoSsg:questDetail.sectionLabel'))}" style="${sectionStyle}">`,
+    `<p style="${kickerStyle}">${escapeAttr(ssg.t('seoSsg:questDetail.kicker'))}</p>`,
     `<h1 style="${titleStyle}">${escapeAttr(cleanTitle)}</h1>`,
     `<p style="${textStyle}">${escapeAttr(lead)}</p>`,
     introParagraphs,
@@ -2390,7 +2390,7 @@ function buildQuestJsonLd({ title, description, canonical, image, quest, ssg = R
     url: canonical,
     mainEntityOfPage: canonical,
     inLanguage: ssg.locale,
-    touristType: ssg.t('seoStatic:questDetailSsg.touristType'),
+    touristType: ssg.t('seoSsg:questDetail.touristType'),
     provider: {
       '@type': 'Organization',
       name: 'MeTravel',

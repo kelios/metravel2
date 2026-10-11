@@ -53,7 +53,7 @@ const CANDIDATE_SCHEMA = 'quest-seo-candidate'
 const RECEIPT_TIMEOUT_MS = 120000
 
 // ---------------------------------------------------------------------------
-// Translation for build-time pages (same catalogs the app ships)
+// Translation for build-time pages (runtime catalogs + SSG-only `ssg/` catalogs, see loadSsgCatalogs)
 // ---------------------------------------------------------------------------
 
 function interpolate(template, params = {}) {
