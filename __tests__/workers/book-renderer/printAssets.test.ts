@@ -5,7 +5,7 @@ import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promis
 import path from 'node:path'
 import type { Page, BrowserContext } from 'playwright'
 import { assertPrintOrientedBinding, assertPrintResourceBinding, assertPrintVariantBinding, PRINT_ORIENTED_VARIANT_RECIPE, PRINT_VARIANT_RECIPE, PRINT_ASSET_RECIPE, type PrintResourceBinding } from '@/services/pdf-export/segments/printAssetsTypes'
-import { PrintAssetCache, PRINT_RESOURCE_POLICY_HASH, PRINT_ORIENTED_VARIANT_POLICY_HASH, checkPrintWorkingBudget, encodePrintImage, printDimensions, transformPrintResourceUrls } from '@/workers/book-renderer/printAssets'
+import { PrintAssetCache, PRINT_RESOURCE_POLICY_HASH, PRINT_ORIENTED_VARIANT_POLICY_HASH, assertPinnedChromiumVersion, checkPrintWorkingBudget, encodePrintImage, printDimensions, transformPrintResourceUrls } from '@/workers/book-renderer/printAssets'
 import { normalizePrintOrientation, printOrientationMatrix, type PrintOrientation } from '@/workers/book-renderer/printOrientation'
 import { canonicalJson, readBoundedBytes, sha256 } from '@/workers/book-renderer/filesystem'
 import { DEFAULT_RENDERER_RESOURCE_PROFILE } from '@/workers/book-renderer/measurement'
@@ -446,4 +446,15 @@ describe('print cache integrity with a mocked codec port', () => {
       await expect(cache.prepareHtml(html(), { ...source, [field]: 'f'.repeat(64) })).rejects.toThrow('PRINT_RESOURCE_BINDING_MISMATCH')
     }
   })
+})
+
+describe('assertPinnedChromiumVersion', () => {
+  const pinned = '149.0.7827.55'
+  it.each(['149.0.7827.55', '149.0.7827.0'])('accepts the exact pin and the Linux ".0" build of the same revision: %s', (actual) => {
+    expect(() => assertPinnedChromiumVersion(actual, pinned)).not.toThrow()
+  })
+  it.each(['149.0.7827.54', '149.0.7828.0', '149.1.7827.55', '150.0.7827.55', '149.0.7827.00', '149.0.7827', '149.0.7827.55.1', 'chromium'])(
+    'rejects any other version as an encoder identity mismatch: %s', (actual) => {
+      expect(() => assertPinnedChromiumVersion(actual, pinned)).toThrow('PRINT_ENCODER_IDENTITY_MISMATCH')
+    })
 })

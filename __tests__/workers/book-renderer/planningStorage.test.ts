@@ -43,6 +43,17 @@ describe('bounded candidate storage and committed read authority', () => {
     await expect(reader.read({ ...file, checksum: 'e'.repeat(64) }, LIMITS.output_bytes)).rejects.toThrow('WORKER_PLANNING_COMMITTED_REFERENCE_INVALID')
   })
 
+  it('resolves a by-ref resource read with one committed lookup and still verifies its bytes', async () => {
+    const receipt = await new PlanningStorage(root, LIMITS).put('print-cache/key.json', { value: 1 })
+    const lookup = jest.fn(async (ref: string) => ref === receipt.ref ? receipt : null)
+    const storage = new PlanningStorage(root, LIMITS, lookup)
+    expect(JSON.parse((await storage.readByRef(receipt.ref, receipt.checksum, LIMITS.output_bytes)).toString('utf8'))).toEqual({ value: 1 })
+    expect(lookup).toHaveBeenCalledTimes(1)
+    await expect(storage.readByRef(receipt.ref, 'e'.repeat(64), LIMITS.output_bytes)).rejects.toThrow('WORKER_PLANNING_COMMITTED_REFERENCE_INVALID')
+    await writeFile(path.join(root, receipt.ref), '{"value":2}')
+    await expect(storage.readByRef(receipt.ref, receipt.checksum, LIMITS.output_bytes)).rejects.toThrow('WORKER_PLANNING_CHECKSUM_MISMATCH')
+  })
+
   it('rejects a lookup resolving a different job/ref rather than using its valid hash', async () => {
     const receipt = await new PlanningStorage(root, LIMITS).put('index/other.json', { value: 1 })
     const storage = new PlanningStorage(root, LIMITS, async () => receipt)
@@ -80,7 +91,8 @@ describe('bounded candidate storage and committed read authority', () => {
     expect(await retry.put(receipt.ref, { text: 'Original 😀' })).toEqual(receipt)
     expect(retry.outputs).toEqual([receipt])
     const conflicting = new PlanningStorage(root, LIMITS)
-    await expect(conflicting.put(receipt.ref, { text: 'Changed' })).rejects.toThrow()
+    // The existing leaf fails verification against the new value's receipt.
+    await expect(conflicting.put(receipt.ref, { text: 'Changed' })).rejects.toThrow('WORKER_PLANNING_CHECKSUM_MISMATCH')
     expect(conflicting.outputs).toEqual([])
     expect(await readFile(path.join(root, receipt.ref))).toEqual(before)
     expect((await readdir(path.join(root, 'book'))).filter(name => name.startsWith('.pending-'))).toEqual([])

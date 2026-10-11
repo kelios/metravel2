@@ -126,6 +126,10 @@ describe('fenced bounded planning protocol through sealed descriptors', () => {
     const f = await setup()
     await expect(preparePlanningStep(f.jobDir, f.plan, f.document, { renderer_content_hash: RENDERER, generation: 1 }, undefined as unknown as PlanningStepOptions)).rejects.toThrow('WORKER_PLANNING_COMMITTED_LOOKUP_REQUIRED')
     await expect(step(f, { renderer_content_hash: RENDERER, generation: 1, limits: { output_bytes: 100 } })).rejects.toThrow('WORKER_PLANNING_OUTPUT_BUDGET_EXCEEDED')
+    // A malformed profile is reported as a request error, never as checkpoint corruption.
+    for (const resource_profile of [{ ...DEFAULT_RENDERER_RESOURCE_PROFILE, extra: 1 }, [] as unknown]) {
+      await expect(step(f, { renderer_content_hash: RENDERER, generation: 1, resource_profile } as unknown as PlanningRequest)).rejects.toThrow('WORKER_RESOURCE_PROFILE_INVALID')
+    }
     expect(f.committed.size).toBe(0)
   })
 

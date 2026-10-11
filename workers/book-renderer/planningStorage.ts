@@ -58,7 +58,8 @@ export class PlanningStorage {
   async readByRef(ref: string, checksum: string, maximum: number): Promise<Buffer> {
     const trusted = this.admitted.get(ref) ?? await this.committed?.(ref)
     if (!trusted || trusted.ref !== ref || trusted.checksum !== checksum) throw new Error('WORKER_PLANNING_COMMITTED_REFERENCE_INVALID')
-    return this.read(trusted, maximum)
+    // `trusted` is already the authority receipt; read() would repeat the same lookup.
+    return readPlanningFile(this.root, trusted, maximum)
   }
 
   /** Checkpoint-nested hashes are integrity witnesses, never commit authority. */
