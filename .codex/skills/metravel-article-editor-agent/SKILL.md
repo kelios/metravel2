@@ -18,7 +18,7 @@ Operate the article/travel API when the user asks for content changes.
 - Public read: `GET /api/articles/`, `GET /api/articles/{id}/`, `GET /api/travels/{id}/`.
 - Admin writes: `POST /api/articles/`, `PUT/PATCH /api/articles/{id}/`, `POST /api/articles/{id}/publish/`, `POST /api/articles/{id}/unpublish/`.
 - Article fields: `name`, `description`, `article_type_id`, `publish`.
-- Live travel body: `scripts/seo-edit.js --desc-file` (backup + verify + rollback). Do not run `metravel_publish.py` on a published travel — it unpublishes.
+- Live travel body: `scripts/seo-edit.js --desc-file` (backup + verify + rollback). Do not run `metravel_publish.py` on a published travel — it is the draft engine; live bodies go through `seo-edit` only.
 - New travel draft: `PUT /api/travels/upsert/` with `id:null` and `publish=false`, Julia token only.
 - Description images: `POST /api/upload` `collection=description` with the travel id. For pure article records, confirm the backend media path; do not invent a collection name.
 

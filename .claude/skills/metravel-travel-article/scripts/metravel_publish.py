@@ -1,24 +1,32 @@
 #!/usr/bin/env python3
 """
-metravel_publish.py — движок публикации/редактирования путешествий на metravel.by.
+metravel_publish.py — движок черновиков путешествий автора 1 на metravel.by.
 
-Токен НЕ хранится в коде. Источник токена (в порядке приоритета):
-  1) переменная окружения METRAVEL_TOKEN
-  2) файл ~/.metravel_token (одна строка)
-Токен — это сессионный токен авторизации залогиненного пользователя metravel.by
-(DRF Token). Используется ТОЛЬКО для запросов к metravel.by.
+Токен в коде и в окружении скрипта не хранится. `token()` получает проверенный
+токен владельца (owner1, `expectedUserId: 1`) через `scripts/lib/metravel-token-bridge.js`
+по приватному каналу — тот же общий resolver, что у `createToolSession` в JS
+(`docs/DEVELOPMENT.md` → «Operator token sessions»). Запросы — только к https://metravel.by.
+
+Что движок гарантирует сам, без опоры на текст регламента:
+  * upsert берёт `year`, `month` и `created_at` из `date:` черновика и не шлёт `month: []`;
+  * пустые plus/minus/recommendation/youtube_link уходят `null`, сентинела нет;
+  * правка существующей статьи эхом сохраняет publish/moderation и поля, которых нет в черновике;
+  * descimg кладёт в тело только `travel-description-image` (перезаливка, alt = имя точки);
+  * между заливками `POST /api/upload` выдерживается пауза ≥ max(длительность запроса, 10 с) (#2306).
 
 CLI:
-  # создать/обновить статью из markdown-черновика
-  python metravel_publish.py upsert <draft.md> [--id <travelId>]
+  # создать/обновить черновик из markdown (date: YYYY-MM-DD | YYYY-MM | A..B обязателен для новой)
+  python metravel_publish.py upsert <draft.md> [--id <travelId>] [--year <YYYY>] [--dry-run]
   # залить фото (обложка + галерея + фото к точкам) из папки(папок)
   python metravel_publish.py photos <travelId> <folder> [<folder2> ...] [--gallery N] [--no-cover] [--no-points]
   # только обложка из конкретного файла
   python metravel_publish.py cover <travelId> <imageFile>
+  # фото точек в текст (перезаливка в collection=description), категории точек
+  python metravel_publish.py descimg <travelId> ; python metravel_publish.py recat <travelId>
   # справочники id категорий/стран
   python metravel_publish.py facets
 """
-import os, sys, json, re, glob, math, subprocess, urllib.request, urllib.error, pathlib
+import os, sys, json, re, glob, math, subprocess, urllib.request, urllib.error, urllib.parse, pathlib, time, datetime, hashlib, io, html as _html
 
 BASE = os.environ.get("METRAVEL_API", "https://metravel.by/api")
 
@@ -160,6 +168,28 @@ def strip_meta(html):
     return html.strip()
 
 # ---------------- markdown -> travel ----------------
+SENTINEL = "__draft_placeholder__"   # маркер визарда: движок его не пишет, встречный — обнуляет
+
+def parse_trip_date(value, today=None):
+    """`date:` черновика → {year, month, created_at, exact_day}. Формы: YYYY-MM-DD, YYYY-MM, «A..B».
+    Без точного дня — 1-е число месяца; несколько месяцев — created_at по самому раннему (#2046)."""
+    s = (value or "").strip().strip("\"'")
+    if not s: return None
+    parts = [x.strip() for x in s.split("..")]
+    if len(parts) > 2: raise ValueError(f"date: {s!r} — ожидается YYYY-MM-DD, YYYY-MM или диапазон A..B")
+    def one(x):
+        m = re.fullmatch(r"(\d{4})-(\d{2})(?:-(\d{2}))?", x)
+        if not m: raise ValueError(f"date: {x!r} — ожидается YYYY-MM-DD или YYYY-MM")
+        return datetime.date(int(m[1]), int(m[2]), int(m[3] or 1)), bool(m[3])
+    (start, exact), (end, _) = one(parts[0]), one(parts[-1])
+    if end < start: raise ValueError(f"date: {s!r} — конец раньше начала")
+    if start > (today or datetime.date.today()): raise ValueError(f"date: {s!r} — дата в будущем, бэкенд ответит 400")
+    months, y, mo = [], start.year, start.month
+    while (y, mo) <= (end.year, end.month) and len(months) < 12:
+        if mo not in months: months.append(mo)
+        y, mo = (y + 1, 1) if mo == 12 else (y, mo + 1)
+    return {"year": start.year, "month": months, "created_at": start.isoformat() + "T12:00:00Z", "exact_day": exact}
+
 def parse_md(path):
     md = open(path).read()
     fm = {}
@@ -189,7 +219,7 @@ def parse_md(path):
                 co=re.match(r"(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)", cells[1])
                 if co and not cells[0].lower().startswith(("место","---")):
                     points.append((cells[0], float(co.group(1)), float(co.group(2))))
-    return title, body, countries, cats, points
+    return title, body, countries, cats, points, parse_trip_date(fm.get("date"))
 
 def inline(s):
     s = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", s)
@@ -201,7 +231,7 @@ DROP_H = {"вступление","введение","итог","итоги","з�
           "как прошло","как прошёл день","как прошел день","о поездке","точки",
           "резюме","описание","места","места (точки на карте)","точки маршрута"}
 # Переименовываем в естественные.
-RENAME_H = {"маршрут по точкам":"Маршрут","полезное":"Советы путешественнику",
+RENAME_H = {"маршрут по точкам":"Маршрут","полезное":"Если соберётесь",
             "как прошло путешествие":"Как всё прошло"}
 
 def _h2(text):
@@ -239,97 +269,110 @@ def md_to_html(body):
     fp(); fl()
     return "".join(out)
 
-def _template():
-    st,txt=req("GET","/travels/upsert/")  # not used; template comes from an existing draft if available
-    return {}
+def _get_detail(tid):
+    _,t=req("GET",f"/travels/{tid}/"); d=json.loads(t)
+    return d.get("data",d) if isinstance(d,dict) else {}
 
-def upsert(path, existing_id=None, year="2024"):
-    title, body, countries, cats, points = parse_md(path)
+def _clean_text(v):
+    return None if v in (None, "", SENTINEL) else v
+
+def _markers_from_detail(d, recategorize=False):
+    """Точки из детали: coordsMeTravel (id, координаты, категории, фото) — как buildUpsertPayload в seo-edit.js.
+    Пустые категории дозаполняются по имени; recategorize=True пересчитывает все."""
+    cs=d.get("countries") or [160]; c=cs[0] if cs else 160; out=[]
+    points=d.get("coordsMeTravel")
+    if points is None:   # деталь без coordsMeTravel — координаты из travelAddress[].coord
+        points=[]
+        for a in (d.get("travelAddress") or []):
+            mm=re.match(r"\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)", a.get("coord") or "")
+            if mm: points.append({"id":a.get("id"),"lat":mm.group(1),"lng":mm.group(2),"address":a.get("address"),"categories":a.get("categories")})
+    for p in points:
+        if p.get("lat") is None or p.get("lng") is None: continue
+        cats=p.get("categories") or []
+        out.append({"id":p.get("id"),"lat":float(p["lat"]),"lng":float(p["lng"]),"address":p.get("address") or "",
+                    "country":p.get("country") or c,"image":p.get("image"),
+                    "categories":point_categories(p.get("address")) if recategorize or not cats else cats})
+    return out
+
+def _payload_from_detail(d, **over):
+    """Эхо всех полей детали (publish/moderation/month/plus… не теряются); override — только переданное."""
+    payload={"id":d.get("id"),"name":d.get("name"),"description":d.get("description") or "",
+      "meta_description":d.get("meta_description"),"year":d.get("year"),
+      "categories":d.get("categories") or [20],"countries":d.get("countries") or [160],
+      "coordsMeTravel":_markers_from_detail(d),"travelAddress":[],"gallery":[],
+      "transports":d.get("transports") or [],"month":d.get("month") or [],"complexity":d.get("complexity") or [],
+      "companions":d.get("companions") or [],"over_nights_stay":d.get("over_nights_stay") or [],
+      "thumbs200ForCollectionArr":[],"travelImageThumbUrlArr":[],"travelImageAddress":[],
+      "minus":_clean_text(d.get("minus")),"plus":_clean_text(d.get("plus")),
+      "recommendation":_clean_text(d.get("recommendation")),"youtube_link":_clean_text(d.get("youtube_link")),
+      "publish":bool(d.get("publish")),"moderation":bool(d.get("moderation")),"visa":bool(d.get("visa")),
+      "number_days":d.get("number_days"),"number_peoples":d.get("number_peoples"),"budget":d.get("budget")}
+    payload.update(over)
+    return payload
+
+def _same_month(stamp, year, months):
+    m=re.match(r"(\d{4})-(\d{2})", stamp or "")
+    return bool(m) and int(m[1])==year and int(m[2]) in months
+
+def upsert(path, existing_id=None, year=None, dry_run=False):
+    title, body, countries, cats, points, trip = parse_md(path)
     html = strip_meta(md_to_html(body))
     c = countries[0] if countries else 160
     markers=[{"id":None,"lat":la,"lng":ln,"address":nm,"country":c,"categories":point_categories(nm),"image":None} for (nm,la,ln) in points]
-    # preserve existing point ids on update (match by nearest coord) so photos survive
+    detail=None
     if existing_id:
-        try:
-            _,t=req("GET",f"/travels/{existing_id}/"); d=json.loads(t); d=d.get("data",d)
-            pool=[]
-            for a in (d.get("travelAddress") or []):
-                mm=re.match(r"\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)", a.get("coord") or "")
-                if mm: pool.append((float(mm.group(1)),float(mm.group(2)),a.get("id")))
-            for mk in markers:
-                bi=-1; bd=1e18; best=None
-                for i,(la2,lo2,pid) in enumerate(pool):
-                    dd=(mk["lat"]-la2)**2+(mk["lng"]-lo2)**2
-                    if dd<bd: bd=dd; best=pid; bi=i
-                if best is not None and bd < 0.002**2:
-                    mk["id"]=best; pool.pop(bi)
-        except Exception as e:
-            print("  (id-preserve skipped:", e, ")")
-    payload={
-      "id":existing_id, "name":title, "description":html, "year":year,
-      "categories":cats or [20], "countries":countries or [160],
-      "coordsMeTravel":markers, "travelAddress":[], "gallery":[],
-      "transports":[], "month":[], "complexity":[], "companions":[], "over_nights_stay":[],
-      "thumbs200ForCollectionArr":[], "travelImageThumbUrlArr":[], "travelImageAddress":[],
-      "minus":"__draft_placeholder__","plus":"__draft_placeholder__",
-      "recommendation":"__draft_placeholder__","youtube_link":"__draft_placeholder__",
-      "publish":False, "moderation":False, "visa":False,
-      "number_days":None, "number_peoples":None, "budget":None,
-    }
+        detail=_get_detail(existing_id)
+        if not detail.get("id"): print(f"  {existing_id}: нет данных — upsert не выполнен"); return None
+        # id точек сохраняются (ближайшая координата) — фото точек не теряются
+        pool=[(float(p["lat"]),float(p["lng"]),p.get("id"),p.get("image")) for p in (detail.get("coordsMeTravel") or []) if p.get("lat") is not None]
+        for mk in markers:
+            bi=-1; bd=1e18
+            for i,(la2,lo2,_pid,_img) in enumerate(pool):
+                dd=(mk["lat"]-la2)**2+(mk["lng"]-lo2)**2
+                if dd<bd: bd=dd; bi=i
+            if bi>=0 and bd < 0.002**2:
+                _,_,mk["id"],mk["image"]=pool.pop(bi)
+    over={"name":title,"description":html,"coordsMeTravel":markers}
+    if cats or not detail: over["categories"]=cats or [20]
+    if countries or not detail: over["countries"]=countries or [160]
+    if trip:
+        over["year"]=trip["year"]; over["month"]=trip["month"]
+        stored=(detail or {}).get("created_at")
+        if not (stored and not trip["exact_day"] and _same_month(stored, trip["year"], trip["month"])):
+            over["created_at"]=trip["created_at"]
+    elif not (detail or {}).get("month"):
+        print("  ОТКАЗ: в черновике нет `date:` (YYYY-MM-DD) — month и created_at не из чего взять. Добавь дату поездки.")
+        return None
+    if year: over["year"]=int(year)
+    if detail:
+        payload=_payload_from_detail(detail, **over)
+    else:
+        payload=_payload_from_detail({"id":None,"publish":False,"moderation":False}, **over)
+    if dry_run:
+        print(json.dumps({k:v for k,v in payload.items() if k!="description"}, ensure_ascii=False, indent=1))
+        print(f"  dry-run: description {len(html)} симв., PUT не выполнен")
+        return payload
     st,txt=req("PUT","/travels/upsert/", payload)
     nid=None
     try: nid=json.loads(txt).get("id")
-    except: pass
-    print(f"[{st}] upsert id={nid} pts={len(markers)} cats={cats} ctry={countries} :: {title[:50]}")
+    except Exception: pass
+    print(f"[{st}] upsert id={nid} pts={len(markers)} cats={payload['categories']} ctry={payload['countries']} month={payload['month']} :: {title[:50]}")
     if st>=400: print("   ERR:", txt[:300])
     return nid
 
 def recat(tid):
-    """Дозаполнить категории всех точек статьи + почистить технические фразы. Точки/фото сохраняются (id preserved)."""
-    _,t=req("GET",f"/travels/{tid}/"); d=json.loads(t); d=d.get("data",d)
+    """Дозаполнить категории точек без категории + почистить технические фразы. Остальные поля — эхом."""
+    d=_get_detail(tid)
     if not d.get("name"): print(f"  {tid}: skip (нет данных)"); return
-    cs=d.get("countries") or [160]; c=cs[0] if cs else 160
-    markers=[]
-    for a in (d.get("travelAddress") or []):
-        mm=re.match(r"\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)", a.get("coord") or "")
-        if not mm: continue
-        markers.append({"id":a.get("id"),"lat":float(mm.group(1)),"lng":float(mm.group(2)),
-            "address":a.get("address") or "", "country":c,
-            "categories":point_categories(a.get("address")), "image":None})
+    markers=_markers_from_detail(d)
     desc=strip_meta(d.get("description") or "")
-    payload={"id":tid,"name":d.get("name"),"description":desc,"year":str(d.get("year") or "2025"),
-      "categories":d.get("categories") or [20],"countries":cs,
-      "coordsMeTravel":markers,"travelAddress":[],"gallery":[],
-      "transports":[],"month":[],"complexity":[],"companions":[],"over_nights_stay":[],
-      "thumbs200ForCollectionArr":[],"travelImageThumbUrlArr":[],"travelImageAddress":[],
-      "minus":"__draft_placeholder__","plus":"__draft_placeholder__",
-      "recommendation":"__draft_placeholder__","youtube_link":"__draft_placeholder__",
-      "publish":False,"moderation":False,"visa":False,
-      "number_days":None,"number_peoples":None,"budget":None}
-    st,txt=req("PUT","/travels/upsert/",payload)
+    st,txt=req("PUT","/travels/upsert/",_payload_from_detail(d, description=desc, coordsMeTravel=markers))
     print(f"  [{st}] recat {tid}: точек {len(markers)} (с категориями), desc {len(desc)}")
     return st
 
 def _put_with_desc(d, new_desc):
-    """PUT статьи с новым описанием, сохраняя точки (с категориями), галерею, обложку, страны."""
-    tid=d.get("id"); cs=d.get("countries") or [160]; c=cs[0] if cs else 160
-    markers=[]
-    for a in (d.get("travelAddress") or []):
-        mm=re.match(r"\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)", a.get("coord") or "")
-        if not mm: continue
-        markers.append({"id":a.get("id"),"lat":float(mm.group(1)),"lng":float(mm.group(2)),
-            "address":a.get("address") or "", "country":c,
-            "categories":point_categories(a.get("address")), "image":None})
-    payload={"id":tid,"name":d.get("name"),"description":new_desc,"year":str(d.get("year") or "2025"),
-      "categories":d.get("categories") or [20],"countries":cs,
-      "coordsMeTravel":markers,"travelAddress":[],"gallery":[],
-      "transports":[],"month":[],"complexity":[],"companions":[],"over_nights_stay":[],
-      "thumbs200ForCollectionArr":[],"travelImageThumbUrlArr":[],"travelImageAddress":[],
-      "minus":"__draft_placeholder__","plus":"__draft_placeholder__",
-      "recommendation":"__draft_placeholder__","youtube_link":"__draft_placeholder__",
-      "publish":False,"moderation":False,"visa":False,
-      "number_days":None,"number_peoples":None,"budget":None}
-    return req("PUT","/travels/upsert/",payload)
+    """PUT статьи с новым описанием; остальное (точки, галерея, publish, month, plus…) — эхом детали."""
+    return req("PUT","/travels/upsert/",_payload_from_detail(d, description=new_desc))
 
 def _norm_url(u):
     if not u: return None
@@ -340,53 +383,70 @@ def _norm_url(u):
 def _tokens(s):
     return set(w for w in re.findall(r"[A-Za-zА-Яа-яёЁ]{4,}", (s or "").lower()))
 
+def _fetch_as_jpeg(url):
+    """Скачать первопартийную картинку metravel.by и сохранить JPEG для перезаливки → (путь, (w, h))."""
+    from PIL import Image
+    if not (url or "").startswith("https://metravel.by/"): raise RuntimeError("descimg: только картинки metravel.by")
+    request=urllib.request.Request(url, headers={"User-Agent":"metravel-publish/1.0"})
+    with urllib.request.build_opener(_NoAuthRedirect()).open(request, timeout=30) as response:
+        data=response.read(33554433)
+    im=Image.open(io.BytesIO(data)).convert("RGB")
+    dst=os.path.join(TMP,"d_%s.jpg"%hashlib.md5(url.encode()).hexdigest())
+    im.save(dst,"JPEG",quality=92)
+    return dst, im.size
+
+def _desc_figure(src_url, tid, alt):
+    """Перезалить кадр в collection=description и вернуть плоский <p><img> (address-image в тело не попадает)."""
+    path,(w,h)=_fetch_as_jpeg(src_url)
+    code,url=upload_image(path,"description",tid)
+    url=_norm_url(url)
+    if code!="200" and code!="201" or not url:
+        print(f"    upload [{code}] не дал url — кадр {src_url} пропущен"); return None
+    return f'<p><img src="{_html.escape(url)}" width="{w}" height="{h}" alt="{_html.escape(alt)}" /></p>'
+
 def desc_images(tid, n=6):
-    """Вставить в текст описания ФОТО К ТОЧКАМ (релевантные месту, не дублируют галерею).
-    Где заголовок совпадает с названием точки — её фото; остальные распределяются по порядку. Идемпотентно."""
-    _,t=req("GET",f"/travels/{tid}/"); d=json.loads(t); d=d.get("data",d)
+    """Вставить в текст фото точек: каждый кадр перезаливается в collection=description,
+    alt = имя точки (или подпись галереи / заголовок раздела). Где заголовок совпадает с
+    названием точки — её фото; остальные по порядку. Идемпотентно по alt."""
+    d=_get_detail(tid)
     if not d.get("name"): print(f"  {tid}: нет данных"); return
-    # фото к точкам (только реальные, не плейсхолдер address-image/)
+    # прежние вставки движка (<p class="mt-img"> с address-image и пустым alt) снимаются
+    desc=re.sub(r'<p class="mt-img">.*?</p>','', d.get("description","") or "")
+    have={_html.unescape(a).strip().lower() for a in re.findall(r'<img[^>]*\balt="([^"]*)"', desc)}
     pts=[]
     for a in (d.get("travelAddress") or []):
         u=a.get("travelImageThumbUrl") or ""
         if u and not u.rstrip("/").endswith("address-image"):
-            pts.append((a.get("address") or "", _norm_url(u)))
-    desc=re.sub(r'<p class="mt-img">.*?</p>','', d.get("description","") or "")  # убрать прежние вставки
+            pts.append(((a.get("address") or "").strip(), _norm_url(u)))
     if not pts:
-        # запасной вариант: если фото к точкам нет — берём из галереи
-        gal=[_norm_url(g.get("url") if isinstance(g,dict) else g) for g in (d.get("gallery") or [])]
-        gal=[u for u in gal if u]
-        pts=[("",u) for u in gal[::max(1,len(gal)//n)][:n]]
+        # запасной вариант: фото к точкам нет — кадры галереи (тоже перезаливкой)
+        gal=[g for g in (d.get("gallery") or []) if isinstance(g,dict) and g.get("url")]
+        pts=[((g.get("caption") or "").strip(), _norm_url(g["url"])) for g in gal[::max(1,len(gal)//n)][:n]]
         if not pts: print(f"  {tid}: нет фото"); return
-    fig=lambda u:f'<p class="mt-img"><img src="{u}" alt="" style="max-width:100%;height:auto;border-radius:10px"></p>'
-    # заголовки h2/h3 по порядку
+    pts=[(name,url) for name,url in pts if not name or name.lower() not in have]
     heads=[(m.group(1), m.end()) for m in re.finditer(r"<h[23]>(.*?)</h[23]>", desc)]
-    used=set(); placement={}   # pos -> url
-    # 1) сопоставление по названию
-    for text,pos in heads:
-        ht=_tokens(text); best=None
+    used=set(); placement={}   # pos -> (url, alt)
+    for text,pos in heads:           # 1) сопоставление по названию
+        ht=_tokens(text)
         for i,(addr,url) in enumerate(pts):
-            if i in used: continue
-            if ht & _tokens(addr): best=i; break
-        if best is not None: placement[pos]=pts[best][1]; used.add(best)
-    # 2) оставшиеся точки — в заголовки без фото, по порядку
+            if i not in used and ht & _tokens(addr):
+                placement[pos]=(url, addr); used.add(i); break
     rem=[i for i in range(len(pts)) if i not in used]
-    for text,pos in heads:
+    for text,pos in heads:           # 2) остальные — в заголовки без фото, по порядку
         if pos in placement or not rem: continue
-        placement[pos]=pts[rem.pop(0)][1]; used.add(0)  # noqa
-    # собрать с вставками по позициям (с конца, чтобы не сбить индексы)
-    nd=desc
+        i=rem.pop(0); placement[pos]=(pts[i][1], pts[i][0] or re.sub(r"<[^>]+>","",text).strip())
+    if not heads:                    # 3) нет заголовков — после первых абзацев
+        ends=[m.end() for m in re.finditer(r"</p>", desc)]
+        for pos,(name,url) in zip(ends, pts[:n]): placement[pos]=(url, name)
+    nd=desc; inserted=0
     for pos in sorted(placement, reverse=True):
-        nd=nd[:pos]+fig(placement[pos])+nd[pos:]
-    if not heads:  # нет заголовков — после первых абзацев
-        ps=re.split(r'(</p>)', nd); out=[]; k=0
-        urls=[u for _,u in pts]
-        for seg in ps:
-            out.append(seg)
-            if seg=='</p>' and k<min(n,len(urls)): out.append(fig(urls[k])); k+=1
-        nd="".join(out)
+        url,alt=placement[pos]
+        if not alt: print(f"    кадр {url} без имени точки/подписи — пропущен"); continue
+        fig=_desc_figure(url, tid, alt)
+        if fig: nd=nd[:pos]+fig+nd[pos:]; inserted+=1
+    if nd==(d.get("description") or ""): print(f"  {tid}: нечего вставлять"); return
     st,_=_put_with_desc(d,nd)
-    print(f"  [{st}] desc_images {tid}: вставлено {len(placement) or 0} фото (к точкам), точек с фото {len(pts)}")
+    print(f"  [{st}] desc_images {tid}: вставлено {inserted} фото (перезалиты в description), точек с фото {len(pts)}")
     return st
 
 # ---------------- photos ----------------
@@ -411,6 +471,18 @@ def _resize(src):
     subprocess.run(["sips","-Z",str(MAXDIM),src,"--out",dst],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     return dst if os.path.exists(dst) else src
 
+# Один POST /api/upload — ~10 с CPU единственного ядра прода (варианты картинки синхронно).
+# Без пауз заливка держит хост на 70–90 %, API живым пользователям — по 5 с, а monitor.sh
+# шлёт владельцу «SYSTEM ALERT» (#2306). Поэтому строго последовательно и duty ≤ 50 %:
+# следующая заливка стартует не раньше max(длительность прошлой, 10 с) после её конца.
+UPLOAD_MIN_PAUSE_S = 10
+_LAST_UPLOAD = {"end": None, "took": 0.0}
+
+def _pace_upload():
+    if _LAST_UPLOAD["end"] is None: return
+    wait = _LAST_UPLOAD["end"] + max(_LAST_UPLOAD["took"], UPLOAD_MIN_PAUSE_S) - time.monotonic()
+    if wait > 0: time.sleep(wait)
+
 def upload_image(file, collection, id_):
     import secrets
     dst = _resize(file)
@@ -423,7 +495,12 @@ def upload_image(file, collection, id_):
     parts.append(("--" + boundary + '\r\nContent-Disposition: form-data; name="file"; filename="' + filename + '"\r\nContent-Type: image/jpeg\r\n\r\n').encode())
     with open(dst, 'rb') as source: parts.append(source.read())
     parts.append(('\r\n--' + boundary + '--\r\n').encode())
-    code, body = _authenticated("POST", "/upload", b''.join(parts), "multipart/form-data; boundary=" + boundary)
+    _pace_upload()
+    started = time.monotonic()
+    try:
+        code, body = _authenticated("POST", "/upload", b''.join(parts), "multipart/form-data; boundary=" + boundary)
+    finally:
+        _LAST_UPLOAD["end"] = time.monotonic(); _LAST_UPLOAD["took"] = _LAST_UPLOAD["end"] - started
     try: url = json.loads(body).get("url")
     except Exception: url = None
     return str(code), url
@@ -488,10 +565,13 @@ def main():
         print("categories:",[(x['id'],x['name']) for x in f.get('categories',[])])
         print("countries:",[(x['id'],x['name']) for x in f.get('countries',[]) if x['name'] in ('Польша','Словакия','Чехия','Австрия','Испания','Португалия','Хорватия','Беларусь')])
     elif cmd=="upsert":
-        path=a[1]; eid=None; year="2024"
+        path=a[1]; eid=None; year=None
         if "--id" in a: eid=int(a[a.index("--id")+1])
         if "--year" in a: year=a[a.index("--year")+1]
-        upsert(path, eid, year)
+        try:
+            if upsert(path, eid, year, dry_run="--dry-run" in a) is None: sys.exit(2)
+        except ValueError as error:
+            sys.exit(f"  ОТКАЗ: {error}")
     elif cmd=="recat":
         for x in a[1:]:
             if x.isdigit(): recat(int(x))
@@ -511,5 +591,4 @@ def main():
         sys.exit(__doc__)
 
 if __name__=="__main__":
-    import urllib.parse
     main()
