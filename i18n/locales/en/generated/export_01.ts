@@ -485,7 +485,7 @@ export const exportGenerated1 = {
   "services.pdf_export.generators.v2.runtime.travelContentPage.value1_div_class_travel_online_card_style_di_2997e202.text01": "Online version",
   "services.pdf_export.generators.v2.runtime.travelContentPage.value1_div_class_travel_online_card_style_di_2997e202.text02": "Scan the QR code to view the route",
   "components.export.FullBookExport.title": "Full book for a period",
-  "components.export.FullBookExport.hint": "The server builds one PDF with every trip from the chosen years — no limit on photos. You can close the page: the build keeps going, its status will show up here, and we'll email your account address when the book is ready.",
+  "components.export.FullBookExport.hint": "The server builds one PDF with every trip from the chosen years — no limit on photos. You can close the page: the build keeps going, its status will show up here, and we'll email your account address when the book is ready or if the build fails.",
   "components.export.FullBookExport.yearFrom": "From year",
   "components.export.FullBookExport.yearTo": "To year",
   "components.export.FullBookExport.yearFromA11y": "First year of the period",

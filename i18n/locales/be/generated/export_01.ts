@@ -485,7 +485,7 @@ export const exportGenerated1 = {
   "services.pdf_export.generators.v2.runtime.travelContentPage.value1_div_class_travel_online_card_style_di_2997e202.text01": "Анлайн-версія",
   "services.pdf_export.generators.v2.runtime.travelContentPage.value1_div_class_travel_online_card_style_di_2997e202.text02": "Скануйце QR-код для прагляду маршруту",
   "components.export.FullBookExport.title": "Уся кніга за перыяд",
-  "components.export.FullBookExport.hint": "Сервер збярэ адзін PDF з усімі падарожжамі за выбраныя гады — без абмежавання па колькасці фота. Старонку можна закрыць: зборка працягнецца, статус з'явіцца тут, а калі кніга будзе гатовая — прыйдзе ліст на пошту акаўнта.",
+  "components.export.FullBookExport.hint": "Сервер збярэ адзін PDF з усімі падарожжамі за выбраныя гады — без абмежавання па колькасці фота. Старонку можна закрыць: зборка працягнецца, статус з'явіцца тут, а калі кніга будзе гатовая або зборка не ўдасца — прыйдзе ліст на пошту акаўнта.",
   "components.export.FullBookExport.yearFrom": "З года",
   "components.export.FullBookExport.yearTo": "Па год",
   "components.export.FullBookExport.yearFromA11y": "Першы год перыяду",
