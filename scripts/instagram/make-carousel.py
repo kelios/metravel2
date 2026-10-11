@@ -4,7 +4,7 @@
 Вход — JSON-спецификация: {"out_dir": "...", "slides": [...]}. Типы слайдов:
   cover — {"type": "cover", "image", "kicker", "title", "subtitle", "kicker_plate"?: true — тёмная подложка под надзаголовком}
   list  — {"type": "list", "image"?, "kicker", "title", "items": [...], "size"?: фиксированный кегль пунктов (единый на всю карусель)}
-  map   — {"type": "map", "title", "note", "points": [{"name", "lat", "lng"}], "line"?: false — без ломаной между точками, "map_h"?: высота карты (800), "row_h"?: шаг строки легенды (62), "inset"?: {"from","to","x","y","w","h"} — врезка крупным масштабом для тесного кластера точек (номера from..to, 1-based)}
+  map   — {"type": "map", "title", "note", "points": [{"name", "lat", "lng"}], "line"?: false — без ломаной между точками, "map_h"?: высота карты (800), "row_h"?: шаг строки легенды (62), "zoom"?, "patches"?: [{"box","from"}], "tile_url"?, "credit"?, "inset_line"?: "auto"|"none", "inset"?: {"from","to","x","y","w","h"} — врезка крупным масштабом для тесного кластера точек (номера from..to, 1-based)}
   cta   — {"type": "cta", "image", "title", "text", "top"?: y начала текста, по умолчанию 430; для кадра с объектом по центру — небо сверху}
 
 Фото — локальный путь или URL (только свои фото автора 1). Карта — плитки OpenStreetMap,
@@ -125,8 +125,9 @@ def slide_list(spec):
     draw = ImageDraw.Draw(img)
     y = PAD + 30
     if spec.get("image"):
-        img.paste(photo(spec["image"], (W, 600)), (0, 0))
-        y = 600 + 56
+        photo_h = spec.get("photo_h", 600)  # портретный кадр с лицами: photo_h 720
+        img.paste(photo(spec["image"], (W, photo_h)), (0, 0))
+        y = photo_h + 56
     y = kicker(draw, spec["kicker"], PAD, y)
     y = block(draw, spec["title"], font("serif", 62), PAD, y, W - 2 * PAD, TEXT, gap=1.16) + 30
     room = H - 120 - y
@@ -150,10 +151,11 @@ def mercator(lat, lng, zoom):
 
 
 def slide_map(spec):
+    tile_url = spec.get("tile_url", "https://tile.openstreetmap.org/{z}/{x}/{y}.png")  # "tile_url": подложка без подписей (напр. CARTO light_nolabels)
     map_h = spec.get("map_h", 800)  # для 12 и более точек легенда не помещается: map_h 720, row_h 54
     row_h = spec.get("row_h", 62)
     points = spec["points"]
-    for zoom in range(14, 4, -1):
+    for zoom in ([spec["zoom"]] if spec.get("zoom") else range(14, 4, -1)):  # "zoom": фиксированный масштаб плиток (крупнее — тесный маршрут без врезки)
         xy = [mercator(p["lat"], p["lng"], zoom) for p in points]
         xs, ys = [p[0] for p in xy], [p[1] for p in xy]
         if max(xs) - min(xs) <= 1500 and max(ys) - min(ys) <= 1500 * map_h / W:
@@ -166,11 +168,13 @@ def slide_map(spec):
                               (int((top + view_h) // 256) - int(top // 256) + 1) * 256))
     for tx in range(int(left // 256), int((left + span) // 256) + 1):
         for ty in range(int(top // 256), int((top + view_h) // 256) + 1):
-            tile = Image.open(fetch(f"https://tile.openstreetmap.org/{zoom}/{tx}/{ty}.png")).convert("RGB")
+            tile = Image.open(fetch(tile_url.format(z=zoom, x=tx, y=ty))).convert("RGB")
             tiles.paste(tile, ((tx - int(left // 256)) * 256, (ty - int(top // 256)) * 256))
     ox, oy = left - int(left // 256) * 256, top - int(top // 256) * 256
     view = tiles.crop((int(ox), int(oy), int(ox + span), int(oy + view_h))).resize((W, map_h), Image.LANCZOS)
     view = Image.blend(view, Image.new("RGB", view.size, WHITE), 0.18)
+    for patch in spec.get("patches", []):  # {"box": [x0,y0,x1,y1], "from": [x,y]} — закрасить значок/подпись карты цветом соседнего пикселя
+        view.paste(view.getpixel(tuple(patch["from"])), tuple(patch["box"]))
     img = Image.new("RGB", (W, H), BG)
     img.paste(view, (0, 0))
     draw = ImageDraw.Draw(img)
@@ -202,21 +206,27 @@ def slide_map(spec):
         mosaic = Image.new("RGB", ((int((l2 + sw) // 256) - int(l2 // 256) + 1) * 256, (int((t2 + sh) // 256) - int(t2 // 256) + 1) * 256))
         for tx in range(int(l2 // 256), int((l2 + sw) // 256) + 1):
             for ty in range(int(t2 // 256), int((t2 + sh) // 256) + 1):
-                tile = Image.open(fetch(f"https://tile.openstreetmap.org/{z}/{tx}/{ty}.png")).convert("RGB")
+                tile = Image.open(fetch(tile_url.format(z=z, x=tx, y=ty))).convert("RGB")
                 mosaic.paste(tile, ((tx - int(l2 // 256)) * 256, (ty - int(t2 // 256)) * 256))
         o2x, o2y = l2 - int(l2 // 256) * 256, t2 - int(t2 // 256) * 256
         box = mosaic.crop((int(o2x), int(o2y), int(o2x + sw), int(o2y + sh))).resize((iw, ih), Image.LANCZOS)
         box = Image.blend(box, Image.new("RGB", (iw, ih), WHITE), 0.18)
         img.paste(box, (ix, iy))
         draw.rectangle([ix, iy, ix + iw, iy + ih], outline=BRAND, width=5)
-        draw.line([(bx1, (by0 + by1) / 2), (ix, iy + ih / 2)], fill=BRAND, width=4)
+        if spec.get("inset_line") == "auto":  # линия рамка→врезка к ближнему краю врезки, не через неё; "none" — без линии
+            if ix + iw <= bx0:
+                draw.line([(bx0, (by0 + by1) / 2), (ix + iw, iy + ih / 2)], fill=BRAND, width=4)
+            elif ix >= bx1:
+                draw.line([(bx1, (by0 + by1) / 2), (ix, iy + ih / 2)], fill=BRAND, width=4)
+        elif spec.get("inset_line") != "none":
+            draw.line([(bx1, (by0 + by1) / 2), (ix, iy + ih / 2)], fill=BRAND, width=4)
         d2 = [((a - l2) * f + ix, (b - t2) * f + iy) for a, b in q]
         draw.line(d2, fill=BRAND, width=6, joint="curve")
         for n, (x, y) in zip(sorted(hidden), d2):
             draw.ellipse([x - 21, y - 21, x + 21, y + 21], fill=WHITE, outline=BRAND, width=4)
             lab = str(n + 1)
             draw.text((x - draw.textlength(lab, font=font("bold", 26)) / 2, y - 16), lab, font=font("bold", 26), fill=TEXT)
-    credit = "© OpenStreetMap"
+    credit = spec.get("credit", "© OpenStreetMap")
     draw.text((W - 16 - draw.textlength(credit, font=font("sans", 22)), map_h - 34), credit, font=font("sans", 22), fill=MUTED)
     y = block(draw, spec["title"], font("serif", 58), PAD, map_h + 40, W - 2 * PAD, TEXT) + 10
     y = block(draw, spec["note"], font("sans", 36), PAD, y, W - 2 * PAD, MUTED) + 26
