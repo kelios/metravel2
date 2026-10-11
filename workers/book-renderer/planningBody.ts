@@ -233,7 +233,7 @@ async function advanceBody(context: BookPlanningContext, storage: PlanningStorag
   return result
 }
 
-/** A call performs one durable semantic unit and no more than one physical layout probe. */
+/** One semantic transition with at most one physical layout probe; preparePlanningStep batches transitions into a durable generation (#2384). */
 export async function advanceBookPlanning(
   jobRoot: string, storage: PlanningStorage, pinned: BookDocument, summary: IndexedBookSummary,
   previous: BookPlanningState, limits: PlanningLimits, ports: BookPlanningContext['ports'],

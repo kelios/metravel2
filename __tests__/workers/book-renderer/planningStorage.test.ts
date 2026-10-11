@@ -1,5 +1,5 @@
 /** @jest-environment node */
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, open, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { PlanningStorage, readPlanningFile } from '@/workers/book-renderer/planningStorage'
 import type { PlanningFile } from '@/workers/book-renderer/planningTypes'
@@ -98,10 +98,85 @@ describe('bounded candidate storage and committed read authority', () => {
     expect((await readdir(path.join(root, 'book'))).filter(name => name.startsWith('.pending-'))).toEqual([])
   })
 
+  it('leaves no pending temporary behind when replacing an uncommitted leaf fails mid-write', async () => {
+    const storage = new PlanningStorage(root, LIMITS, async () => null, { deferred_durability: true })
+    const handle = await open(__filename, 'r'); const proto = Object.getPrototypeOf(handle) as { writeFile: (data: unknown) => Promise<void> }; await handle.close()
+    jest.spyOn(proto, 'writeFile').mockRejectedValueOnce(Object.assign(new Error('ENOSPC: no space left on device'), { code: 'ENOSPC' }))
+    await expect(storage.put('book/full.json', { value: 1 })).rejects.toThrow('ENOSPC')
+    expect(await readdir(path.join(root, 'book'))).toEqual([])
+    expect(storage.outputs).toEqual([])
+  })
+
   it('enforces checksum, size and private receipt paths on every restored read', async () => {
     const receipt = await new PlanningStorage(root, LIMITS).put('book/a.json', { value: 1 })
     await expect(readPlanningFile(root, { ...receipt, size_bytes: receipt.size_bytes + 1 }, LIMITS.output_bytes)).rejects.toThrow('WORKER_PLANNING_CHECKSUM_MISMATCH')
     await expect(readPlanningFile(root, { ...receipt, checksum: 'd'.repeat(64) }, LIMITS.output_bytes)).rejects.toThrow('WORKER_PLANNING_CHECKSUM_MISMATCH')
     expect(() => new PlanningStorage(root, LIMITS).recordExternalReceipt({ ...receipt, ref: '../escape' })).toThrow('WORKER_PLANNING_REFERENCE_INVALID')
+  })
+})
+
+describe('generation durability barrier (#2384)', () => {
+  let root: string
+  beforeEach(async () => {
+    const base = path.resolve(__dirname, '../../../.codex-temp/tests')
+    await mkdir(base, { recursive: true }); root = await mkdtemp(path.join(base, 'planning-barrier-'))
+  })
+  afterEach(async () => { jest.restoreAllMocks(); await rm(root, { recursive: true, force: true }) })
+  async function countSyncs(): Promise<{ calls: () => number }> {
+    const handle = await open(__filename, 'r'); const proto = Object.getPrototypeOf(handle) as { sync: () => Promise<void> }; await handle.close()
+    const spy = jest.spyOn(proto, 'sync')
+    return { calls: () => spy.mock.calls.length }
+  }
+
+  it('requires committed authority for deferred durability', () => {
+    expect(() => new PlanningStorage(root, LIMITS, undefined, { deferred_durability: true })).toThrow('WORKER_PLANNING_COMMITTED_LOOKUP_REQUIRED')
+  })
+
+  it('writes without per-file fsync, then syncs every output and its directories once at the commit point', async () => {
+    const storage = new PlanningStorage(root, LIMITS, async () => null, { deferred_durability: true })
+    const syncs = await countSyncs()
+    await storage.put('book/a.json', { value: 1 })
+    await storage.put('book/b.json', { value: 2 })
+    await storage.put('book/deep/c.json', { value: 3 })
+    expect(syncs.calls()).toBe(0)
+    await storage.flush()
+    // Three files, then book/deep, book and the plan root, each exactly once.
+    expect(syncs.calls()).toBe(6)
+  })
+
+  it('replaces uncommitted crash debris (a torn leaf) atomically instead of reporting a conflict', async () => {
+    await mkdir(path.join(root, 'book'), { mode: 0o700 })
+    await writeFile(path.join(root, 'book/source.json'), '', { mode: 0o600 })
+    const storage = new PlanningStorage(root, LIMITS, async () => null, { deferred_durability: true })
+    const receipt = await storage.put('book/source.json', { text: 'Original 😀' })
+    expect(await readPlanningFile(root, receipt, LIMITS.output_bytes)).toEqual(Buffer.from('{"text":"Original 😀"}'))
+    expect(storage.outputs).toEqual([receipt])
+    expect((await readdir(path.join(root, 'book'))).filter(name => name.startsWith('.pending-'))).toEqual([])
+  })
+
+  it('verifies a committed leaf in place and never rewrites or contradicts it', async () => {
+    const receipt = await new PlanningStorage(root, LIMITS).put('index/summary.json', { value: 1 })
+    const committed = new Map<string, PlanningFile>([[receipt.ref, receipt]])
+    const before = (await stat(path.join(root, receipt.ref))).ino
+    const storage = () => new PlanningStorage(root, LIMITS, async ref => committed.get(ref) ?? null, { deferred_durability: true })
+    expect(await storage().put(receipt.ref, { value: 1 })).toEqual(receipt)
+    expect((await stat(path.join(root, receipt.ref))).ino).toBe(before)
+    await expect(storage().put(receipt.ref, { value: 2 })).rejects.toThrow('WORKER_PLANNING_IMMUTABLE_CONFLICT')
+    await writeFile(path.join(root, receipt.ref), '{"value":3}')
+    await expect(storage().put(receipt.ref, { value: 1 })).rejects.toThrow('WORKER_PLANNING_CHECKSUM_MISMATCH')
+  })
+
+  it('rolls one transition back out of the candidate without touching earlier receipts', async () => {
+    const storage = new PlanningStorage(root, LIMITS, async () => null, { deferred_durability: true })
+    const kept = await storage.put('book/kept.json', { value: 1 })
+    const mark = storage.mark(); const remaining = storage.remainingBytes
+    await storage.put('book/dropped.json', { value: 2 })
+    storage.recordExternalReceipt({ ref: 'parser/x/text/0.json', checksum: 'e'.repeat(64), size_bytes: 10 })
+    storage.rollback(mark)
+    expect(storage.outputs).toEqual([kept])
+    expect(storage.remainingBytes).toBe(remaining)
+    expect(storage.admittedReceipt('book/dropped.json')).toBeUndefined()
+    expect(await storage.readIndex('book/dropped.json')).toBeUndefined()
+    expect(() => storage.rollback({ outputs: 5, bytes: 0 })).toThrow('WORKER_PLANNING_OUTPUT_BUDGET_INVALID')
   })
 })

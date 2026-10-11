@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import fs from 'node:fs'
 import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -79,6 +80,31 @@ describe('private immutable checkpoint disk stores', () => {
     const expected: SafeContentFragment[] = []
     for await (const fragment of incrementalContent(original(), {maxFragmentChars: 512})) expected.push(fragment)
     expect(actual).toEqual(expected)
+  })
+  it('replaces untrusted crash debris under the deferred barrier and verifies trusted leaves in place (#2384)', () => {
+    const block = 'A'.repeat(1024); const receipts: Array<{ref: string; created: boolean}> = []
+    createDiskCheckpointStores(root)
+    writeFileSync(join(root, 'text/0.json'), '', {mode: 0o600})
+    const deferred = createDiskCheckpointStores(root, {onwrite: file => receipts.push(file), deferred: {trusted: () => false}})
+    deferred.text.put(0, block)
+    expect(deferred.text.get(0)).toBe(block)
+    expect(readdirSync(join(root, 'text'))).toEqual(['0.json'])
+    const trusted = createDiskCheckpointStores(root, {onwrite: file => receipts.push(file), deferred: {trusted: ref => ref === 'text/0.json'}})
+    trusted.text.put(0, block)
+    expect(receipts.map(file => [file.ref, file.created])).toEqual([['text/0.json', true], ['text/0.json', false]])
+    writeFileSync(join(root, 'text/0.json'), JSON.stringify({ordinal: 0, text: 'B'.repeat(1024), sha256: 'x'}), {mode: 0o600})
+    expect(() => trusted.text.put(0, block)).toThrow('HTML_CHECKPOINT_FILE_INVALID')
+  })
+  it('removes a partially written deferred temporary when the write fails (#2384)', () => {
+    const deferred = createDiskCheckpointStores(root, {deferred: {trusted: () => false}})
+    const real = fs.writeFileSync
+    jest.spyOn(fs, 'writeFileSync').mockImplementationOnce((path, _value, options) => {
+      real(path, 'partial', options as fs.WriteFileOptions)
+      throw Object.assign(new Error('ENOSPC: no space left on device'), {code: 'ENOSPC'})
+    })
+    expect(() => deferred.text.put(0, 'A'.repeat(1024))).toThrow('ENOSPC')
+    jest.restoreAllMocks()
+    expect(readdirSync(join(root, 'text'))).toEqual([])
   })
   it('rejects wrong root permissions without changing them and requires an existing root', () => {
     chmodSync(root, 0o755)

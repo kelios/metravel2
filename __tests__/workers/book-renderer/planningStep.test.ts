@@ -1,5 +1,5 @@
 /** @jest-environment node */
-import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { mkdirSync } from 'node:fs'
 import { buildSnapshotFixture } from '../../fixtures/pdfBook/buildSnapshotFixture'
@@ -67,8 +67,8 @@ describe('fenced bounded planning protocol through sealed descriptors', () => {
       phases.add(result.phase)
       expect(result.outputs.length).toBeLessThanOrEqual(LIMITS.output_records)
       expect(result.outputs.reduce((n, file) => n + file.size_bytes, 0)).toBeLessThanOrEqual(LIMITS.output_bytes)
-      expect(result.consumed_bytes).toBeLessThanOrEqual(LIMITS.input_bytes)
-      expect(result.probes).toBeLessThanOrEqual(1)
+      // Each transition keeps its input window and single probe; a generation batches at most 8 probes (#2384).
+      expect(result.probes).toBeLessThanOrEqual(8)
       for (const file of result.outputs) {
         const bytes = await readPlanningFile(f.plan, file, LIMITS.output_bytes)
         expect(sha256(bytes)).toBe(file.checksum)
@@ -93,6 +93,66 @@ describe('fenced bounded planning protocol through sealed descriptors', () => {
     expect(summary).toMatchObject({ pages: 4, blocks: 5, occurrences: 2, included_media_occurrences: 1, measured: false,
       planning_protocol_version: 2, renderer_content_hash: RENDERER, resource_profile_hash: sha256(canonicalJson(DEFAULT_RENDERER_RESOURCE_PROFILE)) })
     await expect(step(f, { renderer_content_hash: RENDERER, generation: generation + 1, checkpoint })).rejects.toThrow('WORKER_PLANNING_ALREADY_COMPLETE')
+  }, 120_000)
+
+  async function plan(f: Awaited<ReturnType<typeof setup>>, planRoot: string, extra: Partial<PlanningStepOptions> = {}) {
+    const committed = new Map<string, PlanningFile>(); let checkpoint: PlanningFile | undefined; let generation = 0
+    for (let result: PlanningStepResult | undefined; !result || result.phase !== 'plan_ready';) {
+      result = await preparePlanningStep(f.jobDir, planRoot, f.document, { renderer_content_hash: RENDERER, generation: ++generation, checkpoint, limits: LIMITS },
+        { ...options(committed), ...extra })
+      commit(result, committed); checkpoint = result.checkpoint
+    }
+    const data = [...committed.values()].filter(file => !/^(checkpoints|ledgers)\//.test(file.ref)).map(file => `${file.ref} ${file.checksum}`).sort()
+    return { generations: generation, data }
+  }
+
+  it('batches transitions into far fewer generations with byte-identical committed plan files (#2384)', async () => {
+    const f = await setup()
+    const single = await plan(f, path.join(root, 'plan-single'), { max_transitions: 1 })
+    const batched = await plan(f, path.join(root, 'plan-batched'))
+    expect(batched.data).toEqual(single.data)
+    expect(batched.data.some(line => line.startsWith('descriptors/3.json '))).toBe(true)
+    expect(batched.generations * 3).toBeLessThan(single.generations)
+    await expect(plan(f, path.join(root, 'plan-invalid'), { max_transitions: 0 })).rejects.toThrow('WORKER_PLANNING_CHECKPOINT_INVALID')
+  }, 120_000)
+
+  it('rolls a failing later transition back to its boundary and replays it as the next first transition (#2384)', async () => {
+    const f = await setup(); let calls = 0
+    const factory = options(f.committed); const createPorts = factory.ports_factory!
+    factory.ports_factory = storage => ({ ...createPorts(storage), probe: async (source, context) => {
+      calls++
+      if (calls <= 2) { await storage.put('book/probe-debris.json', { calls }); throw new Error('TRANSIENT_PROBE') }
+      return createPorts(storage).probe(source, context)
+    } })
+    let checkpoint: PlanningFile | undefined; let generation = 0; let rolledBack: PlanningStepResult | undefined
+    while (calls === 0) {
+      const result = await preparePlanningStep(f.jobDir, f.plan, f.document, { renderer_content_hash: RENDERER, generation: ++generation, checkpoint }, factory)
+      commit(result, f.committed); checkpoint = result.checkpoint
+      if (calls) rolledBack = result
+    }
+    // The probing transition was not the generation's first: it is rolled back, earlier transitions are sealed.
+    expect(rolledBack!.probes).toBe(0)
+    expect(rolledBack!.outputs.some(file => file.ref === 'book/probe-debris.json')).toBe(false)
+    const sealed = JSON.parse(await readFile(path.join(f.plan, rolledBack!.checkpoint.ref), 'utf8')) as PlanningCheckpoint
+    expect(sealed.book!.queue).toBeDefined()
+    // Next generation meets the same transition first and reports its exact error without publishing.
+    const request = { renderer_content_hash: RENDERER, generation: generation + 1, checkpoint }
+    await expect(preparePlanningStep(f.jobDir, f.plan, f.document, request, factory)).rejects.toThrow('TRANSIENT_PROBE')
+    const retried = await preparePlanningStep(f.jobDir, f.plan, f.document, request, factory)
+    expect(retried.probes).toBeGreaterThanOrEqual(1)
+    const advanced = JSON.parse(await readFile(path.join(f.plan, retried.checkpoint.ref), 'utf8')) as PlanningCheckpoint
+    expect(advanced.book!.counts.pages).toBeGreaterThanOrEqual(1)
+  }, 120_000)
+
+  it('re-executes an uncommitted generation over torn crash debris and reproduces identical receipts (#2384)', async () => {
+    const f = await setup()
+    const first = await preparePlanningStep(f.jobDir, f.plan, f.document, { renderer_content_hash: RENDERER, generation: 1 }, options(f.committed))
+    // Power loss before B3 committed generation 1: its unsynced leaves may be empty on disk.
+    const torn = first.outputs.filter(file => file.size_bytes > 0)
+    for (const file of torn) await writeFile(path.join(f.plan, file.ref), '')
+    const retry = await step(f, { renderer_content_hash: RENDERER, generation: 1 })
+    expect(retry.outputs).toEqual(first.outputs)
+    for (const file of torn) expect(sha256(await readPlanningFile(f.plan, file, 1_048_576))).toBe(file.checksum)
   }, 120_000)
 
   it('retries after a crash-written ledger without committing discarded candidate outputs', async () => {
@@ -156,7 +216,8 @@ describe('fenced bounded planning protocol through sealed descriptors', () => {
     const queued = await queuedPage(f)
     const { checkpoint, book } = queued
     let { generation } = queued
-    const factory = options(f.committed)
+    // First-transition cache-only semantics, measured in the pre-#2384 one-transition generation and 24-record envelope.
+    const factory = { ...options(f.committed), max_transitions: 1 }
     const createPorts = factory.ports_factory!
     factory.ports_factory = storage => ({ ...createPorts(storage), probe: async source => {
       for (let asset = 0; asset < 14; asset++) {
@@ -169,7 +230,7 @@ describe('fenced bounded planning protocol through sealed descriptors', () => {
       return { source: freeze(source), measurement: { pages: 1, fits: true } }
     } })
     const first = await preparePlanningStep(f.jobDir, f.plan, f.document,
-      { renderer_content_hash: RENDERER, generation: ++generation, checkpoint }, factory)
+      { renderer_content_hash: RENDERER, generation: ++generation, checkpoint, limits: { output_records: 24 } }, factory)
     const unchanged = JSON.parse(await readFile(path.join(f.plan, first.checkpoint.ref), 'utf8')) as PlanningCheckpoint
     expect(unchanged.book).toEqual(book)
     expect(first.probes).toBe(0)
@@ -189,7 +250,7 @@ describe('fenced bounded planning protocol through sealed descriptors', () => {
     const { checkpoint, generation } = await queuedPage(f)
     const served = { blob: 'x'.repeat(5_000_000) }
     const servedBytes = Buffer.byteLength(canonicalJson(served))
-    const factory = options(f.committed)
+    const factory = { ...options(f.committed), max_transitions: 1 }
     const createPorts = factory.ports_factory!
     factory.ports_factory = storage => ({ ...createPorts(storage), probe: async source => {
       if (!await storage.readIndex('print-cache/large.json')) {

@@ -1,6 +1,6 @@
 import { constants } from 'node:fs'
 import { createHash, randomBytes } from 'node:crypto'
-import { link, lstat, open, realpath, unlink } from 'node:fs/promises'
+import { link, lstat, open, realpath, rename, unlink } from 'node:fs/promises'
 import { dirname, isAbsolute, resolve, sep } from 'node:path'
 import { isUint8Array } from 'node:util/types'
 import { sha256 } from './filesystem'
@@ -62,9 +62,24 @@ async function verifyExisting(path: string, expected: { checksum: string; size_b
   } finally { await handle.close() }
 }
 
+/** Verify a leaf whose receipt the commit authority already holds; committed bytes are never rewritten. */
+export async function verifyImmutableFile(root: string, ref: string, expected: { checksum: string; size_bytes: number }, maximum: number): Promise<void> {
+  if (!Number.isSafeInteger(maximum) || maximum < 0) throw new Error('WORKER_IMMUTABLE_BUDGET_INVALID')
+  await verifyExisting(await destination(root, ref), expected, maximum)
+}
+
+export interface PublishImmutableOptions {
+  /**
+   * Planning generation barrier (#2384): the leaf is uncommitted, so existing bytes are crash
+   * debris to replace atomically; neither the file nor its directory is fsynced here, the
+   * owning PlanningStorage.flush() does both at the commit point.
+   */
+  deferred?: boolean
+}
+
 /** Publish exact immutable bytes; a failed write can never leave a partial canonical leaf. */
 export async function publishImmutableFile(
-  root: string, ref: string, payload: string | Uint8Array, maximum: number,
+  root: string, ref: string, payload: string | Uint8Array, maximum: number, options: PublishImmutableOptions = {},
 ): Promise<{ checksum: string; size_bytes: number }> {
   if (!Number.isSafeInteger(maximum) || maximum < 0 || (typeof payload !== 'string' && !isUint8Array(payload))) throw new Error('WORKER_IMMUTABLE_BUDGET_INVALID')
   const length = typeof payload === 'string' ? Buffer.byteLength(payload) : payload.byteLength
@@ -84,11 +99,16 @@ export async function publishImmutableFile(
       const info = await handle.stat()
       if (!info.isFile() || (info.mode & 0o777) !== 0o600) return invalid()
       await handle.writeFile(bytes)
-      await handle.sync()
+      if (!options.deferred) await handle.sync()
     } finally { await handle.close() }
-    // A caller-owned binary may change during awaited IO. Verify the fsynced private
-    // temporary bytes against the original digest before exposing a canonical name.
+    // A caller-owned binary may change during awaited IO. Verify the private temporary
+    // bytes against the original digest before exposing a canonical name.
     await verifyExisting(temporary, expected, maximum)
+    if (options.deferred) {
+      await rename(temporary, target)
+      created = false
+      return expected
+    }
     try { await link(temporary, target) }
     catch (error) {
       if (!errno(error, 'EEXIST')) throw error

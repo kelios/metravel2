@@ -15,7 +15,8 @@ describe('durable bounded frozen snapshot indexing', () => {
   async function preparePlanningStep(job: string, out: string, document: BookDocument, request: PlanningRequest) {
     let receipts = committed.get(out)
     if (!receipts) { receipts = new Map(); committed.set(out, receipts) }
-    const result = await prepareStep(job, out, document, request, { committed: async ref => receipts!.get(ref) ?? null })
+    // Index transition protocol: one transition per generation (pre-#2384 shape); batching is covered in planningStep.test.
+    const result = await prepareStep(job, out, document, request, { committed: async ref => receipts!.get(ref) ?? null, max_transitions: 1 })
     // A failed candidate is deliberately never committed.
     for (const file of result.outputs) receipts.set(file.ref, { ...file })
     return result
@@ -111,12 +112,17 @@ describe('durable bounded frozen snapshot indexing', () => {
     await expect(preparePlanningStep(f.jobDir, out, f.document, { ...request, checkpoint: { ref, checksum: hash, size_bytes: Buffer.byteLength(forged) } })).rejects.toThrow('WORKER_PLANNING_CHECKPOINT_INVALID')
   })
 
-  it('rejects a conflicting crash-written country marker before it can be committed', async () => {
+  it('never trusts a conflicting crash-written country marker and replaces it before it can be committed (#2384)', async () => {
     const f = await buildSnapshotFixture(path.join(scratch, 'input'), { travels: [{ id: 27, title: 'Future marker' }] })
     const out = path.join(scratch, 'plan')
     await mkdir(path.join(out, 'index', 'countries'), { recursive: true, mode: 0o700 })
-    await writeFile(path.join(out, 'index', 'countries', '1.json'), canonicalJson({ first_position: f.manifest.length + 1, value: 1 }), { mode: 0o600 })
-    await expect(index(f.jobDir, out, f.document, 65_536)).rejects.toThrow('WORKER_PLANNING_CHECKSUM_MISMATCH')
+    const forged = canonicalJson({ first_position: f.manifest.length + 1, value: 1 })
+    await writeFile(path.join(out, 'index', 'countries', '1.json'), forged, { mode: 0o600 })
+    const complete = await index(f.jobDir, out, f.document, 65_536)
+    expect(complete.state.index.summary.countries).toBe(1)
+    const marker = await readFile(path.join(out, 'index', 'countries', '1.json'), 'utf8')
+    expect(marker).not.toBe(forged)
+    expect(committed.get(out)!.get('index/countries/1.json')!.checksum).toBe(sha256(marker))
   })
 
   it('rejects an unsafe aggregate before publishing the next checkpoint', async () => {

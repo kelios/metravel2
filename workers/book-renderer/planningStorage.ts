@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto'
-import { link, lstat, mkdir, open, realpath, unlink } from 'node:fs/promises'
+import { constants } from 'node:fs'
+import { link, lstat, mkdir, open, realpath, rename, unlink } from 'node:fs/promises'
 import { dirname, isAbsolute, resolve, sep } from 'node:path'
 import { canonicalJson, privatePath, readBoundedBytes, sha256 } from './filesystem'
 import type { PlanningFile, PlanningLimits } from './planningTypes'
@@ -38,6 +39,33 @@ export async function readPlanningFile(root: string, file: PlanningFile, maximum
   return bytes
 }
 
+/** fsync one already-published leaf or directory without following a symlink. */
+async function syncPath(path: string): Promise<void> {
+  const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW)
+  try { await handle.sync() } finally { await handle.close() }
+}
+
+/** Uncommitted bytes have no authority: replace any crash debris atomically, never verify it in place. */
+async function replaceUncommittedLeaf(target: string, bytes: Uint8Array): Promise<void> {
+  const temporary = resolve(dirname(target), `.pending-${randomBytes(12).toString('hex')}`)
+  const handle = await open(temporary, 'wx', 0o600)
+  try {
+    try { await handle.writeFile(bytes) } finally { await handle.close() }
+    await rename(temporary, target)
+  } catch (error) { await unlink(temporary).catch(() => undefined); throw error }
+}
+
+export interface PlanningStorageOptions {
+  /**
+   * Generation durability barrier (#2384). Writes are not fsynced one by one; `flush()` at the
+   * commit point fsyncs every output and every directory on its path before the step returns,
+   * i.e. before B3 can commit a receipt. Requires committed authority: only receipts the B3
+   * index confirms are verified in place, every other existing leaf is replaced.
+   */
+  deferred_durability?: boolean
+}
+export interface PlanningStorageMark { outputs: number; bytes: number }
+
 /** Complete bytes become visible atomically; retries verify an existing immutable value. */
 export class PlanningStorage {
   readonly outputs: PlanningFile[] = []
@@ -45,9 +73,41 @@ export class PlanningStorage {
   private reservedRecords = 0
   private reservedBytes = 0
   private readonly admitted = new Map<string, PlanningFile>()
-  constructor(readonly root: string, private readonly limits: PlanningLimits, private readonly committed?: CommittedPlanningLookup) {}
+  readonly deferredDurability: boolean
+  constructor(readonly root: string, private readonly limits: PlanningLimits, private readonly committed?: CommittedPlanningLookup, options: PlanningStorageOptions = {}) {
+    if (options.deferred_durability && !committed) throw new Error('WORKER_PLANNING_COMMITTED_LOOKUP_REQUIRED')
+    this.deferredDurability = !!options.deferred_durability
+  }
 
   get hasCommittedAuthority(): boolean { return !!this.committed }
+
+  /** Receipt already admitted into this candidate generation, if any (synchronous, no B3 lookup). */
+  admittedReceipt(ref: string): PlanningFile | undefined { return this.admitted.get(ref) }
+
+  /** Position before one transition; `rollback` drops that transition's receipts from the candidate. */
+  mark(): PlanningStorageMark { return { outputs: this.outputs.length, bytes: this.bytes } }
+
+  /** Rolled-back leaves stay on disk as uncommitted debris; a later generation replaces or re-admits them. */
+  rollback(mark: PlanningStorageMark): void {
+    if (mark.outputs > this.outputs.length || mark.bytes > this.bytes) throw new Error('WORKER_PLANNING_OUTPUT_BUDGET_INVALID')
+    for (const file of this.outputs.splice(mark.outputs)) this.admitted.delete(file.ref)
+    this.bytes = mark.bytes
+  }
+
+  /** Commit-point barrier: file data first, then every directory between a leaf and the plan root. */
+  async flush(): Promise<void> {
+    if (!this.deferredDurability) return
+    const base = await realpath(this.root)
+    const directories = new Set<string>([base])
+    for (const file of this.outputs) {
+      const path = resolve(base, file.ref)
+      if (!path.startsWith(`${base}${sep}`)) throw new Error('WORKER_PLANNING_PATH_INVALID')
+      await syncPath(path)
+      for (let directory = dirname(path); directory.startsWith(`${base}${sep}`); directory = dirname(directory)) directories.add(directory)
+    }
+    // Deepest first: a directory entry is synced only after its own entries.
+    for (const directory of [...directories].sort((a, b) => b.length - a.length)) await syncPath(directory)
+  }
 
   async receipt(ref: string): Promise<PlanningFile | null> {
     const file = this.admitted.get(ref) ?? await this.committed?.(ref) ?? null
@@ -121,6 +181,11 @@ export class PlanningStorage {
     const prior = this.admitted.get(ref)
     if (!prior) this.admit(1, bytes.length)
     else if (prior.checksum !== file.checksum || prior.size_bytes !== file.size_bytes) throw new Error('WORKER_PLANNING_IMMUTABLE_CONFLICT')
+    if (this.deferredDurability) {
+      if (!prior) await this.putDeferred(file, bytes, maximum)
+      this.recordExternalReceipt(file)
+      return file
+    }
     const target = await destination(this.root, ref)
     const temporary = resolve(dirname(target), `.pending-${randomBytes(12).toString('hex')}`)
     let created = false
@@ -138,6 +203,17 @@ export class PlanningStorage {
     } finally { if (created) await unlink(temporary) }
     this.recordExternalReceipt(file)
     return file
+  }
+
+  /** A committed leaf is durable and verified in place; anything else is (re)written for this generation's barrier. */
+  private async putDeferred(file: PlanningFile, bytes: Buffer, maximum: number): Promise<void> {
+    const trusted = await this.committed!(file.ref)
+    if (trusted) {
+      if (trusted.ref !== file.ref || trusted.checksum !== file.checksum || trusted.size_bytes !== file.size_bytes) throw new Error('WORKER_PLANNING_IMMUTABLE_CONFLICT')
+      await readPlanningFile(this.root, file, maximum)
+      return
+    }
+    await replaceUncommittedLeaf(await destination(this.root, file.ref), bytes)
   }
 
   async readIndex<T>(ref: string): Promise<T | undefined> {

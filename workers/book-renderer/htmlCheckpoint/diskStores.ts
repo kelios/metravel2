@@ -1,6 +1,6 @@
 import type { TagStore } from '@/workers/book-renderer/htmlCheckpoint/tagStackStore'
 import { createHash, randomBytes } from 'node:crypto'
-import { closeSync, constants, fsyncSync, fstatSync, linkSync, lstatSync, mkdirSync, openSync, readSync, realpathSync, unlinkSync, writeFileSync } from 'node:fs'
+import { closeSync, constants, fsyncSync, fstatSync, linkSync, lstatSync, mkdirSync, openSync, readSync, realpathSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import type { ContextNode, ContextStore } from '@/workers/book-renderer/htmlCheckpoint/contextStore'
 import { SOURCE_BLOCK_CHARS, type TextStore } from '@/workers/book-renderer/htmlCheckpoint/sourceText'
@@ -53,17 +53,47 @@ function immutable(path: string, value: string, maximum: number): boolean {
   return published
 }
 
+/**
+ * Planning generation barrier (#2384): a leaf the commit authority (or the current candidate)
+ * already trusts is verified in place; any other existing leaf is uncommitted crash debris and
+ * is replaced atomically. No fsync here: the owning PlanningStorage.flush() syncs receipts.
+ */
+function deferredImmutable(path: string, value: string, maximum: number, trusted: boolean): boolean {
+  if (trusted) {
+    if (readPrivateCheckpointFile(path, maximum) !== value) throw new Error('HTML_CHECKPOINT_FILE_INVALID')
+    return false
+  }
+  const temporary = `${path}.${randomBytes(8).toString('hex')}.tmp`
+  let created = false
+  try {
+    writeFileSync(temporary, value, {flag: 'wx', mode: 0o600}); created = true
+    renameSync(temporary, path)
+  } catch (error) {
+    // `wx` may have created a partial leaf before a write error (ENOSPC/EIO); never leave it behind.
+    if (created || (error as NodeJS.ErrnoException).code !== 'EEXIST') { try { unlinkSync(temporary) } catch { /* already gone */ } }
+    throw error
+  }
+  return true
+}
+
 /** Caller supplies an existing canonical epoch-private0700 root and binds outputs to its snapshot. */
 export interface CheckpointStoreReceipt {ref: string; checksum: string; size_bytes: number; created: boolean}
-export function createDiskCheckpointStores(root: string, options: {onwrite?: (file: CheckpointStoreReceipt) => void; onread?: (file: Omit<CheckpointStoreReceipt, 'created'>) => void; readonly?: boolean} = {}): {context: ContextStore; text: TextStore; tags: TagStore} {
+export interface DiskCheckpointStoreOptions {
+  onwrite?: (file: CheckpointStoreReceipt) => void
+  onread?: (file: Omit<CheckpointStoreReceipt, 'created'>) => void
+  readonly?: boolean
+  /** Store-relative ref → whether a receipt already exists; enables the deferred generation barrier. */
+  deferred?: {trusted: (ref: string) => boolean}
+}
+export function createDiskCheckpointStores(root: string, options: DiskCheckpointStoreOptions = {}): {context: ContextStore; text: TextStore; tags: TagStore} {
   const base = privateDirectory(root)
   privateDirectory(join(base, 'contexts'), !options.readonly); privateDirectory(join(base, 'text'), !options.readonly)
   privateDirectory(join(base, 'stack'), !options.readonly)
-  if (!options.readonly) syncDirectory(base)
+  if (!options.readonly && !options.deferred) syncDirectory(base)
   const publish = (ref: string, encoded: string, maximum: number): void => {
     if (options.readonly) throw new Error('HTML_CHECKPOINT_STORE_READONLY')
     if (Buffer.byteLength(encoded) > maximum) throw new Error('HTML_CHECKPOINT_OUTPUT_LIMIT')
-    const created = immutable(join(base, ref), encoded, maximum)
+    const created = options.deferred ? deferredImmutable(join(base, ref), encoded, maximum, options.deferred.trusted(ref)) : immutable(join(base, ref), encoded, maximum)
     options.onwrite?.({ref, checksum: sha256(encoded), size_bytes: Buffer.byteLength(encoded), created})
   }
   const load = (ref: string, maximum: number): string => {

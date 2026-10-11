@@ -41,6 +41,7 @@ export async function createPlanningPorts(jobRoot: string, storage: PlanningStor
     admit: (records, bytes) => storage.admit(records, bytes),
     parserStores: scope => createDiskCheckpointStores(scopePath(storage.root, scope, true), {
       onwrite: file => storage.recordExternalReceipt({ ref: `${scope}/${file.ref}`, checksum: file.checksum, size_bytes: file.size_bytes }),
+      deferred: storage.deferredDurability ? { trusted: ref => !!(storage.admittedReceipt(`${scope}/${ref}`) ?? committedParser(`${scope}/${ref}`)) } : undefined,
     }),
     parserReadStores: scope => createDiskCheckpointStores(scopePath(storage.root, scope, false), { readonly: true,
       onread: file => verifyParserRead(scope, file),

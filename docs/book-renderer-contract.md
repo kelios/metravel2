@@ -65,8 +65,23 @@ protocol1 checkpoints несовместимы. B3 проверяет actual art
 identity включает этот pin, frozen document, точный resource profile и physical
 либо fixture measurement mode. Профиль или artifact нельзя менять при resume.
 
-`preparePlanningStep(jobRoot,planRoot,pinned,request,options)` делает один bounded
-переход `index → indexed → book → descriptors → plan_ready`. В `book` сохраняются
+`preparePlanningStep(jobRoot,planRoot,pinned,request,options)` выполняет одно
+поколение (generation) из последовательных bounded переходов
+`index → indexed → book → descriptors → plan_ready` (#2384). Каждый переход сохраняет
+прежние per-transition лимиты (input window, probes, admitted outputs); поколение
+останавливается на смене фазы, cache-only переходе, 512 переходах, когда следующий
+переход мог бы превысить 8 probes или 1MiB входа на поколение, по исчерпании
+`encoded_portion_bytes` на чтение картинок или через ~1.5с. Граница по времени
+недетерминирована, содержимое плана от неё не зависит. Ошибка не первого перехода
+откатывает его receipts к границе перехода, поколение запечатывается на предыдущем, а
+следующее встречает этот переход первым — с прежними ошибкой, budget retry и
+cache-only семантикой. `options.max_transitions` — только fixtures/диагностика, B3
+его не передаёт. Поколение пишет один ledger и один checkpoint; файлы не fsync-ятся
+по одному: перед возвратом шага `flush()` делает один барьер — fsync каждого output,
+затем каждого каталога до plan root (глубже первым), поэтому B3 коммитит receipts
+только на прошедшие барьер байты. Файл с committed receipt проверяется на месте и не
+переписывается; любой другой существующий файл (crash debris незакоммиченной
+попытки) атомарно заменяется через rename. В `book` сохраняются
 body/TOC/frontmatter cursors и immutable seals; архивные строки живут на диске.
 В `descriptors` каждая страница повторно измеряется с окончательным абсолютным
 folio после подсчёта frontmatter, затем по одной проверяются placement receipts
@@ -76,7 +91,9 @@ folio после подсчёта frontmatter, затем по одной про
 
 Request содержит sequential generation, предыдущий checksummed checkpoint,
 renderer content hash, profile и per-call limits. Default input65,536bytes,
-output4MiB/24records, probes1; maxima output 4MiB + `encoded_resource_bytes`
+output4MiB/128records (generation envelope: 126 ledgered outputs + ledger +
+checkpoint), probes1 на переход; result `consumed_bytes`/`consumed_asset_bytes`/`probes`
+— суммы по поколению. Maxima output 4MiB + `encoded_resource_bytes`
 профиля + 64KiB descriptor (`maxPlanningOutputBytes`), 128records и probes8. До работы
 резервируются index checkpoint1MiB (manifest carry), либо post-index
 checkpoint64KiB (только bounded cursors/refs), и generation-ledger64KiB. Недостаточный бюджет

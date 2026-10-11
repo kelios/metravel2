@@ -2,7 +2,7 @@ import { imageEffectFromWorkerStyle, assertWorkerImageEffect, type WorkerImageEf
 import { createReadStream } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { access } from 'node:fs/promises'
-import { publishImmutableFile } from './immutableFile'
+import { publishImmutableFile, verifyImmutableFile } from './immutableFile'
 import { createRequire } from 'node:module'
 import { dirname, resolve } from 'node:path'
 import type { Browser, BrowserContext, Page } from 'playwright'
@@ -423,7 +423,16 @@ export class PrintAssetCache {
     const size = typeof bytes === 'string' ? Buffer.byteLength(bytes) : bytes.length
     const trusted = await this.planning?.receipt(ref)
     if (!trusted) this.planning?.admit(1, size)
-    const receipt = await publishImmutableFile(this.indexRoot, ref, bytes, maximum)
+    // Under a planning generation barrier a trusted leaf is verified, never rewritten; an
+    // untrusted one is published without its own fsync and covered by PlanningStorage.flush().
+    const deferred = !!this.planning?.deferredDurability && resolve(this.indexRoot) === resolve(this.planning.root)
+    if (deferred && trusted) {
+      const digest = sha256(bytes)
+      if (trusted.checksum !== digest || trusted.size_bytes !== size) throw new Error('PRINT_RESOURCE_INTEGRITY_FAILED')
+      await verifyImmutableFile(this.indexRoot, ref, trusted, maximum)
+      return
+    }
+    const receipt = await publishImmutableFile(this.indexRoot, ref, bytes, maximum, { deferred })
     if (trusted && (trusted.checksum !== receipt.checksum || trusted.size_bytes !== receipt.size_bytes)) throw new Error('PRINT_RESOURCE_INTEGRITY_FAILED')
     if (!trusted) this.planning?.recordExternalReceipt({ ref, ...receipt })
   }

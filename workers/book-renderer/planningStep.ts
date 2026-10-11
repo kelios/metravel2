@@ -9,7 +9,7 @@ import { PlanningStorage, type CommittedPlanningLookup } from './planningStorage
 import { readGenerationLedger, sealGenerationLedger, MAX_GENERATION_LEDGER_BYTES, MAX_PLANNING_OUTPUT_FILE_BYTES } from './planningLedger'
 import { initialBookPlanning, restoreBookPlanning, type BookPlanningPorts } from './planningBookTypes'
 import { advanceBookPlanning } from './planningBody'
-import { initialDescriptors, restoreDescriptors, advanceDescriptors } from './planningDescriptors'
+import { initialDescriptors, restoreDescriptors, advanceDescriptors, type DescriptorIdentity } from './planningDescriptors'
 import { createPlanningPorts, type CommittedParserLookup } from './planningPorts'
 import { DEFAULT_RENDERER_RESOURCE_PROFILE, validateRendererResourceProfile, type RendererResourceProfile } from './measurement'
 import { planningIdentity, type PlanningPhysicalSession } from './planningSession'
@@ -93,6 +93,8 @@ function validateIndex(value: unknown, pinned: BookDocument): SnapshotIndexState
 }
 
 const DEFAULT_OUTPUT_BYTES = 4_194_304
+/** Records are a generation envelope: the documented maximum (126 ledgered outputs + ledger + checkpoint). */
+const DEFAULT_OUTPUT_RECORDS = 128
 /** A retried generation must admit one maximal binary+descriptor pair on top of the default envelope. */
 export function maxPlanningOutputBytes(profile: RendererResourceProfile): number {
   return DEFAULT_OUTPUT_BYTES + profile.encoded_resource_bytes + PRINT_DESCRIPTOR_MAX_BYTES
@@ -101,7 +103,48 @@ function validateLimits(value: PlanningRequest['limits'], profile: RendererResou
   if (value !== undefined) keys(record(value), ['input_bytes', 'output_bytes', 'output_records', 'probes'], [])
   return { input_bytes: integer(value?.input_bytes ?? 65_536, 65_536, 1),
     output_bytes: integer(value?.output_bytes ?? DEFAULT_OUTPUT_BYTES, maxPlanningOutputBytes(profile), 1),
-    output_records: integer(value?.output_records ?? 24, 128, 1), probes: integer(value?.probes ?? 1, 8, 1) }
+    output_records: integer(value?.output_records ?? DEFAULT_OUTPUT_RECORDS, 128, 1), probes: integer(value?.probes ?? 1, 8, 1) }
+}
+
+/**
+ * Generation envelope (#2384). Every transition keeps its own unchanged bounds (input window,
+ * probes, admitted outputs); a generation runs consecutive transitions inside one output envelope
+ * and seals them with one ledger, one checkpoint and one durability barrier.
+ */
+const GENERATION_MAX_TRANSITIONS = 512
+const GENERATION_MAX_PROBES = 8
+const GENERATION_MAX_INPUT_BYTES = 1_048_576
+const GENERATION_SOFT_MS = 1_500
+
+interface TransitionResult { consumed: number; assets: number; probes: number; cache_only: boolean }
+
+/** One bounded semantic transition on the in-memory checkpoint (the former whole generation body). */
+async function planningTransition(jobRoot: string, pinned: BookDocument, checkpoint: PlanningCheckpoint, storage: PlanningStorage, limits: PlanningLimits,
+  ports: () => Promise<BookPlanningPorts>, identity: DescriptorIdentity, first: boolean): Promise<TransitionResult> {
+  const result: TransitionResult = { consumed: 0, assets: 0, probes: 0, cache_only: false }
+  if (checkpoint.phase === 'index') { result.consumed = await prepareSnapshotIndexStep(jobRoot, pinned, checkpoint, storage, limits.input_bytes); return result }
+  if (checkpoint.phase === 'indexed') { checkpoint.book = initialBookPlanning(); checkpoint.phase = 'book'; return result }
+  try {
+    if (checkpoint.phase === 'book') {
+      const advanced = await advanceBookPlanning(jobRoot, storage, pinned, checkpoint.index.summary, checkpoint.book!, limits, await ports())
+      checkpoint.book = advanced.state; result.consumed = advanced.consumed_bytes; result.assets = advanced.consumed_asset_bytes; result.probes = advanced.probes
+      if (advanced.done) { checkpoint.phase = 'descriptors'; checkpoint.descriptors = initialDescriptors() }
+    } else {
+      const advanced = await advanceDescriptors(storage, pinned, checkpoint.book!, checkpoint.index.summary.included_media_occurrences, checkpoint.descriptors!, await ports(), identity)
+      checkpoint.descriptors = advanced.state; result.probes = advanced.probes
+      if (advanced.state.phase === 'done') checkpoint.phase = 'plan_ready'
+    }
+  } catch (error) {
+    // Book and descriptor producers clone their input. If a probe filled the
+    // generation with complete cache pairs, commit those pairs while retaining
+    // the original planning cursor. The next committed generation can resume
+    // preparation rather than rediscovering the same orphan files forever.
+    // Only a generation's first transition does this; later ones roll back.
+    if (!(first && error instanceof Error && error.message === 'WORKER_PLANNING_OUTPUT_BUDGET_EXCEEDED' &&
+        storage.outputs.some(file => file.ref.startsWith('print-cache/')))) throw error
+    result.cache_only = true
+  }
+  return result
 }
 
 export interface PlanningStepOptions {
@@ -112,6 +155,8 @@ export interface PlanningStepOptions {
   /** Unit/protocol fixtures only; a resulting plan is explicitly measured:false. */
   ports_factory?: (storage: PlanningStorage) => BookPlanningPorts
   physical_session?: PlanningPhysicalSession
+  /** Fixtures/diagnostics only (B3 omits it): cap transitions per generation, 1 = the pre-#2384 one-transition generation. */
+  max_transitions?: number
 }
 
 /** Each call creates an immutable candidate; only B2's fenced commit makes it consumable. */
@@ -128,6 +173,7 @@ export async function preparePlanningStep(jobRoot: string, planRoot: string, pin
   if (resourceProfile.encoded_resource_bytes > MAX_PLANNING_OUTPUT_FILE_BYTES) throw new Error('WORKER_RESOURCE_PROFILE_INVALID')
   const limits = validateLimits(request.limits, resourceProfile)
   if (!options || typeof options.committed !== 'function') throw new Error('WORKER_PLANNING_COMMITTED_LOOKUP_REQUIRED')
+  const maxTransitions = integer(options.max_transitions ?? GENERATION_MAX_TRANSITIONS, GENERATION_MAX_TRANSITIONS, 1)
   const profileHash = sha256(canonicalJson(resourceProfile))
   const identity = planningIdentity(pinned, request.renderer_content_hash, resourceProfile, !!options.ports_factory)
   if (options.physical_session && (options.ports_factory || options.physical_session.identity !== identity ||
@@ -135,7 +181,7 @@ export async function preparePlanningStep(jobRoot: string, planRoot: string, pin
   await mkdir(planRoot, { recursive: true, mode: 0o700 })
   const info = await lstat(planRoot)
   if (!info.isDirectory() || info.isSymbolicLink() || (info.mode & 0o077)) throw new Error('WORKER_PLANNING_DIRECTORY_INVALID')
-  const storage = new PlanningStorage(planRoot, limits, options.committed)
+  const storage = new PlanningStorage(planRoot, limits, options.committed, { deferred_durability: true })
   // Restore first: an index resume still needs its bounded manifest carry reserve.
   let checkpoint: PlanningCheckpoint
   if (request.checkpoint) {
@@ -167,42 +213,50 @@ export async function preparePlanningStep(jobRoot: string, planRoot: string, pin
   await storage.put('identity.json', { version: PLANNING_PROTOCOL_VERSION, identity, renderer_content_hash: request.renderer_content_hash,
     resource_profile_hash: profileHash, measured: !options.ports_factory })
   const before = { ...checkpoint.index.summary }
-  let consumed = 0; let consumedAssets = 0; let probes = 0
-  if (checkpoint.phase === 'index') consumed = await prepareSnapshotIndexStep(jobRoot, pinned, checkpoint, storage, limits.input_bytes)
-  else if (checkpoint.phase === 'indexed') { checkpoint.book = initialBookPlanning(); checkpoint.phase = 'book' }
-  else {
-    const physicalPorts = options.ports_factory ? undefined : await createPlanningPorts(jobRoot, storage, pinned, resourceProfile, options.fonts_dir, options.committed_parser!, options.physical_session)
-    const ports = options.ports_factory?.(storage) ?? physicalPorts!.ports
-    try {
-      if (canonicalJson(ports.resource_profile) !== canonicalJson(resourceProfile)) throw new Error('WORKER_PLANNING_PROFILE_MISMATCH')
-      if (checkpoint.phase === 'book') {
-        const result = await advanceBookPlanning(jobRoot, storage, pinned, checkpoint.index.summary, checkpoint.book!, limits, ports)
-        checkpoint.book = result.state; consumed = result.consumed_bytes; consumedAssets = result.consumed_asset_bytes; probes = result.probes
-        if (result.done) { checkpoint.phase = 'descriptors'; checkpoint.descriptors = initialDescriptors() }
-      } else {
-        const result = await advanceDescriptors(storage, pinned, checkpoint.book!, checkpoint.index.summary.included_media_occurrences,
-          checkpoint.descriptors!, ports, { identity, renderer_content_hash: request.renderer_content_hash, resource_profile_hash: profileHash,
-            measured: !options.ports_factory, planning_protocol_version: PLANNING_PROTOCOL_VERSION })
-        checkpoint.descriptors = result.state; probes = result.probes
-        if (result.state.phase === 'done') checkpoint.phase = 'plan_ready'
-      }
-    } catch (error) {
-      // Book and descriptor producers clone their input. If a probe filled the
-      // generation with complete cache pairs, commit those pairs while retaining
-      // the original planning cursor. The next committed generation can resume
-      // preparation rather than rediscovering the same orphan files forever.
-      if (!(error instanceof Error && error.message === 'WORKER_PLANNING_OUTPUT_BUDGET_EXCEEDED' &&
-          storage.outputs.some(file => file.ref.startsWith('print-cache/')))) throw error
-    } finally { await physicalPorts?.close() }
+  const totals = { consumed: 0, assets: 0, probes: 0 }
+  const started = performance.now()
+  const physicalSlot: { ports?: Awaited<ReturnType<typeof createPlanningPorts>> } = {}
+  let portsValue: BookPlanningPorts | undefined
+  const ports = async (): Promise<BookPlanningPorts> => {
+    if (portsValue) return portsValue
+    if (!options.ports_factory) physicalSlot.ports = await createPlanningPorts(jobRoot, storage, pinned, resourceProfile, options.fonts_dir, options.committed_parser!, options.physical_session)
+    portsValue = options.ports_factory?.(storage) ?? physicalSlot.ports!.ports
+    if (canonicalJson(portsValue.resource_profile) !== canonicalJson(resourceProfile)) throw new Error('WORKER_PLANNING_PROFILE_MISMATCH')
+    return portsValue
   }
-  validateIndex(checkpoint.index, pinned)
-  if (consumed > limits.input_bytes || probes > limits.probes || !Number.isSafeInteger(consumedAssets) || consumedAssets < 0) throw new Error('WORKER_PLANNING_STEP_BUDGET_EXCEEDED')
+  const descriptorIdentity = { identity, renderer_content_hash: request.renderer_content_hash, resource_profile_hash: profileHash,
+    measured: !options.ports_factory, planning_protocol_version: PLANNING_PROTOCOL_VERSION } as const
+  try {
+    for (let transitions = 0; ; transitions++) {
+      const phase: PlanningCheckpoint['phase'] = checkpoint.phase
+      // Later transitions are opportunistic: any failure rolls back to the previous transition
+      // boundary and seals the generation, so the next generation meets it as its first
+      // transition with today's exact error, retry and cache-only semantics.
+      const mark = storage.mark()
+      const boundary = transitions ? structuredClone(checkpoint) : undefined
+      let step: TransitionResult
+      try { step = await planningTransition(jobRoot, pinned, checkpoint, storage, limits, ports, descriptorIdentity, !transitions) }
+      catch (error) {
+        if (!boundary) throw error
+        storage.rollback(mark); checkpoint = boundary
+        break
+      }
+      validateIndex(checkpoint.index, pinned)
+      if (step.consumed > limits.input_bytes || step.probes > limits.probes || !Number.isSafeInteger(step.assets) || step.assets < 0) throw new Error('WORKER_PLANNING_STEP_BUDGET_EXCEEDED')
+      totals.consumed += step.consumed; totals.assets += step.assets; totals.probes += step.probes
+      if (step.cache_only || checkpoint.phase !== phase || transitions + 1 >= maxTransitions ||
+          totals.probes + limits.probes > GENERATION_MAX_PROBES || totals.consumed + limits.input_bytes > GENERATION_MAX_INPUT_BYTES ||
+          totals.assets >= resourceProfile.encoded_portion_bytes || performance.now() - started >= GENERATION_SOFT_MS) break
+    }
+  } finally { await physicalSlot.ports?.close() }
   storage.releaseReservation()
   checkpoint.ledger = await sealGenerationLedger(storage, identity, request.generation, previousLedger)
   const encoded = canonicalJson(checkpoint)
   const saved = await storage.put(`checkpoints/${sha256(encoded)}.json`, checkpoint, savedMaximum)
+  // Commit point: one durability barrier for every output of the generation before B3 sees it.
+  await storage.flush()
   return { planning_protocol_version: PLANNING_PROTOCOL_VERSION, generation: request.generation, checkpoint: saved, phase: checkpoint.phase,
-    outputs: storage.outputs, consumed_bytes: consumed, consumed_asset_bytes: consumedAssets, probes, ledger: checkpoint.ledger,
+    outputs: storage.outputs, consumed_bytes: totals.consumed, consumed_asset_bytes: totals.assets, probes: totals.probes, ledger: checkpoint.ledger,
     deltas: { sources: checkpoint.index.summary.sources - before.sources, travels: checkpoint.index.summary.travels - before.travels,
       included_media_occurrences: checkpoint.index.summary.included_media_occurrences - before.included_media_occurrences } }
 }
