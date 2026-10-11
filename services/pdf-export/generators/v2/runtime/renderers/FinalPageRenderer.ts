@@ -10,6 +10,8 @@ import {
   buildPostmarkRings,
   buildPostmarkWaves,
   buildQuoteMark,
+  buildTravelBirdSvg,
+  buildTravelLandscapeSvg,
   buildTicketRoute,
   inkWithAlpha,
 } from './finalPageArt'
@@ -37,7 +39,7 @@ const SCREEN_LAYER = 'mix-blend-mode: screen;'
  * средние тёмные обложки: на них отличие ≤ 1/255, на синих (`light`) свечение
  * светлее прежнего до 16/255 в синем канале.
  */
-const ORANGE_GLOW_SCREEN = 'rgb(29,3,0)'
+const PASTEL_GLOW_SCREEN = 'rgb(232,214,204)'
 
 export class RuntimeFinalRenderer {
   constructor(private ctx: RuntimeRenderContext) {}
@@ -77,7 +79,12 @@ export class RuntimeFinalRenderer {
       stats.push({ value: totalPhotos, label: getPhotoLabel(totalPhotos) })
     }
 
-    const ink = colors.cover.text
+    // Финальный лист — единая мягкая «открытка» для всех тем. У тёмных обложек
+    // белый cover-текст заменяем на приглушённый slate, иначе на пастели теряется
+    // контраст; светлые темы сохраняют свой канонический цвет текста.
+    const usesLightCoverText = colors.cover.text.toLowerCase() === '#ffffff'
+    const ink = usesLightCoverText ? '#52636a' : colors.cover.text
+    const secondaryInk = usesLightCoverText ? '#718086' : colors.cover.textSecondary
     const numberSize = stats.length > 3 ? '26pt' : '30pt'
     const statsHtml = stats.length > 0 ? `
       <div class="final-ticket" style="
@@ -114,7 +121,7 @@ export class RuntimeFinalRenderer {
                 font-size: 7.5pt;
                 text-transform: uppercase;
                 letter-spacing: 0.1em;
-                color: ${colors.cover.textSecondary};
+                color: ${secondaryInk};
                 font-family: ${typography.bodyFont};
                 line-height: 1.4;
                 overflow-wrap: anywhere;
@@ -138,7 +145,7 @@ export class RuntimeFinalRenderer {
         min-height: 285mm;
         text-align: center;
         color: ${ink};
-        background: linear-gradient(135deg, ${colors.cover.backgroundGradient[0]} 0%, ${colors.cover.backgroundGradient[1]} 100%);
+        background: linear-gradient(135deg, #f7eee9 0%, #e2efec 100%);
         position: relative;
         overflow: hidden;
       ">
@@ -146,13 +153,14 @@ export class RuntimeFinalRenderer {
           position: absolute;
           top: 0; right: 0; bottom: 0; left: 0;
           background:
-            radial-gradient(circle at 50% 17%, ${screenGray(0.08)}, #000 34%),
-            radial-gradient(circle at 50% 86%, ${ORANGE_GLOW_SCREEN}, #000 32%);
+            radial-gradient(circle at 50% 17%, ${screenGray(0.16)}, ${screenGray(0.04)} 68%),
+            radial-gradient(circle at 50% 86%, ${PASTEL_GLOW_SCREEN}, ${screenGray(0.03)} 70%);
           background-blend-mode: screen;
           ${SCREEN_LAYER}
           pointer-events: none;
         "></div>
         ${buildContourLayer(ink)}
+        ${buildTravelBirdSvg(ink)}
         <div style="
           position: absolute;
           top: 10mm; right: 10mm; bottom: 10mm; left: 10mm;
@@ -166,6 +174,7 @@ export class RuntimeFinalRenderer {
           pointer-events: none;
         "></div>
         ${buildEmblemSvg(ink)}
+        ${buildTravelLandscapeSvg(ink)}
 
         <div style="
           position: relative;
@@ -198,7 +207,7 @@ export class RuntimeFinalRenderer {
             margin: 0 auto;
             font-size: 11pt;
             line-height: 1.65;
-            color: ${colors.cover.textSecondary};
+            color: ${secondaryInk};
             font-family: ${typography.bodyFont};
           ">
             ${i18nT("export:services.pdf_export.generators.v2.runtime.renderers.FinalPageRenderer.section_class_pdf_page_final_page_style_padd_473b31a3.text02")}
@@ -224,7 +233,7 @@ export class RuntimeFinalRenderer {
                 margin: 0;
                 font-size: 8pt;
                 line-height: 1.4;
-                color: ${colors.cover.textSecondary};
+                color: ${secondaryInk};
                 letter-spacing: 0.08em;
                 text-transform: uppercase;
                 font-family: ${typography.bodyFont};

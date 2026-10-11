@@ -11,6 +11,44 @@
  */
 import { renderPdfIcon } from '../pdfVisualHelpers'
 
+/** Фирменная птичка MeTravel в тонком travel-скетче. */
+export function buildTravelBirdSvg(ink: string): string {
+  return `
+        <svg class="final-travel-bird" viewBox="0 0 120 100" aria-hidden="true" style="
+          position: absolute;
+          top: 14mm;
+          right: 27mm;
+          width: 27mm;
+          height: 22.5mm;
+          pointer-events: none;
+        ">
+          <path d="M18 48C16 26 30 11 55 10C76 9 91 19 94 38C96 53 88 60 98 54C105 50 110 43 112 35C115 51 107 69 91 72C78 75 70 70 61 77C51 85 38 83 28 74C21 68 18 58 18 48Z" fill="#F5A623" opacity="0.92"/>
+          <path d="M42 48C55 30 75 25 88 30C82 42 74 58 61 61C53 63 47 59 42 55" fill="none" stroke="${inkWithAlpha(ink, 0.55)}" stroke-width="2.2" stroke-linecap="round"/>
+          <circle cx="38" cy="31" r="2.8" fill="${ink}"/>
+          <path d="M18 35L8 29L18 42L7 43L20 48" fill="#F5A623" opacity="0.92"/>
+          <path d="M45 79L41 91M64 78L71 91M37 91L31 95M42 91L49 95M70 91L77 94" fill="none" stroke="#F5A623" stroke-width="2.4" stroke-linecap="round"/>
+        </svg>`
+}
+
+/** Мягкий силуэт гор, берега и волн — travel-мотив без тяжёлой иллюстрации. */
+export function buildTravelLandscapeSvg(ink: string): string {
+  return `
+        <svg class="final-travel-landscape" viewBox="0 0 210 59" preserveAspectRatio="none" aria-hidden="true" style="
+          position: absolute;
+          left: 0;
+          bottom: 13mm;
+          width: 100%;
+          height: 29mm;
+          pointer-events: none;
+        ">
+          <path d="M0 39L29 15L45 29L66 8L96 39Z" fill="${inkWithAlpha(ink, 0.09)}"/>
+          <path d="M46 39L76 18L91 29L113 11L150 39Z" fill="${inkWithAlpha(ink, 0.12)}"/>
+          <path d="M0 42C20 37 32 48 52 43S86 39 104 44S139 49 158 43S190 37 210 42V58H0Z" fill="${inkWithAlpha(ink, 0.08)}"/>
+          <path d="M0 45C20 40 32 51 52 46S86 42 104 47S139 52 158 46S190 40 210 45" fill="none" stroke="${inkWithAlpha(ink, 0.35)}" stroke-width="0.7"/>
+          <path d="M0 51C20 46 32 57 52 52S86 48 104 53S139 58 158 52S190 46 210 51" fill="none" stroke="${inkWithAlpha(ink, 0.22)}" stroke-width="0.7"/>
+        </svg>`
+}
+
 /** `#rgb`/`#rrggbb` → `rgba(r,g,b,a)`; нераспознанный цвет — белый. */
 export function inkWithAlpha(color: string, alpha: number): string {
   const hex = color.trim().replace(/^#/, '')
