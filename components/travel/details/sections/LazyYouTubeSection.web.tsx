@@ -50,7 +50,7 @@ export const LazyYouTube: React.FC<LazyYouTubeProps> = memo(({ url }) => {
         onPress={handlePreviewPress}
         style={styles.videoContainer}
         accessibilityRole="button"
-        accessibilityLabel={i18nT('travel:components.travel.details.sections.LazyYouTubeSection.smotret_video_998d86a4')}
+        accessibilityLabel={i18nT('travel:components.travel.details.sections.LazyYouTubeSection.smotret_video_6c6623d8')}
       >
         {shouldLoad ? (
           <ImageCardMedia
@@ -66,7 +66,7 @@ export const LazyYouTube: React.FC<LazyYouTubeProps> = memo(({ url }) => {
         ) : null}
         <View style={styles.playOverlay}>
           <Icon name="play-circle-fill" size={64} color={colors.textOnDark} />
-          <Text style={styles.videoHintText}>{i18nT('travel:components.travel.details.sections.LazyYouTubeSection.video_zapustitsya_avtomaticheski_e11cf341')}</Text>
+          <Text style={styles.videoHintText}>{i18nT('travel:components.travel.details.sections.LazyYouTubeSection.video_zapustitsya_avtomaticheski_c03be162')}</Text>
         </View>
       </Pressable>
     )

@@ -73,7 +73,7 @@ const getRouteStatusText = (route: QuestRouteGeometryState, routeMode: QuestRout
                 ? i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeReadyWithDistance', { value1: distance })
                 : i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeReady');
         }
-        return distance ? i18nT('quests:components.quests.QuestFullMap.peshiy_marshrut_gotov_value1_62786bc6', { value1: distance }) : i18nT('quests:components.quests.QuestFullMap.peshiy_marshrut_gotov_bca517c9');
+        return distance ? i18nT('quests:components.quests.QuestFullMap.peshiy_marshrut_gotov_value1_62786bc6', { value1: distance }) : i18nT('quests:components.quests.QuestFullMap.peshiy_marshrut_gotov_01c8c350');
     }
     if (route.status === 'fallback') return i18nT('quests:components.quests.QuestFullMap.marshrutizator_nedostupen_pokazana_priblizit_20e198c4');
     return i18nT('quests:components.quests.QuestFullMap.dobavte_minimum_dve_tochki_dlya_marshruta_1653582f');
@@ -82,7 +82,7 @@ const getRouteStatusText = (route: QuestRouteGeometryState, routeMode: QuestRout
 function QuestFullMap({
     steps,
     height = 520,
-    title = i18nT('quests:components.quests.QuestFullMap.karta_kvesta_9da6e5cf'),
+    title = i18nT('quests:components.quests.QuestFullMap.karta_kvesta_8aa1d381'),
     activeStepIndex,
     allowFullscreen = true,
     onClose,
@@ -321,7 +321,7 @@ function QuestFullMap({
                 });
             }
         } catch {
-            notifyExportError(i18nT('quests:components.quests.QuestFullMap.eksport_d541404b'), i18nT('quests:components.quests.QuestFullMap.ne_udalos_podelitsya_gpx_faylom_fbac86e9'));
+            notifyExportError(i18nT('quests:components.quests.QuestFullMap.eksport_a573001b'), i18nT('quests:components.quests.QuestFullMap.ne_udalos_podelitsya_gpx_faylom_fbac86e9'));
         }
     };
 
@@ -346,7 +346,7 @@ function QuestFullMap({
                 });
             }
         } catch {
-            notifyExportError(i18nT('quests:components.quests.QuestFullMap.eksport_d541404b'), i18nT('quests:components.quests.QuestFullMap.ne_udalos_podelitsya_geojson_faylom_5bb0e239'));
+            notifyExportError(i18nT('quests:components.quests.QuestFullMap.eksport_a573001b'), i18nT('quests:components.quests.QuestFullMap.ne_udalos_podelitsya_geojson_faylom_5bb0e239'));
         }
     };
 
@@ -373,7 +373,7 @@ function QuestFullMap({
                             style={styles.mobileMenuButton}
                             onPress={() => setFullscreenVisible(true)}
                             accessibilityRole="button"
-                            accessibilityLabel={i18nT('quests:components.quests.QuestFullMap.otkryt_kartu_kvesta_na_ves_ekran_aa9d3b80')}
+                            accessibilityLabel={i18nT('quests:components.quests.QuestFullMap.otkryt_kartu_kvesta_na_ves_ekran_50d6d221')}
                         >
                             <Feather name="maximize-2" size={18} color={colors.textOnPrimary} />
                         </TouchableOpacity>
@@ -382,7 +382,7 @@ function QuestFullMap({
                         style={styles.mobileMenuButton}
                         onPress={() => setExportMenuVisible(true)}
                         accessibilityRole="button"
-                        accessibilityLabel={i18nT('quests:components.quests.QuestFullMap.skachat_marshrut_png_gpx_geojson_bb653813')}
+                        accessibilityLabel={i18nT('quests:components.quests.QuestFullMap.skachat_marshrut_png_gpx_geojson_79e8c69f')}
                     >
                         <Feather name="download" size={18} color={colors.textOnPrimary} />
                     </TouchableOpacity>
@@ -391,7 +391,7 @@ function QuestFullMap({
                             style={styles.fullscreenClose}
                             onPress={onClose}
                             accessibilityRole="button"
-                            accessibilityLabel={i18nT('quests:components.quests.QuestFullMap.zakryt_polnoekrannuyu_kartu_kvesta_dbff4c11')}
+                            accessibilityLabel={i18nT('quests:components.quests.QuestFullMap.zakryt_polnoekrannuyu_kartu_kvesta_9c32a17c')}
                         >
                             <Feather name="x" size={20} color={colors.text} />
                         </TouchableOpacity>
@@ -492,7 +492,7 @@ function QuestFullMap({
                                 void shareAsGPX();
                             }}
                         >
-                            <Text style={styles.modalOptionText}>{i18nT('quests:components.quests.QuestFullMap.podelitsya_gpx_bd013bf8')}</Text>
+                            <Text style={styles.modalOptionText}>{i18nT('quests:components.quests.QuestFullMap.podelitsya_gpx_781eaf8e')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={styles.modalOption}

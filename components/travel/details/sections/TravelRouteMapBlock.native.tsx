@@ -96,10 +96,10 @@ export const TravelRouteMapBlock: React.FC<{
       testID="travel-details-map"
       style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
       collapsable={false}
-      accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelRouteMapBlock.karta_marshruta_24103feb')}
+      accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelRouteMapBlock.karta_marshruta_0bb083af')}
       accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
     >
-      <Text style={styles.sectionHeaderText}>{i18nT('travel:components.travel.details.sections.TravelRouteMapBlock.karta_marshruta_24103feb')}</Text>
+      <Text style={styles.sectionHeaderText}>{i18nT('travel:components.travel.details.sections.TravelRouteMapBlock.karta_marshruta_0bb083af')}</Text>
       <View style={SECTION_CONTENT_MARGIN_STYLE}>
         {hasMapData ? (
           <>
@@ -147,7 +147,7 @@ export const TravelRouteMapBlock: React.FC<{
         ) : (
           <View style={styles.mapEmptyState}>
             <Feather name="map" size={32} color={colors.textMuted} />
-            <Text style={[styles.mapEmptyText, { marginTop: 12 }]}>{i18nT('travel:components.travel.details.sections.TravelRouteMapBlock.marshrut_na_karte_ne_zadan_d15dc325')}</Text>
+            <Text style={[styles.mapEmptyText, { marginTop: 12 }]}>{i18nT('travel:components.travel.details.sections.TravelRouteMapBlock.marshrut_na_karte_ne_zadan_3baa427b')}</Text>
             <Text
               style={{
                 fontSize: 13,
@@ -157,7 +157,7 @@ export const TravelRouteMapBlock: React.FC<{
                 opacity: 0.8,
               }}
             >
-              {i18nT('travel:components.travel.details.sections.TravelRouteMapBlock.avtor_ne_dobavil_liniyu_marshruta_dlya_etogo_d87240c6')}</Text>
+              {i18nT('travel:components.travel.details.sections.TravelRouteMapBlock.avtor_ne_dobavil_liniyu_marshruta_dlya_etogo_636d4fc3')}</Text>
           </View>
         )}
       </View>

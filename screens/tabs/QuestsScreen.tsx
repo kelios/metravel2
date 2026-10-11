@@ -46,14 +46,11 @@ import {
     filterKidsQuests,
     filterNearbyQuests,
     filterQuestsByMapSearchArea,
-    getAverageQuestMapPointCenter,
-    loadExpoLocation,
-    resolveQuestMapCenter,
     resolveStoredQuestCatalogSelection,
     parseThemeSelectionId,
     toThemeSelectionId,
+    loadExpoLocation,
     type QuestMapArea,
-    type MapPoint,
 } from './QuestsScreen.helpers';
 import { canRankQuestsByPopularity, sortQuestsByPopularity } from '@/utils/questPopularity';
 import { filterQuestsByTheme, getActiveQuestThemes, getQuestThemeById } from '@/utils/questThemes';
@@ -69,7 +66,8 @@ const { spacing, radii } = DESIGN_TOKENS;
 // ломал бы мемоизацию карточек ровно так же, как снятые отсюда спреды-копии.
 const EMPTY_QUESTS: (QuestMeta & { _distanceKm?: number })[] = [];
 
-const LazyQuestMap = React.lazy(() => import('@/components/MapPage/Map.web'));
+// #2389: режим карты (точки, центр, сама карта) грузится по переключению на карту.
+const QuestsMapSection = React.lazy(() => import('./QuestsMapSection'));
 // #2360: optional banner stays out of the catalog chunk; safeLazy renders
 // nothing if its chunk fails, instead of throwing the catalog into the boundary.
 const QuestReviewPromptBanner = safeLazy(
@@ -298,34 +296,35 @@ export default function QuestsScreen() {
             }
             if (viewMode === 'map') mapLocationAttemptedRef.current = true;
             if (isNearbySelection) setGeoRequesting(true);
+            // #2389: сам запрос позиции и тексты отказа — отдельным чанком,
+            // он грузится только по «Рядом» или открытию карты.
+            let failure: string | null = null;
             try {
-                const Location = await loadExpoLocation();
-                const { status } = await Location.requestForegroundPermissionsAsync();
-                if (status !== 'granted' || cancelled) {
-                    if (!cancelled && isNearbySelection) {
-                        setSelectedCityId(ALL_QUESTS_ID);
-                        setGeoMessage(i18nT('quests:screens.tabs.QuestsScreen.geolokatsiya_zapreschena_pokazyvaem_ves_kata_b7ae192f'));
-                        await AsyncStorage.setItem(STORAGE_SELECTED_CITY, ALL_QUESTS_ID).catch(() => {});
-                    }
+                // Оба чанка — параллельно: expo-location не ждёт загрузки модуля запроса.
+                const [{ requestQuestCatalogLocation }] = await Promise.all([
+                    import('./questCatalogLocation'),
+                    loadExpoLocation(),
+                ]);
+                const result = await requestQuestCatalogLocation(() => cancelled);
+                if (!result || cancelled) return;
+                if ('coords' in result) {
+                    setUserLoc(result.coords);
+                    setGeoMessage(null);
                     return;
                 }
-                const pos = await Location.getCurrentPositionAsync({
-                    accuracy: Location.LocationAccuracy.Balanced,
-                });
-                if (!cancelled) {
-                    setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-                    setGeoMessage(null);
-                }
+                failure = result.failure;
             } catch (error) {
-                if (!cancelled && isNearbySelection) {
-                    setSelectedCityId(ALL_QUESTS_ID);
-                    setGeoMessage(i18nT('quests:screens.tabs.QuestsScreen.ne_udalos_opredelit_mestopolozhenie_proverte_34451827'));
-                    await AsyncStorage.setItem(STORAGE_SELECTED_CITY, ALL_QUESTS_ID).catch(() => {});
-                }
+                // Сюда доходит только сбой загрузки самого чанка: игрок узнаёт
+                // ту же причину, что и при сбое позиции, а не молчаливый сброс.
+                failure = i18nT('quests:screens.tabs.QuestsScreen.ne_udalos_opredelit_mestopolozhenie_proverte_34451827');
                 console.warn('Error requesting nearby location', error);
             } finally {
                 if (!cancelled && isNearbySelection) setGeoRequesting(false);
             }
+            if (cancelled || !isNearbySelection) return;
+            setSelectedCityId(ALL_QUESTS_ID);
+            setGeoMessage(failure);
+            await AsyncStorage.setItem(STORAGE_SELECTED_CITY, ALL_QUESTS_ID).catch(() => {});
         })();
         return () => { cancelled = true; };
     }, [selectedCityId, viewMode, nearbyRequestVersion]);
@@ -504,67 +503,6 @@ export default function QuestsScreen() {
     const catalogModel = useQuestCatalogResponsiveModel(questsAll.length);
     const questCardWidth = catalogModel.cardWidth;
 
-    const mapPoints = useMemo<MapPoint[]>(() => {
-        if (!dataLoaded) return [];
-        if (!searchTerm && !selectedCityId) return [];
-        const source = questsAll;
-
-        return source
-            .filter((q) => Number.isFinite(q.lat) && Number.isFinite(q.lng) && !!q.id)
-            .map((q) => {
-                const citySegmentRaw = q.cityId || selectedCityId || '';
-                const citySegment = encodeURIComponent(String(citySegmentRaw || 'city'));
-                const questSegment = encodeURIComponent(String(q.id));
-                const questUrl = buildCanonicalUrl(`/quests/${citySegment}/${questSegment}`);
-
-                const coverUri = typeof q.cover === 'string' ? q.cover : '';
-                return {
-                    id: q.id,
-                    coord: `${q.lat},${q.lng}`,
-                    address: q.title,
-                    travelImageThumbUrl: coverUri,
-                    categoryName: i18nT('quests:screens.tabs.QuestsScreen.kvest_1033726e'),
-                    articleUrl: questUrl,
-                    urlTravel: questUrl,
-                    questMeta: {
-                        id: q.id,
-                        title: q.title,
-                        cityId: q.cityId ?? String(citySegmentRaw || ''),
-                        cityName: q.cityName,
-                        countryName: q.countryName,
-                        points: q.points,
-                        durationMin: q.durationMin,
-                        difficulty: q.difficulty,
-                        tags: q.tags,
-                        petFriendly: q.petFriendly,
-                        cover: coverUri || undefined,
-                    },
-                };
-            });
-    }, [dataLoaded, selectedCityId, questsAll, searchTerm]);
-
-    const mapCenter = useMemo(() => {
-        // Вся страна, как и виртуальные срезы, центрируется по своим квестам, а не по игроку.
-        const virtualFilterCenter = selectedCityId === KIDS_FILTER_ID
-            || selectedCityId === BIKE_FILTER_ID
-            || selectedCityId === REVIEWED_FILTER_ID
-            || personalSlices.isPersonalSliceId(selectedCityId)
-            || Boolean(selectedCountry)
-            || Boolean(selectedTheme)
-            ? getAverageQuestMapPointCenter(mapPoints)
-            : null;
-        const selectedCity = virtualFilterCenter
-            ? { lat: virtualFilterCenter.latitude, lng: virtualFilterCenter.longitude }
-            : CITIES.find((c) => c.id === selectedCityId);
-        return resolveQuestMapCenter({
-            searchTerm,
-            mapPoints,
-            activeMapAreaCenter,
-            userLoc,
-            selectedCity,
-        });
-    }, [CITIES, mapPoints, searchTerm, selectedCityId, selectedCountry, selectedTheme, userLoc, activeMapAreaCenter, personalSlices]);
-
     const handleMapUserLocationChange = useCallback((loc: { latitude: number; longitude: number } | null) => {
         if (!loc) return;
         if (!Number.isFinite(loc.latitude) || !Number.isFinite(loc.longitude)) return;
@@ -595,6 +533,32 @@ export default function QuestsScreen() {
         setPendingMapAreaCenter(null);
         void AsyncStorage.setItem(STORAGE_SELECTED_CITY, ALL_QUESTS_ID);
     }, [pendingMapAreaCenter]);
+
+    // Срез без своего города центрирует карту по своим квестам, а не по игроку.
+    const centerMapOnQuests = selectedCityId === KIDS_FILTER_ID
+        || selectedCityId === BIKE_FILTER_ID
+        || selectedCityId === REVIEWED_FILTER_ID
+        || personalSlices.isPersonalSliceId(selectedCityId)
+        || Boolean(selectedCountry)
+        || Boolean(selectedTheme);
+    const mapSlot = useMemo(() => (viewMode === 'map' ? (
+        <QuestsMapSection
+            styles={s}
+            colors={colors}
+            dataLoaded={dataLoaded}
+            quests={questsAll}
+            cities={CITIES}
+            selectedCityId={selectedCityId}
+            searchTerm={searchTerm}
+            centerOnQuests={centerMapOnQuests}
+            userLoc={userLoc}
+            activeMapAreaCenter={activeMapAreaCenter}
+            showMapAreaSearch={Boolean(pendingMapAreaCenter)}
+            onSearchMapArea={handleSearchMapArea}
+            onUserLocationChange={handleMapUserLocationChange}
+            onMapMove={handleMapMove}
+        />
+    ) : null), [viewMode, s, colors, dataLoaded, questsAll, CITIES, selectedCityId, searchTerm, centerMapOnQuests, userLoc, activeMapAreaCenter, pendingMapAreaCenter, handleSearchMapArea, handleMapUserLocationChange, handleMapMove]);
 
     // Фильтр «сужает» каталог: выбран конкретный город, явный «Рядом» с радиусом
     // или область карты. В этих случаях показываем быстрый сброс к «Все квесты».
@@ -807,15 +771,12 @@ export default function QuestsScreen() {
                 availableSortOrders={availableSortOrders}
                 activeSortOrder={activeSortOrder}
                 onSelectSortOrder={handleSelectSortOrder}
-                mapPoints={mapPoints}
-                mapCenter={mapCenter}
+                mapSlot={mapSlot}
                 userLoc={userLoc}
                 isMapAreaActive={Boolean(activeMapAreaCenter)}
                 geoMessage={geoMessage}
                 geoRequesting={geoRequesting}
-                showMapAreaSearch={Boolean(pendingMapAreaCenter)}
                 radiiLg={radii.lg}
-                LazyQuestMap={LazyQuestMap}
                 isMobile={isMobile}
                 filtersActive={filtersActive}
                 onResetFilters={handleResetFilters}
@@ -826,9 +787,6 @@ export default function QuestsScreen() {
                 onShowNearby={requestNearbyQuests}
                 onOpenFilterDrawer={handleOpenFilterDrawer}
                 onToggleViewMode={handleToggleViewMode}
-                onMapUserLocationChange={handleMapUserLocationChange}
-                onMapMove={handleMapMove}
-                onSearchMapArea={handleSearchMapArea}
             />
         </View>
     );

@@ -16,8 +16,9 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import type { ComponentProps } from 'react';
+import type { ComponentProps, ReactElement } from 'react';
 import type QuestsContentPanel from '@/screens/tabs/QuestsContentPanel';
+import type QuestsMapSection from '@/screens/tabs/QuestsMapSection';
 import type { QuestMeta } from '@/utils/questAdapters';
 import { ALL_QUESTS_ID } from '@/screens/tabs/QuestsScreen.helpers';
 import QuestsScreen from '@/screens/tabs/QuestsScreen';
@@ -25,10 +26,13 @@ import QuestsScreen from '@/screens/tabs/QuestsScreen';
 type ContentProps = ComponentProps<typeof QuestsContentPanel>;
 let mockContentProps: ContentProps;
 let mockQuests: QuestMeta[] = [];
+// Режим карты живёт в ленивой секции (#2389): её пропсы — у элемента `mapSlot`.
+const mapSectionProps = () => (mockContentProps.mapSlot as ReactElement<ComponentProps<typeof QuestsMapSection>>).props;
 
 jest.mock('expo-router', () => ({ useIsFocused: () => true }));
 jest.mock('@expo/vector-icons/Feather', () => 'Feather');
 jest.mock('@/components/MapPage/Map.web', () => () => null);
+jest.mock('@/screens/tabs/questCatalogLocation', () => ({ requestQuestCatalogLocation: async () => null }));
 jest.mock('@/components/seo/LazyInstantSEO', () => () => null);
 jest.mock('@/hooks/useQuestReturnVisit', () => ({ useQuestReturnVisit: () => {} }));
 jest.mock('@/hooks/useQuestReviewPrompt', () => ({
@@ -229,9 +233,11 @@ it('never reorders a distance-ordered map-area list', async () => {
     await waitFor(() => expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID));
     expect(mockContentProps.availableSortOrders?.includes('popular')).toBe(true);
 
-    mockContentProps.onMapMove({ latitude: 53.9, longitude: 27.56 });
-    await waitFor(() => expect(mockContentProps.showMapAreaSearch).toBe(true));
-    mockContentProps.onSearchMapArea();
+    mockContentProps.onToggleViewMode();
+    await waitFor(() => expect(mockContentProps.mapSlot).toBeTruthy());
+    mapSectionProps().onMapMove({ latitude: 53.9, longitude: 27.56 });
+    await waitFor(() => expect(mapSectionProps().showMapAreaSearch).toBe(true));
+    mapSectionProps().onSearchMapArea();
 
     await waitFor(() => expect(mockContentProps.isMapAreaActive).toBe(true));
     expect(mockContentProps.availableSortOrders?.includes('popular')).toBe(false);
@@ -245,9 +251,11 @@ it('offers the sort again once a search overrides the map area', async () => {
     const { getByTestId } = render(<QuestsScreen />);
     await waitFor(() => expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID));
 
-    mockContentProps.onMapMove({ latitude: 53.9, longitude: 27.56 });
-    await waitFor(() => expect(mockContentProps.showMapAreaSearch).toBe(true));
-    mockContentProps.onSearchMapArea();
+    mockContentProps.onToggleViewMode();
+    await waitFor(() => expect(mockContentProps.mapSlot).toBeTruthy());
+    mapSectionProps().onMapMove({ latitude: 53.9, longitude: 27.56 });
+    await waitFor(() => expect(mapSectionProps().showMapAreaSearch).toBe(true));
+    mapSectionProps().onSearchMapArea();
     await waitFor(() => expect(mockContentProps.isMapAreaActive).toBe(true));
     expect(mockContentProps.availableSortOrders?.includes('popular')).toBe(false);
 

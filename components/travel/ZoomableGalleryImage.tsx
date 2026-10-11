@@ -151,7 +151,7 @@ export default function ZoomableGalleryImage({
     <GestureHandlerRootView
       testID="travel-zoomable-image"
       style={[styles.viewport, { width, height }]}
-      accessibilityLabel={i18nT('travel:components.travel.ZoomableGalleryImage.value1_uvelichenie_dvumya_paltsami_57c2f423', { value1: alt })}
+      accessibilityLabel={i18nT('travel:components.travel.ZoomableGalleryImage.value1_uvelichenie_dvumya_paltsami_1ef063e7', { value1: alt })}
     >
       <PanGestureHandler
         ref={panRef}

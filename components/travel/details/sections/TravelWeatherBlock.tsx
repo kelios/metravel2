@@ -86,12 +86,12 @@ export const TravelWeatherBlock: React.FC<{
         accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
         aria-level={2 as any}
       >{i18nT('travel:components.travel.details.sections.TravelWeatherBlock.pogoda_853f5c3c')}</Text>
-      <Text style={styles.sectionSubtitle}>{i18nT('travel:components.travel.details.sections.TravelWeatherBlock.prognoz_po_tochkam_marshruta_926029bd')}</Text>
+      <Text style={styles.sectionSubtitle}>{i18nT('travel:components.travel.details.sections.TravelWeatherBlock.prognoz_po_tochkam_marshruta_53153181')}</Text>
       {!weatherVisible ? (
         <Pressable
           onPress={() => setWeatherVisible(true)}
           accessibilityRole="button"
-          accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelWeatherBlock.pokazat_pogodu_po_tochkam_marshruta_a15c8883')}
+          accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelWeatherBlock.pokazat_pogodu_po_tochkam_marshruta_295a8bca')}
           style={({ pressed }) => [{
             flexDirection: 'row',
             alignItems: 'center',
@@ -110,7 +110,7 @@ export const TravelWeatherBlock: React.FC<{
         >
           <Feather name="cloud" size={16} color={colors.text} />
           <Text style={{ color: colors.text, fontWeight: '600', fontSize: DESIGN_TOKENS.typography.sizes.sm } as any}>
-            {i18nT('travel:components.travel.details.sections.TravelWeatherBlock.pokazat_pogodu_19f2da8f')}</Text>
+            {i18nT('travel:components.travel.details.sections.TravelWeatherBlock.pokazat_pogodu_0db4f2e2')}</Text>
         </Pressable>
       ) : (
         <View style={{ marginTop: DESIGN_TOKENS.spacing.sm }}>

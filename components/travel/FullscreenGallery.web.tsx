@@ -219,7 +219,7 @@ export default function FullscreenGallery({
 
       <button
         type="button"
-        aria-label={i18nT('travel:components.travel.FullscreenGallery.zakryt_galereyu_9e4ee562')}
+        aria-label={i18nT('travel:components.travel.FullscreenGallery.zakryt_galereyu_84365214')}
         data-testid="travel-fullscreen-gallery-close"
         onClick={onClose}
         style={{

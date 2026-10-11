@@ -247,7 +247,6 @@ export const travelGenerated4 = {
   "components.travel.WeeklyHighlights.razvernut_podborku_mesyatsa_4d3336ca": "Разгарнуць падборку месяца",
   "components.travel.WeeklyHighlights.samye_populyarnye_marshruty_etogo_mesyatsa_c2e48432": "Самыя папулярныя маршруты гэтага месяца",
   "components.travel.ZoomableGalleryImage.value1_uvelichenie_dvumya_paltsami_1ef063e7": "{{value1}}. Павелічэнне двума пальцамі",
-  "components.travel.ZoomableGalleryImage.value1_uvelichenie_dvumya_paltsami_57c2f423": "{{value1}}. Павелічэнне двума пальцамі",
   "components.listTravel.sortings.newestShort": "Новыя",
   "components.listTravel.sortings.oldestShort": "Старыя",
   "components.listTravel.sortings.popularShort": "Папулярныя",

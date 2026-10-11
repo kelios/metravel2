@@ -52,11 +52,11 @@ export const LazyYouTube: React.FC<LazyYouTubeProps> = memo(({ url }) => {
         onPress={handlePreviewPress}
         style={styles.videoContainer}
         accessibilityRole="button"
-        accessibilityLabel={i18nT('travel:components.travel.details.sections.LazyYouTubeSection.smotret_video_b3c7bda0')}
+        accessibilityLabel={i18nT('travel:components.travel.details.sections.LazyYouTubeSection.smotret_video_6c6623d8')}
       >
         <ImageCardMedia
           src={`https://img.youtube.com/vi/${id}/hqdefault.jpg`}
-          alt={i18nT('travel:components.travel.details.sections.LazyYouTubeSection.prevyu_video_youtube_f1ae631f')}
+          alt={i18nT('travel:components.travel.details.sections.LazyYouTubeSection.prevyu_video_youtube_43c600fa')}
           fit="contain"
           blurBackground
           allowCriticalWebBlur
@@ -91,7 +91,7 @@ export const LazyYouTube: React.FC<LazyYouTubeProps> = memo(({ url }) => {
         loading="lazy"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowFullScreen
-        title={i18nT('travel:components.travel.details.sections.LazyYouTubeSection.youtube_video_bfabc11f')}
+        title={i18nT('travel:components.travel.details.sections.LazyYouTubeSection.youtube_video_2e756db5')}
       />
     </div>
   ) : (

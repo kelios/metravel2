@@ -56,7 +56,7 @@ const getRouteStatusText = (route: QuestRouteGeometryState, routeMode: QuestRout
     if (route.status === 'loading') {
         return routeMode === 'bike'
             ? i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeLoading')
-            : i18nT('quests:components.quests.QuestFullMap.stroim_peshiy_marshrut_po_dorozhkam_db0b0939');
+            : i18nT('quests:components.quests.QuestFullMap.stroim_peshiy_marshrut_po_dorozhkam_8ab3ce79');
     }
     if (hasRoutedQuestTrack(route.track, route.source)) {
         const distance = formatRouteDistance(route.distanceM);
@@ -65,10 +65,10 @@ const getRouteStatusText = (route: QuestRouteGeometryState, routeMode: QuestRout
                 ? i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeReadyWithDistance', { value1: distance })
                 : i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeReady');
         }
-        return distance ? i18nT('quests:components.quests.QuestFullMap.peshiy_marshrut_gotov_value1_679a9da1', { value1: distance }) : i18nT('quests:components.quests.QuestFullMap.peshiy_marshrut_gotov_01c8c350');
+        return distance ? i18nT('quests:components.quests.QuestFullMap.peshiy_marshrut_gotov_value1_62786bc6', { value1: distance }) : i18nT('quests:components.quests.QuestFullMap.peshiy_marshrut_gotov_01c8c350');
     }
-    if (route.status === 'fallback') return i18nT('quests:components.quests.QuestFullMap.marshrutizator_nedostupen_pokazana_priblizit_ec750b6f');
-    return i18nT('quests:components.quests.QuestFullMap.dobavte_minimum_dve_tochki_dlya_marshruta_7b40ac4f');
+    if (route.status === 'fallback') return i18nT('quests:components.quests.QuestFullMap.marshrutizator_nedostupen_pokazana_priblizit_20e198c4');
+    return i18nT('quests:components.quests.QuestFullMap.dobavte_minimum_dve_tochki_dlya_marshruta_1653582f');
 };
 
 // n теперь может быть числом или строкой "1,2"
@@ -312,10 +312,10 @@ function QuestFullMap({
             if (!routedTrack) {
                 void showToast({
                     type: 'error',
-                    text1: i18nT('quests:components.quests.QuestFullMap.eksport_gpx_c785ac18'),
+                    text1: i18nT('quests:components.quests.QuestFullMap.eksport_gpx_5b594fb6'),
                     text2: routeMode === 'bike'
                         ? i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeBuildFailed')
-                        : i18nT('quests:components.quests.QuestFullMap.ne_udalos_postroit_realnyy_peshiy_marshrut_s_590dfe0b'),
+                        : i18nT('quests:components.quests.QuestFullMap.ne_udalos_postroit_realnyy_peshiy_marshrut_s_01a5921d'),
                     position: 'bottom',
                 });
                 return;
@@ -335,7 +335,7 @@ function QuestFullMap({
             if (await Sharing.isAvailableAsync()) {
                 await Sharing.shareAsync(fileUri, {
                     mimeType: gpxFile.mimeType,
-                    dialogTitle: i18nT('quests:components.quests.QuestFullMap.podelitsya_marshrutom_f0d2e5de'),
+                    dialogTitle: i18nT('quests:components.quests.QuestFullMap.podelitsya_marshrutom_d39de8d4'),
                 });
             }
         } catch (error) {
@@ -349,10 +349,10 @@ function QuestFullMap({
             if (!routedTrack) {
                 void showToast({
                     type: 'error',
-                    text1: i18nT('quests:components.quests.QuestFullMap.eksport_geojson_763e0f06'),
+                    text1: i18nT('quests:components.quests.QuestFullMap.eksport_geojson_2369b67f'),
                     text2: routeMode === 'bike'
                         ? i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeBuildFailed')
-                        : i18nT('quests:components.quests.QuestFullMap.ne_udalos_postroit_realnyy_peshiy_marshrut_s_4748c560'),
+                        : i18nT('quests:components.quests.QuestFullMap.ne_udalos_postroit_realnyy_peshiy_marshrut_s_433c08de'),
                     position: 'bottom',
                 });
                 return;
@@ -372,7 +372,7 @@ function QuestFullMap({
             if (await Sharing.isAvailableAsync()) {
                 await Sharing.shareAsync(fileUri, {
                     mimeType: 'application/geo+json',
-                    dialogTitle: i18nT('quests:components.quests.QuestFullMap.podelitsya_marshrutom_f0d2e5de'),
+                    dialogTitle: i18nT('quests:components.quests.QuestFullMap.podelitsya_marshrutom_d39de8d4'),
                 });
             }
         } catch (error) {
@@ -586,7 +586,7 @@ function QuestFullMap({
                     onPress={() => setExportMenuVisible(false)}
                 >
                     <View style={[styles.modalContent, { bottom: insets.bottom }]}>
-                        <Text style={styles.modalTitle}>{i18nT('quests:components.quests.QuestFullMap.eksport_marshruta_4db5c962')}</Text>
+                        <Text style={styles.modalTitle}>{i18nT('quests:components.quests.QuestFullMap.eksport_marshruta_365e5842')}</Text>
 
                         <TouchableOpacity
                             style={styles.modalOption}
@@ -615,7 +615,7 @@ function QuestFullMap({
                                 shareAsGeoJSON();
                             }}
                         >
-                            <Text style={styles.modalOptionText}>{i18nT('quests:components.quests.QuestFullMap.podelitsya_geojson_36af5ef4')}</Text>
+                            <Text style={styles.modalOptionText}>{i18nT('quests:components.quests.QuestFullMap.podelitsya_geojson_1c4cb024')}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
@@ -740,7 +740,7 @@ function QuestFullMap({
             {/* Mobile touch hints */}
             {Platform.OS !== 'web' && (
                 <View style={styles.touchHints}>
-                    <Text style={styles.hintText}>{i18nT('quests:components.quests.QuestFullMap.dvumya_paltsami_dlya_masshtabirovaniya_3dd61e24')}</Text>
+                    <Text style={styles.hintText}>{i18nT('quests:components.quests.QuestFullMap.dvumya_paltsami_dlya_masshtabirovaniya_2e3cc5a3')}</Text>
                 </View>
             )}
         </View>

@@ -121,24 +121,17 @@ describe('QuestsContentPanel', () => {
         nearbyId: '__nearby__',
         questsAll: [makeQuest(0)],
         questCardWidth: 320,
-        mapPoints: [],
-        mapCenter: { latitude: 53.9, longitude: 27.56 },
         userLoc: null,
         isMapAreaActive: false,
         geoMessage: null,
         geoRequesting: false,
-        showMapAreaSearch: false,
         radiiLg: 24,
-        LazyQuestMap: () => null,
         isMobile: false,
         filtersActive: true,
         onResetFilters: () => {},
         onShowNearby: () => {},
         onOpenFilterDrawer: () => {},
         onToggleViewMode: () => {},
-        onMapUserLocationChange: () => {},
-        onMapMove: () => {},
-        onSearchMapArea: () => {},
     });
 
     /**
@@ -378,163 +371,9 @@ describe('QuestsContentPanel', () => {
         expect(heading.props['aria-level']).toBe(1);
     });
 
-    it('shows a geolocation-disabled banner without a radius circle', () => {
-        (Platform as { OS: string }).OS = 'web';
-        const LazyQuestMap = jest.fn(() => null);
-
-        const { getByTestId, queryByText } = render(
-            <QuestsContentPanel
-                styles={styles}
-                colors={colors}
-                dataLoaded
-                viewMode="map"
-                selectedCityId="__nearby__"
-                selectedCityName="Рядом"
-                nearbyId="__nearby__"
-                nearbyRadiusKm={20}
-                questsAll={[]}
-                questCardWidth={320}
-                mapPoints={[
-                    {
-                        id: 'minsk-quest',
-                        coord: '53.9,27.5667',
-                        address: 'Минск',
-                        travelImageThumbUrl: '',
-                        categoryName: 'Квест',
-                    },
-                ]}
-                mapCenter={{ latitude: 53.9, longitude: 27.56 }}
-                userLoc={null}
-                isMapAreaActive={false}
-                geoMessage={null}
-                geoRequesting={false}
-                showMapAreaSearch={false}
-                radiiLg={24}
-                LazyQuestMap={LazyQuestMap}
-                isMobile={false}
-                onShowNearby={() => {}}
-                onOpenFilterDrawer={() => {}}
-                onToggleViewMode={() => {}}
-                onSetRadius={() => {}}
-                onMapUserLocationChange={() => {}}
-                onMapMove={() => {}}
-                onSearchMapArea={() => {}}
-            />
-        );
-
-        expect(getByTestId('quests-geo-banner')).toBeTruthy();
-        expect(queryByText('Геолокация отключена. Показываем все квесты на карте.')).toBeTruthy();
-        expect(LazyQuestMap).toHaveBeenCalledWith(
-            expect.objectContaining({
-                coordinates: { latitude: 53.9, longitude: 27.56 },
-                userLocation: null,
-                showRadiusCircle: false,
-            }),
-            undefined,
-        );
-    });
-
-    it('shows the real user location marker instead of a radius selector', () => {
-        (Platform as { OS: string }).OS = 'web';
-        const LazyQuestMap = jest.fn(() => null);
-
-        const { queryByTestId } = render(
-            <QuestsContentPanel
-                styles={styles}
-                colors={colors}
-                dataLoaded
-                viewMode="map"
-                selectedCityId="__nearby__"
-                selectedCityName="Рядом"
-                nearbyId="__nearby__"
-                nearbyRadiusKm={10}
-                questsAll={[]}
-                questCardWidth={320}
-                mapPoints={[
-                    {
-                        id: 'minsk-quest',
-                        coord: '53.9,27.5667',
-                        address: 'Минск',
-                        travelImageThumbUrl: '',
-                        categoryName: 'Квест',
-                    },
-                ]}
-                mapCenter={{ latitude: 53.9, longitude: 27.56 }}
-                userLoc={{ lat: 53.91, lng: 27.57 }}
-                isMapAreaActive={false}
-                geoMessage={null}
-                geoRequesting={false}
-                showMapAreaSearch={false}
-                radiiLg={24}
-                LazyQuestMap={LazyQuestMap}
-                isMobile={false}
-                onShowNearby={() => {}}
-                onOpenFilterDrawer={() => {}}
-                onToggleViewMode={() => {}}
-                onSetRadius={() => {}}
-                onMapUserLocationChange={() => {}}
-                onMapMove={() => {}}
-                onSearchMapArea={() => {}}
-            />
-        );
-
-        expect(queryByTestId('quests-map-radius-toggle')).toBeNull();
-        expect(LazyQuestMap).toHaveBeenCalledWith(
-            expect.objectContaining({
-                userLocation: { latitude: 53.91, longitude: 27.57 },
-                showRadiusCircle: false,
-            }),
-            undefined,
-        );
-    });
-
-    it('keeps the map mounted with zero results and shows no full empty-state in map mode', () => {
-        (Platform as { OS: string }).OS = 'web';
-        const LazyQuestMap = jest.fn(() => null);
-
-        const { queryByText } = render(
-            <QuestsContentPanel
-                styles={styles}
-                colors={colors}
-                dataLoaded
-                viewMode="map"
-                selectedCityId="__nearby__"
-                selectedCityName="Рядом"
-                nearbyId="__nearby__"
-                nearbyRadiusKm={10}
-                questsAll={[]}
-                questCardWidth={320}
-                mapPoints={[]}
-                mapCenter={{ latitude: 53.9, longitude: 27.56 }}
-                userLoc={{ lat: 53.9, lng: 27.56 }}
-                isMapAreaActive
-                geoMessage={null}
-                geoRequesting={false}
-                showMapAreaSearch={false}
-                radiiLg={24}
-                LazyQuestMap={LazyQuestMap}
-                isMobile={false}
-                onShowNearby={() => {}}
-                onOpenFilterDrawer={() => {}}
-                onToggleViewMode={() => {}}
-                onSetRadius={() => {}}
-                onMapUserLocationChange={() => {}}
-                onMapMove={() => {}}
-                onSearchMapArea={() => {}}
-            />
-        );
-
-        expect(LazyQuestMap).toHaveBeenCalledWith(
-            expect.objectContaining({ travel: { data: [] } }),
-            undefined,
-        );
-        expect(queryByText('Нет квестов для отображения на карте')).toBeNull();
-    });
-
     it('opens the city drawer from the mobile city button', () => {
         mockIsMobile = true;
         (Platform as { OS: string }).OS = 'android';
-        const LazyQuestMap = jest.fn(() => null);
         const onOpenFilterDrawer = jest.fn();
 
         const { getByLabelText } = render(
@@ -549,23 +388,16 @@ describe('QuestsContentPanel', () => {
                 nearbyRadiusKm={15}
                 questsAll={[]}
                 questCardWidth={320}
-                mapPoints={[]}
-                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
                 userLoc={null}
                 isMapAreaActive={false}
                 geoMessage={null}
                 geoRequesting={false}
-                showMapAreaSearch={false}
                 radiiLg={24}
-                LazyQuestMap={LazyQuestMap}
                 isMobile
                 onShowNearby={() => {}}
                 onOpenFilterDrawer={onOpenFilterDrawer}
                 onToggleViewMode={() => {}}
                 onSetRadius={() => {}}
-                onMapUserLocationChange={() => {}}
-                onMapMove={() => {}}
-                onSearchMapArea={() => {}}
             />
         );
 
@@ -577,7 +409,6 @@ describe('QuestsContentPanel', () => {
     it('uses a virtualized FlatList for Android mobile quest list scrolling', () => {
         mockIsMobile = true;
         (Platform as { OS: string }).OS = 'android';
-        const LazyQuestMap = jest.fn(() => null);
         const quests = Array.from({ length: 12 }, (_, index) => makeQuest(index));
 
         const { UNSAFE_getByType, getByTestId } = render(
@@ -592,23 +423,16 @@ describe('QuestsContentPanel', () => {
                 nearbyRadiusKm={15}
                 questsAll={quests}
                 questCardWidth={320}
-                mapPoints={[]}
-                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
                 userLoc={null}
                 isMapAreaActive={false}
                 geoMessage={null}
                 geoRequesting={false}
-                showMapAreaSearch={false}
                 radiiLg={24}
-                LazyQuestMap={LazyQuestMap}
                 isMobile
                 onShowNearby={() => {}}
                 onOpenFilterDrawer={() => {}}
                 onToggleViewMode={() => {}}
                 onSetRadius={() => {}}
-                onMapUserLocationChange={() => {}}
-                onMapMove={() => {}}
-                onSearchMapArea={() => {}}
             />
         );
 
@@ -630,7 +454,6 @@ describe('QuestsContentPanel', () => {
         // закрывалась при наборе. Ветка обязана оставаться FlatList в обоих состояниях.
         mockIsMobile = true;
         (Platform as { OS: string }).OS = 'android';
-        const LazyQuestMap = jest.fn(() => null);
 
         const baseProps = {
             styles,
@@ -644,15 +467,11 @@ describe('QuestsContentPanel', () => {
             onSearchChange: () => {},
             nearbyRadiusKm: 15,
             questCardWidth: 320,
-            mapPoints: [],
-            mapCenter: { latitude: 52.23, longitude: 21.01 },
             userLoc: null,
             isMapAreaActive: false,
             geoMessage: null,
             geoRequesting: false,
-            showMapAreaSearch: false,
             radiiLg: 24,
-            LazyQuestMap,
             isMobile: true,
             filtersActive: false,
             onResetFilters: () => {},
@@ -660,9 +479,6 @@ describe('QuestsContentPanel', () => {
             onOpenFilterDrawer: () => {},
             onToggleViewMode: () => {},
             onSetRadius: () => {},
-            onMapUserLocationChange: () => {},
-            onMapMove: () => {},
-            onSearchMapArea: () => {},
         };
 
         const { getByTestId, queryByText, rerender } = render(
@@ -686,7 +502,6 @@ describe('QuestsContentPanel', () => {
     it('renders a first window of the web grid and grows it on scroll', () => {
         mockIsMobile = true;
         (Platform as { OS: string }).OS = 'web';
-        const LazyQuestMap = jest.fn(() => null);
         const quests = Array.from({ length: 54 }, (_, index) => makeQuest(index));
 
         const { getByTestId, queryByTestId } = render(
@@ -701,23 +516,16 @@ describe('QuestsContentPanel', () => {
                 nearbyRadiusKm={15}
                 questsAll={quests}
                 questCardWidth={320}
-                mapPoints={[]}
-                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
                 userLoc={null}
                 isMapAreaActive={false}
                 geoMessage={null}
                 geoRequesting={false}
-                showMapAreaSearch={false}
                 radiiLg={24}
-                LazyQuestMap={LazyQuestMap}
                 isMobile
                 onShowNearby={() => {}}
                 onOpenFilterDrawer={() => {}}
                 onToggleViewMode={() => {}}
                 onSetRadius={() => {}}
-                onMapUserLocationChange={() => {}}
-                onMapMove={() => {}}
-                onSearchMapArea={() => {}}
             />
         );
 
@@ -755,7 +563,6 @@ describe('QuestsContentPanel', () => {
     it('grows the web grid window while the content still fits the viewport', () => {
         mockIsMobile = false;
         (Platform as { OS: string }).OS = 'web';
-        const LazyQuestMap = jest.fn(() => null);
         const quests = Array.from({ length: 54 }, (_, index) => makeQuest(index));
 
         const { getByTestId, queryByTestId } = render(
@@ -770,23 +577,16 @@ describe('QuestsContentPanel', () => {
                 nearbyRadiusKm={15}
                 questsAll={quests}
                 questCardWidth={320}
-                mapPoints={[]}
-                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
                 userLoc={null}
                 isMapAreaActive={false}
                 geoMessage={null}
                 geoRequesting={false}
-                showMapAreaSearch={false}
                 radiiLg={24}
-                LazyQuestMap={LazyQuestMap}
                 isMobile={false}
                 onShowNearby={() => {}}
                 onOpenFilterDrawer={() => {}}
                 onToggleViewMode={() => {}}
                 onSetRadius={() => {}}
-                onMapUserLocationChange={() => {}}
-                onMapMove={() => {}}
-                onSearchMapArea={() => {}}
             />
         );
 
@@ -818,7 +618,6 @@ describe('QuestsContentPanel', () => {
     it('keeps the web grid window closed while the grid overflows the viewport', () => {
         mockIsMobile = false;
         (Platform as { OS: string }).OS = 'web';
-        const LazyQuestMap = jest.fn(() => null);
         const quests = Array.from({ length: 54 }, (_, index) => makeQuest(index));
 
         const { getByTestId, queryByTestId } = render(
@@ -833,23 +632,16 @@ describe('QuestsContentPanel', () => {
                 nearbyRadiusKm={15}
                 questsAll={quests}
                 questCardWidth={320}
-                mapPoints={[]}
-                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
                 userLoc={null}
                 isMapAreaActive={false}
                 geoMessage={null}
                 geoRequesting={false}
-                showMapAreaSearch={false}
                 radiiLg={24}
-                LazyQuestMap={LazyQuestMap}
                 isMobile={false}
                 onShowNearby={() => {}}
                 onOpenFilterDrawer={() => {}}
                 onToggleViewMode={() => {}}
                 onSetRadius={() => {}}
-                onMapUserLocationChange={() => {}}
-                onMapMove={() => {}}
-                onSearchMapArea={() => {}}
             />
         );
 
@@ -866,7 +658,6 @@ describe('QuestsContentPanel', () => {
     it('does not reveal from a stale grid height while the grid is unmounted', () => {
         mockIsMobile = false;
         (Platform as { OS: string }).OS = 'web';
-        const LazyQuestMap = jest.fn(() => null);
         const quests = Array.from({ length: 54 }, (_, index) => makeQuest(index));
 
         const panel = (mode: 'list' | 'map') => (
@@ -881,23 +672,16 @@ describe('QuestsContentPanel', () => {
                 nearbyRadiusKm={15}
                 questsAll={quests}
                 questCardWidth={320}
-                mapPoints={[]}
-                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
                 userLoc={null}
                 isMapAreaActive={false}
                 geoMessage={null}
                 geoRequesting={false}
-                showMapAreaSearch={false}
                 radiiLg={24}
-                LazyQuestMap={LazyQuestMap}
                 isMobile={false}
                 onShowNearby={() => {}}
                 onOpenFilterDrawer={() => {}}
                 onToggleViewMode={() => {}}
                 onSetRadius={() => {}}
-                onMapUserLocationChange={() => {}}
-                onMapMove={() => {}}
-                onSearchMapArea={() => {}}
             />
         );
 
@@ -922,7 +706,6 @@ describe('QuestsContentPanel', () => {
     it('restarts the web grid window when the catalog changes', () => {
         mockIsMobile = true;
         (Platform as { OS: string }).OS = 'web';
-        const LazyQuestMap = jest.fn(() => null);
         const quests = Array.from({ length: 54 }, (_, index) => makeQuest(index));
 
         const panel = (data: QuestMeta[]) => (
@@ -937,23 +720,16 @@ describe('QuestsContentPanel', () => {
                 nearbyRadiusKm={15}
                 questsAll={data}
                 questCardWidth={320}
-                mapPoints={[]}
-                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
                 userLoc={null}
                 isMapAreaActive={false}
                 geoMessage={null}
                 geoRequesting={false}
-                showMapAreaSearch={false}
                 radiiLg={24}
-                LazyQuestMap={LazyQuestMap}
                 isMobile
                 onShowNearby={() => {}}
                 onOpenFilterDrawer={() => {}}
                 onToggleViewMode={() => {}}
                 onSetRadius={() => {}}
-                onMapUserLocationChange={() => {}}
-                onMapMove={() => {}}
-                onSearchMapArea={() => {}}
             />
         );
 
@@ -978,7 +754,6 @@ describe('QuestsContentPanel', () => {
     it('keeps the web grid window when only the order of the same catalog changes', () => {
         mockIsMobile = true;
         (Platform as { OS: string }).OS = 'web';
-        const LazyQuestMap = jest.fn(() => null);
         const quests = Array.from({ length: 54 }, (_, index) => makeQuest(index));
 
         const panel = (data: QuestMeta[]) => (
@@ -993,23 +768,16 @@ describe('QuestsContentPanel', () => {
                 nearbyRadiusKm={15}
                 questsAll={data}
                 questCardWidth={320}
-                mapPoints={[]}
-                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
                 userLoc={null}
                 isMapAreaActive={false}
                 geoMessage={null}
                 geoRequesting={false}
-                showMapAreaSearch={false}
                 radiiLg={24}
-                LazyQuestMap={LazyQuestMap}
                 isMobile
                 onShowNearby={() => {}}
                 onOpenFilterDrawer={() => {}}
                 onToggleViewMode={() => {}}
                 onSetRadius={() => {}}
-                onMapUserLocationChange={() => {}}
-                onMapMove={() => {}}
-                onSearchMapArea={() => {}}
             />
         );
 
@@ -1030,7 +798,6 @@ describe('QuestsContentPanel', () => {
     it('exposes the mobile nearby CTA and geolocation message in list mode', () => {
         mockIsMobile = true;
         (Platform as { OS: string }).OS = 'web';
-        const LazyQuestMap = jest.fn(() => null);
         const onShowNearby = jest.fn();
 
         const { getByTestId, getByText } = render(
@@ -1045,23 +812,16 @@ describe('QuestsContentPanel', () => {
                 nearbyRadiusKm={15}
                 questsAll={[]}
                 questCardWidth={320}
-                mapPoints={[]}
-                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
                 userLoc={null}
                 isMapAreaActive={false}
                 geoMessage="Разрешите доступ к геолокации."
                 geoRequesting={false}
-                showMapAreaSearch={false}
                 radiiLg={24}
-                LazyQuestMap={LazyQuestMap}
                 isMobile
                 onShowNearby={onShowNearby}
                 onOpenFilterDrawer={() => {}}
                 onToggleViewMode={() => {}}
                 onSetRadius={() => {}}
-                onMapUserLocationChange={() => {}}
-                onMapMove={() => {}}
-                onSearchMapArea={() => {}}
             />
         );
 
@@ -1090,15 +850,11 @@ describe('QuestsContentPanel', () => {
                 kidsFilterId="__kids__"
                 questsAll={[makeQuest(0)]}
                 questCardWidth={320}
-                mapPoints={[]}
-                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
                 userLoc={null}
                 isMapAreaActive={false}
                 geoMessage={null}
                 geoRequesting={false}
-                showMapAreaSearch={false}
                 radiiLg={24}
-                LazyQuestMap={() => null}
                 isMobile
                 filtersActive
                 onResetFilters={() => {}}
@@ -1106,9 +862,6 @@ describe('QuestsContentPanel', () => {
                 onShowNearby={() => {}}
                 onOpenFilterDrawer={() => {}}
                 onToggleViewMode={() => {}}
-                onMapUserLocationChange={() => {}}
-                onMapMove={() => {}}
-                onSearchMapArea={() => {}}
             />,
         );
 
@@ -1135,24 +888,17 @@ describe('QuestsContentPanel', () => {
                 nearbyId="__nearby__"
                 questsAll={[quest]}
                 questCardWidth={320}
-                mapPoints={[]}
-                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
                 userLoc={null}
                 isMapAreaActive={false}
                 geoMessage={null}
                 geoRequesting={false}
-                showMapAreaSearch={false}
                 radiiLg={24}
-                LazyQuestMap={() => null}
                 isMobile={false}
                 filtersActive
                 onResetFilters={() => {}}
                 onShowNearby={() => {}}
                 onOpenFilterDrawer={() => {}}
                 onToggleViewMode={() => {}}
-                onMapUserLocationChange={() => {}}
-                onMapMove={() => {}}
-                onSearchMapArea={() => {}}
             />,
         );
 
@@ -1162,7 +908,6 @@ describe('QuestsContentPanel', () => {
     it('shows the reset-filters chip when a filter narrows the catalog and hides it otherwise', () => {
         mockIsMobile = true;
         (Platform as { OS: string }).OS = 'web';
-        const LazyQuestMap = jest.fn(() => null);
         const onResetFilters = jest.fn();
 
         const baseProps = {
@@ -1175,24 +920,17 @@ describe('QuestsContentPanel', () => {
             nearbyRadiusKm: 15,
             questsAll: [makeQuest(0)],
             questCardWidth: 320,
-            mapPoints: [],
-            mapCenter: { latitude: 52.23, longitude: 21.01 },
             userLoc: null,
             isMapAreaActive: false,
             geoMessage: null,
             geoRequesting: false,
-            showMapAreaSearch: false,
             radiiLg: 24,
-            LazyQuestMap,
             isMobile: true,
             onResetFilters,
             onShowNearby: () => {},
             onOpenFilterDrawer: () => {},
             onToggleViewMode: () => {},
             onSetRadius: () => {},
-            onMapUserLocationChange: () => {},
-            onMapMove: () => {},
-            onSearchMapArea: () => {},
         };
 
         const { getByTestId, queryByTestId, rerender } = render(
@@ -1219,22 +957,15 @@ describe('QuestsContentPanel', () => {
             nearbyId: '__nearby__',
             questsAll: [makeQuest(0)],
             questCardWidth: 320,
-            mapPoints: [],
-            mapCenter: { latitude: 52.23, longitude: 21.01 },
             userLoc: { lat: 52.23, lng: 21.01 },
             geoMessage: null,
             geoRequesting: false,
-            showMapAreaSearch: false,
             radiiLg: 24,
-            LazyQuestMap: () => null,
             isMobile: false,
             onResetFilters: () => {},
             onShowNearby: () => {},
             onOpenFilterDrawer: () => {},
             onToggleViewMode: () => {},
-            onMapUserLocationChange: () => {},
-            onMapMove: () => {},
-            onSearchMapArea: () => {},
         };
 
         const { getByText, getByTestId, queryAllByTestId, rerender } = render(
@@ -1278,91 +1009,26 @@ describe('QuestsContentPanel', () => {
                 nearbyId="__nearby__"
                 questsAll={[makeQuest(0)]}
                 questCardWidth={320}
-                mapPoints={[]}
-                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
                 userLoc={null}
                 isMapAreaActive={false}
                 geoMessage="Геолокация запрещена. Показываем весь каталог."
                 geoRequesting={false}
-                showMapAreaSearch={false}
                 radiiLg={24}
-                LazyQuestMap={() => null}
                 isMobile={false}
                 filtersActive={false}
                 onResetFilters={() => {}}
                 onShowNearby={() => {}}
                 onOpenFilterDrawer={() => {}}
                 onToggleViewMode={() => {}}
-                onMapUserLocationChange={() => {}}
-                onMapMove={() => {}}
-                onSearchMapArea={() => {}}
             />,
         );
 
         expect(getByText('Геолокация запрещена. Показываем весь каталог.')).toBeTruthy();
     });
 
-    it('shows the search-this-area action on the quest map and forwards map moves', () => {
-        (Platform as { OS: string }).OS = 'web';
-        const LazyQuestMap = jest.fn(() => null);
-        const onMapMove = jest.fn();
-        const onSearchMapArea = jest.fn();
-
-        const { getByTestId } = render(
-            <QuestsContentPanel
-                styles={styles}
-                colors={colors}
-                dataLoaded
-                viewMode="map"
-                selectedCityId="warsaw"
-                selectedCityName="Warsaw"
-                nearbyId="__nearby__"
-                nearbyRadiusKm={15}
-                questsAll={[]}
-                questCardWidth={320}
-                mapPoints={[
-                    {
-                        id: 'warsaw-quest',
-                        coord: '52.23,21.01',
-                        address: 'Warsaw',
-                        travelImageThumbUrl: '',
-                        categoryName: 'Квест',
-                    },
-                ]}
-                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
-                userLoc={null}
-                isMapAreaActive={false}
-                geoMessage={null}
-                geoRequesting={false}
-                showMapAreaSearch
-                radiiLg={24}
-                LazyQuestMap={LazyQuestMap}
-                isMobile={false}
-                onShowNearby={() => {}}
-                onOpenFilterDrawer={() => {}}
-                onToggleViewMode={() => {}}
-                onSetRadius={() => {}}
-                onMapUserLocationChange={() => {}}
-                onMapMove={onMapMove}
-                onSearchMapArea={onSearchMapArea}
-            />
-        );
-
-        fireEvent.press(getByTestId('quests-map-search-area'));
-
-        expect(onSearchMapArea).toHaveBeenCalledTimes(1);
-        expect(LazyQuestMap).toHaveBeenCalledWith(
-            expect.objectContaining({
-                onMapMove,
-            }),
-            undefined,
-        );
-    });
-
     it('keeps the same header toggle row visible in map mode so the user can switch back to the list', () => {
         mockIsMobile = true;
         (Platform as { OS: string }).OS = 'web';
-        const LazyQuestMap = jest.fn(() => null);
         const onToggleViewMode = jest.fn();
         const onOpenFilterDrawer = jest.fn();
         const onShowNearby = jest.fn();
@@ -1379,31 +1045,16 @@ describe('QuestsContentPanel', () => {
                 nearbyRadiusKm={15}
                 questsAll={[]}
                 questCardWidth={320}
-                mapPoints={[
-                    {
-                        id: 'warsaw-quest',
-                        coord: '52.23,21.01',
-                        address: 'Warsaw',
-                        travelImageThumbUrl: '',
-                        categoryName: 'Квест',
-                    },
-                ]}
-                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
                 userLoc={null}
                 isMapAreaActive={false}
                 geoMessage={null}
                 geoRequesting={false}
-                showMapAreaSearch={false}
                 radiiLg={24}
-                LazyQuestMap={LazyQuestMap}
                 isMobile
                 onShowNearby={onShowNearby}
                 onOpenFilterDrawer={onOpenFilterDrawer}
                 onToggleViewMode={onToggleViewMode}
                 onSetRadius={() => {}}
-                onMapUserLocationChange={() => {}}
-                onMapMove={() => {}}
-                onSearchMapArea={() => {}}
             />
         );
 
@@ -1416,6 +1067,26 @@ describe('QuestsContentPanel', () => {
 
         fireEvent.press(getByTestId('quests-show-nearby'));
         expect(onShowNearby).toHaveBeenCalledTimes(1);
+    });
+
+    // #2389: режим карты приходит готовым слотом; панель рисует только его,
+    // без пустых состояний списка, а в списке слот не появляется.
+    it('renders the map slot instead of list empty-states in map mode', () => {
+        (Platform as { OS: string }).OS = 'web';
+        const { Text } = require('react-native') as typeof import('react-native');
+        const mapSlot = <Text testID="quests-map-slot">map</Text>;
+        const props = { ...makeBaseProps(), searchQuery: '', onSearchChange: () => {}, questsAll: [], isMapAreaActive: true, mapSlot };
+
+        const { getByTestId, queryByText, rerender, queryByTestId } = render(
+            <QuestsContentPanel {...props} viewMode="map" />,
+        );
+
+        expect(getByTestId('quests-map-slot')).toBeTruthy();
+        expect(queryByText('Рядом ничего не найдено')).toBeNull();
+
+        rerender(<QuestsContentPanel {...props} viewMode="list" />);
+        expect(queryByTestId('quests-map-slot')).toBeNull();
+        expect(queryByText('Рядом ничего не найдено')).toBeTruthy();
     });
 
     // #2005: колонку web-сетки задаёт CSS auto-fill по контейнеру, поэтому карточка

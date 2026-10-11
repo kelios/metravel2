@@ -247,7 +247,6 @@ export const travelGenerated4 = {
   "components.travel.WeeklyHighlights.razvernut_podborku_mesyatsa_4d3336ca": "Розгорнути добірку місяця",
   "components.travel.WeeklyHighlights.samye_populyarnye_marshruty_etogo_mesyatsa_c2e48432": "Найпопулярніші маршрути цього місяця",
   "components.travel.ZoomableGalleryImage.value1_uvelichenie_dvumya_paltsami_1ef063e7": "{{value1}}. Збільшення двома пальцями",
-  "components.travel.ZoomableGalleryImage.value1_uvelichenie_dvumya_paltsami_57c2f423": "{{value1}}. Збільшення двома пальцями",
   "components.listTravel.sortings.newestShort": "Нові",
   "components.listTravel.sortings.oldestShort": "Старі",
   "components.listTravel.sortings.popularShort": "Популярні",

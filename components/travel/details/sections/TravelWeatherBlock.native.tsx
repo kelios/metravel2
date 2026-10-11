@@ -36,7 +36,7 @@ export const TravelWeatherBlock: React.FC<{
   return (
     <View
       accessibilityRole={Platform.OS === 'web' ? ('region' as any) : 'none'}
-      accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelWeatherBlock.pogoda_9e3017f3')}
+      accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelWeatherBlock.pogoda_853f5c3c')}
       style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
     >
       <Text
@@ -44,7 +44,7 @@ export const TravelWeatherBlock: React.FC<{
         accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
         aria-level={2 as any}
       >
-        {i18nT('travel:components.travel.details.sections.TravelWeatherBlock.pogoda_9e3017f3')}</Text>
+        {i18nT('travel:components.travel.details.sections.TravelWeatherBlock.pogoda_853f5c3c')}</Text>
       <Text style={styles.sectionSubtitle}>{i18nT('travel:components.travel.details.sections.TravelWeatherBlock.prognoz_po_tochkam_marshruta_53153181')}</Text>
       {!weatherVisible ? (
         <Pressable

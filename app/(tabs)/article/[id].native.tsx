@@ -108,7 +108,7 @@ export default function ArticleDetails() {
         }
 
         if (!loadedArticle?.id) {
-          throw new Error(i18nT('shared:app.tabs.article.id.statya_ne_naydena_fda21643'))
+          throw new Error(i18nT('shared:app.tabs.article.id.statya_ne_naydena_697a610d'))
         }
 
         if (!cancelled) {
@@ -156,10 +156,10 @@ export default function ArticleDetails() {
   if (!article || errorMessage) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-        <Stack.Screen options={{ headerTitle: i18nT('shared:app.tabs.article.id.statya_ne_naydena_fda21643'), headerBackVisible: false }} />
+        <Stack.Screen options={{ headerTitle: i18nT('shared:app.tabs.article.id.statya_ne_naydena_697a610d'), headerBackVisible: false }} />
         <ArticleBackButton colors={colors} onPress={handleBack} styles={styles} />
         <ScrollView style={styles.container} contentContainerStyle={styles.centerContent}>
-          <Title style={styles.errorTitle}>{i18nT('shared:app.tabs.article.id.statya_ne_naydena_fda21643')}</Title>
+          <Title style={styles.errorTitle}>{i18nT('shared:app.tabs.article.id.statya_ne_naydena_697a610d')}</Title>
           <SafeHtml html={errorMessage || i18nT('sharedStatic:article.checkLink')} />
         </ScrollView>
       </SafeAreaView>

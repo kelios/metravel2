@@ -68,7 +68,7 @@ export const LazyYouTube: React.FC<LazyYouTubeProps> = memo(({ url }) => {
       >
         <ImageCardMedia
           src={`https://img.youtube.com/vi/${id}/hqdefault.jpg`}
-          alt={i18nT('travel:components.travel.details.sections.LazyYouTubeSection.prevyu_video_youtube_8247752c')}
+          alt={i18nT('travel:components.travel.details.sections.LazyYouTubeSection.prevyu_video_youtube_43c600fa')}
           fit="contain"
           blurBackground
           cachePolicy="memory-disk"
@@ -77,7 +77,7 @@ export const LazyYouTube: React.FC<LazyYouTubeProps> = memo(({ url }) => {
         />
         <View style={styles.playOverlay}>
           <Icon name="play-circle-fill" size={64} color={colors.textOnDark} />
-          <Text style={styles.videoHintText}>{i18nT('travel:components.travel.details.sections.LazyYouTubeSection.video_zapustitsya_avtomaticheski_dd7a9992')}</Text>
+          <Text style={styles.videoHintText}>{i18nT('travel:components.travel.details.sections.LazyYouTubeSection.video_zapustitsya_avtomaticheski_c03be162')}</Text>
         </View>
       </Pressable>
     )

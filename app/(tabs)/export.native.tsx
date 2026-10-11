@@ -61,9 +61,9 @@ export default function ExportScreen() {
           density="full"
           icon="lock"
           title={i18nT('export:app.tabs.export.voydite_chtoby_sobrat_pdf_knigu_03c34a03')}
-          description={i18nT('export:app.tabs.export.eksport_v_pdf_dostupen_posle_avtorizatsii_ab9dcd89')}
+          description={i18nT('export:app.tabs.export.eksport_v_pdf_dostupen_posle_avtorizatsii_4948aa62')}
           action={{
-            label: i18nT('export:app.tabs.export.voyti_c0048a7c'),
+            label: i18nT('export:app.tabs.export.voyti_70e887f8'),
             onPress: () => router.push(buildLoginHref({ redirect: '/export', intent: 'build-pdf' }) as any),
           }}
           secondaryAction={{
@@ -82,10 +82,10 @@ export default function ExportScreen() {
         <EmptyState
           density="full"
           icon="file-text"
-          title={i18nT('export:app.tabs.export.chtoby_sobrat_pdf_knigu_dobavte_hotya_by_odn_fa3a25bc')}
+          title={i18nT('export:app.tabs.export.chtoby_sobrat_pdf_knigu_dobavte_hotya_by_odn_605e941a')}
           description={i18nT('export:app.tabs.export.dobavte_pervoe_puteshestvie_i_smozhete_sobra_1745dc75')}
           action={{
-            label: i18nT('export:app.tabs.export.dobavit_puteshestvie_7414bbc8'),
+            label: i18nT('export:app.tabs.export.dobavit_puteshestvie_31bfd4e1'),
             onPress: () => router.push('/travel/new' as any),
           }}
           secondaryAction={{

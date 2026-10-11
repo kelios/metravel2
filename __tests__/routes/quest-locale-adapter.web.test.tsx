@@ -1,5 +1,5 @@
 import React from 'react'
-import { render } from '@testing-library/react-native'
+import { render, waitFor } from '@testing-library/react-native'
 
 let mockPathname = '/pl/quests/4/minsk-cmok'
 const mockDetail = jest.fn((_props: unknown) => null)
@@ -17,12 +17,13 @@ import QuestLocaleRouteScreen from '@/app/[...missing].web'
 describe('quest-only web catch-all', () => {
   beforeEach(() => { mockDetail.mockClear(); mockNotFound.mockClear() })
 
-  it.each(['be', 'uk', 'pl', 'en'])('delegates an exact %s prefix with stable city and slug', (locale) => {
+  it.each(['be', 'uk', 'pl', 'en'])('delegates an exact %s prefix with stable city and slug', async (locale) => {
     mockPathname = `/${locale}/quests/4/minsk-cmok`
     render(<QuestLocaleRouteScreen />)
-    expect(mockDetail).toHaveBeenCalledWith(expect.objectContaining({
+    // The quest screen is a lazy boundary (#2389): it resolves after the first render.
+    await waitFor(() => expect(mockDetail).toHaveBeenCalledWith(expect.objectContaining({
       route: { locale, cityId: 4, questSlug: 'minsk-cmok', path: mockPathname },
-    }))
+    })))
     expect(mockNotFound).not.toHaveBeenCalled()
   })
 

@@ -1,6 +1,6 @@
 import type { ParsedRoutePoint, ParsedRoutePreview, RouteElevationSample } from '@/types/travelRoutes';
-import { DOMParser as SafeXmlDomParser } from '@xmldom/xmldom';
 import { haversineMeters } from '@/utils/geoDistance';
+import { parseRouteFileXml } from '@/utils/routeFileXmlDocument';
 
 export type RouteFileFormat = 'gpx' | 'kml';
 
@@ -326,22 +326,9 @@ const parseRouteFileDocument = (text: string, ext?: string): ParsedRouteFileDocu
     return { ok: false, reason: 'damaged' };
   }
 
-  const diagnostics: string[] = [];
-  let document: Document;
-  try {
-    document = new SafeXmlDomParser({
-      errorHandler: {
-        warning: (message) => diagnostics.push(String(message)),
-        error: (message) => diagnostics.push(String(message)),
-        fatalError: (message) => diagnostics.push(String(message)),
-      },
-    }).parseFromString(text, 'application/xml');
-  } catch {
-    return { ok: false, reason: 'damaged' };
-  }
-
-  const root = document.documentElement;
-  if (diagnostics.length > 0 || !root || normalizedElementName(root) !== format) {
+  const document = parseRouteFileXml(text);
+  const root = document?.documentElement;
+  if (!document || !root || normalizedElementName(root) !== format) {
     return { ok: false, reason: 'damaged' };
   }
 

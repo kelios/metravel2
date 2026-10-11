@@ -4,8 +4,9 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import type { ComponentProps } from 'react';
+import type { ComponentProps, ReactElement } from 'react';
 import type QuestsContentPanel from '@/screens/tabs/QuestsContentPanel';
+import type QuestsMapSection from '@/screens/tabs/QuestsMapSection';
 import QuestsScreen from '@/screens/tabs/QuestsScreen';
 import { ALL_QUESTS_ID, STORAGE_SELECTED_CITY } from '@/utils/questCatalogSelection';
 import type { QuestMeta } from '@/utils/questAdapters';
@@ -13,10 +14,15 @@ import type { QuestMeta } from '@/utils/questAdapters';
 let mockQuests: QuestMeta[] = [];
 let mockMobile = false;
 let mockPanelProps: ComponentProps<typeof QuestsContentPanel> | null = null;
+let mockMapProps: { coordinates?: { latitude: number; longitude: number } } | null = null;
 
-jest.mock('expo-router', () => ({ useIsFocused: () => true }));
+jest.mock('expo-router', () => ({ useIsFocused: () => true, useRouter: () => ({ push: () => {} }) }));
 jest.mock('@expo/vector-icons/Feather', () => 'Feather');
-jest.mock('@/components/MapPage/Map.web', () => () => null);
+jest.mock('@/components/MapPage/Map', () => (props: typeof mockMapProps) => {
+  mockMapProps = props;
+  return null;
+});
+jest.mock('@/screens/tabs/questCatalogLocation', () => ({ requestQuestCatalogLocation: async () => null }));
 jest.mock('@/components/seo/LazyInstantSEO', () => () => null);
 jest.mock('@/hooks/useQuestReturnVisit', () => ({ useQuestReturnVisit: () => {} }));
 jest.mock('@/hooks/useQuestReviewPrompt', () => ({
@@ -30,9 +36,11 @@ jest.mock('@/hooks/useResponsive', () => ({
 }));
 jest.mock('@/screens/tabs/QuestsContentPanel', () => (props: ComponentProps<typeof QuestsContentPanel>) => {
   const { Pressable, Text } = require('react-native') as typeof import('react-native');
+  const { Suspense } = require('react') as typeof import('react');
   mockPanelProps = props;
   return (
     <>
+      {props.mapSlot ? <Suspense fallback={null}>{props.mapSlot}</Suspense> : null}
       <Pressable testID="open-filters" onPress={props.onOpenFilterDrawer} />
       <Text testID="panel-title">{props.selectedCityName ?? ''}</Text>
       <Text testID="panel-quests">{props.questsAll.map((quest) => quest.id).sort().join(',')}</Text>
@@ -60,6 +68,7 @@ describe('страна в каталоге квестов', () => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
     mockMobile = false;
     mockQuests = CATALOG;
+    mockMapProps = null;
     await AsyncStorage.clear();
   });
   afterEach(() => {
@@ -110,11 +119,15 @@ describe('страна в каталоге квестов', () => {
     fireEvent.press(getByTestId('quests-country-all-BY'));
     await waitFor(() => expect(getByTestId('panel-title').props.children).toBe('Беларусь'));
 
-    // Игрок далеко от страны: центр по нему увёл бы карту от квестов страны.
-    act(() => mockPanelProps?.onMapUserLocationChange?.({ latitude: 41.72, longitude: 44.79 }));
+    act(() => mockPanelProps?.onToggleViewMode());
+    await waitFor(() => expect(mockMapProps).not.toBeNull());
 
-    await waitFor(() => expect(mockPanelProps?.mapCenter?.latitude).toBeCloseTo(53, 1));
-    expect(mockPanelProps?.mapCenter?.longitude).toBeCloseTo(25.63, 1);
+    // Игрок далеко от страны: центр по нему увёл бы карту от квестов страны.
+    const mapSection = mockPanelProps?.mapSlot as ReactElement<ComponentProps<typeof QuestsMapSection>>;
+    act(() => mapSection.props.onUserLocationChange({ latitude: 41.72, longitude: 44.79 }));
+
+    await waitFor(() => expect(mockMapProps?.coordinates?.latitude).toBeCloseTo(53, 1));
+    expect(mockMapProps?.coordinates?.longitude).toBeCloseTo(25.63, 1);
   });
 
   it('в мобильном drawer раскрытие страны его не закрывает, а выбор страны закрывает', async () => {

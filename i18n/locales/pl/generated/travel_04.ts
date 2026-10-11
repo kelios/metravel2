@@ -247,7 +247,6 @@ export const travelGenerated4 = {
   "components.travel.WeeklyHighlights.razvernut_podborku_mesyatsa_4d3336ca": "Rozwiń wybór miesiąca",
   "components.travel.WeeklyHighlights.samye_populyarnye_marshruty_etogo_mesyatsa_c2e48432": "Najpopularniejsze trasy w tym miesiącu",
   "components.travel.ZoomableGalleryImage.value1_uvelichenie_dvumya_paltsami_1ef063e7": "{{value1}}. Zoom dwoma palcami",
-  "components.travel.ZoomableGalleryImage.value1_uvelichenie_dvumya_paltsami_57c2f423": "{{value1}}. Zoom dwoma palcami",
   "components.listTravel.sortings.newestShort": "Nowy",
   "components.listTravel.sortings.oldestShort": "Stary",
   "components.listTravel.sortings.popularShort": "Popularne",

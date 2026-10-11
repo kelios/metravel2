@@ -76,23 +76,16 @@ describe('#1826 бюджет первого кадра каталога', () => 
                 nearbyRadiusKm={15}
                 questsAll={quests}
                 questCardWidth={320}
-                mapPoints={[]}
-                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
                 userLoc={null}
                 isMapAreaActive={false}
                 geoMessage={null}
                 geoRequesting={false}
-                showMapAreaSearch={false}
                 radiiLg={24}
-                LazyQuestMap={(() => null) as never}
                 isMobile={false}
                 onShowNearby={() => {}}
                 onOpenFilterDrawer={() => {}}
                 onToggleViewMode={() => {}}
                 onSetRadius={() => {}}
-                onMapUserLocationChange={() => {}}
-                onMapMove={() => {}}
-                onSearchMapArea={() => {}}
             />
         );
 

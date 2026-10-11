@@ -12,11 +12,8 @@ import {
 } from 'react-native';
 import type { LayoutChangeEvent, ListRenderItemInfo, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { useRouter } from 'expo-router';
 
-import Map from '@/components/MapPage/Map';
 import EmptyState from '@/components/ui/EmptyState';
-import type { MapMovePayload } from '@/components/MapPage/Map/types';
 import { useQuestGridCardWidth } from '@/hooks/useQuestCatalogResponsiveModel';
 
 import QuestCard from './QuestCard';
@@ -33,20 +30,6 @@ import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 import { webDataSetProps } from '@/utils/webProps'
 
 const useWebLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
-
-type MapPoint = {
-    id?: string | number;
-    coord: string;
-    address: string;
-    travelImageThumbUrl: string;
-    categoryName: string;
-    articleUrl?: string;
-    urlTravel?: string;
-    questMeta?: {
-        id: string;
-        cityId: string;
-    };
-};
 
 type QuestsContentPanelProps = {
     styles: any;
@@ -70,15 +53,13 @@ type QuestsContentPanelProps = {
     availableSortOrders?: QuestSortOrder[];
     activeSortOrder?: QuestSortOrder;
     onSelectSortOrder?: (order: QuestSortOrder) => void;
-    mapPoints: MapPoint[];
-    mapCenter: { latitude: number; longitude: number };
+    /** Режим карты (#2389): ленивый `QuestsMapSection`, рисуется только при `viewMode === 'map'`. */
+    mapSlot?: React.ReactNode;
     userLoc: { lat: number; lng: number } | null;
     isMapAreaActive: boolean;
     geoMessage: string | null;
     geoRequesting: boolean;
-    showMapAreaSearch: boolean;
     radiiLg: number;
-    LazyQuestMap: any;
     isMobile: boolean;
     filtersActive: boolean;
     onResetFilters: () => void;
@@ -91,9 +72,6 @@ type QuestsContentPanelProps = {
     onToggleViewMode: () => void;
     /** @deprecated Radius selection is no longer shown in the quest catalog. */
     onSetRadius?: (km: number) => void;
-    onMapUserLocationChange: (loc: { latitude: number; longitude: number } | null) => void;
-    onMapMove: (center: MapMovePayload) => void;
-    onSearchMapArea: () => void;
     /** Мягкое уведомление над списком (сейчас — просьба об отзыве, #1795). */
     noticeSlot?: React.ReactNode;
 };
@@ -125,15 +103,12 @@ function QuestsContentPanel({
     availableSortOrders = EMPTY_SORT_ORDERS,
     activeSortOrder = 'default',
     onSelectSortOrder = () => {},
-    mapPoints,
-    mapCenter,
+    mapSlot = null,
     userLoc,
     isMapAreaActive,
     geoMessage,
     geoRequesting,
-    showMapAreaSearch,
     radiiLg,
-    LazyQuestMap,
     isMobile,
     filtersActive = false,
     onResetFilters,
@@ -144,9 +119,6 @@ function QuestsContentPanel({
     onShowNearby,
     onOpenFilterDrawer,
     onToggleViewMode,
-    onMapUserLocationChange,
-    onMapMove,
-    onSearchMapArea,
     noticeSlot = null,
 }: QuestsContentPanelProps) {
     // #1826: на web сетка каталога не виртуализирована — 177 карточек уходили в
@@ -230,7 +202,6 @@ function QuestsContentPanel({
         maybeRevealWhenGridFits();
     }, [maybeRevealWhenGridFits, onGridLayout]);
 
-    const router = useRouter();
     // #1826: заголовок, счётчик и пустые состояния обязаны жить по тому же
     // терму, что и список. Иначе на debounce-паузе шапка уже «поиск», а список
     // ещё прежний — и при пустом прежнем наборе на 200 мс показывалось
@@ -266,12 +237,6 @@ function QuestsContentPanel({
             <QuestsSeoIntroFaq variant="faq" />
         </View>
     ) : null;
-
-    const openQuestFromPoint = (point?: { questMeta?: MapPoint['questMeta'] }) => {
-        const meta = point?.questMeta;
-        if (!meta?.cityId || !meta?.id) return;
-        router.push(`/quests/${meta.cityId}/${meta.id}`);
-    };
 
     const getQuestCityId = useCallback(
         (quest: QuestListItem) => quest.cityId || selectedCityId || '',
@@ -481,89 +446,9 @@ function QuestsContentPanel({
 
                 {viewMode === 'map' ? (
                     <View style={styles.mapSection}>
-                        {dataLoaded && selectedCityId === nearbyId && !userLoc && !isMapAreaActive && (
-                            <View style={styles.geoBanner} testID="quests-geo-banner">
-                                <Feather name="map-pin" size={13} color={colors.warning} />
-                                <Text style={styles.geoBannerText}>
-                                    {i18nT('quests:screens.tabs.QuestsContentPanel.geolokatsiya_otklyuchena_pokazyvaem_vse_kves_48d7a8ae')}</Text>
-                            </View>
-                        )}
-
-                        {!dataLoaded && (
-                            <View style={styles.mapLoading}>
-                                <ActivityIndicator color={colors.primary} />
-                            </View>
-                        )}
-
-                        {/* Карта-исследование: держим карту живой всегда после загрузки.
-                            Ноль квестов = нет маркеров, но карта видна и интерактивна —
-                            пользователь двигает область и повторяет «Искать в этой области». */}
-                        {dataLoaded && Platform.OS === 'web' && (
-                            <View style={styles.mapContainer}>
-                                {showMapAreaSearch && (
-                                    <Pressable
-                                        style={styles.mapSearchAreaBtn}
-                                        onPress={onSearchMapArea}
-                                        accessibilityRole="button"
-                                        accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.iskat_v_etoy_oblasti_2dbf958f')}
-                                        testID="quests-map-search-area"
-                                    >
-                                        <Feather name="search" size={15} color={colors.textOnPrimary} />
-                                        <Text style={styles.mapSearchAreaBtnText}>{i18nT('quests:screens.tabs.QuestsContentPanel.iskat_v_etoy_oblasti_2dbf958f')}</Text>
-                                    </Pressable>
-                                )}
-                                <Suspense fallback={<View style={styles.mapLoading}><ActivityIndicator color={colors.primary} /></View>}>
-                                    <LazyQuestMap
-                                        travel={{ data: mapPoints as any }}
-                                        coordinates={mapCenter}
-                                        userLocation={userLoc ? { latitude: userLoc.lat, longitude: userLoc.lng } : null}
-                                        pointsOnly
-                                        mode="radius"
-                                        showRadiusCircle={false}
-                                        routePoints={[]}
-                                        transportMode="foot"
-                                        onMapClick={() => {}}
-                                        setRouteDistance={() => {}}
-                                        setFullRouteCoords={() => {}}
-                                        onUserLocationChange={onMapUserLocationChange}
-                                        onMapMove={onMapMove}
-                                    />
-                                </Suspense>
-                            </View>
-                        )}
-
-                        {dataLoaded && Platform.OS !== 'web' && (
-                            <View style={styles.mapContainer}>
-                                {showMapAreaSearch && (
-                                    <Pressable
-                                        style={styles.mapSearchAreaBtn}
-                                        onPress={onSearchMapArea}
-                                        accessibilityRole="button"
-                                        accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.iskat_v_etoy_oblasti_2dbf958f')}
-                                        testID="quests-map-search-area"
-                                    >
-                                        <Feather name="search" size={15} color={colors.textOnPrimary} />
-                                        <Text style={styles.mapSearchAreaBtnText}>{i18nT('quests:screens.tabs.QuestsContentPanel.iskat_v_etoy_oblasti_2dbf958f')}</Text>
-                                    </Pressable>
-                                )}
-                                <Map
-                                    travel={{ data: mapPoints as any }}
-                                    coordinates={mapCenter}
-                                    userLocation={userLoc ? { latitude: userLoc.lat, longitude: userLoc.lng } : null}
-                                    pointsOnly
-                                    mode="radius"
-                                    showRadiusCircle={false}
-                                    routePoints={[]}
-                                    transportMode="foot"
-                                    onMapClick={() => {}}
-                                    onMarkerSelect={openQuestFromPoint}
-                                    setRouteDistance={() => {}}
-                                    setFullRouteCoords={() => {}}
-                                    onUserLocationChange={onMapUserLocationChange}
-                                    onMapMove={onMapMove}
-                                />
-                            </View>
-                        )}
+                        <Suspense fallback={<View style={styles.mapLoading}><ActivityIndicator color={colors.primary} /></View>}>
+                            {mapSlot}
+                        </Suspense>
                     </View>
                 ) : (
                     <>

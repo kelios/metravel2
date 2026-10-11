@@ -57,8 +57,8 @@ export const NetworkStatus: React.FC<NetworkStatusProps> = ({
   }
 
   const message = isConnected
-    ? i18nT('shared:components.ui.NetworkStatus.soedinenie_vosstanovleno_692decf2')
-    : i18nT('shared:components.ui.NetworkStatus.net_podklyucheniya_k_internetu_7a7a2a5e');
+    ? i18nT('shared:components.ui.NetworkStatus.soedinenie_vosstanovleno_25419314')
+    : i18nT('shared:components.ui.NetworkStatus.net_podklyucheniya_k_internetu_71e8692e');
 
   const backgroundColor = isConnected ? colors.success : colors.danger;
 

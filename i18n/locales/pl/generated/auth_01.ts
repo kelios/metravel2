@@ -31,7 +31,6 @@ export const authGenerated1 = {
   "components.auth.GoogleSignInButton.oshibka_otobrazheniya_knopki_google_sign_in_9e8d05a4": "Błąd podczas wyświetlania przycisku logowania Google",
   "components.auth.GoogleSignInButton.oshibka_pri_otkrytii_google_sign_in_4891146d": "Błąd podczas otwierania logowania Google",
   "components.auth.GoogleSignInButton.voyti_cherez_google_43bd772c": "Zaloguj się za pomocą Google",
-  "components.auth.GoogleSignInButton.voyti_cherez_google_bdcc8a1f": "Zaloguj się za pomocą Google",
   "components.auth.GoogleSignInButton.zagruzka_google_sign_in_33b991c3": "Ładowanie logowania Google...",
   "components.auth.LoginForm.email_c5e1625d": "Email",
   "components.auth.LoginForm.ne_udalos_voyti_cherez_google_0930989b": "Nie udało się zalogować przez Google.",

@@ -171,7 +171,7 @@ function GoogleSignInButtonConfigured({
                 pressed && styles.buttonPressed,
             ]}
             accessibilityRole="button"
-            accessibilityLabel={i18nT('auth:components.auth.GoogleSignInButton.voyti_cherez_google_bdcc8a1f')}
+            accessibilityLabel={i18nT('auth:components.auth.GoogleSignInButton.voyti_cherez_google_43bd772c')}
         >
             <View style={styles.content}>
                 {isLoading ? (
@@ -181,7 +181,7 @@ function GoogleSignInButtonConfigured({
                         <View style={styles.iconContainer}>
                             <Text style={styles.googleIcon}>{i18nT('auth:components.auth.GoogleSignInButton.g_101365fe')}</Text>
                         </View>
-                        <Text style={styles.text}>{i18nT('auth:components.auth.GoogleSignInButton.voyti_cherez_google_bdcc8a1f')}</Text>
+                        <Text style={styles.text}>{i18nT('auth:components.auth.GoogleSignInButton.voyti_cherez_google_43bd772c')}</Text>
                     </>
                 )}
             </View>

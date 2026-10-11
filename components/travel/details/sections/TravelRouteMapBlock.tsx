@@ -132,7 +132,7 @@ export const TravelRouteMapBlock: React.FC<{
               initiallyOpen
               keepMounted={Platform.OS === 'web'}
               isLoading={isLoading && !shouldRender && !shouldForceRenderMap}
-              loadingLabel={i18nT('travel:components.travel.details.sections.TravelRouteMapBlock.podgruzhaem_kartu_marshruta_a83bda14')}
+              loadingLabel={i18nT('travel:components.travel.details.sections.TravelRouteMapBlock.podgruzhaem_kartu_marshruta_73bd108d')}
               forceOpenTrigger={mapOpenTrigger || undefined}
               onOpenChange={handleMapOpenChange}
             >

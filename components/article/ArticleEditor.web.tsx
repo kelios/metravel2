@@ -89,8 +89,8 @@ import { useArticleEditorQuillSync } from './useArticleEditorQuillSync';
 import { translate as i18nT } from '@/i18n'
 
 const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
-    label = i18nT('shared:components.article.ArticleEditor.opisanie_aff7874f'),
-    placeholder = i18nT('shared:components.article.ArticleEditor.vvedite_opisanie_638bcc13'),
+    label = i18nT('shared:components.article.ArticleEditor.opisanie_2e106b75'),
+    placeholder = i18nT('shared:components.article.ArticleEditor.vvedite_opisanie_5aa2e118'),
     content,
     onChange,
     autosaveMode,
