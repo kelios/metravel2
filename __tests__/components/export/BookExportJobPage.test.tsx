@@ -1,4 +1,5 @@
 import React from 'react'
+import { Platform } from 'react-native'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native'
 
 import type { BookExportV2Job } from '@/api/bookExportApi'
@@ -64,6 +65,7 @@ let mockController = makeController()
 
 beforeEach(() => {
   jest.clearAllMocks()
+  Platform.OS = 'web'
   mockJobId = JOB
   mockAuth = { authReady: true, isAuthenticated: true }
   mockController = makeController()

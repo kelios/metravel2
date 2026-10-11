@@ -324,7 +324,7 @@ Resource Timing с видимым положительным encodedBodySize н�
   `BOOK_EXPORT_DOWNLOAD_PAGE_PATH`, default `/book-exports/{job_id}`); при финальном `failed` —
   письмо «Не удалось собрать книгу» с кодом ошибки и предложением «Повторить». В письме нет
   билета и других секретов;
-- страницы и готовый PDF лежат в приватном S3 (SSE-KMS); билет
+- страницы и готовый PDF лежат в отдельном приватном бакете S3 (SSE-S3/AES256, #2424); билет
   (`POST /api/exports/books/{job_id}/download-ticket/` → `GET …/download/?ticket=…`) стримит из
   S3 — контракт билета не менялся; срок хранения готовой книги 7 дней
   (`BOOK_EXPORT_DONE_TTL_SECONDS`), после — `JOB_EXPIRED`/`REBUILD_REQUIRED`.

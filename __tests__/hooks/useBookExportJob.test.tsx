@@ -170,14 +170,15 @@ it('surfaces an initially paused offline read as reconnecting instead of a perma
 })
 
 it('stops polling once the server confirms a terminal job', async () => {
+  mockedGet.mockResolvedValue(completeJob())
+  const { result, unmount } = setup()
+  await waitFor(() => expect(result.current.job?.status).toBe('done'))
   jest.useFakeTimers()
   try {
-    mockedGet.mockResolvedValue(completeJob())
-    const { result, unmount } = setup()
-    await waitFor(() => expect(result.current.job?.status).toBe('done'))
-    await act(async () => { jest.advanceTimersByTime(12_000) })
+    await act(async () => { await jest.advanceTimersByTimeAsync(12_000) })
     expect(mockedGet).toHaveBeenCalledTimes(1)
     unmount()
+    await act(async () => { await jest.runOnlyPendingTimersAsync() })
   } finally {
     jest.useRealTimers()
   }

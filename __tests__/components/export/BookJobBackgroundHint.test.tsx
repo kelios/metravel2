@@ -1,4 +1,5 @@
 import React from 'react'
+import { Platform } from 'react-native'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
@@ -14,6 +15,7 @@ const mockedGet = apiClient.get as jest.Mock
 
 beforeEach(() => {
   jest.clearAllMocks()
+  Platform.OS = 'web'
   mockOwner = 'owner-1'
 })
 
