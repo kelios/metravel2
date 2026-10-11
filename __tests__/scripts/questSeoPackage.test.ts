@@ -13,6 +13,7 @@ const { makeTempDir } = require('./cli-test-utils')
 const contract = require('@/scripts/lib/questSeoContract')
 const {
   assertCatalogMatchesReceipt,
+  buildLocaleErrorPageHtml,
   buildQuestLocaleCandidate,
   createSsgTranslator,
   finalizeQuestSeoPackage,
@@ -470,5 +471,12 @@ describe('RU regression of the shared detail builder', () => {
     const pl = createSsgTranslator(CATALOGS, 'pl')
     expect(pl.tp('seoStatic:questDetailSsg.factRoute', 5)).toBe('Trasa: 5 punktów')
     expect(() => pl.t('seoStatic:questDetailSsg.doesNotExist')).toThrow(/Missing pl translation/)
+  })
+
+  it('marks only the target language of the catalog link on a localized error page', () => {
+    const html = buildLocaleErrorPageHtml(createSsgTranslator(CATALOGS, 'en'))
+    expect(html).toContain('<html lang="en">')
+    expect(html).toMatch(/<a href="\/quests" hreflang="ru">[^<]+<\/a>/)
+    expect(html).not.toMatch(/<a [^>]*\blang="ru"/)
   })
 })

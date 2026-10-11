@@ -14,6 +14,7 @@
  */
 
 const crypto = require('crypto')
+const { buildQuestLocalePath } = require('../../utils/questLocaleRouting')
 
 const LOCALES = Object.freeze(['ru', 'be', 'uk', 'pl', 'en'])
 const TRANSLATED_LOCALES = Object.freeze(LOCALES.slice(1))
@@ -176,7 +177,10 @@ function boundedText(value, maximum, label) {
 }
 
 function canonicalPath(cityId, slug, locale = 'ru') {
-  return `${locale === 'ru' ? '' : `/${locale}`}/quests/${cityId}/${slug}`
+  // One builder for the prefixed-URL contract (#2208): the runtime router uses the same function.
+  const path = buildQuestLocalePath(Number(cityId), slug, locale)
+  if (!path) fail(`invalid quest locale path: ${cityId}/${slug} (${locale})`)
+  return path
 }
 
 function memberHtmlPath(cityId, slug, locale) {

@@ -175,7 +175,7 @@ function buildLocaleErrorPageHtml(translator) {
     `<h1>${escapeHtml(title)}</h1>`,
     `<p>${escapeHtml(description)}</p>`,
     `<p>${SLOTS.error}</p>`,
-    `<p><a href="/quests" lang="ru">${escapeHtml(catalogLabel)}</a></p>`,
+    `<p><a href="/quests" hreflang="ru">${escapeHtml(catalogLabel)}</a></p>`,
     '</main>',
     '</body>',
     '</html>',
