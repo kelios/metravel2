@@ -281,10 +281,10 @@ export class TravelDataTransformer {
    * ✅ PDF-001: Добавлена валидация размера данных
    */
   validate(travels: Travel[]): void {
-    // Константы для валидации
+    // Пределы всей книги: они защищают окно печати от памяти и времени сборки.
+    // Пределов на одно путешествие нет: что сайт показывает в путешествии,
+    // то и печатается (длинное описание и галерея режутся на страницы сегментами).
     const MAX_TRAVELS = 50;
-    const MAX_TEXT_LENGTH = 50000; // Максимальная длина текста в одном поле
-    const MAX_IMAGES_PER_TRAVEL = 30;
     const MAX_TOTAL_IMAGES = 200;
     const MAX_TOTAL_TEXT_LENGTH = 500000; // Общая длина всего текста
 
@@ -328,39 +328,12 @@ export class TravelDataTransformer {
         );
       }
 
-      // ✅ PDF-001: Проверка длины текстовых полей
-      const textFields = [
-        travel.description,
-        travel.recommendation,
-        travel.plus,
-        travel.minus,
-      ].filter(Boolean);
-
-      textFields.forEach((text, fieldIndex) => {
-        const textLength = typeof text === 'string' ? text.length : String(text).length;
-        if (textLength > MAX_TEXT_LENGTH) {
-          const fieldNames = [i18nT('export:services.pdf_export.TravelDataTransformer.opisanie_bd44d0b5'), i18nT('export:services.pdf_export.TravelDataTransformer.rekomendatsii_5b88b537'), i18nT('export:services.pdf_export.TravelDataTransformer.plyusy_204f01be'), i18nT('export:services.pdf_export.TravelDataTransformer.minusy_11a8c846')];
-          throw new ExportError(
-            ExportErrorType.VALIDATION_ERROR,
-            translatePlural('export:services.pdf_export.TravelDataTransformer.puteshestvie_value1_soderzhit_slishkom_dlinn_f4b87eee', textLength, { value1: travel.name, value2: fieldNames[fieldIndex], value4: MAX_TEXT_LENGTH })
-          );
-        }
-        totalTextLength += textLength;
+      [travel.description, travel.recommendation, travel.plus, travel.minus].forEach((text) => {
+        if (text) totalTextLength += typeof text === 'string' ? text.length : String(text).length;
       });
 
-      // ✅ PDF-001: Проверка количества изображений
-      const galleryCount = Array.isArray(travel.gallery) ? travel.gallery.length : 0;
-      const thumbCount = travel.travel_image_thumb_url ? 1 : 0;
-      const imageCount = galleryCount + thumbCount;
-
-      if (imageCount > MAX_IMAGES_PER_TRAVEL) {
-        throw new ExportError(
-          ExportErrorType.VALIDATION_ERROR,
-          i18nT('export:services.pdf_export.TravelDataTransformer.puteshestvie_value1_soderzhit_slishkom_mnogo_aacc3fd9', { value1: travel.name, value2: imageCount, value3: MAX_IMAGES_PER_TRAVEL })
-        );
-      }
-
-      totalImages += imageCount;
+      totalImages += (Array.isArray(travel.gallery) ? travel.gallery.length : 0)
+        + (travel.travel_image_thumb_url ? 1 : 0);
     });
 
     // ✅ PDF-001: Проверка общего количества изображений

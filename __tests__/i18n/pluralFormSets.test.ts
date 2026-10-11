@@ -358,8 +358,6 @@ const COUNTED_NOUN = new RegExp(
 )
 
 const COUNTED_NOUN_ALLOWLIST: Record<string, string> = {
-  'export:services.pdf_export.TravelDataTransformer.puteshestvie_value1_soderzhit_slishkom_mnogo_aacc3fd9':
-    'максимум — константа MAX_IMAGES_PER_TRAVEL = 30: «30 изображений», PL «30 obrazów», UK «30 зображень»',
   'export:services.pdf_export.TravelDataTransformer.slishkom_mnogo_izobrazheniy_v_vybrannyh_pute_cded7c5a':
     'максимум — константа MAX_TOTAL_IMAGES = 200: «200 изображений», PL «200 obrazów»',
   'export:services.pdf_export.TravelDataTransformer.slishkom_mnogo_puteshestviy_vybrano_value1_m_406dc555':

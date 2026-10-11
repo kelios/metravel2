@@ -41,6 +41,29 @@ describe('TravelDataTransformer', () => {
       ];
       expect(() => transformer.validate(travels)).not.toThrow();
     });
+
+    // Путешествие, которое сайт показывает целиком, печатается целиком: длинное описание
+    // и галерея больше 30 кадров режутся на страницы, а не отклоняются (Mullerthal Trail:
+    // описание 59 444 символа, 32 фото).
+    it('пропускает одно путешествие с длинным описанием и большой галереей', () => {
+      const travel = {
+        id: 1,
+        name: 'Mullerthal Trail',
+        description: `<p>${'а'.repeat(59_444)}</p>`,
+        gallery: Array.from({ length: 32 }, (_, i) => ({ url: `https://metravel.by/g/${i}.jpg` })),
+        travel_image_thumb_url: 'https://metravel.by/thumb.jpg',
+      } as unknown as Travel;
+      expect(() => transformer.validate([travel])).not.toThrow();
+    });
+
+    it('отклоняет книгу, где фото больше общего предела 200', () => {
+      const travels = Array.from({ length: 3 }, (_, i) => ({
+        id: i + 1,
+        name: `T${i}`,
+        gallery: Array.from({ length: 70 }, (_, j) => ({ url: `https://metravel.by/${i}/${j}.jpg` })),
+      })) as unknown as Travel[];
+      expect(() => transformer.validate(travels)).toThrow(ExportError);
+    });
   });
 
   describe('transform', () => {
