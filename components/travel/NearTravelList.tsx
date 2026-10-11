@@ -14,6 +14,8 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
+import { getNearbyTravelsSubtitle } from '@/constants/nearby';
+import { NEAR_RAIL_PADDING_VERTICAL } from '@/components/travel/nearTravelRailLayout';
 import { Title } from '@/ui/paper';
 
 import { Travel } from '@/types/types';
@@ -42,9 +44,6 @@ const MapComponent = Platform.OS === 'web' ? MapClientSideComponent : TravelMap;
 type Segment = 'list' | 'map';
 
 const MOBILE_RAIL_CARD_MAX_WIDTH = 340;
-// Тени и фокус-кольцо карточек не срезаются краем прокрутки; отступ общий для
-// каркаса и карточек, поэтому высоту ряда не меняет.
-const RAIL_PADDING_VERTICAL = 4;
 // Карточка в горизонтальном ряду: по умолчанию UnifiedTravelCard ставит 'pan-y',
 // и на тач-вебе свайп ряда, начатый на карточке, гасится.
 const RAIL_CARD_TOUCH_ACTION = 'pan-x pan-y';
@@ -409,7 +408,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       <CardRail
         gap={railGap}
         contentPaddingHorizontal={0}
-        contentPaddingVertical={RAIL_PADDING_VERTICAL}
+        contentPaddingVertical={NEAR_RAIL_PADDING_VERTICAL}
         contentStyle={railContentStyle}
         hideArrows={isMobile}
         testID="near-travel-rail"
@@ -421,7 +420,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
     const header = showHeader ? (
       <View style={styles.header}>
         <Title style={styles.title}>{i18nT('travel:components.travel.NearTravelList.ryadom_mozhno_posmotret_127cfa0d')}</Title>
-        <Text style={styles.subtitle}>{i18nT('travel:components.travel.NearTravelList.marshruty_v_radiuse_60_km_62529086')}</Text>
+        <Text style={styles.subtitle}>{getNearbyTravelsSubtitle()}</Text>
       </View>
     ) : null;
 

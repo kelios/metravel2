@@ -7,6 +7,7 @@ import { useResponsiveWidth } from '@/hooks/useResponsive'
 import { METRICS } from '@/constants/layout'
 import { translate as i18nT } from '@/i18n'
 import { getNearbyTravelsSubtitle } from '@/constants/nearby'
+import { NEAR_RAIL_PADDING_VERTICAL } from '@/components/travel/nearTravelRailLayout'
 import { createTravelDetailsSectionHeaderStyles } from './details/styles/travelDetailsSectionHeaderStyles'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -111,6 +112,8 @@ const staticStyles = StyleSheet.create({
   sidebarSection: { width: '100%', gap: DESIGN_TOKENS.spacing.sm },
   sidebarWebSection: { width: '100%' },
   sidebarCardContent: { marginTop: 8 },
+  // #2367: ряд «Рядом» несёт вертикальный отступ под тени — каркас повторяет его.
+  sidebarNearRailContent: { paddingVertical: NEAR_RAIL_PADDING_VERTICAL },
   sidebarIconPlaceholder: { width: 18, height: 18, flexShrink: 0 },
   sidebarDecorativeText: { color: 'transparent' },
   // marginTop повторяет отступ первой секции футера (leadSection в
@@ -344,7 +347,7 @@ export const SidebarSectionSkeleton: React.FC = () => {
     <View style={staticStyles.sidebarContainer}>
       <View style={staticStyles.sidebarWebSection} testID="travel-sidebar-near-skeleton">
         {header('near', i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.ryadom_mozhno_posmotret_3f015f94'), getNearbyTravelsSubtitle())}
-        <View style={staticStyles.sidebarCardContent}>
+        <View style={[staticStyles.sidebarCardContent, staticStyles.sidebarNearRailContent]}>
           {isNearMobile ? <RoundSidebarCardSkeleton /> : <TravelListItemSkeleton />}
         </View>
       </View>
