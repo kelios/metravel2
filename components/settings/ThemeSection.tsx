@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
-import { View, Text, Pressable, Platform } from 'react-native';
+import { View, Text, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
 import type { useThemedColors } from '@/hooks/useTheme';
 import type { createSettingsStyles } from '@/components/screens/settings/settings.styles';
 import { translate as i18nT } from '@/i18n'
+import RadioPressable from '@/components/ui/RadioPressable';
 
 
 type Colors = ReturnType<typeof useThemedColors>;
@@ -67,15 +68,14 @@ export default function ThemeSection<T extends string>({
                 {themeOptions.map((option) => {
                     const isSelected = theme === option.value;
                     return (
-                        <Pressable
+                        <RadioPressable
                             key={option.value}
-                            onPress={() => setTheme(option.value)}
+                            onSelect={() => setTheme(option.value)}
                             style={({ pressed }) => [
                                 styles.themeOption,
                                 isSelected && styles.themeOptionActive,
                                 pressed && styles.themeOptionPressed,
                             ]}
-                            accessibilityRole="radio"
                             accessibilityState={{ checked: isSelected }}
                             accessibilityLabel={option.label}
                             {...Platform.select({ web: { cursor: 'pointer' } })}
@@ -90,7 +90,7 @@ export default function ThemeSection<T extends string>({
                             {isSelected ? (
                                 <Feather name="check" size={16} color={colors.primaryDark} />
                             ) : null}
-                        </Pressable>
+                        </RadioPressable>
                     );
                 })}
             </View>

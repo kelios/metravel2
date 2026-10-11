@@ -1,6 +1,7 @@
 import { useMemo, type ReactNode } from 'react';
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
+import RadioPressable from '@/components/ui/RadioPressable';
 
 export interface ThemeOptionGroupOption<T extends string> {
   value: T;
@@ -110,22 +111,17 @@ export default function ThemeOptionGroup<T extends string>({
         const accessibilityLabel = getAccessibilityLabel(option);
 
         return (
-          <Pressable
+          <RadioPressable
             key={option.value}
-            onPress={() => onChange(option.value)}
+            onSelect={() => onChange(option.value)}
             style={({ hovered }) => [
               styles.button,
               isActive && styles.buttonActive,
               (hovered && !isActive) && styles.buttonHover,
             ]}
-            accessibilityRole="radio"
             accessibilityState={{ checked: isActive }}
             accessibilityLabel={accessibilityLabel}
             testID={`${testID}-${option.value}`}
-            {...(Platform.OS === 'web'
-              ? // web-only ARIA: RN Pressable types не знают aria-label/aria-checked
-                ({ 'aria-label': accessibilityLabel, 'aria-checked': isActive } as Record<string, unknown>)
-              : {})}
           >
             <View style={styles.iconWrapper}>
               {option.renderIcon(iconSize, isActive ? colors.textOnPrimary : colors.text)}
@@ -135,7 +131,7 @@ export default function ThemeOptionGroup<T extends string>({
                 {option.label}
               </Text>
             )}
-          </Pressable>
+          </RadioPressable>
         );
       })}
     </View>
