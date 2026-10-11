@@ -53,6 +53,18 @@ describe('bounded print DOM visibility', () => {
     caption.style.whiteSpace = 'nowrap'
     caption.style.textOverflow = 'clip'
     expect(hasPrintedPageOverflow(100)).toBe(true)
+    // A 255-character one-line title measures wider than the page itself; still a deliberate truncation.
+    caption.style.textOverflow = 'ellipsis'
+    caption.style.whiteSpace = 'nowrap'
+    jest.mocked(document.createRange).mockReturnValue({
+      selectNodeContents: jest.fn(), getClientRects: () => [rectangle(900, 70)],
+    } as unknown as Range)
+    expect(hasPrintedPageOverflow(100)).toBe(false)
+    caption.style.textOverflow = 'clip'
+    expect(hasPrintedPageOverflow(100)).toBe(true)
+    jest.mocked(document.createRange).mockReturnValue({
+      selectNodeContents: jest.fn(), getClientRects: () => [rectangle(150, 70)],
+    } as unknown as Range)
     // Vertical clipping is never a deliberate truncation.
     caption.style.textOverflow = 'ellipsis'
     caption.style.overflowY = 'hidden'

@@ -75,23 +75,28 @@ export function hasPrintedPageOverflow(domBudget: number): boolean {
       if (caption.height >= frame.height - 1 || caption.top < frame.top - 1 || caption.bottom > frame.bottom + 1
         || caption.left < frame.left - 1 || caption.right > frame.right + 1) return true
     }
+    // A deliberate one-line ellipsis (running header title) keeps its text visible as "…": it is
+    // layout, not lost content, and the measured range of a nowrap text node spans the full text
+    // width regardless of the clip, so every horizontal check is skipped inside such a container.
+    let truncated = false
+    for (let ancestor: HTMLElement | null = element; ancestor && ancestor !== section; ancestor = ancestor.parentElement) {
+      const style = getComputedStyle(ancestor)
+      if (style.textOverflow === 'ellipsis' && style.whiteSpace === 'nowrap' && /^(hidden|clip)$/.test(style.overflowX)) { truncated = true; break }
+    }
     for (const node of Array.from(element.childNodes)) {
       if (node.nodeType !== 3 || !node.textContent?.trim()) continue
       const range = document.createRange()
       range.selectNodeContents(node)
       for (const textBounds of Array.from(range.getClientRects())) {
         if (!textBounds.height) continue
-        if (textBounds.bottom > bottom + 1 || textBounds.top < bounds.top - 1
-          || textBounds.left < bounds.left - 1 || textBounds.right > bounds.right + 1) return true
+        if (textBounds.bottom > bottom + 1 || textBounds.top < bounds.top - 1) return true
+        if (!truncated && (textBounds.left < bounds.left - 1 || textBounds.right > bounds.right + 1)) return true
         for (let ancestor: HTMLElement | null = element; ancestor; ancestor = ancestor.parentElement) {
           const style = getComputedStyle(ancestor)
           const clip = ancestor.getBoundingClientRect()
           if (/^(hidden|clip|auto|scroll)$/.test(style.overflowY)
             && (textBounds.top < clip.top - 1 || textBounds.bottom > clip.bottom + 1)) return true
-          // A deliberate one-line ellipsis (running header title) keeps its text visible as "…";
-          // it is layout, not lost content, and depends on the runtime's fallback font widths.
-          const ellipsized = style.textOverflow === 'ellipsis' && style.whiteSpace === 'nowrap'
-          if (!ellipsized && /^(hidden|clip|auto|scroll)$/.test(style.overflowX)
+          if (!truncated && /^(hidden|clip|auto|scroll)$/.test(style.overflowX)
             && (textBounds.left < clip.left - 1 || textBounds.right > clip.right + 1)) return true
           if (ancestor === section) break
         }
