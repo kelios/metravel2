@@ -18,6 +18,8 @@ const { createToolSession, publicRequest, TokenError } = require('./lib/metravel
 
 const path = require('path');
 
+const { resolveFinalePk, FinalePkError } = require('./lib/quest-finale-pk');
+
 const { parseCliArgs, parseCliTokens, requireNoBatchFailures, requireNonEmptySelection, runCli } = require('./lib/cli-contract');
 
 const USAGE = `Синк контента квеста из локального data-файла на прод
@@ -178,12 +180,31 @@ async function main() {
             console.log(`  ✅ step ${s.step_id}${doReorder ? ` (order ${finalOrder})` : ''}`);
         }
         if (skippedSteps) questsWithSkippedSteps++;
-        // finale — OneToOne с квестом: finale id == numeric quest id (bundle.id).
-        // Список финалов скрывает id, но detail /api/quest-finales/<id>/ доступен по id квеста.
+        // finale — OneToOne с квестом, но pk записи финала СВОЙ и с id квеста не
+        // совпадает (#2427: PATCH по id квеста переписал финал Торуни в Люблин и
+        // обратно). pk резолвится только через `lib/quest-finale-pk` — маппинг
+        // со сверкой текста или перебор с детектором коллизии; непроверяемый
+        // исход роняет прогон без записи.
         const finaleText = q.finale && (q.finale.text || q.finale.story);
         if (finaleText && bundle.finale && bundle.finale.text !== finaleText) {
-            await api.patch(`/api/quest-finales/${bundle.id}/`, { text: finaleText });
-            console.log('  ✅ finale');
+            const pk = await resolveFinalePk({ questId: q.quest_id, currentText: bundle.finale.text, apiGet: api.get });
+            await api.patch(`/api/quest-finales/${pk}/`, { text: finaleText });
+            if (isDryRun) {
+                console.log(`  [DRY] finale → pk=${pk}`);
+            } else {
+                // Успешный PATCH не доказывает, что запись ушла в этот квест:
+                // применённым финал считается только после совпавшего verify.
+                const live = await api.get(`/api/quests/by-quest-id/${encodeURIComponent(q.quest_id)}/`);
+                const liveText = ((live.finale && live.finale.text) || '').trim();
+                if (liveText !== finaleText.trim()) {
+                    throw new FinalePkError([
+                        `Текст финала записан в pk=${pk}, но у квеста «${q.quest_id}» на проде остался другой текст — правка ушла в чужую запись.`,
+                        `   Сейчас у квеста: «${liveText.slice(0, 120)}${liveText.length > 120 ? '…' : ''}»`,
+                        `   Верни прежний текст в pk=${pk} по GET/PATCH /api/quest-finales/${pk}/ и сверь маппинг.`,
+                    ]);
+                }
+                console.log(`  ✅ finale (pk=${pk})`);
+            }
         }
     }
     console.log('\n✅ Sync завершён');

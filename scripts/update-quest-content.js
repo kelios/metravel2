@@ -26,9 +26,9 @@ const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const { QUESTS: FINALE_QUESTS } = require('./generate-quest-finale-videos.js');
+const { resolveFinalePk: resolveSharedFinalePk, FinalePkError } = require('./lib/quest-finale-pk');
 
-const { rethrowTerminalAuthError, createToolSession, publicRequest, TokenError, formatTokenError  } = require('./lib/metravel-tool-session')
+const { createToolSession, publicRequest, TokenError, formatTokenError } = require('./lib/metravel-tool-session')
 
 const args = process.argv.slice(2);
 const isDryRun = args.includes('--dry-run');
@@ -74,17 +74,6 @@ function archiveApplied(absPath) {
     }
     return target;
 }
-
-// Точный маппинг questId -> pk финала: тот же источник, по которому заливаются
-// финальные видео (`upload-quest-finales.js`), сверенный с продом по тексту.
-// Для квеста из маппинга угадывать по тексту не нужно вообще.
-const KNOWN_FINALE_PK = new Map(FINALE_QUESTS.filter(q => q.finaleId).map(q => [q.questId, q.finaleId]));
-
-// Верхняя граница перебора для квестов ВНЕ маппинга: FK quest->finale API не
-// отдаёт, других идентификаторов в ответе нет. Граница считается от реальных
-// данных — фиксированные 60 обрывали перебор на середине (78 из 131 известных
-// финалов лежат за ними), и «не нашёл pk» становилось штатным исходом.
-const FINALE_PK_SCAN_LIMIT = Math.max(60, ...KNOWN_FINALE_PK.values()) + 20;
 
 // путь для сообщений: относительный внутри репо, абсолютный снаружи
 function displayPath(absPath) {
@@ -143,68 +132,16 @@ function stepPayload(s) {
     return p;
 }
 
-// Резолв pk записи финала. Маппинг проверяется по тексту: pk из маппинга и
-// финал квеста — одна и та же запись, поэтому расхождение текстов означает, что
-// маппинг протух, и продолжать по нему нельзя. Фолбэк для квестов вне маппинга —
-// перебор по тексту с детектором коллизии.
+// Резолв pk записи финала — общий модуль `lib/quest-finale-pk` (маппинг со
+// сверкой по тексту, фолбэк — полный перебор с детектором коллизии). Отказ
+// резолва здесь — провал запуска со снимком на месте.
 async function resolveFinalePk(curText, dataPath) {
-    const mapped = KNOWN_FINALE_PK.get(QUEST_ID);
-    if (mapped != null) {
-        let mappedText = null;
-        try { mappedText = ((await apiGet(`/api/quest-finales/${mapped}/`)).text || '').trim(); }
-        catch (e) {
-          rethrowTerminalAuthError(e);
-            failRun(dataPath, [
-                `Финал квеста «${QUEST_ID}» по маппингу должен лежать в pk=${mapped}, но записи нет: ${e.message}`,
-                '   Маппинг questId → finaleId в scripts/generate-quest-finale-videos.js протух — сверь его с продом.',
-            ]);
-        }
-        if (mappedText !== curText) {
-            failRun(dataPath, [
-                `Маппинг ведёт финал квеста «${QUEST_ID}» в pk=${mapped}, но там лежит другой текст — запись ушла бы в чужой квест.`,
-                `   В pk=${mapped}: «${mappedText.slice(0, 100)}${mappedText.length > 100 ? '…' : ''}»`,
-                `   У квеста:   «${curText.slice(0, 100)}${curText.length > 100 ? '…' : ''}»`,
-                '   Поправь маппинг questId → finaleId в scripts/generate-quest-finale-videos.js и повтори.',
-            ]);
-        }
-        return mapped;
+    try {
+        return await resolveSharedFinalePk({ questId: QUEST_ID, currentText: curText, apiGet });
+    } catch (e) {
+        if (e instanceof FinalePkError) failRun(dataPath, e.lines);
+        throw e;
     }
-
-    const matches = [];
-    for (let i = 1; i <= FINALE_PK_SCAN_LIMIT; i++) {
-        let finale = null;
-        try { finale = await apiGet(`/api/quest-finales/${i}/`); }
-        catch (e) {
-          rethrowTerminalAuthError(e);
-            if (e.statusCode === 404) continue;
-            // Пропущенный из-за сбоя pk мог быть вторым совпадением: тогда
-            // коллизия выглядела бы однозначным резолвом.
-            failRun(dataPath, [
-                `Перебор финалов оборвался на pk=${i}: ${e.message}`,
-                '   Резолв по тексту без полного перебора не отличает коллизию от однозначного совпадения.',
-            ]);
-        }
-        if ((finale.text || '').trim() === curText) matches.push(i);
-    }
-    if (matches.length > 1) {
-        failRun(dataPath, [
-            `Текущий текст финала квеста «${QUEST_ID}» совпадает сразу с несколькими записями: pk=${matches.join(', ')}.`,
-            '   По тексту нужную запись не отличить, а запись наугад ушла бы в чужой квест.',
-            `   Разбери вручную: сравни GET /api/quest-finales/{${matches.join(',')}}/ и примени текст точечно.`,
-        ]);
-    }
-    // Не нашли запись — правка финала не легла бы никуда. Раньше это был ⚠️ с
-    // продолжением: снимок уезжал в архив с кодом 0, а отредактированный финал
-    // тихо терялся. Пропуск здесь не мягче коллизии, он просто менее заметен.
-    if (matches.length === 0) {
-        failRun(dataPath, [
-            `Не нашёл запись финала квеста «${QUEST_ID}» по текущему тексту в pk 1..${FINALE_PK_SCAN_LIMIT} — текст финала не применён.`,
-            '   Текущий текст финала на проде изменился между снятием снимка и запуском,',
-            `   либо запись лежит за границей перебора (pk > ${FINALE_PK_SCAN_LIMIT}).`,
-            `   Добавь квест в маппинг questId → finaleId (scripts/generate-quest-finale-videos.js) или примени текст точечно.`,
-        ]);
-    }
-    return matches[0];
 }
 
 async function main() {
@@ -242,7 +179,7 @@ async function main() {
         console.log(`  ✅ step ${s.step_id} (id=${target.id})`);
     }
     // finale: pk финала НЕ равен pk квеста (FK quest->finale API не отдаёт).
-    // Основной путь — точный маппинг questId -> pk (`KNOWN_FINALE_PK`), тот же,
+    // Основной путь — точный маппинг questId -> pk (`lib/quest-finale-pk`), тот же,
     // по которому заливаются финальные видео. Угадывание по тексту осталось
     // фолбэком для квестов вне маппинга: текст — не ключ (#1458), у двух
     // квестов он может совпасть дословно, поэтому диапазон сканируется целиком
