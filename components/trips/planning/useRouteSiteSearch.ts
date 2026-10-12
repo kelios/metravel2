@@ -38,8 +38,16 @@ export function useRouteSiteSearch({
   const appliedSiteQuery = useDebouncedValue(siteQuery, PLACES_SEARCH_DEBOUNCE_MS, isBlankQuery);
   const [siteOptions, setSiteOptions] = useState<SiteRouteOption[]>([]);
   const [siteSearchStatus, setSiteSearchStatus] = useState<SiteSearchStatus>('idle');
+  // Дочитывание координат выбранной статьи владеет своим «loading» отдельно от
+  // поиска: устаревший выбор (строку уже поменяли) обязан снять только свой флаг,
+  // иначе при неизменном appliedSiteQuery эффект поиска не перезапустится и
+  // подсказка «Ищем совпадения» зависнет до следующего нажатия.
+  const [detailLoadingToken, setDetailLoadingToken] = useState<number | null>(null);
 
-  useEffect(() => () => { selectionToken.current += 1; }, [isAddPointOpen, newType, siteQuery]);
+  useEffect(() => () => {
+    selectionToken.current += 1;
+    setDetailLoadingToken(null);
+  }, [isAddPointOpen, newType, siteQuery]);
 
   useEffect(() => {
     const query = appliedSiteQuery.trim();
@@ -101,6 +109,7 @@ export function useRouteSiteSearch({
     setSiteQuery('');
     setSiteOptions([]);
     setSiteSearchStatus('idle');
+    setDetailLoadingToken(null);
   }, []);
 
   const resolveSiteOption = useCallback(async (
@@ -114,7 +123,7 @@ export function useRouteSiteSearch({
       ? option.coordinates : null;
     if (!coordinates && option.kind === 'travel' && option.id != null) {
       const travelId = option.id;
-      setSiteSearchStatus('loading');
+      setDetailLoadingToken(token);
       try {
         const travel = await queryClient.fetchQuery({
           queryKey: queryKeys.travel(travelId),
@@ -123,13 +132,13 @@ export function useRouteSiteSearch({
         coordinates = travelCoordinates(travel);
       } catch {
         if (token !== selectionToken.current) return;
-        setSiteSearchStatus('ready');
         onError(i18nT('tripsStatic:plan.siteSearch.detailError'));
         return;
+      } finally {
+        setDetailLoadingToken((current) => (current === token ? null : current));
       }
     }
     if (token !== selectionToken.current) return;
-    setSiteSearchStatus('ready');
     if (!coordinates) {
       onError(i18nT('tripsStatic:plan.siteSearch.noCoordinates'));
       return;
@@ -137,5 +146,12 @@ export function useRouteSiteSearch({
     onResolved({ ...option, coordinates });
   }, [queryClient]);
 
-  return { siteQuery, setSiteQuery, siteOptions, siteSearchStatus, resetSiteSearch, resolveSiteOption };
+  return {
+    siteQuery,
+    setSiteQuery,
+    siteOptions,
+    siteSearchStatus: detailLoadingToken !== null ? 'loading' as const : siteSearchStatus,
+    resetSiteSearch,
+    resolveSiteOption,
+  };
 }

@@ -592,6 +592,33 @@ describe('actual RouteBuilder site-search debounce (#2235)', () => {
     expect(mockedFetchTravels).toHaveBeenCalledTimes(1)
     screen.unmount()
   })
+  it('a stale travel-detail selection clears its own loading hint when the debounced query is unchanged (#2413)', async () => {
+    mockedFetchTravels.mockResolvedValue({
+      ...travelsPage, data: [{ ...travelsPage.data[0], travelAddress: [] }],
+    })
+    let resolveDetail!: (travel: Travel) => void
+    mockedFetchTravel.mockReturnValue(new Promise((resolve) => { resolveDetail = resolve }))
+    const screen = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    fireEvent.press(screen.getByTestId('route-builder-add-action'))
+    const input = screen.getByTestId('route-builder-site-search')
+    fireEvent.changeText(input, 'Маршрут')
+    await tick(400)
+    fireEvent.press(screen.getByTestId('route-builder-site-option-travel-77'))
+    await tick(0)
+    expect(mockedFetchTravel).toHaveBeenCalledTimes(1)
+    expect(screen.getByText('Ищем совпадения...')).toBeTruthy()
+    // Typing and deleting a letter inside the debounce window stales the
+    // selection but leaves the applied query unchanged, so search never reruns.
+    fireEvent.changeText(input, 'Маршрут1')
+    await tick(100)
+    fireEvent.changeText(input, 'Маршрут')
+    await tick(400)
+    await act(async () => { resolveDetail({ ...travelsPage.data[0], travelAddress: [] }); await Promise.resolve() })
+    expect(screen.queryByText('Ищем совпадения...')).toBeNull()
+    expect(screen.getByTestId('route-builder-site-option-travel-77')).toBeTruthy()
+    expect(mockMutate).not.toHaveBeenCalled()
+    screen.unmount()
+  })
   it('clear aborts pending search immediately and a late successful reply cannot restore options', async () => {
     let resolve!: (page: PlacesCatalogPage) => void
     mockedFetchPlacesCatalog.mockReturnValue(new Promise((res) => { resolve = res }))
