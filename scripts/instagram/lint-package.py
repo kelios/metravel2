@@ -15,7 +15,9 @@
   F11 — у reel.mp4 есть звуковая дорожка и длина 15–40 с (если есть ffprobe);
   F2  — титры Reel из spec.json держатся ≥ 1,5 с + 0,3 с на слово и не длиннее ~7 слов;
   B1  — запрещённые по Беларуси источники, общий список
-        scripts/content-source-denylist.json (тот же, что у scan-content-sources.js).
+        scripts/content-source-denylist.json (тот же, что у scan-content-sources.js);
+  R18 — в package.md чек-лист раздела 18: строка на каждый номер V1–V10 и F1–F13
+        с отметкой («- V1 да: …», «V10 не применяется»).
 
 Текст слайдов берётся из spec.json (make-carousel.py, вместе с name точек карты) и
 slides.txt (слайды другого скрипта или титры Reel: один слайд — блок через пустую строку).
@@ -55,6 +57,14 @@ EMOJI_RE = re.compile('(?:[\U0001F1E6-\U0001F1FF]{2}|[0-9#*]\uFE0F?\u20E3|%s%s(?
 HASHTAG_RE = re.compile(r'(?<![\w#])#[\w]+', re.U)
 QUEST_ID_RE = re.compile(r'(?:quest_id\s*[=:]\s*[`"\']?|by-quest-id/)([a-z0-9][a-z0-9-]+)', re.I)
 ALLOW_RE = re.compile(r'^\s*lint-allow:\s*(F10)\s+(.+?)\s+—\s+\S', re.M)
+CHECKLIST_ITEMS = ['V%d' % n for n in range(1, 11)] + ['F%d' % n for n in range(1, 14)]
+# Пункт чек-листа: строка списка «- V1 …» или номер после «·», «;», «.» с отметкой словом, галочкой
+# или прочерком — «V2 да (…) · V3 да», «F4 да — 1750 знаков», «V10 неприменимо», «F10 n/a», «F10 — ·».
+# Диапазон «V1–V10» и «V2/V3» пунктом не считаются.
+CHECKLIST_ITEM_RE = re.compile(
+    r'^\s*[-*]\s*\**([VF]\d{1,2})\**(?![\d/–-])'
+    r'|(?:^\s*|[·;]\s*|\.\s+)\**([VF]\d{1,2})\**'
+    r'(?=\s*[:—–-]?\s*(?:[а-яёА-ЯЁ✓✔]|n/a)|\s*[—–-]\s*(?:[(·;,]|$))', re.M)
 BAD_FIRST_LINE_RE = re.compile(r'^\s*(?:(?:всем\s+)?привет\b|итак\b|#|\d{1,2}[./]\d{1,2})', re.I)
 
 
@@ -236,6 +246,18 @@ def check_quest_answers(package, lines, data_glob=QUEST_DATA_GLOB):
 TITLE_MIN_S, TITLE_PER_WORD_S, TITLE_MAX_WORDS = 1.5, 0.3, 7
 
 
+def check_checklist(package):
+    """Раздел 18: creator проходит V1–V10 и F1–F13 строкой на номер в package.md."""
+    path = os.path.join(package, 'package.md')
+    if not os.path.exists(path):
+        return [finding('package.md', 0, 'R18', 'нет package.md с чек-листом V1–V10, F1–F13')]
+    present = {a or b for a, b in CHECKLIST_ITEM_RE.findall(read(path))}
+    missing = [item for item in CHECKLIST_ITEMS if item not in present]
+    if not missing:
+        return []
+    return [finding('package.md', 0, 'R18', 'в чек-листе нет строк: %s' % ', '.join(missing))]
+
+
 def check_reel_titles(package):
     """F2 для Reel (бриф шаг 5): титр держится ≥ 1,5 с + 0,3 с на слово, не длиннее ~7 слов."""
     path = os.path.join(package, 'spec.json')
@@ -313,6 +335,7 @@ def lint_package(package, spec_path=SPEC_PATH, denylist_path=DENYLIST_PATH, data
     hits += check_quest_answers(package, public, data_glob)
     hits += check_reel(package)
     hits += check_reel_titles(package)
+    hits += check_checklist(package)
     return hits
 
 
