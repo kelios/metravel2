@@ -86,3 +86,21 @@ test('book responds to height-only resize without reload', async ({ page }) => {
   await page.setViewportSize({ width: 2048, height: 900 })
   await expect.poll(async () => (await frame.boundingBox())!.height).toBeCloseTo(original, 0)
 })
+
+// The visible field must be the real target: a click near its top edge has to
+// focus the input on narrow/mobile variants too, not only on the paper book.
+for (const viewport of [{ width: 1440, height: 900 }, { width: 1279, height: 900 }, { width: 390, height: 844 }]) {
+  test(`search field edge click focuses the input at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport)
+    await preacceptCookies(page)
+    await page.goto('/', { waitUntil: 'domcontentloaded' })
+    const input = page.getByRole('searchbox').first()
+    await expect(input).toBeVisible()
+    await input.scrollIntoViewIfNeeded()
+    const field = (await input.locator('xpath=..').boundingBox())!
+    const box = (await input.boundingBox())!
+    expect(box.height).toBeGreaterThanOrEqual(44)
+    await page.mouse.click(box.x + 30, field.y + 4)
+    await expect(input).toBeFocused()
+  })
+}

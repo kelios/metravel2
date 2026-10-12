@@ -92,9 +92,12 @@ const createStyles = (
         ? DESIGN_TOKENS.colors.bookPageSurface
         : colors.surface,
     },
+    // The input fills the field's full inner height on every variant, so the
+    // visible 46/50px field is also the real tap/click target (≥44px, #2405).
     input: {
       flex: 1,
-      minHeight: useBookPaperColors ? 44 : undefined,
+      alignSelf: 'stretch',
+      minHeight: 44,
       fontSize: isMobile ? 14 : 15,
       ...Platform.select({ web: { outlineStyle: 'none' } as any, default: {} }),
     },
