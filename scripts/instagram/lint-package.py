@@ -261,33 +261,55 @@ def check_checklist(package):
     return [finding('package.md', 0, 'R18', 'в чек-листе нет строк: %s' % ', '.join(missing))]
 
 
-def check_reel_titles(package):
-    """F2 для Reel (бриф шаг 5): титр держится ≥ 1,5 с + 0,3 с на слово, не длиннее ~7 слов."""
-    path = os.path.join(package, 'spec.json')
-    if not os.path.exists(path):
+def reel_title_items(data):
+    """[(текст, секунд на экране)] из spec монтажа: dict с segments/texts или список сегментов;
+    время — `dur`, `t0`/`t1` или строка `t: "0.0-4.0"`."""
+    if isinstance(data, list):
+        data = {'segments': data}
+    if not isinstance(data, dict):
         return []
-    try:
-        data = json.loads(read(path))
-    except ValueError:
-        return []
-    hits = []
     items = []
-    for item in (data.get('segments') or []) if isinstance(data, dict) else []:
-        if isinstance(item, dict) and isinstance(item.get('text'), str) and item.get('dur'):
+    for item in (data.get('segments') or []) + (data.get('texts') or []):
+        if not isinstance(item, dict) or not isinstance(item.get('text'), str):
+            continue
+        span = re.match(r'^\s*([\d.]+)\s*[-–]\s*([\d.]+)\s*$', str(item.get('t', '')))
+        if item.get('dur'):
             items.append((item['text'], float(item['dur'])))
-    for item in (data.get('texts') or []) if isinstance(data, dict) else []:
-        if isinstance(item, dict) and isinstance(item.get('text'), str) and 't0' in item and 't1' in item:
+        elif 't0' in item and 't1' in item:
             items.append((item['text'], float(item['t1']) - float(item['t0'])))
+        elif span:
+            items.append((item['text'], float(span.group(2)) - float(span.group(1))))
+    return items
+
+
+def check_reel_titles(package):
+    """F2 для Reel (бриф шаг 5): титр держится ≥ 1,5 с + 0,3 с на слово, не длиннее ~7 слов.
+    Spec монтажа — spec.json в пакете или в build/; без тайминга слова считаются по slides.txt."""
+    items = []
+    for name in ('spec.json', os.path.join('build', 'spec.json')):
+        path = os.path.join(package, name)
+        if os.path.exists(path) and not items:
+            try:
+                items = reel_title_items(json.loads(read(path)))
+            except ValueError:
+                pass
+    plain = os.path.join(package, 'slides.txt')
+    if not items and os.path.exists(os.path.join(package, 'reel.mp4')):
+        if not os.path.exists(plain):
+            return [finding('reel.mp4', 0, 'F2', 'титры Reel не найдены: нет spec.json (segments/texts с dur, '
+                                                 't0/t1 или t) и slides.txt — линт их не проверил')]
+        items = [(block.strip(), None) for block in re.split(r'\n\s*\n', read(plain)) if block.strip()]
+    hits = []
     merged = []  # один титр через несколько клипов подряд — одно появление на экране
     for text, shown in items:
-        if merged and merged[-1][0] == text:
+        if merged and merged[-1][0] == text and shown is not None:
             merged[-1] = (text, merged[-1][1] + shown)
         else:
             merged.append((text, shown))
     for index, (text, shown) in enumerate(merged, 1):
         words = len(text.split())
         need = TITLE_MIN_S + TITLE_PER_WORD_S * words
-        if shown + 1e-6 < need:
+        if shown is not None and shown + 1e-6 < need:
             hits.append(finding('spec.json титр %02d' % index, 0, 'F2',
                                 'титр «%s» держится %.1f с, нужно ≥ %.1f с' % (text.replace('\n', ' / '), shown, need)))
         if words > TITLE_MAX_WORDS:

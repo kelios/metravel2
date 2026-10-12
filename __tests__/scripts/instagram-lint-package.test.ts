@@ -159,6 +159,24 @@ describe('instagram lint-package', () => {
     ])
   })
 
+  it('finds Reel titles in build/spec.json lists and t ranges, and flags a Reel with no titles to check', () => {
+    const listed = makePackage('reel-build-list', { 'caption.txt': CLEAN_CAPTION, 'reel.mp4': '' })
+    fs.mkdirSync(path.join(listed, 'build'))
+    fs.writeFileSync(path.join(listed, 'build', 'spec.json'), JSON.stringify([
+      { src: 'a.MOV', dur: 1.2, text: 'Касина-Велька: круг 11,5 км' },
+    ]))
+    const ranged = makePackage('reel-t-range', {
+      'caption.txt': CLEAN_CAPTION,
+      'spec.json': JSON.stringify({ format: 'reel', segments: [{ t: '0.0-1.5', text: 'Касина-Велька: круг 11,5 км' }] }),
+    })
+    const bare = makePackage('reel-no-titles', { 'caption.txt': CLEAN_CAPTION, 'reel.mp4': '' })
+    for (const dir of [listed, ranged]) {
+      expect(lint(dir).hits.map((h: { rule: string; source: string }) => `${h.rule} ${h.source}`))
+        .toContain('F2 spec.json титр 01')
+    }
+    expect(lint(bare).hits).toContainEqual(expect.objectContaining({ rule: 'F2', source: 'reel.mp4' }))
+  })
+
   it('requires a section 18 checklist line per V/F number in package.md', () => {
     const missing = makePackage('checklist-missing', {
       'caption.txt': CLEAN_CAPTION,
