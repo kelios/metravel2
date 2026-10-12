@@ -59,11 +59,13 @@ describe('instagram lint-package', () => {
     ].join('\n')
     const dir = makePackage('dirty', {
       'caption.txt': caption,
-      'slides.txt': 'Все кадры в подборке зимние (данные на 11.10.2026)\n',
+      'slides.txt': 'Все кадры в подборке зимние (данные на 11.10.2026)\n\nЗдесь, как пишет Центральная научная библиотека, побывал король\n',
     })
-    const { status, rules } = lint(dir)
+    const { status, rules, hits } = lint(dir)
     expect(status).toBe(1)
     expect(new Set(rules)).toEqual(new Set(['F3', 'F4', 'F5', 'F8', 'V3', 'V6', 'V8']))
+    expect(hits.map((h: { message: string }) => h.message)).toContainEqual(
+      expect.stringContaining('ссылка на источник вместо рассказа): «как пишет Центральная научная библиотек'))
   })
 
   it('scans every package text with the shared Belarus denylist', () => {
