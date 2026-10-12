@@ -28,7 +28,8 @@
 | точечная правка полей шага или `quest.title` | `node scripts/apply-quest-patches.js --dry-run …`, затем `--apply`; патч `{quest_id, step_db_id, step_id, changes:{…}}` или `{quest_id, quest_db_id, changes:{title}}`; поля только внутри `changes` (allowlist: task, hint, answer_pattern, lat, lng, maps_url, story, location, title, order, input_type), `answer_pattern` строкой; источник — в отчёте, не в патче |
 | сквозная переработка квеста в одну историю | снимок `scripts/.quest-review/<quest_id>.json` + `node scripts/update-quest-content.js --quest-id=<id> --data=… --dry-run`, затем без `--dry-run` |
 | синк всего файла на прод | `scripts/sync-quest-to-prod.js --source-file=… --dry-run`, затем `--apply` — шлёт PATCH по ВСЕМ шагам, поэтому для точечных правок не годится; `quest.title` не патчит — его правят патчем квеста |
-| порядок шагов | только поле `order`, двухфазно: временные 900+, затем целевые (unique) — `sync-quest-to-prod.js --reorder` или патчи `order`; новый шаг — POST с временным order до синка |
+| порядок шагов | только поле `order`, двухфазно: временные 900+, затем целевые (unique) — `sync-quest-to-prod.js --reorder` или патчи `order` |
+| новая точка в живом квесте | патч `{quest_id, quest_db_id, after_step_id, create_step:{step_id, title, location, story, task, hint, answer_pattern, lat, lng, point_role?}}` тем же `apply-quest-patches.js`: POST с временным order, хвост сдвигается двухфазно, точка встаёт сразу за `after_step_id` (после финальной — нельзя); повтор пропускает уже созданный step_id. Data-файл: шаг вписать руками на то же место, затем `sync-quest-data-from-prod.js` — он только сверяет поля и новых шагов не добавляет |
 
 Рабочие файлы и патчи — `.codex-temp/quest-audit/` (gitignored), патч-файл
 пишется инкрементально после каждого квеста.
