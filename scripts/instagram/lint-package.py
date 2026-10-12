@@ -9,7 +9,7 @@
   F4  — длина подписи через len() (не `wc -m`: при пустой локали он считает байты);
   F5  — не больше 2 эмодзи;
   F8  — 3–5 хештегов, все в конце подписи;
-  F10 — ответы на задания квеста не раскрыты (если в пакете есть quest_id и
+  F10 — ответы на задания квеста не раскрыты (если в пакете есть quest_id или адрес квеста и
         локальный scripts/*-quest-data.js с answer_pattern — его читает node); совпадение, которое не
         ответ, снимается строкой `lint-allow: F10 <слово> — <причина>` в package.md;
   F11 — у reel.mp4 есть звуковая дорожка и длина 15–40 с (если есть ffprobe);
@@ -56,6 +56,8 @@ EMOJI_RE = re.compile('(?:[\U0001F1E6-\U0001F1FF]{2}|[0-9#*]\uFE0F?\u20E3|%s%s(?
     EMOJI_CHAR, EMOJI_TAIL, EMOJI_CHAR, EMOJI_TAIL))
 HASHTAG_RE = re.compile(r'(?<![\w#])#[\w]+', re.U)
 QUEST_ID_RE = re.compile(r'(?:quest_id\s*[=:]\s*[`"\']?|by-quest-id/)([a-z0-9][a-z0-9-]+)', re.I)
+# Адрес квеста по F7 — metravel.by/quests/<city_id>/<quest_id>: квест в пакете находится и без строки quest_id.
+QUEST_URL_RE = re.compile(r'\bquests/\d+/([a-z0-9][a-z0-9-]+)', re.I)
 ALLOW_RE = re.compile(r'^\s*lint-allow:\s*(F10)\s+(.+?)\s+—\s+\S', re.M)
 CHECKLIST_ITEMS = ['V%d' % n for n in range(1, 11)] + ['F%d' % n for n in range(1, 14)]
 # Пункт чек-листа: строка списка «- V1 …» или номер после «·», «;», «.» с отметкой словом, галочкой
@@ -166,10 +168,11 @@ def check_caption(caption):
 
 def quest_ids(package):
     ids = set()
-    for name in SOURCE_FILES:
+    for name in SOURCE_FILES + ('caption.txt',):
         path = os.path.join(package, name)
         if os.path.exists(path):
-            ids.update(m.lower() for m in QUEST_ID_RE.findall(read(path)))
+            text = read(path)
+            ids.update(m.lower() for m in QUEST_ID_RE.findall(text) + QUEST_URL_RE.findall(text))
     return ids
 
 

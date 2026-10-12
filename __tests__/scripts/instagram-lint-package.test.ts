@@ -91,6 +91,11 @@ describe('instagram lint-package', () => {
     const leak = makePackage('quest-leak', files)
     expect(lint(leak, ['--quest-data', data])).toMatchObject({ status: 1, rules: ['F10'] })
 
+    const byUrl = makePackage('quest-by-url', {
+      'caption.txt': CLEAN_CAPTION.replace('Я давно', 'Фонтан Нептуна стоит на рынке, квест: metravel.by/quests/22/demo-quest. Я давно'),
+    })
+    expect(lint(byUrl, ['--quest-data', data])).toMatchObject({ status: 1, rules: ['F10'] })
+
     const allowed = makePackage('quest-allowed', {
       ...files,
       'package.md': `lint-allow: F10 нептуна — название фонтана на маршруте, задание о другом\n${CHECKLIST}`,
