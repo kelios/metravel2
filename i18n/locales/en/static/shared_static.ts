@@ -81,6 +81,8 @@ export const sharedStaticResources = {
   "subscription.sendQuestNotSubscribed": "No subscription found — subscribe and we will send you the quest.",
   "subscription.questSentExisting": "You're already subscribed — we've sent the quest to your email.",
   "subscription.checkMail": "Check your inbox and confirm your subscription, then we'll send you an email.",
+  "subscription.pendingConfirm": "Your subscription isn't confirmed yet — check your inbox (and your Spam folder) and follow the link in the email.",
+  "subscription.pendingConfirmQuest": "Your subscription isn't confirmed yet — check your inbox (and your Spam folder) and follow the link in the email, then we'll send you the quest.",
   "subscriptionLink.loading": "Checking the link…",
   "subscriptionLink.confirmedTitle": "Subscription confirmed",
   "subscriptionLink.confirmedText": "Thank you! New routes and quests will now arrive in your inbox. You can unsubscribe via the link in any email.",

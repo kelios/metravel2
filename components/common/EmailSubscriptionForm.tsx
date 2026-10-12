@@ -127,7 +127,13 @@ function EmailSubscriptionForm({
       })
     },
     onSuccess: (result) => {
-      queueAnalyticsEvent('email_subscribe', { source, status: result.status })
+      queueAnalyticsEvent('email_subscribe', {
+        source,
+        status: result.status,
+        ...(result.confirmation_resent !== undefined
+          ? { confirmation_resent: result.confirmation_resent }
+          : {}),
+      })
     },
   })
 
@@ -156,6 +162,9 @@ function EmailSubscriptionForm({
   const succeeded = mutation.isSuccess
   const alreadyExists = mutation.data?.status === 'exists'
   const sentToExisting = mutation.data?.status === 'sent'
+  // #2396: адрес ещё не подтверждён — не «уже подписаны». Текст один при любом
+  // confirmation_resent: письмо со ссылкой у человека есть в обоих случаях.
+  const awaitingConfirmation = mutation.data?.status === 'pending'
 
   const handleSubmit = () => {
     if (!consentChecked) {
@@ -238,10 +247,18 @@ function EmailSubscriptionForm({
             )
           ) : succeeded ? (
             <View style={[styles.successRow, isMobile ? styles.fieldsStacked : styles.fieldsRow]}>
-              <Feather name="check-circle" size={18} color={colors.primaryDark} />
+              <Feather
+                name={awaitingConfirmation ? 'mail' : 'check-circle'}
+                size={18}
+                color={colors.primaryDark}
+              />
               <Text style={styles.successText}>
                 {sentToExisting
                   ? i18nT('sharedStatic:subscription.questSentExisting')
+                  : awaitingConfirmation
+                  ? source === 'quest'
+                    ? i18nT('sharedStatic:subscription.pendingConfirmQuest')
+                    : i18nT('sharedStatic:subscription.pendingConfirm')
                   : alreadyExists
                   ? i18nT('shared:components.common.EmailSubscriptionForm.vy_uzhe_podpisany_spasibo_chto_s_nami_6014714e')
                   : source === 'quest'

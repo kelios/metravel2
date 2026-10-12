@@ -240,6 +240,33 @@ describe('EmailSubscriptionForm', () => {
         expect(utils.queryByText(/Проверьте почту/)).toBeNull();
     });
 
+    describe('pending — адрес ждёт подтверждения (#2396)', () => {
+        const PENDING = 'Подписка ещё не подтверждена — проверьте почту (и папку «Спам») и перейдите по ссылке из письма.';
+        const PENDING_QUEST =
+            'Подписка ещё не подтверждена — проверьте почту (и папку «Спам») и перейдите по ссылке из письма, после этого пришлём квест.';
+
+        it.each([true, false])('на квесте просит перейти по ссылке и обещает квест (confirmation_resent=%s)', async (resent) => {
+            mockedSubscribeEmail.mockResolvedValue({ ok: true, status: 'pending', confirmation_resent: resent });
+            const utils = renderForm('quest');
+            await submitValid(utils);
+            await waitFor(() => expect(utils.queryByText(PENDING_QUEST)).toBeTruthy());
+            expect(utils.queryByText(/Вы уже подписаны/)).toBeNull();
+            expect(mockedQueueAnalyticsEvent).toHaveBeenCalledWith('email_subscribe', {
+                source: 'quest',
+                status: 'pending',
+                confirmation_resent: resent,
+            });
+        });
+
+        it.each([true, false])('в остальных местах — тот же текст без квеста (confirmation_resent=%s)', async (resent) => {
+            mockedSubscribeEmail.mockResolvedValue({ ok: true, status: 'pending', confirmation_resent: resent });
+            const utils = renderForm('article', 'https://metravel.by/articles');
+            await submitValid(utils);
+            await waitFor(() => expect(utils.queryByText(PENDING)).toBeTruthy());
+            expect(utils.queryByText(/Вы уже подписаны/)).toBeNull();
+        });
+    });
+
     it('не обращается к бэкенду при некорректном email', async () => {
         const { getByLabelText, getByTestId, queryByText } = renderForm();
 

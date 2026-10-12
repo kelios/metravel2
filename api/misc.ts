@@ -782,8 +782,14 @@ export interface SubscribeResult {
   /**
    * `sent` (#2317): адрес уже подписан и подтверждён, а квест со страницы формы
    * бэк отправил на почту сразу, без нового подтверждения.
+   * `pending` (#2395): адрес уже ждёт подтверждения по ссылке из письма.
    */
-  status: 'created' | 'exists' | 'sent';
+  status: 'created' | 'exists' | 'sent' | 'pending';
+  /**
+   * Только для `pending`: `true` — этот запрос поставил новое письмо
+   * подтверждения, `false` — действует пауза и письмо ушло раньше.
+   */
+  confirmation_resent?: boolean;
 }
 
 export interface SubscribeEmailConsent {
@@ -793,7 +799,8 @@ export interface SubscribeEmailConsent {
 
 // Public email lead subscription (growth forms on home/articles). Backend BE-3:
 // POST /api/subscribe/ -> 201 {ok,status:"created"} | 200 {ok,status:"exists"|"sent"}
-// | 400 {email:[...]} | 429 (scoped throttle). No auth required.
+// | 200 {ok,status:"pending",confirmation_resent:boolean} | 400 {email:[...]}
+// | 429 (scoped throttle). No auth required. Unknown status -> "created".
 export const subscribeEmail = async (
   email: string,
   source: SubscribeSource,
@@ -828,6 +835,7 @@ export const subscribeEmail = async (
     const json = await safeJsonParse<{
       ok?: boolean;
       status?: string;
+      confirmation_resent?: unknown;
       email?: string[];
       source?: string[];
       detail?: string;
@@ -844,9 +852,16 @@ export const subscribeEmail = async (
       throw new Error(firstError);
     }
 
+    const status: SubscribeResult['status'] =
+      json?.status === 'exists' || json?.status === 'sent' || json?.status === 'pending'
+        ? json.status
+        : 'created';
     return {
       ok: Boolean(json?.ok ?? true),
-      status: json?.status === 'exists' || json?.status === 'sent' ? json.status : 'created',
+      status,
+      ...(status === 'pending' && typeof json?.confirmation_resent === 'boolean'
+        ? { confirmation_resent: json.confirmation_resent }
+        : {}),
     };
   } catch (e: unknown) {
     if (__DEV__) {

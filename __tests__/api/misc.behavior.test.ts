@@ -786,6 +786,26 @@ describe('api/misc', () => {
     })
   })
 
+  it('subscribeEmail keeps pending with confirmation_resent and maps unknown status to created', async () => {
+    mockSanitizeInput.mockImplementation((v: string) => v.trim())
+    mockFetchWithTimeout.mockResolvedValue({ ok: true, status: 200 })
+
+    for (const resent of [true, false]) {
+      mockSafeJsonParse.mockResolvedValueOnce({ ok: true, status: 'pending', confirmation_resent: resent })
+      await expect(subscribeEmail('a@b.com', 'quest')).resolves.toEqual({
+        ok: true,
+        status: 'pending',
+        confirmation_resent: resent,
+      })
+    }
+
+    mockSafeJsonParse.mockResolvedValueOnce({ ok: true, status: 'pending', confirmation_resent: 'yes' })
+    await expect(subscribeEmail('a@b.com', 'quest')).resolves.toEqual({ ok: true, status: 'pending' })
+
+    mockSafeJsonParse.mockResolvedValueOnce({ ok: true, status: 'mystery', confirmation_resent: true })
+    await expect(subscribeEmail('a@b.com', 'home')).resolves.toEqual({ ok: true, status: 'created' })
+  })
+
   it('subscribeEmail surfaces field validation (400) and throttle (429)', async () => {
     mockSanitizeInput.mockImplementation((v: string) => v.trim())
 

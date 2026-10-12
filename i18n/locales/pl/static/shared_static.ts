@@ -81,6 +81,8 @@ export const sharedStaticResources = {
   "subscription.sendQuestNotSubscribed": "Nie znaleziono subskrypcji — zapisz się, a wyślemy quest.",
   "subscription.questSentExisting": "Masz już subskrypcję — wysłaliśmy quest na e-mail.",
   "subscription.checkMail": "Sprawdź skrzynkę i potwierdź subskrypcję — potem wyślemy wiadomość.",
+  "subscription.pendingConfirm": "Subskrypcja nie jest jeszcze potwierdzona — sprawdź skrzynkę (także folder „Spam”) i kliknij link z wiadomości.",
+  "subscription.pendingConfirmQuest": "Subskrypcja nie jest jeszcze potwierdzona — sprawdź skrzynkę (także folder „Spam”) i kliknij link z wiadomości, potem wyślemy quest.",
   "subscriptionLink.loading": "Sprawdzamy link…",
   "subscriptionLink.confirmedTitle": "Subskrypcja potwierdzona",
   "subscriptionLink.confirmedText": "Dziękujemy! Nowe trasy i questy będą teraz trafiać na Twoją skrzynkę. Wypisać się możesz przez link w każdym mailu.",

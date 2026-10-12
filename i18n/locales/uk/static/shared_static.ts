@@ -81,6 +81,8 @@ export const sharedStaticResources = {
   "subscription.sendQuestNotSubscribed": "Підписку не знайдено — підпишіться, і ми надішлемо квест.",
   "subscription.questSentExisting": "Ви вже підписані — надіслали квест на пошту.",
   "subscription.checkMail": "Перевірте пошту й підтвердьте підписку, після цього надішлемо лист.",
+  "subscription.pendingConfirm": "Підписку ще не підтверджено — перевірте пошту (і теку «Спам») та перейдіть за посиланням із листа.",
+  "subscription.pendingConfirmQuest": "Підписку ще не підтверджено — перевірте пошту (і теку «Спам») та перейдіть за посиланням із листа, після цього надішлемо квест.",
   "subscriptionLink.loading": "Перевіряємо посилання…",
   "subscriptionLink.confirmedTitle": "Підписку підтверджено",
   "subscriptionLink.confirmedText": "Дякуємо! Тепер нові маршрути й квести надходитимуть на вашу пошту. Відписатися можна за посиланням у будь-якому листі.",
