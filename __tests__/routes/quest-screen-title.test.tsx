@@ -310,6 +310,16 @@ describe('Quest screen title sync', () => {
     versions: [{ locale: 'ru', path: '/quests/4/minsk-cmok' }, { locale: 'pl', path: plRoute.path }],
   }
 
+  it('the RU detail is a revalidation-only serving caller (#2364)', () => {
+    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
+    render(<QuestScreen />)
+    const ruCalls = mockUseQuestServing.mock.calls
+      .map(([options]) => options as { locale: string; enabled: boolean; requireBootstrap?: boolean; cityId?: number })
+      .filter((options) => options.cityId === 4)
+    expect(ruCalls.length).toBeGreaterThan(0)
+    expect(ruCalls.every((options) => options.locale === 'ru' && options.requireBootstrap === true)).toBe(true)
+  })
+
   it('gates the exact prefixed bundle query while E is pending and preserves the static head', () => {
     mockUseQuestServing.mockReturnValue({ projection: null, pending: true, offline: false, refetch: jest.fn() })
     const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default

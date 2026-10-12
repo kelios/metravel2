@@ -397,6 +397,7 @@ export default function QuestByIdScreen({ route }: { route?: QuestLocaleRoute } 
     questSlug: questId,
     locale: 'ru',
     enabled: Platform.OS === 'web' && isFocused && Boolean(!route && bundle && questId),
+    requireBootstrap: true,
   });
   const serving = route ? prefixServing : ruServing;
   const prefixContentMismatch = Boolean(route && !offlinePrefix && bundle && bundle.contentLocale !== route.locale);

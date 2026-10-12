@@ -6,6 +6,8 @@ export type QuestServingOptions = {
   questSlug: string;
   locale: SupportedLocale;
   enabled: boolean;
+  /** Revalidation-only caller: pause after a 503 without package identity, unless the document carries this quest's bootstrap. */
+  requireBootstrap?: boolean;
 };
 export type QuestServingResult = {
   projection: QuestServingProjection | null;

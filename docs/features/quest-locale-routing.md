@@ -24,7 +24,11 @@ URL до mount; SPA-переход ждёт правильной локали. �
 Начальные canonical/alternates/version links берутся только из проверенного
 `script#quest-serving-v1[type="application/json"]`. Отдельный анонимный
 `GET /api/quests/serving/{city}/{slug}/?lang={locale}` ревалидирует проекцию
-без credentials и без кэширования. Свежий ответ заменяет bootstrap;
+без credentials и без кэширования. RU-деталь — только ревалидатор: она
+спрашивает API и при SPA-входе без bootstrap (иначе выпущенный квест потеряет
+языковые ссылки), но после ответа «identity пакета не установлена» (503,
+`release_id: null`: до релиза — каждый запрос, после — повторяемый сбой)
+делает паузу 5 минут, кроме документа с bootstrap этого квеста (#2364). Свежий ответ заменяет bootstrap;
 `available_locales` gameplay-бандла и offline-копия не восстанавливают E.
 
 V1 поля: `schema_version`, `release_id`, `city_id`, `quest_slug`, `locale`,
