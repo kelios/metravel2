@@ -46,7 +46,12 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
   const [selectedCategories, setSelectedCategories] = useState<string[]>(() =>
     Platform.OS === 'web' ? [] : resolvePlacesCategorySelection(params.category),
   )
-  const [implicitCategorySelection, setImplicitCategorySelection] = useState(params.category === undefined)
+  // Как и выбор категорий, на web происхождение категории читается из URL
+  // эффектом: SSG-кадр не знает `?category=`, а `false` здесь сразу включал
+  // статус «Загружаем» фильтров и ронял гидратацию (React #418, #2406).
+  const [implicitCategorySelection, setImplicitCategorySelection] = useState(() =>
+    Platform.OS === 'web' || params.category === undefined,
+  )
   const [scopeRequested, setScopeRequested] = useState(false)
   const [selectedCountry, setSelectedCountry] = useState<string | null>(() =>
     Platform.OS !== 'web' && typeof params.country === 'string' && params.country.trim() ? params.country.trim() : null,

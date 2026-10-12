@@ -155,7 +155,7 @@ describe('PlacesScreen pre-hydration chrome', () => {
 
 describe('Places URL state hydration parity (#2240)', () => {
   it.each<Record<string, string>>([
-    { category: 'Замок' }, { q: 'замок' }, { country: 'by' },
+    { category: 'Замок' }, { category: '' }, { q: 'замок' }, { country: 'by' },
     { q: 'замок', category: 'Замок', country: 'by' },
   ])('hydrates a neutral SSG frame before committing %j', async (params) => {
     Platform.OS = 'web'
@@ -166,7 +166,7 @@ describe('Places URL state hydration parity (#2240)', () => {
     const client = new QueryClient()
     function Probe() {
       const state = usePlacesCatalogController({ isCompact: true, isWide: false, hasMeasuredWidth: true })
-      const frame = JSON.stringify([state.query, state.selectedCategories, state.selectedCountry, state.activeCategoryTitle, state.isInitialLoading])
+      const frame = JSON.stringify([state.query, state.selectedCategories, state.selectedCountry, state.activeCategoryTitle, state.isInitialLoading, state.scopeStatus])
       useLayoutEffect(() => { frames.push(frame) }, [frame])
       return <span>{frame}</span>
     }
