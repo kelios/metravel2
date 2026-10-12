@@ -357,7 +357,7 @@ describe('ssg-skeletons', () => {
       expect(css).toContain('data-theme="dark"');
       expect(css).toContain(COLORS.dark.surface);
       expect(css).toContain(
-        '@media(min-width:1280px){html[data-theme="dark"] .ssg-home-page{background-color:transparent}}',
+        '@media(min-width:1280px){html[data-theme="dark"] .ssg-home-book,html[data-theme="dark"] .ssg-home-page{background-color:transparent}}',
       );
     });
 
@@ -710,7 +710,7 @@ describe('ssg-skeletons', () => {
       const { resolveHomeBookGeometry } = require('../../components/home/homeBookGeometry');
       const book = resolveHomeBookGeometry(1350, 940);
       expect(book.height).toBe(bookHeight);
-      expect(book.usableHeight).toBeCloseTo(592.8);
+      expect(book.usableHeight).toBeCloseTo(463.6);
 
       expect(css).toMatch(/@media\(min-width:1280px\)\{[^\n]*\.ssg-home-bar\{height:78px/);
       expect(css).toContain('.ssg-home-shell{max-width:none;padding:52px 40px 24px}');
@@ -721,8 +721,12 @@ describe('ssg-skeletons', () => {
       expect(css).not.toContain('aspect-ratio:1040/765');
       expect(css).toContain('background-image:var(--image-homeHeroBook,none)');
       expect(css).toContain('.ssg-home-page{position:relative;align-self:stretch;min-height:0;');
-      expect(css).toContain('padding-top:calc(var(--home-book-height) * 0.08)');
-      expect(css).toContain('padding-bottom:calc(var(--home-book-height) * 0.14)');
+      expect(css).toContain('padding-top:calc(var(--home-book-height) * 0.132)');
+      expect(css).toContain('padding-bottom:calc(var(--home-book-height) * 0.258)');
+      // Grid-item % would resolve against the page column, not the book.
+      expect(css).toContain('padding-left:calc(var(--home-book-width) * 0.156)');
+      // The cut-out artwork carries no backdrop of its own around the book.
+      expect(css).toMatch(/\.ssg-home-book\{display:grid;[^}]*background-color:transparent;background-image:var\(--image-homeHeroBook/);
       expect(css).toContain('.ssg-home-page-content{display:flex;flex-direction:column;min-height:0;overflow-y:auto;overflow-x:hidden}');
       expect(css).toContain(
         '.ssg-home-week{top:29.2%;align-self:start;width:61.2%;aspect-ratio:3/2;margin:0 0 0 5.1%',

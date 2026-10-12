@@ -4,7 +4,7 @@
 
 import { StyleSheet } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { getHomeBookPageMetrics, HOME_BOOK_GEOMETRY } from './homeBookGeometry'
+import { getHomeBookLeftPagePaddingShares, getHomeBookPageMetrics, HOME_BOOK_GEOMETRY } from './homeBookGeometry'
 
 import type { HeroStyleContext, HeroStyleParams } from './homeHeroStyles/context'
 import { createHeroShellStyles } from './homeHeroStyles/shellStyles'
@@ -44,12 +44,12 @@ export const createHomeHeroStyles = ({
   const desktopBookSubtitleSize = hasBookLayout ? `${pageMetrics.subtitleSize}px` : '17px'
   const desktopBookSubtitleLineHeight = hasBookLayout ? `${pageMetrics.subtitleLineHeight}px` : '28px'
 
-  // CSS percentage padding resolves against the containing book row width.
-  // Convert the paper's page-relative horizontal shares to book-relative ones.
+  // Content edges follow the page frame drawn on the book artwork; shares are
+  // of the whole book row, which is what flex-item percentage padding resolves to.
   const leftPageShare = isNarrowDesktopBook ? 0.49 : 0.5
-  const leftInsetShare = isUltraWideBook ? 0.17 : isLargeDesktopBook ? 0.18 : isNarrowDesktopBook ? 0.16 : 0.17
-  const leftPagePaddingLeft = hasBookLayout ? `${leftPageShare * leftInsetShare * 100}%` : 100
-  const leftPagePaddingRight = hasBookLayout ? `${leftPageShare * (isUltraWideBook ? 0.08 : 0.09) * 100}%` : 16
+  const leftPagePadding = getHomeBookLeftPagePaddingShares(leftPageShare)
+  const leftPagePaddingLeft = hasBookLayout ? `${leftPagePadding.start * 100}%` : 100
+  const leftPagePaddingRight = hasBookLayout ? `${leftPagePadding.end * 100}%` : 16
   const leftPagePaddingTop = hasBookLayout ? pageMetrics.topInset : 48
   const leftPageWidth = showSideSlider
     ? isNarrowDesktopBook
@@ -66,6 +66,15 @@ export const createHomeHeroStyles = ({
   const useDenseBookNotes = showSideSlider && viewportWidth < 2200
 
   const leftPagePaddingBottom = hasBookLayout ? pageMetrics.bottomInset : 110
+  // Page numbers are absolute children of their page, so percentages resolve
+  // against the page width; they line up with the page content edges.
+  const pageNumberBottom = hasBookLayout ? bookHeight * HOME_BOOK_GEOMETRY.pageNumberBottomShare : isMobile ? 10 : 14
+  const leftPageNumberLeft = hasBookLayout
+    ? (`${(HOME_BOOK_GEOMETRY.leftPageStartShare / leftPageShare) * 100}%` as const)
+    : isMobile ? 14 : 20
+  const rightPageNumberRight = hasBookLayout
+    ? (`${(HOME_BOOK_GEOMETRY.rightPageEndShare / (1 - leftPageShare)) * 100}%` as const)
+    : isMobile ? 14 : 20
 
   const warmBg = colors.background
   const warmBgSoft = hasBookLayout
@@ -128,6 +137,9 @@ export const createHomeHeroStyles = ({
     leftPagePaddingRight,
     leftPagePaddingTop,
     leftPagePaddingBottom,
+    pageNumberBottom,
+    leftPageNumberLeft,
+    rightPageNumberRight,
     leftPageWidth,
     rightPageWidth,
     serif,

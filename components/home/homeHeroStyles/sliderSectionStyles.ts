@@ -101,8 +101,8 @@ export const createSliderSectionStyles = (ctx: HeroStyleContext) => {
     },
     sliderPageNumber: {
       position: 'absolute' as const,
-      bottom: isMobile ? 10 : 14,
-      right: isMobile ? 14 : 20,
+      bottom: ctx.pageNumberBottom,
+      right: ctx.rightPageNumberRight,
       fontSize: isMobile ? 10 : 11,
       fontWeight: '400',
       letterSpacing: 0.4,

@@ -1,14 +1,47 @@
 /* global module */
 // Pure geometry shared by the loaded book and its Node-only static shell.
+// Inner page frame drawn on open-book-bg(-dark).webp (both share one drawing),
+// as shares of the artwork. The wrapper stretches the artwork with
+// `background-size: 100% 100%`, so horizontal shares are shares of the book
+// width and vertical ones of the book height. Innermost line across the page
+// slant, measured on the 1536×1024 source.
+const HOME_BOOK_ARTWORK_FRAME = Object.freeze({
+  left: 0.131,
+  gutterLeft: 0.4805,
+  right: 0.867,
+  top: 0.097,
+  bottom: 0.777,
+})
+// Breathing room between that frame line and the page content.
+const HOME_BOOK_FRAME_GAP = Object.freeze({ x: 0.025, y: 0.035 })
+// Shares go into CSS strings verbatim, so float noise is cut off here.
+const share = (value) => Math.round(value * 1e4) / 1e4
+
 const HOME_BOOK_GEOMETRY = Object.freeze({
   viewportReserve: 180,
   horizontalReserve: 80,
   artworkHeightRatio: 765 / 1040,
   minHeight: 240,
   compactHeight: 760,
-  topInsetShare: 0.08,
-  bottomInsetShare: 0.14,
+  topInsetShare: share(HOME_BOOK_ARTWORK_FRAME.top + HOME_BOOK_FRAME_GAP.y),
+  bottomInsetShare: share(1 - HOME_BOOK_ARTWORK_FRAME.bottom + HOME_BOOK_FRAME_GAP.y),
+  // Left-page content edges, as shares of the whole book width.
+  leftPageStartShare: share(HOME_BOOK_ARTWORK_FRAME.left + HOME_BOOK_FRAME_GAP.x),
+  leftPageEndShare: share(HOME_BOOK_ARTWORK_FRAME.gutterLeft - HOME_BOOK_FRAME_GAP.x),
+  rightPageEndShare: share(1 - HOME_BOOK_ARTWORK_FRAME.right + HOME_BOOK_FRAME_GAP.x),
+  // Page numbers sit inside the frame, just above its bottom line.
+  pageNumberBottomShare: share(1 - HOME_BOOK_ARTWORK_FRAME.bottom + 0.012),
 })
+
+// Horizontal padding of a left page that takes `pageShare` of the book width,
+// as shares of the book width: CSS percentage padding of a flex item resolves
+// against its container — the whole book row — not against the page itself.
+function getHomeBookLeftPagePaddingShares(pageShare) {
+  return {
+    start: HOME_BOOK_GEOMETRY.leftPageStartShare,
+    end: share(Math.max(0, pageShare - HOME_BOOK_GEOMETRY.leftPageEndShare)),
+  }
+}
 
 function getHomeBookWidthLimit(viewportWidth) {
   return viewportWidth >= 2560 ? 1520 : viewportWidth >= 1920 ? 1360 : 1200
@@ -55,9 +88,12 @@ function buildHomeBookSkeletonGeometryCSS() {
     const rightLeftShare = breakpoint >= 2560 ? 0.028 : narrow ? 0.026 : 0.032
     const rightRightShare = breakpoint >= 2560 ? 0.152 : narrow ? 0.172 : 0.162
     const photoBookShare = rightPageShare - rightLeftShare - rightRightShare
-    css += `@media(min-width:${breakpoint}px){.ssg-home-book{--home-book-width:min(calc(100vw - ${g.horizontalReserve}px),${cap}px);--home-book-height:max(${g.minHeight}px,min(calc(100vh - ${g.viewportReserve}px),calc(var(--home-book-width) * ${g.artworkHeightRatio})));--home-book-usable-height:calc(var(--home-book-height) * ${1 - g.topInsetShare - g.bottomInsetShare});width:var(--home-book-width);height:var(--home-book-height);grid-template-columns:${narrow ? '49% 51%' : '50% 50%'}}.ssg-home-page{padding-top:calc(var(--home-book-height) * ${g.topInsetShare});padding-bottom:calc(var(--home-book-height) * ${g.bottomInsetShare});padding-left:${narrow ? 16 : breakpoint >= 1920 && breakpoint < 2560 ? 18 : 17}%;padding-right:${breakpoint >= 2560 ? 8 : 9}%}.ssg-home-title{font-size:max(24px,min(${scale.titleVw}vw,${scale.titleMax}px,calc(var(--home-book-usable-height) * .1)));line-height:1.2}.ssg-home-sub{font-size:max(12px,min(${scale.subtitleVw}vw,${scale.subtitleMax}px,calc(var(--home-book-usable-height) * .03)));line-height:1.5}.ssg-home-week{top:calc(var(--home-book-height) * ${g.topInsetShare} + (var(--home-book-usable-height) - var(--home-book-width) * ${photoBookShare / 1.5}) / 2);width:calc(var(--home-book-width) * ${photoBookShare});margin-left:calc(var(--home-book-width) * ${rightLeftShare})}}`
+    // Grid-item percentages resolve against the page column, so the book-width
+    // shares are spelled out against --home-book-width instead.
+    const padding = getHomeBookLeftPagePaddingShares(1 - rightPageShare)
+    css += `@media(min-width:${breakpoint}px){.ssg-home-book{--home-book-width:min(calc(100vw - ${g.horizontalReserve}px),${cap}px);--home-book-height:max(${g.minHeight}px,min(calc(100vh - ${g.viewportReserve}px),calc(var(--home-book-width) * ${g.artworkHeightRatio})));--home-book-usable-height:calc(var(--home-book-height) * ${share(1 - g.topInsetShare - g.bottomInsetShare)});width:var(--home-book-width);height:var(--home-book-height);grid-template-columns:${narrow ? '49% 51%' : '50% 50%'}}.ssg-home-page{padding-top:calc(var(--home-book-height) * ${g.topInsetShare});padding-bottom:calc(var(--home-book-height) * ${g.bottomInsetShare});padding-left:calc(var(--home-book-width) * ${padding.start});padding-right:calc(var(--home-book-width) * ${padding.end})}.ssg-home-title{font-size:max(24px,min(${scale.titleVw}vw,${scale.titleMax}px,calc(var(--home-book-usable-height) * .1)));line-height:1.2}.ssg-home-sub{font-size:max(12px,min(${scale.subtitleVw}vw,${scale.subtitleMax}px,calc(var(--home-book-usable-height) * .03)));line-height:1.5}.ssg-home-week{top:calc(var(--home-book-height) * ${g.topInsetShare} + (var(--home-book-usable-height) - var(--home-book-width) * ${photoBookShare / 1.5}) / 2);width:calc(var(--home-book-width) * ${photoBookShare});margin-left:calc(var(--home-book-width) * ${rightLeftShare})}}`
   }
   return css
 }
 
-module.exports = { HOME_BOOK_GEOMETRY, getHomeBookWidthLimit, getHomeBookWidth, resolveHomeBookGeometry, getHomeBookPageMetrics, buildHomeBookSkeletonGeometryCSS }
+module.exports = { HOME_BOOK_GEOMETRY, getHomeBookLeftPagePaddingShares, getHomeBookWidthLimit, getHomeBookWidth, resolveHomeBookGeometry, getHomeBookPageMetrics, buildHomeBookSkeletonGeometryCSS }

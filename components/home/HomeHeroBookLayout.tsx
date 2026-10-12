@@ -520,7 +520,6 @@ export default function HomeHeroBookLayout({
           {withBookFrame && <View style={styles.heroBookSpine} />}
 
           <View testID="home-hero-left-page" style={styles.heroSection}>
-            {withBookFrame && <View style={styles.heroPageGoldLine} />}
             {withBookFrame && <View style={styles.heroPageCurlLeft} />}
 
             <View testID="home-hero-left-frame" style={styles.leftPageFrame}>

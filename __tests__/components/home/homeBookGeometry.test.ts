@@ -1,4 +1,27 @@
-import { HOME_BOOK_GEOMETRY, resolveHomeBookGeometry } from '@/components/home/homeBookGeometry'
+import {
+  getHomeBookLeftPagePaddingShares,
+  HOME_BOOK_GEOMETRY,
+  resolveHomeBookGeometry,
+} from '@/components/home/homeBookGeometry'
+
+// Inner page frame of open-book-bg(-dark).webp, measured on the 1536×1024 art.
+const ARTWORK_FRAME = { left: 196 / 1536, gutterLeft: 738 / 1536, right: 1340 / 1536, top: 98 / 1024, bottom: 796 / 1024 }
+
+describe('home book content sits inside the drawn page frame', () => {
+  it.each([0.5, 0.49])('keeps the left page content off the frame lines (page share %s)', (pageShare) => {
+    const padding = getHomeBookLeftPagePaddingShares(pageShare)
+    expect(padding.start).toBeGreaterThan(ARTWORK_FRAME.left + 0.01)
+    expect(pageShare - padding.end).toBeLessThan(ARTWORK_FRAME.gutterLeft - 0.01)
+    expect(pageShare - padding.end - padding.start).toBeGreaterThan(0.25)
+  })
+
+  it('starts content below the top frame line and ends it above the bottom one', () => {
+    expect(HOME_BOOK_GEOMETRY.topInsetShare).toBeGreaterThan(ARTWORK_FRAME.top + 0.01)
+    expect(1 - HOME_BOOK_GEOMETRY.bottomInsetShare).toBeLessThan(ARTWORK_FRAME.bottom - 0.01)
+    expect(1 - HOME_BOOK_GEOMETRY.pageNumberBottomShare).toBeLessThan(ARTWORK_FRAME.bottom)
+    expect(1 - HOME_BOOK_GEOMETRY.rightPageEndShare).toBeLessThan(ARTWORK_FRAME.right)
+  })
+})
 
 describe('home book viewport capacity', () => {
   it.each([

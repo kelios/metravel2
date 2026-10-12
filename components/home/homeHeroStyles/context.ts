@@ -58,6 +58,9 @@ export interface HeroStyleContext {
   leftPagePaddingRight: string | number
   leftPagePaddingTop: string | number
   leftPagePaddingBottom: string | number
+  pageNumberBottom: number
+  leftPageNumberLeft: `${number}%` | number
+  rightPageNumberRight: `${number}%` | number
   leftPageWidth: string
   rightPageWidth: string | number
 

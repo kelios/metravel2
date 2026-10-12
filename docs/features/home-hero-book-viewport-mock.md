@@ -7,6 +7,15 @@ book height: artwork ratio limited by viewport height minus 180px of shell/chrom
 Width caps remain 1200/1360/1520px. Vertical paper insets use book height, rather
 than CSS percentage padding (which resolves against width).
 
+All paper insets derive from the inner page frame drawn on the artwork
+(`HOME_BOOK_ARTWORK_FRAME` in `components/home/homeBookGeometry.js`, both
+themes share one drawing) plus a fixed gap: content, search and page numbers
+never sit on a frame line. Horizontal left-page padding is a share of the whole
+book width — flex-item `%` resolves against the book row, while the SSG grid item
+spells it as `calc(var(--home-book-width) * share)`. The artwork is cut out with
+alpha around the book, so seasonal page backgrounds show no rectangle behind it;
+its URL carries a `?v=` token because `/assets/images` is served `immutable`.
+
 ```text
 Healthy desktop                       Wide, short desktop
 ┌──────────── book artwork ─────────┐  ┌────────── book artwork ──────────┐

@@ -388,7 +388,7 @@ export const createBookWidgetStyles = (ctx: HeroStyleContext) => {
     },
     bookPageNumber: {
       position: 'absolute' as const,
-      bottom: isMobile ? 10 : 14,
+      bottom: ctx.pageNumberBottom,
       fontSize: isMobile ? 12 : 14,
       fontWeight: '500',
       letterSpacing: 0.5,
@@ -400,7 +400,6 @@ export const createBookWidgetStyles = (ctx: HeroStyleContext) => {
         } as any,
       }),
     },
-    bookPageNumberLeft: { left: isMobile ? 14 : 20 },
-    bookPageNumberRight: { right: isMobile ? 14 : 20 },
+    bookPageNumberLeft: { left: ctx.leftPageNumberLeft },
   } as const
 }

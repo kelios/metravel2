@@ -205,24 +205,6 @@ export const createHeroShellStyles = (ctx: HeroStyleContext) => {
           : {},
       }),
     },
-    heroPageGoldLine: {
-      position: 'absolute' as const,
-      top: 0,
-      left: '12%',
-      right: '12%',
-      height: 1,
-      zIndex: 5,
-      ...Platform.select({
-        web: {
-          backgroundImage: `linear-gradient(90deg, 
-        transparent 0%, 
-        rgba(180,150,80,0.35) 15%, 
-        rgba(180,150,80,0.35) 85%, 
-        transparent 100%
-      )`,
-        } as any,
-      }),
-    },
     heroPageCurlLeft: {
       position: 'absolute' as const,
       bottom: 0,
