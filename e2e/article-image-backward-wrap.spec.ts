@@ -2,7 +2,8 @@ import Module from 'node:module'
 
 import { expect, test, type Page } from '@playwright/test'
 
-import { applyBackwardFloatWrap, applySmartImageLayout } from '../utils/richTextImageLayout'
+import { applySmartImageLayout } from '../utils/richTextImageLayout'
+import { groupInlinePhotoFlow } from '../utils/richTextImageLayoutPhotoFlow'
 
 // #1623: a single portrait after a long paragraph with nothing wrappable
 // after it (heading/end of content) must swap before that paragraph so the
@@ -110,11 +111,12 @@ function buildFixtureHtml(description: string): string {
     floatStyles(COLORS, WEB_RICH_TEXT_CLASS) +
     typographyStyles(COLORS, WEB_RICH_TEXT_CLASS) +
     responsiveStyles(COLORS, WEB_RICH_TEXT_CLASS)
-  // #1623: two-step pipeline matching production — the persisted transform
-  // (`applySmartImageLayout`) runs first, then the render-only backward wrap
-  // (`applyBackwardFloatWrap`) is applied on top, exactly as
+  // #1623/#2411: two-step pipeline matching production — the persisted
+  // transform (`applySmartImageLayout`) runs first, then the render-only
+  // photo-flow grouping (`groupInlinePhotoFlow`, which owns the backward
+  // association since #2411) is applied on top, exactly as
   // `components/travel/StableContent.web.tsx` wires it.
-  const transformed = applyBackwardFloatWrap(applySmartImageLayout(description))
+  const transformed = groupInlinePhotoFlow(applySmartImageLayout(description))
 
   return `<!doctype html>
     <html lang="ru">
