@@ -21,8 +21,12 @@
  *   2. КАЖДЫЙ `scripts/scan-quest-*.js` с `--source=` и теми же baseline, что
  *      у `check:fast` (список берётся с диска: новый скан входит сам и падает
  *      красным, если не умеет `--source`);
- *   3. геометрия маршрута `quest-geocheck.js --route-only`: возвраты и бюджет
- *      длины (≤4 км суммой перегонов, перегон ≤1,2 км; `roadtrip` — без бюджета);
+ *   3. геометрия маршрута `quest-geocheck.js --route-only`: крюки (другой
+ *      порядок точек между стартом и финалом короче) и бюджет длины по типу
+ *      маршрута — пеший ≤4 км суммой перегонов, перегон ≤1,2 км; тропа
+ *      (`hiking`/`mountain`) ≤10 км и ≤5 км; `roadtrip`/`bike` — без бюджета.
+ *      Проверенное пешей маршрутизацией исключение (крюк по прямым, которого
+ *      нет на улицах из-за реки) — строка в `scripts/quest-route-allow.json`;
  *   4. запрещённые по Беларуси источники (`scan-content-sources.js`);
  *   5. проверки этого файла:
  *      - самоутечка: вариант ответа целым словом стоит в title/location/task/
@@ -54,6 +58,7 @@ const {
   runCli,
 } = require('./lib/cli-contract')
 const { normalizeAnswer } = require('./lib/questAnswerNormalize')
+const { loadBaseline } = require('./lib/scanBaseline')
 const { buildQuestCityAliasMap } = require('../utils/questCityAlias')
 
 const SCRIPTS_DIR = __dirname
@@ -287,16 +292,44 @@ async function fetchSitemapAliases(apiUrl) {
   return sitemapQuestAliases(await response.text())
 }
 
-/** Вердикт геометрии из JSON `quest-geocheck --route-only`; `roadtrip` честно заявляет транспорт. */
-function evaluateRoute(report, quests) {
+const ROUTE_ALLOW_PATH = 'scripts/quest-route-allow.json'
+const ROUTE_ALLOW_CONTRACT_VERSION = 1
+// Транспорт заявлен тегом — пешего бюджета у маршрута нет.
+const TRANSPORT_TAGS = ['roadtrip', 'bike']
+// Тропа — дневной поход: ≤10 км по прямым ≈ 12 км тропой, перегон до вершины
+// или по ущелью ≤5 км. Городской бюджет 4 км / 1,2 км на тропе меряет не то.
+const TRAIL_TAGS = ['hiking', 'mountain']
+const TRAIL_BUDGET = { route_m: 10000, leg_m: 5000 }
+
+/** Ключ `quest_id|order` или `quest_id|budget` → обоснование (вердикт пешей сверки). */
+function loadRouteAllow(allowPath = ROUTE_ALLOW_PATH) {
+  return loadBaseline(path.resolve(process.cwd(), allowPath), ROUTE_ALLOW_CONTRACT_VERSION).known || {}
+}
+
+function routeBudgetOf(quest, len) {
+  const tags = tagsOf(quest)
+  if (tags.some((t) => TRANSPORT_TAGS.includes(t))) return null
+  if (tags.some((t) => TRAIL_TAGS.includes(t))) {
+    const over = len.total_m > TRAIL_BUDGET.route_m || (len.max_leg?.m || 0) > TRAIL_BUDGET.leg_m
+    return { over, route_m: TRAIL_BUDGET.route_m, leg_m: TRAIL_BUDGET.leg_m, kind: 'тропа' }
+  }
+  return { over: !!(len.over_route || len.over_leg), route_m: len.max_route_m, leg_m: len.max_leg_m, kind: 'пеший' }
+}
+
+/** Вердикт геометрии из JSON `quest-geocheck --route-only`: крюки и бюджет по типу маршрута. */
+function evaluateRoute(report, quests, allow = loadRouteAllow()) {
   const problems = []
   for (const r of report.reports || []) {
     const quest = quests.find((q) => q.quest_id === r.quest_id)
     const route = r.route || {}
-    if (route.backtracks?.length) problems.push(`${r.quest_id}: возвратов ${route.backtracks.length} (кольцо даёт ложный возврат по 1D-оси — тогда --backtrack-m)`)
+    if (route.backtracks?.length && !allow[`${r.quest_id}|order`]) {
+      const gain = route.backtracks.reduce((sum, b) => sum + (b.gain_m || 0), 0)
+      problems.push(`${r.quest_id}: крюков ${route.backtracks.length} (порядок ${(route.suggested_order || []).join('→')} короче на ~${gain} м по прямым)`)
+    }
     const len = route.length
-    if (len && (len.over_route || len.over_leg) && !tagsOf(quest).includes('roadtrip')) {
-      problems.push(`${r.quest_id}: маршрут ${len.total_m} м (≤${len.max_route_m}), max leg ${len.max_leg?.m} м (≤${len.max_leg_m})`)
+    const budget = len && routeBudgetOf(quest, len)
+    if (budget?.over && !allow[`${r.quest_id}|budget`]) {
+      problems.push(`${r.quest_id}: ${budget.kind} маршрут ${len.total_m} м (≤${budget.route_m}), max leg ${len.max_leg?.m} м (≤${budget.leg_m})`)
     }
   }
   return problems
@@ -440,6 +473,7 @@ module.exports = {
   checkSelfLeak,
   checkShortSubstring,
   evaluateRoute,
+  loadRouteAllow,
   parseArgs,
   sitemapQuestAliases,
 }

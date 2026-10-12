@@ -8,9 +8,12 @@
  * `quest_db_id` → /api/quests/<id>/. Заголовок квеста живёт не в шаге, и без
  * второго маршрута его правили бы мимо этого инструмента, то есть без
  * валидации и без единого лога правок (#1540).
+ * Формат ПЕРЕСТАНОВКИ: {quest_id, quest_db_id, reorder:[step_id, …все точки квеста]}
  * `create_step` — POST /api/quest-steps/ и вставка сразу после `after_step_id`
  * сдвигом `order` у следующих точек (#2423: квест с точками меньше пола
  * добирается новой обязательной точкой, а не удалением чужих шагов).
+ * `reorder` — новый порядок точек без правки их полей (#2426: крюк маршрута из
+ * `quest-geocheck --route-only`); order 1..n, двухфазно через +10000.
  *
  * Режим запуска называется явно — дефолта нет ни в одну сторону (#1934):
  *
@@ -225,6 +228,49 @@ async function applyCreate(p, file, transport, { fetchBundle = fetchQuestBundles
   return { label: `${label}, order ${plan.order}, сдвинуто ${plan.shifts.length}`, skipped: false }
 }
 
+const PARK = 10000
+
+/**
+ * Чистый план перестановки: точки получают order 1..n в новой
+ * последовательности — та же плотная нумерация, что у всего прода. Цель берётся
+ * из позиции в списке, а не из текущих order: после упавшего прогона часть точек
+ * стоит на временных +10000, и слоты по ним уже не восстановить. Список обязан
+ * совпасть с составом квеста на проде — пропущенная точка иначе осталась бы на
+ * чужом слоте. Финал (`point_role: final`) остаётся последней обязательной точкой.
+ */
+function planReorder(steps, reorder) {
+  const points = steps.filter((s) => !s.is_intro)
+  const byId = new Map(points.map((s) => [s.step_id, s]))
+  const unknown = reorder.filter((id) => !byId.has(id))
+  const missing = points.map((s) => s.step_id).filter((id) => !reorder.includes(id))
+  if (unknown.length || missing.length || new Set(reorder).size !== reorder.length) {
+    throw new Error(`состав точек не совпал с продом: лишние ${unknown.join(',') || '—'}, пропущены ${missing.join(',') || '—'}`)
+  }
+  const final = points.find((s) => s.point_role === 'final')
+  if (final) {
+    const tail = reorder.slice(reorder.indexOf(final.step_id) + 1).map((id) => byId.get(id))
+    if (tail.some((s) => s.point_role !== 'optional')) throw new Error(`после финала ${final.step_id} осталась обязательная точка`)
+  }
+  const moves = reorder
+    .map((id, i) => ({ pk: byId.get(id).id, step_id: id, from: Number(byId.get(id).order), to: i + 1 }))
+    .filter((m) => m.from !== m.to)
+  return { moves }
+}
+
+/** Перестановка точек: сдвиг через +10000, затем целевые слоты; повтор по готовому порядку — SKIP. */
+async function applyReorder(p, file, transport, { fetchBundle = fetchQuestBundles } = {}) {
+  if (!p.quest_db_id) throw new Error(`${file} ${p.quest_id}: перестановке нужен quest_db_id`)
+  if (!Array.isArray(p.reorder) || !p.reorder.every((id) => typeof id === 'string')) throw new Error(`${file} ${p.quest_id}: reorder — список step_id`)
+  const [bundle] = await fetchBundle(transport.api, p.quest_id)
+  if (!bundle || bundle.id !== p.quest_db_id) throw new Error(`${file} ${p.quest_id}: quest_db_id ${p.quest_db_id} ≠ проду ${bundle && bundle.id}`)
+  const { moves } = planReorder(parseSteps(bundle), p.reorder)
+  const label = `${p.quest_id} (порядок ${p.reorder.join('→')})`
+  if (!moves.length) return { label, skipped: true }
+  for (const m of moves.filter((x) => x.from < PARK)) await apiRequest('PATCH', `/api/quest-steps/${m.pk}/`, { order: m.from + PARK }, transport)
+  for (const m of moves) await apiRequest('PATCH', `/api/quest-steps/${m.pk}/`, { order: m.to }, transport)
+  return { label: `${label}, переставлено ${moves.length}`, skipped: false }
+}
+
 /** Куда и чем патчить: шаг или сам квест. */
 function validate(p, file) {
   if (p.step_db_id) {
@@ -285,8 +331,8 @@ async function main() {
     console.log(`\n=== ${file}: ${patches.length} патчей`)
     for (const p of patches) {
       try {
-        if (p.create_step) {
-          const { label, skipped } = await applyCreate(p, file, transport)
+        if (p.create_step || p.reorder) {
+          const { label, skipped } = await (p.create_step ? applyCreate : applyReorder)(p, file, transport)
           console.log(`  ${skipped ? 'SKIP' : 'OK'} ${label}${skipped ? ': уже на проде' : ''}`)
           ok++
           continue
@@ -297,7 +343,7 @@ async function main() {
         ok++
       } catch (e) {
         rethrowTerminalAuthError(e);
-        console.error(`  FAIL ${p.quest_id}/${p.step_id ?? p.create_step?.step_id ?? 'quest'}: ${formatTokenError(e)}`)
+        console.error(`  FAIL ${p.quest_id}/${p.step_id ?? p.create_step?.step_id ?? (p.reorder ? 'reorder' : 'quest')}: ${formatTokenError(e)}`)
         failed++
       }
     }
@@ -317,9 +363,11 @@ module.exports = {
   USAGE,
   apiPatch,
   applyCreate,
+  applyReorder,
   main,
   parseArgs,
   planInsert,
+  planReorder,
   validate,
   validateCreate,
   validateQuest,

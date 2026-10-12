@@ -41,7 +41,7 @@ const { parse } = require('@babel/parser')
 const { fetchQuestBundles, parseSteps } = require('./lib/questBundles')
 const { localQuestDataFiles } = require('./lib/scanBaseline')
 const { QUEST_DATA_FILE_PATTERN } = require('./scan-quest-answer-reachability')
-const { comparableFields, diffStep, diffQuestLevel, DEFAULT_API } = require('./lib/questProdDiff')
+const { comparableFields, diffOrder, diffStep, diffQuestLevel, DEFAULT_API } = require('./lib/questProdDiff')
 const {
   parseCliArgs,
   parseCliTokens,
@@ -161,6 +161,57 @@ function replaceByAst(text, stepId, field, newValue) {
   return { text: text.slice(0, target.start) + renderObject(object, indent) + text.slice(target.end), ok: true }
 }
 
+/**
+ * Порядок точек квеста из прода: объекты шагов в массиве `steps` нужного квеста
+ * переставляются целиком, исходным текстом, — разделители, отступы и
+ * комментарии между элементами остаются на своих местах. Точки, которых нет на
+ * проде, не двигаются. Шаг, записанный не литералом объекта (спред, вызов),
+ * делает перестановку небезопасной — тогда `ok: false` и строка в отчёт.
+ */
+function reorderByAst(text, questId, prodOrder) {
+  let ast
+  try {
+    ast = parse(text, { sourceType: 'unambiguous', errorRecovery: true })
+  } catch {
+    return { text, ok: false }
+  }
+  const keyOf = (prop) => prop.key?.name ?? prop.key?.value
+  let steps = null
+  const visit = (node) => {
+    if (steps || !node || typeof node !== 'object') return
+    if (Array.isArray(node)) { node.forEach(visit); return }
+    if (node.type === 'ObjectExpression') {
+      const idProp = node.properties.find((prop) => keyOf(prop) === 'quest_id')
+      const stepsProp = node.properties.find((prop) => keyOf(prop) === 'steps')
+      if (idProp?.value?.value === questId && stepsProp?.value?.type === 'ArrayExpression') {
+        steps = stepsProp.value.elements
+        return
+      }
+    }
+    for (const key of Object.keys(node)) {
+      if (key === 'loc' || key === 'leadingComments' || key === 'trailingComments') continue
+      visit(node[key])
+    }
+  }
+  visit(ast.program ?? ast)
+  if (!steps) return { text, ok: false }
+
+  const idOf = (el) => el?.type === 'ObjectExpression'
+    ? el.properties.find((prop) => keyOf(prop) === 'step_id')?.value
+    : null
+  if (steps.some((el) => idOf(el)?.type !== 'StringLiteral')) return { text, ok: false }
+
+  const onProd = new Set(prodOrder)
+  const slots = steps.filter((el) => onProd.has(idOf(el).value))
+  const byId = new Map(slots.map((el) => [idOf(el).value, el]))
+  const wanted = prodOrder.filter((id) => byId.has(id)).map((id) => byId.get(id))
+  let out = text
+  for (let i = slots.length - 1; i >= 0; i -= 1) {
+    out = out.slice(0, slots[i].start) + text.slice(wanted[i].start, wanted[i].end) + out.slice(slots[i].end)
+  }
+  return { text: out, ok: true }
+}
+
 /** Многострочный литерал объекта в стиле data-файлов. */
 function renderObject(value, indent) {
   const inner = `${indent}    `
@@ -235,6 +286,13 @@ async function syncFile(file, { apiUrl, dryRun }) {
         const row = { quest_id: quest.quest_id, step_id: step.step_id, field }
         if (result.ok) { text = result.text; applied.push(row) } else skipped.push(row)
       }
+    }
+
+    const order = diffOrder(quest.steps || [], parseSteps(bundle))
+    if (order) {
+      const result = reorderByAst(text, quest.quest_id, order.prod)
+      const row = { quest_id: quest.quest_id, step_id: 'steps', field: 'order' }
+      if (result.ok) { text = result.text; applied.push(row) } else skipped.push(row)
     }
 
     for (const { scope, field, local, prod } of diffQuestLevel(quest, bundle)) {
@@ -321,7 +379,7 @@ async function main() {
   })
 }
 
-module.exports = { sourceShapes, jsString, replaceField, replaceByAst, renderObject, comparableFields, parseArgs, syncFile, main }
+module.exports = { sourceShapes, jsString, replaceField, replaceByAst, reorderByAst, renderObject, comparableFields, parseArgs, syncFile, main }
 
 if (require.main === module) {
   runCli(main, { name: CLI_SPEC.name, usage: USAGE })

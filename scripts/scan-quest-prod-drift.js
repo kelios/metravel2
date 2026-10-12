@@ -132,11 +132,12 @@ async function scanFile(file, apiUrl) {
     }
     compared += 1
     const diff = diffQuest(quest, bundle, parseSteps(bundle))
-    // Гейт валит только то, что заливка реально перенесёт, — расхождения полей
-    // шага и текста интро/финала. Разошедшийся состав шагов заливка не
-    // применяет ни в одну сторону (`sync-quest-to-prod.js:107` пропускает шаг,
-    // которого нет на проде), поэтому он идёт в отчёт, но не в код возврата.
-    const drifted = diff.changed.length || diff.questLevel.length
+    // Гейт валит то, что заливка реально перенесёт, — расхождения полей шага и
+    // текста интро/финала, — и отставший порядок точек: по нему файл меряет
+    // гейт маршрута (#2426). Разошедшийся состав шагов заливка не применяет ни
+    // в одну сторону (`sync-quest-to-prod.js:107` пропускает шаг, которого нет
+    // на проде), поэтому он идёт в отчёт, но не в код возврата.
+    const drifted = diff.changed.length || diff.questLevel.length || diff.order
     const structure = diff.onlyLocal.length || diff.onlyProd.length
     if (drifted || structure) rows.push({ file, ...diff, drifted: Boolean(drifted) })
   }
@@ -151,7 +152,7 @@ async function scanFile(file, apiUrl) {
 const parseArgs = (tokens) => parseCliTokens(tokens, CLI_SPEC)
 
 function reportText(rows, files, compared) {
-  console.log(`Сверка локальных data-файлов с продом: ${files} файлов, поля ${comparableFields.join(', ')}`)
+  console.log(`Сверка локальных data-файлов с продом: ${files} файлов, поля ${comparableFields.join(', ')} и порядок точек`)
 
   const missing = rows.filter((r) => r.missingOnProd)
   const diffRows = rows.filter((r) => !r.missingOnProd)
@@ -168,6 +169,7 @@ function reportText(rows, files, compared) {
     if (row.onlyLocal.length) console.log(`    шаги только локально (заливка их пропустит — структура разошлась): ${row.onlyLocal.join(', ')}`)
     for (const c of row.changed) console.log(`    ${c.step_id} (id ${c.prod_db_id ?? '?'}): ${c.fields.join(', ')}`)
     for (const q of row.questLevel) console.log(`    ${q.scope} / ${q.field}: расходится`)
+    if (row.order) console.log(`    порядок точек: файл ${row.order.local.join(' → ')}; прод ${row.order.prod.join(' → ')}`)
   }
 
   const drifted = diffRows.filter((r) => r.drifted)

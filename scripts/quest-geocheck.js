@@ -26,13 +26,18 @@ const {
   loadLocalBundles,
   parseSteps: parseRawSteps,
 } = require('./lib/questBundles');
+const { declaredRole, isOptionalByTitle } = require('./lib/questPointRoles');
 
 const DEFAULT_API_URL = 'https://metravel.by';
 const DEFAULT_THRESHOLD_METERS = 60;
-// A hop that moves the player back along the route's main axis by more than this
-// (into already-covered territory) is flagged as backtracking. Small side-steps
+// A different visiting order that is shorter by more than this (straight line)
+// means the player walks a detour — "1→2→3, back to 1, then 4". Small side-steps
 // (e.g. a church one corner north of the start) stay under it.
 const DEFAULT_BACKTRACK_METERS = 150;
+// …and by more than this share of the whole route: straight lines miss streets
+// by 15–25%, so a gain below 5% is noise of the metric itself (a 30 km bike ride
+// does not "detour" by 300 m).
+const DETOUR_MIN_SHARE = 0.05;
 // Adult walking-quest length budget: straight-line sum of consecutive legs.
 // Streets add ~15–25% on top, so 4000 m straight ≈ 4.5–5 km actually walked —
 // the ceiling a family covers on foot. Kids quests need a lower --max-route-m.
@@ -236,11 +241,56 @@ function stripStreetPrefix(value) {
   );
 }
 
-// --- Route-order (anti-backtracking) analysis ---------------------------
-// Pure geometry, no network. Projects the steps (in `order`) onto the route's
-// principal axis (PCA) and flags any hop that jumps back into already-covered
-// territory — the "1→2→3, back to 1, then 4" mistake. Small detours (a point a
-// corner behind the start) stay under DEFAULT_BACKTRACK_METERS.
+// --- Route-order (anti-detour) analysis -------------------------------
+// Pure geometry, no network. Start and finale (the last required point) stay
+// where the author put them; optional stops (cafe, spot) may move anywhere,
+// even past the finale. In between, a local search tries every single-point
+// relocation and every reversal of a run of points. A move that shortens the straight-line route by
+// more than the threshold is a detour the player really walks — the
+// "1→2→3, back to 1, then 4" mistake. A loop (ring) route is already the
+// shortest way round, so it gives no finding, unlike the old 1D axis projection
+// that read every ring's return leg as a backtrack (#2426).
+function pathMeters(pts) {
+  let m = 0;
+  for (let k = 1; k < pts.length; k += 1) m += haversineMeters(pts[k - 1].lat, pts[k - 1].lng, pts[k].lat, pts[k].lng);
+  return m;
+}
+
+// A valid order keeps the start first and no required point after the finale.
+function keepsEnds(candidate, start, finale) {
+  if (candidate[0] !== start) return false;
+  const at = candidate.indexOf(finale);
+  return candidate.slice(at + 1).every((p) => p.optional);
+}
+
+function bestDetourMove(path, finale) {
+  const base = pathMeters(path);
+  const n = path.length;
+  let best = null;
+  const consider = (candidate, move) => {
+    if (!keepsEnds(candidate, path[0], finale)) return;
+    const gain = base - pathMeters(candidate);
+    if (!best || gain > best.gain) best = { gain, path: candidate, ...move };
+  };
+  for (let i = 1; i < n; i += 1) {
+    for (let j = i + 1; j < n; j += 1) {
+      const candidate = [...path.slice(0, i), ...path.slice(i, j + 1).reverse(), ...path.slice(j + 1)];
+      consider(candidate, { kind: 'reverse', moved: path.slice(i, j + 1) });
+    }
+  }
+  for (let i = 1; i < n; i += 1) {
+    const rest = [...path.slice(0, i), ...path.slice(i + 1)];
+    for (let j = 1; j <= rest.length; j += 1) {
+      if (j === i) continue;
+      const candidate = [...rest.slice(0, j), path[i], ...rest.slice(j)];
+      consider(candidate, { kind: 'relocate', moved: [path[i]], after: rest[j - 1] });
+    }
+  }
+  return best;
+}
+
+const pointLabel = (p) => `${p.order} ${p.id}`;
+
 function analyzeRouteOrder(steps, backtrackMeters, limits) {
   const pts = steps
     .map((s, i) => ({
@@ -248,6 +298,9 @@ function analyzeRouteOrder(steps, backtrackMeters, limits) {
       order: typeof s.order === 'number' ? s.order : i + 1,
       id: s.step_id || s.id || String(i + 1),
       title: s.title || '',
+      // Роль — тем же правилом, что у заливщика и гвардии ролей (#1802): свободный
+      // ответ сам по себе точку необязательной не делает.
+      optional: declaredRole(s) ? declaredRole(s) === 'optional' : isOptionalByTitle(s),
       lat: toNumber(s.lat),
       lng: toNumber(s.lng),
     }))
@@ -255,15 +308,12 @@ function analyzeRouteOrder(steps, backtrackMeters, limits) {
     .sort((a, b) => a.order - b.order || a.i - b.i);
 
   // Straight-line route budget (sum of consecutive legs + longest leg).
-  let totalM = 0;
   let maxLeg = null;
   for (let k = 1; k < pts.length; k += 1) {
     const d = haversineMeters(pts[k - 1].lat, pts[k - 1].lng, pts[k].lat, pts[k].lng);
-    totalM += d;
-    if (!maxLeg || d > maxLeg.m) {
-      maxLeg = { m: d, from: `${pts[k - 1].order} ${pts[k - 1].id}`, to: `${pts[k].order} ${pts[k].id}` };
-    }
+    if (!maxLeg || d > maxLeg.m) maxLeg = { m: d, from: pointLabel(pts[k - 1]), to: pointLabel(pts[k]) };
   }
+  const totalM = pathMeters(pts);
   const length = {
     total_m: Math.round(totalM),
     max_leg: maxLeg ? { ...maxLeg, m: Math.round(maxLeg.m) } : null,
@@ -273,62 +323,34 @@ function analyzeRouteOrder(steps, backtrackMeters, limits) {
   length.over_route = length.max_route_m > 0 && length.total_m > length.max_route_m;
   length.over_leg = length.max_leg_m > 0 && !!maxLeg && maxLeg.m > length.max_leg_m;
 
-  if (pts.length < 3) return { analyzed: false, backtracks: [], length };
+  // Fewer than 4 points leave nothing to reorder around a fixed start and finale.
+  if (pts.length < 4 || !(backtrackMeters > 0)) return { analyzed: false, backtracks: [], length };
 
-  const lat0 = pts.reduce((s, p) => s + p.lat, 0) / pts.length;
-  const lng0 = pts.reduce((s, p) => s + p.lng, 0) / pts.length;
-  const mPerLat = 110540;
-  const mPerLng = 111320 * Math.cos((lat0 * Math.PI) / 180);
-  const xy = pts.map((p) => ({ ...p, x: (p.lng - lng0) * mPerLng, y: (p.lat - lat0) * mPerLat }));
-
-  // Principal axis of the point cloud (dominant travel direction).
-  let sxx = 0;
-  let syy = 0;
-  let sxy = 0;
-  for (const p of xy) {
-    sxx += p.x * p.x;
-    syy += p.y * p.y;
-    sxy += p.x * p.y;
-  }
-  const theta = 0.5 * Math.atan2(2 * sxy, sxx - syy);
-  let ax = Math.cos(theta);
-  let ay = Math.sin(theta);
-  // Orient the axis so "forward" points from the first step toward the last.
-  const first = xy[0];
-  const last = xy[xy.length - 1];
-  if ((last.x - first.x) * ax + (last.y - first.y) * ay < 0) {
-    ax = -ax;
-    ay = -ay;
-  }
-  for (const p of xy) p.t = p.x * ax + p.y * ay;
-
-  // Compass label for the forward direction (y = north, x = east).
-  const dir =
-    Math.abs(ay) >= Math.abs(ax)
-      ? ay < 0
-        ? 'север→юг'
-        : 'юг→север'
-      : ax >= 0
-        ? 'запад→восток'
-        : 'восток→запад';
-
+  const minGain = Math.max(backtrackMeters, DETOUR_MIN_SHARE * totalM);
+  const finale = [...pts].reverse().find((p) => !p.optional) || pts[pts.length - 1];
   const backtracks = [];
-  let runMax = xy[0].t;
-  for (let k = 1; k < xy.length; k += 1) {
-    const back = runMax - xy[k].t;
-    if (back > backtrackMeters) {
-      backtracks.push({
-        from: `${xy[k - 1].order} ${xy[k - 1].id}`,
-        to: `${xy[k].order} ${xy[k].id}`,
-        to_title: xy[k].title,
-        back_m: Math.round(back),
-        hop_m: Math.round(Math.hypot(xy[k].x - xy[k - 1].x, xy[k].y - xy[k - 1].y)),
-      });
-    }
-    if (xy[k].t > runMax) runMax = xy[k].t;
+  let path = pts;
+  for (let guard = 0; guard < pts.length; guard += 1) {
+    const move = bestDetourMove(path, finale);
+    if (!move || move.gain <= minGain) break;
+    backtracks.push({
+      kind: move.kind,
+      steps: move.moved.map(pointLabel),
+      after: move.after ? pointLabel(move.after) : null,
+      to_title: move.moved[0].title,
+      gain_m: Math.round(move.gain),
+    });
+    path = move.path;
   }
 
-  return { analyzed: true, axis_dir: dir, backtracks, length };
+  return {
+    analyzed: true,
+    min_gain_m: Math.round(minGain),
+    backtracks,
+    suggested_order: backtracks.length ? path.map((p) => p.id) : null,
+    suggested_total_m: Math.round(pathMeters(path)),
+    length,
+  };
 }
 
 async function geocheckQuest(bundle, options) {
@@ -563,15 +585,20 @@ function printRouteOrder(route) {
   printRouteLength(route);
   if (!route || !route.analyzed) return;
   if (route.backtracks.length === 0) {
-    console.log(`        route order: OK — последователен (ось ${route.axis_dir}), возвратов нет`);
+    console.log(`        route order: OK — другой порядок не короче ${route.min_gain_m}м, крюков нет`);
     return;
   }
-  console.log(`        route order: ⚠ ${route.backtracks.length} возврат(а) назад по маршруту (ось ${route.axis_dir}):`);
+  console.log(`        route order: ⚠ ${route.backtracks.length} крюк(а) — другой порядок короче по прямым:`);
   for (const b of route.backtracks) {
-    console.log(
-      `          ⤺ [${b.from}] → [${b.to}] ${b.to_title}: уводит ~${b.back_m}м назад в пройденную зону (переход ${b.hop_m}м). Переставь order (nearest-neighbor).`,
-    );
+    const move =
+      b.kind === 'relocate'
+        ? `перенеси [${b.steps[0]}] ${b.to_title} сразу после [${b.after}]`
+        : `пройди [${b.steps[0]}] … [${b.steps[b.steps.length - 1]}] в обратном порядке`;
+    console.log(`          ⤺ ${move}: короче на ~${b.gain_m}м`);
   }
+  console.log(
+    `          порядок без крюков (${route.suggested_total_m}м): ${route.suggested_order.join(' → ')}. Перед перестановкой сверь пешком (улицы, мосты) и тексты переходов.`,
+  );
 }
 
 function printHuman(report) {
@@ -622,7 +649,7 @@ async function main() {
         '  --source-file=<path>   read steps from a local quest-data.js (authoring mode)',
         '  --api-url=<url>         API base (default https://metravel.by); ignored with --source-file',
         '  --threshold=<m>        FAIL distance in meters (default 60)',
-        '  --backtrack-m=<m>      route backtrack distance to flag (default 150; 0 disables)',
+        '  --backtrack-m=<m>      flag a detour when another order is this much shorter (default 150, and >5% of route; 0 disables)',
         '  --max-route-m=<m>      warn when straight-line route total exceeds this (default 4000; 0 disables)',
         '  --max-leg-m=<m>        warn when a single leg exceeds this (default 1200; 0 disables)',
         '  --limit=<n>            Nominatim candidates per step (default 3)',
@@ -710,4 +737,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { analyzeRouteOrder, haversineMeters };
+module.exports = { analyzeRouteOrder, haversineMeters, DEFAULT_BACKTRACK_METERS };

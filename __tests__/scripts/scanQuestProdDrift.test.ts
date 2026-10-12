@@ -90,6 +90,19 @@ describe('scanFile — квест, которого нет на проде', () 
   })
 })
 
+describe('scanFile — порядок точек (#2426)', () => {
+  it('отставший порядок валит гейт: по файлу гейт маршрута меряет крюки', async () => {
+    const steps = [{ step_id: 'a', order: 1 }, { step_id: 'cafe', order: 2 }, { step_id: 'b', order: 3 }]
+    questBundles.loadLocalBundles.mockReturnValue([{ ...localQuest('q'), steps: [{ step_id: 'a' }, { step_id: 'b' }, { step_id: 'cafe' }] }])
+    questBundles.fetchQuestBundles.mockResolvedValueOnce([{ quest_id: 'q', steps }])
+    questBundles.parseSteps.mockReturnValueOnce(steps)
+
+    const { rows } = await scanFile('scripts/q-quest-data.js', 'https://metravel.by')
+
+    expect(rows).toEqual([expect.objectContaining({ quest_id: 'q', drifted: true, order: { local: ['a', 'b', 'cafe'], prod: ['a', 'cafe', 'b'] } })])
+  })
+})
+
 describe('scanFile — «измерить не удалось» остаётся фатальным', () => {
   it.each([
     ['5xx', httpError(502)],

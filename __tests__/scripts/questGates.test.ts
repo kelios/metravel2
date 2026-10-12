@@ -17,6 +17,7 @@ const {
   checkSelfLeak,
   checkShortSubstring,
   evaluateRoute,
+  loadRouteAllow,
   parseArgs,
   sitemapQuestAliases,
 } = require('@/scripts/quest-gates')
@@ -197,11 +198,38 @@ describe('checkCityAlias — #2209', () => {
 describe('evaluateRoute', () => {
   const report = (route: Record<string, unknown>) => ({ reports: [{ quest_id: 'q', route }] })
   const len = (over: Record<string, unknown> = {}) => ({ total_m: 5200, max_route_m: 4000, max_leg_m: 1200, max_leg: { m: 900 }, over_route: true, over_leg: false, ...over })
+  const withTags = (tags: string[]) => [{ quest_id: 'q', meta: { tags } }]
+  const detour = { backtracks: [{ gain_m: 400 }], suggested_order: ['a', 'c', 'b'], length: len({ over_route: false }) }
 
-  it('возврат и превышение бюджета — красный, roadtrip бюджет не меряет', () => {
-    expect(evaluateRoute(report({ backtracks: [{}], length: len({ over_route: false }) }), [{ quest_id: 'q' }])).toHaveLength(1)
-    expect(evaluateRoute(report({ backtracks: [], length: len() }), [{ quest_id: 'q', meta: { tags: [] } }])).toHaveLength(1)
-    expect(evaluateRoute(report({ backtracks: [], length: len() }), [{ quest_id: 'q', meta: { tags: ['roadtrip'] } }])).toEqual([])
+  it('крюк и превышение бюджета — красный, roadtrip/bike бюджет не меряют', () => {
+    expect(evaluateRoute(report(detour), [{ quest_id: 'q' }], {})).toEqual(['q: крюков 1 (порядок a→c→b короче на ~400 м по прямым)'])
+    expect(evaluateRoute(report({ backtracks: [], length: len() }), withTags([]), {})).toHaveLength(1)
+    expect(evaluateRoute(report({ backtracks: [], length: len() }), withTags(['roadtrip']), {})).toEqual([])
+    expect(evaluateRoute(report({ backtracks: [], length: len() }), withTags(['bike']), {})).toEqual([])
+  })
+
+  it('тропа (hiking/mountain) меряется своим бюджетом, а не городским (#2426)', () => {
+    const hike = len({ total_m: 8100, max_leg: { m: 4600 }, over_leg: true })
+    expect(evaluateRoute(report({ backtracks: [], length: hike }), withTags(['mountain']), {})).toEqual([])
+    expect(evaluateRoute(report({ backtracks: [], length: hike }), withTags(['citywalk']), {})).toHaveLength(1)
+    const tooLong = len({ total_m: 10500, max_leg: { m: 2000 } })
+    expect(evaluateRoute(report({ backtracks: [], length: tooLong }), withTags(['hiking']), {})).toEqual([
+      'q: тропа маршрут 10500 м (≤10000), max leg 2000 м (≤5000)',
+    ])
+  })
+
+  it('allow-файл снимает только свою находку: order — крюк, budget — длину', () => {
+    const both = report({ ...detour, length: len() })
+    expect(evaluateRoute(both, withTags([]), { 'q|order': 'проверено пешком' })).toEqual([expect.stringContaining('маршрут 5200 м')])
+    expect(evaluateRoute(both, withTags([]), { 'q|budget': 'длина в интро' })).toEqual([expect.stringContaining('крюков 1')])
+  })
+
+  it('scripts/quest-route-allow.json: каждая запись — вердикт с причиной', () => {
+    const allow = loadRouteAllow()
+    for (const [key, reason] of Object.entries(allow)) {
+      expect(key).toMatch(/^[a-z0-9-]+\|(order|budget)$/)
+      expect(String(reason).length).toBeGreaterThan(40)
+    }
   })
 })
 

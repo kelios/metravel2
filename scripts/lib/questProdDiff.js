@@ -136,6 +136,26 @@ function parseSection(value) {
 }
 
 /**
+ * Порядок общих точек: в файле — порядок массива `steps`, на проде — `order`.
+ * Data-файл с отставшим порядком лжёт гейту маршрута (`quest-gates` меряет
+ * крюки и бюджет по файлу): `add-quest-spots.js` расставил необязательные
+ * точки на проде по ходу маршрута, а файлы остались с ними в хвосте, и 17
+ * квестов показывали несуществующие крюки (#2426). Точки, которых нет с одной
+ * из сторон, — расхождение состава, его считает `onlyLocal`/`onlyProd`.
+ * Возвращает `null`, если порядок общих точек совпал.
+ */
+function diffOrder(localSteps, prodSteps) {
+  const prodIds = new Set(prodSteps.filter((s) => !s.is_intro).map((s) => s.step_id))
+  const localIds = new Set(localSteps.map((s) => s.step_id))
+  const local = localSteps.map((s) => s.step_id).filter((id) => prodIds.has(id))
+  const prod = prodSteps
+    .filter((s) => !s.is_intro && localIds.has(s.step_id))
+    .sort((a, b) => Number(a.order) - Number(b.order))
+    .map((s) => s.step_id)
+  return local.join('\n') === prod.join('\n') ? null : { local, prod }
+}
+
+/**
  * Полное сравнение одного локального квеста с прод-бандлом.
  *
  * Ни `onlyProd`, ни `onlyLocal` дефектом не являются, и это проверено по коду
@@ -162,6 +182,7 @@ function diffQuest(quest, bundle, prodSteps) {
     onlyLocal: (quest.steps || []).map((s) => s.step_id).filter((id) => !prodById.has(id)),
     onlyProd: [...prodById.keys()].filter((id) => !localIds.has(id)),
     changed,
+    order: diffOrder(quest.steps || [], prodSteps),
     questLevel: diffQuestLevel(quest, bundle),
   }
 }
@@ -171,6 +192,7 @@ module.exports = {
   comparableFields,
   normalizeField,
   diffStep,
+  diffOrder,
   diffQuest,
   diffQuestLevel,
   finaleText,
