@@ -2,6 +2,7 @@ import sanitizeHtml, { Attributes } from 'sanitize-html'
 
 import { buildPrintImageUrl, PRINT_IMAGE_INLINE_WIDTH } from '@/utils/printImageUrl'
 import { normalizeQuillListMarkup } from '@/utils/richTextLists'
+import { transformRichTextStyle } from '@/utils/richTextStyleFilter'
 import { isWeservImageUrl, unwrapWeservImageUrl } from '@/utils/weservImageUrl'
 import { isMetravelMediaHostname } from '@/utils/webResourceHints'
 
@@ -15,14 +16,6 @@ const ALLOWED_IFRAME_HOSTS = [
 ]
 const ALLOWED_SCHEMES = ['http', 'https', 'mailto']
 const DIMENSION_RE = /^\d+(\.\d+)?(px|%)?$/i
-const COLOR_RE =
-  /^(#[0-9a-f]{3,4}|#[0-9a-f]{6}|#[0-9a-f]{8}|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*(,\s*(0|1|0?\.\d+)\s*)?\)|transparent)$/i
-const LENGTH_TOKEN = '-?\\d+(?:\\.\\d+)?(?:px|em|rem|%|pt)?'
-const MARGIN_TOKEN = `(?:${LENGTH_TOKEN}|auto)`
-const MARGIN_RE = new RegExp(`^${MARGIN_TOKEN}( +${MARGIN_TOKEN}){0,3}$`, 'i')
-const PADDING_RE = new RegExp(`^${LENGTH_TOKEN}( +${LENGTH_TOKEN}){0,3}$`, 'i')
-const LENGTH_OR_AUTO_RE = new RegExp(`^(?:${LENGTH_TOKEN}|auto)$`, 'i')
-const LENGTH_ONLY_RE = new RegExp(`^${LENGTH_TOKEN}$`, 'i')
 const SAFE_DATA_IMAGE_RE = /^data:image\/(png|jpe?g|gif|webp|avif);base64,/i
 
 const IMAGE_OPTIMIZATION_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'blur', 'dpr']
@@ -416,26 +409,9 @@ function sanitizeRichTextInternal(
     allowedAttributes: options?.preserveOrderedListStarts
       ? { ...allowedAttributes, ol: [...allowedAttributes.ol, 'start'] }
       : allowedAttributes,
-    allowedStyles: {
-      '*': {
-        'text-align': [/^(left|right|center|justify)$/],
-        float: [/^(left|right|none)$/],
-        margin: [MARGIN_RE],
-        'margin-left': [LENGTH_OR_AUTO_RE],
-        'margin-right': [LENGTH_OR_AUTO_RE],
-        'margin-top': [LENGTH_ONLY_RE],
-        'margin-bottom': [LENGTH_ONLY_RE],
-        padding: [PADDING_RE],
-        color: [COLOR_RE],
-        'background-color': [COLOR_RE],
-        background: [COLOR_RE],
-        display: [/^(block|inline-block|inline)$/],
-      },
-      img: {
-        width: [/^\d+(px|%)$/],
-        height: [/^\d+(px|%)$/],
-      },
-    },
+    // #2389: style declarations are filtered by our own allowlist in the `*`
+    // transform below; sanitize-html's postcss parsing stays off.
+    parseStyleAttributes: false,
     allowedSchemes: ALLOWED_SCHEMES,
     allowedSchemesByTag,
     allowProtocolRelative: false,
@@ -499,6 +475,8 @@ function sanitizeRichTextInternal(
           },
         }
       },
+      // Runs after the tag-specific transforms, with the final tag name.
+      '*': transformRichTextStyle,
     },
     // ✅ КРИТИЧНО: Явно запрещаем React Native компоненты
     disallowedTagsMode: 'discard',

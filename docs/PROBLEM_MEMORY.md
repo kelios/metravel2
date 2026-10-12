@@ -4054,6 +4054,36 @@ guard, падающий в CI на попытке обойти этот конт
 - **Решение для новой жалобы:** строка нужна только сборщику страниц —
   `ssg/`, а не `static/`; потолки `config/bundle-budget.json` не поднимать.
 
+#### Рецидив после #2360 — #2389, 12.10.2026
+
+- **Факт:** чистый `main` dcde4247c — семь превышений (TOTAL gzip 3294,8/3284,9,
+  `index:home`, `index:quests`, `TravelDetailsPostLcpRuntime`,
+  `TravelDetailsSidebarSection`). Запас TOTAL 0,8 КБ после #2360 съели обычные
+  продуктовые коммиты за сутки.
+- **Атрибуция:** две cold-сборки с source maps (зелёная база 94ddd2359 и HEAD)
+  и `source-map-explorer` по каждому чанку, рецепт —
+  `.codex-temp/task-2389/{export.sh,attrib.js}`. Владельцы роста: Node-only
+  генератор CSS книги в `homeBookGeometry.js` (#2430), хук выбора каталога
+  квестов (#2409), импорт `nearTravelMapAvailability` в трёх travel-чанках
+  ради одного и того же вычисления (#2367). TOTAL рос «вширь», без одного виновника.
+- **Решение (рефакторинг, потолки не подняты):** `postcss` (53 КБ raw, ~15 КБ
+  gzip) ушёл из web-бандла: `sanitizeRichText` фильтрует `style` своим
+  allowlist'ом (`utils/richTextStyleFilter.ts`, `parseStyleAttributes: false`),
+  а импорт `postcss` из `sanitize-html` на web разрешается в бросающую заглушку
+  `metro-stubs/sanitize-html-postcss.js`; сайдбар `/quests` — за ленивой
+  границей с предзагрузкой на десктопе (SSG-снимок рендерит мобильную раскладку,
+  сайдбар до гидратации не нужен); 52 никем не читаемых ключа стилей главной и
+  генератор CSS книги (`scripts/ssg-home-book-css.js`) вынесены из `index:home`;
+  доступность карты «Рядом» считает сам каркас по `travel`.
+- **Controls:** `__tests__/utils/richTextStyleFilter.test.ts` (байтовый паритет
+  с путём через postcss, на кривом вводе — только подмножество деклараций),
+  `__tests__/scripts/sanitize-html-postcss-stub.test.ts` (резолвер, список
+  вызывающих `sanitize-html`, ни один не доходит до заглушки), потолок
+  `index:quests` понижен до замера 40,2/12,5/10,6 КБ.
+- **Решение для новой жалобы:** сначала атрибуция по source maps базы и HEAD,
+  потом рефакторинг владельца роста; Node-only код и мёртвые ключи стилей в
+  route-чанке — первые кандидаты.
+
 ### APP-SHELL-BOOT-001 — пол TBT задаёт общий каркас, а не код маршрута
 
 - **Инвариант:** медианный prod mobile TBT укладывается в сайтовый бюджет

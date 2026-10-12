@@ -9,7 +9,6 @@ import {
   RatingSectionSkeleton,
 } from '@/components/travel/TravelDetailSkeletons'
 import { SidebarSectionSkeleton } from '@/components/travel/NearTravelListSkeleton'
-import { canShowNearTravelMapMode, getNearTravelMapOrigin } from '@/components/travel/utils/nearTravelMapAvailability'
 
 import type { AnchorsMap } from './TravelDetailsTypes'
 import { withLazy } from './TravelDetailsLazy'
@@ -125,7 +124,7 @@ export const TravelDeferredSections: React.FC<{
   })
 
   const shouldLoadAuthor = shouldLoadAuthorSection
-  const sidebarPlaceholder = <SidebarSectionSkeleton canShowMapMode={canShowNearTravelMapMode(getNearTravelMapOrigin(travel))} />
+  const sidebarPlaceholder = <SidebarSectionSkeleton travel={travel} />
   const shouldLoadRatingSection = shouldLoadRating
   const shouldLoadMapSection = shouldLoadMap || shouldForceLoadMapSection(forceOpenKey)
   const shouldLoadSidebarSection = shouldLoadSidebar || shouldForceLoadSidebarSection(forceOpenKey)

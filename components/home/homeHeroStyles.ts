@@ -21,7 +21,7 @@ export const createHomeHeroStyles = ({
   colors,
   isMobile,
   isSmallPhone,
-  isNarrowLayout,
+  isNarrowLayout: _isNarrowLayout,
   isTablet: _isTablet,
   isDesktop: _isDesktop,
   viewportWidth = 0,
@@ -62,7 +62,6 @@ export const createHomeHeroStyles = ({
       : '50%'
     : 320
   const isCompactBookLayout = hasBookLayout && bookHeight <= HOME_BOOK_GEOMETRY.compactHeight
-  const isVeryCompactBookLayout = hasBookLayout && bookHeight <= 640
   const useDenseBookNotes = showSideSlider && viewportWidth < 2200
 
   const leftPagePaddingBottom = hasBookLayout ? pageMetrics.bottomInset : 110
@@ -114,7 +113,6 @@ export const createHomeHeroStyles = ({
     colors,
     isMobile,
     isSmallPhone,
-    isNarrowLayout,
     viewportWidth,
     showSideSlider,
     sliderHeight,
@@ -127,7 +125,6 @@ export const createHomeHeroStyles = ({
     isLargeDesktopBook,
     isNarrowDesktopBook,
     isCompactBookLayout,
-    isVeryCompactBookLayout,
     useDenseBookNotes,
     desktopBookTitleSize,
     desktopBookTitleLineHeight,

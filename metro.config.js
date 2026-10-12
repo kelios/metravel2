@@ -153,6 +153,7 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
 // Set EXPO_PUBLIC_RNW_SLIM=1 to enable cherry-picked react-native-web imports.
 const RNW_SLIM_ENABLED = process.env.EXPO_PUBLIC_RNW_SLIM === '1'
 const QUILL_SOURCE_DIR_RE = /[\\/]node_modules[\\/]quill[\\/]/
+const SANITIZE_HTML_SOURCE_DIR_RE = /[\\/]node_modules[\\/]sanitize-html[\\/]/
 // Runtime mock flags reject production use, but Metro still follows fixture
 // imports (including import()) and emits their catalogs. Keep that dev data out
 // of production web artifacts, with a throwing boundary if a caller regresses.
@@ -238,6 +239,18 @@ config.resolver.resolveRequest = ((orig) => {
     ) {
       return {
         filePath: path.resolve(__dirname, 'metro-stubs/quill-lodash-es.js'),
+        type: 'sourceFile',
+      }
+    }
+    // #2389: sanitize-html loads postcss only to parse style attributes; the
+    // app filters style itself, so sanitize-html's own import gets a stub.
+    if (
+      platform === 'web' &&
+      moduleName === 'postcss' &&
+      SANITIZE_HTML_SOURCE_DIR_RE.test(context.originModulePath || '')
+    ) {
+      return {
+        filePath: path.resolve(__dirname, 'metro-stubs/sanitize-html-postcss.js'),
         type: 'sourceFile',
       }
     }

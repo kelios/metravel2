@@ -20,7 +20,7 @@ import type React from 'react'
 let createElement: typeof import('react').createElement
 let renderToStaticMarkup: typeof import('react-dom/server').renderToStaticMarkup
 let StyleSheet: { getSheet: () => { textContent: string } }
-let SidebarSectionSkeleton: React.ComponentType<{ canShowMapMode?: boolean }>
+let SidebarSectionSkeleton: React.ComponentType<{ travel?: { coordsMeTravel?: unknown } }>
 let TravelDetailsSidebarSection: React.ComponentType<any>
 
 type NearState = { travels: { id: number; name: string }[]; isLoading: boolean }
@@ -118,7 +118,7 @@ const toHost = (element: React.ReactElement): HTMLElement => {
 
 const renderSkeleton = (width: number) => {
   viewportWidth = width
-  return toHost(createElement(SidebarSectionSkeleton, { canShowMapMode: true }))
+  return toHost(createElement(SidebarSectionSkeleton, { travel: TRAVEL }))
 }
 
 const renderMounted = (width: number, state: NearState) => {
@@ -237,7 +237,7 @@ describe.each([1280, 390])('coordinate-aware sidebar on %s (#2382)', (width) => 
   it('omits the map toggle from both placeholder and mounted loading when the route has no coordinates', () => {
     viewportWidth = width;
     nearState = MOUNTED.loading;
-    const skeleton = toHost(createElement(SidebarSectionSkeleton, { canShowMapMode: false }));
+    const skeleton = toHost(createElement(SidebarSectionSkeleton, { travel: { id: 8 } }));
     const mounted = toHost(createElement(TravelDetailsSidebarSection, { travel: { id: 8 }, anchors: {}, canRenderHeavy: true }));
     expect(skeleton.querySelector('[data-testid="near-travel-toggle-skeleton"]')).toBeNull();
     expect(mounted.querySelector('[role="radiogroup"]')).toBeNull();

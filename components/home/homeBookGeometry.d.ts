@@ -11,4 +11,4 @@ export function getHomeBookPageMetrics(viewportWidth: number, height: number): {
   titleLineHeight: number; subtitleSize: number; subtitleLineHeight: number;
 }
 export function resolveHomeBookGeometry(viewportWidth: number, viewportHeight: number, measuredWidth?: number): ReturnType<typeof getHomeBookPageMetrics> & { width: number; height: number }
-export function buildHomeBookSkeletonGeometryCSS(): string
+export function getHomeBookTypeScale(viewportWidth: number): { titleVw: number; titleMax: number; subtitleVw: number; subtitleMax: number }

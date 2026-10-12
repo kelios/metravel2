@@ -9,7 +9,7 @@
  * to avoid importing TS modules at build time).
  */
 
-const { buildHomeBookSkeletonGeometryCSS } = require('../components/home/homeBookGeometry');
+const { buildHomeBookSkeletonGeometryCSS } = require('./ssg-home-book-css');
 
 const { BREAKPOINTS, CARD_GEOMETRY, CARD_MEDIA_SLOT_RATIO, CATALOG_CHROME_GEOMETRY, getCatalogViewportGeometry } = require('../components/listTravel/travelCatalogGeometry');
 

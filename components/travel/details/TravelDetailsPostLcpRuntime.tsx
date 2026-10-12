@@ -13,7 +13,6 @@ import {
 } from './travelDetailsDeferredLoader';
 import { TravelDetailsDeferredSectionsSkeleton } from '@/components/travel/NearTravelListSkeleton';
 import { TravelDetailsDeferredTransition } from './TravelDetailsDeferredTransition';
-import { canShowNearTravelMapMode, getNearTravelMapOrigin } from '@/components/travel/utils/nearTravelMapAvailability';
 
 type TravelDetailsPostLcpRuntimeProps = {
   travel: Travel;
@@ -63,7 +62,7 @@ function TravelDetailsPostLcpRuntime({
   const deferredSectionsContent = useMemo(
     () => {
       const placeholder = Platform.OS === 'web' ? (
-        <TravelDetailsDeferredSectionsSkeleton isMobile={isMobile} canShowMapMode={canShowNearTravelMapMode(getNearTravelMapOrigin(travel))} />
+        <TravelDetailsDeferredSectionsSkeleton isMobile={isMobile} travel={travel} />
       ) : (
         <View style={NATIVE_PLACEHOLDER_STYLE}>
           <SectionSkeleton />

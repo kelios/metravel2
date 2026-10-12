@@ -29,7 +29,6 @@ export interface HeroStyleContext {
   colors: Colors
   isMobile: boolean
   isSmallPhone: boolean
-  isNarrowLayout: boolean
   viewportWidth: number
   showSideSlider: boolean
   sliderHeight: number
@@ -44,7 +43,6 @@ export interface HeroStyleContext {
   isLargeDesktopBook: boolean
   isNarrowDesktopBook: boolean
   isCompactBookLayout: boolean
-  isVeryCompactBookLayout: boolean
   useDenseBookNotes: boolean
 
   // derived fluid typography

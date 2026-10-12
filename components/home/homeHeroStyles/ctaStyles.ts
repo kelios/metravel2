@@ -12,7 +12,6 @@ export const createCtaStyles = (ctx: HeroStyleContext) => {
     showSideSlider,
     stackHeroButtons,
     isCompactBookLayout,
-    isVeryCompactBookLayout,
     sansSerif,
     editorialSerif,
     warmBgSoft,
@@ -20,7 +19,6 @@ export const createCtaStyles = (ctx: HeroStyleContext) => {
     warmBorder,
     warmShadow,
     inkStrong,
-    inkMuted,
   } = ctx
 
   return {
@@ -132,54 +130,6 @@ export const createCtaStyles = (ctx: HeroStyleContext) => {
       alignSelf: stackHeroButtons ? 'stretch' : 'flex-start',
     },
 
-    // -- Bookmark rail (desktop left page inline mood cards) --
-    // Horizontal pills layout — simpler, cleaner
-    bookmarkRail: {
-      width: '100%',
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: showSideSlider ? 7 : 6,
-      alignItems: 'center',
-      alignContent: 'flex-start',
-      overflow: 'hidden',
-      marginTop: isCompactBookLayout ? 8 : 14,
-    },
-    bookmarkChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 15,
-      paddingVertical: isVeryCompactBookLayout ? 7 : 9,
-      borderRadius: DESIGN_TOKENS.radii.pill,
-      borderWidth: 1,
-      borderColor: warmBorder,
-      backgroundColor: 'rgba(255,252,245,0.88)',
-      flexBasis: 'auto',
-      maxWidth: 'none' as any,
-      flexShrink: 0,
-      minWidth: 0,
-      minHeight: 44,
-      ...Platform.select({
-        web: {
-          cursor: 'pointer',
-          transition: 'background-color 0.15s ease, border-color 0.15s ease',
-          boxShadow: '0 1px 0 rgba(120,96,62,0.08)',
-        } as any,
-      }),
-    },
-    bookmarkChipAccent: {
-      width: 0,
-      height: 0,
-    },
-    bookmarkChipHover: {
-      backgroundColor: cardSurface,
-      borderColor: colors.brand,
-      ...Platform.select({ web: {} }),
-    },
-    bookmarkChipIcon: {
-      width: 0,
-      height: 0,
-    },
 
     // -- Mood chips (mobile horizontal scroll) --
     moodChipsContainer: {
@@ -243,12 +193,6 @@ export const createCtaStyles = (ctx: HeroStyleContext) => {
         } as any,
       }),
     },
-    moodChipAccent: { width: 0, height: 0 },
-    moodChipIcon: {
-      width: 0,
-      height: 0,
-    },
-    moodChipText: { gap: 0 },
     moodChipTitle: {
       fontSize: 16,
       fontWeight: '500',
@@ -256,14 +200,6 @@ export const createCtaStyles = (ctx: HeroStyleContext) => {
       letterSpacing: -0.12,
       lineHeight: 22,
       ...Platform.select({ web: { fontFamily: editorialSerif } as any }),
-    },
-    moodChipMeta: {
-      fontSize: 10,
-      fontWeight: '400',
-      color: inkMuted,
-      letterSpacing: 0.05,
-      lineHeight: 14,
-      ...Platform.select({ web: { fontFamily: sansSerif } as any }),
     },
 
     // -- Popular section (mobile) --

@@ -11,8 +11,10 @@ import safeLazy from '@/components/layout/safeLazy';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { jsonLdScript } from '@/components/seo/jsonLdScript';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
 import { buildCanonicalUrl, buildOgImageUrl, QUESTS_OG_IMAGE_PATH } from '@/utils/seo';
 import { createQuestCatalogSearch } from '@/utils/questCatalogSearch';
+import { rIC } from '@/utils/rIC';
 import { useIsFocused } from 'expo-router';
 import { useBreakpoints } from '@/hooks/useResponsive';
 import { useQuestCatalogResponsiveModel } from '@/hooks/useQuestCatalogResponsiveModel';
@@ -24,7 +26,6 @@ import { useQuestReviewPrompt } from '@/hooks/useQuestReviewPrompt';
 import QuestsContentPanel from './QuestsContentPanel';
 import { releaseQuestCatalogRestoredClass } from '@/utils/questCatalogSelection';
 import { useQuestPersonalSlices } from './useQuestPersonalSlices';
-import QuestsSidebar from './QuestsSidebar';
 import { getQuestFaqItems } from './QuestsSeoIntroFaq';
 import type { QuestMeta } from './questsShared';
 import { createQuestCatalogStructuredData } from '@/utils/discoverySeo';
@@ -68,6 +69,16 @@ const EMPTY_QUESTS: (QuestMeta & { _distanceKm?: number })[] = [];
 
 // #2389: режим карты (точки, центр, сама карта) грузится по переключению на карту.
 const QuestsMapSection = React.lazy(() => import('./QuestsMapSection'));
+// #2389: the static snapshot uses the mobile breakpoint, so the sidebar never
+// renders before hydration: on desktop it fills the reserved slot after it, on
+// mobile it opens in the filter drawer on demand. Its chunk therefore stays out
+// of the catalog chunk; a desktop viewport starts the import while the route
+// chunk evaluates, in parallel with hydration.
+const loadQuestsSidebar = () => import('./QuestsSidebar');
+const QuestsSidebar = React.lazy(loadQuestsSidebar);
+if (Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth >= METRICS.breakpoints.tablet) {
+    void loadQuestsSidebar();
+}
 // #2360: optional banner stays out of the catalog chunk; safeLazy renders
 // nothing if its chunk fails, instead of throwing the catalog into the boundary.
 const QuestReviewPromptBanner = safeLazy(
@@ -164,6 +175,10 @@ export default function QuestsScreen() {
     const height = useMemo(() => (width > 0 ? Dimensions.get('window').height : 0), [width]);
     const dockPx = useDockReservePx();
     const s = useMemo(() => getStyles(colors, width, height, dockPx), [colors, width, height, dockPx]);
+
+    // #2389: on mobile web the sidebar opens in the filter drawer; warming its
+    // chunk while idle keeps the first open from showing an empty panel.
+    useEffect(() => (Platform.OS === 'web' ? rIC(() => { void loadQuestsSidebar(); }, 2000) : undefined), []);
 
     // ── Persistent city selection ──
     // #2320: восстановленный выбор отрисован — класс первого кадра больше не нужен.
@@ -705,10 +720,12 @@ export default function QuestsScreen() {
                         accessibilityLabel={i18nT('quests:screens.tabs.QuestsScreen.zakryt_menyu_fbe0ff41')}
                     />
                     <View style={s.sidebarMobile as ViewStyle}>
-                        <QuestsSidebar
-                            {...sidebarProps}
-                            onCloseDrawer={() => setFilterDrawerOpen(false)}
-                        />
+                        <Suspense fallback={null}>
+                            <QuestsSidebar
+                                {...sidebarProps}
+                                onCloseDrawer={() => setFilterDrawerOpen(false)}
+                            />
+                        </Suspense>
                     </View>
                 </>
             )}
@@ -718,7 +735,9 @@ export default function QuestsScreen() {
                 this slot still allocates its final width before the first paint. */}
             <View style={s.desktopSidebarSlot as ViewStyle} testID="quests-desktop-sidebar-slot">
                 {!isMobile && (
-                    <QuestsSidebar {...sidebarProps} testID="quests-desktop-sidebar" />
+                    <Suspense fallback={null}>
+                        <QuestsSidebar {...sidebarProps} testID="quests-desktop-sidebar" />
+                    </Suspense>
                 )}
             </View>
 

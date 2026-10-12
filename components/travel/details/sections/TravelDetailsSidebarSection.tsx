@@ -15,7 +15,6 @@ import { translate as i18nT } from '@/i18n'
 import { TravelDetailsDeferredTransition } from '@/components/travel/details/TravelDetailsDeferredTransition'
 import { METRICS } from '@/constants/layout'
 import { NearTravelListSkeleton, PopularTravelListSkeleton } from '@/components/travel/NearTravelListSkeleton'
-import { canShowNearTravelMapMode, getNearTravelMapOrigin } from '@/components/travel/utils/nearTravelMapAvailability'
 
 
 const SIDEBAR_CONTENT_MARGIN_STYLE = { marginTop: 8 } as const
@@ -37,7 +36,6 @@ export const TravelDetailsSidebarSection: React.FC<{
   const styles = useTravelDetailsStyles()
   const colors = useThemedColors()
   const { width } = useWindowDimensions()
-  const canShowMapMode = canShowNearTravelMapMode(getNearTravelMapOrigin(travel))
   const {
     handleTravelsLoaded,
     hasValidTravelId,
@@ -102,7 +100,7 @@ export const TravelDetailsSidebarSection: React.FC<{
         <View style={SIDEBAR_CONTENT_MARGIN_STYLE}>
           {hasValidTravelId && (
             <View testID="travel-details-near-loaded">
-              <Suspense fallback={Platform.OS === 'web' ? <NearTravelListSkeleton canShowMapMode={canShowMapMode} /> : <View style={LIST_FALLBACK_STYLE} />}>
+              <Suspense fallback={Platform.OS === 'web' ? <NearTravelListSkeleton travel={travel} /> : <View style={LIST_FALLBACK_STYLE} />}>
                 <NearTravelListComponent
                   travel={travel}
                   onTravelsLoaded={handleTravelsLoaded}

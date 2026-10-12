@@ -12,6 +12,7 @@ import {
 import { TRAVEL_DETAILS_FOOTER_RESERVE_HEIGHT } from '@/components/travel/details/TravelDetailsDeferredTransition'
 import { createTravelDetailsSectionHeaderStyles } from '@/components/travel/details/styles/travelDetailsSectionHeaderStyles'
 import { createTravelTmlRoundStyles, TRAVEL_TML_ROUND_IMAGE_HEIGHT } from '@/components/travel/TravelTmlRound.styles'
+import { canShowNearTravelMapMode, getNearTravelMapOrigin, type NearTravelCoordinateSource } from '@/components/travel/utils/nearTravelMapAvailability'
 import { getTravelDetailsListColumnWidth } from '@/components/travel/utils/travelDetailsListLayout'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -128,9 +129,12 @@ const skeletonStyles = StyleSheet.create({
  * ряд каркасов карточек той же геометрии, что `NearTravelList`. Декоративный —
  * без фокуса и вне дерева доступности.
  */
-export const NearTravelListSkeleton = memo(function NearTravelListSkeleton({
-  canShowMapMode = false,
-}: { canShowMapMode?: boolean }) {
+// The map toggle is reserved only where the loaded list can show it (#2382):
+// callers pass the travel, the coordinate rule lives in one place.
+type NearTravelSkeletonProps = { travel?: NearTravelCoordinateSource }
+
+export const NearTravelListSkeleton = memo(function NearTravelListSkeleton({ travel }: NearTravelSkeletonProps) {
+  const canShowMapMode = !!travel && canShowNearTravelMapMode(getNearTravelMapOrigin(travel))
   const layout = useNearTravelRailLayout()
   const colors = useThemedColors()
   const slotStyle = useNearTravelRailSlotStyle(layout)
@@ -186,7 +190,7 @@ export const PopularTravelListSkeleton = memo(function PopularTravelListSkeleton
   )
 })
 
-export const SidebarSectionSkeleton = ({ canShowMapMode = false }: { canShowMapMode?: boolean }) => {
+export const SidebarSectionSkeleton = ({ travel }: NearTravelSkeletonProps) => {
   const width = useResponsiveWidth()
   const colors = useThemedColors()
   const headers = useMemo(() => createTravelDetailsSectionHeaderStyles(colors), [colors])
@@ -225,7 +229,7 @@ export const SidebarSectionSkeleton = ({ canShowMapMode = false }: { canShowMapM
       <View style={skeletonStyles.sidebarWebSection} testID="travel-sidebar-near-skeleton">
         {header('near', i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.ryadom_mozhno_posmotret_3f015f94'), getNearbyTravelsSubtitle())}
         <View style={skeletonStyles.sidebarCardContent}>
-          <NearTravelListSkeleton canShowMapMode={canShowMapMode} />
+          <NearTravelListSkeleton travel={travel} />
         </View>
       </View>
       <View style={skeletonStyles.sidebarWebSection} testID="travel-sidebar-popular-skeleton">
@@ -238,7 +242,7 @@ export const SidebarSectionSkeleton = ({ canShowMapMode = false }: { canShowMapM
   )
 }
 
-export function TravelDetailsDeferredSectionsSkeleton({ isMobile, canShowMapMode = false }: { isMobile: boolean; canShowMapMode?: boolean }) {
+export function TravelDetailsDeferredSectionsSkeleton({ isMobile, travel }: { isMobile: boolean } & NearTravelSkeletonProps) {
   return (
     <>
       <View>{isMobile ? <AuthorSectionSkeleton /> : null}</View>
@@ -249,7 +253,7 @@ export function TravelDetailsDeferredSectionsSkeleton({ isMobile, canShowMapMode
         <MapSectionSkeleton />
       </View>
       <View>
-        <SidebarSectionSkeleton canShowMapMode={canShowMapMode} />
+        <SidebarSectionSkeleton travel={travel} />
       </View>
       <View>
         <CommentsSkeleton />
