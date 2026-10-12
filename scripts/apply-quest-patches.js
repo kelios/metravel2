@@ -205,8 +205,18 @@ async function applyCreate(p, file, transport, { fetchBundle = fetchQuestBundles
   const [bundle] = await fetchBundle(transport.api, p.quest_id)
   if (!bundle || bundle.id !== p.quest_db_id) throw new Error(`${file} ${p.quest_id}: quest_db_id ${p.quest_db_id} ≠ проду ${bundle && bundle.id}`)
   const steps = parseSteps(bundle)
-  if (steps.some((s) => s.step_id === payload.step_id)) return { label, skipped: true }
   const intro = bundle.intro ? [{ ...bundle.intro, is_intro: true }] : []
+  const existing = steps.find((s) => s.step_id === payload.step_id)
+  if (existing) {
+    // Повтор засчитывается, только если прошлый прогон довёл точку до места:
+    // упавший сдвиг оставил бы её на временном order за финалом.
+    const after = steps.find((s) => s.step_id === p.after_step_id)
+    const want = after ? Number(after.order) + 1 : NaN
+    if (Number(existing.order) !== want) {
+      throw new Error(`${file} ${payload.step_id}: точка уже на проде, но order ${existing.order} ≠ ${want} — прошлый прогон не довёл сдвиг, почини order вручную`)
+    }
+    return { label, skipped: true }
+  }
   const plan = planInsert([...intro, ...steps], p.after_step_id)
   const created = await apiRequest('POST', '/api/quest-steps/', { ...payload, quest: bundle.id, order: plan.tempOrder }, transport)
   for (const s of plan.shifts) await apiRequest('PATCH', `/api/quest-steps/${s.pk}/`, { order: s.from + 10000 }, transport)

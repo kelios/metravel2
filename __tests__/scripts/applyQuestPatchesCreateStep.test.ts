@@ -98,6 +98,14 @@ describe('apply-quest-patches create_step #2423', () => {
     expect(calls).toEqual([])
   })
 
+  it('точка на проде, но не на своём месте — отказ, а не тихий SKIP', async () => {
+    const { calls, transport } = recorder()
+    const stuck = [...STEPS, { id: 99, step_id: 'new-point', order: 5003 }]
+    await expect(applyCreate(patch(), 'f', transport, { fetchBundle: async () => [bundle(stuck)] }))
+      .rejects.toThrow('order 5003 ≠ 2')
+    expect(calls).toEqual([])
+  })
+
   it('чужой quest_db_id — отказ до записи', async () => {
     const { calls, transport } = recorder()
     await expect(applyCreate(patch({ quest_db_id: 8 }), 'f', transport, { fetchBundle: async () => [bundle()] }))
