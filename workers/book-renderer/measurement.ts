@@ -110,6 +110,17 @@ export function hasPrintedPageOverflow(domBudget: number): boolean {
     })
 }
 
+/**
+ * Executed in the print DOM before bytes that are kept are printed. Chromium skips painting a
+ * background it knows an opaque image fully covers, but it only knows a JPEG is opaque after the
+ * image was decoded — by the screen raster, which races `page.pdf()`. Without a settled decode the
+ * same HTML printed the covered background (e.g. the thumbnail fill under a rounded card corner)
+ * in some runs and not in others (#2407).
+ */
+export async function settlePrintImageDecode(): Promise<void> {
+  await Promise.all(Array.from(document.images, image => image.decode()))
+}
+
 export async function probeFrozenImage(root: string, chunk: BookMediaChunk, profile = DEFAULT_RENDERER_RESOURCE_PROFILE, policy?: PrintSourcePolicy): Promise<{ width: number; height: number; aspect: number }> {
   if (chunk.size_bytes > profile.encoded_resource_bytes) throw new Error('SNAPSHOT_IMAGE_ENCODED_BUDGET_EXCEEDED')
   const file = await verifyFile(root, chunk)
@@ -250,10 +261,12 @@ export async function physicalMeasurer(root: string, out: string, fontsDir: stri
       const overflow = await page!.evaluate(hasPrintedPageOverflow, profile.dom_nodes)
       return !overflow
     }
-    const measurePdf = async (html: string): Promise<PdfPageMeasurement> => {
+    const printPage = async (html: string, keepBytes: boolean): Promise<PdfPageMeasurement> => {
       try {
         const fits = await geometryFits(html)
         if (!fits) return { pages: 0, fits: false }
+        // Page counts do not depend on background culling; only kept bytes pay for the settle.
+        if (keepBytes) await page!.evaluate(settlePrintImageDecode)
         const pdf = await page!.pdf({ format: 'A4', printBackground: true, preferCSSPageSize: true })
         if (pdf.byteLength > 4 * 1024 * 1024) throw new Error('WORKER_SEGMENT_PDF_BUDGET_EXCEEDED')
         const counts = Array.from(pdf.toString('latin1').matchAll(/\/Count\s+(\d+)/g), value => Number(value[1]))
@@ -264,8 +277,9 @@ export async function physicalMeasurer(root: string, out: string, fontsDir: stri
         await page!.requestGC()
       }
     }
+    const measurePdf = (html: string) => printPage(html, true)
     const measure: MeasurePage = async html => {
-      const { pages, fits } = await measurePdf(html)
+      const { pages, fits } = await printPage(html, false)
       return { pages, fits }
     }
 

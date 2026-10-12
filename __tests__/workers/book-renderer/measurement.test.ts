@@ -2,7 +2,7 @@
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { chromium, type Browser, type Route } from 'playwright'
-import { physicalMeasurer } from '@/workers/book-renderer/measurement'
+import { physicalMeasurer, settlePrintImageDecode } from '@/workers/book-renderer/measurement'
 import { canonicalJson, sha256 } from '@/workers/book-renderer/filesystem'
 import { PrintAssetCache } from '@/workers/book-renderer/printAssets'
 
@@ -32,8 +32,30 @@ describe('physical measurement resource readiness with a mocked browser port', (
         else expect(result).toEqual({ pages: kind === 'multiple' ? 2 : 0, fits: false })
       }
       expect(page.pdf).toHaveBeenCalledTimes(kind === 'overflow' ? 0 : 1)
+      // #2407: kept bytes are printed only after every image decode settled.
+      const settles = page.evaluate.mock.calls.flatMap((call, index) => call[0] === settlePrintImageDecode ? [page.evaluate.mock.invocationCallOrder[index]] : [])
+      expect(settles).toHaveLength(kind === 'overflow' ? 0 : 1)
+      if (settles.length) expect(settles[0]).toBeLessThan(page.pdf.mock.invocationCallOrder[0])
       expect(page.goto).toHaveBeenCalledWith('about:blank')
       expect(page.requestGC).toHaveBeenCalledTimes(1)
+    } finally { await measurer?.close(); await rm(scratch, { recursive: true, force: true }) }
+  })
+  it('counts planning pages without paying for the decode settle of kept bytes', async () => {
+    const root = path.resolve(__dirname, '../../../.codex-temp/tests')
+    await mkdir(root, { recursive: true })
+    const scratch = await mkdtemp(path.join(root, 'book-measured-count-'))
+    const fonts = path.join(scratch, 'fonts'); await mkdir(fonts); await writeFile(path.join(fonts, 'fonts.css'), '')
+    const page = { setDefaultTimeout: jest.fn(), emulateMedia: jest.fn(), setContent: jest.fn(),
+      evaluate: jest.fn().mockResolvedValueOnce(undefined).mockResolvedValue(false),
+      pdf: jest.fn().mockResolvedValue(Buffer.from('%PDF-1.4\n/Count 1\n')), goto: jest.fn(), requestGC: jest.fn() }
+    const browser = { close: jest.fn(), newContext: async () => ({ route: jest.fn(), newPage: async () => page }) }
+    jest.mocked(chromium.launch).mockResolvedValueOnce(browser as unknown as Browser)
+    let measurer: Awaited<ReturnType<typeof physicalMeasurer>> | undefined
+    try {
+      measurer = await physicalMeasurer(scratch, scratch, fonts)
+      await expect(measurer.measure('<html><head></head><body></body></html>')).resolves.toEqual({ pages: 1, fits: true })
+      expect(page.pdf).toHaveBeenCalledTimes(1)
+      expect(page.evaluate).not.toHaveBeenCalledWith(settlePrintImageDecode)
     } finally { await measurer?.close(); await rm(scratch, { recursive: true, force: true }) }
   })
   it.each([false, true])('requires each original response even when two bindings share served bytes (complete=%s)', async complete => {
