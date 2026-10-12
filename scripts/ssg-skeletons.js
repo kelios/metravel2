@@ -703,7 +703,7 @@ function buildMapSkeletonHtml() {
   return `<div id="ssg-skeleton">
 <div class="ssg-bar"><div class="ssg-bar-logo">MeTravel</div></div>
 <div class="ssg-map-layout">
-  <div class="ssg-map-canvas" role="region" aria-label="Карта маршрутов и достопримечательностей Беларуси">
+  <div class="ssg-map-canvas" role="region" aria-label="Карта маршрутов и достопримечательностей">
     <img class="ssg-map-tile" data-ssg-map-tile="true" width="256" height="256" alt="" aria-hidden="true" decoding="async">
     <script>(function(){try{if(typeof window.__metravelMountMapShellTile==='function')window.__metravelMountMapShellTile()}catch(e){}})();</script>
     <div class="ssg-map-toolbar">

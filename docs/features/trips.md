@@ -191,7 +191,7 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 | `app/(tabs)/trips/plan/[id].tsx` | 688 | экран поездки: шапка, owner-редактор метаданных, табы планировщика, удаление |
 | `components/trips/planning/TripPlanRouteMap.web.tsx` | 661 | Leaflet/React-Leaflet карта конструктора на web, слои, fullscreen |
 | `components/trips/planning/TripCreateForm.tsx` | 653 | форма создания поездки, yup-валидация, prefill из travel |
-| `components/trips/MyCreatedTripsList.tsx`, `components/trips/myCreatedTripsLayout.ts` | — | список моих поездок (организую/участвую), фильтры, удаление и общий responsive-контракт первого кадра |
+| `components/trips/MyCreatedTripsList.tsx`, `components/trips/myCreatedTripsLayout.ts` | 535 + 41 | список моих поездок (организую/участвую), фильтры, удаление и общий responsive-контракт первого кадра |
 | `components/trips/planning/TripReportForm.tsx` | 422 | пост-отчёт и публикация маршрута в сообщество |
 | `components/trips/chat/TripChatPanel.tsx` | 409 | чат поездки |
 | `components/trips/PublicTripsCatalog.tsx` | 404 | каталог: поиск, фильтры, адаптивная сетка 1/2/3 колонки |
