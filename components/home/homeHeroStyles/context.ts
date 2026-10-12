@@ -59,6 +59,8 @@ export interface HeroStyleContext {
   leftPagePaddingTop: string | number
   leftPagePaddingBottom: string | number
   pageNumberBottom: number
+  /** Paper height between the vertical insets; 0 without the book layout. */
+  bookUsableHeight: number
   leftPageNumberLeft: `${number}%` | number
   rightPageNumberRight: `${number}%` | number
   leftPageWidth: string

@@ -68,9 +68,14 @@ export const createSliderSectionStyles = (ctx: HeroStyleContext) => {
       // набора, поэтому она одна для всех пяти слайдов и не дёргается при
       // автопереключении.
       aspectRatio: HOME_HERO_MEDIA_SLOT_RATIO,
+      // On a wide but short book the width-derived height would outgrow the
+      // paper, so the frame narrows to fit between the insets and stays centred.
+      ...(ctx.bookUsableHeight > 0
+        ? { maxWidth: ctx.bookUsableHeight * HOME_HERO_MEDIA_SLOT_RATIO }
+        : {}),
       ...Platform.select({
         web: {
-          alignSelf: 'stretch',
+          alignSelf: ctx.bookUsableHeight > 0 ? 'center' : 'stretch',
           marginTop: 0,
           clipPath: `inset(0 round ${isNarrowDesktopBook ? 12 : 10}px)`,
           boxSizing: 'border-box',

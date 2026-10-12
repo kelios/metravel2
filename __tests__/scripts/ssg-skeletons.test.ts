@@ -725,6 +725,8 @@ describe('ssg-skeletons', () => {
       expect(css).toContain('padding-bottom:calc(var(--home-book-height) * 0.258)');
       // Grid-item % would resolve against the page column, not the book.
       expect(css).toContain('padding-left:calc(var(--home-book-width) * 0.156)');
+      // A wide, short book narrows the 3:2 week photo to the paper height.
+      expect(css).toContain('--home-week-width:min(calc(var(--home-book-width) * 0.312),calc(var(--home-book-usable-height) * 1.5))');
       // The cut-out artwork carries no backdrop of its own around the book.
       expect(css).toMatch(/\.ssg-home-book\{display:grid;[^}]*background-color:transparent;background-image:var\(--image-homeHeroBook/);
       expect(css).toContain('.ssg-home-page-content{display:flex;flex-direction:column;min-height:0;overflow-y:auto;overflow-x:hidden}');

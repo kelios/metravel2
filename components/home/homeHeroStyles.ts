@@ -138,6 +138,7 @@ export const createHomeHeroStyles = ({
     leftPagePaddingTop,
     leftPagePaddingBottom,
     pageNumberBottom,
+    bookUsableHeight: hasBookLayout ? pageMetrics.usableHeight : 0,
     leftPageNumberLeft,
     rightPageNumberRight,
     leftPageWidth,

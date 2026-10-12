@@ -21,6 +21,7 @@ import { Platform, StyleSheet } from 'react-native'
 
 import { getThemedColors } from '@/constants/designSystem'
 import { BOOK_IMAGES } from '@/components/home/homeHeroContent'
+import { resolveHomeBookGeometry } from '@/components/home/homeBookGeometry'
 import { createHomeHeroStyles } from '@/components/home/homeHeroStyles'
 import {
   HOME_HERO_MAX_FLAT_SHARE,
@@ -95,7 +96,7 @@ function readWebpSize(file: string): { width: number; height: number } {
  * импорте модуля, поэтому desktop-слайдер в jest не рендерится вовсе и
  * возврат `height:'90%'` у кадра остался бы незамеченным.
  */
-function createWebDesktopHeroStyles() {
+function createWebDesktopHeroStyles({ viewportWidth = 1350, bookHeight = 760 } = {}) {
   const previousOS = Platform.OS
   const previousSelect = Platform.select
   Platform.OS = 'web'
@@ -108,10 +109,10 @@ function createWebDesktopHeroStyles() {
       isNarrowLayout: false,
       isTablet: false,
       isDesktop: true,
-      viewportWidth: 1350,
+      viewportWidth,
       showSideSlider: true,
       sliderHeight: 320,
-      bookHeight: 760,
+      bookHeight,
     })
   } finally {
     Platform.OS = previousOS
@@ -168,6 +169,14 @@ describe('#1541 единый ландшафтный кадр hero главной
       expect([label, flat.height]).toEqual([label, undefined])
       expect([label, flat.minHeight ?? 0]).toEqual([label, 0])
     }
+  })
+
+  it('на широкой и низкой книге кадр сужается до высоты бумаги и не выходит за рамку страницы (#2430)', () => {
+    const book = resolveHomeBookGeometry(2560, 640)
+    const styles = createWebDesktopHeroStyles({ viewportWidth: 2560, bookHeight: book.height })
+    const frame = StyleSheet.flatten(styles.sliderFrame) as { maxWidth: number; alignSelf: string }
+    expect(frame.maxWidth / HOME_HERO_MEDIA_SLOT_RATIO).toBeCloseTo(book.usableHeight)
+    expect(frame.alignSelf).toBe('center')
   })
 
   it('SSG-шелл рисует кадр той же пропорции и той же заливкой, что и React', () => {
