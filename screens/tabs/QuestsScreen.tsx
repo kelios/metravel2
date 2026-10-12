@@ -17,7 +17,7 @@ import { useIsFocused } from 'expo-router';
 import { useBreakpoints } from '@/hooks/useResponsive';
 import { useQuestCatalogResponsiveModel } from '@/hooks/useQuestCatalogResponsiveModel';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { useThemedColors } from '@/hooks/useTheme';
+import { useTheme, useThemedColors } from '@/hooks/useTheme';
 import { useQuestsList } from '@/hooks/useQuestsApi';
 import { useQuestReturnVisit } from '@/hooks/useQuestReturnVisit';
 import { useQuestReviewPrompt } from '@/hooks/useQuestReviewPrompt';
@@ -143,6 +143,7 @@ export default function QuestsScreen() {
     );
 
     const colors = useThemedColors();
+    const { activeSeasonalTheme } = useTheme();
     // Ширинно-ориентированная подписка (без ре-рендера на изменение высоты).
     // На мобильном вебе открытие клавиатуры/схлопывание адресной строки меняет
     // высоту вьюпорта покадрово; подписка на высоту (useResponsive) дёргала бы
@@ -326,11 +327,12 @@ export default function QuestsScreen() {
     const bikeQuests = useMemo(() => filterBikeQuests(ALL_QUESTS), [ALL_QUESTS]);
     // Тематические подборки (#2377): активные темы реестра (сезонные — в своём
     // окне дат), у которых есть хотя бы один квест. Пустая тема не рендерится.
+    // Ручной выбор оформления сайта сразу открывает одноимённую подборку (#2409).
     const themeSlices = useMemo(
-        () => getActiveQuestThemes()
+        () => getActiveQuestThemes(new Date(), activeSeasonalTheme)
             .map((theme) => ({ theme, selectionId: toThemeSelectionId(theme.id), quests: filterQuestsByTheme(ALL_QUESTS, theme) }))
             .filter((slice) => slice.quests.length > 0),
-        [ALL_QUESTS],
+        [ALL_QUESTS, activeSeasonalTheme],
     );
     const themeEntries = useMemo(
         () => themeSlices.map(({ theme, selectionId }) => ({ id: theme.id, selectionId, label: theme.label, icon: theme.icon })),

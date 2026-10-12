@@ -107,6 +107,7 @@ jest.mock('@/hooks/useResponsive', () => ({
 }))
 
 jest.mock('@/hooks/useTheme', () => ({
+  useTheme: () => ({ activeSeasonalTheme: null }),
   useThemedColors: () => ({
     primary: '#227744',
     primaryDark: '#115533',

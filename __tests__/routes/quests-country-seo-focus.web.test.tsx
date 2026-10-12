@@ -56,6 +56,7 @@ jest.mock('@/hooks/useResponsive', () => ({
   useBreakpoints: () => ({ width: 1280, isMobile: false }),
 }))
 jest.mock('@/hooks/useTheme', () => ({
+  useTheme: () => ({ activeSeasonalTheme: null }),
   useThemedColors: () => ({
     primary: '#227744',
     primaryDark: '#115533',

@@ -31,7 +31,7 @@ describe('questCatalogSelection theme slice', () => {
 
 describe('explicit theme query authority (#2403)', () => {
   const halloween = new Date(2026, 9, 15, 12);
-  const offSeason = new Date(2026, 9, 11, 12);
+  const offSeason = new Date(2026, 8, 30, 12);
   it.each(['HALLOWEEN', ' halloween '])('normalizes active %s', (value) => {
     expect(resolveQuestThemeQuery(value, halloween)).toBe('__theme__:halloween');
   });
@@ -44,6 +44,11 @@ describe('explicit theme query authority (#2403)', () => {
     expect(resolveQuestThemeQuery('detective', offSeason)).toBe('__theme__:detective');
     expect(resolveQuestThemeQuery('christmas', new Date(2027, 0, 14))).toBe('__theme__:christmas');
     expect(resolveQuestThemeQuery('christmas', new Date(2027, 0, 15))).toBe(ALL_QUESTS_ID);
+  });
+  it('opens a seasonal slice from its early-preview date (#2409)', () => {
+    expect(resolveQuestThemeQuery('christmas', new Date(2026, 10, 14, 12))).toBe(ALL_QUESTS_ID);
+    expect(resolveQuestThemeQuery('christmas', new Date(2026, 10, 20, 12))).toBe('__theme__:christmas');
+    expect(resolveQuestThemeQuery('halloween', new Date(2026, 9, 1, 12))).toBe('__theme__:halloween');
   });
 });
 

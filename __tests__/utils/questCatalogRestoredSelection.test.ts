@@ -8,6 +8,7 @@ import path from 'path'
 
 import {
   ALL_QUESTS_ID,
+  resolveQuestThemeQuery,
   BIKE_FILTER_ID,
   NEARBY_ID,
   QUEST_CATALOG_RESTORED_CLASS,
@@ -87,9 +88,20 @@ describe('explicit theme first-frame priority (#2403)', () => {
     jest.restoreAllMocks();
   });
   it('uses the same civil calendar at both active boundaries and natural off-season', () => {
-    for (const [date, active] of [[new Date(2026, 9, 14), false], [new Date(2026, 9, 15), true], [new Date(2026, 10, 1), true], [new Date(2026, 10, 2), false]] as const) {
+    for (const [date, active] of [[new Date(2026, 8, 30), false], [new Date(2026, 9, 1), true], [new Date(2026, 10, 1), true], [new Date(2026, 10, 2), false]] as const) {
       jest.setSystemTime(date);
       expect(runHeadScript('/quests?theme=halloween', 'minsk')).toBe(active);
     }
+  });
+  it('shares the early-preview window with the runtime resolver (#2409)', () => {
+    for (const date of [new Date(2026, 10, 14), new Date(2026, 10, 15), new Date(2026, 10, 20), new Date(2027, 0, 14), new Date(2027, 0, 15)]) {
+      jest.setSystemTime(date);
+      const runtime = resolveQuestThemeQuery('christmas', date) !== ALL_QUESTS_ID;
+      expect(runHeadScript('/quests?theme=christmas', 'minsk')).toBe(runtime);
+    }
+    jest.setSystemTime(new Date(2026, 10, 14));
+    expect(runHeadScript('/quests?theme=christmas', 'minsk')).toBe(false);
+    jest.setSystemTime(new Date(2026, 10, 15));
+    expect(runHeadScript('/quests?theme=christmas', 'minsk')).toBe(true);
   });
 });

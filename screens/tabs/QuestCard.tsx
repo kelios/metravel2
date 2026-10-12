@@ -14,7 +14,7 @@ import UserAvatar from '@/components/layout/UserAvatar';
 import QuestReviewsModal from '@/components/quests/QuestReviewsModal';
 import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
 import { useBreakpoints } from '@/hooks/useResponsive';
-import { useThemedColors } from '@/hooks/useTheme';
+import { useTheme, useThemedColors } from '@/hooks/useTheme';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { IMAGE_QUALITY, IMAGE_WIDTHS } from '@/constants/imageContract';
@@ -76,6 +76,7 @@ function QuestCard({
     index,
 }: QuestCardProps) {
     const colors = useThemedColors();
+    const { activeSeasonalTheme } = useTheme();
     const { isPhone } = useBreakpoints();
     const [isHovered, setIsHovered] = useState(false);
     const [reviewsOpen, setReviewsOpen] = useState(false);
@@ -86,8 +87,9 @@ function QuestCard({
     const ageCategory = quest.ageCategory ?? getQuestAgeCategory(quest.tags);
     const ageBadgeLabel = getQuestAgeBadgeLabel(ageCategory);
     const isBike = isBikeQuest(quest.tags);
-    // Одна подпись темы (#2377): активная сезонная важнее вечной.
-    const theme = getPrimaryQuestTheme(quest.tags);
+    // Одна подпись темы (#2377): активная сезонная важнее вечной; ручная тема
+    // оформления сайта включает свою подборку и здесь (#2409).
+    const theme = getPrimaryQuestTheme(quest.tags, new Date(), activeSeasonalTheme);
     const categoryLabel = quest.cityName || quest.countryName || null;
     const distanceText = nearby && typeof quest._distanceKm === 'number'
         ? formatDistance(quest._distanceKm)

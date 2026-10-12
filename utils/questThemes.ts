@@ -1,6 +1,7 @@
 import { translate as i18nT } from '@/i18n';
 import { getQuestThemeDefinitions, isQuestThemeActive, type QuestThemeDefinition } from './questThemeRegistry';
 import { normalizeQuestTag } from '@/utils/questAudience';
+import type { SeasonalThemeId } from '@/constants/seasonalThemes';
 
 /**
  * Тематические подборки квестов (#2377).
@@ -28,8 +29,9 @@ export function getQuestThemeById(id: string | null | undefined): QuestTheme | n
 }
 export { isQuestThemeActive } from './questThemeRegistry';
 
-export function getActiveQuestThemes(now: Date = new Date()): QuestTheme[] {
-    return QUEST_THEMES.filter((theme) => isQuestThemeActive(theme, now));
+/** `siteSeason` — сезон оформления сайта (`useTheme().activeSeasonalTheme`), см. `isQuestThemeActive`. */
+export function getActiveQuestThemes(now: Date = new Date(), siteSeason: SeasonalThemeId | null = null): QuestTheme[] {
+    return QUEST_THEMES.filter((theme) => isQuestThemeActive(theme, now, siteSeason));
 }
 
 export function isQuestInTheme(theme: QuestTheme, tags?: readonly string[] | null): boolean {
@@ -54,7 +56,8 @@ export function filterQuestsByTheme<T extends { tags?: string[] | null }>(
 export function getPrimaryQuestTheme(
     tags?: readonly string[] | null,
     now: Date = new Date(),
+    siteSeason: SeasonalThemeId | null = null,
 ): QuestTheme | null {
     if (!tags?.length) return null;
-    return getActiveQuestThemes(now).find((theme) => isQuestInTheme(theme, tags)) ?? null;
+    return getActiveQuestThemes(now, siteSeason).find((theme) => isQuestInTheme(theme, tags)) ?? null;
 }

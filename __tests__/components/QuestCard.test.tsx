@@ -41,6 +41,7 @@ jest.mock('@/hooks/useResponsive', () => ({
     useBreakpoints: () => ({ isPhone: mockIsPhone }),
 }));
 jest.mock('@/hooks/useTheme', () => ({
+    useTheme: () => ({ activeSeasonalTheme: null }),
     useThemedColors: () => ({
         backgroundTertiary: 'backgroundTertiary',
         backgroundSecondary: 'backgroundSecondary',

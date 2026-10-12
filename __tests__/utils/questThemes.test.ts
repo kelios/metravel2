@@ -7,6 +7,8 @@ import {
   isQuestInTheme,
   isQuestThemeActive,
 } from '@/utils/questThemes';
+import { getQuestThemePreviewWindow } from '@/utils/questThemeRegistry';
+import { getSeasonalThemeByCalendar } from '@/constants/seasonalThemes';
 
 const halloween = getQuestThemeById('halloween')!;
 const christmas = getQuestThemeById('christmas')!;
@@ -19,12 +21,38 @@ describe('questThemes', () => {
     expect(ids.indexOf('christmas')).toBeLessThan(ids.indexOf('legends'));
   });
 
-  it('activates a seasonal theme only inside its window (inclusive)', () => {
+  it('activates a seasonal theme from its early preview to the end of its season (inclusive)', () => {
+    expect(isQuestThemeActive(halloween, new Date(2026, 8, 30))).toBe(false);
+    expect(isQuestThemeActive(halloween, new Date(2026, 9, 1))).toBe(true);
+    expect(isQuestThemeActive(halloween, new Date(2026, 9, 14))).toBe(true);
     expect(isQuestThemeActive(halloween, new Date(2026, 9, 15))).toBe(true);
-    expect(isQuestThemeActive(halloween, new Date(2026, 9, 31))).toBe(true);
     expect(isQuestThemeActive(halloween, new Date(2026, 10, 1))).toBe(true);
-    expect(isQuestThemeActive(halloween, new Date(2026, 9, 14))).toBe(false);
     expect(isQuestThemeActive(halloween, new Date(2026, 10, 2))).toBe(false);
+  });
+
+  it('shows the Christmas slice from 15.11 while the site dresses up only from 1.12 (#2409)', () => {
+    expect(isQuestThemeActive(christmas, new Date(2026, 10, 14))).toBe(false);
+    expect(isQuestThemeActive(christmas, new Date(2026, 10, 15))).toBe(true);
+    expect(isQuestThemeActive(christmas, new Date(2026, 10, 30))).toBe(true);
+    expect(getSeasonalThemeByCalendar(new Date(2026, 10, 15))).toBeNull();
+  });
+
+  it('activates the theme matching a manually chosen site season on any day (#2409)', () => {
+    const outOfWindow = new Date(2026, 6, 15);
+    expect(isQuestThemeActive(christmas, outOfWindow, 'christmas')).toBe(true);
+    expect(isQuestThemeActive(christmas, outOfWindow, 'halloween')).toBe(false);
+    expect(isQuestThemeActive(christmas, outOfWindow, null)).toBe(false);
+    expect(getActiveQuestThemes(new Date(2026, 9, 11), 'christmas').map((t) => t.id))
+      .toEqual(['halloween', 'christmas', 'legends', 'detective', 'fairytale']);
+    expect(getPrimaryQuestTheme(['christmas'], outOfWindow, 'christmas')?.id).toBe('christmas');
+    expect(getPrimaryQuestTheme(['christmas'], outOfWindow)).toBeNull();
+  });
+
+  it('keeps a seasonal theme without previewFrom on the plain season window', () => {
+    expect(getQuestThemePreviewWindow({ season: 'christmas' })).toBeNull();
+    expect(isQuestThemeActive({ season: 'christmas' }, new Date(2026, 10, 20))).toBe(false);
+    expect(isQuestThemeActive({ season: 'christmas' }, new Date(2026, 11, 1))).toBe(true);
+    expect(getQuestThemePreviewWindow(christmas)).toEqual({ from: { month: 11, day: 15 }, to: { month: 1, day: 14 } });
   });
 
   it('handles a season window that wraps over New Year', () => {
@@ -38,6 +66,7 @@ describe('questThemes', () => {
   it('always activates evergreen themes and lists seasonal ones first', () => {
     expect(isQuestThemeActive(legends, new Date(2026, 6, 15))).toBe(true);
     expect(getActiveQuestThemes(new Date(2026, 6, 15)).map((t) => t.id)).toEqual(['legends', 'detective', 'fairytale']);
+    expect(getActiveQuestThemes(new Date(2026, 9, 11)).map((t) => t.id)).toEqual(['halloween', 'legends', 'detective', 'fairytale']);
     expect(getActiveQuestThemes(new Date(2026, 9, 20)).map((t) => t.id)).toEqual(['halloween', 'legends', 'detective', 'fairytale']);
   });
 
