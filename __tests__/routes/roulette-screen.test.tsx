@@ -71,14 +71,26 @@ jest.mock('react-native', () => {
 
 jest.mock('@/components/listTravel/ModernFilters', () => {
   const React = require('react')
-  const { Text } = require('react-native')
+  const { Text, Pressable, View } = require('react-native')
   return {
     __esModule: true,
-    default: () => React.createElement(Text, null, 'ModernFilters'),
+    default: ({ onFilterChange, onYearChange }: {
+      onFilterChange: (key: string, id: string) => void;
+      onYearChange: (year: string) => void;
+    }) => (
+      <View>
+        <Text>ModernFilters</Text>
+        <Pressable testID="select-germany" onPress={() => onFilterChange('countries', '65')}>
+          <Text>Германия</Text>
+        </Pressable>
+        <Pressable testID="select-year" onPress={() => onYearChange('2026')}>
+          <Text>2026</Text>
+        </Pressable>
+      </View>
+    ),
   }
 });
 jest.mock('@/components/listTravel/RenderTravelItem', () => {
-  const React = require('react');
   const { View, Text } = require('react-native');
   return {
     __esModule: true,
@@ -103,6 +115,7 @@ jest.mock('@/api/miscOptimized', () => ({
   }),
 }));
 
+const mockedUseQuery = jest.requireMock('@tanstack/react-query').useQuery as jest.Mock;
 const mockedUseRandomTravelData = useRandomTravelData as jest.MockedFunction<typeof useRandomTravelData>;
 const mockedUseListTravelFilters = useListTravelFilters as jest.MockedFunction<typeof useListTravelFilters>;
 
@@ -113,6 +126,7 @@ const createTravel = (id: number) => ({
 
 function setupWeb(dataOverrides: Record<string, unknown> = {}) {
   (Platform as any).OS = 'web';
+  mockedUseQuery.mockImplementation(() => ({ data: { total: 3, facets: {} }, isLoading: false }));
 
   (global as any).__mockResponsive = {
     width: 1400,
@@ -180,8 +194,21 @@ function setupWeb(dataOverrides: Record<string, unknown> = {}) {
   return { ...utils, refetch };
 }
 
-function setupMobileWeb() {
-  (Platform as any).OS = 'web';
+// Словарь стран в форме `/countriesforsearch/`: из него рулетка берёт страны
+// по умолчанию (Беларусь и Польша) и подпись строки фильтров.
+const COUNTRY_DICTIONARY = [
+  { country_id: 3, title_ru: 'Беларусь' },
+  { country_id: 160, title_ru: 'Польша' },
+  { country_id: 65, title_ru: 'Германия' },
+];
+
+function setupMobile(platform: 'web' | 'android' | 'ios' = 'web') {
+  (Platform as any).OS = platform;
+  mockedUseQuery.mockImplementation(({ queryKey }: { queryKey: readonly unknown[] }) =>
+    queryKey[0] === 'filter-options'
+      ? { data: { countries: COUNTRY_DICTIONARY }, isLoading: false }
+      : { data: { total: 1, facets: {} }, isLoading: false },
+  );
 
   (global as any).__mockResponsive = {
     width: 390,
@@ -221,18 +248,9 @@ function setupMobileWeb() {
     },
   });
 
-  const resetFilters = jest.fn();
-
-  mockedUseListTravelFilters.mockReturnValue({
-    filter: {},
-    // эмулируем наличие одного пользовательского фильтра
-    queryParams: { countries: [1] },
-    setFilter: jest.fn(),
-    resetFilters,
-    onSelect: jest.fn(),
-    applyFilter: jest.fn(),
-    handleToggleCategory: jest.fn(),
-  } as any);
+  mockedUseListTravelFilters.mockImplementation(
+    jest.requireActual('@/components/listTravel/hooks/useListTravelFilters').useListTravelFilters,
+  );
 
   const refetch = jest.fn().mockResolvedValue({ data: { pages: [{ data: [createTravel(1)], total: 1 }] } });
 
@@ -259,12 +277,16 @@ function setupMobileWeb() {
     </QueryClientProvider>,
   );
 
-  return { ...utils, resetFilters };
+  return utils;
 }
 
 describe('RouletteScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    (Platform as any).OS = 'web';
   });
 
   it('calls refetch when roulette center is pressed on desktop web', async () => {
@@ -311,20 +333,69 @@ describe('RouletteScreen', () => {
     unmount();
   });
 
-  it('clears filters via reset button on mobile web when there are active filters', async () => {
-    const { getByTestId, resetFilters, unmount } = setupMobileWeb();
-
-    fireEvent.press(getByTestId('mobile-reset-filters'));
+  // #2431: подставленные страны по умолчанию — не выбор пользователя.
+  it('hides the mobile reset at default countries and names them in the summary', async () => {
+    const { queryByTestId, getByText, unmount } = setupMobile();
 
     await waitFor(() => {
-      expect(resetFilters).toHaveBeenCalledTimes(1);
+      expect(getByText('Фильтры: Беларусь и ещё 1')).toBeTruthy();
     });
+    expect(queryByTestId('mobile-reset-filters')).toBeNull();
 
     unmount();
   });
 
+  it.each(['web', 'android', 'ios'] as const)('restores default countries after selecting and resetting on %s', async (platform) => {
+    const { getByTestId, getByText, queryByTestId, unmount } = setupMobile(platform);
+
+    await waitFor(() => {
+      expect(getByText('Фильтры: Беларусь и ещё 1')).toBeTruthy();
+    });
+    expect(queryByTestId('mobile-reset-filters')).toBeNull();
+
+    fireEvent.press(getByTestId('mobile-filters-button'));
+    fireEvent.press(getByTestId('select-germany'));
+
+    await waitFor(() => {
+      expect(getByText('Фильтры: Беларусь и ещё 2')).toBeTruthy();
+    });
+    expect(mockedUseRandomTravelData).toHaveBeenLastCalledWith(expect.objectContaining({
+      queryParams: expect.objectContaining({ countries: [3, 65, 160] }),
+    }));
+    fireEvent.press(getByTestId('mobile-reset-filters'));
+
+    await waitFor(() => {
+      expect(getByText('Фильтры: Беларусь и ещё 1')).toBeTruthy();
+      expect(queryByTestId('mobile-reset-filters')).toBeNull();
+    });
+    expect(mockedUseRandomTravelData).toHaveBeenLastCalledWith(expect.objectContaining({
+      queryParams: expect.objectContaining({ countries: [3, 160] }),
+    }));
+
+    unmount();
+  });
+
+  it('offers mobile reset for a year alone and removes it after clearing', () => {
+    const { getByTestId, queryByTestId, unmount } = setupMobile();
+
+    expect(queryByTestId('mobile-reset-filters')).toBeNull();
+    fireEvent.press(getByTestId('mobile-filters-button'));
+    fireEvent.press(getByTestId('select-year'));
+    expect(mockedUseRandomTravelData).toHaveBeenLastCalledWith(expect.objectContaining({
+      queryParams: expect.objectContaining({ countries: [3, 160], year: '2026' }),
+    }));
+
+    fireEvent.press(getByTestId('mobile-reset-filters'));
+
+    expect(queryByTestId('mobile-reset-filters')).toBeNull();
+    const lastCall = mockedUseRandomTravelData.mock.calls.at(-1)![0];
+    expect(lastCall.queryParams).not.toHaveProperty('year');
+    expect(lastCall.queryParams.countries).toEqual([3, 160]);
+    unmount();
+  });
+
   it('toggles filters modal on mobile web', async () => {
-    const { getByTestId, queryByText, unmount } = setupMobileWeb();
+    const { getByTestId, queryByText, unmount } = setupMobile();
 
     expect(queryByText('ModernFilters')).toBeNull();
     fireEvent.press(getByTestId('mobile-filters-button'));

@@ -172,6 +172,39 @@ describe('ModernFilters Component', () => {
     expect(screen.getByRole('button', { name: 'Очистить все фильтры (1)' })).toBeTruthy();
   });
 
+  it.each([
+    ['2026', undefined, 1],
+    [2026, undefined, 1],
+    ['abc', undefined, 1],
+    [undefined, undefined, 0],
+    ['', undefined, 0],
+    ['  ', undefined, 0],
+    [' 2026 ', 2026, 0],
+    [2025, '2026', 1],
+    [undefined, '2026', 1],
+  ] as const)('counts year %p against default %p as %p', (year, defaultYear, count) => {
+    renderWithProviders(
+      <ModernFilters
+        filterGroups={mockFilterGroups}
+        selectedFilters={{ year } as FilterState}
+        defaultSelectedFilters={{ year: defaultYear }}
+        year={year}
+        onFilterChange={mockOnFilterChange}
+        onResetGroup={mockOnResetGroup}
+        onClearAll={mockOnClearAll}
+      />,
+    );
+
+    const reset = screen.queryByRole('button', { name: /Очистить все фильтры/ });
+    if (count === 0) {
+      expect(reset).toBeNull();
+    } else {
+      expect(reset).toBeTruthy();
+      fireEvent.press(reset!);
+      expect(mockOnClearAll).toHaveBeenCalledTimes(1);
+    }
+  });
+
   it('keeps selected badges but hides group clear for reordered duplicate defaults', () => {
     renderWithProviders(<ModernFilters filterGroups={mockFilterGroups}
       selectedFilters={{ categories: ['2', '1', '1'] }}

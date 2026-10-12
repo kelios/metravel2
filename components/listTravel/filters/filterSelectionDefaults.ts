@@ -18,6 +18,11 @@ export function getModernFiltersActiveCount(
 ) {
   const keys = new Set([...Object.keys(selectedFilters), ...Object.keys(defaultSelectedFilters ?? {})]);
   let count = selectedFilters.allAuthorsUnpublishedOnly === true ? 1 : 0;
+  // Match the year sent by buildTravelQueryParams, including a nonempty value
+  // that the user may need to clear after entering an invalid year.
+  if (String(selectedFilters.year ?? '').trim() !== String(defaultSelectedFilters?.year ?? '').trim()) {
+    count += 1;
+  }
   for (const key of keys) {
     if (!Array.isArray(selectedFilters[key]) && !Array.isArray(defaultSelectedFilters?.[key])) continue;
     count += getFilterGroupResetState(selectedFilters[key], defaultSelectedFilters?.[key]).count;

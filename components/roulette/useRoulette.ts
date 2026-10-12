@@ -6,6 +6,8 @@ import { useListTravelFilters } from '@/components/listTravel/hooks/useListTrave
 import { useRandomTravelData } from '@/components/listTravel/hooks/useListTravelData';
 import { deduplicateTravels, normalizeApiResponse } from '@/components/listTravel/utils/listTravelHelpers';
 import { buildFacetCounts, buildTravelFilterGroups } from '@/components/listTravel/utils/filterGroups';
+import { getModernFiltersActiveCount } from '@/components/listTravel/filters/filterSelectionDefaults';
+import type { FilterState } from '@/components/listTravel/filters/types';
 import { fetchAllFiltersOptimized } from '@/api/miscOptimized';
 import { fetchTravelFacets } from '@/api/travelListQueries';
 import { queryKeys } from '@/api/queryKeys';
@@ -32,8 +34,6 @@ const STRING_ARRAY_FIELDS = [
   'month',
   'over_nights_stay',
 ] as const;
-
-const TECHNICAL_FILTER_KEYS = new Set(['publish', 'moderation']);
 
 function shuffle(items: Travel[]): Travel[] {
   const arr = [...items];
@@ -172,21 +172,29 @@ export function useRoulette() {
     [options, facetCounts, effectiveFilter],
   );
 
+  // #2431: mobile-счётчик и общий сброс считают отклонение от выбора по
+  // умолчанию тем же предикатом, что «Очистить» в панели desktop (#2382):
+  // подставленные Беларусь и Польша выбором пользователя не являются.
   const activeFiltersCount = useMemo(
-    () => Object.keys(rouletteQueryParams).filter((key) => !TECHNICAL_FILTER_KEYS.has(key)).length,
-    [rouletteQueryParams],
+    () => getModernFiltersActiveCount(effectiveFilter as FilterState, defaultFilter as Partial<FilterState>),
+    [effectiveFilter, defaultFilter],
   );
 
   const filtersSummary = useMemo(() => {
     const countryIds = (rouletteQueryParams.countries as number[] | undefined) || [];
-    const countryList = (options?.countries as { id: unknown; name: unknown }[] | undefined) || [];
+    const countryList = options?.countries || [];
 
     if (countryIds.length > 0 && countryList.length > 0) {
-      const first = countryList.find((c) => String(c.id) === String(countryIds[0]));
-      if (first) {
+      // Словарь `/countriesforsearch/` приходит как { country_id, title_ru } —
+      // те же поля читает группа «Страны» в buildTravelFilterGroups.
+      const first = countryList.find(
+        (c) => String(c.country_id ?? c.id) === String(countryIds[0]),
+      );
+      const firstName = first ? first.title_ru || first.name : '';
+      if (firstName) {
         return countryIds.length > 1
-          ? i18nT('home:components.roulette.useRoulette.value1_i_esche_value2_6f94ef8e', { value1: String(first.name), value2: countryIds.length - 1 })
-          : String(first.name);
+          ? i18nT('home:components.roulette.useRoulette.value1_i_esche_value2_6f94ef8e', { value1: String(firstName), value2: countryIds.length - 1 })
+          : String(firstName);
       }
     }
 

@@ -112,7 +112,8 @@ describe('useRouletteLogic', () => {
       expect.objectContaining({ suppressErrors: true })
     );
     expect(result.current.filterGroups.length).toBeGreaterThan(0);
-    expect(result.current.activeFiltersCount).toBeGreaterThan(0);
+    // #2431: подставленные страны по умолчанию — не выбор пользователя.
+    expect(result.current.activeFiltersCount).toBe(0);
     expect(result.current.filterGroups[0]?.options[0]).toMatchObject({
       id: '1',
       name: 'Беларусь',
@@ -121,6 +122,67 @@ describe('useRouletteLogic', () => {
     // Полный справочник `/countries/` рулетке не нужен: дефолтные страны
     // берутся из словаря фильтра, который она грузит в любом случае.
     expect(fetchAllFiltersOptimized).toHaveBeenCalledTimes(1);
+  });
+
+  // #2431: mobile-счётчик и общий сброс считают только отклонение от умолчания.
+  it('counts only the deviation from default countries and returns to 0 after reset', async () => {
+    const filtersState = {
+      filter: { countries: [] as number[], year: undefined },
+      queryParams: {} as Record<string, unknown>,
+    };
+    const resetFilters = jest.fn(() => {
+      filtersState.filter = { countries: [], year: undefined };
+      filtersState.queryParams = {};
+    });
+    useListTravelFilters.mockImplementation(() => ({ ...filtersState, resetFilters, onSelect: jest.fn() }));
+
+    const { result, rerender } = renderHook(() => useRouletteLogic());
+    await waitFor(() => expect(result.current.filter.countries).toEqual([1, 2]));
+    expect(result.current.activeFiltersCount).toBe(0);
+    expect(result.current.filtersSummary).toBe('Беларусь и ещё 1');
+
+    filtersState.filter = { countries: [2], year: undefined };
+    filtersState.queryParams = { countries: [2] };
+    rerender({});
+    expect(result.current.activeFiltersCount).toBe(1);
+    expect(result.current.filtersSummary).toBe('Польша');
+
+    act(() => {
+      result.current.handleClearAll();
+    });
+    rerender({});
+    expect(resetFilters).toHaveBeenCalledTimes(1);
+    expect(result.current.filter.countries).toEqual([1, 2]);
+    expect(result.current.activeFiltersCount).toBe(0);
+  });
+
+  // Словарь `/countriesforsearch/` на проде приходит как { country_id, title_ru }.
+  it('names countries from the production dictionary shape', async () => {
+    fetchAllFiltersOptimized.mockReturnValue({
+      countries: [
+        { country_id: 3, title_ru: 'Беларусь' },
+        { country_id: 160, title_ru: 'Польша' },
+      ],
+    });
+
+    const { result } = renderHook(() => useRouletteLogic());
+
+    await waitFor(() => expect(result.current.filtersSummary).toBe('Беларусь и ещё 1'));
+    expect(result.current.activeFiltersCount).toBe(0);
+  });
+
+  it('counts a selected year while keeping default countries inactive', () => {
+    useListTravelFilters.mockReturnValue({
+      filter: { countries: [], year: '2026' },
+      queryParams: { year: '2026' },
+      resetFilters: jest.fn(),
+      onSelect: jest.fn(),
+    });
+
+    const { result } = renderHook(() => useRouletteLogic());
+
+    expect(result.current.activeFiltersCount).toBe(1);
+    expect(result.current.filter.countries).toEqual([1, 2]);
   });
 
   // #2375: страны по умолчанию видны в панели как выбранные и снимаются чипом.
