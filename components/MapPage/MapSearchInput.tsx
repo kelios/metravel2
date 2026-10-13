@@ -3,7 +3,7 @@ import { searchInputAccessibilityProps } from '@/utils/webProps'
  * MapSearchInput - поисковое поле для фильтрации мест на карте по названию
  */
 
-import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   TextInput,
@@ -18,17 +18,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useMapPanelStore } from '@/stores/mapPanelStore';
 import { translate as i18nT } from '@/i18n'
-
-
-// Keep the search input on the plain RN TextInput across platforms. The map
-// sheet already leaves the field above the dock, and this avoids a native
-// BottomSheetTextInput focus race where Android shows the field but never routes
-// typed text into it.
-const resolveFocusableInput = (): typeof TextInput => {
-  return TextInput;
-};
-
-const FocusableInput: typeof TextInput = resolveFocusableInput();
+import { MapSearchInputContext } from './MapSearchInputContext'
 
 // Retry cadence after interactions settle: a couple of fast frames then a longer
 // backstop, covering the window where the BottomSheetTextInput mounts/settles
@@ -67,6 +57,7 @@ const MapSearchInput: React.FC<MapSearchInputProps> = ({
   accessibilityLabel = i18nT('map:components.MapPage.MapSearchInput.poisk_mest_na_karte_4fd4bc4a'),
   accessibilityHint = i18nT('map:components.MapPage.MapSearchInput.vvedite_nazvanie_mesta_dlya_poiska_baa10a27'),
 }) => {
+  const FocusableInput = useContext(MapSearchInputContext);
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [isFocused, setIsFocused] = useState(false);

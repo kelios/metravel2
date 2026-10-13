@@ -18,6 +18,7 @@ import BottomSheet, {
   BottomSheetBackdrop,
   BottomSheetScrollView,
   BottomSheetFooter,
+  BottomSheetTextInput,
   useBottomSheetInternal,
   type BottomSheetFooterProps,
 } from '@gorhom/bottom-sheet'
@@ -28,6 +29,7 @@ import { translate as i18nT } from '@/i18n'
 import Animated, { useAnimatedReaction, useAnimatedStyle, useSharedValue, runOnJS, type SharedValue } from 'react-native-reanimated'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 import { NativeMapSheetFooterContext, NativeMapSheetFlowContext } from './MapMobile/nativeFiltersPanelAdapter.native'
+import { MapSearchInputContext } from './MapSearchInputContext'
 
 
 type SheetState = 'collapsed' | 'quarter' | 'half' | 'seventy' | 'full'
@@ -275,6 +277,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         backgroundStyle={styles.background}
         style={styles.sheet}
       >
+        <MapSearchInputContext.Provider value={BottomSheetTextInput}>
         <MapSheetViewport footerPosition={footerPosition} hasFooter={!!footer} flow={flow}>
         {hasHeaderText && (
           <View style={styles.header}>
@@ -307,6 +310,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           </View>
         )}
         </MapSheetViewport>
+        </MapSearchInputContext.Provider>
       </BottomSheet>
       </NativeMapSheetFlowContext.Provider>
       </NativeMapSheetFooterContext.Provider>
