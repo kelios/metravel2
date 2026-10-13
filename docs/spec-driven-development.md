@@ -85,8 +85,12 @@ Codex вызывает их как `$openspec-*`, Claude Code — как `/opens
    proposal, delta specs, design и tasks до реализации.
 4. Уточнения вносить через `$openspec-update-change <name>`; не исправлять
    противоречия только в одном artifact.
-5. После отдельного запроса на реализацию использовать
-   `$openspec-apply-change <name>` и выполнять tasks по порядку.
+5. Перейти к `$openspec-apply-change <name>` и выполнять tasks по порядку,
+   если реализация уже разрешена запросом пользователя. Маршрутизация полномочий
+   задана в `docs/RULES.md` → «Development workflow»: прямой запрос на внедрение
+   проходит proposal → apply в одном процессе, даже при вызове `openspec-propose`.
+   Запрос только на план или `openspec-propose` без указания реализовать
+   завершается планом.
 6. После code changes сначала выполнить code-only review-and-fix; после pass,
    commit/push и перехода в `testing` прогнать browser/device/runtime проверки
    из artifacts и project rules.
@@ -113,11 +117,14 @@ openspec validate --all
 - `openspec/specs/<capability>/spec.md` — living specs текущего поведения.
 - `openspec/changes/archive/YYYY-MM-DD-<name>/` — завершённые changes.
 - `.agents/skills/openspec-*/SKILL.md` — vendor-generated OpenSpec skills для
-  Codex; body вручную не редактировать. Текущий Codex compatibility shim удаляет
-  только неподдерживаемое поле frontmatter `compatibility`.
+  Codex; body вручную не редактировать, кроме точечного project shim для
+  маршрутизации proposal → apply по `docs/RULES.md` → «Development workflow».
+  Codex compatibility shim также удаляет неподдерживаемое поле frontmatter
+  `compatibility`.
 - `.claude/skills/openspec-*/SKILL.md` — те же vendor-generated skills для Claude
-  Code, поставлены `openspec init --tools claude` (2026-08-22). Body вручную не
-  редактировать; отличаются от Codex-копии только сохранённым полем
+  Code, поставлены `openspec init --tools claude` (2026-08-22). Для
+  `openspec-propose` действует тот же project shim; остальные body вручную не
+  редактировать. Отличаются от Codex-копии сохранённым полем
   `compatibility` и формой вызова в подсказках. Раньше skills стояли только для
   Codex, из-за чего Claude-сессии обходили обязательный OpenSpec-цикл — это был
   пробел раскладки, а не разрешение работать без change.
@@ -181,8 +188,15 @@ openspec validate --all
 прогнать Codex skill validator для всех `.agents/skills/openspec-*`; OpenSpec
 1.8.0 повторно добавляет
 неподдерживаемое поле `compatibility`, которое нужно удалить до handoff.
-Project-specific правила хранятся только в `openspec/config.yaml` и canonical
-docs, а не в generated skills.
+Project-specific правила хранятся в `openspec/config.yaml` и canonical docs.
+После `openspec update` восстановить точечный routing shim в обеих копиях
+`openspec-propose`: секции Planning boundary, Output и Guardrails должны
+ссылаться на `docs/RULES.md` → «Development workflow» и сохранять уже выданное
+разрешение на реализацию. Удалить восстановленные вендором требования нового
+запроса после прямого «внедри/сделай/исправь», в том числе вместе с вызовом
+`openspec-propose`; сохранить режим планирования для запроса без указания
+реализовать. Затем проверить обе копии и `npm run audit:prompts`.
+Shim не переносит сюда остальные project rules и не снимает operation gates.
 
 ## 9. Legacy Spec Kit
 

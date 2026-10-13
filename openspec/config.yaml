@@ -14,13 +14,18 @@ context: |
   docs/spec-driven-development-requirements.md before producing artifacts.
   The MCP task board remains the permanent backlog; OpenSpec change artifacts
   describe one change and do not replace board status or its Task Contract.
+  Proposal-to-apply authority follows docs/RULES.md, Development workflow:
+  direct implement/build/fix requests authorize the necessary planning and apply
+  in one flow without repeat confirmation, even when openspec-propose is invoked.
+  Planning-only requests or openspec-propose invocations without an implementation
+  instruction stay planning-only. Keep external operation gates.
 
 rules:
   proposal:
     - Describe one change only; include the observed problem, goal, explicit non-goals, dependencies, and fallback/mock policy.
     - Record Platform impact and Localization impact explicitly, including none when considered and not applicable.
     - Identify user-visible, API/data, SEO, accessibility, performance, security, and analytics impact, marking non-applicable areas with a reason.
-    - Do not authorize implementation; planning must be reviewed before apply.
+    - Review and validate planning before apply; follow the existing user authorization and routing in docs/RULES.md, Development workflow.
   specs:
     - Specify observable behavior and contracts, not files, components, libraries, or implementation choices.
     - Use SHALL or MUST requirements with independently testable WHEN/THEN scenarios and preserve relevant existing behavior.
@@ -37,6 +42,7 @@ rules:
 operations:
   apply:
     guidance:
+      - Preserve implementation authority already given by the user; do not request it again after planning. See docs/RULES.md, Development workflow.
       - Follow AGENTS.md quality-gate coordination and run the narrowest reliable validation after each logical block.
       - After code changes, run the mandatory metravel code-review-and-fix pass before handoff.
       - Stop on a real external dependency instead of inventing a mock-only fallback.

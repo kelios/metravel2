@@ -7,11 +7,12 @@
 ## Платформы
 
 - **Web (desktop и mobile)** — полный визуал и переключатель.
-- **Android / iOS** — осознанно без визуала и без переключателя: токены там —
-  литералы `StyleSheet.create`, а не CSS-переменные (`constants/designSystem.ts`),
-  поэтому сезонная палитра на native потребовала бы отдельного механизма.
-  Настройка при этом хранится в AsyncStorage тем же ключом — native подхватит
-  её, когда появится карточка на нативную палитру.
+- **Android / iOS** — тот же выбор и календарь. `useThemedColors` разрешает
+  сезонную светлую/тёмную палитру в нативные значения из
+  `constants/seasonalThemePalettes.ts`; статичный SVG-декор ограничен бренд-строкой
+  шапки. Выбор хранится в AsyncStorage и применяется после восстановления.
+  Нативный launch gate ждёт тему вместе со шрифтом и биометрическим решением;
+  общий failsafe сохраняет запуск при зависшем хранилище.
 
 ## Механизм
 
@@ -20,6 +21,8 @@
 | реестр | `constants/seasonalThemes.ts` | `SEASONAL_THEMES`: id, иконка, приоритет, правила; `getSeasonalCalendar(date)`, `resolveSeasonalTheme(pref, date)` |
 | состояние | `hooks/useTheme.ts` | `seasonalTheme` (настройка), `activeSeasonalTheme` (что применено), `setSeasonalTheme`, `seasonalCalendar`; ключ хранилища `seasonal-theme`; ставит `data-season` на `<html>` |
 | визуал | `app/global.css` → блок «Сезонное (праздничное) оформление» | `html[data-season="<id>"]` и `html[data-season="<id>"][data-theme="dark"]` переопределяют `--color-*`/`--gradient-*`; `body::after` — декор |
+| native палитра | `constants/seasonalThemePalettes.ts` → `constants/designSystem.ts` → `useThemedColors` | те же сезонные цвета, производные alpha-цвета/градиенты; CSS parity проверяется тестом |
+| native декор | `components/layout/SeasonalThemeDecoration.native.tsx` | пять неподвижных мотивов в шапке, без перехвата нажатий и accessibility-фокуса |
 | календарь | `utils/seasonalCalendarCore.ts` | самодостаточный pure core: фиксированные и пасхальные окна, приоритеты и гражданские даты |
 | полночь | `utils/seasonalThemeClock.ts` → `hooks/useTheme.ts` | один таймер до следующей местной полуночи, пересчёт на focus/visibility/pageshow |
 | статус | `components/layout/SeasonalThemeStatus.tsx` | общий локализованный текущий/следующий период в меню и настройках |
@@ -53,9 +56,12 @@
 В постоянно видимой вкладке дата пересчитывается в местную полночь. Следующая
 полночь вычисляется календарно, а не прибавлением 24 часов (DST: 23/25 часов).
 После сна/возврата/BFCache дата пересчитывается на focus, visibilitychange и
-pageshow; таймер и слушатели снимаются при unmount. Ручной выбор и off остаются
+pageshow; native пересчитывает дату на AppState active и снимает таймер в фоне.
+Таймер и слушатели снимаются при unmount. Ручной выбор и off остаются
 приоритетнее календаря. Недоступное хранилище/неизвестное значение дают auto;
 до чтения настроек статус не рисуется, чтобы не создавать SSR-расхождение.
+Позднее чтение AsyncStorage не заменяет более новый выбор пользователя.
+Ошибка записи не сбрасывает выбор текущей сессии.
 
 Сезонные подборки квестов (`docs/features/quests.md` → «Тематические
 подборки») берут окно отсюда, но открываются раньше: `previewFrom` в реестре
@@ -104,6 +110,9 @@ hero с отступом 120 px: ёлка и окна домика видны н
 2. `app/global.css`: два блока — `html[data-season="<id>"]` (светлая) и
    `html[data-season="<id>"][data-theme="dark"]`; задать `--season-canopy-image`,
    `--season-header-glow`, `--season-edge-glow` и `--season-logo-*`.
+   Добавить соответствующие native light/dark палитры и мотив SVG в
+   `constants/seasonalThemePalettes.ts` и `SeasonalThemeDecoration.native.tsx`;
+   parity-тест не допускает расхождения цветов с CSS.
 3. `components/layout/seasonalThemeOptions.tsx`: пара ключей в `OPTION_COPY`
    (typecheck не даст забыть — `Record` по союзу id).
 4. `i18n/locales/<locale>/static/navigation_static.ts` во всех пяти локалях:
@@ -117,6 +126,9 @@ hero с отступом 120 px: ёлка и окна домика видны н
 - `npx jest __tests__/constants/seasonalThemes.test.ts __tests__/utils/seasonalThemeBootScript.test.ts __tests__/hooks/useTheme.test.tsx`
 - `npx jest __tests__/utils/seasonalThemeClock.test.ts __tests__/components/SeasonalThemeStatus.test.tsx __tests__/utils/questThemes.test.ts`
 - `npm run test:i18n`
+- native: выбор семи вариантов в меню гостя/аккаунта и настройках; светлая/тёмная
+  схема, восстановление после перезапуска, авто после возврата из фона и в
+  полночь, off, длинные подписи пяти локалей; screenshots и runtime logs.
 - браузер: меню аккаунта → «Праздничное оформление» → auto/off/пять тем;
   `document.documentElement.dataset.season`; перезагрузка без мигания; тёмная
   тема; `prefers-reduced-motion`.

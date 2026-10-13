@@ -37,6 +37,7 @@ import { setActiveQueryClient } from "@/api/activeQueryClient";
 import { patchWebShadowStyles } from "@/utils/patchWebShadowStyles";
 import { installChunkErrorReloadHandler } from "@/utils/chunkReload";
 import { ThemeProvider, useThemedColors, useTheme } from "@/hooks/useTheme";
+import { useLaunchReadinessStore } from '@/stores/launchReadinessStore';
 import { navigationThemeColors } from "@/components/layout/navigationTheme";
 import SkipLinks from '@/components/layout/SkipLinks';
 import { shouldRunRuntimeConfigDiagnostics } from '@/utils/runtimeConfigDiagnostics';
@@ -386,7 +387,13 @@ function ThemedContent({
   queryClient: any;
 }) {
   const colors = useThemedColors();
-  const { isDark } = useTheme();
+  const { isDark, themeReady } = useTheme();
+  const launchFailsafeExpired = useLaunchReadinessStore((state) => state.failsafeExpired);
+  useEffect(() => {
+    if (!isWeb && themeReady) {
+      useLaunchReadinessStore.getState().markLaunchConditionReady('theme');
+    }
+  }, [themeReady]);
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const mapBackground = showMapBackground ? require("../assets/travel/roulette-map-bg.jpg") : null;
@@ -420,6 +427,8 @@ function ThemedContent({
       },
     }
   }, [colors, isDark]);
+
+  if (!isWeb && themeReady === false && !launchFailsafeExpired) return <LaunchCover />;
 
   return (
     <BottomChromeInsetProvider measuredHeight={measuredDockHeight}>

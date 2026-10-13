@@ -1,4 +1,6 @@
 import { Platform } from 'react-native'
+import { getSeasonalThemePalette, type SeasonalThemePalette } from './seasonalThemePalettes'
+import type { SeasonalThemeId } from './seasonalThemes'
 import {
   MODERN_MATTE_BOX_SHADOWS,
   MODERN_MATTE_BOX_SHADOWS_DARK,
@@ -105,12 +107,11 @@ const themedColor = (
   light: string,
   dark: string,
   isDark: boolean,
+  seasonal: SeasonalThemePalette | null = null,
 ) =>
   Platform.OS === 'web'
     ? `var(--color-${name}, ${light})`
-    : isDark
-      ? dark
-      : light
+    : seasonal?.[name as keyof SeasonalThemePalette] ?? (isDark ? dark : light)
 
 const themedColorAlphaHex = (
   name: string,
@@ -118,18 +119,14 @@ const themedColorAlphaHex = (
   darkHex: string,
   alphaHex: string,
   isDark: boolean,
-) =>
-  Platform.OS === 'web'
-    ? `var(--color-${name}-${alphaHex}, ${applyHexAlpha(
-        extractHexColorFallback(isDark ? darkHex : lightHex) ??
-          (isDark ? darkHex : lightHex),
-        alphaHex,
-      )})`
-    : applyHexAlpha(
-        extractHexColorFallback(isDark ? darkHex : lightHex) ??
-          (isDark ? darkHex : lightHex),
-        alphaHex,
-      )
+  seasonal: SeasonalThemePalette | null = null,
+) => {
+  const selected = Platform.OS !== 'web' && seasonal
+    ? seasonal[name as keyof SeasonalThemePalette] ?? (isDark ? darkHex : lightHex)
+    : isDark ? darkHex : lightHex
+  const value = applyHexAlpha(extractHexColorFallback(selected) ?? selected, alphaHex)
+  return Platform.OS === 'web' ? `var(--color-${name}-${alphaHex}, ${value})` : value
+}
 
 const themedShadow = (
   name: string,
@@ -451,13 +448,17 @@ export const DESIGN_TOKENS = {
  *
  * Rule: modernMattePalette should only be imported by this file.
  */
-export function getThemedColors(isDark: boolean) {
+export function getThemedColors(isDark: boolean, season: SeasonalThemeId | null = null) {
+  // Web keeps live CSS variables and SSR-compatible fallbacks; native resolves literals.
+  const seasonal = Platform.OS === 'web' ? null : getSeasonalThemePalette(season, isDark)
   const shadowsNative = isDark
     ? MODERN_MATTE_SHADOWS_DARK
     : MODERN_MATTE_SHADOWS
-  const gradients = isDark
-    ? MODERN_MATTE_GRADIENTS_DARK
-    : MODERN_MATTE_GRADIENTS
+  const gradients = seasonal ? {
+    primary: `linear-gradient(135deg, ${seasonal.backgroundSecondary} 0%, ${seasonal.primaryLight} 100%)`,
+    surface: `linear-gradient(180deg, ${seasonal.surfaceElevated} 0%, ${seasonal.surface} 100%)`,
+    overlay: `linear-gradient(180deg, ${applyHexAlpha(seasonal.background, 'f2')} 0%, ${applyHexAlpha(seasonal.background, 'd9')} 100%)`,
+  } : isDark ? MODERN_MATTE_GRADIENTS_DARK : MODERN_MATTE_GRADIENTS
 
   return {
     // Primary
@@ -466,6 +467,7 @@ export function getThemedColors(isDark: boolean) {
       MODERN_MATTE_PALETTE.primary,
       MODERN_MATTE_PALETTE_DARK.primary,
       isDark,
+      seasonal,
     ),
     primaryAlpha30: themedColorAlphaHex(
       'primary',
@@ -473,6 +475,7 @@ export function getThemedColors(isDark: boolean) {
       MODERN_MATTE_PALETTE_DARK.primary,
       '30',
       isDark,
+      seasonal,
     ),
     primaryAlpha40: themedColorAlphaHex(
       'primary',
@@ -480,6 +483,7 @@ export function getThemedColors(isDark: boolean) {
       MODERN_MATTE_PALETTE_DARK.primary,
       '40',
       isDark,
+      seasonal,
     ),
     primaryAlpha50: themedColorAlphaHex(
       'primary',
@@ -487,30 +491,35 @@ export function getThemedColors(isDark: boolean) {
       MODERN_MATTE_PALETTE_DARK.primary,
       '50',
       isDark,
+      seasonal,
     ),
     primaryDark: themedColor(
       'primaryDark',
       MODERN_MATTE_PALETTE.primaryDark,
       MODERN_MATTE_PALETTE_DARK.primaryDark,
       isDark,
+      seasonal,
     ),
     primaryText: themedColor(
       'primaryText',
       MODERN_MATTE_PALETTE.primaryText,
       MODERN_MATTE_PALETTE_DARK.primaryText,
       isDark,
+      seasonal,
     ),
     primaryLight: themedColor(
       'primaryLight',
       MODERN_MATTE_PALETTE.primaryLight,
       MODERN_MATTE_PALETTE_DARK.primaryLight,
       isDark,
+      seasonal,
     ),
     primarySoft: themedColor(
       'primarySoft',
       MODERN_MATTE_PALETTE.primarySoft,
       MODERN_MATTE_PALETTE_DARK.primarySoft,
       isDark,
+      seasonal,
     ),
 
     accent: themedColor(
@@ -518,24 +527,28 @@ export function getThemedColors(isDark: boolean) {
       MODERN_MATTE_PALETTE.accent,
       MODERN_MATTE_PALETTE_DARK.accent,
       isDark,
+      seasonal,
     ),
     accentDark: themedColor(
       'accentDark',
       MODERN_MATTE_PALETTE.accentDark,
       MODERN_MATTE_PALETTE_DARK.accentDark,
       isDark,
+      seasonal,
     ),
     accentLight: themedColor(
       'accentLight',
       MODERN_MATTE_PALETTE.accentLight,
       MODERN_MATTE_PALETTE_DARK.accentLight,
       isDark,
+      seasonal,
     ),
     accentSoft: themedColor(
       'accentSoft',
       MODERN_MATTE_PALETTE.accentSoft,
       MODERN_MATTE_PALETTE_DARK.accentSoft,
       isDark,
+      seasonal,
     ),
 
     // Брендовые оранжевые цвета (птичка логотипа)
@@ -544,30 +557,35 @@ export function getThemedColors(isDark: boolean) {
       MODERN_MATTE_PALETTE.brand,
       MODERN_MATTE_PALETTE_DARK.brand,
       isDark,
+      seasonal,
     ),
     brandDark: themedColor(
       'brandDark',
       MODERN_MATTE_PALETTE.brandDark,
       MODERN_MATTE_PALETTE_DARK.brandDark,
       isDark,
+      seasonal,
     ),
     brandText: themedColor(
       'brandText',
       MODERN_MATTE_PALETTE.brandText,
       MODERN_MATTE_PALETTE_DARK.brandText,
       isDark,
+      seasonal,
     ),
     brandLight: themedColor(
       'brandLight',
       MODERN_MATTE_PALETTE.brandLight,
       MODERN_MATTE_PALETTE_DARK.brandLight,
       isDark,
+      seasonal,
     ),
     brandSoft: themedColor(
       'brandSoft',
       MODERN_MATTE_PALETTE.brandSoft,
       MODERN_MATTE_PALETTE_DARK.brandSoft,
       isDark,
+      seasonal,
     ),
     brandAlpha30: themedColorAlphaHex(
       'brand',
@@ -575,6 +593,7 @@ export function getThemedColors(isDark: boolean) {
       MODERN_MATTE_PALETTE_DARK.brand,
       '30',
       isDark,
+      seasonal,
     ),
     brandAlpha40: themedColorAlphaHex(
       'brand',
@@ -582,6 +601,7 @@ export function getThemedColors(isDark: boolean) {
       MODERN_MATTE_PALETTE_DARK.brand,
       '40',
       isDark,
+      seasonal,
     ),
 
     // Text
@@ -590,48 +610,56 @@ export function getThemedColors(isDark: boolean) {
       MODERN_MATTE_PALETTE.text,
       MODERN_MATTE_PALETTE_DARK.text,
       isDark,
+      seasonal,
     ),
     textSecondary: themedColor(
       'textMuted',
       MODERN_MATTE_PALETTE.textSecondary,
       MODERN_MATTE_PALETTE_DARK.textSecondary,
       isDark,
+      seasonal,
     ),
     textTertiary: themedColor(
       'textSubtle',
       MODERN_MATTE_PALETTE.textTertiary,
       MODERN_MATTE_PALETTE_DARK.textTertiary,
       isDark,
+      seasonal,
     ),
     textMuted: themedColor(
       'textMuted',
       MODERN_MATTE_PALETTE.textMuted,
       MODERN_MATTE_PALETTE_DARK.textMuted,
       isDark,
+      seasonal,
     ),
     textSubtle: themedColor(
       'textSubtle',
       MODERN_MATTE_PALETTE.textTertiary,
       MODERN_MATTE_PALETTE_DARK.textTertiary,
       isDark,
+      seasonal,
     ),
     textInverse: themedColor(
       'textInverse',
       MODERN_MATTE_PALETTE.textInverse,
       MODERN_MATTE_PALETTE_DARK.textInverse,
       isDark,
+      seasonal,
     ),
     textOnPrimary: themedColor(
       'textOnPrimary',
       MODERN_MATTE_PALETTE.textOnPrimary,
       MODERN_MATTE_PALETTE_DARK.textOnPrimary,
       isDark,
+      seasonal,
     ),
     textOnDark: themedColor(
       'textOnDark',
       MODERN_MATTE_PALETTE.textOnDark,
       MODERN_MATTE_PALETTE_DARK.textOnDark,
       isDark,
+      seasonal,
     ),
 
     // Background
@@ -640,24 +668,28 @@ export function getThemedColors(isDark: boolean) {
       MODERN_MATTE_PALETTE.background,
       MODERN_MATTE_PALETTE_DARK.background,
       isDark,
+      seasonal,
     ),
     backgroundSecondary: themedColor(
       'backgroundSecondary',
       MODERN_MATTE_PALETTE.backgroundSecondary,
       MODERN_MATTE_PALETTE_DARK.backgroundSecondary,
       isDark,
+      seasonal,
     ),
     backgroundTertiary: themedColor(
       'backgroundTertiary',
       MODERN_MATTE_PALETTE.backgroundTertiary,
       MODERN_MATTE_PALETTE_DARK.backgroundTertiary,
       isDark,
+      seasonal,
     ),
     surface: themedColor(
       'surface',
       MODERN_MATTE_PALETTE.surface,
       MODERN_MATTE_PALETTE_DARK.surface,
       isDark,
+      seasonal,
     ),
     surfaceAlpha40: themedColorAlphaHex(
       'surface',
@@ -665,24 +697,28 @@ export function getThemedColors(isDark: boolean) {
       MODERN_MATTE_PALETTE_DARK.surface,
       '40',
       isDark,
+      seasonal,
     ),
     surfaceElevated: themedColor(
       'surfaceElevated',
       MODERN_MATTE_PALETTE.surfaceElevated,
       MODERN_MATTE_PALETTE_DARK.surfaceElevated,
       isDark,
+      seasonal,
     ),
     surfaceMuted: themedColor(
       'surfaceMuted',
       MODERN_MATTE_PALETTE.surfaceMuted,
       MODERN_MATTE_PALETTE_DARK.surfaceMuted,
       isDark,
+      seasonal,
     ),
     surfaceLight: themedColor(
       'backgroundTertiary',
       MODERN_MATTE_PALETTE.backgroundTertiary,
       MODERN_MATTE_PALETTE_DARK.backgroundTertiary,
       isDark,
+      seasonal,
     ),
 
     // Borders
@@ -691,24 +727,28 @@ export function getThemedColors(isDark: boolean) {
       MODERN_MATTE_PALETTE.border,
       MODERN_MATTE_PALETTE_DARK.border,
       isDark,
+      seasonal,
     ),
     borderLight: themedColor(
       'borderLight',
       MODERN_MATTE_PALETTE.borderLight,
       MODERN_MATTE_PALETTE_DARK.borderLight,
       isDark,
+      seasonal,
     ),
     borderStrong: themedColor(
       'borderStrong',
       MODERN_MATTE_PALETTE.borderStrong,
       MODERN_MATTE_PALETTE_DARK.borderStrong,
       isDark,
+      seasonal,
     ),
     borderAccent: themedColor(
       'borderAccent',
       MODERN_MATTE_PALETTE.borderAccent,
       MODERN_MATTE_PALETTE_DARK.borderAccent,
       isDark,
+      seasonal,
     ),
     mutedBackground: themedColor(
       'mutedBackground',
@@ -717,6 +757,7 @@ export function getThemedColors(isDark: boolean) {
       MODERN_MATTE_PALETTE_DARK.mutedBackground ??
         MODERN_MATTE_PALETTE_DARK.backgroundSecondary,
       isDark,
+      seasonal,
     ),
 
     // Status
@@ -725,24 +766,28 @@ export function getThemedColors(isDark: boolean) {
       MODERN_MATTE_PALETTE.success,
       MODERN_MATTE_PALETTE_DARK.success,
       isDark,
+      seasonal,
     ),
     successDark: themedColor(
       'successDark',
       MODERN_MATTE_PALETTE.successDark,
       MODERN_MATTE_PALETTE_DARK.successDark,
       isDark,
+      seasonal,
     ),
     successLight: themedColor(
       'successLight',
       MODERN_MATTE_PALETTE.successLight,
       MODERN_MATTE_PALETTE_DARK.successLight,
       isDark,
+      seasonal,
     ),
     successSoft: themedColor(
       'successSoft',
       MODERN_MATTE_PALETTE.successSoft,
       MODERN_MATTE_PALETTE_DARK.successSoft,
       isDark,
+      seasonal,
     ),
 
     warning: themedColor(
@@ -750,6 +795,7 @@ export function getThemedColors(isDark: boolean) {
       MODERN_MATTE_PALETTE.warning,
       MODERN_MATTE_PALETTE_DARK.warning,
       isDark,
+      seasonal,
     ),
     warningAlpha40: themedColorAlphaHex(
       'warning',
@@ -757,24 +803,28 @@ export function getThemedColors(isDark: boolean) {
       MODERN_MATTE_PALETTE_DARK.warning,
       '40',
       isDark,
+      seasonal,
     ),
     warningDark: themedColor(
       'warningDark',
       MODERN_MATTE_PALETTE.warningDark,
       MODERN_MATTE_PALETTE_DARK.warningDark,
       isDark,
+      seasonal,
     ),
     warningLight: themedColor(
       'warningLight',
       MODERN_MATTE_PALETTE.warningLight,
       MODERN_MATTE_PALETTE_DARK.warningLight,
       isDark,
+      seasonal,
     ),
     warningSoft: themedColor(
       'warningSoft',
       MODERN_MATTE_PALETTE.warningSoft,
       MODERN_MATTE_PALETTE_DARK.warningSoft,
       isDark,
+      seasonal,
     ),
 
     danger: themedColor(
@@ -782,24 +832,28 @@ export function getThemedColors(isDark: boolean) {
       MODERN_MATTE_PALETTE.danger,
       MODERN_MATTE_PALETTE_DARK.danger,
       isDark,
+      seasonal,
     ),
     dangerDark: themedColor(
       'dangerDark',
       MODERN_MATTE_PALETTE.dangerDark,
       MODERN_MATTE_PALETTE_DARK.dangerDark,
       isDark,
+      seasonal,
     ),
     dangerLight: themedColor(
       'dangerLight',
       MODERN_MATTE_PALETTE.dangerLight,
       MODERN_MATTE_PALETTE_DARK.dangerLight,
       isDark,
+      seasonal,
     ),
     dangerSoft: themedColor(
       'dangerSoft',
       MODERN_MATTE_PALETTE.dangerSoft,
       MODERN_MATTE_PALETTE_DARK.dangerSoft,
       isDark,
+      seasonal,
     ),
 
     info: themedColor(
@@ -807,30 +861,35 @@ export function getThemedColors(isDark: boolean) {
       MODERN_MATTE_PALETTE.info,
       MODERN_MATTE_PALETTE_DARK.info,
       isDark,
+      seasonal,
     ),
     infoDark: themedColor(
       'infoDark',
       MODERN_MATTE_PALETTE.infoDark,
       MODERN_MATTE_PALETTE_DARK.infoDark,
       isDark,
+      seasonal,
     ),
     infoLight: themedColor(
       'infoLight',
       MODERN_MATTE_PALETTE.infoLight,
       MODERN_MATTE_PALETTE_DARK.infoLight,
       isDark,
+      seasonal,
     ),
     infoSoft: themedColor(
       'infoSoft',
       MODERN_MATTE_PALETTE.infoSoft,
       MODERN_MATTE_PALETTE_DARK.infoSoft,
       isDark,
+      seasonal,
     ),
     strava: themedColor(
       'strava',
       DESIGN_COLORS.strava,
       DESIGN_COLORS.strava,
       isDark,
+      seasonal,
     ),
 
     // Focus/state
@@ -839,24 +898,28 @@ export function getThemedColors(isDark: boolean) {
       MODERN_MATTE_PALETTE.focus,
       MODERN_MATTE_PALETTE_DARK.focus,
       isDark,
+      seasonal,
     ),
     focusStrong: themedColor(
       'focusStrong',
       MODERN_MATTE_PALETTE.focusStrong,
       MODERN_MATTE_PALETTE_DARK.focusStrong,
       isDark,
+      seasonal,
     ),
     disabled: themedColor(
       'disabled',
       MODERN_MATTE_PALETTE.disabled,
       MODERN_MATTE_PALETTE_DARK.disabled,
       isDark,
+      seasonal,
     ),
     disabledText: themedColor(
       'disabledText',
       MODERN_MATTE_PALETTE.disabledText,
       MODERN_MATTE_PALETTE_DARK.disabledText,
       isDark,
+      seasonal,
     ),
 
     overlay: themedColor(
@@ -864,18 +927,21 @@ export function getThemedColors(isDark: boolean) {
       MODERN_MATTE_PALETTE.overlay,
       MODERN_MATTE_PALETTE_DARK.overlay,
       isDark,
+      seasonal,
     ),
     mediaCaptionOverlay: themedColor(
       'mediaCaptionOverlay',
       MODERN_MATTE_PALETTE.mediaCaptionOverlay,
       MODERN_MATTE_PALETTE_DARK.mediaCaptionOverlay,
       isDark,
+      seasonal,
     ),
     overlayLight: themedColor(
       'overlayLight',
       MODERN_MATTE_PALETTE.overlayLight,
       MODERN_MATTE_PALETTE_DARK.overlayLight,
       isDark,
+      seasonal,
     ),
 
     // Shadows

@@ -32,6 +32,10 @@ describe('useLaunchSplash', () => {
     act(() => {
       useLaunchReadinessStore.getState().markLaunchConditionReady('biometricGate');
     });
+    expect(mockHideAsync).not.toHaveBeenCalled();
+    act(() => {
+      useLaunchReadinessStore.getState().markLaunchConditionReady('theme');
+    });
     expect(mockHideAsync).toHaveBeenCalledTimes(1);
   });
 
@@ -41,6 +45,7 @@ describe('useLaunchSplash', () => {
     });
     act(() => {
       useLaunchReadinessStore.getState().markLaunchConditionReady('biometricGate');
+      useLaunchReadinessStore.getState().markLaunchConditionReady('theme');
     });
     expect(mockHideAsync).not.toHaveBeenCalled();
     rerender({ fonts: true });

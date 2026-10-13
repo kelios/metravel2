@@ -1,7 +1,7 @@
 // hooks/useLaunchSplash.ts
 // Owner of the native launch splash (#2142). The splash is held from module
 // load (app/_layout.tsx → preventAutoHideAsync) and hidden exactly once the
-// launch is ready per stores/launchReadinessStore: the icon font and the
+// launch is ready per stores/launchReadinessStore: the icon font, saved theme and the
 // biometric gate's decision, or the shared failsafe.
 // Returns whether the failsafe expired, so the root can render without fonts.
 

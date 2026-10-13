@@ -11,7 +11,7 @@ metadata:
 
 Propose a new change - create the change and generate all artifacts in one step.
 
-**Planning boundary**: This workflow creates planning artifacts only. The user request that selected or triggered this workflow authorizes planning only, even if it asks to build or fix something. Do not edit project code. After the planning artifacts are complete, stop. Do not start implementation in the same response, even if the initial request asks for it. Wait for a new user request after the artifacts are presented; then start the apply workflow.
+**Planning boundary**: Create and validate planning artifacts before implementation. Route the next step by `docs/RULES.md` → “Development workflow”: an explicit implement/build/fix instruction authorizes apply in the same flow without repeat confirmation, even when the user invokes `openspec-propose`. A planning-only request or a propose invocation without an implementation instruction stops after planning.
 
 I'll create a change with the artifacts your schema defines. With the default spec-driven schema that is:
 - proposal.md (what & why)
@@ -21,7 +21,7 @@ I'll create a change with the artifacts your schema defines. With the default sp
 
 `<capability-path>` is the spec directory relative to `specs/` (for example, `user-auth` or `identity/user-auth`). Preserve an existing capability's full path and follow the project's established organization for new capabilities.
 
-When the user is ready to implement, they must start the apply workflow explicitly.
+Use the existing user authorization to select planning-only output or the apply workflow; external operation gates remain unchanged.
 
 ---
 
@@ -126,7 +126,7 @@ After completing all artifacts, summarize:
 - Change name and location
 - List of artifacts created with brief descriptions, plus any conditional artifact you skipped and why
 - What's ready: "All artifacts needed for implementation are ready."
-- Prompt: "The artifacts are ready for review. When you are ready, run `$openspec-apply-change (Codex) or /openspec-apply-change (other agents)` or ask me to apply this change."
+- For a planning-only request, present the artifacts for review and explain how to request apply. For an already authorized implementation request, report planning progress briefly and continue with the apply workflow under the project routing rule.
 
 **Artifact Creation Guidelines**
 
@@ -140,7 +140,7 @@ After completing all artifacts, summarize:
   - These guide what you write, but should never appear in the output
 
 **Guardrails**
-- The request that invoked this workflow authorizes planning only. Any implementation or apply instruction in that request does not carry forward. Do NOT implement the change, start the apply workflow, or edit project code during this workflow. After presenting the artifacts, stop and wait for a new user request to start the apply workflow
+- Follow `docs/RULES.md` → “Development workflow” for proposal-to-apply authority. Preserve explicit implementation authority even when `openspec-propose` is invoked; stop after planning only when implementation has not been requested.
 - Create every artifact the apply phase transitively depends on, not just the ids listed in `apply.requires`
 - Always read dependency artifacts before creating a new one - re-read from disk, not from conversation memory (files may have changed since you last saw them)
 - Ask about ambiguities that would materially change scope, externally observable behavior, compatibility, or acceptance criteria; for minor details, make reasonable assumptions and record them

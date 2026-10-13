@@ -119,6 +119,36 @@ describe('CustomHeader', () => {
         );
     };
 
+    it.each(['android', 'ios'])('keeps %s seasonal decoration inside the brand row without changing safe-area geometry', platform => {
+        Object.defineProperty(Platform, 'OS', { value: platform });
+        mockSafeAreaInsets = { top: 59, right: 0, bottom: 34, left: 0 };
+        (global as any).__mockResponsive = {
+            width: 390, height: 844, isPhone: true, isLargePhone: false,
+            isTablet: false, isDesktop: false, isMobile: true, isHydrated: true,
+        };
+        (usePathname as jest.Mock).mockReturnValue('/search');
+        const themeModule = require('@/hooks/useTheme') as typeof import('@/hooks/useTheme');
+        const baselineTheme = themeModule.useTheme();
+        const baseline = renderHeader();
+        const baselineRow = StyleSheet.flatten(baseline.getByTestId('main-header-row').props.style);
+        baseline.unmount();
+        const themeSpy = jest.spyOn(themeModule, 'useTheme').mockReturnValue({ ...baselineTheme, activeSeasonalTheme: 'spring' });
+
+        try {
+            const view = renderHeader();
+            const row = view.getByTestId('main-header-row');
+            expect(row.findByProps({ testID: 'seasonal-theme-decoration' })).toBeTruthy();
+            expect(StyleSheet.flatten(row.props.style)).toEqual(baselineRow);
+            expect(StyleSheet.flatten(view.getByTestId('main-header').props.style).paddingTop).toBe(59);
+            view.unmount();
+            (usePathname as jest.Mock).mockReturnValue('/contact');
+            expect(renderHeader().queryByTestId('seasonal-theme-decoration', { includeHiddenElements: true })).toBeNull();
+        } finally {
+            themeSpy.mockRestore();
+            (global as any).__mockResponsive = undefined;
+        }
+    });
+
     describe('iPhone safe area', () => {
         it('places the header row below the top inset exactly once', () => {
             Object.defineProperty(Platform, 'OS', { value: 'ios' });

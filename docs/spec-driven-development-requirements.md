@@ -10,11 +10,14 @@ breakdown между `proposal.md`, delta specs, `design.md` и `tasks.md`. По
 проектные требования не копируются целиком в каждый файл: каждое решение имеет
 один канонический artifact, а связанные artifacts остаются согласованными.
 
-Vendor-generated body `.agents/skills/openspec-*` и built-in templates вручную
-не редактируются. Единственный текущий compatibility shim — удаление
-неподдерживаемого Codex-полем frontmatter `compatibility` после генерации.
+Vendor-generated body OpenSpec skills и built-in templates вручную не
+редактируются, кроме точечного routing shim в обеих копиях `openspec-propose`
+по `docs/RULES.md` → «Development workflow». Compatibility shim удаляет
+неподдерживаемое Codex-полем frontmatter `compatibility` после генерации.
+Восстановление shim после обновления описано в
+`docs/spec-driven-development.md` → «8. Обслуживание OpenSpec».
 Короткие обязательные ограничения инжектируются через `openspec/config.yaml`,
-подробный contract живёт здесь.
+подробный artifact contract живёт здесь.
 
 ## Proposal: зачем и где границы
 
@@ -120,6 +123,9 @@ trigger. Pass → `done`; отдельный подтверждённый деф
 
 ## Чеклист перед apply
 
+- [ ] Реализация разрешена запросом пользователя по `docs/RULES.md` →
+      «Development workflow»; уже выданное разрешение не запрашивается повторно,
+      в том числе при совмещённом запросе «подготовь план и внедри».
 - [ ] Все обязательные artifacts из `openspec status --change <name>` готовы.
 - [ ] Proposal содержит impacts, dependencies, fallback policy и non-goals.
 - [ ] Delta specs валидны и описывают observable behavior.

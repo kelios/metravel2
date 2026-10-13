@@ -155,8 +155,7 @@ export default function SettingsScreen() {
         []
     );
 
-    // Праздничное оформление (#2376) — только web, см. SeasonalThemeToggle.
-    const seasonalThemeOptions = Platform.OS === 'web' ? getSeasonalThemeOptions() : [];
+    const seasonalThemeOptions = getSeasonalThemeOptions();
 
     const messengerOptions = useMemo(
         () => [
@@ -374,20 +373,18 @@ export default function SettingsScreen() {
                         themeOptions={themeOptions}
                     />
 
-                    {seasonalThemeOptions.length > 0 ? (
-                        <ThemeSection
-                            styles={styles}
-                            colors={colors}
-                            theme={seasonalTheme}
-                            setTheme={setSeasonalTheme}
-                            themeOptions={seasonalThemeOptions}
-                            title={translateTheme('navigationStatic:seasonalTheme.title')}
-                            description={translateTheme('navigationStatic:seasonalTheme.description')}
-                            headerIcon="gift"
-                            accessibilityLabel={translateTheme('navigationStatic:seasonalTheme.title')}
-                            footer={<SeasonalThemeStatus />}
-                        />
-                    ) : null}
+                    <ThemeSection
+                        styles={styles}
+                        colors={colors}
+                        theme={seasonalTheme}
+                        setTheme={setSeasonalTheme}
+                        themeOptions={seasonalThemeOptions}
+                        title={translateTheme('navigationStatic:seasonalTheme.title')}
+                        description={translateTheme('navigationStatic:seasonalTheme.description')}
+                        headerIcon="gift"
+                        accessibilityLabel={translateTheme('navigationStatic:seasonalTheme.title')}
+                        footer={<SeasonalThemeStatus />}
+                    />
 
                     {/* AND-17: Biometric authentication toggle (native only) */}
                     {showBiometricToggle ? (

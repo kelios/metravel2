@@ -1,5 +1,33 @@
 #!/bin/sh
 set -eu
 
-echo "githook(pre-commit): npm run check:fast"
-npm run check:fast
+# Commit scope is the index, not other sessions' unfinished working-tree edits.
+# Keep the regular check:fast runner and its global guards; only select its input.
+mkdir -p .codex-temp/ops
+scope_dir=$(mktemp -d .codex-temp/ops/pre-commit.XXXXXX)
+trap 'rm -rf "$scope_dir"' 0
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+scope_file="$scope_dir/changed-files.txt"
+
+node - "$scope_file" <<'NODE'
+const { execFileSync } = require('child_process')
+const { writeFileSync } = require('fs')
+
+// Disabling rename detection preserves both old and new contract-trigger paths.
+const files = execFileSync('git', ['diff', '--cached', '--name-only', '--no-renames', '-z'], {
+  encoding: 'utf8',
+}).split('\0').filter(Boolean)
+
+// check:fast's existing manifest format is newline-separated and trims paths.
+// Fail rather than silently checking the wrong path for an unrepresentable name.
+if (files.some((file) => /[\r\n]/.test(file) || file !== file.trim())) {
+  console.error('githook(pre-commit): staged filename cannot be represented in the check:fast manifest')
+  process.exit(1)
+}
+writeFileSync(process.argv[2], files.length ? `${files.join('\n')}\n` : '')
+NODE
+
+echo "githook(pre-commit): npm run check:fast (staged scope)"
+npm run check:fast -- --changed-files-file "$scope_file"

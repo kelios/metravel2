@@ -8,8 +8,10 @@
 
 - Семантические цвета остаются в `constants/modernMattePalette.ts`,
   `constants/designSystem.ts` и существующих CSS-переменных `--color-*`.
-  Художественный слой не переопределяет их: native, critical CSS и статические
-  скелетоны продолжают использовать одну палитру.
+  Художественный слой не переопределяет их: critical CSS и статические
+  скелетоны сохраняют базовую палитру. Native без активного сезона также
+  использует её; праздничный выбор разрешается через `useThemedColors`
+  по контракту `docs/features/seasonal-theme.md`.
 - `--base-atlas-*` задают свет, встроенный горный пейзаж, рельеф и оформление логотипа.
   Видимые точки подключения — `main-header-row`, `main-header::before`,
   `home-hero`, `header-logo-frame` и `header-logo-travel`.

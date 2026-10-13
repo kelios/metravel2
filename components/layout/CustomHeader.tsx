@@ -24,6 +24,7 @@ import { useHeaderContextBarFallbackVisibility } from './useHeaderContextBarFall
 import { useHasListFilterQuery } from './useListFilterQuery'
 import { webDataSetProps } from '@/utils/webProps'
 import Logo from './Logo'
+import SeasonalThemeDecoration from './SeasonalThemeDecoration'
 import LanguageSwitcher from './LanguageSwitcher'
 import { WebHeaderMoreFallback } from './WebMobileDockShell'
 
@@ -160,6 +161,7 @@ function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeade
             testID="main-header-row"
             {...webSlotProps('inner')}
           >
+            <SeasonalThemeDecoration />
             <Logo isCompact={rowIsMobile} showWordmark={!rowIsMobile} />
 
             {!rowIsMobile &&

@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState, useCallback, createContext, useContext, createElement, type Context } from 'react';
-import { Appearance, Platform, useColorScheme } from 'react-native';
+import { AppState, Appearance, Platform, useColorScheme } from 'react-native';
 import { DESIGN_COLORS, getThemedColors } from '@/constants/designSystem';
 import { millisecondsUntilLocalMidnight } from '@/utils/seasonalThemeClock';
 import {
@@ -32,6 +32,8 @@ function getThemeGlobalBag(): ThemeGlobalBag | undefined {
 }
 
 export interface ThemeContextType {
+  /** Native startup waits for preference restoration before exposing the themed shell. */
+  themeReady?: boolean;
   theme: Theme;
   isDark: boolean;
   setTheme: (theme: Theme) => void;
@@ -154,6 +156,7 @@ export function useTheme(): ThemeContextType {
       }
     }
     return {
+      themeReady: true,
       theme: 'auto',
       isDark: false,
       setTheme: () => undefined,
@@ -196,19 +199,34 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
-    if (Platform.OS !== 'web' || typeof document === 'undefined' || typeof window === 'undefined') return;
-    let midnightTimer: ReturnType<typeof setTimeout>;
+    const isWeb = Platform.OS === 'web';
+    if (isWeb && (typeof document === 'undefined' || typeof window === 'undefined')) return;
+    let midnightTimer: ReturnType<typeof setTimeout> | undefined;
+    let appState = isWeb ? null : AppState.currentState;
     const refresh = () => {
       clearTimeout(midnightTimer);
       const now = new Date();
       setCalendarDate(now);
-      // Следующая гражданская дата: сутки на границе DST могут длиться 23/25 часов.
-      midnightTimer = setTimeout(refresh, millisecondsUntilLocalMidnight(now));
+      // Civil midnight preserves 23/25-hour DST days. Native background has no timer.
+      if (isWeb || appState == null || appState === 'active') {
+        midnightTimer = setTimeout(refresh, millisecondsUntilLocalMidnight(now));
+      }
     };
+    refresh();
+    if (!isWeb) {
+      const subscription = AppState.addEventListener('change', (nextState) => {
+        appState = nextState;
+        if (nextState === 'active') refresh();
+        else clearTimeout(midnightTimer);
+      });
+      return () => {
+        clearTimeout(midnightTimer);
+        subscription.remove();
+      };
+    }
     const onVisible = () => {
       if (document.visibilityState === 'visible') refresh();
     };
-    refresh();
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', refresh);
     window.addEventListener('pageshow', refresh);
@@ -231,15 +249,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemColorSchemeRef = useRef(systemColorScheme);
   systemColorSchemeRef.current = systemColorScheme;
 
+  const explicitlyChanged = useRef({ theme: false, seasonalTheme: false });
+
   // Инициализация темы при монтировании
   useEffect(() => {
+    let mounted = true;
     readPersistedThemePrefs((prefs) => {
-      const theme = prefs.theme ?? 'auto';
-      setSavedTheme(theme);
-      setIsDark(resolveIsDark(theme, systemColorSchemeRef.current));
-      if (prefs.seasonalTheme) setSeasonalThemeState(prefs.seasonalTheme);
+      if (!mounted) return;
+      if (!explicitlyChanged.current.theme) {
+        const theme = prefs.theme ?? 'auto';
+        setSavedTheme(theme);
+        setIsDark(resolveIsDark(theme, systemColorSchemeRef.current));
+      }
+      if (!explicitlyChanged.current.seasonalTheme && prefs.seasonalTheme) {
+        setSeasonalThemeState(prefs.seasonalTheme);
+      }
       setPrefsRead(true);
     });
+    return () => { mounted = false; };
   }, []);
 
   // Определить текущую тему. До чтения хранилища не пересчитываем: в одном
@@ -285,7 +312,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [isDark, prefsRead]);
 
   // Синхронизация праздничного оформления для web: `data-season` читает app/global.css.
-  // На Android/iOS токены — литералы StyleSheet, сезонной палитры там нет (осознанно, #2376).
+  // Android/iOS receive the seasonal literals through useThemedColors instead.
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     if (typeof document === 'undefined') return;
@@ -300,11 +327,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [activeSeasonalTheme, prefsRead]);
 
   const setTheme = useCallback((theme: Theme) => {
+    explicitlyChanged.current.theme = true;
     setSavedTheme(theme);
+    setIsDark(resolveIsDark(theme, systemColorSchemeRef.current));
     persistThemePref(THEME_STORAGE_KEY, theme);
   }, []);
 
   const setSeasonalTheme = useCallback((preference: SeasonalThemePreference) => {
+    explicitlyChanged.current.seasonalTheme = true;
     setSeasonalThemeState(preference);
     persistThemePref(SEASONAL_THEME_STORAGE_KEY, preference);
   }, []);
@@ -314,6 +344,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [isDark, setTheme]);
 
   const value = useMemo<ThemeContextType>(() => ({
+    themeReady: prefsRead,
     theme: savedTheme,
     isDark,
     setTheme,
@@ -322,7 +353,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     activeSeasonalTheme,
     seasonalCalendar,
     setSeasonalTheme,
-  }), [savedTheme, isDark, setTheme, toggleTheme, seasonalTheme, activeSeasonalTheme, seasonalCalendar, setSeasonalTheme]);
+  }), [prefsRead, savedTheme, isDark, setTheme, toggleTheme, seasonalTheme, activeSeasonalTheme, seasonalCalendar, setSeasonalTheme]);
 
   return createElement(ThemeContext.Provider, { value }, children);
 }
@@ -332,8 +363,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
  * Использует современную матовую палитру (светлая/тёмная).
  */
 export function useThemedColors() {
-  const { isDark } = useTheme();
-  return useMemo(() => getThemedColors(isDark), [isDark]);
+  const { isDark, activeSeasonalTheme } = useTheme();
+  return useMemo(() => getThemedColors(isDark, activeSeasonalTheme), [isDark, activeSeasonalTheme]);
 }
 
 // Экспорт типа возвращаемого значения useThemedColors для использования в компонентах

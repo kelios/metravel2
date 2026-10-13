@@ -11,15 +11,18 @@ const ready = () => selectLaunchReady(useLaunchReadinessStore.getState());
 describe('launchReadinessStore', () => {
   beforeEach(() => resetLaunchReadinessForTests());
 
-  it('is not ready on fonts alone — the biometric gate must decide too', () => {
+  it('waits for saved theme after fonts and the biometric decision', () => {
     useLaunchReadinessStore.getState().markLaunchConditionReady('fonts');
     expect(ready()).toBe(false);
     useLaunchReadinessStore.getState().markLaunchConditionReady('biometricGate');
+    expect(ready()).toBe(false);
+    useLaunchReadinessStore.getState().markLaunchConditionReady('theme');
     expect(ready()).toBe(true);
   });
 
   it('does not depend on the order conditions become ready', () => {
     useLaunchReadinessStore.getState().markLaunchConditionReady('biometricGate');
+    useLaunchReadinessStore.getState().markLaunchConditionReady('theme');
     expect(ready()).toBe(false);
     useLaunchReadinessStore.getState().markLaunchConditionReady('fonts');
     expect(ready()).toBe(true);

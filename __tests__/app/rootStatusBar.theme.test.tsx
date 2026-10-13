@@ -2,6 +2,7 @@ import type React from 'react'
 import type { Root } from 'react-dom/client'
 
 let mockAppDark = false
+let mockThemeReady = true
 let mockSystemScheme = 'light'
 let mockPlatform = 'web'
 let mockPath = '/quests'
@@ -10,7 +11,7 @@ const mockThemeValues: any[] = []
 
 jest.mock('@/hooks/useTheme', () => ({
   ThemeProvider: ({ children }: any) => children,
-  useTheme: () => ({ isDark: mockAppDark }),
+  useTheme: () => ({ isDark: mockAppDark, themeReady: mockThemeReady }),
   useThemedColors: () => require('@/constants/designSystem').getThemedColors(mockAppDark),
 }))
 jest.mock('expo-router', () => {
@@ -25,7 +26,7 @@ jest.mock('expo-router', () => {
 })
 jest.mock('@/components/layout/AppProviders', () => ({ __esModule: true, default: ({ children }: any) => children }))
 jest.mock('@/components/layout/NativeAppRuntime', () => ({ __esModule: true, default: () => null }))
-jest.mock('@/components/layout/LaunchCover', () => ({ __esModule: true, default: () => null }))
+jest.mock('@/components/layout/LaunchCover', () => ({ __esModule: true, default: () => require('react').createElement('div', { 'data-testid': 'launch-cover' }) }))
 jest.mock('@/components/quests/QuestProgressQueueRuntime', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/profile/BlockedAuthorsRuntime', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/ui/ErrorBoundary', () => ({ __esModule: true, default: ({ children }: any) => children }))
@@ -70,9 +71,34 @@ describe.each(['web', 'android', 'ios'])('actual root theme consumer on %s', pla
     ;({ renderToString } = require('react-dom/server.node'))
     RootLayout = require('@/app/_layout').default
   })
-  beforeEach(() => { mockAppDark = false; mockSystemScheme = 'light'; mockPath = '/quests'; mockThemeValues.length = 0; container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container) })
+  beforeEach(() => { mockAppDark = false; mockThemeReady = true; require('@/stores/launchReadinessStore').resetLaunchReadinessForTests(); mockSystemScheme = 'light'; mockPath = '/quests'; mockThemeValues.length = 0; container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container) })
   afterEach(async () => { await act(async () => root.unmount()); container.remove() })
   const mount = () => act(async () => { root.render(ReactModule.createElement(RootLayout)) })
+  it('holds only native themed content until preferences hydrate', async () => {
+    mockThemeReady = false
+    await mount()
+    if (platform === 'web') {
+      expect(mockThemeValues.length).toBeGreaterThan(0)
+      expect(container.querySelector('[data-testid="launch-cover"]')).toBeNull()
+    } else {
+      expect(mockThemeValues).toHaveLength(0)
+      expect(container.querySelector('[data-testid="launch-cover"]')).not.toBeNull()
+      mockAppDark = true
+      mockThemeReady = true
+      await mount()
+      expect(mockThemeValues.at(-1).dark).toBe(true)
+      expect(require('@/stores/launchReadinessStore').useLaunchReadinessStore.getState().ready.theme).toBe(true)
+    }
+  })
+  if (platform !== 'web') {
+    it('lets the existing launch failsafe release hung theme storage', async () => {
+      mockThemeReady = false
+      await mount()
+      await act(async () => { require('@/stores/launchReadinessStore').useLaunchReadinessStore.getState().expireLaunchFailsafe() })
+      expect(mockThemeValues.length).toBeGreaterThan(0)
+      expect(container.querySelector('[data-testid="launch-cover"]')).toBeNull()
+    })
+  }
   it.each([[false, 'light'], [false, 'dark'], [true, 'light'], [true, 'dark']])('app dark=%s/system=%s uses the resolved app value', async (appDark, system) => {
     mockAppDark = appDark as boolean; mockSystemScheme = system as string; await mount()
     const bar = container.querySelector('[data-testid="actual-root-native-status-bar"]')

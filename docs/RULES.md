@@ -87,9 +87,20 @@
 - Before starting any change, review relevant files in `docs/`.
 - New features, contract changes, complex/recurring bugs, SEO-sensitive changes,
   media-pipeline work, and cross-platform or frontend/backend changes use the
-  OpenSpec workflow from `docs/spec-driven-development.md`: planning artifacts
-  are reviewed before a separate apply request. OpenSpec does not replace the
-  MCP task board, Task Contract, project skills, or validation/Done gates.
+  OpenSpec workflow from `docs/spec-driven-development.md`: create, review, and
+  validate planning artifacts before apply. A direct request to implement, build,
+  or fix authorizes the necessary proposal → apply sequence in the same flow;
+  do not ask for a second confirmation of work already authorized. Explicit
+  implementation authority wins even when the request mentions or invokes
+  `openspec-propose` (for example, “propose and implement”). A planning-only
+  request or an `openspec-propose` invocation without an implementation instruction
+  stays planning-only until the user requests implementation. This routing rule
+  also applies when generated vendor skills say every initial request authorizes
+  planning only. Material
+  unresolved scope questions still require clarification. Exact authorization
+  gates for store build/upload/submit/release and other external operations remain
+  unchanged. OpenSpec does not replace the MCP task board, Task Contract, project
+  skills, or validation/Done gates.
 - Work only on the `main` branch by default:
   - check the current branch before editing;
   - do not create or switch to another branch unless the user gives a new explicit instruction;
@@ -108,6 +119,10 @@
   - stage explicit task paths. `git add -A` and a pathless `git commit` are forbidden in
     this shared checkout: they sweep other sessions' unfinished files and ship them past
     their own review gate;
+  - `pre-commit` passes only staged paths to `check:fast` through an ignored temporary
+    manifest. The runner keeps its global guards; another session's unstaged/untracked
+    paths are not selective lint/test inputs. A manual `npm run check:fast` retains
+    its working-tree scope;
   - push `main` only; never push a `claude/*` auto-worktree branch;
   - record the commit sha in the ticket `description`: acceptance, production deploy and any
     later analysis read the pushed code, not somebody's working tree. Having nothing of

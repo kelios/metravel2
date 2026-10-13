@@ -7,8 +7,13 @@ import { fireEvent, render } from '@testing-library/react-native';
 import ThemeSection from '@/components/settings/ThemeSection';
 import { createSettingsStyles } from '@/components/screens/settings/settings.styles';
 import { getThemedColors } from '@/constants/designSystem';
+import { Platform } from 'react-native';
 
 describe('seasonal theme icons', () => {
+  const originalPlatform = Platform.OS;
+  afterEach(() => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
+  });
   it('renders every preference with a supported Feather glyph on web', () => {
     const options = getSeasonalThemeOptions();
     expect(options.map(({ value }) => value)).toEqual(['auto', 'off', ...SEASONAL_THEME_IDS]);
@@ -19,7 +24,8 @@ describe('seasonal theme icons', () => {
     }
   });
 
-  it('exposes exactly one checked radio in settings and updates it after selection', () => {
+  it.each(['web', 'android', 'ios'])('exposes exactly one checked radio in %s settings and updates it after selection', platform => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: platform });
     const options = getSeasonalThemeOptions();
     const colors = getThemedColors(false);
     const setTheme = jest.fn();

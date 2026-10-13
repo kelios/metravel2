@@ -1,4 +1,4 @@
-import { Platform, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { useTheme, useThemedColors } from '@/hooks/useTheme';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { formatDate } from '@/i18n/format';
@@ -16,7 +16,7 @@ export default function SeasonalThemeStatus() {
   const { seasonalTheme, seasonalCalendar } = useTheme();
   const colors = useThemedColors();
   const { t } = useTranslation();
-  if (Platform.OS !== 'web' || seasonalTheme !== 'auto' || !seasonalCalendar) return null;
+  if (seasonalTheme !== 'auto' || !seasonalCalendar) return null;
 
   const period = seasonalCalendar.currentPeriod ?? seasonalCalendar.nextPeriod;
   const label = period ? getSeasonalThemeOptions().find(option => option.value === period.id)?.label : undefined;

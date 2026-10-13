@@ -52,14 +52,19 @@ describe('localized automatic seasonal status', () => {
     expect(render(<SeasonalThemeStatus />).queryByTestId('seasonal-theme-status')).toBeNull();
   });
 
-  it('hides before preferences hydrate and on native', () => {
+  it('hides before preferences hydrate', () => {
     (useTheme as jest.Mock).mockReturnValue({ seasonalTheme: 'auto', seasonalCalendar: null });
     const view = render(<SeasonalThemeStatus />);
     expect(view.queryByTestId('seasonal-theme-status')).toBeNull();
-    install(new Date(2026, 9, 20, 12));
-    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
-    view.rerender(<SeasonalThemeStatus />);
-    expect(view.queryByTestId('seasonal-theme-status')).toBeNull();
+  });
+
+  it.each(['android', 'ios'])('exposes the same automatic calendar status on %s', platform => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: platform });
+    install(new Date(2027, 0, 7, 12));
+    const text = render(<SeasonalThemeStatus />).getByTestId('seasonal-theme-status').props.children;
+    expect(text).toContain('Сейчас: Рождество и Новый год');
+    expect(text).toContain('2026');
+    expect(text).toContain('2027');
   });
 
   it('updates labels and dates when language changes without remounting', async () => {

@@ -1,4 +1,4 @@
-import { Platform, View } from 'react-native';
+import { View } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import ThemeOptionGroup from '@/components/layout/ThemeOptionGroup';
 import { getSeasonalThemeOptions } from '@/components/layout/seasonalThemeOptions';
@@ -17,8 +17,7 @@ interface SeasonalThemeToggleProps {
 
 /**
  * Переключатель праздничного оформления (#2376): по календарю / выкл / каждая
- * тема из `constants/seasonalThemes.ts`. Только web: на Android/iOS токены —
- * литералы StyleSheet, сезонной палитры там нет, и обещать её контролом нельзя.
+ * тема из `constants/seasonalThemes.ts` на web, Android и iOS.
  */
 export default function SeasonalThemeToggle({
   compact = false,
@@ -28,19 +27,17 @@ export default function SeasonalThemeToggle({
   const { seasonalTheme, setSeasonalTheme } = useTheme();
   const { t } = useTranslation();
 
-  if (Platform.OS !== 'web') return null;
-
   return (
     <View>
       <ThemeOptionGroup
-      testID="seasonal-theme-toggle"
-      options={getSeasonalThemeOptions()}
-      value={seasonalTheme}
-      onChange={setSeasonalTheme}
-      getAccessibilityLabel={(option) => t('navigationStatic:seasonalTheme.selectLabel', { value1: option.label })}
-      compact={compact}
-      layout={layout}
-      showLabels={showLabels}
+        testID="seasonal-theme-toggle"
+        options={getSeasonalThemeOptions()}
+        value={seasonalTheme}
+        onChange={setSeasonalTheme}
+        getAccessibilityLabel={(option) => t('navigationStatic:seasonalTheme.selectLabel', { value1: option.label })}
+        compact={compact}
+        layout={layout}
+        showLabels={showLabels}
       />
       <SeasonalThemeStatus />
     </View>

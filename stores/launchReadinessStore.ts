@@ -2,7 +2,7 @@
 // One launch-readiness contract for native cold start (#2142).
 //
 // The native splash stays up until every launch condition is ready: the icon
-// font and the biometric gate's decision (not armed / unlocked / failed).
+// font, saved theme and the biometric gate's decision (not armed / unlocked / failed).
 // Conditions are declared here up front instead of registered at mount, so a
 // condition owner that mounts late can never be missed by the splash owner.
 // `failsafeExpired` is the shared liveness cap (LAUNCH_FAILSAFE_MS): it lets
@@ -10,9 +10,9 @@
 
 import { create } from 'zustand';
 
-export type LaunchCondition = 'fonts' | 'biometricGate';
+export type LaunchCondition = 'fonts' | 'theme' | 'biometricGate';
 
-const LAUNCH_CONDITIONS: readonly LaunchCondition[] = ['fonts', 'biometricGate'];
+const LAUNCH_CONDITIONS: readonly LaunchCondition[] = ['fonts', 'theme', 'biometricGate'];
 
 interface LaunchReadinessState {
   ready: Record<LaunchCondition, boolean>;
@@ -23,6 +23,7 @@ interface LaunchReadinessState {
 
 const initialReady = (): Record<LaunchCondition, boolean> => ({
   fonts: false,
+  theme: false,
   biometricGate: false,
 });
 
