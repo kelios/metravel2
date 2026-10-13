@@ -44,7 +44,7 @@ jest.mock('expo-clipboard', () => ({
   setStringAsync: (...args: any[]) => mockSetString(...args),
 }))
 
-jest.mock('@/utils/toast', () => ({ showToast: jest.fn() }))
+jest.mock('@/utils/toast', () => ({ ...jest.requireActual('@/utils/toast'), showToast: jest.fn() }))
 
 const mockTrackOpened = jest.fn()
 const mockTrackShared = jest.fn()

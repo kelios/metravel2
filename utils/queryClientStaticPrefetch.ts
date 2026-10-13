@@ -1,3 +1,4 @@
+import { getActiveLocale } from '@/i18n';
 import type { QueryClient } from '@tanstack/react-query'
 
 import {
@@ -25,13 +26,14 @@ export { shouldPrefetchTravelStatics } from '@/utils/staticPrefetchRoutes'
  * так что отдельный запрос был чистым расходом канала.
  */
 export function runStaticQueryClientPrefetch(client: QueryClient) {
+  const locale = getActiveLocale();
   // Промис возвращается только чтобы прогрев можно было дождаться в тестах:
   // вызывающий код по-прежнему запускает его fire-and-forget на idle.
   // Ключ, загрузчик и TTL — общие с потребителем (`pointCategoryDictionaryQuery`,
   // `queryConfigs.static`), иначе под одним ключом снова разъедутся формы.
   return client.prefetchQuery({
-    queryKey: pointCategoryDictionaryQueryKey(),
-    queryFn: fetchPointCategoryDictionary,
+    queryKey: pointCategoryDictionaryQueryKey(locale),
+    queryFn: () => fetchPointCategoryDictionary(locale),
     staleTime: queryConfigs.static.staleTime,
   })
 }

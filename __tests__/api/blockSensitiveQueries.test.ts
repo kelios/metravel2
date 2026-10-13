@@ -16,7 +16,7 @@ import {
   resetBlockedAuthorStateForTests,
   subscribeAuthorBlock,
 } from '@/api/blockSensitiveQueries'
-import { stripCollection, stripCommentTree, travelAuthorIds } from '@/api/blockSensitiveShapes'
+import { blockHiddenCount, servedPageLength, stripCollection, stripCommentTree, travelAuthorIds } from '@/api/blockSensitiveShapes'
 import { queryKeys } from '@/api/queryKeys'
 import { commentKeys } from '@/hooks/comments/commentKeys'
 
@@ -71,7 +71,19 @@ describe('stripCollection', () => {
     const page2 = { data: [travel(2, '7'), travel(3, '3,7')], total: 3 }
     const next = stripCollection({ pages: [page1, page2], pageParams: [0, 1] }, travelAuthorIds, blocked) as any
     expect(next.pages[0]).toBe(page1)
-    expect(next.pages[1]).toEqual({ data: [], total: 1 })
+    expect(next.pages[1]).toEqual({ data: [], total: 1, blockHiddenCount: 2 })
+    expect(servedPageLength(next.pages[1])).toBe(2)
+  })
+
+  it('keeps server pagination length across successive author blocks and envelope forms', () => {
+    for (const listKey of ['data', 'items', 'results']) {
+      const original = { pages: [{ [listKey]: [travel(1, '7'), travel(2, '8'), travel(3, '9')], total: 3 }], pageParams: [0] }
+      const first = stripCollection(original, travelAuthorIds, new Set([7]))
+      const next = stripCollection(first, travelAuthorIds, new Set([8])) as { pages: unknown[] }
+      expect(blockHiddenCount(next.pages[0])).toBe(2)
+      expect(servedPageLength(next.pages[0])).toBe(3)
+      expect(stripCollection(next, travelAuthorIds, new Set([7, 8]))).toBe(next)
+    }
   })
 
   it('filters id-keyed maps (popular / of-month)', () => {

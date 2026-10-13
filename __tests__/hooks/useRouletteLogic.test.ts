@@ -88,16 +88,22 @@ describe('useRouletteLogic', () => {
       onSelect: jest.fn(),
     });
 
-    useRandomTravelData.mockReturnValue({
-      data: [{ id: 10 }, { id: 20 }, { id: 30 }, { id: 40 }],
-      isLoading: false,
-      isFetching: false,
-      isEmpty: false,
-      refetch: jest.fn().mockResolvedValue({
-        data: {
-          pages: [{ data: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }] }],
-        },
-      }),
+    // A real refetch updates the guarded query subscription too: selected IDs
+    // now resolve against that live data instead of a copied result payload.
+    useRandomTravelData.mockImplementation(function useMockRandomData() {
+      const React = require('react');
+      const [data, setData] = React.useState([{ id: 10 }, { id: 20 }, { id: 30 }, { id: 40 }]);
+      return {
+        data,
+        isLoading: false,
+        isFetching: false,
+        isEmpty: false,
+        refetch: jest.fn(async () => {
+          const next = [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }];
+          setData(next);
+          return { data: { pages: [{ data: next }] } };
+        }),
+      };
     });
   });
 

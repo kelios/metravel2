@@ -6620,3 +6620,51 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   `openspec/changes/scalable-travel-book-export/{proposal,design,tasks}.md` и
   `specs/large-travel-book-export/spec.md`. Apply — отдельный запрос владельца;
   backend implementation выполняет владелец backend по связанным карточкам.
+
+### UGC-BLOCK-PAGINATION-STARVATION — доступный контент за вырезанной страницей
+
+- Цепочка: #2134 / #2169 → #2439, связан #2137. Verdict `create-linked`:
+  прежняя приёмка проверяла исчезновение единственной карточки автора, а не
+  достижимость другого автора после двух полностью вырезанных страниц.
+- Подтверждённый механизм: `api/blockSensitiveQueries.ts` вырезает кэш,
+  но observer мог остановиться на пустой странице; newest главной запрашивал
+  анонимную первую страницу. Клиентский счётчик409 в записи (12) не является
+  серверным количеством доступных путешествий.
+- Инвариант: блокировка убирает автора, сохраняя доступность остальных страниц,
+  owner-изоляцию кэша и повторную попытку после ошибки сети.
+- Контроль: served-length пагинация и observer advancement в общем слое;
+  `useListTravelData.block.test.tsx`, `useRoulette.block.test.tsx`,
+  `travelListQueries.session.test.ts`. Runtime gate: dominant-author/one/empty,
+  block/unblock, каталог/newest/рулетка; новая физическая сцена вместо дефектной.
+
+### NATIVE-MODAL-TOAST-OCCLUSION — подтверждение под остающимся RN Modal
+
+- Цепочка: #844 / #2161 / #2168 / #2133 → #2440, связан #2137.
+  Verdict `create-linked`: прежние проверки меню и закрытия gallery не
+  проверяли отправку жалобы и видимое подтверждение при открытом родителе.
+- Причина: root `ToastHost` находится под отдельным native modal layer.
+  Инвариант: feedback принадлежит видимому retained parent; временная sheet
+  закрывается перед подтверждением и не забирает host с собой.
+- Постоянный контроль: `ModalToastHost` и AST registry
+  `scripts/guard-modal-feedback.js` в обязательном modal-safe-area guard;
+  отрицательные проверки нового consumer/неверного visibility/transient
+  lifecycle и тест реального toast registry/report mutation.
+- Runtime gate: photo/review201, duplicate409, failure/retry, close/reopen/root
+  и подтверждённые native siblings. Source/unit checks не доказывают экранный
+  слой и не закрывают физическую сцену.
+
+### TRAVEL-DICTIONARY-LOCALE-CACHE — язык подписи не входит в идентичность данных
+
+- Цепочка: #942 / #1518 / #2374 → #2441 (backend) + #2442 (frontend),
+  связаны #2438/#2137. Verdict `create-linked`: shape/freshness/name→ID
+  проверки не покрывали локализованный серверный payload.
+- Причина: raw `values(id,name)` на сервере, общий proxy/TTL/inflight/query key
+  и однократный imperative load на клиенте. Перевод только UI chrome оставляет
+  русские taxonomy names; выдуманные клиентские IDs нарушают контракт.
+- Инвариант: стабильные ID/RU-порядок, выбранная locale в request и каждом
+  cache key; явный RU fallback с `name_language`; поздний ответ прежнего языка
+  не заменяет активный словарь. `_fresh` и sequence arbitration сохраняются.
+- Regression gate: пять локалей, weighted Accept-Language/query priority,
+  cold/HIT и parser-mismatch proxy controls, same-locale dedup, RU→EN races,
+  wizard point refresh. Production/API и desktop/mobile/native приёмка
+  обязательны после ревью; сами исходники не являются Done.

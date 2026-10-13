@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import Feather from '@expo/vector-icons/Feather'
 
 import { useResponsive } from '@/hooks/useResponsive'
+import { useQueryOwner } from '@/hooks/useQueryOwner'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { sendAnalyticsEvent } from '@/utils/analytics'
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem'
@@ -136,6 +137,7 @@ export function HomeInspirationSection({
 }: HomeSectionProps) {
   const router = useRouter()
   const colors = useThemedColors()
+  const owner = useQueryOwner()
   const { isPhone, isLargePhone, width: viewportWidth } = useResponsive()
   const isMobile = isPhoneLayout({ width: viewportWidth, isPhone, isLargePhone })
   const isRail = layout === 'rail'
@@ -153,7 +155,7 @@ export function HomeInspirationSection({
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: [queryKey],
+    queryKey: [queryKey, owner],
     queryFn: ({ signal } = {} as any) => fetchFn({ signal }),
     ...queryConfigs.dynamic,
     // Секции главной — lazy-острова: не рефетчим фоново при каждом маунте, если

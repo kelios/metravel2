@@ -1,6 +1,8 @@
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { resolveSupportedLocale } from '@/i18n/config';
 // hooks/useFilterOptions.ts
 // Единый источник серверных фильтров (категории/транспорт/страны и т.д.).
-// Все потребители читают один кэш React Query (queryKeys.filterOptions()),
+// Все потребители читают один кэш React Query (queryKeys.filterOptions(lang)),
 // данные тянутся одним дедуплицированным запросом через fetchAllFiltersOptimized.
 
 import { useQuery } from '@tanstack/react-query';
@@ -16,9 +18,11 @@ interface UseFilterOptionsParams<T> {
 
 export function useFilterOptions<T = Filters>(params: UseFilterOptionsParams<T> = {}) {
     const { select, enabled } = params;
+    const { i18n } = useTranslation();
+    const lang = resolveSupportedLocale([i18n.resolvedLanguage, i18n.language]);
     return useQuery({
-        queryKey: queryKeys.filterOptions(),
-        queryFn: ({ signal }) => fetchAllFiltersOptimized({ signal }),
+        queryKey: queryKeys.filterOptions(lang),
+        queryFn: ({ signal }) => fetchAllFiltersOptimized({ signal, lang }),
         ...queryConfigs.static,
         ...(enabled === undefined ? {} : { enabled }),
         ...(select ? { select } : {}),

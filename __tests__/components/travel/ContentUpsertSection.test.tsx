@@ -106,7 +106,7 @@ jest.mock('react-native-safe-area-context', () => ({
 jest.mock('expo-document-picker', () => ({ getDocumentAsync: jest.fn() }))
 jest.mock('expo-file-system', () => ({ readAsStringAsync: jest.fn() }))
 jest.mock('expo-clipboard', () => ({ getStringAsync: jest.fn() }))
-jest.mock('@/utils/toast', () => ({ showToast: jest.fn() }))
+jest.mock('@/utils/toast', () => ({ ...jest.requireActual('@/utils/toast'), showToast: jest.fn() }))
 
 const baseFormData: TravelFormData = {
   id: '5',

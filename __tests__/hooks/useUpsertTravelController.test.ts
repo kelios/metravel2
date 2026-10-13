@@ -346,6 +346,16 @@ describe('useUpsertTravelController', () => {
     });
   });
 
+  it('passes dictionary load failure and its retry through to the editor', async () => {
+    const error = new Error('Dictionary unavailable');
+    const loadFilters = jest.fn(async () => {});
+    mockUseTravelFilters.mockReturnValue({ filters: baseFilters, isLoading: false, error, loadFilters });
+    const { result } = renderHook(() => useUpsertTravelController());
+    expect(result.current.filtersError).toBe(error);
+    await act(async () => { await result.current.retryFilters(); });
+    expect(loadFilters).toHaveBeenCalledTimes(1);
+  });
+
   it('does not save local draft when form is dirty but user did not interact', () => {
     const saveDraft = jest.fn();
     mockUseDraftRecovery.mockReturnValue({

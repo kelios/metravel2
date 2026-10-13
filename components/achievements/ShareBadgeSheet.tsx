@@ -38,6 +38,7 @@ import {
   trackShareCardClick,
 } from '@/utils/gamificationAnalytics';
 import { showToast } from '@/utils/toast';
+import ModalToastHost from '@/components/ui/ModalToastHost';
 import { devWarn } from '@/utils/logger';
 import { translate as i18nT } from '@/i18n'
 
@@ -328,6 +329,7 @@ function ShareBadgeSheet({ visible, onClose, subject, context = 'detail' }: Prop
           </View>
         </Pressable>
       </Pressable>
+      <ModalToastHost visible={visible} />
     </Modal>
   );
 }

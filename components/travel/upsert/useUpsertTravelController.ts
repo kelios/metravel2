@@ -39,6 +39,8 @@ export interface UpsertTravelController {
 
   filters: ReturnType<typeof useTravelFilters>['filters'];
   isFiltersLoading: boolean;
+  filtersError: ReturnType<typeof useTravelFilters>['error'];
+  retryFilters: ReturnType<typeof useTravelFilters>['loadFilters'];
 
   handleManualSave: ManualSave;
   handleCountrySelect: ReturnType<typeof useTravelFormData>['handleCountrySelect'];
@@ -207,7 +209,7 @@ export function useUpsertTravelController(): UpsertTravelController {
     stepStorageKey,
   });
 
-  const { filters, isLoading: isFiltersLoading } = useTravelFilters({
+  const { filters, isLoading: isFiltersLoading, error: filtersError, loadFilters: retryFilters } = useTravelFilters({
     loadOnMount: true,
     currentStep: wizard.currentStep,
   });
@@ -335,6 +337,8 @@ export function useUpsertTravelController(): UpsertTravelController {
 
       filters,
       isFiltersLoading,
+      filtersError,
+      retryFilters,
 
       handleManualSave: saveAndClearDraft,
       handleCountrySelect: form.handleCountrySelect,
@@ -364,6 +368,8 @@ export function useUpsertTravelController(): UpsertTravelController {
       currentStepMeta,
       filters,
       isFiltersLoading,
+      filtersError,
+      retryFilters,
       saveAndClearDraft,
       form.handleCountrySelect,
       form.handleCountryDeselect,

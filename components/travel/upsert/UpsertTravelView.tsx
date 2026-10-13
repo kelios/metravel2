@@ -575,6 +575,15 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
       />
 
       <OfflineBanner colors={colors} isVisible={isOffline} />
+      {controller.filtersError && !controller.isFiltersLoading ? (
+        <SafetyBanner
+          colors={colors}
+          icon="alert-triangle"
+          tone="warning"
+          message={i18nT('map:screens.tabs.PlacesScreen.filterLoadFailed')}
+          action={{ label: i18nT('sharedStatic:errors.retry'), onPress: () => { void controller.retryFilters(); } }}
+        />
+      ) : null}
       {controller.draftRecovery.localSaveError ? (
         <SafetyBanner
           colors={colors}

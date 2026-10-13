@@ -1,3 +1,5 @@
+import { DEFAULT_LOCALE, type SupportedLocale } from '@/i18n/config';
+
 export const queryKeys = {
   travel: (slugOrId: string | number) => ['travel', slugOrId] as const,
   travelAll: () => ['travel'] as const,
@@ -16,8 +18,8 @@ export const queryKeys = {
   // только ключи, которые кто-то реально читает: filters() — PointList визарда,
   // filterOptions() — каталог и рулетка. Отдельные countries()/allCountries()
   // были ключами без читателей и порождали дубли запросов.
-  filters: () => ['filters'] as const,
-  filterOptions: () => ['filter-options'] as const,
+  filters: (locale: SupportedLocale = DEFAULT_LOCALE) => ['filters', locale] as const,
+  filterOptions: (locale: SupportedLocale = DEFAULT_LOCALE) => ['filter-options', locale] as const,
   travelFacets: (search: string, params: Record<string, unknown>) =>
     ['travel-facets', search, params] as const,
   userPointsAll: (userId: string | null) => ['userPointsAll', userId] as const,

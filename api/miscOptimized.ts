@@ -1,4 +1,5 @@
-import { fetchAllCountries, fetchFilters, fetchFiltersCountry } from './misc';
+import { fetchAllCountries, fetchFilters, fetchFiltersCountry } from '@/api/misc';
+import { getActiveLocale, resolveSupportedLocale } from '@/i18n';
 import { devWarn } from '@/utils/logger';
 import type { FilterCountryOption, FilterDictionaries, Filters } from '@/types/types';
 
@@ -32,6 +33,7 @@ interface InFlightEntry<T> {
 const inFlightRequests = new Map<string, InFlightEntry<unknown>>();
 
 interface DictionaryLoadOptions {
+  lang?: string;
   signal?: AbortSignal;
   force?: boolean;
   // A return must observe a forced request started after this snapshot.
@@ -170,13 +172,15 @@ const loadCachedDictionary = <T>(
  */
 export const fetchFiltersOptimized = (
   options?: DictionaryLoadOptions,
-): Promise<FilterDictionaries> =>
-  loadCachedDictionary(
-    'filters',
+): Promise<FilterDictionaries> => {
+  const lang = resolveSupportedLocale([options?.lang ?? getActiveLocale()]);
+  return loadCachedDictionary(
+    `filters:${lang}`,
     ({ forceRefresh }) =>
-      fetchFilters({ throwOnError: true, ...(forceRefresh ? { forceRefresh: true } : null) }),
+      fetchFilters({ lang, throwOnError: true, ...(forceRefresh ? { forceRefresh: true } : null) }),
     options,
   );
+};
 
 /**
  * Страны для фильтра поиска (`/countriesforsearch/`) — только те, по которым
@@ -202,18 +206,20 @@ export const fetchAllCountriesOptimized = (
   loadCachedDictionary('all-countries', () => fetchAllCountries({ throwOnError: true }), options);
 
 /** Фильтры вместе со странами поиска — один вызов для каталога и рулетки. */
-export const fetchAllFiltersOptimized = (options?: { signal?: AbortSignal }): Promise<Filters> =>
-  loadCachedDictionary(
-    'all-filters',
+export const fetchAllFiltersOptimized = (options?: { signal?: AbortSignal; lang?: string }): Promise<Filters> => {
+  const lang = resolveSupportedLocale([options?.lang ?? getActiveLocale()]);
+  return loadCachedDictionary(
+    `all-filters:${lang}`,
     async () => {
       const [base, countries] = await Promise.all([
-        fetchFiltersOptimized(),
+        fetchFiltersOptimized({ lang }),
         fetchFiltersCountryOptimized(),
       ]);
       return { ...base, countries };
     },
     options,
   );
+};
 
 // Функция для очистки кэша (полезна для отладки)
 export const clearFiltersCache = () => {

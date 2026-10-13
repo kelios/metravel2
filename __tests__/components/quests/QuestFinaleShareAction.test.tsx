@@ -38,7 +38,7 @@ jest.mock('@/utils/externalLinks', () => ({
 }))
 jest.mock('@/utils/downloadUrlOnWeb', () => ({ downloadUrlOnWeb: jest.fn().mockReturnValue(true) }))
 jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn().mockResolvedValue(undefined) }))
-jest.mock('@/utils/toast', () => ({ showToast: jest.fn() }))
+jest.mock('@/utils/toast', () => ({ ...jest.requireActual('@/utils/toast'), showToast: jest.fn() }))
 jest.mock('@/utils/gamificationAnalytics', () => ({ trackQuestShareClick: jest.fn() }))
 jest.mock('expo-file-system/legacy', () => ({
   cacheDirectory: 'file:///cache/',

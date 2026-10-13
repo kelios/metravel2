@@ -1,9 +1,12 @@
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { resolveSupportedLocale } from '@/i18n/config';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import ModernFilters from '@/components/listTravel/ModernFilters';
 import { useListTravelFilters } from '@/components/listTravel/hooks/useListTravelFilters';
 import { useRandomTravelData } from '@/components/listTravel/hooks/useListTravelData';
+import { useQueryOwner } from '@/hooks/useQueryOwner';
 import { deduplicateTravels, normalizeApiResponse } from '@/components/listTravel/utils/listTravelHelpers';
 import { buildFacetCounts, buildTravelFilterGroups } from '@/components/listTravel/utils/filterGroups';
 import { getModernFiltersActiveCount } from '@/components/listTravel/filters/filterSelectionDefaults';
@@ -78,9 +81,12 @@ function pickDefaultCountryIds(countries: unknown): number[] {
 }
 
 export function useRoulette() {
+  const { i18n } = useTranslation();
+  const lang = resolveSupportedLocale([i18n.resolvedLanguage, i18n.language]);
+  const owner = useQueryOwner();
   const { data: rawOptions, isLoading: filtersLoading } = useQuery({
-    queryKey: queryKeys.filterOptions(),
-    queryFn: ({ signal }) => fetchAllFiltersOptimized({ signal }),
+    queryKey: queryKeys.filterOptions(lang),
+    queryFn: ({ signal }) => fetchAllFiltersOptimized({ signal, lang }),
     ...queryConfigs.static,
   });
 
@@ -146,7 +152,7 @@ export function useRoulette() {
   );
 
   const { data: facetsData, isFetching: resultsLoading, isError: resultsError } = useQuery({
-    queryKey: queryKeys.rouletteTravelFacets(rouletteQueryParams),
+    queryKey: [...queryKeys.rouletteTravelFacets(rouletteQueryParams), owner],
     queryFn: ({ signal }) =>
       fetchTravelFacets('', rouletteQueryParams, { signal, suppressErrors: true }),
     enabled: Boolean(options),
@@ -214,7 +220,10 @@ export function useRoulette() {
   });
 
   const [spinning, setSpinning] = useState(false);
-  const [result, setResult] = useState<Travel[]>([]);
+  const [selection, setSelection] = useState<{ owner: string | null; ids: Travel['id'][] }>({ owner, ids: [] });
+  const result = useMemo(() => selection.owner === owner
+    ? selection.ids.flatMap((id) => (travels ?? []).filter((travel) => travel.id === id))
+    : [], [owner, selection, travels]);
   const spinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
 
@@ -256,7 +265,7 @@ export function useRoulette() {
     if (!mountedRef.current) return;
 
     if (pool.length === 0) {
-      setResult([]);
+      setSelection({ owner, ids: [] });
       setSpinning(false);
       return;
     }
@@ -265,15 +274,15 @@ export function useRoulette() {
     if (spinTimerRef.current) clearTimeout(spinTimerRef.current);
     spinTimerRef.current = setTimeout(() => {
       if (!mountedRef.current) return;
-      setResult(next);
+      setSelection({ owner, ids: next.map((travel) => travel.id) });
       setSpinning(false);
     }, SPIN_DURATION_MS);
-  }, [spinning, travels, refetch]);
+  }, [spinning, travels, refetch, owner]);
 
   const handleClearAll = useCallback(() => {
     resetFilters();
-    setResult([]);
-  }, [resetFilters]);
+    setSelection({ owner, ids: [] });
+  }, [resetFilters, owner]);
 
   const handleFilterChange = useCallback(
     (groupKey: string, optionId: string) => {

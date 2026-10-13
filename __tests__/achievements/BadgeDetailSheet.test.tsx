@@ -34,7 +34,7 @@ jest.mock('@/utils/externalLinks', () => ({
 }))
 jest.mock('@/utils/downloadUrlOnWeb', () => ({ downloadUrlOnWeb: jest.fn(() => true) }))
 jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn() }))
-jest.mock('@/utils/toast', () => ({ showToast: jest.fn() }))
+jest.mock('@/utils/toast', () => ({ ...jest.requireActual('@/utils/toast'), showToast: jest.fn() }))
 jest.mock('@/utils/gamificationAnalytics', () => ({
   trackBadgeShareOpened: jest.fn(),
   trackBadgeShared: jest.fn(),

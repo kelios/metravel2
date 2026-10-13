@@ -11,7 +11,7 @@ import { buildTravelMapNativeHtml } from './Map/travelMapNativeHtml'
 import { openNativeMapLink } from './Map/openNativeMapLink'
 import { normalizePoint } from '@/components/map-core/types'
 import MapPlaceBottomCard from '@/components/MapPage/MapPlaceBottomCard'
-import ToastHost from '@/components/ui/ToastHost'
+import ModalToastHost from '@/components/ui/ModalToastHost'
 import { buildBirdMarkerHtml } from './Map/mapMarkerStyles'
 import {
   DEFAULT_CENTER,
@@ -258,12 +258,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
             topInset={(insets?.top ?? 0) + LAYOUT.headerHeight}
             bottomInset={dockPx}
           />
-          {/* #844 — the app-root Toast is mounted BELOW this native Modal, so save
-              feedback (auth prompt / «Сохранено» / error) from «Мои точки» rendered
-              behind the modal and looked like a no-op. A nested Toast inside the
-              Modal surfaces it above the sheet (react-native-toast-message picks the
-              last-mounted <Toast/> ref, then falls back to root on unmount). */}
-          <ToastHost overDock={false} />
+          <ModalToastHost visible={Boolean(selectedPoint)} />
         </View>
       </Modal>
     </View>

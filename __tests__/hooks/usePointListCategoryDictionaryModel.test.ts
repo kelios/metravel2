@@ -1,5 +1,7 @@
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 
+import { i18n } from '@/i18n';
+import { clearFiltersCache } from '@/api/miscOptimized';
 import { usePointListCategoryDictionaryModel } from '@/components/travel/hooks/usePointListCategoryDictionaryModel';
 
 const mockUseQuery = jest.fn();
@@ -27,6 +29,7 @@ jest.mock('@/utils/reactQueryConfig', () => ({
 
 describe('usePointListCategoryDictionaryModel', () => {
   beforeEach(() => {
+    clearFiltersCache();
     mockUseQuery.mockReset();
     mockFetchFilters.mockReset();
   });
@@ -65,4 +68,18 @@ describe('usePointListCategoryDictionaryModel', () => {
     expect(result.current.categoryIdToName.get('5')).toBe('Замки');
     expect(result.current.categoryNameToIds.get('замки')).toEqual(['5']);
   });
+  it('does not expose a previous-locale fallback while the new dictionary is loading', async () => {
+    mockUseQuery.mockReturnValue({ data: undefined });
+    let resolveEn: (data: unknown) => void = () => {};
+    mockFetchFilters.mockResolvedValueOnce({ categoryTravelAddress: [{ id: 84, name: 'Озеро' }] })
+      .mockImplementationOnce(() => new Promise(resolve => { resolveEn = resolve; }));
+    const { result } = renderHook(() => usePointListCategoryDictionaryModel());
+    await waitFor(() => expect(result.current.categoryIdToName.get('84')).toBe('Озеро'));
+    await act(async () => { await i18n.changeLanguage('en'); });
+    expect(result.current.siteCategoryDictionary).toEqual([]);
+    await act(async () => { resolveEn({ categoryTravelAddress: [{ id: 84, name: 'Lake' }] }); });
+    await waitFor(() => expect(result.current.categoryIdToName.get('84')).toBe('Lake'));
+    await act(async () => { await i18n.changeLanguage('ru'); });
+  });
+
 });

@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueryClient, type InfiniteData, type QueryObserverResult } from '@tanstack/react-query';
 import { fetchTravels, fetchRandomTravels } from '@/api/travelListQueries';
 import { queryKeys } from '@/api/queryKeys';
 import { blockHiddenCount, isLastPageEmptiedByBlock, servedPageLength } from '@/api/blockSensitiveShapes';
@@ -24,6 +24,8 @@ export interface UseListTravelDataProps {
   isQueryEnabled: boolean;
 }
 
+type TravelListPage = Awaited<ReturnType<typeof fetchTravels>>;
+
 export interface UseListTravelDataReturn {
   data: Travel[];
   total: number;
@@ -36,7 +38,7 @@ export interface UseListTravelDataReturn {
   isNextPageLoading: boolean;
   isEmpty: boolean;
   staleContentMeta: PublicStalePayloadMeta | null;
-  refetch: () => Promise<any>;
+  refetch: () => Promise<QueryObserverResult<InfiniteData<TravelListPage>, Error>>;
   handleEndReached: () => void;
   handleRefresh: () => void;
   isRefreshing: boolean;
@@ -53,13 +55,24 @@ const resolveStableTotal = (pages: unknown[]): number => {
   return 0;
 };
 
+const getNextTravelPage = (lastPage: unknown, allPages: unknown[]): number | undefined => {
+  const total = resolveStableTotal(allPages);
+  if (!total) return undefined;
+  const loaded = allPages.reduce<number>((sum, page) => sum + servedPageLength(page), 0);
+  if (loaded >= total) return undefined;
+  // Пустой ответ сервера — конец выдачи; пустая после блокировки автора
+  // страница — нет (`servedPageLength` считает и вырезанное).
+  if (servedPageLength(lastPage) === 0) return undefined;
+  return allPages.length;
+};
+
 type FetchFn = (
   page: number,
   perPage: number,
   search: string,
   params: Record<string, any>,
   options: { signal?: AbortSignal },
-) => Promise<any>;
+) => Promise<TravelListPage>;
 
 interface BaseTravelDataConfig {
   queryKeyPrefix: string;
@@ -118,16 +131,7 @@ function useBaseTravelData(
       fetchFn(pageParam, PER_PAGE, search.trim(), queryParamsForFetch, { signal }),
     enabled: isQueryEnabled,
     initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) => {
-      const total = resolveStableTotal(allPages as unknown[]);
-      if (!total) return undefined;
-      const loaded = allPages.reduce((sum, page) => sum + servedPageLength(page), 0);
-      if (loaded >= total) return undefined;
-      // Пустой ответ сервера — конец выдачи; пустая после блокировки автора
-      // страница — нет (`servedPageLength` считает и вырезанное).
-      if (servedPageLength(lastPage) === 0) return undefined;
-      return allPages.length;
-    },
+    getNextPageParam: getNextTravelPage,
     staleTime: STALE_TIME.TRAVELS,
     gcTime: GC_TIME.TRAVELS,
     refetchOnMount: QUERY_CONFIG.REFETCH_ON_MOUNT,
@@ -199,7 +203,8 @@ function useBaseTravelData(
   // как вернуть карточки вызывающему (в том числе при гостевом fallback).
   const refetchVisiblePages = useCallback(async () => {
     let result = await refetch();
-    while (result.isSuccess && result.hasNextPage && isLastPageEmptiedByBlock(result.data)) {
+    while (result.isSuccess && isLastPageEmptiedByBlock(result.data) &&
+      getNextTravelPage(result.data.pages.at(-1), result.data.pages) !== undefined) {
       result = await fetchNextPage({ cancelRefetch: false });
     }
     return result;

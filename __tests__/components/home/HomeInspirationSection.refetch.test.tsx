@@ -1,7 +1,10 @@
+import React from 'react'
 import { render } from '@testing-library/react-native'
 import { useQuery } from '@tanstack/react-query'
 import { HomeInspirationSection } from '@/components/home/HomeInspirationSection'
 
+let mockOwner: string | null = null
+jest.mock('@/hooks/useQueryOwner', () => ({ useQueryOwner: () => mockOwner }))
 jest.mock('@tanstack/react-query')
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn() }),
@@ -21,6 +24,7 @@ const mockUseQuery = useQuery as jest.MockedFunction<typeof useQuery>
 
 describe('HomeInspirationSection query config (#738)', () => {
   beforeEach(() => {
+    mockOwner = null
     mockUseQuery.mockReturnValue({ data: {}, isLoading: false } as never)
   })
 
@@ -57,5 +61,17 @@ describe('HomeInspirationSection query config (#738)', () => {
 
     const options = mockUseQuery.mock.calls[0][0] as { enabled?: boolean }
     expect(options.enabled).toBe(false)
+  })
+
+  it('isolates home selections by session owner across login and logout', () => {
+    const ui = <HomeInspirationSection title="New" queryKey="home-new-travels" fetchFn={async () => ({ data: [], total: 0 })} />
+    const view = render(ui)
+    expect(mockUseQuery.mock.lastCall?.[0].queryKey).toEqual(['home-new-travels', null])
+    mockOwner = '242'
+    view.rerender(React.cloneElement(ui))
+    expect(mockUseQuery.mock.lastCall?.[0].queryKey).toEqual(['home-new-travels', '242'])
+    mockOwner = null
+    view.rerender(React.cloneElement(ui))
+    expect(mockUseQuery.mock.lastCall?.[0].queryKey).toEqual(['home-new-travels', null])
   })
 })

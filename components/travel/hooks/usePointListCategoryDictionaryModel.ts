@@ -1,3 +1,5 @@
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { resolveSupportedLocale, type SupportedLocale } from '@/i18n/config';
 import { useEffect, useMemo, useState } from 'react';
 import * as ReactQuery from '@tanstack/react-query';
 
@@ -12,7 +14,9 @@ import {
 } from '@/utils/userPointsCategories';
 
 export function usePointListCategoryDictionaryModel() {
-  const [siteCategoryDictionaryFallback, setSiteCategoryDictionaryFallback] = useState<CategoryDictionaryItem[]>([]);
+  const { i18n } = useTranslation();
+  const locale = resolveSupportedLocale([i18n.resolvedLanguage, i18n.language]);
+  const [fallback, setFallback] = useState<{ locale: SupportedLocale; data: CategoryDictionaryItem[] }>();
   const queryRunner = (ReactQuery as { useQuery?: typeof ReactQuery.useQuery }).useQuery as
     | typeof ReactQuery.useQuery
     | undefined;
@@ -21,8 +25,8 @@ export function usePointListCategoryDictionaryModel() {
   if (typeof queryRunner === 'function') {
     try {
       const queryResult = queryRunner<CategoryDictionaryItem[]>({
-        queryKey: pointCategoryDictionaryQueryKey(),
-        queryFn: fetchPointCategoryDictionary,
+        queryKey: pointCategoryDictionaryQueryKey(locale),
+        queryFn: () => fetchPointCategoryDictionary(locale),
         ...queryConfigs.static,
         select: (data) => (Array.isArray(data) ? data : []),
       });
@@ -37,21 +41,23 @@ export function usePointListCategoryDictionaryModel() {
     let active = true;
     const loadDictionary = async () => {
       try {
-        const dictionary = await fetchPointCategoryDictionary();
+        const dictionary = await fetchPointCategoryDictionary(locale);
         if (active) {
-          setSiteCategoryDictionaryFallback(dictionary);
+          setFallback({ locale, data: dictionary });
         }
       } catch {
-        if (active) setSiteCategoryDictionaryFallback([]);
+        if (active) setFallback({ locale, data: [] });
       }
     };
     void loadDictionary();
     return () => {
       active = false;
     };
-  }, [siteCategoryDictionaryQuery]);
+  }, [siteCategoryDictionaryQuery, locale]);
 
-  const siteCategoryDictionary = siteCategoryDictionaryQuery ?? siteCategoryDictionaryFallback;
+  const siteCategoryDictionary = useMemo(() =>
+    siteCategoryDictionaryQuery ?? (fallback?.locale === locale ? fallback.data : []),
+  [siteCategoryDictionaryQuery, fallback, locale]);
 
   const categoryNameToIds = useMemo(
     () => createCategoryNameToIdsMap(siteCategoryDictionary),

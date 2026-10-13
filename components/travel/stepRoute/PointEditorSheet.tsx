@@ -13,7 +13,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import Button from '@/components/ui/Button'
 import ModalSafeArea from '@/components/ui/ModalSafeArea'
-import ToastHost from '@/components/ui/ToastHost'
+import ModalToastHost from '@/components/ui/ModalToastHost'
 import MultiSelectField from '@/components/forms/MultiSelectField'
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview'
 import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard'
@@ -110,7 +110,7 @@ export const PointEditorSheet = React.memo(function PointEditorSheet({
   const coordsLabel = `${Number(marker.lat).toFixed(5)}, ${Number(marker.lng).toFixed(5)}`
 
   return (
-    <Modal visible animationType="slide" onRequestClose={onClose} statusBarTranslucent>
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose} statusBarTranslucent>
       <ModalSafeArea testID="point-editor-safe-area">
         <KeyboardAvoidingView style={styles.flex} behavior={WIZARD_KEYBOARD_BEHAVIOR}>
           <View style={styles.header}>
@@ -262,7 +262,7 @@ export const PointEditorSheet = React.memo(function PointEditorSheet({
             />
           </View>
         </KeyboardAvoidingView>
-        <ToastHost overDock={false} />
+        <ModalToastHost visible={visible} />
       </ModalSafeArea>
     </Modal>
   )

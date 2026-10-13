@@ -974,10 +974,12 @@ jest.mock('expo-image', () => {
 
 jest.mock('react-native-toast-message', () => ({
   __esModule: true,
-  default: {
+  // The library's default export is a component with a static command API.
+  // An object-only mock makes every real ToastHost render an invalid element.
+  default: Object.assign(function MockToast() { return null }, {
     show: jest.fn(),
     hide: jest.fn(),
-  },
+  }),
 }))
 
 // Mock native modules before mocking react-native

@@ -1,6 +1,9 @@
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { resolveSupportedLocale } from '@/i18n/config';
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { queryKeys } from '@/api/queryKeys'
+import { useQueryOwner } from '@/hooks/useQueryOwner'
 import { fetchAllFiltersOptimized } from '@/api/miscOptimized'
 import { fetchTravelFacets } from '@/api/travelListQueries'
 import { buildFacetCounts } from '../utils/filterGroups'
@@ -21,14 +24,16 @@ export interface UseListTravelFilterOptionsReturn {
  * the filter query params.
  */
 export function useListTravelFilterOptions(enabled: boolean): UseListTravelFilterOptionsReturn {
+  const { i18n } = useTranslation();
+  const lang = resolveSupportedLocale([i18n.resolvedLanguage, i18n.language]);
   const {
     data: rawOptions,
     isLoading: filterOptionsLoading,
     isError: hasFilterOptionsQueryError,
     refetch: refetchFilterOptions,
   } = useQuery({
-    queryKey: queryKeys.filterOptions(),
-    queryFn: ({ signal }) => fetchAllFiltersOptimized({ signal }),
+    queryKey: queryKeys.filterOptions(lang),
+    queryFn: ({ signal }) => fetchAllFiltersOptimized({ signal, lang }),
     enabled,
     staleTime: 10 * 60 * 1000,
   })
@@ -55,8 +60,9 @@ export function useListTravelFacets({
   search,
   queryParams,
 }: UseListTravelFacetsProps): FacetCounts {
+  const owner = useQueryOwner()
   const { data: facetsData } = useQuery({
-    queryKey: queryKeys.travelFacets(search, queryParams),
+    queryKey: [...queryKeys.travelFacets(search, queryParams), owner],
     queryFn: ({ signal }) => fetchTravelFacets(search, queryParams, { signal }),
     enabled,
     staleTime: 30 * 1000,

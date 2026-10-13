@@ -1,5 +1,7 @@
 import { Travel } from '@/types/types';
 import { apiClient } from '@/api/client';
+import { fetchPublicWithSession } from '@/api/publicFetchWithSession';
+import { useAuthStore } from '@/stores/authStore';
 import type { NearLocationParams } from '@/api/quests';
 import { devError, devWarn } from '@/utils/logger';
 import { safeJsonParse } from '@/utils/safeJsonParse';
@@ -123,11 +125,14 @@ export const fetchTravelFacets = async (
             ...(authToken ? { headers: { Authorization: `Token ${authToken}` } } : {}),
             ...(options?.signal ? { signal: options.signal } : {}),
         };
+        const requestFacets = () => !needsAuth && useAuthStore.getState().isAuthenticated
+            ? fetchPublicWithSession(url, { signal: options?.signal }, LONG_TIMEOUT)
+            : fetchWithTimeout(url, init, LONG_TIMEOUT);
 
         const res = options?.signal
-            ? await fetchWithTimeout(url, init, LONG_TIMEOUT)
+            ? await requestFacets()
             : await retry(
-                async () => await fetchWithTimeout(url, init, LONG_TIMEOUT),
+                requestFacets,
                 { maxAttempts: 2, delay: 1000, shouldRetry: (error) => isRetryableError(error) }
             );
 
@@ -238,6 +243,7 @@ export const fetchTravels = async (
         publicStaleEndpoint = !isUserScoped && !isPendingReview && !isUnpublished ? urlTravel : '';
 
         const needsAuth = allowDrafts || isPendingReview || isUnpublished;
+        const usePublicSession = !needsAuth && useAuthStore.getState().isAuthenticated;
         const authToken = needsAuth && shouldUseStoredAuthToken()
             ? await getSecureItem(TOKEN_KEY)
             : null;
@@ -250,10 +256,13 @@ export const fetchTravels = async (
             ...(options?.signal ? { signal: options.signal } : {}),
         };
 
+        const readTravels = () => usePublicSession
+            ? fetchPublicWithSession(urlTravel, { signal: options?.signal }, LONG_TIMEOUT)
+            : fetchWithTimeout(urlTravel, baseInit, LONG_TIMEOUT);
         const requestTravels = () => options?.signal
-            ? fetchWithTimeout(urlTravel, baseInit, LONG_TIMEOUT)
+            ? readTravels()
             : retry(
-                async () => fetchWithTimeout(urlTravel, baseInit, LONG_TIMEOUT),
+                readTravels,
                 { maxAttempts: 2, delay: 1000, shouldRetry: (error) => isRetryableError(error) }
             );
 
@@ -262,7 +271,7 @@ export const fetchTravels = async (
         // осталась общей. Сам прогрев отменить нельзя — он уже в полёте, — но
         // отмену потребителя после его завершения уважаем, иначе отменённый
         // запрос молча дописал бы public-stale кэш.
-        const preloadedResponse = takeTravelListPreload(urlTravel);
+        const preloadedResponse = needsAuth || usePublicSession ? null : takeTravelListPreload(urlTravel);
         const res = preloadedResponse
             ? await preloadedResponse.catch((error) => {
                 if (__DEV__) devWarn('Travel list preload failed, falling back to a fresh request:', error);
@@ -319,7 +328,7 @@ export const fetchTravels = async (
             total: coerceTotal(total, 0),
         };
 
-        if (publicStaleEndpoint && !canIncludeDrafts) {
+        if (publicStaleEndpoint && !needsAuth && !usePublicSession) {
             await savePublicStalePayload(publicStaleEndpoint, freshPayload, baseInit);
         }
 
@@ -369,11 +378,14 @@ export const fetchRandomTravels = async (
 
         const params = buildWhereQueryParams({ page, perPage: itemsPerPage, where: whereObject, query: search, sortQuery });
         const urlTravel = `${GET_RANDOM_TRAVELS}?${params}`;
+        const requestRandomTravels = () => useAuthStore.getState().isAuthenticated
+            ? fetchPublicWithSession(urlTravel, { signal: options?.signal }, LONG_TIMEOUT)
+            : fetchWithTimeout(urlTravel, { ...getApiRequestCredentials(true), signal: options?.signal }, LONG_TIMEOUT);
 
         const res = options?.signal
-            ? await fetchWithTimeout(urlTravel, { signal: options.signal }, LONG_TIMEOUT)
+            ? await requestRandomTravels()
             : await retry(
-                async () => fetchWithTimeout(urlTravel, {}, LONG_TIMEOUT),
+                requestRandomTravels,
                 { maxAttempts: 2, delay: 1000, shouldRetry: (error) => isRetryableError(error) }
             );
 

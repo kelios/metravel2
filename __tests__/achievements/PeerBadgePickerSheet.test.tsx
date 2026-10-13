@@ -21,7 +21,9 @@ jest.mock('expo-linear-gradient', () => {
 
 // DESIGN_TOKENS
 jest.mock('@/constants/designSystem', () => ({
+  ...jest.requireActual('@/constants/designSystem'),
   DESIGN_TOKENS: {
+    ...jest.requireActual('@/constants/designSystem').DESIGN_TOKENS,
     spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 40 },
     typography: { sizes: { xs: 12, sm: 14, md: 16, lg: 18 } },
     radii: { xl: 16 },

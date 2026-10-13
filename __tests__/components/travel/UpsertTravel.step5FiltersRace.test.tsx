@@ -54,6 +54,9 @@ jest.mock('@/components/travel/ValidationFeedback', () => {
 });
 
 jest.mock('expo-router', () => ({
+  useFocusEffect: (effect: () => void | (() => void)) => {
+    require('react').useEffect(effect, [effect]);
+  },
   useRouter: () => ({
     push: mockPush,
     replace: mockReplace,
@@ -219,7 +222,7 @@ describe('UpsertTravel step 5 filters race regression', () => {
     fireEvent.press(utils.getByTestId('next-4'));
   };
 
-  it('does not render empty MultiSelect lists when filters resolve after fast navigation to step 5', async () => {
+  it('renders only server dictionaries when filters resolve after fast navigation to step 5', async () => {
     let resolveFilters: (v: any) => void = () => {};
     const filtersPromise = new Promise((res) => {
       resolveFilters = res as any;
@@ -239,25 +242,25 @@ describe('UpsertTravel step 5 filters race regression', () => {
 
     const ms = MultiSelectField as unknown as jest.Mock;
 
-    // Fallback invariant: categories must not be empty even before API filters resolve
+    // Pending dictionaries must not offer invented IDs or labels.
     await waitFor(
       () => {
         const calls = ms.mock.calls.map((c) => c[0]);
 
-        const assertNonEmpty = (label: string) => {
+        const assertEmpty = (label: string) => {
           const same = calls.filter((p: any) => p?.label === label);
           expect(same.length).toBeGreaterThan(0);
           const last = same[same.length - 1];
           expect(Array.isArray(last.items)).toBe(true);
-          expect(last.items.length).toBeGreaterThan(0);
+          expect(last.items).toEqual([]);
         };
 
-        assertNonEmpty('Категории путешествий *');
-        assertNonEmpty('Средства передвижения');
-        assertNonEmpty('Физическая подготовка');
-        assertNonEmpty('С кем путешествуете');
-        assertNonEmpty('Тип ночлега');
-        assertNonEmpty('Месяц путешествия');
+        assertEmpty('Категории путешествий *');
+        assertEmpty('Средства передвижения');
+        assertEmpty('Физическая подготовка');
+        assertEmpty('С кем путешествуете');
+        assertEmpty('Тип ночлега');
+        assertEmpty('Месяц путешествия');
       },
       { timeout: 3000 }
     );
@@ -279,7 +282,7 @@ describe('UpsertTravel step 5 filters race regression', () => {
       await new Promise((r) => setTimeout(r, 0));
     });
 
-    // After filters resolve, lists must still be non-empty (race must not wipe data)
+    // After filters resolve, live server data replaces the pending empty state.
     await waitFor(
       () => {
         const calls = ms.mock.calls.map((c) => c[0]);
@@ -297,6 +300,8 @@ describe('UpsertTravel step 5 filters race regression', () => {
         assertNonEmpty('С кем путешествуете');
         assertNonEmpty('Тип ночлега');
         assertNonEmpty('Месяц путешествия');
+        expect(calls.filter((p: any) => p?.label === 'Категории путешествий *').at(-1).items)
+          .toEqual([{ id: '1', name: 'Дайвинг' }]);
       },
       { timeout: 3000 }
     );

@@ -1,8 +1,9 @@
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { resolveSupportedLocale } from '@/i18n/config';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
 import { captureFiltersRefreshBoundary, fetchAllCountriesOptimized, fetchFiltersOptimized } from '@/api/miscOptimized';
 import { POINT_CATEGORY_DICTIONARY_REFRESH_EVENT } from '@/utils/pointCategoryDictionaryQuery';
-import { translate as i18nT } from '@/i18n'
 
 export interface TravelFilters {
   categories: Array<{ id: string; name: string }>;
@@ -28,62 +29,11 @@ export interface TravelFilters {
   }>;
 }
 
-export function initFilters(): TravelFilters {
+/** Only server dictionaries may supply selectable taxonomy IDs and labels. */
+export function initFilters(countries: TravelFilters['countries'] = []): TravelFilters {
   return {
-    countries: [],
-    categories: [
-      { id: '1', name: i18nT('travel:hooks.useTravelFilters.category.mountains') },
-      { id: '2', name: i18nT('travel:hooks.useTravelFilters.category.sea') },
-      { id: '3', name: i18nT('travel:hooks.useTravelFilters.category.cities') },
-      { id: '4', name: i18nT('travel:hooks.useTravelFilters.category.nature') },
-    ],
-    companions: [
-      { id: '1', name: i18nT('travel:hooks.useTravelFilters.companion.solo') },
-      { id: '2', name: i18nT('travel:hooks.useTravelFilters.companion.couple') },
-      { id: '3', name: i18nT('travel:hooks.useTravelFilters.companion.friends') },
-      { id: '4', name: i18nT('travel:hooks.useTravelFilters.companion.family') },
-    ],
-    complexity: [
-      { id: '1', name: i18nT('travel:hooks.useTravelFilters.complexity.easy') },
-      { id: '2', name: i18nT('travel:hooks.useTravelFilters.complexity.medium') },
-      { id: '3', name: i18nT('travel:hooks.useTravelFilters.complexity.hard') },
-    ],
-    month: [
-      { id: '1', name: i18nT('travel:hooks.useTravelFilters.month.january') },
-      { id: '2', name: i18nT('travel:hooks.useTravelFilters.month.february') },
-      { id: '3', name: i18nT('travel:hooks.useTravelFilters.month.march') },
-      { id: '4', name: i18nT('travel:hooks.useTravelFilters.month.april') },
-      { id: '5', name: i18nT('travel:hooks.useTravelFilters.month.may') },
-      { id: '6', name: i18nT('travel:hooks.useTravelFilters.month.june') },
-      { id: '7', name: i18nT('travel:hooks.useTravelFilters.month.july') },
-      { id: '8', name: i18nT('travel:hooks.useTravelFilters.month.august') },
-      { id: '9', name: i18nT('travel:hooks.useTravelFilters.month.september') },
-      { id: '10', name: i18nT('travel:hooks.useTravelFilters.month.october') },
-      { id: '11', name: i18nT('travel:hooks.useTravelFilters.month.november') },
-      { id: '12', name: i18nT('travel:hooks.useTravelFilters.month.december') },
-    ],
-    over_nights_stay: [
-      { id: '1', name: i18nT('travel:hooks.useTravelFilters.overnight.tent') },
-      { id: '2', name: i18nT('travel:hooks.useTravelFilters.overnight.hotel') },
-      { id: '3', name: i18nT('travel:hooks.useTravelFilters.overnight.camping') },
-      { id: '4', name: i18nT('travel:hooks.useTravelFilters.overnight.none') },
-    ],
-    transports: [
-      { id: '1', name: i18nT('travel:hooks.useTravelFilters.transport.car') },
-      { id: '2', name: i18nT('travel:hooks.useTravelFilters.transport.train') },
-      { id: '3', name: i18nT('travel:hooks.useTravelFilters.transport.plane') },
-      { id: '4', name: i18nT('travel:hooks.useTravelFilters.transport.walking') },
-    ],
-    categoryTravelAddress: [
-      { id: '1', name: i18nT('travel:hooks.useTravelFilters.place.parking') },
-      { id: '2', name: i18nT('travel:hooks.useTravelFilters.place.hotel') },
-      { id: '3', name: i18nT('travel:hooks.useTravelFilters.place.restaurant') },
-      { id: '4', name: i18nT('travel:hooks.useTravelFilters.place.attraction') },
-      { id: '5', name: i18nT('travel:hooks.useTravelFilters.place.viewpoint') },
-      { id: '6', name: i18nT('travel:hooks.useTravelFilters.place.gasStation') },
-      { id: '7', name: i18nT('travel:hooks.useTravelFilters.place.shop') },
-      { id: '8', name: i18nT('travel:hooks.useTravelFilters.place.cafe') },
-    ],
+    categories: [], transports: [], companions: [], complexity: [], month: [],
+    over_nights_stay: [], categoryTravelAddress: [], countries,
   };
 }
 
@@ -248,11 +198,17 @@ interface UseTravelFiltersOptions {
 export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
   const { loadOnMount = true, currentStep } = options;
   
-  const [filters, setFilters] = useState<TravelFilters>(initFilters());
+  const { i18n } = useTranslation();
+  const locale = resolveSupportedLocale([i18n.resolvedLanguage, i18n.language]);
+  const [filterState, setFilterState] = useState(() => ({ locale, data: initFilters() }));
+  const filters = useMemo(() => filterState.locale === locale
+    ? filterState.data : initFilters(filterState.data.countries), [filterState, locale]);
   const [isLoading, setIsLoading] = useState(loadOnMount);
   const [error, setError] = useState<Error | null>(null);
   
   const loadedRef = useRef(false);
+  const activeLocaleRef = useRef(locale);
+  const localeRevisionRef = useRef(0);
   const mountedRef = useRef(true);
   const inFlightCountRef = useRef(0);
   const pointCatsInFlightRef = useRef(0);
@@ -265,12 +221,24 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
   // словарь (см. `loadFilters`).
   const pointCatsRevisionRef = useRef(0);
 
+  if (activeLocaleRef.current !== locale) {
+    activeLocaleRef.current = locale;
+    localeRevisionRef.current += 1;
+    loadedRef.current = false;
+    inFlightCountRef.current = 0;
+    pointCatsInFlightRef.current = 0;
+    pointCatsRequestRef.current += 1;
+    triedPointCatsRef.current = null;
+    lastPointCatsForcedAtRef.current = 0;
+  }
+
   const beginLoading = useCallback(() => {
     inFlightCountRef.current += 1;
     if (mountedRef.current) setIsLoading(true);
   }, []);
 
-  const endLoading = useCallback(() => {
+  const endLoading = useCallback((revision = localeRevisionRef.current) => {
+    if (revision !== localeRevisionRef.current) return;
     inFlightCountRef.current = Math.max(0, inFlightCountRef.current - 1);
     if (mountedRef.current && inFlightCountRef.current === 0) setIsLoading(false);
   }, []);
@@ -283,7 +251,8 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
   }, []);
 
   const loadFilters = useCallback(async () => {
-    if (loadedRef.current) return;
+    if (loadedRef.current || locale !== activeLocaleRef.current) return;
+    const localeRevision = localeRevisionRef.current;
 
     try {
       beginLoading();
@@ -292,11 +261,11 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
       const pointCatsRevisionAtStart = pointCatsRevisionRef.current;
 
       const [filtersData, countryData] = await Promise.all([
-        fetchFiltersOptimized(),
+        fetchFiltersOptimized({ lang: locale }),
         fetchAllCountriesOptimized(),
       ]);
 
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || localeRevision !== localeRevisionRef.current) return;
 
       const normalizedCategories = normalizeTravelCategories(filtersData?.categories || []);
       const normalizedTransports = normalizeIdNameList(filtersData?.transports || []);
@@ -317,7 +286,7 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
       const pointCatsRefreshedWhileLoading =
         pointCatsRevisionRef.current !== pointCatsRevisionAtStart;
 
-      setFilters(prev => ({
+      setFilterState(prev => ({ locale, data: {
         categories: normalizedCategories,
         transports: normalizedTransports,
         companions: normalizedCompanions,
@@ -325,20 +294,20 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
         month: normalizedMonth,
         over_nights_stay: normalizedOvernights,
         categoryTravelAddress: pointCatsRefreshedWhileLoading
-          ? prev.categoryTravelAddress
+          ? (prev.locale === locale ? prev.data.categoryTravelAddress : [])
           : normalizedCategoryTravelAddress,
         countries: normalizedCountries,
-      }));
+      } }));
       
       loadedRef.current = true;
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to load filters');
-      if (mountedRef.current) setError(error);
+      if (mountedRef.current && localeRevision === localeRevisionRef.current) setError(error);
       console.error('Error loading filters:', error);
     } finally {
-      endLoading();
+      endLoading(localeRevision);
     }
-  }, [beginLoading, endLoading]);
+  }, [beginLoading, endLoading, locale]);
 
   /**
    * Догрузка словаря категорий точек.
@@ -356,10 +325,11 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
   ) => {
     const afterRequestSequence = refetchOptions?.afterRequestSequence;
     const signal = refetchOptions?.signal;
-    if (signal?.aborted || (pointCatsInFlightRef.current > 0 && afterRequestSequence === undefined)) return;
+    if (locale !== activeLocaleRef.current || signal?.aborted || (pointCatsInFlightRef.current > 0 && afterRequestSequence === undefined)) return;
 
     const silent = refetchOptions?.silent === true;
     const force = refetchOptions?.force === true;
+    const localeRevision = localeRevisionRef.current;
     const request = ++pointCatsRequestRef.current;
     pointCatsInFlightRef.current += 1;
 
@@ -368,31 +338,34 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
       if (force && afterRequestSequence === undefined) lastPointCatsForcedAtRef.current = Date.now();
       const filtersData = await fetchFiltersOptimized(afterRequestSequence !== undefined
         ? {
+            lang: locale,
             force: true,
             afterRequestSequence,
             signal,
-            onRequestStart: (startedAt) => { lastPointCatsForcedAtRef.current = startedAt; },
+            onRequestStart: (startedAt) => {
+              if (localeRevision === localeRevisionRef.current) lastPointCatsForcedAtRef.current = startedAt;
+            },
           }
-        : force ? { force: true } : undefined);
+        : { lang: locale, ...(force ? { force: true } : {}) });
 
-      if (!mountedRef.current || signal?.aborted || request !== pointCatsRequestRef.current) return;
+      if (!mountedRef.current || signal?.aborted || request !== pointCatsRequestRef.current || localeRevision !== localeRevisionRef.current) return;
 
       const normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(
         filtersData?.categoryTravelAddress || []
       );
 
       pointCatsRevisionRef.current += 1;
-      setFilters(prev => ({
-        ...prev,
+      setFilterState(prev => ({ locale, data: {
+        ...(prev.locale === locale ? prev.data : initFilters(prev.data.countries)),
         categoryTravelAddress: normalizedCategoryTravelAddress,
-      }));
+      } }));
     } catch (err) {
       if (!signal?.aborted) console.error('Error refetching point categories:', err);
     } finally {
-      if (!silent) endLoading();
-      pointCatsInFlightRef.current -= 1;
+      if (!silent) endLoading(localeRevision);
+      if (localeRevision === localeRevisionRef.current) pointCatsInFlightRef.current -= 1;
     }
-  }, [beginLoading, endLoading]);
+  }, [beginLoading, endLoading, locale]);
 
   const isPointStep = currentStep === 2 || currentStep === 3;
   useEffect(() => {
@@ -454,6 +427,7 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
   }, [isPointStep, refetchPointCategories]);
 
   const refetchCountries = useCallback(async () => {
+    const localeRevision = localeRevisionRef.current;
     try {
       beginLoading();
       const countryData = await fetchAllCountriesOptimized();
@@ -462,14 +436,11 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
 
       const normalizedCountries = normalizeCountries(countryData);
 
-      setFilters(prev => ({
-        ...prev,
-        countries: normalizedCountries,
-      }));
+      setFilterState(prev => ({ ...prev, data: { ...prev.data, countries: normalizedCountries } }));
     } catch (err) {
       console.error('Error refetching countries:', err);
     } finally {
-      endLoading();
+      endLoading(localeRevision);
     }
   }, [beginLoading, endLoading]);
 
@@ -480,10 +451,7 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
   }, [loadOnMount, loadFilters]);
 
   // Вход на шаг с точками = момент, когда автор выбирает категории точек.
-  // Раньше догрузка стояла под условием «список пуст», а стартовый стейт
-  // `initFilters()` уже содержит фолбэк-категории, поэтому она не выполнялась
-  // никогда и новая категория из админки не появлялась до истечения HTTP-кэша.
-  // Теперь на каждый вход тянем словарь мимо кэшей, но не чаще раза в минуту —
+  // На каждый вход тянем словарь мимо кэшей, но не чаще раза в минуту —
   // это и есть TTL, который прод задумывал для браузера (nginx `max-age=60`).
   useEffect(() => {
     const isPointStep = currentStep === 2 || currentStep === 3;

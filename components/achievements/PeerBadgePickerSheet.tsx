@@ -13,6 +13,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useActionFeedback } from '@/hooks/useActionFeedback';
+import ModalToastHost from '@/components/ui/ModalToastHost';
 import { usePeerBadgeCatalog, useGrantPeerBadge } from '@/hooks/useAchievementsApi';
 import type { PeerBadgeReceived, PeerBadgeTarget } from '@/api/achievements';
 import BadgeMedal from '@/components/achievements/BadgeMedal';
@@ -141,6 +142,7 @@ function PeerBadgePickerSheet({
           )}
         </Pressable>
       </Pressable>
+      <ModalToastHost visible={visible} />
     </Modal>
   );
 }

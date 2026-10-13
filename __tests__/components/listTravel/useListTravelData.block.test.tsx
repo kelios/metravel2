@@ -1,8 +1,8 @@
 // 1.2(d), TestFlight 1.0.5 (12): блок автора всех загруженных карточек каталога.
-// Каталог для гостя и для вошедшего — анонимный запрос (`fetchTravels` без
-// токена), поэтому скрытие держит только клиентский слой
-// (`api/blockSensitiveQueries.ts`). Первая страница целиком от автора: после
-// вырезки она пуста, и лента обязана догрузить следующую, а не показать «пусто».
+// Клиентский guard нужен и при анонимном fallback публичного чтения, когда
+// сервер не может применить блокировки сессии. Первая страница целиком от
+// автора: после вырезки она пуста, и лента обязана догрузить следующую,
+// а не показать «пусто». Session transport проверяется отдельным API-тестом.
 import React, { forwardRef, useImperativeHandle } from 'react'
 import { act, render, renderHook, waitFor } from '@testing-library/react-native'
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'

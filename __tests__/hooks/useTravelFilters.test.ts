@@ -9,6 +9,7 @@
 
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { Platform } from 'react-native';
+import { i18n } from '@/i18n';
 
 import {
   useTravelFilters,
@@ -31,12 +32,10 @@ const mockFetchFilters = fetchFiltersOptimized as jest.Mock;
 const mockFetchAllCountries = fetchAllCountriesOptimized as jest.Mock;
 
 describe('initFilters', () => {
-  it('returns stable default dictionaries', () => {
+  it('does not invent selectable taxonomy entries before the server responds', () => {
     const f = initFilters();
     expect(f.countries).toEqual([]);
-    expect(f.categories.length).toBeGreaterThan(0);
-    expect(f.month).toHaveLength(12);
-    expect(f.complexity.map((c) => c.name)).toEqual(['Легко', 'Средне', 'Сложно']);
+    for (const entries of Object.values(f)) expect(entries).toEqual([]);
   });
 });
 
@@ -151,7 +150,7 @@ describe('useTravelFilters', () => {
     expect(result.current.filters.countries).toHaveLength(1);
   });
 
-  it('captures error and keeps default filters when API fails', async () => {
+  it('captures error and keeps dictionaries empty when API fails', async () => {
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     mockFetchFilters.mockRejectedValue(new Error('Network down'));
     mockFetchAllCountries.mockResolvedValue([]);
@@ -161,7 +160,7 @@ describe('useTravelFilters', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(result.current.error).toEqual(new Error('Network down'));
-    expect(result.current.filters.categories.length).toBeGreaterThan(0);
+    for (const entries of Object.values(result.current.filters)) expect(entries).toEqual([]);
     consoleErrorSpy.mockRestore();
   });
 
@@ -199,7 +198,7 @@ describe('useTravelFilters', () => {
   });
 
   // Регресс: догрузка категорий точек стояла под условием «список пуст», а
-  // стартовый `initFilters()` уже содержит фолбэк-категории — условие не
+  // прежний `initFilters()` содержал фолбэк-категории — условие не
   // выполнялось никогда, и категория, заведённая в админке, не появлялась в
   // редакторе точки, пока не истечёт HTTP-кэш браузера (до 30 минут).
   it('refreshes point categories past the caches on every entry to the point step', async () => {
@@ -216,7 +215,7 @@ describe('useTravelFilters', () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(mockFetchFilters).toHaveBeenCalledTimes(1);
-    expect(mockFetchFilters).toHaveBeenLastCalledWith();
+    expect(mockFetchFilters).toHaveBeenLastCalledWith({ lang: 'ru' });
 
     mockFetchFilters.mockResolvedValue({
       categories: [{ id: 1, name: 'Горы' }],
@@ -231,7 +230,7 @@ describe('useTravelFilters', () => {
     });
 
     expect(mockFetchFilters).toHaveBeenCalledTimes(2);
-    expect(mockFetchFilters).toHaveBeenLastCalledWith({ force: true });
+    expect(mockFetchFilters).toHaveBeenLastCalledWith({ lang: 'ru', force: true });
     await waitFor(() =>
       expect(result.current.filters.categoryTravelAddress).toEqual([
         { id: '4', name: 'Достопримечательность' },
@@ -393,7 +392,7 @@ describe('useTravelFilters', () => {
     now += 120_000;
     await act(async () => { rerender({ step: 2 }); });
     expect(mockFetchFilters).toHaveBeenCalledTimes(callsAfterLoad + 2);
-    expect(mockFetchFilters).toHaveBeenLastCalledWith({ force: true });
+    expect(mockFetchFilters).toHaveBeenLastCalledWith({ lang: 'ru', force: true });
 
     nowSpy.mockRestore();
   });
@@ -673,4 +672,92 @@ describe('useTravelFilters', () => {
       }
     });
   });
+});
+
+
+describe('useTravelFilters locale transitions', () => {
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    await i18n.changeLanguage('ru');
+    mockFetchAllCountries.mockResolvedValue([]);
+  });
+  afterEach(async () => { await act(async () => { await i18n.changeLanguage('ru'); }); });
+
+  it('keeps the first failed EN load empty and retries with actual server IDs and labels', async () => {
+    await i18n.changeLanguage('en');
+    const error = new Error('EN unavailable');
+    mockFetchFilters.mockRejectedValueOnce(error).mockResolvedValueOnce({
+      categories: [{ id: 1, name: 'Diving' }],
+      categoryTravelAddress: [{ id: 1, name: 'Aqueduct' }],
+    });
+    const { result } = renderHook(() => useTravelFilters());
+    for (const entries of Object.values(result.current.filters)) expect(entries).toEqual([]);
+    await waitFor(() => expect(result.current.error).toBe(error));
+    expect(result.current.isLoading).toBe(false);
+    for (const entries of Object.values(result.current.filters)) expect(entries).toEqual([]);
+
+    await act(async () => { await result.current.loadFilters(); });
+    expect(result.current.error).toBeNull();
+    expect(result.current.filters.categories).toEqual([{ id: '1', name: 'Diving' }]);
+    expect(result.current.filters.categoryTravelAddress).toEqual([{ id: '1', name: 'Aqueduct' }]);
+    expect(mockFetchFilters).toHaveBeenNthCalledWith(2, { lang: 'en' });
+  });
+
+  it('retains the last server dictionary when a same-locale point refresh fails', async () => {
+    await i18n.changeLanguage('en');
+    mockFetchFilters.mockResolvedValueOnce({
+      categories: [{ id: 1, name: 'Diving' }],
+      categoryTravelAddress: [{ id: 1, name: 'Aqueduct' }],
+    }).mockRejectedValueOnce(new Error('Refresh unavailable'));
+    const { result } = renderHook(() => useTravelFilters());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    await act(async () => { await result.current.refetchPointCategories({ force: true }); });
+    expect(result.current.filters.categories).toEqual([{ id: '1', name: 'Diving' }]);
+    expect(result.current.filters.categoryTravelAddress).toEqual([{ id: '1', name: 'Aqueduct' }]);
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it('loads the selected locale and ignores a late previous-language initial response', async () => {
+    let resolveRu: (data: unknown) => void = () => {};
+    mockFetchFilters.mockImplementation(({ lang }: { lang: string }) => lang === 'ru'
+      ? new Promise(resolve => { resolveRu = resolve; })
+      : Promise.resolve({ categories: [{ id: 25, name: 'Mountains' }] }));
+    const { result } = renderHook(() => useTravelFilters());
+    await act(async () => { await i18n.changeLanguage('en'); });
+    await waitFor(() => expect(result.current.filters.categories).toEqual([{ id: '25', name: 'Mountains' }]));
+    expect(result.current.isLoading).toBe(false);
+    await act(async () => { resolveRu({ categories: [{ id: 25, name: 'Горы' }] }); });
+    expect(result.current.filters.categories).toEqual([{ id: '25', name: 'Mountains' }]);
+  });
+
+  it('refreshes point categories in the new locale even while an old-locale refresh is pending', async () => {
+    let resolveRu: (data: unknown) => void = () => {};
+    mockFetchFilters.mockImplementation(({ lang }: { lang: string }) => lang === 'ru'
+      ? new Promise(resolve => { resolveRu = resolve; })
+      : Promise.resolve({ categoryTravelAddress: [{ id: 84, name: 'Lake' }] }));
+    const { result } = renderHook(() => useTravelFilters({ loadOnMount: false, currentStep: 2 }));
+    await act(async () => { await i18n.changeLanguage('en'); });
+    await waitFor(() => expect(result.current.filters.categoryTravelAddress).toEqual([{ id: '84', name: 'Lake' }]));
+    await act(async () => { resolveRu({ categoryTravelAddress: [{ id: 84, name: 'Озеро' }] }); });
+    expect(result.current.filters.categoryTravelAddress).toEqual([{ id: '84', name: 'Lake' }]);
+    expect(mockFetchFilters).toHaveBeenLastCalledWith({ lang: 'en', force: true });
+  });
+  it('rejects a stale RU callback and response after RU→EN→RU without changing current data', async () => {
+    let resolveOldRu: (data: unknown) => void = () => {};
+    mockFetchFilters.mockImplementationOnce(() => new Promise(resolve => { resolveOldRu = resolve; }))
+      .mockResolvedValueOnce({ categories: [{ id: 25, name: 'Mountains' }] })
+      .mockResolvedValueOnce({ categories: [{ id: 25, name: 'Свежие горы' }] });
+    const { result } = renderHook(() => useTravelFilters());
+    const oldPointRefresh = result.current.refetchPointCategories;
+    await act(async () => { await i18n.changeLanguage('en'); });
+    await waitFor(() => expect(result.current.filters.categories[0]?.name).toBe('Mountains'));
+    await act(async () => { await oldPointRefresh({ force: true }); });
+    expect(mockFetchFilters).toHaveBeenCalledTimes(2);
+    await act(async () => { await i18n.changeLanguage('ru'); });
+    await waitFor(() => expect(result.current.filters.categories[0]?.name).toBe('Свежие горы'));
+    await act(async () => { resolveOldRu({ categories: [{ id: 25, name: 'Старые горы' }] }); });
+    expect(result.current.filters.categories[0]?.name).toBe('Свежие горы');
+    expect(result.current.isLoading).toBe(false);
+  });
+
 });

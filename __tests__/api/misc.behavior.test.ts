@@ -432,6 +432,22 @@ describe('api/misc', () => {
     expect(freshInit.cache).toBe('reload')
   })
 
+  it.each(['ru', 'be', 'uk', 'pl', 'en', 'en-US', 'BE_by', 'unsupported'])(
+    'fetchFilters requests a canonical explicit dictionary locale for %s', async (lang) => {
+      mockFetchWithTimeout.mockResolvedValue({ ok: true });
+      mockSafeJsonParse.mockResolvedValue({
+        categories: [{ id: 25, name: 'Server label', name_language: 'en' }],
+        categoryTravelAddress: [], companions: [], complexity: [], month: [],
+        over_nights_stay: [], transports: [], sortings: [], language: 'en', fallback_language: 'ru',
+      });
+      const result = await fetchFilters({ lang, throwOnError: true });
+      const [url] = mockFetchWithTimeout.mock.calls.at(-1) as [string];
+      const expected = lang === 'en-US' ? 'en' : lang === 'BE_by' ? 'be' : lang === 'unsupported' ? 'ru' : lang;
+      expect(new URL(url).searchParams.get('lang')).toBe(expected);
+      expect(result.categories).toEqual([{ id: 25, name: 'Server label' }]);
+    },
+  );
+
   it('fetchFilters propagates invalid JSON, malformed dictionaries, and 502 with throwOnError', async () => {
     mockFetchWithTimeout.mockResolvedValueOnce({ ok: true })
     mockSafeJsonParse.mockRejectedValueOnce(new Error('Invalid JSON'))

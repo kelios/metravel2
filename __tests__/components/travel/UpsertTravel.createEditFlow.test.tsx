@@ -1,8 +1,11 @@
-import { render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
+import { i18n } from '@/i18n';
 
 import UpsertTravel from '@/components/travel/UpsertTravel';
 
 const mockSeo = jest.fn(() => null);
+let mockFiltersError: Error | null = null;
+const mockRetryFilters = jest.fn(async () => {});
 
 let mockAuthState = {
   isAuthenticated: true,
@@ -79,6 +82,8 @@ jest.mock('@/hooks/useTravelFilters', () => ({
   useTravelFilters: () => ({
     filters: { categoryTravelAddress: [], countries: [] },
     isLoading: false,
+    error: mockFiltersError,
+    loadFilters: mockRetryFilters,
   }),
 }));
 
@@ -139,6 +144,7 @@ jest.mock('@/components/travel/TravelWizardStepPublish', () => {
 describe('UpsertTravel create/edit flow', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockFiltersError = null;
     mockLocalParams = {};
     mockPathname = '/travel/new';
     capturedFormArgs = null;
@@ -238,5 +244,21 @@ describe('UpsertTravel create/edit flow', () => {
         robots: 'noindex, nofollow',
       })
     );
+  });
+
+  it('shows a localized dictionary failure with retry without discarding the editor', async () => {
+    await act(async () => { await i18n.changeLanguage('en'); });
+    try {
+      mockFiltersError = new Error('HTTP 502: upstream failure');
+      const view = render(<UpsertTravel />);
+      expect(view.getByText('Failed to load filters')).toBeTruthy();
+      expect(view.queryByText('HTTP 502: upstream failure')).toBeNull();
+      expect(view.getByTestId('travel-upsert.root')).toBeTruthy();
+      expect(view.getByText('Step1')).toBeTruthy();
+      fireEvent.press(view.getByRole('button', { name: 'Retry' }));
+      expect(mockRetryFilters).toHaveBeenCalledTimes(1);
+    } finally {
+      await act(async () => { await i18n.changeLanguage('ru'); });
+    }
   });
 });

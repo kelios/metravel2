@@ -1,3 +1,4 @@
+import { getActiveLocale, type SupportedLocale } from '@/i18n';
 import { fetchFiltersOptimized } from '@/api/miscOptimized'
 import { queryKeys } from '@/api/queryKeys'
 import { normalizeCategoryDictionary, type CategoryDictionaryItem } from '@/utils/userPointsCategories'
@@ -15,10 +16,10 @@ import { normalizeCategoryDictionary, type CategoryDictionaryItem } from '@/util
  * загрузчик живут здесь в одном экземпляре, а конфиг кэширования каждый
  * потребитель берёт из общего `queryConfigs.static`.
  */
-export const pointCategoryDictionaryQueryKey = () => queryKeys.filters()
+export const pointCategoryDictionaryQueryKey = (locale: SupportedLocale = getActiveLocale()) => queryKeys.filters(locale)
 
-export const fetchPointCategoryDictionary = async (): Promise<CategoryDictionaryItem[]> => {
-  const data = await fetchFiltersOptimized()
+export const fetchPointCategoryDictionary = async (locale: SupportedLocale = getActiveLocale()): Promise<CategoryDictionaryItem[]> => {
+  const data = await fetchFiltersOptimized({ lang: locale })
   return normalizeCategoryDictionary(data.categoryTravelAddress)
 }
 

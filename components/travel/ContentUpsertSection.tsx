@@ -16,6 +16,7 @@ import { uploadImage } from '@/api/misc';
 import { useWebSpeechDictation } from '@/hooks/useWebSpeechDictation';
 import { useSoftKeyboardInset } from '@/hooks/useSoftKeyboardInset';
 import { showToast } from '@/utils/toast';
+import ModalToastHost from '@/components/ui/ModalToastHost';
 import { createContentUpsertStyles } from './contentUpsertStyles';
 import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard';
 import { getFormatLocale, translate as i18nT, translatePlural } from '@/i18n'
@@ -676,6 +677,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                     </View>
                                     </KeyboardAvoidingView>
                                 </ModalSafeArea>
+                                <ModalToastHost visible={isDescriptionFullscreen} />
                             </Modal>
                         </>
                     ) : (

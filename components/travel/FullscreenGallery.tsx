@@ -14,6 +14,7 @@ import {
 import Feather from '@expo/vector-icons/Feather';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ContentSafetyActions from '@/components/safety/ContentSafetyActions';
+import ModalToastHost from '@/components/ui/ModalToastHost';
 import ZoomableGalleryImage from '@/components/travel/ZoomableGalleryImage';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -275,6 +276,7 @@ export default function FullscreenGallery({
             <Text style={[styles.captionText, { color: colors.textOnDark }]}>{currentCaption}</Text>
           </View>
         ) : null}
+        <ModalToastHost visible={visible} />
       </View>
     </Modal>
   );

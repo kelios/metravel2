@@ -9,7 +9,7 @@ import { createQueryWrapper } from '../../helpers/testQueryClient'
 
 jest.mock('@/stores/authStore', () => require('../../helpers/contentSafetyMocks').authStoreMock)
 jest.mock('@/api/userSafety', () => require('../../helpers/contentSafetyMocks').userSafetyApiMock)
-jest.mock('@/utils/toast', () => ({ showToast: jest.fn(() => Promise.resolve()) }))
+jest.mock('@/utils/toast', () => ({ ...jest.requireActual('@/utils/toast'), showToast: jest.fn(() => Promise.resolve()) }))
 jest.mock('@/api/quests', () => ({
   ...jest.requireActual('@/api/quests'),
   fetchQuestReviews: jest.fn(() =>

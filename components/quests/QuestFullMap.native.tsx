@@ -40,6 +40,7 @@ import { translatePlural, translate as i18nT } from '@/i18n'
 import { formatDistanceMeters, ROUTE_DISTANCE_FORMAT } from '@/utils/distanceCalculator'
 import { openExternalUrl } from '@/utils/externalLinks';
 import { showToast } from '@/utils/toast'
+import ModalToastHost from '@/components/ui/ModalToastHost'
 
 // #2127: ошибка экспорта — тостом через общий канал (раньше Alert.alert).
 const notifyExportError = (text1: string, text2: string) => {
@@ -401,7 +402,7 @@ function QuestFullMap({
 
             {fullscreenVisible ? (
                 <Modal
-                    visible
+                    visible={fullscreenVisible}
                     transparent={false}
                     animationType="slide"
                     statusBarTranslucent
@@ -419,6 +420,7 @@ function QuestFullMap({
                             onClose={closeFullscreen}
                             pointerFrozen={fullscreenClosing}
                         />
+                        <ModalToastHost visible={fullscreenVisible} />
                     </View>
                 </Modal>
             ) : null}

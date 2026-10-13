@@ -11,6 +11,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import ModalToastHost from '@/components/ui/ModalToastHost'
 
 type Props = {
   visible: boolean
@@ -88,6 +89,7 @@ function QuestModalSheet({
           {children}
         </Pressable>
       </Pressable>
+      <ModalToastHost visible={visible} />
     </Modal>
   )
 }

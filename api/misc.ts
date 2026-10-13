@@ -17,7 +17,7 @@ import {
   hasUsableAuthCredential,
   shouldUseStoredAuthToken,
 } from '@/utils/authPlatform';
-import { translate as i18nT } from '@/i18n';
+import { getActiveLocale, resolveSupportedLocale, translate as i18nT } from '@/i18n';
 import { normalizeFilterCountries, normalizeFilterDictionaries } from '@/api/filterDictionaries';
 import { localizeBackendFieldError } from '@/utils/errorHelpers';
 import { isBlankTravelContent } from '@/utils/travelFormNormalization';
@@ -624,32 +624,22 @@ export const createPointCategory = async (
   return { id, name: typeof result?.name === 'string' && result.name.trim() ? result.name : name };
 };
 
-/**
- * Уникальный query-параметр для запроса «мимо клиентского кэша».
- *
- * `cache: 'reload'` — опция Web Fetch, React Native её игнорирует, а OkHttp
- * (Android) и NSURLCache (iOS) продолжают уважать тот же `max-age`. Серверной
- * нагрузки параметр не добавляет: прод кэширует этот роут ключом без query
- * (источник правды — `deploy/prod/nginx/nginx.conf` в бэкенд-репо, `master`;
- * снаружи видно по заголовку `x-cache-status` на `/api/getFiltersTravel/`).
- */
+// Native HTTP caches ignore reload; _fresh bypasses proxy/application caches
+// while the explicit lang parameter keeps each locale in its own cache key.
 const withCacheBuster = (url: string): string =>
   `${url}${url.includes('?') ? '&' : '?'}_fresh=${Date.now()}`;
 
 export const fetchFilters = async (
-  options?: { signal?: AbortSignal; throwOnError?: boolean; forceRefresh?: boolean },
+  options?: { signal?: AbortSignal; throwOnError?: boolean; forceRefresh?: boolean; lang?: string },
 ): Promise<FilterDictionaries> => {
+  const locale = resolveSupportedLocale([options?.lang ?? getActiveLocale()]);
+  const url = `${GET_FILTERS}?lang=${locale}`;
   try {
     const res = await fetchWithTimeout(
-      options?.forceRefresh ? withCacheBuster(GET_FILTERS) : GET_FILTERS,
+      options?.forceRefresh ? withCacheBuster(url) : url,
       {
         signal: options?.signal,
-        // Словарь редактируется в админке прямо во время работы автора (новая
-        // категория точки), а прод отдаёт на этот роут ДВА Cache-Control:
-        // Django `max-age=1800` и nginx `max-age=60`. Браузер берёт первый,
-        // поэтому обычный запрос до 30 минут читается из HTTP-кэша и новую
-        // категорию не видит (BE-задача #1436). `forceRefresh` идёт мимо кэша
-        // на всех платформах: `cache: 'reload'` на web, busting-параметр везде.
+        // Web reload and the shared _fresh parameter preserve forced refresh.
         ...(options?.forceRefresh ? { cache: 'reload' as RequestCache } : null),
       },
       DEFAULT_TIMEOUT,

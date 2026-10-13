@@ -38,6 +38,7 @@ import { downloadUrlOnWeb } from '@/utils/downloadUrlOnWeb';
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
 import { trackQuestShareClick } from '@/utils/gamificationAnalytics';
 import { showToast } from '@/utils/toast';
+import ModalToastHost from '@/components/ui/ModalToastHost';
 import { devWarn } from '@/utils/logger';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe';
@@ -440,6 +441,7 @@ function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
           </View>
         </Pressable>
       </Pressable>
+      <ModalToastHost visible={visible} />
     </Modal>
   );
 }

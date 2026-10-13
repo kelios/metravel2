@@ -28,6 +28,7 @@ import { buildArticleEditorNativeHtml } from './articleEditorNativeHtml';
 import type { ArticleEditorProps } from './articleEditor.types';
 import { translate as i18nT } from '@/i18n'
 import { showToast } from '@/utils/toast'
+import ModalToastHost from '@/components/ui/ModalToastHost'
 
 
 const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
@@ -447,6 +448,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
             </View>
           </View>
         </View>
+        <ModalToastHost visible={anchorModalVisible} />
       </Modal>
     </View>
   );

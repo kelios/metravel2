@@ -52,7 +52,7 @@ describe('miscOptimized', () => {
       countries,
     });
     // Signal вызывающего в сеть не уходит: запрос общий на всех потребителей.
-    expect(fetchFilters).toHaveBeenCalledWith({ throwOnError: true });
+    expect(fetchFilters).toHaveBeenCalledWith({ lang: 'ru', throwOnError: true });
     expect(fetchFiltersCountry).toHaveBeenCalledWith({ throwOnError: true });
 
     // Второй вызов должен использовать кэш
@@ -146,7 +146,7 @@ describe('miscOptimized', () => {
 
     await fetchFiltersOptimized();
     expect(fetchFilters).toHaveBeenCalledTimes(1);
-    expect(fetchFilters).toHaveBeenLastCalledWith({ throwOnError: true });
+    expect(fetchFilters).toHaveBeenLastCalledWith({ lang: 'ru', throwOnError: true });
 
     // Обычный вызов внутри TTL сети не касается.
     await fetchFiltersOptimized();
@@ -157,7 +157,7 @@ describe('miscOptimized', () => {
 
     await expect(fetchFiltersOptimized({ force: true })).resolves.toEqual(refreshed);
     expect(fetchFilters).toHaveBeenCalledTimes(2);
-    expect(fetchFilters).toHaveBeenLastCalledWith({ throwOnError: true, forceRefresh: true });
+    expect(fetchFilters).toHaveBeenLastCalledWith({ lang: 'ru', throwOnError: true, forceRefresh: true });
 
     // Свежий ответ становится новым содержимым кэша.
     await expect(fetchFiltersOptimized()).resolves.toEqual(refreshed);
@@ -258,7 +258,7 @@ describe('miscOptimized', () => {
     await fetchFiltersOptimized();
     await fetchFiltersOptimized({ force: true, afterRequestSequence });
     expect(fetchFilters).toHaveBeenCalledTimes(2);
-    expect(fetchFilters).toHaveBeenLastCalledWith({ throwOnError: true, forceRefresh: true });
+    expect(fetchFilters).toHaveBeenLastCalledWith({ lang: 'ru', throwOnError: true, forceRefresh: true });
   });
 
   it.each([false, true])('keeps strict errors independent of the shared request creator (strict=%s)', async (strictCreator) => {
@@ -410,4 +410,43 @@ describe('miscOptimized', () => {
       expect(fetchAllCountries).toHaveBeenCalledTimes(1);
     });
   });
+  it('isolates parallel locales while deduplicating base and combined consumers in each locale', async () => {
+    const { fetchFilters, fetchFiltersCountry } = require('@/api/misc');
+    let resolveRu: (data: typeof filters) => void = () => {};
+    const english = { ...filters, categories: [{ id: 1, name: 'Mountains' }] };
+    fetchFilters.mockImplementation(({ lang }: { lang: string }) => lang === 'ru'
+      ? new Promise(resolve => { resolveRu = resolve; }) : Promise.resolve(english));
+    fetchFiltersCountry.mockResolvedValue(countries);
+    const ru = fetchFiltersOptimized({ lang: 'ru' });
+    const ruCombined = fetchAllFiltersOptimized({ lang: 'ru-RU' });
+    await expect(fetchAllFiltersOptimized({ lang: 'en-US' })).resolves.toEqual({ ...english, countries });
+    resolveRu(filters);
+    await expect(ru).resolves.toEqual(filters);
+    await expect(ruCombined).resolves.toEqual({ ...filters, countries });
+    await expect(fetchFiltersOptimized({ lang: 'en' })).resolves.toEqual(english);
+    expect(fetchFilters).toHaveBeenCalledTimes(2);
+    expect(fetchFiltersCountry).toHaveBeenCalledTimes(1);
+  });
+
+  it('never substitutes a cached Russian dictionary for an English network failure', async () => {
+    const { fetchFilters } = require('@/api/misc');
+    fetchFilters.mockResolvedValueOnce(filters).mockRejectedValueOnce(new Error('EN unavailable'));
+    await fetchFiltersOptimized({ lang: 'ru' });
+    await expect(fetchFiltersOptimized({ lang: 'en' })).rejects.toThrow('EN unavailable');
+    await expect(fetchFiltersOptimized({ lang: 'ru' })).resolves.toEqual(filters);
+  });
+
+  it('forced refresh updates only the captured locale cache', async () => {
+    const { fetchFilters } = require('@/api/misc');
+    const english = { ...filters, categories: [{ id: 1, name: 'Mountains' }] };
+    const refreshed = { ...english, categories: [{ id: 1, name: 'Updated mountains' }] };
+    fetchFilters.mockResolvedValueOnce(filters).mockResolvedValueOnce(english).mockResolvedValueOnce(refreshed);
+    await fetchFiltersOptimized({ lang: 'ru' });
+    await fetchFiltersOptimized({ lang: 'en' });
+    await fetchFiltersOptimized({ lang: 'en', force: true });
+    await expect(fetchFiltersOptimized({ lang: 'ru' })).resolves.toEqual(filters);
+    await expect(fetchFiltersOptimized({ lang: 'en' })).resolves.toEqual(refreshed);
+    expect(fetchFilters).toHaveBeenCalledTimes(3);
+  });
+
 });

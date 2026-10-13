@@ -10,7 +10,40 @@ iPad Air 11-inch (M3), дата ревью 25.09.2026. Предыдущие ра
 problem-memory (дедуп борда). Ничего не собиралось, Reply не отправлялся, ASC не
 менялся.
 
-## Готовность Reply и Notes на 08.10.2026 (#2138)
+## Продолжение 13.10.2026: исправления и выборочная пересъёмка
+
+Физические записи 1.0.5 (12), source `4b7166e61`, сохранены в
+`.codex-temp/app-review-2026-10-13/build12/`: девять фрагментов iPhone 13 mini,
+iOS 26.5, интерфейс EN. Полный симуляторный прогон был прерван лимитом Claude
+до завершения сценариев; поднятый им `ios-sweep-13` содержит старый source,
+его имя не доказывает проверку исправлений.
+
+По решению владельца готовые пригодные сцены сохраняются, переснимаются
+только дефектные, недостающие и затронутые исправлениями. Монтажный журнал
+`.codex-temp/apple-handoff-20261013/retained-build12-timeline.json` привязывает
+каждый фрагмент к исходному файлу, SHA-256, сборке и диапазону времени.
+Первый черновик сохранённых сцен — 124 секунды; это неполный пакет.
+Материал (12) остаётся доказательством поведения (12), даже если его
+включают в ролик вместе с новыми сценами. Переснятые сцены подписываются
+фактической новой сборкой. Для отправляемого кандидата отдельно проверяется
+затронутое поведение; монтаж не заменяет exact-candidate QA/IPA audit/NAT64.
+
+| Остаток | Обязательный результат |
+| --- | --- |
+| #2439, блокировка и пагинация | Автор занимает две полные страницы, другой автор доступен дальше: без reload нет ложной пустой ленты; разблокировка возвращает контент. Проверить каталог, newest главной, рулетку и карту, включая холодный старт и смену аккаунта |
+| #2440, обратная связь внутри native modal | После жалобы на фото и отзыв квеста видны подтверждение и 24-hour SLA поверх остающейся открытой галереи/отзывов; close/reopen возвращает root feedback. Проверить iPhone, iPad и native siblings |
+| #2441 / #2442, язык справочников | Сервер возвращает локализованные названия со стабильными ID; клиент передаёт выбранный язык и разделяет HTTP/TTL/inflight/query-кэши. Переключение RU/BE/UK/PL/EN и поздний ответ прежней локали не возвращают русские подписи в EN |
+| #2137, запись | Заменить дефектный block-фрагмент (12), photo/review-фрагменты без видимого success; снять недостающий iPad landscape без cookies. Сохранять готовые Terms, travel/comment/message/trip-chat и iPhone privacy после проверки их пригодности |
+| #2138 / #1940, перед отправкой | Свежие ASC privacy/build facts, все required сцены и attestations, полный privacy просмотр финального монтажа, Notes ≤4000, доставка ролика и exact-candidate IOS-16. Upload/Reply/submit/release требуют отдельных команд |
+
+Предыдущая приёмка #2134 проверяла каталог только одного автора (1→0),
+а #2133 проверяла gallery menu и закрытие, без submit и видимого success.
+Эти проверки не доказывали доступность следующей страницы другого автора
+или слой native modal. Новый прогон включает оба условия явно.
+Непереведённые серверные taxonomy names — отдельный backend locale/cache
+контракт; не подменять их выдуманными клиентскими ID или переводом UGC.
+
+## Историческая готовность Reply и Notes на 08.10.2026 (#2138)
 
 Разрешённая локальная подготовка уточнена; **Reply не отправлен, Notes не
 сохранены в ASC, submit не выполнен**. #2128–#2136 имеют статус `done` на
@@ -231,8 +264,8 @@ Guideline 1.2:
 - Objectionable-word filtering applies to comments, direct messages and trip chat; travel articles and quest reviews are pre-moderated.
 - Every report and block sends an email notification to the website administrator. The administrator reviews reports within 24 hours and can remove offending content and ban abusive users.
 
-Evidence for this candidate:
-[IPHONE_VIDEO_ATTACHMENT_OR_URL] — physical [IPHONE_MODEL], [IPHONE_OS], recorded [IPHONE_RECORDING_DATE], [CANDIDATE_VERSION] ([CANDIDATE_BUILD]).
+Demonstration video:
+[IPHONE_VIDEO_ATTACHMENT_OR_URL] — physical [IPHONE_MODEL], [IPHONE_OS], recorded [IPHONE_RECORDING_DATE]. Each segment identifies its actual app version/build; retained clips from 1.0.5 (12) are supplementary recordings, not recordings of the revised candidate. The corrected blocking and modal report-confirmation segments show [CANDIDATE_VERSION] ([CANDIDATE_BUILD]) and have been checked on that candidate.
 Terms before registration/sign-in: [EULA_TIMECODE].
 Content report and confirmation: [REPORT_TIMECODE].
 Block confirmation, immediate content removal and blocked-users list: [BLOCK_TIMECODE].
@@ -258,7 +291,7 @@ User-generated content (1.2): Terms of Use and Community Guidelines state zero t
 
 Privacy (5.1.2): the app does not track users and has no cookie prompts or cookie-settings entry. Belkraj and Instagram links open in the external browser. App Privacy declares Tracking=No, confirmed for this candidate.
 
-Review evidence: [IPHONE_VIDEO_ATTACHMENT_OR_URL], physical [IPHONE_MODEL], [IPHONE_OS], [IPHONE_RECORDING_DATE], candidate [CANDIDATE_VERSION] ([CANDIDATE_BUILD]). Terms [EULA_TIMECODE]; report [REPORT_TIMECODE]; block and immediate hiding [BLOCK_TIMECODE].
+Review evidence: [IPHONE_VIDEO_ATTACHMENT_OR_URL], physical [IPHONE_MODEL], [IPHONE_OS], [IPHONE_RECORDING_DATE]. Actual version/build is labelled per segment. Retained 1.0.5 (12) clips are supplementary; corrected block/modal-confirmation clips show [CANDIDATE_VERSION] ([CANDIDATE_BUILD]). Terms [EULA_TIMECODE]; report [REPORT_TIMECODE]; block and immediate hiding [BLOCK_TIMECODE].
 iPad evidence: [IPAD_VIDEO_ATTACHMENT_OR_URL], [IPAD_MODEL], [IPAD_OS], [IPAD_PHYSICAL_OR_SIMULATOR], [IPAD_RECORDING_DATE], candidate [IPAD_CANDIDATE_IDENTITY]; privacy [PRIVACY_TIMECODE].
 ```
 

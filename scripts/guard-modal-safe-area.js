@@ -80,6 +80,13 @@ if (require.main === module) {
     process.exit(1)
   }
 
+  const feedbackViolations = require('./guard-modal-feedback').scanModalFeedback(ROOT)
+  if (feedbackViolations.length) {
+    console.error('guard:modal-feedback: native Modal feedback registry (#2440)')
+    for (const item of feedbackViolations) console.error(`  ${item}`)
+    process.exit(1)
+  }
+
   console.log('guard:modal-safe-area: ok')
 }
 
