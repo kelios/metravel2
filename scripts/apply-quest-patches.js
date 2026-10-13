@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Применяет патчи квест-контента (.codex-temp/quest-audit/patches-*.json) на прод.
- * Формат патча ШАГА:   {quest_id, step_db_id, step_id, changes:{task?,hint?,answer_pattern?,lat?,lng?,maps_url?,story?}}
+ * Формат патча ШАГА:   {quest_id, step_db_id, step_id, changes:{task?,hint?,answer_pattern?,lat?,lng?,maps_url?,story?,point_role?,poi_info:null}}
  * Формат патча КВЕСТА: {quest_id, quest_db_id, changes:{title}}
  * Формат НОВОЙ ТОЧКИ:  {quest_id, quest_db_id, after_step_id, create_step:{step_id, title, location, story, task, hint?, answer_pattern, lat, lng, maps_url?, input_type?, point_role?}}
  * Куда идёт PATCH, решает ключ: `step_db_id` → /api/quest-steps/<id>/,
@@ -100,7 +100,7 @@ const parseArgs = (tokens) => parseCliTokens(tokens, CLI_SPEC)
 // `title` — по той же причине: заголовок шага виден игроку на карточке, и
 // механическая опечатка в нём (подменённая буква чужого алфавита, #1464)
 // правится тем же путём, что и остальной видимый текст.
-const ALLOWED = new Set(['task', 'hint', 'answer_pattern', 'lat', 'lng', 'maps_url', 'story', 'location', 'title', 'order', 'input_type'])
+const ALLOWED = new Set(['task', 'hint', 'answer_pattern', 'lat', 'lng', 'maps_url', 'story', 'location', 'title', 'order', 'input_type', 'point_role', 'poi_info'])
 // Поля уровня КВЕСТА. Список узкий сознательно: обложка, город, статус и
 // координаты квеста принадлежат migrate-/upload-скриптам, а этому инструменту
 // нужен ровно редакционный текст. `title` попал сюда потому, что заголовок
@@ -113,6 +113,8 @@ const TYPES = new Set(['any', 'exact', 'exact_any', 'range', 'any_text', 'any_nu
 // остаётся источником правды для админки и механического аудита (класс B —
 // рассогласование input_type и типа паттерна), поэтому её тоже надо уметь чинить.
 const INPUT_TYPES = new Set(['text', 'number'])
+// Смена обязательности существующей точки не создаёт новый старт или финал.
+const PATCH_ROLES = new Set(['required', 'optional'])
 
 
 
@@ -142,6 +144,16 @@ function validateStep(p, file) {
   }
   if (payload.input_type !== undefined && !INPUT_TYPES.has(payload.input_type)) {
     throw new Error(`${file} ${p.step_id}: неизвестный input_type ${payload.input_type}`)
+  }
+  if (payload.point_role !== undefined) {
+    if (p.step_id === 'intro' || !PATCH_ROLES.has(payload.point_role)) {
+      throw new Error(`${file} ${p.step_id}: допустима только роль required/optional у обычной точки`)
+    }
+  }
+  // При смене объекта можно удалить старые часы/билет. Заполнение новых POI
+  // остаётся задачей профильного инструмента, произвольный JSON не принимаем.
+  if (Object.hasOwn(payload, 'poi_info') && payload.poi_info !== null) {
+    throw new Error(`${file} ${p.step_id}: poi_info допускает только null для очистки`)
   }
   for (const k of ['lat', 'lng']) {
     if (payload[k] !== undefined && !Number.isFinite(Number(payload[k])))
@@ -299,6 +311,28 @@ async function apiRequest(method, endpoint, payload, { api, session, token, dryR
 
 const apiPatch = (endpoint, payload, transport) => apiRequest('PATCH', endpoint, payload, transport)
 
+/** Метаданные меняются у подтверждённой точки; роль старта/финала сохраняется. */
+async function applyPatch(p, file, transport, { fetchBundle = fetchQuestBundles } = {}) {
+  const validated = validate(p, file)
+  const changesRole = Object.hasOwn(validated.payload, 'point_role')
+  if (changesRole || Object.hasOwn(validated.payload, 'poi_info')) {
+    if (typeof p.quest_id !== 'string' || !p.quest_id.trim() || typeof p.step_id !== 'string' || !p.step_id.trim()) {
+      throw new Error(`${file}: метаданным нужны quest_id и step_id`)
+    }
+    const [bundle] = await fetchBundle(transport.api, p.quest_id)
+    if (!bundle || bundle.quest_id !== p.quest_id) throw new Error(`${file}: квест не совпал с продом`)
+    const intro = typeof bundle.intro === 'string' ? JSON.parse(bundle.intro) : bundle.intro
+    const points = [...parseSteps(bundle), ...(intro ? [{ ...intro, is_intro: true }] : [])]
+    const target = points.find((s) => String(s.id) === String(p.step_db_id))
+    if (!target || target.step_id !== p.step_id) throw new Error(`${file}: step_db_id и step_id не совпали с продом`)
+    if (changesRole && (target.is_intro || !PATCH_ROLES.has(target.point_role))) {
+      throw new Error(`${file} ${p.step_id}: нельзя менять роль старта, финала или неподтверждённой точки`)
+    }
+  }
+  await apiPatch(validated.endpoint, validated.payload, transport)
+  return validated
+}
+
 async function main() {
   const args = parseCliArgs(process.argv, CLI_SPEC)
   const files = requireNonEmptySelection(args.files, {
@@ -320,7 +354,7 @@ async function main() {
   const session = createToolSession(sessionOptions)
   if (args.authCheck) { await session.ensureToken(); console.log('metravel-auth: ready (userId=104); content writes=0') }
   // Репетиция не пишет в сеть и токена не требует (новая точка лишь читает
-  // публичный бандл ради плана order), а боевой прогон без него
+  // публичный бандл ради плана order, метаданные — ради сверки цели), а боевой прогон без него
   // получил бы 401 на каждом патче — это ошибка вызова, а не результат замера.
   const transport = { api: args.apiUrl, session, dryRun }
 
@@ -337,8 +371,7 @@ async function main() {
           ok++
           continue
         }
-        const { endpoint, payload, label } = validate(p, file)
-        await apiPatch(endpoint, payload, transport)
+        const { payload, label } = await applyPatch(p, file, transport)
         console.log(`  OK ${label}: ${Object.keys(payload).join(', ')}`)
         ok++
       } catch (e) {
@@ -362,6 +395,7 @@ module.exports = {
   CLI_SPEC,
   USAGE,
   apiPatch,
+  applyPatch,
   applyCreate,
   applyReorder,
   main,
