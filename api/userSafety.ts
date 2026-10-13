@@ -18,7 +18,7 @@ import type { UserProfileDto } from '@/api/user'
 import { contentRefKey, type ContentRef } from '@/types/contentSafety'
 import { resolveDevMockFlag } from '@/utils/devMockFlags'
 import { devWarn } from '@/utils/logger'
-import { translate as i18nT } from '@/i18n'
+import { REPORT_REASON_KEYS, reportReasonLabel } from '@/utils/reportReasonLabel'
 
 export type ReportReasonKey =
   | 'spam'
@@ -46,14 +46,12 @@ export interface ReportResult {
 }
 
 // Дефолтный справочник причин — используется, если BE не отдаёт /report-reasons/.
-export const DEFAULT_REPORT_REASONS: ReportReason[] = [
-  { key: 'spam', get label() { return i18nT('sharedStatic:userSafety.reason.spam') } },
-  { key: 'harassment', get label() { return i18nT('sharedStatic:userSafety.reason.harassment') } },
-  { key: 'scam', get label() { return i18nT('sharedStatic:userSafety.reason.scam') } },
-  { key: 'inappropriate_content', get label() { return i18nT('sharedStatic:userSafety.reason.inappropriateContent') } },
-  { key: 'fake_account', get label() { return i18nT('sharedStatic:userSafety.reason.fakeAccount') } },
-  { key: 'other', get label() { return i18nT('sharedStatic:userSafety.reason.other') } },
-]
+export const DEFAULT_REPORT_REASONS: ReportReason[] = REPORT_REASON_KEYS.map((key) => ({
+  key,
+  get label() {
+    return reportReasonLabel({ key, label: key })
+  },
+}))
 
 const USE_MOCK = resolveDevMockFlag({
   name: 'EXPO_PUBLIC_SAFETY_MOCK',

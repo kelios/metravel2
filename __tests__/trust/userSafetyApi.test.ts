@@ -29,6 +29,7 @@ jest.mock('@/utils/logger', () => ({
 }))
 
 import { apiClient, ApiError } from '@/api/client'
+import { i18n } from '@/i18n'
 import {
   DEFAULT_REPORT_REASONS,
   blockUser,
@@ -39,6 +40,7 @@ import {
   reportContent,
   unblockUser,
 } from '@/api/userSafety'
+import { reportReasonLabel } from '@/utils/reportReasonLabel'
 
 const mockGet = apiClient.get as jest.Mock
 const mockPost = apiClient.post as jest.Mock
@@ -62,6 +64,27 @@ describe('fetchReportReasons', () => {
   it('falls back to defaults on 404 in DEV', async () => {
     mockGet.mockRejectedValueOnce(new ApiError(404))
     expect(await fetchReportReasons()).toBe(DEFAULT_REPORT_REASONS)
+  })
+})
+
+describe('reportReasonLabel', () => {
+  // BE отдаёт label из непереведённых Django choices — по-русски при любом языке.
+  it('labels a known key in the UI language, not with the server Russian label', async () => {
+    const originalLanguage = i18n.language
+    try {
+      await i18n.changeLanguage('en')
+      expect(reportReasonLabel({ key: 'harassment', label: 'Домогательства или травля' })).toBe(
+        'Insults/harassment',
+      )
+      await i18n.changeLanguage('pl')
+      expect(reportReasonLabel({ key: 'fake_account', label: 'Фейковый аккаунт' })).toBe('Fałszywe konto')
+    } finally {
+      await i18n.changeLanguage(originalLanguage)
+    }
+  })
+
+  it('keeps the server label for a key the app does not know', () => {
+    expect(reportReasonLabel({ key: 'new_reason' as never, label: 'Server label' })).toBe('Server label')
   })
 })
 

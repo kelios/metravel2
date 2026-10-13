@@ -19,6 +19,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { useReportContent, useReportReasons } from '@/hooks/useUserSafety'
 import type { ReportReasonKey } from '@/api/userSafety'
+import { reportReasonLabel } from '@/utils/reportReasonLabel'
 import type { ContentRef } from '@/types/contentSafety'
 import { translate as i18nT } from '@/i18n'
 
@@ -95,6 +96,7 @@ function ReportReasonSheet({ visible, target, onClose, onReported }: Props) {
             ) : (
               reasons.map((r) => {
                 const selected = reason === r.key
+                const label = reportReasonLabel(r)
                 return (
                   <Pressable
                     key={r.key}
@@ -102,7 +104,7 @@ function ReportReasonSheet({ visible, target, onClose, onReported }: Props) {
                     onPress={() => setReason(r.key)}
                     accessibilityRole="radio"
                     accessibilityState={{ selected }}
-                    accessibilityLabel={r.label}
+                    accessibilityLabel={label}
                     testID={`report-reason-${r.key}`}
                   >
                     <Feather
@@ -110,7 +112,7 @@ function ReportReasonSheet({ visible, target, onClose, onReported }: Props) {
                       size={18}
                       color={selected ? colors.primary : colors.textMuted}
                     />
-                    <Text style={[styles.reasonText, selected && styles.reasonTextSelected]}>{r.label}</Text>
+                    <Text style={[styles.reasonText, selected && styles.reasonTextSelected]}>{label}</Text>
                   </Pressable>
                 )
               })
