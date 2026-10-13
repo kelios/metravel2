@@ -104,6 +104,45 @@ const isIdMap = (rec: AnyRecord): boolean => {
 }
 
 /**
+ * Сколько объектов слой вырезал из страницы бесконечной ленты (только конверт).
+ * Пустая после вырезки страница — не конец выдачи: потребитель, который по пустой
+ * последней странице решает «дальше нет», считает поданное сервером
+ * (`servedPageLength`), а guard (`api/blockSensitiveQueries.ts`) догружает
+ * следующую страницу.
+ */
+export const BLOCK_HIDDEN_KEY = 'blockHiddenCount'
+
+const envelopeList = (page: unknown): unknown[] | null => {
+  const rec = asRecord(page)
+  const listKey = rec ? ENVELOPE_LIST_KEYS.find((key) => Array.isArray(rec[key])) : undefined
+  return rec && listKey ? (rec[listKey] as unknown[]) : null
+}
+
+export const blockHiddenCount = (page: unknown): number => {
+  const value = asRecord(page)?.[BLOCK_HIDDEN_KEY]
+  return typeof value === 'number' && value > 0 ? value : 0
+}
+
+/** Объекты страницы, как их подал сервер: видимые плюс вырезанные блокировкой. */
+export const servedPageLength = (page: unknown): number =>
+  (envelopeList(page)?.length ?? 0) + blockHiddenCount(page)
+
+/** Последняя загруженная страница бесконечной ленты опустела из-за блокировки. */
+export const isLastPageEmptiedByBlock = (data: unknown): boolean => {
+  const pages = asRecord(data)?.pages
+  if (!Array.isArray(pages) || pages.length === 0) return false
+  const last = pages[pages.length - 1]
+  return envelopeList(last)?.length === 0 && blockHiddenCount(last) > 0
+}
+
+const markHidden = (page: unknown, next: unknown): unknown => {
+  const before = envelopeList(page)
+  const after = envelopeList(next)
+  if (!before || !after) return next
+  return { ...(next as AnyRecord), [BLOCK_HIDDEN_KEY]: blockHiddenCount(page) + before.length - after.length }
+}
+
+/**
  * Универсальная коллекция: массив, конверт `{data|items|results, total|count}`,
  * бесконечный список `{pages, pageParams}` или карта по id. Неизвестная форма
  * возвращается как есть.
@@ -118,8 +157,9 @@ export const stripCollection = (data: unknown, authorIdsOf: AuthorIdsOf, blocked
     let changed = false
     const pages = rec.pages.map((page) => {
       const next = stripCollection(page, authorIdsOf, blockedIds)
-      if (next !== page) changed = true
-      return next
+      if (next === page) return page
+      changed = true
+      return markHidden(page, next)
     })
     return changed ? { ...rec, pages } : rec
   }

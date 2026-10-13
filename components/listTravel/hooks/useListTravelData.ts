@@ -2,6 +2,8 @@ import { useState, useCallback, useMemo } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchTravels, fetchRandomTravels } from '@/api/travelListQueries';
 import { queryKeys } from '@/api/queryKeys';
+import { blockHiddenCount, isLastPageEmptiedByBlock, servedPageLength } from '@/api/blockSensitiveShapes';
+import { useQueryOwner } from '@/hooks/useQueryOwner';
 import type { Travel } from '@/types/types';
 import {
   PER_PAGE,
@@ -40,30 +42,13 @@ export interface UseListTravelDataReturn {
   isRefreshing: boolean;
 }
 
-const countLoadedItems = (pages: Array<{ data?: Travel[] }>): number => {
-  if (!Array.isArray(pages)) return 0;
-  return pages.reduce((sum, page) => {
-    if (Array.isArray(page?.data)) return sum + page.data.length;
-    if (Array.isArray((page as any)?.items)) return sum + (page as any).items.length;
-    return sum;
-  }, 0);
-};
-
-const getPageItemsLength = (page: unknown): number => {
-  if (!page || typeof page !== 'object') return 0;
-  const source = page as { data?: unknown; items?: unknown };
-  if (Array.isArray(source.data)) return source.data.length;
-  if (Array.isArray(source.items)) return source.items.length;
-  return 0;
-};
-
 const resolveStableTotal = (pages: unknown[]): number => {
   if (!Array.isArray(pages)) return 0;
   for (let index = pages.length - 1; index >= 0; index -= 1) {
     const page = pages[index];
     const rawTotal = page && typeof page === 'object' ? (page as { total?: unknown }).total : undefined;
     const total = typeof rawTotal === 'number' ? rawTotal : Number(rawTotal);
-    if (Number.isFinite(total) && total > 0) return total;
+    if (Number.isFinite(total) && total >= 0) return total + blockHiddenCount(page);
   }
   return 0;
 };
@@ -86,6 +71,7 @@ function useBaseTravelData(
   { queryKeyPrefix, fetchFn }: BaseTravelDataConfig,
 ): UseListTravelDataReturn {
   const queryClient = useQueryClient();
+  const owner = useQueryOwner();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const queryParamsStringified = useMemo(() => {
@@ -105,9 +91,10 @@ function useBaseTravelData(
         perPage: PER_PAGE,
         search: search.trim(),
         params: queryParamsStringified,
+        owner,
       },
     ],
-    [queryKeyPrefix, search, queryParamsStringified],
+    [queryKeyPrefix, search, queryParamsStringified, owner],
   );
 
   const queryParamsForFetch = useMemo(
@@ -134,9 +121,11 @@ function useBaseTravelData(
     getNextPageParam: (lastPage, allPages) => {
       const total = resolveStableTotal(allPages as unknown[]);
       if (!total) return undefined;
-      const loaded = countLoadedItems(allPages as any);
+      const loaded = allPages.reduce((sum, page) => sum + servedPageLength(page), 0);
       if (loaded >= total) return undefined;
-      if (getPageItemsLength(lastPage) === 0) return undefined;
+      // Пустой ответ сервера — конец выдачи; пустая после блокировки автора
+      // страница — нет (`servedPageLength` считает и вырезанное).
+      if (servedPageLength(lastPage) === 0) return undefined;
       return allPages.length;
     },
     staleTime: STALE_TIME.TRAVELS,
@@ -156,7 +145,12 @@ function useBaseTravelData(
     return deduplicateTravels(flattened);
   }, [normalizedPages]);
 
-  const total = normalizedPages.length > 0 ? normalizedPages[0].total : 0;
+  const hiddenCount = data?.pages.reduce((sum, page) => sum + blockHiddenCount(page), 0) ?? 0;
+  const total = hiddenCount > 0
+    ? hasNextPage
+      ? Math.max(combinedTravels.length, resolveStableTotal(data?.pages ?? []) - hiddenCount)
+      : combinedTravels.length
+    : normalizedPages.length > 0 ? normalizedPages[0].total : 0;
   const staleContentMeta = useMemo(() => {
     if (!data?.pages?.length) return null;
     for (const page of data.pages) {
@@ -172,12 +166,13 @@ function useBaseTravelData(
   // 'paused', и isLoading/isError/isEmpty все ложны — экран показывал
   // «0 путешествий» над пустотой. Пауза без данных — сбой загрузки: UI отдаёт
   // «Нет подключения» с «Повторить», а запрос сам доедет, когда сеть вернётся.
-  // Именно без данных (status 'pending'), а не без элементов: закэшированный
-  // пустой ответ при паузе рефетча остаётся честным «пусто», и его fallback-
-  // выдача из кэша не прячется за ошибкой.
-  const isLoadPaused = fetchStatus === 'paused' && status === 'pending';
+  // Это также относится к догрузке страницы после блока без видимых карточек.
+  // Завершённый пустой ответ при паузе рефетча остаётся честным «пусто».
+  const isLoadPaused = fetchStatus === 'paused' && !hasAnyItems && (status === 'pending' || hasMore);
 
-  const isInitialLoading = isLoading && !hasAnyItems;
+  // Страницы без видимых карточек при `hasNextPage` — блокировка автора
+  // вырезала всё загруженное, и слой блокировок уже догружает следующую.
+  const isInitialLoading = !isLoadPaused && !hasAnyItems && (isLoading || (status === 'success' && hasMore));
   const isNextPageLoading = isFetchingNextPage;
   // «Пусто» — факт завершённого запроса: успех без единого элемента. Признак
   // `isQueryEnabled` сюда не входит (#2375): рулетка держит запрос выключенным и
@@ -189,6 +184,7 @@ function useBaseTravelData(
     !isFetching &&
     !isLoading &&
     !isFetchingNextPage &&
+    !hasMore &&
     !hasAnyItems;
 
   const handleEndReached = useCallback(() => {
@@ -198,15 +194,26 @@ function useBaseTravelData(
     fetchNextPage();
   }, [hasMore, isFetchingNextPage, fetchNextPage, isFetching, hasAnyItems]);
 
+  // Рулетка запускает выключенный запрос вручную. Guard не догружает фоновые
+  // ленты, поэтому ручной вызов сам ждёт замену вырезанных страниц перед тем,
+  // как вернуть карточки вызывающему (в том числе при гостевом fallback).
+  const refetchVisiblePages = useCallback(async () => {
+    let result = await refetch();
+    while (result.isSuccess && result.hasNextPage && isLastPageEmptiedByBlock(result.data)) {
+      result = await fetchNextPage({ cancelRefetch: false });
+    }
+    return result;
+  }, [refetch, fetchNextPage]);
+
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
       await queryClient.invalidateQueries({ queryKey });
-      await refetch();
+      await refetchVisiblePages();
     } finally {
       setIsRefreshing(false);
     }
-  }, [queryClient, queryKey, refetch]);
+  }, [queryClient, queryKey, refetchVisiblePages]);
 
   return {
     data: combinedTravels,
@@ -220,7 +227,7 @@ function useBaseTravelData(
     isNextPageLoading,
     isEmpty,
     staleContentMeta,
-    refetch,
+    refetch: refetchVisiblePages,
     handleEndReached,
     handleRefresh,
     isRefreshing,

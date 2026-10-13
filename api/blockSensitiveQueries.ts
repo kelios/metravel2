@@ -17,13 +17,14 @@
 // корень `queryKeys`/`commentKeys` и каждый ad-hoc ключ в исходниках обязан быть
 // либо в реестре, либо в `BLOCK_EXEMPT_ROOTS` с причиной.
 
-import type { Query, QueryClient, QueryKey } from '@tanstack/react-query'
+import { InfiniteQueryObserver, type Query, type QueryClient, type QueryKey } from '@tanstack/react-query'
 
 import { commentKeys } from '@/hooks/comments/commentKeys'
 import { queryKeys } from '@/api/queryKeys'
 import { shouldPersistQuery } from '@/utils/queryPersist'
 import {
   chatSenderIds,
+  isLastPageEmptiedByBlock,
   organizerIds,
   stripCollection,
   stripComments,
@@ -56,6 +57,8 @@ export const BLOCK_SENSITIVE_ENTRIES: readonly SensitiveEntry[] = [
   { key: ['travels-for-quest'], strip: travels },
   { key: ['travels-near-location'], strip: travels },
   { key: ['user-travels'], strip: travels },
+  { key: ['travel-facets'] },
+  { key: ['roulette-travel-facets'] },
   // Комментарии: списки и дерево; ответ уходит вместе с заблокированным родителем.
   { key: commentKeys.all, strip: stripComments },
   { key: ['trip-chat-messages'], strip: (data, blocked) => stripCollection(data, chatSenderIds, blocked) },
@@ -96,14 +99,12 @@ export const BLOCK_EXEMPT_ROOTS: Readonly<Record<string, string>> = {
   'email-subscription-status': 'подписка email своего аккаунта на рассылку; чужого контента нет',
   filters: 'справочник',
   'filter-options': 'справочник',
-  'travel-facets': 'агрегаты фильтров без карточек',
   userPointsAll: 'личные точки владельца',
   'my-travels-count': 'свои путешествия',
   'export-my-travels-count': 'свои путешествия',
   'full-book-export': 'серверные задания книги владельца: статус и счётчики, без чужого контента',
   travelUserRating: 'своя оценка',
   questUserReview: 'свой отзыв',
-  'roulette-travel-facets': 'агрегаты фильтров без карточек',
   'location-search': 'геокодер',
   'reverse-geocode': 'геокодер',
   'terms-accepted-current': 'своё согласие',
@@ -217,12 +218,33 @@ const findEntry = (queryKey: QueryKey): SensitiveEntry | undefined => {
   return entry && matchesEntry(queryKey, entry) ? entry : undefined
 }
 
+/**
+ * Бесконечная лента, чья последняя страница опустела после вырезки, догружает
+ * следующую: иначе экран показал бы «пусто» при `count > 0`, а `onEndReached`
+ * пустого списка не срабатывает. Ответ следующей страницы снова проходит guard,
+ * поэтому цепочка идёт до первой видимой карточки или до конца выдачи. Догружает
+ * смонтированный наблюдатель — его `getNextPageParam` и `queryFn`; без него
+ * экрана нет и догружать некому. Отложено микрозадачей: guard вызывается внутри
+ * dispatch кэша.
+ */
+const advancePastEmptiedPage = (query: Query) => {
+  if (!isLastPageEmptiedByBlock(query.state.data)) return
+  void Promise.resolve().then(() => {
+    if (query.state.status !== 'success' || query.state.fetchStatus !== 'idle' || !isLastPageEmptiedByBlock(query.state.data)) return
+    const observer = query.observers.find((item) => item instanceof InfiniteQueryObserver && item.getCurrentResult().isEnabled)
+    if (observer instanceof InfiniteQueryObserver && observer.getCurrentResult().hasNextPage) {
+      void observer.fetchNextPage()
+    }
+  })
+}
+
 const stripQuery = (qc: QueryClient, query: Query, entry: SensitiveEntry, blocked: BlockedIds) => {
   const data = query.state.data
   if (data === undefined || !entry.strip) return
   const next = entry.strip(data, blocked)
   // Пишем только при изменении: иначе каждое событие кэша порождало бы запись.
   if (next !== data) qc.setQueryData(query.queryKey, next)
+  advancePastEmptiedPage(query)
 }
 
 const stripAll = (qc: QueryClient, blocked: BlockedIds) => {
@@ -331,6 +353,10 @@ export function installBlockedAuthorGuard(
   resolveOwner = options.getOwner
   serverCache = null
   const unsubscribe = qc.getQueryCache().subscribe((event) => {
+    if (event.type === 'observerAdded' || event.type === 'observerOptionsUpdated') {
+      if (findEntry(event.query.queryKey)?.strip) advancePastEmptiedPage(event.query)
+      return
+    }
     if (event.type !== 'updated' || event.action.type !== 'success') return
     const { queryKey } = event.query
     if (isBlockedListKey(queryKey)) {
