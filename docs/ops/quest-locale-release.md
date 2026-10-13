@@ -22,6 +22,13 @@ inspection. Owner must select `QUEST_SEO_MANAGED_MAX_BYTES` from actual candidat
 default or automatic cleanup. Existing disk reserve/backend-build floor apply.
 Explicit bounded backend cleanup preserves active, rollback and pinned readers.
 
+Static preflight accepts a bind of the static directory or its ancestor (for
+example, the checkout bound to `/app`). It resolves the most specific covering
+bind and checks the host/app/Nginx directory device, inode and owner. The app
+must use that owner UID with writable directory access. Foreign roots, symlink
+paths, read-only app binds and mounts nested below static fail before any lock
+or package mutation; a dedicated `/app/static` bind is not required.
+
 Download old assets while holding the release reader pin. Apply the existing
 14-day/256-MiB overlay locally, preserving mtimes and the replaced generation's
 exception. After all postprocessing/marker/overlay, run the full quest static

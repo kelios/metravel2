@@ -81,11 +81,12 @@ function save(file, state) {
 
 function preflight(t) {
   // Exact Git classification plus actual bind mounts before any server write.
+  const code = fs.readFileSync(TRANSPORT).toString('base64')
+  const python = `import base64;exec(compile(base64.b64decode('${code}'),'<quest-seo-transport>','exec'))`
   t.ssh(`set -eu; cd ${quote(t.remote)}; test -d static; test ! -L static; `
     + `status=$(git status --porcelain); unexpected=$(printf '%s\\n' "$status" | sed '/^?? dump.sql$/d; /^?? deploy\\/prod\\/nginx\\/ssl\\//d; /^?? dist\\//d; /^$/d'); `
     + `test -z "$unexpected"; test -z "$(git ls-files -- static/dist static/quest-seo-releases static/.quest-seo-operation.lock static/.quest-seo-activation.json static/quests/quest-default-cover.svg)"; `
-    + `test "$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/app/static"}}{{.Source}}{{end}}{{end}}' ${quote(t.app)})" = ${quote(`${t.remote}/static`)}; `
-    + `test "$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/usr/local/metravel/static"}}{{.Source}}{{end}}{{end}}' ${quote(t.nginx)})" = ${quote(`${t.remote}/static`)}`)
+    + `python3 -c ${quote(python)} static-preflight ${[t.remote, t.app, t.nginx].map(quote).join(' ')}`)
 }
 
 function overlay(t, dist, stateFile) {

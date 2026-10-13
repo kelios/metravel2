@@ -9,6 +9,7 @@ import os
 import shutil
 from pathlib import Path, PurePosixPath
 import stat
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -20,6 +21,53 @@ MAX_BYTES = 2 * 1024 * 1024 * 1024
 def require(condition, message):
     if not condition:
         raise ValueError(message)
+
+
+def static_preflight(remote, app, nginx):
+    """Validate physical shared roots, including binds on a static ancestor."""
+    root = Path(remote) / 'static'
+    require(root.is_absolute() and root.resolve(strict=True) == root and root.is_dir(),
+            'Canonical physical static parent required')
+    info = root.stat()
+    identity = f'{info.st_dev}:{info.st_ino}:{info.st_uid}'
+
+    def docker(*args):
+        return subprocess.check_output(['docker', *args], text=True, timeout=20,
+                                       stderr=subprocess.PIPE).strip()
+
+    for container, target, writer in [(app, '/app/static', True),
+                                      (nginx, '/usr/local/metravel/static', False)]:
+        mounts = json.loads(docker('inspect', '--format', '{{json .Mounts}}', container))
+        require(isinstance(mounts, list), 'Docker mount list required')
+        destinations, covering = set(), []
+        target_path = PurePosixPath(target)
+        for mount in mounts:
+            require(isinstance(mount, dict) and isinstance(mount.get('Destination'), str),
+                    'Invalid Docker mount')
+            destination = PurePosixPath(mount['Destination'])
+            require(destination.is_absolute() and str(destination) == mount['Destination']
+                    and '..' not in destination.parts and destination not in destinations,
+                    'Noncanonical or duplicate mount destination')
+            destinations.add(destination)
+            require(target_path not in destination.parents, 'Nested static mount refused')
+            if destination == target_path or destination in target_path.parents:
+                covering.append((destination, mount))
+        require(covering, 'Static bind mount missing')
+        destination, mount = max(covering, key=lambda entry: len(entry[0].parts))
+        require(mount.get('Type') == 'bind' and isinstance(mount.get('Source'), str),
+                'Static parent must be a bind mount')
+        require(not writer or mount.get('RW') is True, 'App static bind must be writable')
+        source = Path(mount['Source'])
+        effective = source.joinpath(*target_path.relative_to(destination).parts)
+        require(source.is_absolute() and str(source) == mount['Source']
+                and source.resolve(strict=True) == source and effective == root,
+                'Static bind source mismatch or symlink')
+        check = 'test -d "$1" && test ! -L "$1" && test "$(readlink -f "$1")" = "$1"'
+        if writer:
+            check += ' && test -w "$1" && test -x "$1" && test "$(id -u)" = "$2"'
+        check += ' && stat -c "%d:%i:%u" "$1"'
+        require(docker('exec', container, 'sh', '-c', check, 'static-preflight',
+                       target, str(info.st_uid)) == identity, 'Physical static identity mismatch')
 
 
 def regular_tree(root):
@@ -238,6 +286,9 @@ def publish_cover(package, activation, active, releases, arguments):
 def main():
     action = sys.argv[1]
     arguments = sys.argv[2:]
+    if action == 'static-preflight':
+        static_preflight(*arguments)
+        return
     if action == 'size':
         print(sum(entry.stat().st_size for entry in regular_tree(Path(arguments[0]).absolute()) if entry.is_file()))
         return

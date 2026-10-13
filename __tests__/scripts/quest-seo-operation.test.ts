@@ -195,31 +195,73 @@ describe('normal managed publication orchestration', () => {
 })
 
 describe('real private archive and operation lock', () => {
-  it('executes the exact preflight shell for clean, allowed, dirty, tracked and mismounted targets', () => {
+  it('executes the exact preflight shell for checkout safety and physical shared bind roots', () => {
     const root = makeTempDir('quest-e-preflight-')
     try {
-      const repo = path.join(root, "repo ' $literal"), bin = path.join(root, 'bin'), statusFile = path.join(root, 'status')
+      const repo = path.join(fs.realpathSync(root), "repo ' $literal"), bin = path.join(root, 'bin'), statusFile = path.join(root, 'status')
       fs.mkdirSync(path.join(repo, 'static'), { recursive: true }); fs.mkdirSync(bin)
       fs.writeFileSync(path.join(bin, 'git'), '#!/bin/sh\ncase "$1" in status) cat "$QUEST_TEST_STATUS_FILE";; ls-files) printf %s "$QUEST_TEST_TRACKED";; *) exit 2;; esac\n', { mode: 0o755 })
-      fs.writeFileSync(path.join(bin, 'docker'), '#!/bin/sh\n[ "$1" = inspect ] || exit 2\nprintf %s "$QUEST_TEST_STATIC"\n', { mode: 0o755 })
+      fs.writeFileSync(path.join(bin, 'docker'), `#!/usr/bin/env python3
+import os, sys
+if sys.argv[1] == 'inspect':
+    print(os.environ['QUEST_TEST_APP_MOUNTS' if sys.argv[-1] == 'app' else 'QUEST_TEST_NGINX_MOUNTS'])
+elif sys.argv[1] == 'exec':
+    if os.environ.get('QUEST_TEST_EXEC_FAIL') == sys.argv[2]: sys.exit(1)
+    assert sys.argv[3:5] == ['sh', '-c']
+    assert 'test ! -L' in sys.argv[5] and 'readlink -f' in sys.argv[5]
+    assert 'stat -c "%d:%i:%u"' in sys.argv[5]
+    if sys.argv[2] == 'app':
+        assert 'test -w' in sys.argv[5] and 'test -x' in sys.argv[5] and 'id -u' in sys.argv[5]
+    print(os.environ.get('QUEST_TEST_BAD_IDENTITY') or os.environ['QUEST_TEST_IDENTITY'])
+else: sys.exit(2)
+`, { mode: 0o755 })
       let command = ''
       const t = { ...remote().t, remote: repo, ssh: (value: string) => { command = value; throw new Error('captured locally') } }
       expect(() => overlay(t, path.join(root, 'dist'), path.join(root, 'state.json'))).toThrow('captured locally')
       expect(command).toContain('static/quests/quest-default-cover.svg')
+      const staticPath = path.join(repo, 'static'), info = fs.statSync(staticPath)
+      const bind = (source: string, destination = '/app/static', rw = true) => ({ Type: 'bind', Source: source, Destination: destination, RW: rw })
+      const app = [bind(staticPath)], nginx = [bind(staticPath, '/usr/local/metravel/static', false)]
+      const linkedSource = path.join(repo, 'static-link')
+      fs.symlinkSync(staticPath, linkedSource)
       for (const fixture of [
-        { status: '', tracked: '', mount: path.join(repo, 'static'), pass: true },
-        { status: '?? dump.sql\n?? deploy/prod/nginx/ssl/\n?? dist/\n', tracked: '', mount: path.join(repo, 'static'), pass: true },
-        { status: ' M quests/views.py\n', tracked: '', mount: path.join(repo, 'static'), pass: false },
-        { status: '?? unknown/\n', tracked: '', mount: path.join(repo, 'static'), pass: false },
-        { status: '', tracked: 'static/dist/index.html\n', mount: path.join(repo, 'static'), pass: false },
-        { status: '', tracked: '', mount: '/another/static', pass: false },
+        { pass: true },
+        { app: [bind(repo, '/app')], pass: true },
+        { app: [bind(repo, '/app'), ...app], pass: true },
+        { nginx: [bind(repo, '/usr/local/metravel', false)], pass: true },
+        { status: '?? dump.sql\n?? deploy/prod/nginx/ssl/\n?? dist/\n', pass: true },
+        { status: ' M quests/views.py\n', pass: false },
+        { status: '?? unknown/\n', pass: false },
+        { tracked: 'static/dist/index.html\n', pass: false },
+        { app: [bind(repo)], pass: false },
+        { nginx: [bind(repo, '/usr/local/metravel/static')], pass: false },
+        { app: [bind(staticPath, '/app/static-other')], pass: false },
+        { app: [bind(staticPath, '/app/static', false)], pass: false },
+        { app: [{ ...app[0], Type: 'volume' }], pass: false },
+        { app: [bind(repo, '/app'), { ...app[0], Type: 'tmpfs' }], pass: false },
+        { app: [...app, bind(staticPath, '/app/static/dist')], pass: false },
+        { nginx: [...nginx, bind(staticPath, '/usr/local/metravel/static/quest-seo-releases')], pass: false },
+        { app: [...app, ...app], pass: false },
+        { app: [bind(linkedSource)], pass: false },
+        { app: [bind(`${repo}/../${path.basename(repo)}/static`)], pass: false },
+        { app: [bind(staticPath, '/app//static')], pass: false },
+        { badIdentity: `${info.dev}:${info.ino + 1}:${info.uid}`, pass: false },
+        { badIdentity: `${info.dev}:${info.ino}:${info.uid + 1}`, pass: false },
+        { execFail: 'app', pass: false },
+        { execFail: 'nginx', pass: false },
+        { appJson: '{}', pass: false },
+        { appJson: '{', pass: false },
       ]) {
-        fs.writeFileSync(statusFile, fixture.status)
+        fs.writeFileSync(statusFile, fixture.status || '')
         const result = runCli('bash', ['-c', command], { env: {
           PATH: `${bin}:${process.env.PATH}`, QUEST_TEST_STATUS_FILE: statusFile,
-          QUEST_TEST_TRACKED: fixture.tracked, QUEST_TEST_STATIC: fixture.mount,
+          QUEST_TEST_TRACKED: fixture.tracked || '',
+          QUEST_TEST_APP_MOUNTS: fixture.appJson || JSON.stringify(fixture.app || app),
+          QUEST_TEST_NGINX_MOUNTS: JSON.stringify(fixture.nginx || nginx),
+          QUEST_TEST_IDENTITY: `${info.dev}:${info.ino}:${info.uid}`,
+          QUEST_TEST_BAD_IDENTITY: fixture.badIdentity || '', QUEST_TEST_EXEC_FAIL: fixture.execFail || '',
         } })
-        expect(result.status === 0).toBe(fixture.pass)
+        expect({ fixture, pass: result.status === 0 }).toEqual({ fixture, pass: fixture.pass })
       }
     } finally { removeDir(root) }
   })
