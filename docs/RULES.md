@@ -707,7 +707,11 @@ not by the fastest patch that makes the symptom disappear.
   another path or host, `target=_blank` — opens externally through
   `openExternalUrl`. A third-party document that itself loads a tag manager,
   ad pixels or a cookie prompt is not embedded on native at all: it becomes an
-  `ExternalContentLinkCard` to the external browser (Instagram, Belkraj, #2135).
+  `ExternalContentLinkCard` to the external browser (Instagram, iPhone Belkraj,
+  #2135). Android Belkraj may extract inert excursion fields from a
+  credential-free HTML response into native cards: no partner document,
+  scripts, styles, tag manager or embeds execute inside the app. Only validated
+  static excursion photos load; card/catalog navigation opens externally.
   Every `react-native-webview` consumer is classified in
   `__tests__/config/nativeWebViewPrivacy.guard.test.ts`.
 - CI enforcement:

@@ -37,7 +37,9 @@ const NO_WEBVIEW_BY_DECISION: Record<string, string> = {
   'components/iframe/InstagramEmbed.native.tsx':
     'embed Instagram несёт cookie-согласие и логирование Meta — карточка-ссылка (#2135)',
   'components/belkraj/BelkrajWidget.native.tsx':
-    'документ виджета belkraj.by грузит GTM партнёра, страницы экскурсий — Facebook Pixel/Google Ads — карточка-ссылка (#2135)',
+    'iPhone: документ belkraj.by грузит GTM партнёра — карточка-ссылка (#2135)',
+  'components/belkraj/BelkrajWidget.android.tsx':
+    'Android: только извлечённые данные и native-карточки, без исполнения HTML/GTM',
 }
 
 /** Навигационные props, которые задаёт только guard: локальное значение его обошло бы. */
