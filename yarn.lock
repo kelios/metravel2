@@ -2728,6 +2728,11 @@
   resolved "https://registry.npmjs.org/@react-native/normalize-colors/-/normalize-colors-0.86.0.tgz"
   integrity sha512-kG0wfCGghUKlfxkJyyHCDVutWVYWK7/DG58ojA/4v9EfulgF+osuSQmlbNb3rcKX58qutm7JcldSeVLgGFha9g==
 
+"@react-native/normalize-colors@0.86.3":
+  version "0.86.3"
+  resolved "https://registry.yarnpkg.com/@react-native/normalize-colors/-/normalize-colors-0.86.3.tgz#50176b5ff6d5533418c5a71c889b37e123d0b3cb"
+  integrity sha512-Cv3CDkprb67GrzuaS9BGbBJC/6G4lIw3nyKOHRKTqTTum4bn37y5+R0Z04L8mcbQN85eEohNrRwb7IOM4j6uvg==
+
 "@react-native/normalize-colors@^0.74.1":
   version "0.74.89"
   resolved "https://registry.npmjs.org/@react-native/normalize-colors/-/normalize-colors-0.74.89.tgz"
@@ -5327,6 +5332,14 @@ expo-symbols@^57.0.0:
   dependencies:
     "@expo-google-fonts/material-symbols" "^0.4.1"
     sf-symbols-typescript "^2.0.0"
+
+expo-system-ui@~57.0.0:
+  version "57.0.4"
+  resolved "https://registry.yarnpkg.com/expo-system-ui/-/expo-system-ui-57.0.4.tgz#e70154f9b9e2e2d28d94b6bfa05992e200ba6b6d"
+  integrity sha512-z//rxQJzhTNA1PcKrUtWmrd21jAS3nEDu1b0n8B/7LTTR933OcsZYP1HnbaZifuo2ZH/h7nce2Ow61WZ1Ig2bg==
+  dependencies:
+    "@react-native/normalize-colors" "0.86.3"
+    debug "^4.3.2"
 
 expo-updates-interface@~57.0.0:
   version "57.0.0"

@@ -14,6 +14,7 @@ import { createMapClusterGroup, runClusterClick } from './mapClusterGroup'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useTheme } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
+import { useLocaleRevision } from '@/i18n/useLocaleRevision'
 
 import { buildClusterIconHtml } from './mapMarkerStyles'
 import { useApplyClusterAccessibleName } from './clusterAccessibleName'
@@ -206,6 +207,9 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
     return places
   }, [points, hintCenter])
 
+  const localeRevision = useLocaleRevision()
+
+
   const clusterIconFactory = useMemo(() => {
     if (!L?.divIcon || typeof document === 'undefined') return null
 
@@ -313,6 +317,17 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
   // and rationale live in `clusterAccessibleName.ts` (#1624; split out to keep
   // this file under the push-gate's 800-LOC threshold).
   const applyClusterAccessibleName = useApplyClusterAccessibleName(L)
+
+  useEffect(() => {
+    // Translate existing marker accessibility without rebuilding markers/popups.
+    for (const { point, key } of validPoints) {
+      const marker = markerMapRef.current.get(key)?.marker
+      const alt = point.address || i18nT('map:components.MapPage.Map.MarkerClusterGroup.tochka_na_karte_13493b1e')
+      if (marker?.options) marker.options.alt = alt
+      marker?.getElement?.()?.setAttribute('alt', alt)
+    }
+    map?.eachLayer?.(applyClusterAccessibleName)
+  }, [localeRevision, validPoints, map, applyClusterAccessibleName])
 
   // `map.fire('layeradd', ...)` runs synchronously right after
   // `onAdd()`/`_initIcon()` for every layer the group adds

@@ -2,10 +2,10 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 
 import BelkrajWidget from '@/components/belkraj/BelkrajWidget.android'
-import { loadBelkrajNativeData, type BelkrajNativeData } from '@/components/belkraj/belkrajNativeData'
+import { loadBelkrajNativeData, type BelkrajNativeData } from '@/components/belkraj/belkrajNativeData.native'
 import { openExternalUrl } from '@/utils/externalLinks'
 
-jest.mock('@/components/belkraj/belkrajNativeData', () => ({ loadBelkrajNativeData: jest.fn() }))
+jest.mock('@/components/belkraj/belkrajNativeData.native', () => ({ loadBelkrajNativeData: jest.fn() }))
 jest.mock('@/utils/externalLinks', () => ({ openExternalUrl: jest.fn(async () => true) }))
 jest.mock('@/components/ui/ImageCardMedia', () => {
   const { View } = require('react-native')

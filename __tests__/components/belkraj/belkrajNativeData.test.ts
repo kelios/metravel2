@@ -1,4 +1,4 @@
-import { loadBelkrajNativeData, parseBelkrajNativeData } from '@/components/belkraj/belkrajNativeData'
+import { loadBelkrajNativeData, parseBelkrajNativeData } from '@/components/belkraj/belkrajNativeData.native'
 
 // Shape of the server-rendered Minsk/Warsaw widget, including relative affiliate links.
 const fixture = `<html><head><script src="https://www.googletagmanager.com/gtm.js"></script></head>

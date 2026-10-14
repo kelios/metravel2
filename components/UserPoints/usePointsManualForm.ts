@@ -1,3 +1,4 @@
+import { useLocaleRevision } from '@/i18n/useLocaleRevision'
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import type { QueryClient } from '@tanstack/react-query';
@@ -43,7 +44,8 @@ const parseCoordinate = (value: string): number | null => {
 const getPrimaryPlaceName = (geocodeData: unknown, lat: number, lng: number): string => {
   const title = String(buildPointTitleFromGeocode(geocodeData, { lat, lng }) || '').trim();
   if (!title || title === `${lat}, ${lng}`) {
-    return i18nT('map:components.UserPoints.usePointsManualForm.novaya_tochka_4d3f685d');
+    // Keep the absence of an API-owned name distinct from localized UI fallback.
+    return '';
   }
   return title;
 };
@@ -76,6 +78,7 @@ export const usePointsManualForm = ({
   resolveCategoryIdsForEdit,
   queryClient,
 }: Params) => {
+  const localeRevision = useLocaleRevision()
   const owner = useQueryOwner();
   const [editingPointId, setEditingPointId] = useState<number | null>(null);
   const [showManualAdd, setShowManualAdd] = useState(false);
@@ -103,7 +106,7 @@ export const usePointsManualForm = ({
     if (!showManualAdd) return;
     if (manualNameTouched) return;
     setManualName(manualAutoName || i18nT('map:components.UserPoints.usePointsManualForm.novaya_tochka_4d3f685d'));
-  }, [manualAutoName, manualNameTouched, showManualAdd]);
+  }, [manualAutoName, manualNameTouched, showManualAdd, localeRevision]);
 
   const resetManualForm = useCallback(() => {
     geocodeSeq.current += 1;
@@ -226,7 +229,7 @@ export const usePointsManualForm = ({
         setManualAutoName(primaryName);
 
         if (!manualNameTouchedRef.current) {
-          setManualName(primaryName);
+          setManualName(primaryName || i18nT('map:components.UserPoints.usePointsManualForm.novaya_tochka_4d3f685d'));
         }
       })();
     },

@@ -20,6 +20,7 @@ beforeAll(() => {
   jest.doMock('@/hooks/useBreadcrumbModel', () => ({ useBreadcrumbModel: () => ({ items: [{ label: 'Главная', path: '/' }, { label: 'Приложение', path: '/app' }], depth: 2, currentTitle: 'Приложение', pageContextTitle: 'Приложение', backToPath: '/', showBreadcrumbs: true }) }))
   jest.doMock('@expo/vector-icons/Feather', () => () => null)
   jest.doMock('@/components/layout/Logo', () => () => null)
+  jest.doMock('@/components/layout/SeasonalThemeDecoration', () => jest.requireActual('@/components/layout/SeasonalThemeDecoration.web.tsx'))
   jest.doMock('@/components/layout/LanguageSwitcher', () => () => null)
   jest.doMock('@/components/layout/customHeaderLazy', () => ({
     HeaderContextBarLazy: require('react').lazy(async () => ({ default: require('@/components/layout/HeaderContextBar').default })),

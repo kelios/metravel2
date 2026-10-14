@@ -30,7 +30,9 @@ describe('MapErrorBoundary retry budget reset (#217)', () => {
   })
 
   function makeBoundary() {
-    const instance = new (MapErrorBoundary as any)({ children: null })
+    const ref = React.createRef<any>()
+    render(<MapErrorBoundary ref={ref}>{null}</MapErrorBoundary>)
+    const instance = ref.current
     const setState = jest.fn((updater: any) => {
       const next = typeof updater === 'function' ? updater(instance.state) : updater
       instance.state = { ...instance.state, ...next }
@@ -47,7 +49,7 @@ describe('MapErrorBoundary retry budget reset (#217)', () => {
     for (let cycle = 0; cycle < 4; cycle += 1) {
       const before = { ...boundary.state }
       // 1) Error thrown during a flip.
-      boundary.state = (MapErrorBoundary as any).getDerivedStateFromError(REUSED_ERROR)
+      boundary.state = boundary.constructor.getDerivedStateFromError(REUSED_ERROR)
       boundary.componentDidCatch(REUSED_ERROR, noopInfo)
 
       // componentDidCatch auto-recovers a "reused" error within budget → hasError false.

@@ -111,6 +111,65 @@ Human tasks hold current agreements, legal identity, DSA/trader status, distribu
 
 ## Data and API contract
 
+### Locale lifecycle repair discovered during App Review acceptance — #2442, 2026-10-13
+
+Production acceptance of source `b9eae1764b217d75b5fe8a26aea937e108bd86ae`
+found that `/search` loses a real category selection when EN changes to PL:
+selected ID6 and 252 results become no selection and 429 results without a
+document reload. API responses were successful. Both locale providers change
+the key above the application subtree on `languageChanged`, remounting local
+filter/form state and the auth/query/navigation providers beneath it.
+
+Preserve the mounted application after boot. Introduce a shared reactive
+locale revision subscription and an audited compatibility transform for proven
+app-owned React components and custom hooks, including memo/forwardRef owners
+and indirect presentation helpers. Ordinary helpers, event/list callbacks,
+worklets, third-party modules and the i18n runtime must not receive hooks.
+Class error boundaries require locale-aware wrappers that retain their class
+instance, refs and theme contract. Web `useTranslation` must actually subscribe.
+
+Presentation memo values and render callbacks must refresh in the current
+locale. Preserve absent-dependency semantics and fail explicitly on unsupported
+owner/dependency shapes. Audit translation effects and callbacks separately:
+changing language must not repeat authentication, routing, network requests or
+mutations. Derived labels may update from existing raw results without refetch.
+Do not add blanket locale dependencies to effects or action callbacks.
+
+Coverage must include named factories and arrow-wrapped local factories, pure
+formatter returns and locally constructed validation results. Helper analysis
+must refresh when a transitively read source changes in the compiler process.
+An independent memo backstop supplements the React-owner inventory. Audit all
+app-owned roots, including `screens`, for persistent presentation effects.
+Quest navigation titles update from their translated value. Weather retains
+raw forecast data and coordinate identity while deriving current-language
+labels. The retained Quill instance updates placeholder/accessibility labels
+without reconstructing the editor or replacing authored image text. Tests
+must preserve draft, focus, editor identity and loaded data through the change.
+
+Keep the web boot-only boundary generation, deterministic RU hydration,
+canonical quest-route locale, Suspense and slow/failure recovery/abandonment
+contracts. Native still withholds children until boot is ready. Explicit
+post-boot language changes must preserve selected IDs, form input, route and
+provider instances while refreshing visible translated presentation.
+
+Rejected alternatives: backing up one catalog selection leaves the root cause
+in other screens; removing only the keys leaves legacy translated memoized UI
+stale. The chosen transform requires source coverage and real transformed
+stateful-component tests, rather than assuming translator imports identify all
+React owners. Regression controls must retain ID6 and form input across locale
+changes, refresh memo labels, and keep mount/startup-query counts unchanged.
+Existing web/native boot and recovery suites remain mandatory. Runtime evidence
+must follow a fresh review, push and rollout; prior dictionary tests do not prove
+this lifecycle repair. Rollback reverts the complete compatibility/provider
+change together. API, native SDK, signing and build number are unchanged.
+
+The owner narrowed current native QA and recording on 2026-10-13 to iPhone
+only. Android and iPad runtime checks are outside this current pass; existing
+recordings retain their original provenance. Shared web regression and
+platform-specific compiler/source fixtures remain required for the shared
+repair. Universal device-family configuration stays unchanged. An iPhone-only
+pass must not be reported as physical iPad or full universal-candidate evidence.
+
 Existing API DTOs and URLs stay unchanged except the separately delivered Apple-login endpoint described above. APNs/Expo push registration reuses `POST /api/user/push-token/`. Account deletion, media upload, travels, quests, maps, profiles, and public content continue to use their deployed contracts.
 
 Frontend behavior is fail-closed: a missing Apple endpoint cannot become mock login; invalid AASA cannot be treated as a verified Universal Link; an APNs token without a delivered notification is not delivery evidence; a simulator screenshot cannot replace physical-device/TestFlight evidence.

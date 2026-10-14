@@ -5,6 +5,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { ThemeContext, getThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
 import { translate as i18nT } from '@/i18n'
+import { useLocaleRevision } from '@/i18n/useLocaleRevision'
 
 
 interface Props {
@@ -20,7 +21,7 @@ interface State {
   errorInfo: React.ErrorInfo | null;
 }
 
-class TravelFormErrorBoundary extends Component<Props, State> {
+class TravelFormErrorBoundaryInstance extends Component<Props & { localeRevision?: string }, State> {
   static contextType = ThemeContext;
   override context: React.ContextType<typeof ThemeContext> | null = null;
 
@@ -175,4 +176,11 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
   },
 });
 
+
+
+// Prop updates preserve the error/retry state and ThemeContext of this instance.
+const TravelFormErrorBoundary = React.forwardRef<TravelFormErrorBoundaryInstance, Props>(function TravelFormErrorBoundary(props, ref) {
+  const localeRevision = useLocaleRevision();
+  return <TravelFormErrorBoundaryInstance {...props} ref={ref} localeRevision={localeRevision} />;
+});
 export default TravelFormErrorBoundary;

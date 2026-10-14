@@ -29,7 +29,7 @@
 
 ## 6. Testing after review
 
-- [ ] 6.1 Enter testing through the applicable project handoff gate; before backend-dependent QA synchronize/start the local backend and pass operation gates for builds/browser/device runs.
+- [x] 6.1 Enter testing through the applicable project handoff gate; before backend-dependent QA synchronize/start the local backend and pass operation gates for builds/browser/device runs.
 - [ ] 6.2 Verify desktop web 1440px and mobile web 390px: seven choices, light/dark, first frame, menu/settings, keyboard/touch, print, screenshots and console; inspect adjacent article/map chrome.
 - [ ] 6.3 Verify on USB Android using a local build/install: guest/authenticated theme controls, all five themes in light/dark, off/auto, restart persistence, foreground refresh, screenshots/logcat and tap/contrast checks.
 - [ ] 6.4 Verify iPhone simulator: same selection/persistence/foreground cases, safe areas and no runtime errors; inspect iPad portrait/landscape/resizable-window geometry.
@@ -39,3 +39,13 @@
 
 - [ ] 7.1 Reconcile evidence with each scenario and document failures or precise access/device unblock requests; leave unverified tasks unchecked.
 - [ ] 7.2 Run strict change validation and openspec validate --all before a separately requested archive. Store build/upload/submit/release requires the respective explicit authorization and operator workflow.
+
+## 8. Verified native configuration/menu follow-up from testing
+
+- [x] 8.1 Record actual iPhone forced-light failure, Android detached-menu input failure and the distinct observed ANR; prepare the canonical configuration and shared native overlay architecture without unsupported dismissal timers or source hiding.
+- [x] 8.2 Enable supported automatic native appearance in Expo/tracked iOS configuration and compatible SDK/package/pod metadata, with meaningful contract regression coverage.
+- [x] 8.3 Repair native header/profile menu ownership through a shared Portal overlay with Back/focus/accessibility isolation; retain real web Modal behavior and correct the web decoration fixture without weakening geometry assertions.
+- [ ] 8.4 Run required code-level checks and independent review/gate over the complete follow-up; commit/push only reviewed owned paths.
+- [ ] 8.5 Rebuild the actual native candidate and retest OS light/dark, hydration/persistence, menu → Login and Profile menu → Settings → themes → Routes; retain ANR as unverified until its exact sequence passes, and complete iPad/web acceptance.
+- [x] 8.6 Move the confirmed overlapping offline banner into the shared measured bottom-overlay reserve, preserving saved-content action/timing/accessibility and existing Toast placement; prepare focused measurement regression tests.
+- [ ] 8.7 Verify offline header/menu and saved-content action on the reviewed rebuilt native candidate, including phone/tablet safe areas and bottom dock; keep the observed Worklets ANR separate until its exact regression scenario passes.

@@ -15,6 +15,7 @@ import { parseQuestLocaleRoute } from '@/utils/questLocaleRouting'
 import { BOOT_LOCALE_TIMEOUT_MS, normalizeActiveLocale, resolvePendingBootLocale } from './bootLocale'
 import { getLocaleDefinition, SUPPORTED_LOCALES, type SupportedLocale } from './config'
 import i18n from './instance'
+import { useLocaleRevision } from './useLocaleRevision'
 import {
   DEFAULT_LOCALE_PREFERENCE,
   readLocalePreference,
@@ -52,7 +53,7 @@ const syncDocumentLocale = (locale: SupportedLocale) => {
  * screens mounted once (#2239). A null fallback prevents outer-context changes
  * from mounting a temporary Russian tree. Slow/failed boot exposes localized
  * recovery controls; choosing RU invalidates any older pending completion.
- * Explicit language switches after boot retain the legacy subtree revision.
+ * Explicit language switches update presentation without remounting state.
  * Canonical translated quest URLs preload/commit their own locale instead;
  * SPA transitions suspend before any screen mounts in the previous locale.
  */
@@ -95,7 +96,8 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   )
   const [preference, setPreference] = useState<LocalePreference>(DEFAULT_LOCALE_PREFERENCE)
   const [isHydrated, setIsHydrated] = useState(false)
-  const [legacyRenderRevision, setLegacyRenderRevision] = useState(0)
+  const [bootRenderRevision, setBootRenderRevision] = useState(0)
+  const hasMountedBootTree = useRef(false)
   // На сервере `window` нет — разметка всегда полная; на клиенте граница лишь
   // откладывает гидратацию, разметку она не меняет.
   const [bootLocale] = useState(resolvePendingBootLocale)
@@ -120,16 +122,20 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   // Reveal only a committed tree in its final boot locale. No reveal timer:
   // a slow catalogue must not mount Russian screens and send requests twice.
   useLayoutEffect(() => {
-    if (!pending) releaseLocaleBootShell()
+    if (!pending) {
+      hasMountedBootTree.current = true
+      releaseLocaleBootShell()
+    }
   }, [pending, locale])
 
-  // Подписка — в layout effect, чтобы смена языка ниже уже меняла ключ.
+  // Only the initial suspended RU hydration may replace its boot generation.
+  // Once mounted, auth/query/navigation and forms keep their React identities.
   useLayoutEffect(() => {
     const handleLanguageChanged = (language: string) => {
       const nextLocale = normalizeActiveLocale(language)
       setLocaleState(nextLocale)
       syncDocumentLocale(routeLocale ?? nextLocale)
-      setLegacyRenderRevision((revision) => revision + 1)
+      if (!hasMountedBootTree.current) setBootRenderRevision((revision) => revision + 1)
     }
 
     i18n.on('languageChanged', handleLanguageChanged)
@@ -248,7 +254,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
           }}>{recoveryCopy.fallback}</button>}
         </div>
       )}
-      <BootLocaleBoundary key={legacyRenderRevision} pending={pending}>
+      <BootLocaleBoundary key={bootRenderRevision} pending={pending}>
         {children}
       </BootLocaleBoundary>
     </LocaleContext.Provider>
@@ -261,4 +267,11 @@ export const useLocale = (): LocaleContextValue => {
   return value
 }
 
-export const useTranslation = () => ({ t: translate, i18n, ready: true })
+export const useTranslation = () => {
+  const locale = useLocaleRevision()
+  // Keep the compiled-key argument contract while changing t identity with locale.
+  // Locale intentionally invalidates translator identity, not its live lookup.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const t = useMemo(() => ((...args: Parameters<typeof translate>) => translate(...args)), [locale])
+  return { t, i18n, ready: true }
+}

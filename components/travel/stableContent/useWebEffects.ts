@@ -1,3 +1,4 @@
+import { useLocaleRevision } from '@/i18n/useLocaleRevision'
 import { Dispatch, SetStateAction, useEffect, useInsertionEffect, useLayoutEffect } from 'react'
 import type { RefObject } from 'react'
 import { Platform } from 'react-native'
@@ -100,6 +101,7 @@ export function useStableContentWebEffects({
   scrollToHashTarget,
   rootRef,
 }: UseStableContentWebEffectsInput) {
+  const localeRevision = useLocaleRevision()
   useEffect(() => {
     if (Platform.OS !== 'web') return
     if (typeof window === 'undefined' || typeof document === 'undefined') return
@@ -317,7 +319,7 @@ export function useStableContentWebEffects({
         }
       }
     }
-  }, [prepared, rootRef, setLightboxGallery])
+  }, [prepared, rootRef, setLightboxGallery, localeRevision])
 
   useLayoutEffect(() => {
     if (Platform.OS !== 'web') return

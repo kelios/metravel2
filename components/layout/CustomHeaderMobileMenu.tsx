@@ -1,5 +1,6 @@
-import React, { useRef } from 'react'
-import { Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native'
+import React, { useRef, type RefObject } from 'react'
+import { Platform, Pressable, ScrollView, Text, View } from 'react-native'
+import MenuOverlay from '@/components/ui/MenuOverlay'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Feather from '@expo/vector-icons/Feather'
 import type { ThemedColors } from '@/hooks/useTheme'
@@ -19,6 +20,7 @@ import { webDataSetProps } from '@/utils/webProps'
 type Props = {
   visible: boolean
   onRequestClose: () => void
+  onClosed?: () => void
   onOverlayPress: () => void
   onNavPress: (path: string, external?: boolean) => void
   onUserAction: (path: string, extraAction?: () => void) => void
@@ -33,6 +35,8 @@ type Props = {
   favoritesCount: number
   unreadCount?: number
   themeToggleNode?: React.ReactNode
+  returnFocusRef: RefObject<View | null>
+  restoreFocusRef: RefObject<boolean>
 }
 
 type MenuActionItem = {
@@ -87,6 +91,7 @@ const renderMenuItem = (
 export default function CustomHeaderMobileMenu({
   visible,
   onRequestClose,
+  onClosed,
   onOverlayPress,
   onNavPress,
   onUserAction,
@@ -101,9 +106,12 @@ export default function CustomHeaderMobileMenu({
   favoritesCount,
   unreadCount = 0,
   themeToggleNode,
+  returnFocusRef,
+  restoreFocusRef,
 }: Props) {
   // A11Y-05: focus trap для web — при открытии меню фокус остаётся внутри панели
   const panelRef = useRef<any>(null);
+  const closeButtonRef = useRef<View>(null)
   useFocusTrap(panelRef as any, { enabled: visible && Platform.OS === 'web' });
 
   // Нижний system inset (жестовая полоса/навбар Android), чтобы последний пункт
@@ -198,11 +206,14 @@ export default function CustomHeaderMobileMenu({
     }))
 
   return (
-    <Modal
+    <MenuOverlay
       visible={visible}
-      transparent
-      animationType="fade"
       onRequestClose={onRequestClose}
+      onClosed={onClosed}
+      accessibilityLabel={i18nT('navigation:components.layout.CustomHeaderMobileMenu.menyu_navigatsii_039574df')}
+      initialFocusRef={closeButtonRef}
+      returnFocusRef={returnFocusRef}
+      restoreFocusRef={restoreFocusRef}
     >
       <View style={styles.modalOverlay} testID="mobile-menu-overlay-container">
         <Pressable
@@ -225,6 +236,7 @@ export default function CustomHeaderMobileMenu({
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{i18nT('navigation:components.layout.CustomHeaderMobileMenu.menyu_cb359c1b')}</Text>
             <Pressable
+              ref={closeButtonRef}
               onPress={onRequestClose}
               style={styles.modalCloseButton}
               accessibilityRole="button"
@@ -265,6 +277,6 @@ export default function CustomHeaderMobileMenu({
           </ScrollView>
         </View>
       </View>
-    </Modal>
+    </MenuOverlay>
   )
 }

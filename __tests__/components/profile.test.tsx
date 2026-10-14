@@ -1,5 +1,7 @@
 import type { ComponentProps, ComponentType, ReactElement } from 'react';
 import { act, render, fireEvent, waitFor } from '@testing-library/react-native';
+import { PaperProvider } from 'react-native-paper';
+import { NativeMenuAccessibilityProvider, NativeMenuBackground } from '@/components/ui/NativeMenuAccessibilityScope';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import type { MyAchievements, UserRank } from '@/api/achievements';
@@ -19,6 +21,7 @@ import {
 } from '../fixtures/travelFixtures';
 
 jest.mock('@/context/AuthContext');
+jest.mock('react-native-paper', () => jest.requireActual('react-native-paper'));
 
 jest.setTimeout(15000);
 
@@ -317,7 +320,14 @@ describe('ProfileScreen', () => {
   });
 
   const renderProfile = () => {
-    return render(<ProfileScreen />, { wrapper: createQueryWrapper().Wrapper });
+    return render(
+      <NativeMenuAccessibilityProvider>
+        <PaperProvider>
+          <NativeMenuBackground><ProfileScreen /></NativeMenuBackground>
+        </PaperProvider>
+      </NativeMenuAccessibilityProvider>,
+      { wrapper: createQueryWrapper().Wrapper },
+    );
   };
 
   it('shows EmptyState when user is not authenticated', async () => {
@@ -496,11 +506,12 @@ describe('ProfileScreen', () => {
     setupAuth({ isAuthenticated: true, logout: logoutMock });
     setupFavorites(0, 0);
 
-    const { getByLabelText, getByText } = renderProfile();
+    const { getByLabelText, getByText, queryByTestId } = renderProfile();
 
     // Открываем меню профиля
     await waitFor(() => getByLabelText('Меню профиля'));
     fireEvent.press(getByLabelText('Меню профиля'));
+    expect(queryByTestId('native-menu-overlay')).toBeTruthy();
 
     // Ждем появления кнопки выхода (ищем по тексту)
     await waitFor(() => getByText('Выйти'));
@@ -509,6 +520,7 @@ describe('ProfileScreen', () => {
     await waitFor(() => {
       expect(logoutMock).toHaveBeenCalled();
       expect(mockReplace).toHaveBeenCalledWith('/login');
+      expect(queryByTestId('native-menu-overlay')).toBeNull();
     });
   });
 

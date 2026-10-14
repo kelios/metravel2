@@ -1,6 +1,6 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 
-import { translate as i18nT } from '@/i18n';
+import { i18n, translate as i18nT } from '@/i18n';
 
 const mockBigDataCloudReverse = jest.fn();
 const mockNominatimReverse = jest.fn();
@@ -94,6 +94,23 @@ describe('usePointsManualForm — автоимя ручной точки', () =>
 
     await waitFor(() => expect(result.current.manualName).toBe(NEW_POINT_LABEL));
     expect(result.current.manualName).not.toBe(`${COORDS.lat}, ${COORDS.lng}`);
+  });
+
+  it('refreshes the untouched fallback on locale change without geocoding again, preserving user edits', async () => {
+    answerWith({ address: {}, display_name: '' });
+    const { result } = renderManualForm();
+    await act(async () => result.current.handleMapPress(COORDS));
+    await waitFor(() => expect(mockNominatimReverse).toHaveBeenCalled());
+    const requests = mockNominatimReverse.mock.calls.length;
+    try {
+      await act(async () => { await i18n.changeLanguage('en') });
+      expect(result.current.manualName).toBe(i18nT('map:components.UserPoints.usePointsManualForm.novaya_tochka_4d3f685d'));
+      expect(mockNominatimReverse).toHaveBeenCalledTimes(requests);
+      act(() => { result.current.setManualNameTouched(true); result.current.setManualName('my point') });
+      await act(async () => { await i18n.changeLanguage('pl') });
+      expect(result.current.manualName).toBe('my point');
+      expect(mockNominatimReverse).toHaveBeenCalledTimes(requests);
+    } finally { await act(async () => { await i18n.changeLanguage('ru') }) }
   });
 
   it('не перебивает имя, которое пользователь уже правил руками', async () => {

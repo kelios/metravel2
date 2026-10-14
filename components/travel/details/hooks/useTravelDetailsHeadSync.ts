@@ -1,3 +1,4 @@
+import { useLocaleRevision } from '@/i18n/useLocaleRevision'
 import { useEffect } from 'react'
 import { Platform } from 'react-native'
 
@@ -21,6 +22,7 @@ export function useTravelDetailsHeadSync({
   readyTitle,
   syncNavigationTitle,
 }: UseTravelDetailsHeadSyncArgs) {
+  const localeRevision = useLocaleRevision()
   useEffect(() => {
     if (!readyTitle || readyTitle === 'Metravel') return undefined
     if (!isFocused) return undefined
@@ -132,5 +134,5 @@ export function useTravelDetailsHeadSync({
       window.clearTimeout(timeout)
       observer.disconnect()
     }
-  }, [canonicalUrl, isFocused, readyDesc, readyImage, readyTitle, syncNavigationTitle])
+  }, [canonicalUrl, isFocused, readyDesc, readyImage, readyTitle, syncNavigationTitle, localeRevision])
 }

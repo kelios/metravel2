@@ -1,10 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Keyboard, Platform, Pressable, Text, StyleSheet, View, useWindowDimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Keyboard, Platform, Pressable, Text, StyleSheet, View } from 'react-native';
 import Toast, { BaseToast, ErrorToast, InfoToast, SuccessToast } from 'react-native-toast-message';
 
-import { useDockReservePx, useNativeBottomChromeOcclusion } from '@/components/layout/bottomChromeInset';
+import { useNativeBottomOverlayInset } from '@/components/layout/useNativeBottomOverlayInset';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe';
 import { useThemedColors } from '@/hooks/useTheme';
 import { toastBottomOffset, type ToastAction } from '@/utils/toast.native';
 
@@ -69,26 +68,8 @@ type ToastHostProps = {
  * sticky-баров с `elevation` на Android.
  */
 export default function ToastHost({ overDock = true }: ToastHostProps) {
-  const dockReservePx = useDockReservePx();
-  const insets = useSafeAreaInsetsSafe();
-  const { top } = useNativeBottomChromeOcclusion();
-  const { width, height } = useWindowDimensions();
-  const layerRef = useRef<View>(null);
-  const generation = useRef(0);
-  const [layerBottom, setLayerBottom] = useState<number | null>(null);
+  const { layerRef, measureLayer, reserve, safeBottom } = useNativeBottomOverlayInset(overDock);
   const [keyboardLift, setKeyboardLift] = useState(KEYBOARD_OFFSET);
-  const measureLayer = useCallback(() => {
-    if (Platform.OS === 'web') return;
-    const request = ++generation.current;
-    layerRef.current?.measureInWindow((_x, y, _width, measuredHeight) => {
-      if (request !== generation.current || !Number.isFinite(y + measuredHeight) || measuredHeight <= 0) return;
-      setLayerBottom(y + measuredHeight);
-    });
-  }, []);
-  useEffect(() => {
-    measureLayer();
-    return () => { generation.current += 1; };
-  }, [measureLayer, width, height]);
   useEffect(() => {
     if (Platform.OS !== 'ios') return;
     const show = Keyboard.addListener('keyboardDidShow', ({ endCoordinates }) => {
@@ -98,9 +79,7 @@ export default function ToastHost({ overDock = true }: ToastHostProps) {
     return () => { show.remove(); hide.remove(); };
   }, []);
   if (Platform.OS === 'web') return null;
-  const footerReserve = layerBottom !== null && top !== null ? Math.max(0, layerBottom - top) : 0;
-  const reserve = Math.max(overDock ? Math.max(dockReservePx, footerReserve) : 0, insets.bottom || 0);
-  const bottomOffset = toastBottomOffset(reserve, insets.bottom);
+  const bottomOffset = toastBottomOffset(reserve, safeBottom);
   return (
     <View ref={layerRef} collapsable={false} onLayout={measureLayer} pointerEvents="box-none" style={styles.layer} testID="toast-layer">
       {/* The library snapshots its offsets at show(); move this layer for live remeasurements.

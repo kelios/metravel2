@@ -1,5 +1,6 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, Modal, Dimensions } from 'react-native';
+import { useState, useCallback, useLayoutEffect, useRef, useMemo } from 'react';
+import { View, Text, StyleSheet, Pressable, Platform, Dimensions } from 'react-native';
+import MenuOverlay from '@/components/ui/MenuOverlay';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -19,15 +20,30 @@ export function ProfileMenu({ onLogout, onSettings }: ProfileMenuProps) {
   // and before measureInWindow resolves.
   const [menuPosition, setMenuPosition] = useState({ top: 60, right: DESIGN_TOKENS.spacing.md });
   const triggerRef = useRef<View>(null);
+  const firstActionRef = useRef<View>(null);
+  const restoreFocusRef = useRef(true);
+  const pendingActionRef = useRef<null | (() => void)>(null);
+  const ownerMountedRef = useRef(false);
+
+  useLayoutEffect(() => {
+    ownerMountedRef.current = true;
+    return () => {
+      ownerMountedRef.current = false;
+      pendingActionRef.current = null;
+    };
+  }, []);
 
   const handleToggle = useCallback(() => {
     if (isOpen) {
+      pendingActionRef.current = null;
       setIsOpen(false);
       return;
     }
 
     // Open immediately with the last/default position so the menu is interactive
     // even if measurement is unavailable (RNTL) or slow.
+    restoreFocusRef.current = true;
+    pendingActionRef.current = null;
     setIsOpen(true);
 
     const node = triggerRef.current;
@@ -51,18 +67,31 @@ export function ProfileMenu({ onLogout, onSettings }: ProfileMenuProps) {
   }, [isOpen]);
 
   const handleClose = useCallback(() => {
+    pendingActionRef.current = null;
     setIsOpen(false);
   }, []);
 
-  const handleLogout = useCallback(() => {
+  const runAfterMenuClose = useCallback((action: () => void) => {
+    if (!ownerMountedRef.current || pendingActionRef.current) return;
+    restoreFocusRef.current = false;
+    if (Platform.OS !== 'web') pendingActionRef.current = action;
     setIsOpen(false);
-    onLogout();
-  }, [onLogout]);
+    if (Platform.OS === 'web') action();
+  }, []);
+
+  const handleMenuClosed = useCallback(() => {
+    const action = pendingActionRef.current;
+    pendingActionRef.current = null;
+    if (ownerMountedRef.current) action?.();
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    runAfterMenuClose(onLogout);
+  }, [onLogout, runAfterMenuClose]);
 
   const handleSettings = useCallback(() => {
-    setIsOpen(false);
-    onSettings?.();
-  }, [onSettings]);
+    if (onSettings) runAfterMenuClose(onSettings);
+  }, [onSettings, runAfterMenuClose]);
 
   const styles = useMemo(() => StyleSheet.create({
     trigger: {
@@ -130,8 +159,9 @@ export function ProfileMenu({ onLogout, onSettings }: ProfileMenuProps) {
 
   return (
     <>
-      <View ref={triggerRef} collapsable={false}>
+      <View collapsable={false}>
         <Pressable
+          ref={triggerRef}
           onPress={handleToggle}
           style={({ pressed }) => [
             styles.trigger,
@@ -146,16 +176,20 @@ export function ProfileMenu({ onLogout, onSettings }: ProfileMenuProps) {
         </Pressable>
       </View>
 
-      <Modal
+      <MenuOverlay
         visible={isOpen}
-        transparent
-        animationType="fade"
         onRequestClose={handleClose}
+        onClosed={handleMenuClosed}
+        accessibilityLabel={i18nT('profile:components.profile.ProfileMenu.menyu_profilya_ab998098')}
+        initialFocusRef={firstActionRef}
+        returnFocusRef={triggerRef}
+        restoreFocusRef={restoreFocusRef}
       >
         <Pressable style={styles.overlay} onPress={handleClose}>
           <View style={[styles.menu, { top: menuPosition.top, right: menuPosition.right }]}>
             {onSettings && (
               <Pressable
+                ref={firstActionRef}
                 onPress={handleSettings}
                 style={({ pressed }) => [
                   styles.menuItem,
@@ -172,6 +206,7 @@ export function ProfileMenu({ onLogout, onSettings }: ProfileMenuProps) {
             )}
 
             <Pressable
+              ref={onSettings ? undefined : firstActionRef}
               onPress={handleLogout}
               style={({ pressed }) => [
                 styles.menuItem,
@@ -189,7 +224,7 @@ export function ProfileMenu({ onLogout, onSettings }: ProfileMenuProps) {
             </Pressable>
           </View>
         </Pressable>
-      </Modal>
+      </MenuOverlay>
     </>
   );
 }

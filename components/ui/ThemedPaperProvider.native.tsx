@@ -3,6 +3,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { MD3DarkTheme, MD3LightTheme as DefaultTheme, PaperProvider } from 'react-native-paper'
 
 import { useTheme, useThemedColors } from '@/hooks/useTheme'
+import { NativeMenuAccessibilityProvider, NativeMenuBackground } from '@/components/ui/NativeMenuAccessibilityScope'
 
 type Props = { children: React.ReactNode }
 
@@ -31,16 +32,18 @@ export default function ThemedPaperProvider({ children }: Props) {
   }, [colors, isDark])
 
   return (
-    <PaperProvider
-      theme={paperTheme}
-      settings={{
-        icon: (props: any) => {
-          const name = props?.name
-          return <Feather {...props} name={name} />
-        },
-      }}
-    >
-      {children}
-    </PaperProvider>
+    <NativeMenuAccessibilityProvider>
+      <PaperProvider
+        theme={paperTheme}
+        settings={{
+          icon: (props: any) => {
+            const name = props?.name
+            return <Feather {...props} name={name} />
+          },
+        }}
+      >
+        <NativeMenuBackground>{children}</NativeMenuBackground>
+      </PaperProvider>
+    </NativeMenuAccessibilityProvider>
   )
 }

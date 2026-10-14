@@ -13,6 +13,16 @@ The system SHALL provide all seven seasonal choices (automatic, off and the five
 - **WHEN** a user selects Christmas and changes the ordinary scheme from light to dark or system
 - **THEN** Christmas remains selected and its palette follows the resulting light/dark scheme
 
+#### Scenario: Actual native system scheme
+- **WHEN** system mode is selected and the actual Android, iPhone or iPad OS appearance changes between light and dark
+- **THEN** the application visibly follows the OS scheme while preserving its seasonal choice, including foreground and cold startup
+- **AND** canonical native configuration and the compatible SDK integration permit automatic appearance rather than forcing light
+
+#### Scenario: Native menu navigation remains interactive
+- **WHEN** a guest selects a theme and opens Login through the header menu, or an authenticated user opens Settings through the profile menu, changes a theme and navigates to Routes
+- **THEN** the destination remains interactive, seasonal preferences are preserved and no detached menu window intercepts input or causes an input-dispatch ANR
+- **AND** Back/dismiss restores focus, navigation avoids restoring focus to the previous route, and only the open menu is exposed to screen readers
+
 #### Scenario: Native disable
 - **WHEN** off is selected during a calendar holiday
 - **THEN** the ordinary palette is restored and seasonal decoration disappears

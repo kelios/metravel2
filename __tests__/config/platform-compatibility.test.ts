@@ -241,9 +241,31 @@ describe('Platform Compatibility Tests', () => {
       expect(['portrait', 'landscape', 'default']).toContain(orientation);
     });
 
-    it('should have user interface style', () => {
+    it('allows the native system appearance to reach the app theme provider', () => {
       const appConfig = readAppConfig();
-      expect(appConfig.expo.userInterfaceStyle).toBeDefined();
+      expect(appConfig.expo.userInterfaceStyle).toBe('automatic');
+      for (const platform of ['ios', 'android']) {
+        expect(appConfig.expo[platform].userInterfaceStyle ?? appConfig.expo.userInterfaceStyle)
+          .toBe('automatic');
+      }
+      const nativeInfo = require('plist').parse(readRepoFile('ios/metravel/Info.plist'));
+      expect(nativeInfo.UIUserInterfaceStyle).toBe('Automatic');
+    });
+
+    it('installs the SDK-compatible system appearance module and config plugin', () => {
+      const bundledModules = require('expo/bundledNativeModules.json');
+      const systemUi = require('expo-system-ui/package.json');
+      const semver = require('semver');
+      const configuredRange = packageJson.dependencies['expo-system-ui'];
+      expect(configuredRange).toBe(bundledModules['expo-system-ui']);
+      expect(semver.satisfies(systemUi.version, configuredRange)).toBe(true);
+      const pluginNames = readAppConfig().expo.plugins.map((plugin: string | [string, unknown]) =>
+        Array.isArray(plugin) ? plugin[0] : plugin,
+      );
+      expect(pluginNames).toContain('expo-system-ui');
+      const podLock = readRepoFile('ios/Podfile.lock');
+      expect(podLock).toContain(`- ExpoSystemUI (${systemUi.version}):`);
+      expect(podLock).toContain('ExpoSystemUI (from `../node_modules/expo-system-ui/ios`)');
     });
 
     it('should have asset bundle patterns', () => {

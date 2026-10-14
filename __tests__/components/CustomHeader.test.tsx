@@ -5,6 +5,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import CustomHeader from '@/components/layout/CustomHeader';
 import * as ReactNative from 'react-native';
 import { Platform, StyleSheet } from 'react-native';
+import { PaperProvider } from 'react-native-paper';
+import { NativeMenuAccessibilityProvider, NativeMenuBackground } from '@/components/ui/NativeMenuAccessibilityScope';
+
+jest.mock('react-native-paper', () => jest.requireActual('react-native-paper'));
 
 let mockSafeAreaInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 
@@ -114,7 +118,13 @@ describe('CustomHeader', () => {
         const client = createTestQueryClient();
         return render(
             <QueryClientProvider client={client}>
-                <CustomHeader {...props} />
+                <NativeMenuAccessibilityProvider>
+                    <PaperProvider>
+                        <NativeMenuBackground>
+                            <CustomHeader {...props} />
+                        </NativeMenuBackground>
+                    </PaperProvider>
+                </NativeMenuAccessibilityProvider>
             </QueryClientProvider>
         );
     };
@@ -460,6 +470,20 @@ describe('CustomHeader', () => {
             expect(utils.queryByTestId('mobile-menu-panel')).toBeNull();
         });
 
+        it.each(['android', 'ios'])('removes the native %s menu before guest login without retaining a Dialog', async (platform) => {
+            Object.defineProperty(Platform, 'OS', { configurable: true, value: platform });
+            (usePathname as jest.Mock).mockReturnValue('/');
+            const utils = renderHeader();
+            fireEvent.press(utils.getByTestId('mobile-menu-open'));
+            expect(utils.UNSAFE_queryAllByType(ReactNative.Modal)).toEqual([]);
+            mockPush.mockImplementationOnce(() => {
+                expect(utils.queryByTestId('native-menu-overlay')).toBeNull();
+            });
+            fireEvent.press(utils.getByText('Войти'));
+            await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/login?redirect=%2F&intent=menu'));
+            expect(utils.queryByTestId('mobile-menu-panel')).toBeNull();
+        });
+
         it('closes when overlay is pressed', () => {
             (usePathname as jest.Mock).mockReturnValue('/');
             const utils = renderHeader();
@@ -467,8 +491,25 @@ describe('CustomHeader', () => {
             fireEvent.press(utils.getByTestId('mobile-menu-open'));
             expect(utils.getByTestId('mobile-menu-panel')).toBeTruthy();
 
-            fireEvent.press(utils.getByTestId('mobile-menu-overlay'));
+            expect(utils.queryByTestId('mobile-menu-open')).toBeNull();
+            // The actual dialog intentionally hides its backdrop sibling from
+            // screen readers, while the backdrop still receives physical taps.
+            fireEvent.press(utils.getByTestId('mobile-menu-overlay', { includeHiddenElements: true }));
             expect(utils.queryByTestId('mobile-menu-panel')).toBeNull();
+            expect(utils.getByTestId('native-menu-background').props.pointerEvents).toBe('box-none');
+            expect(utils.getByTestId('mobile-menu-open')).toBeTruthy();
+        });
+
+        it('cancels queued native navigation if the header owner unmounts before host removal', () => {
+            (usePathname as jest.Mock).mockReturnValue('/');
+            const utils = renderHeader();
+            fireEvent.press(utils.getByTestId('mobile-menu-open'));
+            const login = utils.getByText('Войти');
+            act(() => {
+                fireEvent.press(login);
+                utils.unmount();
+            });
+            expect(mockPush).not.toHaveBeenCalled();
         });
 
         it('shows navigation and documents sections in mobile modal', () => {

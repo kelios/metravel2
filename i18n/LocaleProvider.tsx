@@ -50,7 +50,6 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     DEFAULT_LOCALE_PREFERENCE,
   )
   const [isHydrated, setIsHydrated] = useState(false)
-  const [legacyRenderRevision, setLegacyRenderRevision] = useState(0)
   // #2239: дерево приложения монтируется, когда сохранённая локаль уже
   // применена. Раньше оно монтировалось на системном языке, а смена языка из
   // AsyncStorage перемонтировала его ключом — экраны слали стартовые запросы
@@ -95,9 +94,6 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       const nextLocale = normalizeActiveLocale(language)
       setLocaleState(nextLocale)
       syncDocumentLocale(nextLocale)
-      // Existing non-hook call sites are remounted during the migration. New code
-      // should use useTranslation(), which updates without a subtree remount.
-      setLegacyRenderRevision((revision) => revision + 1)
     }
 
     i18n.on('languageChanged', handleLanguageChanged)
@@ -139,9 +135,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   return (
     <I18nextProvider i18n={i18n}>
       <LocaleContext.Provider value={value}>
-        {isBootReady ? (
-          <React.Fragment key={legacyRenderRevision}>{children}</React.Fragment>
-        ) : null}
+        {isBootReady ? children : null}
       </LocaleContext.Provider>
     </I18nextProvider>
   )

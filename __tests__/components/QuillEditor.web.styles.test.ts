@@ -94,3 +94,70 @@ describe('QuillEditor.web styles', () => {
     expect(root.querySelector('img[src="/described.jpg"]')?.getAttribute('alt')).toBe('Авторское описание')
   })
 })
+
+it('updates only generated fallback alt, preserving authored and subsequently edited alt text', async () => {
+  const i18n = (await import('@/i18n/instance')).default
+  const root = document.createElement('div')
+  root.innerHTML = '<img src="/automatic.jpg"><img src="/authored.jpg" alt="Author description">'
+  try {
+    await i18n.changeLanguage('ru')
+    applyQuillAccessibility({ root }, null)
+    await i18n.changeLanguage('en')
+    applyQuillAccessibility({ root }, null)
+    expect(root.querySelector('img[src="/automatic.jpg"]')?.getAttribute('alt')).toBe('Image')
+    expect(root.querySelector('img[src="/authored.jpg"]')?.getAttribute('alt')).toBe('Author description')
+    root.querySelector('img[src="/automatic.jpg"]')?.setAttribute('alt', 'My description')
+    await i18n.changeLanguage('pl')
+    applyQuillAccessibility({ root }, null)
+    expect(root.querySelector('img[src="/automatic.jpg"]')?.getAttribute('alt')).toBe('My description')
+  } finally { await i18n.changeLanguage('ru') }
+})
+
+it('retains Quill instance, unsaved content and focus when localized placeholder/accessibility changes', async () => {
+  const React = await import('react')
+  const { createRoot } = await import('react-dom/client')
+  const { default: QuillEditor } = await import('@/components/article/QuillEditor.web')
+  const i18n = (await import('@/i18n/instance')).default
+  const { translate } = await import('@/i18n')
+  const previousQuill = (window as any).Quill
+  const host = document.createElement('div')
+  document.body.appendChild(host)
+  const reactRoot = createRoot(host)
+  const onChange = jest.fn()
+  let editor: any
+  const constructor = jest.fn((container: HTMLElement) => {
+    const root = document.createElement('div')
+    root.tabIndex = 0
+    container.appendChild(root)
+    editor = { root, on: jest.fn(), off: jest.fn(), getModule: jest.fn(), getSelection: jest.fn(() => ({ index: 2, length: 0 })), setSelection: jest.fn(),
+      clipboard: { dangerouslyPasteHTML: jest.fn((html: string) => { root.innerHTML = html }) } }
+    return editor
+  })
+  ;(window as any).Quill = constructor
+  const renderEditor = () => React.createElement(QuillEditor, {
+    value: '<p>initial</p><img src="/automatic.jpg">', onChange,
+    placeholder: translate('shared:components.article.ArticleEditor.vvedite_opisanie_5aa2e118'),
+  })
+  try {
+    await React.act(async () => { await i18n.changeLanguage('ru'); reactRoot.render(renderEditor()); await Promise.resolve() })
+    expect(constructor).toHaveBeenCalledTimes(1)
+    const instance = editor
+    editor.root.innerHTML += '<p>unsaved draft</p>'
+    editor.root.focus()
+    const focused = document.activeElement
+    for (const locale of ['en', 'pl', 'ru'] as const) {
+      await React.act(async () => { await i18n.changeLanguage(locale); reactRoot.render(renderEditor()) })
+      expect(editor).toBe(instance)
+      expect(constructor).toHaveBeenCalledTimes(1)
+      expect(editor.root.innerHTML).toContain('unsaved draft')
+      expect(editor.root.getAttribute('data-placeholder')).toBe(translate('shared:components.article.ArticleEditor.vvedite_opisanie_5aa2e118'))
+      expect(document.activeElement).toBe(focused)
+      expect(editor.off).not.toHaveBeenCalled()
+      expect(onChange).not.toHaveBeenCalled()
+    }
+  } finally {
+    await React.act(async () => { reactRoot.unmount(); await i18n.changeLanguage('ru') })
+    host.remove()
+    ;(window as any).Quill = previousQuill
+  }
+})

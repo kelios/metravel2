@@ -13,5 +13,13 @@
 ## 3. Review and integration
 
 - [x] 3.1 Independently review-and-fix the complete updated workflow diff, run its narrow tests/static checks and refresh code-review-gate.
-- [ ] 3.2 Verify strict specification validation and audit:prompts; commit/push only reviewed task-owned paths through the normal hook using the existing owner pipeline authorization.
-- [ ] 3.3 Record successful actual commit integration and outstanding acceptance accurately. This tooling change adds no browser/device gate; native theme runtime remains in its separate change.
+- [x] 3.2 Verify strict specification validation and audit:prompts; commit/push only reviewed task-owned paths through the normal hook using the existing owner pipeline authorization.
+- [x] 3.3 Record successful actual commit integration and outstanding acceptance accurately. This tooling change adds no browser/device gate; native theme runtime remains in its separate change.
+
+Integration evidence: reviewed commit `0e2520762cf3852fb33225703387f7004ee6a27c`
+passed the normal staged-scope pre-commit and code-level pre-push checks and was
+pushed to `main`. All 44 explicitly staged task paths were included; unrelated
+working-tree changes were excluded. The nine real-Git hook fixtures, both strict
+change validations and `audit:prompts` passed. Logs are retained in ignored
+`.codex-temp/native-seasonal-themes/{commit,push,precommit-tests}.log`. Native
+runtime acceptance remains recorded separately in `add-native-seasonal-themes`.

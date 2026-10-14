@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { ThemeContext, getThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
+import { useLocaleRevision } from '@/i18n/useLocaleRevision'
 
 
 interface Props {
@@ -50,7 +51,7 @@ function ErrorActionButton({
   )
 }
 
-export default class ErrorBoundary extends Component<Props, State> {
+class ErrorBoundaryInstance extends Component<Props & { localeRevision?: string }, State> {
   static contextType = ThemeContext;
   override context: React.ContextType<typeof ThemeContext> | null = null;
   private _leafletAutoRetryCount = 0;
@@ -217,3 +218,10 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     color: colors.text,
   },
 });
+
+// Prop updates preserve the error/retry state and ThemeContext of this instance.
+const ErrorBoundary = React.forwardRef<ErrorBoundaryInstance, Props>(function ErrorBoundary(props, ref) {
+  const localeRevision = useLocaleRevision();
+  return <ErrorBoundaryInstance {...props} ref={ref} localeRevision={localeRevision} />;
+});
+export default ErrorBoundary;

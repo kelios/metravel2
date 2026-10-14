@@ -3,6 +3,7 @@ import Feather from '@expo/vector-icons/Feather';
 
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { translate as i18nT } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider'
 import { isChainNoiseSegment, splitGeocodeChain } from '@/utils/geocodeHelpers';
 
 
@@ -20,6 +21,7 @@ export type DailyForecast = {
 };
 
 export type WeatherWidgetStatus = 'idle' | 'loading' | 'success' | 'error';
+type RawDailyForecast = Omit<DailyForecast, 'condition'> & { weatherCode: number };
 
 export function useWeatherWidgetModel({
     points,
@@ -30,7 +32,8 @@ export function useWeatherWidgetModel({
     countryName?: string;
     onSettled?: () => void;
 }) {
-    const [forecast, setForecast] = useState<DailyForecast[]>([]);
+    const { t } = useTranslation();
+    const [forecast, setForecast] = useState<RawDailyForecast[]>([]);
     const [status, setStatus] = useState<WeatherWidgetStatus>('idle');
     const settledRef = useRef(false);
 
@@ -69,7 +72,7 @@ export function useWeatherWidgetModel({
         settledRef.current = false;
         setForecast([]);
         setStatus(primaryCoord ? 'loading' : 'idle');
-    }, [locationLabel, primaryCoord]);
+    }, [primaryCoord]);
 
     useEffect(() => {
         if (!primaryCoord) {
@@ -107,11 +110,11 @@ export function useWeatherWidgetModel({
             const tempMax = data?.daily?.temperature_2m_max ?? [];
             const tempMin = data?.daily?.temperature_2m_min ?? [];
             const codes = data?.daily?.weather_code ?? [];
-            const forecastData: DailyForecast[] = dates.slice(0, 3).map((date: string, i: number) => ({
+            const forecastData: RawDailyForecast[] = dates.slice(0, 3).map((date: string, i: number) => ({
               date,
               temperatureMin: tempMin[i],
               temperatureMax: tempMax[i],
-              condition: getWeatherDescription(codes[i]),
+              weatherCode: codes[i],
               icon: iconFromCode(codes[i]),
             }));
 
@@ -133,8 +136,13 @@ export function useWeatherWidgetModel({
         };
     }, [primaryCoord, settle]);
 
+    const localizedForecast = useMemo(() => forecast.map(({ weatherCode, ...day }) => ({
+        ...day,
+        condition: t(WEATHER_DESCRIPTION_KEYS[weatherCode as keyof typeof WEATHER_DESCRIPTION_KEYS] ?? 'homeStatic:weather.unknown'),
+    })), [forecast, t]);
+
     return {
-        forecast,
+        forecast: localizedForecast,
         locationLabel,
         status,
     };
@@ -170,11 +178,6 @@ const WEATHER_DESCRIPTION_KEYS = {
     96: 'homeStatic:weather.thunderstormWithHail',
     99: 'homeStatic:weather.heavyThunderstorm',
 } as const;
-
-function getWeatherDescription(code: number): string {
-    const key = WEATHER_DESCRIPTION_KEYS[code as keyof typeof WEATHER_DESCRIPTION_KEYS];
-    return key ? i18nT(key) : i18nT('homeStatic:weather.unknown');
-}
 
 function iconFromCode(code: number): React.ComponentProps<typeof Feather>['name'] {
     if (code === 0) return 'sun';

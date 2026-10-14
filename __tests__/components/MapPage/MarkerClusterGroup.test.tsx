@@ -2,6 +2,7 @@ import React from 'react'
 import { act, render } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
+import i18n from '@/i18n/instance'
 import MarkerClusterGroup from '@/components/MapPage/Map/MarkerClusterGroup'
 
 const mockCreatePortal = jest.fn(
@@ -613,7 +614,7 @@ describe('MarkerClusterGroup', () => {
       }
     }
 
-    it('labels every cluster icon found by the post-sync `map.eachLayer` sweep with a localized, pluralized name', () => {
+    it('labels existing clusters across locale changes without recreating the map/markers (#2442)', async () => {
       const clusterIcon = makeIcon()
       const fakeCluster = new FakeMarkerCluster(clusterIcon, 5)
       const marker = {} as TestMarker
@@ -656,6 +657,16 @@ describe('MarkerClusterGroup', () => {
 
       expect(map.eachLayer).toHaveBeenCalled()
       expect(clusterIcon.getAttribute('aria-label')).toBe('Кластер: 5 точек')
+      const markerCount = L.marker.mock.calls.length
+      const groupCount = L.markerClusterGroup.mock.calls.length
+      try {
+        await act(async () => { await i18n.changeLanguage('en') })
+        expect(clusterIcon.getAttribute('aria-label')).not.toBe('Кластер: 5 точек')
+        expect(clusterIcon.getAttribute('aria-label')).toContain('5')
+        expect(L.marker).toHaveBeenCalledTimes(markerCount)
+        expect(L.markerClusterGroup).toHaveBeenCalledTimes(groupCount)
+        expect(group.clearLayers).not.toHaveBeenCalled()
+      } finally { await act(async () => { await i18n.changeLanguage('ru') }) }
     })
 
     it('labels a cluster reported later through the map layeradd event, and ignores non-cluster layers', () => {

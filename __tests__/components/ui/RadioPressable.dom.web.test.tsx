@@ -1,9 +1,11 @@
 import type React from 'react';
 import type { Root } from 'react-dom/client';
+import type { ReactTestRenderer } from 'react-test-renderer';
 
 let act: typeof import('react').act;
 let createElement: typeof import('react').createElement;
 let createRoot: typeof import('react-dom/client').createRoot;
+let createTestRenderer: typeof import('react-test-renderer').create;
 let Platform: typeof import('react-native').Platform;
 let Pressable: typeof import('react-native').Pressable;
 let Text: typeof import('react-native').Text;
@@ -22,6 +24,7 @@ beforeAll(() => {
   jest.doMock('@/i18n', () => ({ translate: (key: string) => key }));
   ({ act, createElement } = require('react'));
   ({ createRoot } = require('react-dom/client'));
+  ({ create: createTestRenderer } = require('react-test-renderer'));
   ({ Platform, Pressable, Text } = require('react-native'));
   RadioPressable = require('@/components/ui/RadioPressable').default;
   ThemeOptionGroup = require('@/components/layout/ThemeOptionGroup').default;
@@ -91,20 +94,27 @@ describe('radio activation in real React Native Web DOM', () => {
     expect(onSelect).not.toHaveBeenCalled();
   });
 
-  it.each(['ios', 'android'] as const)('delegates native %s activation to Pressable without a web key handler', platform => {
+  it.each(['ios', 'android'] as const)('delegates native %s activation to Pressable without a web key handler', async platform => {
     const originalPlatform = Platform.OS;
     const onSelect = jest.fn();
+    let tree: ReactTestRenderer | undefined;
     try {
       Platform.OS = platform;
-      const element = RadioPressable({ onSelect, accessibilityState: { checked: true } });
-      expect(element.type).toBe(Pressable);
-      expect(element.props.onKeyDown).toBeUndefined();
-      expect(element.props.accessibilityRole).toBe('radio');
-      expect(element.props.accessibilityState).toEqual({ checked: true });
-      element.props.onPress();
+      await act(async () => {
+        tree = createTestRenderer(createElement(RadioPressable, { onSelect, accessibilityState: { checked: true } }));
+      });
+      const pressable = tree!.root.findByType(Pressable);
+      expect(pressable.props.onKeyDown).toBeUndefined();
+      expect(pressable.props.accessibilityRole).toBe('radio');
+      expect(pressable.props.accessibilityState).toEqual({ checked: true });
+      await act(async () => { pressable.props.onPress(); });
       expect(onSelect).toHaveBeenCalledTimes(1);
     } finally {
-      Platform.OS = originalPlatform;
+      try {
+        await act(async () => { tree?.unmount(); });
+      } finally {
+        Platform.OS = originalPlatform;
+      }
     }
   });
 

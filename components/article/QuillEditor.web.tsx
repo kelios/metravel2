@@ -432,10 +432,12 @@ const QUILL_PICKER_ACCESSIBLE_NAMES: Record<string, string> = {
   'ql-background': 'Background color',
   'ql-align': 'Text alignment',
 }
+const generatedImageAlts = new WeakMap<HTMLImageElement, string>()
 
 export const applyQuillAccessibility = (
   quill: QuillInstance | null,
   toolbar: HTMLElement | null,
+  fallbackImageAlt = i18nT('shared:components.article.articleEditorUiHelpers.izobrazhenie_a7123dea'),
 ): void => {
   toolbar?.querySelectorAll<HTMLElement>('.ql-picker-label').forEach((pickerLabel) => {
     if (pickerLabel.getAttribute('aria-label') || pickerLabel.getAttribute('aria-labelledby')) return
@@ -446,11 +448,13 @@ export const applyQuillAccessibility = (
     if (accessibleName) pickerLabel.setAttribute('aria-label', accessibleName)
   })
 
-  const fallbackImageAlt = i18nT(
-    'shared:components.article.articleEditorUiHelpers.izobrazhenie_a7123dea',
-  )
-  quill?.root?.querySelectorAll?.('img:not([alt])')?.forEach?.((image: HTMLImageElement) => {
+  quill?.root?.querySelectorAll?.('img')?.forEach?.((image: HTMLImageElement) => {
+    // Only untouched fallbacks generated for this node are app-owned. Existing
+    // or subsequently edited alt text remains author/editorial content.
+    const previous = generatedImageAlts.get(image)
+    if (image.hasAttribute('alt') && (previous == null || image.getAttribute('alt') !== previous)) return
     image.setAttribute('alt', fallbackImageAlt)
+    generatedImageAlts.set(image, fallbackImageAlt)
   })
 }
 
@@ -463,6 +467,9 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
   const isApplyingValueRef = useRef(false)
   const onChangeRef = useRef<Props['onChange']>(onChange)
   const initialValueRef = useRef<string>(typeof value === 'string' ? value : '')
+  const placeholderRef = useRef(placeholder)
+  placeholderRef.current = placeholder
+  const fallbackImageAlt = i18nT('shared:components.article.articleEditorUiHelpers.izobrazhenie_a7123dea')
 
   const modules = useMemo(() => props.modules ?? {}, [props.modules])
   const shellStyle = useMemo(() => StyleSheet.flatten(style) ?? {}, [style])
@@ -512,7 +519,7 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
         const quill = new Quill(containerEl, {
           theme: theme ?? 'snow',
           modules,
-          placeholder,
+          placeholder: placeholderRef.current,
         })
 
         quillInstance = quill
@@ -616,7 +623,14 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
         void err
       }
     }
-  }, [modules, placeholder, theme])
+  }, [modules, theme])
+
+  useEffect(() => {
+    const quill = quillRef.current
+    if (!quill?.root) return
+    quill.root.setAttribute('data-placeholder', placeholder ?? '')
+    applyQuillAccessibility(quill, null, fallbackImageAlt)
+  }, [placeholder, fallbackImageAlt])
 
   useEffect(() => {
     const quill = quillRef.current

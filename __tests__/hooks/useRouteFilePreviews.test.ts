@@ -1,6 +1,7 @@
-import { renderHook, waitFor } from '@testing-library/react-native'
+import { renderHook, waitFor, act } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 
+import i18n from '@/i18n/instance'
 import { useRouteFilePreviews } from '@/hooks/useRouteFilePreviews'
 
 jest.mock('@/hooks/useTheme', () => ({
@@ -89,6 +90,33 @@ describe('useRouteFilePreviews', () => {
     expect(useTravelRouteFiles).toHaveBeenCalledWith(528, {
       enabled: true,
     })
+  })
+
+  it('translates completed preview labels without downloading/parsing tracks again', async () => {
+    const theme = jest.requireMock('@/hooks/useTheme').useThemedColors as jest.Mock
+    const colors = theme()
+    theme.mockReturnValue(colors)
+    const sourceLine = [{ coord: '50,19' }, { coord: '50.1,19.1' }]
+    useTravelRouteFiles.mockReturnValue({ data: [{ id: 77, original_name: 'route.gpx', ext: 'gpx' }], isLoading: false, isFetching: false })
+    downloadTravelRouteFileBlob.mockResolvedValue({ text: '<gpx/>' })
+    parseRouteFileGeometry.mockReturnValue({ hasIndependentPoints: false, lines: [sourceLine, sourceLine], points: [] })
+    const { result, rerender } = renderHook(() => useRouteFilePreviews({ travelId: 88, canRenderHeavy: true, shouldRender: true, shouldForceRenderMap: false }))
+    await waitFor(() => expect(result.current.routePreviewItems).toHaveLength(2))
+    const downloads = downloadTravelRouteFileBlob.mock.calls.length
+    const parses = parseRouteFileGeometry.mock.calls.length
+    const initialItems = result.current.routePreviewItems
+    rerender({})
+    expect(result.current.routePreviewItems).toBe(initialItems)
+    try {
+      await act(async () => { await i18n.changeLanguage('en') })
+      expect(result.current.routePreviewItems[0].label).toBe('route.gpx • track 1')
+      expect(result.current.routePreviewItems[1].label).toBe('route.gpx • track 2')
+      const translatedItems = result.current.routePreviewItems
+      rerender({})
+      expect(result.current.routePreviewItems).toBe(translatedItems)
+      expect(downloadTravelRouteFileBlob).toHaveBeenCalledTimes(downloads)
+      expect(parseRouteFileGeometry).toHaveBeenCalledTimes(parses)
+    } finally { await act(async () => { await i18n.changeLanguage('ru') }) }
   })
 
   it('reports loading while route files request is still in flight', () => {

@@ -52,7 +52,7 @@ jest.mock('react-native-paper', () => {
   )
   Menu.Item = () => null
   const Paragraph = ({ children, ...props }: any) => <Text {...props}>{children}</Text>
-  return { Menu, Paragraph }
+  return { Menu, Paragraph, Portal: ({ children }: { children: React.ReactNode }) => children }
 })
 
 import AccountMenu from '@/components/layout/AccountMenu'
@@ -60,6 +60,7 @@ import CustomHeaderMobileMenu from '@/components/layout/CustomHeaderMobileMenu'
 import { AboutIntroCard } from '@/components/about/AboutIntroCard'
 import { getIsHeaderMobile } from '@/components/layout/customHeaderModel'
 import { isNavRouteAvailable, WEB_ONLY_NAV_ROUTES } from '@/constants/platformNavRoutes'
+import { NativeMenuAccessibilityProvider } from '@/components/ui/NativeMenuAccessibilityScope'
 
 const COOKIE_ITEM = 'Настройки cookies'
 const PRIVACY_ITEM = 'Политика конфиденциальности'
@@ -80,19 +81,23 @@ const renderWithClient = (ui: React.ReactElement) =>
 
 const renderMobileMenu = () =>
   render(
-    <CustomHeaderMobileMenu
-      visible
-      onRequestClose={jest.fn()}
-      onOverlayPress={jest.fn()}
-      onNavPress={jest.fn()}
-      onUserAction={jest.fn()}
-      onLogout={jest.fn()}
-      colors={{} as any}
-      styles={{}}
-      activePath="/"
-      isAuthenticated={false}
-      favoritesCount={0}
-    />,
+    <NativeMenuAccessibilityProvider>
+      <CustomHeaderMobileMenu
+        visible
+        onRequestClose={jest.fn()}
+        onOverlayPress={jest.fn()}
+        onNavPress={jest.fn()}
+        onUserAction={jest.fn()}
+        onLogout={jest.fn()}
+        colors={{} as any}
+        styles={{}}
+        activePath="/"
+        isAuthenticated={false}
+        favoritesCount={0}
+        returnFocusRef={React.createRef()}
+        restoreFocusRef={{ current: true }}
+      />
+    </NativeMenuAccessibilityProvider>,
   )
 
 const renderAboutCard = () =>

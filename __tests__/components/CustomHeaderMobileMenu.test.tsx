@@ -4,6 +4,8 @@ import { fireEvent, render } from '@testing-library/react-native'
 import CustomHeaderMobileMenu from '@/components/layout/CustomHeaderMobileMenu'
 import NavigationIcon from '@/components/layout/NavigationIcon'
 import { TASK_BOARD_URL } from '@/components/layout/accountMenuModel'
+import { NativeMenuAccessibilityProvider } from '@/components/ui/NativeMenuAccessibilityScope'
+import type { View } from 'react-native'
 
 jest.mock('@/i18n/LocaleProvider', () => ({
   ...jest.requireActual('@/i18n/LocaleProvider'),
@@ -15,20 +17,24 @@ const colors = { primary: '#primary', textMuted: '#muted', text: '#text' } as an
 const renderMenu = (props: Partial<React.ComponentProps<typeof CustomHeaderMobileMenu>> = {}) => {
   const handlers = { onNavPress: jest.fn(), onUserAction: jest.fn(), onLogout: jest.fn() }
   const utils = render(
-    <CustomHeaderMobileMenu
-      visible
-      onRequestClose={jest.fn()}
-      onOverlayPress={jest.fn()}
-      colors={colors}
-      styles={{}}
-      activePath="/"
-      isAuthenticated
-      userId={7}
-      username="Юля"
-      favoritesCount={0}
-      {...handlers}
-      {...props}
-    />,
+    <NativeMenuAccessibilityProvider>
+      <CustomHeaderMobileMenu
+        visible
+        onRequestClose={jest.fn()}
+        onOverlayPress={jest.fn()}
+        colors={colors}
+        styles={{}}
+        activePath="/"
+        isAuthenticated
+        userId={7}
+        username="Юля"
+        favoritesCount={0}
+        returnFocusRef={React.createRef<View>()}
+        restoreFocusRef={{ current: true }}
+        {...handlers}
+        {...props}
+      />
+    </NativeMenuAccessibilityProvider>,
   )
   return { ...utils, ...handlers }
 }

@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
+import ts from 'typescript'
 
 /**
  * #1148: регрессия на состав eager-бандла.
@@ -404,13 +405,22 @@ const dynamicImportSpecifiers = (rawContent: string): string[] => {
 const RESOLVE_EXTS = ['.web.tsx', '.web.ts', '.web.jsx', '.web.js', '.tsx', '.ts', '.jsx', '.js']
 
 /** Разрешение импорта под web-бандл: `.web.*` выигрывает у платформенно-общего файла. */
-const resolveImport = (specifier: string, fromFile: string): string | null => {
+const resolveImport = (
+  specifier: string,
+  fromFile: string,
+  platform: 'web' | 'ios' | 'android' = 'web',
+): string | null => {
   let base: string
   if (specifier.startsWith('@/')) base = join(ROOT, specifier.slice(2))
   else if (specifier.startsWith('.')) base = resolve(dirname(fromFile), specifier)
   else return null // node_modules — вес вендоров держат проверки выше
-  for (const ext of RESOLVE_EXTS) if (existsSync(base + ext)) return base + ext
-  for (const ext of RESOLVE_EXTS) if (existsSync(join(base, `index${ext}`))) return join(base, `index${ext}`)
+  const extensions = platform === 'web' ? RESOLVE_EXTS : [
+    ...['.tsx', '.ts', '.jsx', '.js'].map((ext) => `.${platform}${ext}`),
+    ...['.tsx', '.ts', '.jsx', '.js'].map((ext) => `.native${ext}`),
+    '.tsx', '.ts', '.jsx', '.js',
+  ]
+  for (const ext of extensions) if (existsSync(base + ext)) return base + ext
+  for (const ext of extensions) if (existsSync(join(base, `index${ext}`))) return join(base, `index${ext}`)
   return existsSync(base) && statSync(base).isFile() ? base : null
 }
 
@@ -584,6 +594,87 @@ const dynamicImportersOf = (
 const webResolvesToItself = (file: string): boolean =>
   resolveImport(`@/${file.replace(/\.(t|j)sx?$/, '')}`, ROOT) === join(ROOT, file)
 
+type ValueImports = { sync: string[]; dynamic: string[] }
+
+/** Runtime edges only: inline type specifiers and import type queries are erased. */
+const valueImports = (file: string, content: string): ValueImports => {
+  const source = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, false,
+    /\.[jt]sx$/.test(file) ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
+  const sync = new Set<string>()
+  const dynamic = new Set<string>()
+  const add = (target: Set<string>, specifier: ts.Node | undefined) => {
+    if (specifier && ts.isStringLiteralLike(specifier)) target.add(specifier.text)
+  }
+  const visit = (node: ts.Node) => {
+    if (ts.isTypeNode(node)) return
+    if (ts.isImportDeclaration(node)) {
+      const clause = node.importClause
+      const bindings = clause?.namedBindings
+      const inlineTypesOnly = bindings && ts.isNamedImports(bindings) &&
+        bindings.elements.length > 0 && bindings.elements.every((element) => element.isTypeOnly)
+      if (!clause?.isTypeOnly && (!inlineTypesOnly || clause?.name)) add(sync, node.moduleSpecifier)
+      return
+    }
+    if (ts.isExportDeclaration(node)) {
+      const clause = node.exportClause
+      const inlineTypesOnly = clause && ts.isNamedExports(clause) &&
+        clause.elements.length > 0 && clause.elements.every((element) => element.isTypeOnly)
+      if (!node.isTypeOnly && !inlineTypesOnly) add(sync, node.moduleSpecifier)
+      return
+    }
+    if (ts.isImportEqualsDeclaration(node)) {
+      if (!node.isTypeOnly && ts.isExternalModuleReference(node.moduleReference))
+        add(sync, node.moduleReference.expression)
+      return
+    }
+    if (ts.isCallExpression(node)) {
+      if (node.expression.kind === ts.SyntaxKind.ImportKeyword) add(dynamic, node.arguments[0])
+      else if (ts.isIdentifier(node.expression) && node.expression.text === 'require') add(sync, node.arguments[0])
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(source)
+  return { sync: [...sync], dynamic: [...dynamic] }
+}
+
+/**
+ * Keep every platform-selected web source as a root, including unused modules.
+ * Follow async edges too: an explicitly imported native file can enter a web
+ * chunk despite its suffix. Neither native suffixes nor shadowed shared files
+ * are excluded once a web value edge reaches them.
+ */
+const webValueGraph = (
+  files: string[] = sourceFiles,
+  read: ReadSource = (file) => readFileSync(file, 'utf8'),
+): Map<string, ValueImports> => {
+  const queue = files.filter((file) => !NATIVE_ONLY_FILE.test(file) && webResolvesToItself(relative(ROOT, file)))
+  const reached = new Set(queue)
+  const graph = new Map<string, ValueImports>()
+  for (let index = 0; index < queue.length; index++) {
+    const file = queue[index]
+    const imports = valueImports(file, read(file))
+    graph.set(file, imports)
+    for (const specifier of [...imports.sync, ...imports.dynamic]) {
+      const target = resolveImport(specifier, file)
+      if (target && SOURCE_EXTS.some((ext) => target.endsWith(ext)) && !reached.has(target)) {
+        reached.add(target)
+        queue.push(target)
+      }
+    }
+  }
+  return graph
+}
+
+const webVendorOffenders = (
+  { pkg, allowedSyncImporters }: { pkg: string; allowedSyncImporters: string[] },
+  graph: Map<string, ValueImports>,
+): string[] => [...graph]
+  .filter(([, imports]) => imports.sync.includes(pkg))
+  .map(([file]) => relative(ROOT, file))
+  .filter((file) => !allowedSyncImporters.includes(file))
+
+const vendorWebGraph = webValueGraph()
+
 describe('состав eager-бандла (#1148)', () => {
   it('обход включает вспомогательные web-исходники и вложенные локали (#2086)', () => {
     // Проверяем результат реального обхода, а не наличие имени в SOURCE_DIRS.
@@ -639,14 +730,109 @@ describe('состав eager-бандла (#1148)', () => {
   it.each(LAZY_ONLY_VENDORS)(
     'вендор $pkg синхронно импортируется только из своего async-чанка ($ticket)',
     ({ pkg, allowedSyncImporters }) => {
-      const offenders = sourceFiles
-        .filter((file) => hasSyncImport(readFileSync(file, 'utf8'), pkg))
-        .map((file) => relative(ROOT, file))
-        .filter((file) => !allowedSyncImporters.includes(file))
+      const offenders = webVendorOffenders({ pkg, allowedSyncImporters }, vendorWebGraph)
 
       expect({ pkg, offenders }).toEqual({ pkg, offenders: [] })
     },
   )
+
+  it('Belkraj parser stays native while the actual widget pair resolves per platform', () => {
+    const widget = '@/components/belkraj/BelkrajWidget'
+    const web = join(ROOT, 'components/belkraj/BelkrajWidget.tsx')
+    const ios = join(ROOT, 'components/belkraj/BelkrajWidget.native.tsx')
+    const android = join(ROOT, 'components/belkraj/BelkrajWidget.android.tsx')
+    const parser = join(ROOT, 'components/belkraj/belkrajNativeData.native.ts')
+    expect(resolveImport(widget, ROOT)).toBe(web)
+    expect(resolveImport(widget, ROOT, 'ios')).toBe(ios)
+    expect(resolveImport(widget, ROOT, 'android')).toBe(android)
+    expect(resolveImport('./belkrajNativeData', android, 'android')).toBe(parser)
+    expect(resolveImport('./belkrajNativeData', web)).toBeNull()
+    expect(vendorWebGraph.has(web)).toBe(true)
+    expect(vendorWebGraph.has(parser)).toBe(false)
+    expect(vendorWebGraph.has(android)).toBe(false)
+    for (const [file, platform] of [[web, 'web'], [ios, 'ios']] as const) {
+      const imports = valueImports(file, readFileSync(file, 'utf8'))
+      expect([...imports.sync, ...imports.dynamic].some((specifier) =>
+        resolveImport(specifier, file, platform) === parser)).toBe(false)
+    }
+    const androidImports = valueImports(android, readFileSync(android, 'utf8'))
+    expect(androidImports.sync.some((specifier) => resolveImport(specifier, android, 'android') === parser)).toBe(true)
+  })
+
+  it.each([
+    "import { parseBelkrajNativeData } from './belkrajNativeData.native'",
+    "import * as parser from '@/components/belkraj/belkrajNativeData.native'",
+    "import './belkrajNativeData.native'",
+    "const parser = require('./belkrajNativeData.native')",
+    "export * from './belkrajNativeData.native'",
+    "export { parseBelkrajNativeData } from '@/components/belkraj/belkrajNativeData.native'",
+    "const load = () => import('./belkrajNativeData.native')",
+    "const load = () => import('@/components/belkraj/belkrajNativeData.native')",
+    // The fixture gives this real intermediate file an explicit native edge.
+    // Web never switches to native resolution merely because it reaches Android.
+    "import AndroidWidget from './BelkrajWidget.android'",
+    "const load = () => import('./BelkrajWidget.android')",
+  ])('web vendor detector catches explicit/transitive native value edges: %s', (content) => {
+    const root = join(ROOT, 'components/belkraj/BelkrajWidget.tsx')
+    const bridge = join(ROOT, 'components/belkraj/BelkrajWidget.android.tsx')
+    const read = (file: string) => {
+      if (file === root) return content
+      const source = readFileSync(file, 'utf8')
+      return file === bridge
+        ? source.replace("from './belkrajNativeData'", "from './belkrajNativeData.native'")
+        : source
+    }
+    const entry = LAZY_ONLY_VENDORS.find(({ pkg }) => pkg === 'htmlparser2')!
+    expect(webVendorOffenders(entry, webValueGraph([root], read))).toEqual([
+      'components/belkraj/belkrajNativeData.native.ts',
+    ])
+  })
+
+  it('an explicitly reached Android file still resolves its bare imports as web', () => {
+    const root = join(ROOT, 'components/belkraj/BelkrajWidget.tsx')
+    const android = join(ROOT, 'components/belkraj/BelkrajWidget.android.tsx')
+    const parser = join(ROOT, 'components/belkraj/belkrajNativeData.native.ts')
+    const read = (file: string) => file === root
+      ? "import AndroidWidget from './BelkrajWidget.android'"
+      : readFileSync(file, 'utf8')
+    const graph = webValueGraph([root], read)
+    expect(graph.has(android)).toBe(true)
+    expect(resolveImport('./belkrajNativeData', android)).toBeNull()
+    expect(graph.has(parser)).toBe(false)
+  })
+
+  it.each([
+    "import type { BelkrajNativeData } from './belkrajNativeData.native'",
+    "import { type BelkrajNativeData } from './belkrajNativeData.native'",
+    "export type { BelkrajNativeData } from './belkrajNativeData.native'",
+    "export { type BelkrajNativeData } from './belkrajNativeData.native'",
+    "type Parser = typeof import('./belkrajNativeData.native')",
+    "// import './belkrajNativeData.native'\nconst label = 'import htmlparser2'",
+  ])('web vendor detector ignores erased native type edges: %s', (content) => {
+    const root = join(ROOT, 'components/belkraj/BelkrajWidget.tsx')
+    const read = (file: string) => file === root ? content : readFileSync(file, 'utf8')
+    const entry = LAZY_ONLY_VENDORS.find(({ pkg }) => pkg === 'htmlparser2')!
+    const graph = webValueGraph([root], read)
+    expect([...graph.keys()]).toEqual([root])
+    expect(webVendorOffenders(entry, graph)).toEqual([])
+  })
+
+  it('vendor AST detector retains value imports mixed with inline types', () => {
+    const entry = { pkg: 'htmlparser2', allowedSyncImporters: [] }
+    const root = join(ROOT, 'components/belkraj/BelkrajWidget.tsx')
+    for (const content of [
+      "import { type ParserOptions, parseDocument } from 'htmlparser2'",
+      "import parser, { type ParserOptions } from 'htmlparser2'",
+      "export { type ParserOptions, parseDocument } from 'htmlparser2'",
+      "import {} from 'htmlparser2'",
+      "export {} from 'htmlparser2'",
+      "import parser = require('htmlparser2')",
+    ]) {
+      expect(webVendorOffenders(entry, webValueGraph([root], () => content))).toEqual([
+        'components/belkraj/BelkrajWidget.tsx',
+      ])
+    }
+  })
 
   it('native map filter sheet stays behind its web platform adapters (#1148)', () => {
     const nativeAdapter = 'components/MapPage/MapMobile/nativeFiltersPanelAdapter.native.tsx'

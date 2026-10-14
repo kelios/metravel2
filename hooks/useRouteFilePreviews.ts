@@ -8,7 +8,7 @@ import { downloadTravelRouteFileBlob } from '@/api/travelRoutes'
 import { buildElevationProfile, parseRouteFileGeometry, sanitizeRoutePreview } from '@/utils/routeFileParser'
 import { isWebAutomation } from '@/utils/isWebAutomation'
 import type { ParsedRoutePreview, TravelRouteFile } from '@/types/travelRoutes'
-import { translate as i18nT } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider'
 
 
 const SUPPORTED_ROUTE_EXTENSIONS = new Set(['gpx', 'kml'])
@@ -18,6 +18,7 @@ export type RoutePreviewItem = {
   preview: ParsedRoutePreview
   color: string
   label: string
+  trackIndex?: number
 }
 
 export type RouteFilePointItem = {
@@ -59,6 +60,7 @@ const areRoutePreviewItemsEqual = (prevItems: RoutePreviewItem[], nextItems: Rou
       prev?.file?.id !== next?.file?.id ||
       prev?.color !== next?.color ||
       prev?.label !== next?.label ||
+      prev?.trackIndex !== next?.trackIndex ||
       !areLinePointsEqual(prev?.preview?.linePoints, next?.preview?.linePoints)
     ) {
       return false
@@ -89,6 +91,7 @@ export function useRouteFilePreviews({
   shouldRender,
   shouldForceRenderMap,
 }: UseRouteFilePreviewsArgs) {
+  const { t } = useTranslation()
   const [routePreviewItems, setRoutePreviewItems] = useState<RoutePreviewItem[]>([])
   const [routeFilePoints, setRouteFilePoints] = useState<RouteFilePointItem[]>([])
   const [isParsingRouteFiles, setIsParsingRouteFiles] = useState(false)
@@ -200,13 +203,8 @@ export function useRouteFilePreviews({
                 file,
                 preview,
                 color: routeColorPalette[(index + previewIndex) % routeColorPalette.length],
-                label:
-                  validPreviews.length > 1
-                    ? i18nT('shared:hooks.useRouteFilePreviews.value1_trek_value2_f84d09eb', {
-                        value1: file.original_name || i18nT('sharedStatic:route.fileFallback'),
-                        value2: previewIndex + 1,
-                      })
-                    : file.original_name || i18nT('sharedStatic:route.fileFallback'),
+                label: file.original_name || '',
+                trackIndex: validPreviews.length > 1 ? previewIndex + 1 : undefined,
               })),
             }
           })
@@ -219,7 +217,7 @@ export function useRouteFilePreviews({
         )
         const readyItems = readyResults
           .flatMap((result) => result.previewItems)
-          .filter((item): item is RoutePreviewItem => Boolean(item))
+          .filter((item) => Boolean(item))
         const readyPoints = readyResults.flatMap((result) => result.pointItems)
 
         setRoutePreviewItems((prev) => (areRoutePreviewItemsEqual(prev, readyItems) ? prev : readyItems))
@@ -247,9 +245,18 @@ export function useRouteFilePreviews({
     setRouteFilePoints([])
   }, [])
 
+  const localizedRoutePreviewItems = useMemo(() => routePreviewItems.map((item) => ({
+      ...item,
+      label: item.trackIndex != null
+        ? t('shared:hooks.useRouteFilePreviews.value1_trek_value2_f84d09eb', {
+          value1: item.file.original_name || t('sharedStatic:route.fileFallback'), value2: item.trackIndex,
+        })
+        : item.file.original_name || t('sharedStatic:route.fileFallback'),
+    })), [routePreviewItems, t])
+
   return {
     routeFilePoints,
-    routePreviewItems,
+    routePreviewItems: localizedRoutePreviewItems,
     resetRoutePreviewItems,
     primaryRoutePreview: routePreviewItems[0]?.preview ?? null,
     hasSupportedRouteFiles: supportedFiles.length > 0,

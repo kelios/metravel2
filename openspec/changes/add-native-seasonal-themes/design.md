@@ -74,3 +74,80 @@ No storage migration. Apply follows the existing owner implementation request; r
 | RU/BE/UK/PL/EN | `npm run test:i18n`, existing option/date labels | Native localized settings/menu/status; longest labels on narrow width |
 
 Backend-dependent runtime probes use the synchronized local backend and owned test account; offline appearance also receives a direct no-network test. Hardware-specific features are not changed, so physical iPhone/TestFlight is not required for source acceptance. Uploaded store versions require their separate release gates.
+
+## Verified testing follow-up (13 October 2026)
+
+The reviewed baseline `0e2520762cf3852fb33225703387f7004ee6a27c` passed the
+five native manual palettes in light/dark, seven guest/authenticated choices,
+saved preferences and RU/BE/UK/PL/EN labels. Testing found two mechanisms that
+must be repaired before final acceptance:
+
+1. `app.json` fixes `userInterfaceStyle` to `light`, and tracked
+   `ios/metravel/Info.plist` fixes `UIUserInterfaceStyle` to `Light`. iPhone's
+   System radio and saved Christmas choice survive restart, but actual OS dark
+   mode still renders the light palette. The earlier broad system-mode verdict
+   was corrected after screenshot/pixel verification. Android's existing
+   DayNight theme follows both actual OS schemes, but Expo's supported Android
+   app-config contract requires SDK-compatible `expo-system-ui`.
+2. `CustomHeaderMobileAccountSection` queues navigation in a passive effect
+   after JS `visible=false`; its conditional menu host can unmount before the
+   separate Android RN Modal window is dismissed. Menu → Login leaves visible
+   but noninteractive input; the independent Profile → Login entry works.
+   `ProfileMenu` uses the same close-and-navigate lifetime pattern. A subsequent
+   Profile menu → Settings → theme selection → Routes sequence produced an
+   actual Android input-dispatch ANR; its precise native cause remains under
+   investigation and must be retested rather than assumed fixed.
+
+The owner's explicit native-theme implementation request covers these necessary
+configuration and interaction repairs. The follow-up extends task ownership to
+the appearance fields in `app.json`/tracked plist, compatible package/yarn/pod
+metadata and focused configuration coverage; and to the two native menu hosts,
+their shared platform overlay, native accessibility scope/provider integration
+and focused navigation/overlay tests. Version, signing and store operations keep
+their existing authorization gates.
+
+Choose `automatic` in both canonical configurations, the supported SDK module
+and plugin, preserving dark splash assets and current status-bar ownership.
+Reject overriding `Appearance` in the hook to imitate OS dark mode. Dependency
+changes require a genuinely rebuilt local native candidate with source/config/
+pod fingerprints; cached native build 11 is only a valid baseline/auth control,
+not a renamed replacement for the changed configuration.
+
+Use the existing native Paper Portal host for a shared menu overlay, retaining
+the existing bodies, safe areas, anchoring, scrolling, Back and ≥44dp targets.
+The narrow native scope hides app underlay from accessibility while an overlay
+is registered; the sibling portal content remains reachable, receives focus,
+and restores it on dismiss/back without restoring focus to an old route after
+navigation. Locale and theme providers already surround the host; transported
+menu leaves receive Auth data/actions through props. Web retains its RNW Modal
+and focus trap. Reject Android `onDismiss`, arbitrary delay and
+`InteractionManager` as proofs of native dismissal: this RN version emits
+`onDismiss` only on iOS. React-owned portal removal eliminates the detached
+native Dialog lifetime instead of patching one navigation timing symptom.
+
+The real Paper host regression also verifies that `PortalConsumer` only requests
+manager removal: native Header/Profile navigation waits for the transported
+content's passive unmount cleanup, not the parent's `visible=false` effect.
+
+The full shared baseline also found a web geometry fixture resolving the native
+decoration despite mocking RNW. Its fixture must resolve the real `.web`
+decoration (CSS owns web art), preserving all 46px/late-child assertions. Do not
+remove decoration or weaken geometry assertions to turn the test green.
+
+After independent review/gate and explicit-path commit/push, recheck actual OS
+light/dark, active/foreground/cold startup and splash/status bar on rebuilt
+Android/iPhone/iPad, and both reproduced navigation sequences with no ghost
+input window or ANR. Preserve complete unchanged-palette baseline evidence and
+record the exact new candidate; run adaptive iPad and remaining web acceptance.
+
+Offline testing also confirmed that `SyncIndicator` positioned its saved-content
+action at the top safe-area inset, overlapping the native header menu button.
+Move that interactive transient banner into the existing native bottom-chrome
+reserve instead of removing its action or shrinking screen content. Extract the
+measured dock/sticky-footer/window-coordinate calculation already used by
+`ToastHost` into one shared hook, preserve safe-area and no-dock modal behavior,
+and add measurement/rotation/stale-callback coverage. Web notification rendering
+is unchanged. Add the hook, Sync/Toast consumers and their focused tests to
+follow-up ownership. Recheck the offline menu and saved-content action on the
+reviewed native candidate; the separately observed Worklets ANR remains an open
+runtime retest, with no asserted source cause or unreviewed vendor workaround.

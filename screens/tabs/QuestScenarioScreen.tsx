@@ -127,11 +127,12 @@ export default function QuestScenarioScreen() {
   const navigation = useNavigation()
   const colors = useThemedColors()
   const { quests } = useQuestsList()
+  const navigationTitle = i18nT('quests:screens.tabs.QuestScenarioScreen.breadcrumb')
 
   // Stack/nav header title — otherwise the raw «scenario» URL segment shows up.
   useEffect(() => {
-    navigation.setOptions({ title: i18nT('quests:screens.tabs.QuestScenarioScreen.breadcrumb') })
-  }, [navigation])
+    navigation.setOptions({ title: navigationTitle })
+  }, [navigation, navigationTitle])
 
   const { width: bpWidth, isMobile } = useBreakpoints()
   const mobileDockPadding = useScrollBottomPadding(spacing.xl)

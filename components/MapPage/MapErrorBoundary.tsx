@@ -5,6 +5,7 @@ import { ThemeContext, getThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
 import Feather from '@expo/vector-icons/Feather';
 import { translate as i18nT } from '@/i18n'
+import { useLocaleRevision } from '@/i18n/useLocaleRevision'
 
 
 interface Props {
@@ -18,7 +19,7 @@ interface State {
   error: Error | null;
 }
 
-class MapErrorBoundary extends Component<Props, State> {
+class MapErrorBoundaryInstance extends Component<Props & { localeRevision?: string }, State> {
   static contextType = ThemeContext;
   // Вместо declare context используем приведение типа при обращении к this.context
 
@@ -196,4 +197,11 @@ const createStyles = (colors: ReturnType<typeof getThemedColors>) => StyleSheet.
   },
 });
 
+
+
+// Prop updates preserve the error/retry state and ThemeContext of this instance.
+const MapErrorBoundary = React.forwardRef<MapErrorBoundaryInstance, Props>(function MapErrorBoundary(props, ref) {
+  const localeRevision = useLocaleRevision();
+  return <MapErrorBoundaryInstance {...props} ref={ref} localeRevision={localeRevision} />;
+});
 export default MapErrorBoundary;

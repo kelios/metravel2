@@ -8,7 +8,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "metravel",
     "newArchEnabled": true,
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "assetBundlePatterns": [
       "assets/images/*",
       "assets/fonts/*",
@@ -81,6 +81,7 @@
       "favicon": "./assets/icons/logo_yellow_60x60.png"
     },
     "plugins": [
+      "expo-system-ui",
       [
         "expo-router",
         {

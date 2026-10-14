@@ -2,7 +2,7 @@
 // Поиск места по сайту (каталог мест + путешествия MeTravel) для формы
 // добавления точки маршрута. Вынесено из RouteBuilder.tsx (#1825) дословно:
 // тот же порог длины запроса, тот же AbortController и те же статусы.
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { PLACES_SEARCH_DEBOUNCE_MS } from '@/screens/tabs/PlacesScreen.helpers';
@@ -22,6 +22,7 @@ import {
   travelCoordinates,
 } from '@/components/trips/planning/routeBuilderPoint';
 import { translate as i18nT } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider'
 
 const isBlankQuery = (query: string) => !query.trim();
 
@@ -32,6 +33,7 @@ export function useRouteSiteSearch({
   isAddPointOpen: boolean;
   newType: RoutePointType;
 }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const selectionToken = useRef(0);
   const [siteQuery, setSiteQuery] = useState('');
@@ -84,7 +86,7 @@ export function useRouteSiteSearch({
           kind: 'travel',
           id: travel.id,
           title: travel.name,
-          subtitle: compactText([i18nT('trips:components.trips.planning.RouteBuilder.puteshestvie_7cbf3a43'), travel.countryName]),
+          subtitle: compactText([travel.countryName]),
           description: travel.description || null,
           coordinates: travelCoordinates(travel),
           imageUrl: travel.travel_image_thumb_url || travel.travel_image_thumb_small_url || null,
@@ -146,10 +148,14 @@ export function useRouteSiteSearch({
     onResolved({ ...option, coordinates });
   }, [queryClient]);
 
+  const localizedSiteOptions = useMemo(() => siteOptions.map((option) => option.kind === 'travel' ? {
+      ...option, subtitle: compactText([t('trips:components.trips.planning.RouteBuilder.puteshestvie_7cbf3a43'), option.subtitle]),
+    } : option), [siteOptions, t]);
+
   return {
     siteQuery,
     setSiteQuery,
-    siteOptions,
+    siteOptions: localizedSiteOptions,
     siteSearchStatus: detailLoadingToken !== null ? 'loading' as const : siteSearchStatus,
     resetSiteSearch,
     resolveSiteOption,

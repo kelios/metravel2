@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Text, StyleSheet, Platform, ActivityIndicator, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNativeBottomOverlayInset } from '@/components/layout/useNativeBottomOverlayInset';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
@@ -25,12 +25,12 @@ export function SyncIndicator() {
 
 function SyncIndicatorNative() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const { layerRef, measureLayer, reserve } = useNativeBottomOverlayInset();
   const colors = useThemedColors();
   const { isConnected } = useNetworkStatus();
   const [visible, setVisible] = useState(false);
   const wasOfflineRef = useRef(false);
-  const translateY = useSharedValue(-60);
+  const translateY = useSharedValue(60);
 
   useEffect((): (() => void) | void => {
     if (!isConnected) {
@@ -47,7 +47,7 @@ function SyncIndicatorNative() {
 
       let settleTimer: ReturnType<typeof setTimeout> | null = null;
       const hideTimer = setTimeout(() => {
-        translateY.value = withTiming(-60, { duration: 300 });
+        translateY.value = withTiming(60, { duration: 300 });
         settleTimer = setTimeout(() => setVisible(false), 350);
       }, 3000);
 
@@ -67,12 +67,20 @@ function SyncIndicatorNative() {
   if (!visible) return null;
 
   return (
+    <View
+      ref={layerRef}
+      collapsable={false}
+      onLayout={measureLayer}
+      pointerEvents="box-none"
+      style={styles.layer}
+      testID="sync-indicator-layer"
+    >
     <Animated.View
       pointerEvents="box-none"
       style={[
         styles.container,
         animatedStyle,
-        { backgroundColor: colors.info, top: insets.top },
+        { backgroundColor: colors.info, bottom: reserve + DESIGN_TOKENS.spacing.xs },
       ]}
       accessibilityRole="alert"
       accessibilityLabel={isConnected
@@ -106,18 +114,22 @@ function SyncIndicatorNative() {
         ) : null}
       </View>
     </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  layer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: DESIGN_TOKENS.zIndex.overlay,
+    elevation: DESIGN_TOKENS.zIndex.overlay,
+  },
   container: {
     position: 'absolute',
-    top: 0,
     left: 0,
     right: 0,
     paddingVertical: DESIGN_TOKENS.spacing.xs,
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    zIndex: 9998, // Чуть ниже NetworkStatus (9999)
   },
   content: {
     flexDirection: 'row',

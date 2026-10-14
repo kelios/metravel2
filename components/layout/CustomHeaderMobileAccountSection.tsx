@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
@@ -38,6 +38,16 @@ const useCustomHeaderMobileMenuController = ({ logout }: { logout: () => Promise
   const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
   const mobileMenuOpenedAtRef = useRef(0);
   const pendingMenuActionRef = useRef<null | (() => void | Promise<void>)>(null);
+  const restoreFocusRef = useRef(true);
+  const ownerMountedRef = useRef(false);
+
+  useLayoutEffect(() => {
+    ownerMountedRef.current = true;
+    return () => {
+      ownerMountedRef.current = false;
+      pendingMenuActionRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     if (Platform.OS !== 'web' || !mobileMenuVisible) return;
@@ -52,15 +62,15 @@ const useCustomHeaderMobileMenuController = ({ logout }: { logout: () => Promise
     return () => window.removeEventListener('keydown', handleEscape);
   }, [mobileMenuVisible]);
 
-  useEffect(() => {
-    if (mobileMenuVisible) return;
-
+  const handleMenuClosed = useCallback(() => {
     const pendingAction = pendingMenuActionRef.current;
-    if (!pendingAction) return;
-
     pendingMenuActionRef.current = null;
-    void pendingAction();
-  }, [mobileMenuVisible]);
+    if (ownerMountedRef.current && pendingAction) void pendingAction();
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS === 'web' && !mobileMenuVisible) handleMenuClosed();
+  }, [handleMenuClosed, mobileMenuVisible]);
 
   const closeMenu = useCallback(() => {
     pendingMenuActionRef.current = null;
@@ -75,6 +85,7 @@ const useCustomHeaderMobileMenuController = ({ logout }: { logout: () => Promise
   }, []);
 
   const openMobileMenu = useCallback(() => {
+    restoreFocusRef.current = true;
     pendingMenuActionRef.current = null;
     mobileMenuOpenedAtRef.current = Date.now();
     setMobileMenuVisible(true);
@@ -82,16 +93,16 @@ const useCustomHeaderMobileMenuController = ({ logout }: { logout: () => Promise
 
   const runAfterMenuClose = useCallback(
     (action: () => void | Promise<void>) => {
+      if (!ownerMountedRef.current) return;
       if (!mobileMenuVisible) {
         void action();
         return;
       }
 
-      // On Android a React Native Modal owns a separate full-screen window.
-      // Navigating first can leave the previous header's invisible window alive
-      // above the destination route, where it intercepts every touch. Commit the
-      // closed state first; the effect above runs the action after the Modal is gone.
+      // Remove the menu overlay before routing; navigation must not restore
+      // accessibility focus to the previous screen's menu trigger.
       if (pendingMenuActionRef.current) return;
+      restoreFocusRef.current = false;
       pendingMenuActionRef.current = action;
       setMobileMenuVisible(false);
     },
@@ -138,8 +149,10 @@ const useCustomHeaderMobileMenuController = ({ logout }: { logout: () => Promise
     handleLogout,
     handleNavPress,
     handleUserAction,
+    handleMenuClosed,
     mobileMenuVisible,
     openMobileMenu,
+    restoreFocusRef,
   };
 };
 
@@ -162,9 +175,12 @@ export default function CustomHeaderMobileAccountSection({
     handleLogout,
     handleNavPress,
     handleUserAction,
+    handleMenuClosed,
     mobileMenuVisible,
     openMobileMenu,
+    restoreFocusRef,
   } = useCustomHeaderMobileMenuController({ logout });
+  const menuTriggerRef = useRef<View>(null);
   const { count: unreadCount } = useDeferredUnreadCount(
     isAuthenticated && mobileMenuVisible,
     mobileMenuVisible
@@ -173,7 +189,10 @@ export default function CustomHeaderMobileAccountSection({
   const menuProps = useMemo(
     () => ({
       visible: mobileMenuVisible,
+      returnFocusRef: menuTriggerRef,
+      restoreFocusRef,
       onRequestClose: closeMenu,
+      onClosed: handleMenuClosed,
       onOverlayPress: closeMenuSafely,
       onNavPress: handleNavPress,
       onUserAction: handleUserAction,
@@ -197,9 +216,11 @@ export default function CustomHeaderMobileAccountSection({
       handleLogout,
       handleNavPress,
       handleUserAction,
+      handleMenuClosed,
       isAuthenticated,
       isSuperuser,
       mobileMenuVisible,
+      restoreFocusRef,
       styles,
       unreadCount,
       userId,
@@ -235,6 +256,7 @@ export default function CustomHeaderMobileAccountSection({
       )}
 
       <Pressable
+        ref={menuTriggerRef}
         onPress={openMobileMenu}
         style={[styles.mobileMenuButton, globalFocusStyles.focusable]}
         accessibilityRole="button"
@@ -248,21 +270,10 @@ export default function CustomHeaderMobileAccountSection({
 
       {mobileMenuVisible && (
         isHeaderMobileMenuTestEnv ? (
-          <>
-            <Pressable
-              testID="mobile-menu-overlay"
-              accessibilityRole="button"
-              accessibilityLabel={i18nT('navigation:components.layout.CustomHeaderMobileAccountSection.zakryt_menyu_b46b8503')}
-              onPress={closeMenuSafely}
-            >
-              <View />
-            </Pressable>
-
-            <CustomHeaderMobileMenuComp
-              {...menuProps}
-              themeToggleNode={null}
-            />
-          </>
+          <CustomHeaderMobileMenuComp
+            {...menuProps}
+            themeToggleNode={null}
+          />
         ) : (
           <Suspense fallback={null}>
             <CustomHeaderMobileMenuComp

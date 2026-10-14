@@ -1,6 +1,8 @@
 import { act, render, waitFor } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 import WeatherWidget from '@/components/home/WeatherWidget'
+import i18n from '@/i18n/instance'
+import { translate } from '@/i18n'
 
 describe('WeatherWidget', () => {
   const originalPlatform = Platform.OS
@@ -12,10 +14,11 @@ describe('WeatherWidget', () => {
     global.fetch = jest.fn()
   })
 
-  afterEach(() => {
+  afterEach(async () => {
     ;(Platform as any).OS = originalPlatform
     global.fetch = originalFetch
     jest.clearAllMocks()
+    await act(async () => { await i18n.changeLanguage('ru') })
   })
 
   it('renders native fallback instead of blank content while loading', () => {
@@ -62,6 +65,23 @@ describe('WeatherWidget', () => {
     await waitFor(() => expect(getByText('Ясно')).toBeTruthy())
     expect(getByText(/Гроза/)).toBeTruthy()
     expect(queryByText(/tooltip/i)).toBeNull()
+  })
+
+  it('keeps forecast for a fallback address and updates weather labels without a request or settle replay', async () => {
+    const fetchMock = global.fetch as jest.Mock
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ daily: {
+      time: ['2026-10-13'], temperature_2m_max: [15], temperature_2m_min: [5], weather_code: [0],
+    } }) })
+    const onSettled = jest.fn()
+    const { getByText, queryByText } = render(<WeatherWidget points={[{ coord: '53.9, 27.56' }]} onSettled={onSettled} />)
+    await waitFor(() => expect(getByText('Ясно')).toBeTruthy())
+    for (const locale of ['en', 'pl', 'ru'] as const) {
+      await act(async () => { await i18n.changeLanguage(locale) })
+      expect(getByText(translate('homeStatic:weather.clear'))).toBeTruthy()
+      expect(queryByText(translate('home:components.home.WeatherWidget.zagruzhaem_prognoz_58fcfd93'))).toBeNull()
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(onSettled).toHaveBeenCalledTimes(1)
+    }
   })
 
   it('calls onSettled for invalid coords and again after a successful reload with new coords', async () => {
