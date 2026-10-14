@@ -28,6 +28,7 @@ const getDefaultDescriptionFallback = (): string =>
   i18nT('travel:utils.instagramPublish.defaultDescriptionFallback');
 export const INSTAGRAM_CAPTION_MAX_LENGTH = 2200;
 export const INSTAGRAM_HASHTAG_MAX_COUNT = 30;
+export const INSTAGRAM_IMAGE_MAX_COUNT = 10;
 
 const STOP_WORDS = new Set([
   'и', 'в', 'во', 'на', 'по', 'из', 'от', 'до', 'для', 'под', 'над', 'при', 'к', 'ко', 'с', 'со',
@@ -133,6 +134,9 @@ const buildCountryHashtagToken = (value: string): string => {
 };
 
 const unique = <T,>(values: T[]): T[] => Array.from(new Set(values));
+
+export const getInstagramSourceImageUrls = (gallery: TravelFormData['gallery']): string[] =>
+  unique(Array.isArray(gallery) ? gallery.map(getGalleryUrl).filter(Boolean) : []);
 
 const normalizeLabelSpacing = (value: string): string => value.replace(/\s{2,}/g, ' ').trim();
 
@@ -272,8 +276,7 @@ export const buildInstagramPublicationDraft = ({
   formData: TravelFormData;
   countries?: CountryOption[];
 }): InstagramPublicationDraft => {
-  const galleryUrls = Array.isArray(formData.gallery) ? formData.gallery.map(getGalleryUrl).filter(Boolean) : [];
-  const imageUrls = unique(galleryUrls).slice(0, 10);
+  const imageUrls = getInstagramSourceImageUrls(formData.gallery).slice(0, INSTAGRAM_IMAGE_MAX_COUNT);
 
   const countryLabels = unique(
     (Array.isArray(formData.countries) ? formData.countries : [])

@@ -3,6 +3,7 @@ import {
   buildInstagramPublicationDraft,
   clampInstagramCaption,
   getInstagramAccountOptions,
+  getInstagramSourceImageUrls,
   INSTAGRAM_CAPTION_MAX_LENGTH,
   stripHtmlToInstagramCaption,
   parseInstagramHashtags,
@@ -93,6 +94,18 @@ describe('instagramPublish utils', () => {
     expect(draft.imageUrls).toHaveLength(10);
     expect(draft.imageUrls[0]).toBe('https://example.com/gallery-1.jpg');
     expect(draft.imageUrls[9]).toBe('https://example.com/gallery-10.jpg');
+  });
+
+  it('keeps the full canonical source gallery for draft reconciliation', () => {
+    const urls = Array.from({ length: 12 }, (_, index) => `https://example.com/${index}.jpg`);
+    expect(getInstagramSourceImageUrls([
+      ...urls.map((url, id) => ({ id, url })),
+      ` ${urls[0]} `,
+      'javascript:invalid',
+      '',
+      '/relative.jpg',
+    ])).toEqual([...urls, '/relative.jpg']);
+    expect(getInstagramSourceImageUrls(undefined)).toEqual([]);
   });
 
   it('drops junk address tags and keeps only human-readable poi tags', () => {
