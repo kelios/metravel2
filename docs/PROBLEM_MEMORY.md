@@ -1285,6 +1285,15 @@ guard, падающий в CI на попытке обойти этот конт
   монтирование экрана только на не русской локали — `reuse #2239`, а не правка
   экрана; ожидание готовности локали в отдельном потребителе повторяет `#1975`.
 - **Последняя проверка:** 2026-10-06; `#2239` в работе, jest-контроли выше.
+- **Продолжение #2442, 14.10.2026:** прежнее перемонтирование при явной
+  смене языка сбрасывало выбранный category ID6 и незаписанные данные формы.
+  Исправление `d5a6f9e11`: web меняет ключ BootLocaleBoundary только до первого
+  коммита дерева, native сохраняет identity детей. `useLocaleRevision` и
+  `babel-reactive-locale-plugin` обновляют переводы и presentation memo без
+  повторного запуска data effects. Постоянные контроли — localeProviderBoot
+  web/native (ID6 и форма), reactiveLocaleTransform (инвентаризация владельцев
+  переводов), localeErrorBoundaryState (ошибка/retry), questScenarioLocaleState
+  (memo и открытая секция). Runtime-приёмка принадлежит #2442.
 
 ### BOARD-001 — task history and duplicate prevention
 
@@ -6711,3 +6720,9 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   cold/HIT и parser-mismatch proxy controls, same-locale dedup, RU→EN races,
   wizard point refresh. Production/API и desktop/mobile/native приёмка
   обязательны после ревью; сами исходники не являются Done.
+- Дополнительный подтверждённый механизм #2442: keyed locale boundary
+  уничтожала state всего дерева при смене языка, даже при правильных API/cache
+  ID. Исправление и постоянные lifecycle-контроли —
+  `I18N-LOCALE-BOOT-REMOUNT-001` выше. Приёмка должна сохранять выбранный ID6
+  и данные открытой формы на пяти локалях без reload, включая прогретый кэш;
+  переведённая подпись сама по себе не подтверждает сохранение выбора.
