@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "appId": "by.metravel.app",
+  "locale": "ru",
+  "limits": { "suiteSeconds": 600, "flowSeconds": 150 },
+  "suites": {
+    "guest-smoke": {
+      "platforms": ["android", "ios-simulator"],
+      "account": "guest",
+      "flows": ["auth-consent-entry.yaml"],
+      "checks": ["guest guard", "login and registration consent hint toggles in both directions"],
+      "completeReviewScenes": []
+    },
+    "quest-regression": {
+      "platforms": ["android"],
+      "account": "guest",
+      "flows": ["quest-reviews.yaml", "quest-intro-map-points.yaml", "quest-offline-points.yaml"],
+      "checks": ["reviews close and reopen", "quest intro point count", "GPX system share"],
+      "completeReviewScenes": []
+    },
+    "recommendations": {
+      "platforms": ["android"],
+      "account": "seeded",
+      "flows": ["recommendation-shelves.yaml"],
+      "checks": ["favorites and history recommendation shelves visible"],
+      "completeReviewScenes": []
+    }
+  }
+}

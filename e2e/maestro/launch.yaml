@@ -1,21 +1,18 @@
-# Общий запуск приложения. На DEV-CLIENT `launchApp` открывает лаунчер Expo (список
-# dev-серверов), а не приложение — поэтому опционально тапаем dev-сервер, а если auto-discovery
-# пустой, открываем dev-client deep-link к adb-reverse `127.0.0.1:8081`. На STANDALONE
-# preview/release-сборке optional-шаги пропускаются, и launchApp сразу открывает приложение.
-# Затем ждём загрузки UI.
+# Common subflow, not an independent suite. Release launches never attempt an
+# Expo URL. DEV_CLIENT=1 explicitly selects the local Metro deep-link on Android
+# with adb reverse configured (or on the iOS simulator). No reset of app data.
 appId: by.metravel.app
 ---
 - launchApp
-- tapOn:
-    text: ".*8081.*"
-    optional: true
-- openLink:
-    link: "exp+metravel://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081"
-    optional: true
+- runFlow:
+    when:
+      true: ${typeof DEV_CLIENT !== 'undefined' && DEV_CLIENT == '1'}
+    commands:
+      - openLink: "exp+metravel://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081"
 - extendedWaitUntil:
     visible:
       text: "Маршруты|Куда поехать|Все квесты"
-    timeout: 90000
+    timeout: 30000
 # Чистая установка показывает онбординг поверх главной: он перехватывает тапы по доку.
 # Пропускаем его, если он есть (accessibilityLabel кнопки «Пропустить»).
 - tapOn:

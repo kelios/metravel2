@@ -12,7 +12,7 @@ export type CliRunResult = {
 export const runNodeCli = (
   args: string[],
   env: Record<string, string> = {},
-  options: { cwd?: string; input?: string } = {},
+  options: { cwd?: string; input?: string; timeoutMs?: number } = {},
 ): CliRunResult => {
   // Legacy CLI regression servers use ephemeral loopback ports. Inject the
   // explicit isolated token fixture through a test-only preload; production
@@ -55,10 +55,10 @@ export const runNodeCli = (
 export const runCli = (
   command: string,
   args: string[],
-  options: { cwd?: string; env?: Record<string, string>; input?: string } = {},
+  options: { cwd?: string; env?: Record<string, string>; input?: string; timeoutMs?: number } = {},
 ): CliRunResult => {
   if (command === process.execPath && !args.includes('--require') && options.env?.METRAVEL_API && /^http:\/\/(?:127\.0\.0\.1|localhost):\d+/.test(options.env.METRAVEL_API)) {
-    return runNodeCli(args, options.env, { cwd: options.cwd, input: options.input });
+    return runNodeCli(args, options.env, { cwd: options.cwd, input: options.input, timeoutMs: options.timeoutMs });
   }
   try {
     const stdout = execFileSync(command, args, {
@@ -67,6 +67,7 @@ export const runCli = (
       env: { ...process.env, ...(options.env ?? {}) },
       stdio: 'pipe',
       input: options.input,
+      timeout: options.timeoutMs,
     });
     return {
       status: 0,
@@ -93,8 +94,10 @@ export const writeTextFile = (filePath: string, content: string) => {
   fs.writeFileSync(filePath, content, 'utf8');
 };
 
-export const makeTempDir = (prefix: string) => {
-  return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+export const makeTempDir = (prefix: string, options: { root?: string } = {}) => {
+  const root = options.root ?? os.tmpdir();
+  fs.mkdirSync(root, { recursive: true });
+  return fs.mkdtempSync(path.join(root, prefix));
 };
 
 export const removeDir = (dirPath: string) => {

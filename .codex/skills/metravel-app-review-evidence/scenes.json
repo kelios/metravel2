@@ -49,6 +49,7 @@
     {
       "id": "ugc-flag-content",
       "required": true,
+      "requiredSegments": ["travel", "comment", "message", "trip-chat", "quest-review", "photo"],
       "name": "Report every user-content type of another author — trip card, comment, direct message, trip chat message, quest review, photo: reason, send, confirmation that the report is reviewed within 24 hours (profile reports are ugc-report)"
     },
     {

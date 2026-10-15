@@ -25,7 +25,22 @@ appId: by.metravel.app
 - tapOn:
     text: "Посмотреть отзывы.*"
 - assertVisible: "Отзывы о квесте"
+- extendedWaitUntil:
+    notVisible:
+      id: "quest-reviews-loading"
+    timeout: 15000
+- assertNotVisible:
+    id: "quest-reviews-error"
 # Закрыть модалку крестиком (testID quest-reviews-close), затем убедиться, что закрылась
 - tapOn:
     id: "quest-reviews-close"
 - assertNotVisible: "Отзывы о квесте"
+# Reopening catches stale native Modal/backdrop state after the first dismissal.
+- tapOn:
+    text: "Посмотреть отзывы.*"
+- assertVisible:
+    id: "quest-reviews-modal"
+- tapOn:
+    id: "quest-reviews-close"
+- assertNotVisible:
+    id: "quest-reviews-modal"

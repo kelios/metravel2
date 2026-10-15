@@ -7,50 +7,56 @@
 # или зеркалированием (см. SKILL.md, раздел «Скриншоты»). simctl здесь не работает вообще.
 
 IOS_QA_BUNDLE="${IOS_QA_BUNDLE:-by.metravel.app}"
-IOS_QA_OUT="${IOS_QA_OUT:-/tmp/ios-device-qa}"
+IOS_QA_OUT="${IOS_QA_OUT:-.codex-temp/ios-device-qa}"
 IOS_QA_PROC="${IOS_QA_PROC:-metravel}"   # имя цели Xcode = имя процесса на устройстве
 mkdir -p "$IOS_QA_OUT"
 
-# Резолв устройства. State в `list devices` НЕ стабилен: до первого туннеля строка
-# показывает `available (paired)`, после — `connected`; отбираем всё, кроме `unavailable`.
-_pick() {
-  xcrun devicectl list devices 2>/dev/null | awk '
-    /unavailable/ { next }
-    { for (i = 1; i <= NF; i++) if ($i ~ /^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-/) { print $i; exit } }'
-}
-
 _dev() {
-  if [ -z "$IOS_QA_DEVICE" ]; then IOS_QA_DEVICE="$(_pick)"; fi
-  if [ -z "$IOS_QA_DEVICE" ]; then
-    echo "нет доступного устройства: подключи iPhone, разблокируй и подтверди Trust (Devices)" >&2
+  if [ -z "${IOS_QA_DEVICE:-}" ]; then
+    echo "нужен явный IOS_QA_DEVICE: выбери цель из Devices и вызови UseDevice <id>" >&2
     return 1
   fi
   printf '%s' "$IOS_QA_DEVICE"
 }
 
-# Вызывать первой: печатает список и кэширует устройство в текущей оболочке
-# (внутри других функций резолв идёт в подоболочке и не сохраняется).
+# Инвентаризация не выбирает первый iPhone/iPad автоматически.
 Devices() {
   xcrun devicectl list devices
-  export IOS_QA_DEVICE="${IOS_QA_DEVICE:-$(_pick)}"
-  echo "device=${IOS_QA_DEVICE:-<не найдено>}"
 }
 
-UseDevice() { export IOS_QA_DEVICE="$1"; echo "device=$IOS_QA_DEVICE"; }
+UseDevice() {
+  [ -n "${1:-}" ] || { echo "UseDevice <id>" >&2; return 1; }
+  export IOS_QA_DEVICE="$1"
+  echo "цель выбрана явно"
+}
+
+# tail не должен превращать отказ devicectl в успешный результат.
+_qa_run() {
+  local output rc
+  if output="$("$@" 2>&1)"; then rc=0; else rc=$?; fi
+  printf '%s\n' "$output" | tail -5
+  return "$rc"
+}
 
 # Достоверная проба блокировки (Xcode 26). Раньше её не было и приходилось
 # запускать UI-тест ради строки "Unlock iPhone" — теперь не нужно.
 # passcodeRequired=true → экран заблокирован, XCUITest и долгий прогон умрут посередине.
 Unlocked() {
   local d; d="$(_dev)" || return 1
-  xcrun devicectl device info lockState --device "$d" 2>/dev/null | grep -E 'passcodeRequired|unlockedSinceBoot'
-  xcrun devicectl device info displays --device "$d" 2>/dev/null | grep -i 'backlight'
+  local state
+  state="$(xcrun devicectl device info lockState --device "$d" 2>/dev/null)" || return 1
+  printf '%s\n' "$state" | grep -E 'passcodeRequired|unlockedSinceBoot'
+  if ! printf '%s\n' "$state" | grep -Eq 'passcodeRequired:[[:space:]]*false([[:space:]]|$)' ||
+     printf '%s\n' "$state" | grep -Eq 'passcodeRequired:[[:space:]]*true([[:space:]]|$)'; then
+    echo "цель заблокирована либо состояние блокировки неизвестно" >&2
+    return 1
+  fi
 }
 
 # Установленная сборка: version + buildNumber. Пустой вывод = приложения на устройстве нет.
 AppInfo() {
   local d; d="$(_dev)" || return 1
-  xcrun devicectl device info apps --device "$d" --bundle-id "$IOS_QA_BUNDLE" 2>/dev/null | tail -4
+  _qa_run xcrun devicectl device info apps --device "$d" --bundle-id "$IOS_QA_BUNDLE"
 }
 
 # Геометрия экрана: bounds в px, pointScale → координаты для тапов считаем в ПУНКТАХ.
@@ -73,15 +79,15 @@ Uninstall() {
 
 Launch() { # Launch  — холодный старт поверх уже запущенного
   local d; d="$(_dev)" || return 1
-  xcrun devicectl device process launch --device "$d" \
-    --terminate-existing --activate "$IOS_QA_BUNDLE" 2>&1 | tail -3
+  _qa_run xcrun devicectl device process launch --device "$d" \
+    --terminate-existing --activate "$IOS_QA_BUNDLE"
 }
 
 # Диплинк и Universal Link. Именно тут проверяется AASA — на симуляторе openurl этого НЕ доказывает.
 Open() { # Open metravel://map | Open https://metravel.by/travels/<slug>
   local d; d="$(_dev)" || return 1
-  xcrun devicectl device process launch --device "$d" \
-    --terminate-existing --activate --payload-url "$1" "$IOS_QA_BUNDLE" 2>&1 | tail -3
+  _qa_run xcrun devicectl device process launch --device "$d" \
+    --terminate-existing --activate --payload-url "$1" "$IOS_QA_BUNDLE"
 }
 
 # Фоновый запуск с потоком stdout/stderr приложения в файл. Без него «крашей нет» —
@@ -98,20 +104,21 @@ Console() { # Console [имя-лога]
 # (`/…/metravel.app/metravel`), поэтому ищем по имени цели, а не по bundle id.
 Pid() {
   local d; d="$(_dev)" || return 1
-  xcrun devicectl device info processes --device "$d" 2>/dev/null \
-    | awk -v n="${IOS_QA_PROC:-metravel}" '$2 ~ ("/" n "\\.app/") {print $1; exit}'
+  local output
+  output="$(xcrun devicectl device info processes --device "$d" 2>/dev/null)" || return $?
+  printf '%s\n' "$output" | awk -v n="${IOS_QA_PROC:-metravel}" '$2 ~ ("/" n "\\.app/") {print $1; exit}'
 }
 
 Kill() {
-  local d p; d="$(_dev)" || return 1; p="$(Pid)"
+  local d p; d="$(_dev)" || return 1; p="$(Pid)" || return $?
   [ -z "$p" ] && { echo "процесс не найден"; return 0; }
-  xcrun devicectl device process terminate --device "$d" --pid "$p" 2>&1 | tail -2
+  _qa_run xcrun devicectl device process terminate --device "$d" --pid "$p"
 }
 
 Orient() { # Orient p|pu|ll|lr   (без аргумента — текущая)
   local d; d="$(_dev)" || return 1
-  [ -z "$1" ] && { xcrun devicectl device orientation get --device "$d" 2>&1 | tail -2; return; }
-  xcrun devicectl device orientation set --device "$d" "$1" 2>&1 | tail -2
+  [ -z "${1:-}" ] && { _qa_run xcrun devicectl device orientation get --device "$d"; return; }
+  _qa_run xcrun devicectl device orientation set --device "$d" "$1"
 }
 
 # Выгрузка файла из контейнера приложения (кэш, база, экспортированный PDF).

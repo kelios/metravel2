@@ -253,6 +253,7 @@ module.exports = [
   {
     files: [
       "scripts/**/*.{js,ts,mjs,cjs}",
+      "tools/ios-device-uitests/run.js",
       ".grok/**/*.{js,mjs,cjs}",
       "*.config.{js,ts,mjs,cjs}",
       ".*rc.{js,cjs,mjs,ts}",

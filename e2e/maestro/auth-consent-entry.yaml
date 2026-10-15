@@ -1,0 +1,35 @@
+# Non-destructive guest baseline. This verifies consent UI state, not successful
+# email/OAuth authentication or the complete App Review eula-before-auth scene.
+appId: by.metravel.app
+---
+- runFlow: launch.yaml
+- tapOn: "Профиль"
+- assertVisible: "Войдите в аккаунт"
+- openLink: "metravel://login"
+- extendedWaitUntil:
+    visible:
+      id: "auth-terms-gate-hint"
+    timeout: 15000
+- assertVisible:
+    id: "auth-terms-gate-checkbox"
+- tapOn:
+    id: "auth-terms-gate-checkbox"
+- assertNotVisible:
+    id: "auth-terms-gate-hint"
+- tapOn:
+    id: "auth-terms-gate-checkbox"
+- assertVisible:
+    id: "auth-terms-gate-hint"
+- openLink: "metravel://registration"
+- extendedWaitUntil:
+    visible:
+      id: "auth-terms-gate-hint"
+    timeout: 15000
+- tapOn:
+    id: "auth-terms-gate-checkbox"
+- assertNotVisible:
+    id: "auth-terms-gate-hint"
+- tapOn:
+    id: "auth-terms-gate-checkbox"
+- assertVisible:
+    id: "auth-terms-gate-hint"

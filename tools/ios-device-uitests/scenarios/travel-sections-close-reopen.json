@@ -1,0 +1,18 @@
+{
+  "id": "travel-sections-close-reopen",
+  "layer": "physical-ios",
+  "purpose": "Focused installed-app regression; does not cover a complete review recording scene.",
+  "preconditions": ["Open a travel detail with the sections trigger visible; use a non-secret screen."],
+  "steps": [
+    { "op": "waitUntil", "id": "travel-sections-trigger", "state": "hittable", "timeout": 10 },
+    { "op": "tapId", "id": "travel-sections-trigger" },
+    { "op": "waitUntil", "id": "travel-sections-close", "state": "hittable", "timeout": 5 },
+    { "op": "tapId", "id": "travel-sections-close" },
+    { "op": "waitUntil", "id": "travel-sections-close", "state": "absent", "timeout": 5 },
+    { "op": "tapId", "id": "travel-sections-trigger" },
+    { "op": "waitUntil", "id": "travel-sections-close", "state": "hittable", "timeout": 5 },
+    { "op": "tapId", "id": "travel-sections-close" },
+    { "op": "waitUntil", "id": "travel-sections-close", "state": "absent", "timeout": 5 },
+    { "op": "assert", "id": "travel-sections-trigger", "state": "hittable" }
+  ]
+}
