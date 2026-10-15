@@ -9,16 +9,18 @@
 import { memo, useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Modal,
   Platform,
   Pressable,
   Share,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
+
+import BottomSheet from '@/components/ui/BottomSheet'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -263,111 +265,71 @@ function ShareBadgeSheet({ visible, onClose, subject, context = 'detail' }: Prop
   }
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={i18nT('common:action.close')}>
-        <Pressable style={styles.sheet} onPress={() => {}}>
-          <View style={styles.header}>
-            <Text style={styles.heading}>{i18nT('achievements:components.achievements.ShareBadgeSheet.podelitsya_dostizheniem_75a70bc0')}</Text>
-            <Pressable
-              style={styles.closeBtn}
-              onPress={onClose}
-              accessibilityRole="button"
-              accessibilityLabel={i18nT('common:action.close')}
-            >
-              <Feather name="x" size={20} color={colors.text} />
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title={i18nT('achievements:components.achievements.ShareBadgeSheet.podelitsya_dostizheniem_75a70bc0')}
+      panelStyle={{ maxHeight: '90%' }}
+      modalContent={<ModalToastHost visible={visible} />}
+    >
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.body}>
+        <ShareCardPreview
+          testID="share-card-preview"
+          subject={{
+            badge: subject.badge,
+            ownerName: subject.ownerName,
+            reason: subject.reason ?? subject.badge.description,
+            dateLabel: subject.dateLabel,
+            isRare,
+          }}
+        />
+
+        {status === 'loading' ? (
+          <View style={styles.statusRow}>
+            <ActivityIndicator color={colors.primaryDark} />
+            <Text style={styles.statusText}>{i18nT('achievements:components.achievements.ShareBadgeSheet.gotovim_kartochku_2d3809e6')}</Text>
+          </View>
+        ) : null}
+
+        {status === 'error' ? (
+          <View style={styles.statusRow}>
+            <Feather name="alert-triangle" size={16} color={colors.warning ?? colors.textMuted} />
+            <Text style={styles.statusText}>{i18nT('achievements:components.achievements.ShareBadgeSheet.ne_udalos_sozdat_kartochku_595af4a6')}</Text>
+            <Pressable onPress={loadCard} accessibilityRole="button" accessibilityLabel={i18nT('achievements:components.achievements.ShareBadgeSheet.povtorit_d49cf974')}>
+              <Text style={[styles.statusText, { color: colors.primaryText, fontWeight: '700' }]}>
+                {i18nT('achievements:components.achievements.ShareBadgeSheet.povtorit_d49cf974')}</Text>
             </Pressable>
           </View>
+        ) : null}
 
-          <ShareCardPreview
-            testID="share-card-preview"
-            subject={{
-              badge: subject.badge,
-              ownerName: subject.ownerName,
-              reason: subject.reason ?? subject.badge.description,
-              dateLabel: subject.dateLabel,
-              isRare,
-            }}
-          />
-
-          {status === 'loading' ? (
-            <View style={styles.statusRow}>
-              <ActivityIndicator color={colors.primaryDark} />
-              <Text style={styles.statusText}>{i18nT('achievements:components.achievements.ShareBadgeSheet.gotovim_kartochku_2d3809e6')}</Text>
-            </View>
-          ) : null}
-
-          {status === 'error' ? (
-            <View style={styles.statusRow}>
-              <Feather name="alert-triangle" size={16} color={colors.warning ?? colors.textMuted} />
-              <Text style={styles.statusText}>{i18nT('achievements:components.achievements.ShareBadgeSheet.ne_udalos_sozdat_kartochku_595af4a6')}</Text>
-              <Pressable onPress={loadCard} accessibilityRole="button" accessibilityLabel={i18nT('achievements:components.achievements.ShareBadgeSheet.povtorit_d49cf974')}>
-                <Text style={[styles.statusText, { color: colors.primaryText, fontWeight: '700' }]}>
-                  {i18nT('achievements:components.achievements.ShareBadgeSheet.povtorit_d49cf974')}</Text>
-              </Pressable>
-            </View>
-          ) : null}
-
-          <View style={styles.channels} pointerEvents={status === 'ready' ? 'auto' : 'none'}>
-            {channels.map((ch) => (
-              <Pressable
-                key={ch.key}
-                onPress={ch.onPress}
-                disabled={status !== 'ready'}
-                style={({ pressed }) => [
-                  styles.channel,
-                  pressed && styles.channelPressed,
-                  status !== 'ready' && styles.channelDisabled,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={ch.label}
-                testID={`share-channel-${ch.key}`}
-              >
-                <Feather name={ch.icon} size={18} color={ch.color} />
-                <Text style={styles.channelText}>{ch.label}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </Pressable>
-      </Pressable>
-      <ModalToastHost visible={visible} />
-    </Modal>
+        <View style={styles.channels} pointerEvents={status === 'ready' ? 'auto' : 'none'}>
+          {channels.map((ch) => (
+            <Pressable
+              key={ch.key}
+              onPress={ch.onPress}
+              disabled={status !== 'ready'}
+              style={({ pressed }) => [
+                styles.channel,
+                pressed && styles.channelPressed,
+                status !== 'ready' && styles.channelDisabled,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={ch.label}
+              testID={`share-channel-${ch.key}`}
+            >
+              <Feather name={ch.icon} size={18} color={ch.color} />
+              <Text style={styles.channelText}>{ch.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </ScrollView>
+    </BottomSheet>
   );
 }
 
 const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
-    backdrop: {
-      flex: 1,
-      backgroundColor: colors.overlay,
-      justifyContent: 'flex-end',
-    },
-    sheet: {
-      backgroundColor: colors.background,
-      borderTopLeftRadius: DESIGN_TOKENS.radii.xl,
-      borderTopRightRadius: DESIGN_TOKENS.radii.xl,
-      paddingTop: DESIGN_TOKENS.spacing.md,
-      paddingBottom: DESIGN_TOKENS.spacing.xxl,
-      paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-      gap: DESIGN_TOKENS.spacing.md,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    heading: {
-      fontSize: DESIGN_TOKENS.typography.sizes.md,
-      fontWeight: '800',
-      color: colors.text,
-    },
-    closeBtn: {
-      width: DESIGN_TOKENS.touchTarget.minWidth,
-      height: DESIGN_TOKENS.touchTarget.minHeight,
-      borderRadius: 999,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.backgroundSecondary,
-    },
+    body: { gap: DESIGN_TOKENS.spacing.md },
     statusRow: {
       flexDirection: 'row',
       alignItems: 'center',

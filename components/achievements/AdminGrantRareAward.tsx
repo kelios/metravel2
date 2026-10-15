@@ -1,7 +1,6 @@
 import { memo, useState } from 'react';
 import {
   ActivityIndicator,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,6 +11,8 @@ import {
   type ViewStyle,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
+
+import BottomSheet from '@/components/ui/BottomSheet'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -93,134 +94,93 @@ function AdminGrantRareAward({ recipientId, recipientName, testID, style }: Prop
         style={style}
       />
 
-      <Modal visible={open} transparent animationType="slide" onRequestClose={close}>
-        <Pressable style={styles.backdrop} onPress={close} accessibilityLabel={i18nT('common:action.close')}>
-          <Pressable style={styles.sheet} onPress={() => {}}>
-            <View style={styles.header}>
-              <Text style={styles.title}>
-                {i18nT('achievements:components.achievements.AdminGrantRareAward.redkaya_nagrada_b6972e49')}{recipientName ? ` · ${recipientName}` : ''}
-              </Text>
-              <Pressable
-                style={styles.closeBtn}
-                onPress={close}
-                accessibilityRole="button"
-                accessibilityLabel={i18nT('common:action.close')}
-              >
-                <Feather name="x" size={20} color={colors.text} />
-              </Pressable>
-            </View>
+      <BottomSheet
+        visible={open}
+        onClose={close}
+        title={`${i18nT('achievements:components.achievements.AdminGrantRareAward.redkaya_nagrada_b6972e49')}${recipientName ? ` · ${recipientName}` : ''}`}
+        panelStyle={{ maxHeight: '85%' }}
+        keyboardAware
+      >
+        {done ? (
+          <View style={styles.successBox}>
+            <Feather name="check-circle" size={40} color={colors.success} />
+            <Text style={styles.successText}>{i18nT('achievements:components.achievements.AdminGrantRareAward.nagrada_vydana_df1ef785')}</Text>
+            <Button
+              variant="primary"
+              label={i18nT('achievements:components.achievements.AdminGrantRareAward.gotovo_811a4b03')}
+              onPress={close}
+            />
+          </View>
+        ) : isLoading || !catalog ? (
+          <View style={styles.loading}>
+            <ActivityIndicator color={colors.primaryDark} />
+          </View>
+        ) : (
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <Text style={styles.label}>{i18nT('achievements:components.achievements.AdminGrantRareAward.kategoriya_c101f0f2')}</Text>
+            {catalog.map((item) => {
+              const selected = item.slug === selectedSlug;
+              return (
+                <Pressable
+                  key={item.slug}
+                  style={[styles.optionRow, selected && styles.optionRowSelected]}
+                  onPress={() => setSelectedSlug(item.slug)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={item.title}
+                >
+                  <View style={styles.optionText}>
+                    <Text style={styles.optionName} numberOfLines={1}>
+                      {item.title}
+                    </Text>
+                    {item.description ? (
+                      <Text style={styles.optionDesc} numberOfLines={2}>
+                        {item.description}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Feather
+                    name={selected ? 'check-circle' : 'circle'}
+                    size={20}
+                    color={selected ? colors.primary : colors.textMuted}
+                  />
+                </Pressable>
+              );
+            })}
 
-            {done ? (
-              <View style={styles.successBox}>
-                <Feather name="check-circle" size={40} color={colors.success} />
-                <Text style={styles.successText}>{i18nT('achievements:components.achievements.AdminGrantRareAward.nagrada_vydana_df1ef785')}</Text>
-                <Button
-                  variant="primary"
-                  label={i18nT('achievements:components.achievements.AdminGrantRareAward.gotovo_811a4b03')}
-                  onPress={close}
-                />
-              </View>
-            ) : isLoading || !catalog ? (
-              <View style={styles.loading}>
-                <ActivityIndicator color={colors.primaryDark} />
-              </View>
-            ) : (
-              <ScrollView showsVerticalScrollIndicator={false}>
-                <Text style={styles.label}>{i18nT('achievements:components.achievements.AdminGrantRareAward.kategoriya_c101f0f2')}</Text>
-                {catalog.map((item) => {
-                  const selected = item.slug === selectedSlug;
-                  return (
-                    <Pressable
-                      key={item.slug}
-                      style={[styles.optionRow, selected && styles.optionRowSelected]}
-                      onPress={() => setSelectedSlug(item.slug)}
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected }}
-                      accessibilityLabel={item.title}
-                    >
-                      <View style={styles.optionText}>
-                        <Text style={styles.optionName} numberOfLines={1}>
-                          {item.title}
-                        </Text>
-                        {item.description ? (
-                          <Text style={styles.optionDesc} numberOfLines={2}>
-                            {item.description}
-                          </Text>
-                        ) : null}
-                      </View>
-                      <Feather
-                        name={selected ? 'check-circle' : 'circle'}
-                        size={20}
-                        color={selected ? colors.primary : colors.textMuted}
-                      />
-                    </Pressable>
-                  );
-                })}
+            <Text style={styles.label}>{i18nT('achievements:components.achievements.AdminGrantRareAward.prichina_c3e41a00')}</Text>
+            <TextInput
+              style={styles.reasonInput}
+              value={reason}
+              onChangeText={setReason}
+              placeholder={i18nT('achievements:components.achievements.AdminGrantRareAward.za_chto_vruchaetsya_nagrada_6cac6411')}
+              placeholderTextColor={colors.textMuted}
+              multiline
+              accessibilityLabel={i18nT('achievements:components.achievements.AdminGrantRareAward.prichina_vydachi_nagrady_0fba630b')}
+            />
 
-                <Text style={styles.label}>{i18nT('achievements:components.achievements.AdminGrantRareAward.prichina_c3e41a00')}</Text>
-                <TextInput
-                  style={styles.reasonInput}
-                  value={reason}
-                  onChangeText={setReason}
-                  placeholder={i18nT('achievements:components.achievements.AdminGrantRareAward.za_chto_vruchaetsya_nagrada_6cac6411')}
-                  placeholderTextColor={colors.textMuted}
-                  multiline
-                  accessibilityLabel={i18nT('achievements:components.achievements.AdminGrantRareAward.prichina_vydachi_nagrady_0fba630b')}
-                />
+            {grant.isError ? (
+              <Text style={styles.errorText}>{errorMessage(grant.error)}</Text>
+            ) : null}
 
-                {grant.isError ? (
-                  <Text style={styles.errorText}>{errorMessage(grant.error)}</Text>
-                ) : null}
-
-                <Button
-                  variant="primary"
-                  label={i18nT('achievements:components.achievements.AdminGrantRareAward.vydat_nagradu_68779ada')}
-                  onPress={submit}
-                  disabled={!canSubmit}
-                  loading={grant.isPending}
-                  style={styles.submitCta}
-                />
-                <View style={styles.footerSpace} />
-              </ScrollView>
-            )}
-          </Pressable>
-        </Pressable>
-      </Modal>
+            <Button
+              variant="primary"
+              label={i18nT('achievements:components.achievements.AdminGrantRareAward.vydat_nagradu_68779ada')}
+              onPress={submit}
+              disabled={!canSubmit}
+              loading={grant.isPending}
+              style={styles.submitCta}
+            />
+            <View style={styles.footerSpace} />
+          </ScrollView>
+        )}
+      </BottomSheet>
     </>
   );
 }
 
 const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
-    backdrop: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' },
-    sheet: {
-      backgroundColor: colors.background,
-      borderTopLeftRadius: DESIGN_TOKENS.radii.xl,
-      borderTopRightRadius: DESIGN_TOKENS.radii.xl,
-      maxHeight: '85%',
-      paddingTop: DESIGN_TOKENS.spacing.md,
-      paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingBottom: DESIGN_TOKENS.spacing.sm,
-    },
-    title: {
-      flex: 1,
-      fontSize: DESIGN_TOKENS.typography.sizes.lg,
-      fontWeight: '800',
-      color: colors.text,
-    },
-    closeBtn: {
-      width: 44,
-      height: 44,
-      borderRadius: 999,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.backgroundSecondary,
-    },
     loading: { paddingVertical: DESIGN_TOKENS.spacing.xl, alignItems: 'center' },
     label: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,

@@ -30,6 +30,10 @@ const TRANSIENT_MODALS = [
     file: 'components/quests/QuestFullMap.native.tsx', visible: 'exportMenuVisible', policy: 'export-parent',
     reason: 'Every export action closes this menu first; fullscreen export feedback belongs to the retained fullscreenVisible modal above.',
   },
+  {
+    file: 'components/travel/TravelStatusButton.tsx', visible: 'modalOpen', policy: 'status-parent',
+    reason: 'Every status mutation closes the temporary sheet before run(); feedback belongs to the retained parent or app root.',
+  },
 ]
 
 const normalize = (value) => value.replace(/\s+/g, '')
@@ -45,6 +49,7 @@ const attribute = (node, name) => {
 function sourceInfo(file, text) {
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
   const nativeModals = new Set()
+  const bottomSheets = new Set()
   const hosts = new Set()
   const rawHosts = new Set()
   const feedback = new Set()
@@ -54,6 +59,12 @@ function sourceInfo(file, text) {
     const module = node.moduleSpecifier.text
     const clause = node.importClause
     if (module === 'react-native' && clause?.name) nativeModals.add(`${clause.name.text}.Modal`)
+    // BottomSheet owns a native Modal too. Its modalContent slot retains hosts
+    // and nested presentations at the full-screen layer, outside the panel.
+    if (module === '@/components/ui/BottomSheet' && clause?.name) {
+      nativeModals.add(clause.name.text)
+      bottomSheets.add(clause.name.text)
+    }
     if (module === 'react-native-toast-message' && clause?.name) {
       rawHosts.add(clause.name.text)
       feedback.add(`${clause.name.text}.show`)
@@ -89,7 +100,14 @@ function sourceInfo(file, text) {
     ts.forEachChild(node, visit)
   }
   visit(source)
-  return { source, modals, hosts, rawHosts, usesFeedback, webAliases }
+  return { source, modals, bottomSheets, hosts, rawHosts, usesFeedback, webAliases }
+}
+
+function isInModalContent(node, modal) {
+  for (let parent = node.parent; parent && parent !== modal; parent = parent.parent) {
+    if (ts.isJsxAttribute(parent) && parent.parent === opening(modal).attributes && parent.name.getText() === 'modalContent') return true
+  }
+  return false
 }
 
 function isWebBranch(node, webAliases) {
@@ -138,7 +156,10 @@ function scanModalFeedback(rootDir) {
       const inspect = (node) => {
         if (node !== modal && (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) && info.modals.includes(node)) return
         if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
-          if (info.hosts.has(jsxName(node))) retainedHosts.push(node)
+          if (info.hosts.has(jsxName(node))) {
+            retainedHosts.push(node)
+            if (info.bottomSheets.has(jsxName(modal)) && !isInModalContent(node, modal)) findings.push(`${file}: BottomSheet ModalToastHost must use modalContent outside the panel`)
+          }
           if (info.rawHosts.has(jsxName(node))) findings.push(`${file}: native Modal uses raw ToastHost; use ModalToastHost`)
         }
         ts.forEachChild(node, inspect)
@@ -152,6 +173,15 @@ function scanModalFeedback(rootDir) {
         if (entry.policy === 'export-parent') {
           for (const handler of ['shareAsPNG', 'shareAsGPX', 'shareAsGeoJSON']) {
             if (!new RegExp(`setExportMenuVisible\\(false\\);\\s*void ${handler}\\(`).test(modal.getText())) findings.push(`${file}: ${handler} must close export menu before feedback`)
+          }
+        }
+        if (entry.policy === 'status-parent') {
+          for (const handler of ['handleSelectStatus', 'handleConfirmDate', 'handleRemove']) {
+            const declaration = info.source.statements.flatMap((statement) => ts.isFunctionDeclaration(statement) ? statement.body?.statements ?? [] : [])
+              .flatMap((statement) => ts.isVariableStatement(statement) ? [...statement.declarationList.declarations] : [])
+              .find((node) => node.name.getText() === handler)
+            const body = declaration?.initializer?.getText() ?? ''
+            if (!/setModalOpen\(false\)/.test(body) || body.indexOf('setModalOpen(false)') > body.indexOf('await run(')) findings.push(`${file}: ${handler} must close status sheet before feedback`)
           }
         }
       }

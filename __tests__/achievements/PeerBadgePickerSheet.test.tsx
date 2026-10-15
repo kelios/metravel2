@@ -116,11 +116,11 @@ describe('PeerBadgePickerSheet — visible=false', () => {
   })
 
   it('renders nothing when visible=false', () => {
-    const { toJSON } = render(
+    const { queryByText } = render(
       <PeerBadgePickerSheet {...defaultProps} visible={false} />,
     )
-    // MockModal in setup.ts returns null when visible=false
-    expect(toJSON()).toBeNull()
+    expect(queryByText('Наградить автора')).toBeNull()
+    expect(queryByText('Любимый автор')).toBeNull()
   })
 })
 

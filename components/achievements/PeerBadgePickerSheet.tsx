@@ -1,7 +1,6 @@
 import { memo, useMemo } from 'react';
 import {
   ActivityIndicator,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,6 +8,8 @@ import {
   View,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
+
+import BottomSheet from '@/components/ui/BottomSheet'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -60,119 +61,84 @@ function PeerBadgePickerSheet({
     title ?? (target === 'travel' ? i18nT('achievements:components.achievements.PeerBadgePickerSheet.nagradit_puteshestvie_4a165119') : i18nT('achievements:components.achievements.PeerBadgePickerSheet.nagradit_avtora_fda404fd'));
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={i18nT('common:action.close')}>
-        <Pressable style={styles.sheet} onPress={() => {}}>
-          <View style={styles.header}>
-            <Text style={styles.title}>{heading}</Text>
-            <Pressable
-              style={styles.closeBtn}
-              onPress={onClose}
-              accessibilityRole="button"
-              accessibilityLabel={i18nT('common:action.close')}
-            >
-              <Feather name="x" size={20} color={colors.text} />
-            </Pressable>
-          </View>
-
-          {isLoading ? (
-            <View style={styles.loading}>
-              <ActivityIndicator color={colors.primaryDark} />
-            </View>
-          ) : options.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Feather name="award" size={26} color={colors.textMuted} />
-              <Text style={styles.emptyTitle}>{i18nT('achievements:components.achievements.PeerBadgePickerSheet.net_dostupnyh_nagrad_9ee2a601')}</Text>
-              <Text style={styles.emptyText}>
-                {i18nT('achievements:components.achievements.PeerBadgePickerSheet.dlya_etogo_tipa_kontenta_poka_net_variantov__89630fca')}</Text>
-            </View>
-          ) : (
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {options.map((badge) => {
-                const st = stateBySlug.get(badge.slug);
-                const granted = st?.grantedByMe ?? false;
-                const count = st?.count ?? 0;
-                return (
-                  <Pressable
-                    key={badge.id}
-                    style={styles.optionRow}
-                    onPress={() =>
-                      void run({
-                        key: `award:${badge.slug}`,
-                        commit: () =>
-                          grant.mutateAsync({ badgeSlug: badge.slug, recipientId, travelId }),
-                        success: granted
-                          ? undefined
-                          : { message: i18nT('common:feedback.awardSent') },
-                      })
-                    }
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: granted }}
-                    accessibilityLabel={i18nT('achievements:components.achievements.PeerBadgePickerSheet.value1_znachok_value2_e849d9e1', { value1: granted
-                      ? i18nT('achievements:components.achievements.PeerBadgePickerSheet.actions.revoke')
-                      : i18nT('achievements:components.achievements.PeerBadgePickerSheet.actions.grant'), value2: badge.name })}
-                  >
-                    <BadgeMedal badge={badge} size={44} earned />
-                    <View style={styles.optionText}>
-                      <Text style={styles.optionName} numberOfLines={1}>
-                        {badge.name}
-                      </Text>
-                      {badge.description ? (
-                        <Text style={styles.optionDesc} numberOfLines={1}>
-                          {badge.description}
-                        </Text>
-                      ) : null}
-                    </View>
-                    {count > 0 ? <Text style={styles.count}>{count}</Text> : null}
-                    <View style={[styles.toggle, granted && styles.toggleOn]}>
-                      <Feather
-                        name={granted ? 'check' : 'plus'}
-                        size={16}
-                        color={granted ? colors.textOnPrimary : colors.primary}
-                      />
-                      <Text style={[styles.toggleText, granted && styles.toggleTextOn]}>
-                        {granted ? i18nT('achievements:components.achievements.PeerBadgePickerSheet.vydano_e24d2d1f') : i18nT('achievements:components.achievements.PeerBadgePickerSheet.vydat_73b97b21')}
-                      </Text>
-                    </View>
-                  </Pressable>
-                );
-              })}
-              <View style={styles.footerSpace} />
-            </ScrollView>
-          )}
-        </Pressable>
-      </Pressable>
-      <ModalToastHost visible={visible} />
-    </Modal>
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title={heading}
+      panelStyle={{ maxHeight: '80%' }}
+      modalContent={<ModalToastHost visible={visible} />}
+    >
+      {isLoading ? (
+        <View style={styles.loading}>
+          <ActivityIndicator color={colors.primaryDark} />
+        </View>
+      ) : options.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Feather name="award" size={26} color={colors.textMuted} />
+          <Text style={styles.emptyTitle}>{i18nT('achievements:components.achievements.PeerBadgePickerSheet.net_dostupnyh_nagrad_9ee2a601')}</Text>
+          <Text style={styles.emptyText}>
+            {i18nT('achievements:components.achievements.PeerBadgePickerSheet.dlya_etogo_tipa_kontenta_poka_net_variantov__89630fca')}</Text>
+        </View>
+      ) : (
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {options.map((badge) => {
+            const st = stateBySlug.get(badge.slug);
+            const granted = st?.grantedByMe ?? false;
+            const count = st?.count ?? 0;
+            return (
+              <Pressable
+                key={badge.id}
+                style={styles.optionRow}
+                onPress={() =>
+                  void run({
+                    key: `award:${badge.slug}`,
+                    commit: () =>
+                      grant.mutateAsync({ badgeSlug: badge.slug, recipientId, travelId }),
+                    success: granted
+                      ? undefined
+                      : { message: i18nT('common:feedback.awardSent') },
+                  })
+                }
+                accessibilityRole="button"
+                accessibilityState={{ selected: granted }}
+                accessibilityLabel={i18nT('achievements:components.achievements.PeerBadgePickerSheet.value1_znachok_value2_e849d9e1', { value1: granted
+                  ? i18nT('achievements:components.achievements.PeerBadgePickerSheet.actions.revoke')
+                  : i18nT('achievements:components.achievements.PeerBadgePickerSheet.actions.grant'), value2: badge.name })}
+              >
+                <BadgeMedal badge={badge} size={44} earned />
+                <View style={styles.optionText}>
+                  <Text style={styles.optionName} numberOfLines={1}>
+                    {badge.name}
+                  </Text>
+                  {badge.description ? (
+                    <Text style={styles.optionDesc} numberOfLines={1}>
+                      {badge.description}
+                    </Text>
+                  ) : null}
+                </View>
+                {count > 0 ? <Text style={styles.count}>{count}</Text> : null}
+                <View style={[styles.toggle, granted && styles.toggleOn]}>
+                  <Feather
+                    name={granted ? 'check' : 'plus'}
+                    size={16}
+                    color={granted ? colors.textOnPrimary : colors.primary}
+                  />
+                  <Text style={[styles.toggleText, granted && styles.toggleTextOn]}>
+                    {granted ? i18nT('achievements:components.achievements.PeerBadgePickerSheet.vydano_e24d2d1f') : i18nT('achievements:components.achievements.PeerBadgePickerSheet.vydat_73b97b21')}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })}
+          <View style={styles.footerSpace} />
+        </ScrollView>
+      )}
+    </BottomSheet>
   );
 }
 
 const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
-    backdrop: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' },
-    sheet: {
-      backgroundColor: colors.background,
-      borderTopLeftRadius: DESIGN_TOKENS.radii.xl,
-      borderTopRightRadius: DESIGN_TOKENS.radii.xl,
-      maxHeight: '80%',
-      paddingTop: DESIGN_TOKENS.spacing.md,
-      paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingBottom: DESIGN_TOKENS.spacing.sm,
-    },
-    title: { fontSize: DESIGN_TOKENS.typography.sizes.lg, fontWeight: '800', color: colors.text },
-    closeBtn: {
-      width: 44,
-      height: 44,
-      borderRadius: 999,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.backgroundSecondary,
-    },
     loading: { paddingVertical: DESIGN_TOKENS.spacing.xl, alignItems: 'center' },
     emptyState: {
       alignItems: 'center',

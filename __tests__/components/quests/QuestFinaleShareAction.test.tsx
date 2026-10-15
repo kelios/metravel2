@@ -1,6 +1,6 @@
 import React from 'react'
 import { act, render, fireEvent, waitFor } from '@testing-library/react-native'
-import { Share, StyleSheet } from 'react-native'
+import { KeyboardAvoidingView, Share, StyleSheet } from 'react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 // Верификация вирусной петли финала ([INV2-02], #1472) без браузера: живой финал
@@ -277,17 +277,17 @@ describe('QuestFinaleShareAction ([INV2-02] #1472)', () => {
     expect(caption).not.toContain('попробуй и ты')
   })
 
-  // #1667: подписи каналов сделали ряд выше и он стал нижним элементом листа.
-  // `Modal` не приносит системных вставок, поэтому зазор под home indicator
-  // iPhone и жестовой панелью Android считается в рендере.
+  // BottomSheet owns the inset; the scrolling body must not add it again.
   it('keeps the channel row clear of the system inset at the bottom edge', async () => {
     mockCreateCard.mockRejectedValue(new Error('no backend yet'))
-    const { getByTestId } = renderCompletedFinale()
+    const { getByTestId, UNSAFE_getByType } = renderCompletedFinale()
 
     fireEvent.press(getByTestId('quest-finale-share'))
     await waitFor(() => getByTestId('quest-share-channel-copy'))
 
-    const sheet = StyleSheet.flatten(getByTestId('quest-share-sheet').props.style)
-    expect(sheet.paddingBottom).toBe(34)
+    expect(UNSAFE_getByType(KeyboardAvoidingView)).toBeTruthy()
+    const panel = StyleSheet.flatten(getByTestId('bottom-sheet-panel').props.style)
+    expect(panel.paddingBottom).toBe(34)
+    expect(getByTestId('quest-share-sheet').props.keyboardShouldPersistTaps).toBe('handled')
   })
 })

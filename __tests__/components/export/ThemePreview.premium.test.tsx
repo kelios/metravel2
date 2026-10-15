@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
+import { Pressable } from 'react-native';
 import ThemePreview, { THEME_CATALOG } from '@/components/export/ThemePreview';
 import type { PdfThemeName } from '@/components/export/ThemePreview';
 
@@ -102,6 +103,23 @@ describe('ThemePreview paywall (#296)', () => {
       fireEvent.press(getByText('Открыть премиум'));
 
       expect(mockRequireUnlock).toHaveBeenCalledWith('ocean');
+    });
+
+    it('keeps premium actions outside the accessible backdrop (#2434)', () => {
+      const { getByText, getByTestId, getByRole, queryByTestId } = render(<ThemePreview {...baseProps} />);
+      fireEvent.press(getByText('Океан'));
+      const panel = getByTestId('theme-paywall-panel');
+      const backdrop = getByTestId('theme-paywall-backdrop');
+      for (let ancestor = panel.parent; ancestor; ancestor = ancestor.parent) {
+        expect(ancestor.type).not.toBe(Pressable);
+      }
+      expect(backdrop.findAllByType(Pressable)).toHaveLength(0);
+      expect(getByRole('button', { name: 'Открыть премиум' })).toBeTruthy();
+      fireEvent.press(panel);
+      expect(getByTestId('theme-paywall-panel')).toBeTruthy();
+      fireEvent.press(backdrop);
+      expect(queryByTestId('theme-paywall-panel')).toBeNull();
+      expect(mockRequireUnlock).not.toHaveBeenCalled();
     });
   });
 

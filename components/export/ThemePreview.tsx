@@ -426,8 +426,15 @@ function PaywallSheet({ theme, styles, onClose, onUnlock }: PaywallSheetProps) {
       animationType="fade"
       onRequestClose={onClose}
     >
-      <Pressable style={styles.paywallBackdrop} onPress={onClose}>
-        <Pressable style={styles.paywallCard} onPress={() => {}}>
+      <View style={styles.paywallRoot}>
+        <Pressable
+          style={styles.paywallBackdrop}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={i18nT('common:action.close')}
+          testID="theme-paywall-backdrop"
+        />
+        <View style={styles.paywallCard} testID="theme-paywall-panel">
           <View style={styles.paywallIcon}>
             <Feather name="lock" size={22} color={styles.paywallIconGlyph.color} />
           </View>
@@ -440,14 +447,15 @@ function PaywallSheet({ theme, styles, onClose, onUnlock }: PaywallSheetProps) {
           <Pressable
             style={styles.paywallCta}
             onPress={() => theme && onUnlock(theme.id)}
+            accessibilityRole="button"
           >
             <Text style={styles.paywallCtaText}>{i18nT('export:components.export.ThemePreview.otkryt_premium_252532ee')}</Text>
           </Pressable>
-          <Pressable style={styles.paywallDismiss} onPress={onClose}>
+          <Pressable style={styles.paywallDismiss} onPress={onClose} accessibilityRole="button">
             <Text style={styles.paywallDismissText}>{i18nT('export:components.export.ThemePreview.ne_seychas_0537f0db')}</Text>
           </Pressable>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -695,12 +703,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   lockBadgeGlyph: {
     color: colors.textMuted,
   },
-  paywallBackdrop: {
+  paywallRoot: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
+  },
+  paywallBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   paywallCard: {
     width: '100%',

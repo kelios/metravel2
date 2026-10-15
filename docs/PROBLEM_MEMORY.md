@@ -121,6 +121,26 @@ guard, падающий в CI на попытке обойти этот конт
   Done требует локально установленный Android candidate и `AND-USB-31` на
   travel/quest с BY/PL, светлой/тёмной темой и переходом к выбранной экскурсии.
 
+### A11Y-IOS-SHEET-BACKDROP-WRAPPER — подписанный фон скрывает содержимое листа
+
+- Canonical task: #2434; связи #2133 (единая жалоба), #2231 (граница касаний).
+- Механизм confirmed: `Pressable` фона с собственной accessibility label
+  оборачивал панель с пустым `onPress`. На iOS такой accessible-родитель
+  скрывает интерактивных потомков от VoiceOver; runtime-доказательство жалобы
+  в #2434, source-проверка подтверждает тот же шаблон в восьми компонентах.
+- Постоянный инвариант: фон — сосед неинтерактивной панели. Семь нижних листов
+  используют `components/ui/BottomSheet.tsx`; центрированный premium-dialog
+  `ThemePreview` сохраняет геометрию с соседними фоном и `View` панели.
+  Клавиатура форм и полноэкранный modalContent принадлежат общему shell;
+  retained toast host не переносится в координаты панели.
+- Контроль: `scripts/guard-sheet-backdrop.js` в lint, позитивные/негативные AST
+  fixtures `guard-sheet-backdrop.test.ts`; `guard-modal-feedback` распознаёт
+  BottomSheet и сохраняет контроль retained/transient host. Тесты жалобы
+  проверяют доступность причин/поля/submit и отделение backdrop от панели;
+  runtime-приёмка iOS/Android/web обязательна по карточке, source её не заменяет.
+- Design evidence: `docs/design/task-2434-bottom-sheets.md`. Повтор того же
+  wrapper-механизма — reopen #2434; иной modal/focus defect сравнивать отдельно.
+
 ### ACTION-SHEET-SWIPE-CLOSE-001 — свайп шапки листа не доходит, если шапка не ответчик на старте
 
 - Каноническая задача: #2159 (2026-10-04). Связаны: #798 (ввод свайпа, done),

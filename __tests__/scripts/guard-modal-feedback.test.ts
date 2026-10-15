@@ -62,8 +62,39 @@ describe('native modal feedback registry (#2440)', () => {
     const file = 'components/safety/ReportReasonSheet.tsx'
     const abs = path.join(root, file)
     const text = fs.readFileSync(abs, 'utf8')
-    writeTextFile(abs, `import ModalToastHost from '@/components/ui/ModalToastHost'\n${text.replace('</Modal>', '<ModalToastHost visible={visible} /></Modal>')}`)
+    writeTextFile(abs, `import ModalToastHost from '@/components/ui/ModalToastHost'\n${text.replace('</BottomSheet>', '<ModalToastHost visible={visible} /></BottomSheet>')}`)
     expect(scanModalFeedback(root)).toEqual(expect.arrayContaining([expect.stringContaining('transient feedback must remain')]))
+  })
+
+  it('requires registration for feedback in the shared sheet, including an aliased import', () => {
+    writeTextFile(path.join(root, 'components/NewSheet.tsx'), `
+      import Sheet from '@/components/ui/BottomSheet'
+      import { showToast as notify } from '@/utils/toast'
+      export const NewSheet = () => <Sheet visible title="Read" onClose={close}><Button onPress={() => notify({})} /></Sheet>
+    `)
+    expect(scanModalFeedback(root)).toEqual(expect.arrayContaining([expect.stringContaining('NewSheet.tsx: native Modal visible=true uses feedback outside registry')]))
+  })
+
+  it.each([
+    'components/achievements/ShareBadgeSheet.tsx',
+    'components/achievements/PeerBadgePickerSheet.tsx',
+    'components/quests/ShareQuestResultSheet.tsx',
+  ])('rejects a retained host moved into the constrained body of %s', (file: string) => {
+    const abs = path.join(root, file)
+    const text = fs.readFileSync(abs, 'utf8')
+    writeTextFile(abs, text
+      .replace('modalContent={<ModalToastHost visible={visible} />}', '')
+      .replace('</ScrollView>', '<ModalToastHost visible={visible} /></ScrollView>'))
+    expect(scanModalFeedback(root)).toEqual(expect.arrayContaining([expect.stringContaining('BottomSheet ModalToastHost must use modalContent outside the panel')]))
+  })
+
+  it('accepts a retained host in the modalContent slot of an aliased BottomSheet', () => {
+    const file = 'components/achievements/ShareBadgeSheet.tsx'
+    const abs = path.join(root, file)
+    writeTextFile(abs, fs.readFileSync(abs, 'utf8')
+      .replace('import BottomSheet from', 'import Sheet from')
+      .replaceAll('<BottomSheet', '<Sheet').replaceAll('</BottomSheet>', '</Sheet>'))
+    expect(scanModalFeedback(root)).toEqual([])
   })
 
   it('requires a new policy if export feedback starts before its temporary menu closes', () => {
@@ -71,5 +102,12 @@ describe('native modal feedback registry (#2440)', () => {
     const abs = path.join(root, file)
     writeTextFile(abs, fs.readFileSync(abs, 'utf8').replace('setExportMenuVisible(false);\n                                void shareAsGPX();', 'void shareAsGPX();'))
     expect(scanModalFeedback(root)).toEqual(expect.arrayContaining([expect.stringContaining('shareAsGPX must close export menu')]))
+  })
+
+  it('requires status mutations to close their temporary BottomSheet before feedback', () => {
+    const file = 'components/travel/TravelStatusButton.tsx'
+    const abs = path.join(root, file)
+    writeTextFile(abs, fs.readFileSync(abs, 'utf8').replaceAll('setModalOpen(false)', 'setModalOpen(true)'))
+    expect(scanModalFeedback(root)).toEqual(expect.arrayContaining([expect.stringContaining('handleRemove must close status sheet before feedback')]))
   })
 })

@@ -1,13 +1,12 @@
 import { memo, useMemo, useState } from 'react';
 import {
-  Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
+
+import BottomSheet from '@/components/ui/BottomSheet'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -88,39 +87,6 @@ function AchievementsGalleryModal({ visible, onClose, data, ownerName }: Props) 
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        backdrop: {
-          flex: 1,
-          backgroundColor: colors.overlay,
-          justifyContent: 'flex-end',
-        },
-        sheet: {
-          backgroundColor: colors.background,
-          borderTopLeftRadius: DESIGN_TOKENS.radii.xl,
-          borderTopRightRadius: DESIGN_TOKENS.radii.xl,
-          maxHeight: '90%',
-          paddingTop: DESIGN_TOKENS.spacing.md,
-        },
-        header: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-          paddingBottom: DESIGN_TOKENS.spacing.sm,
-        },
-        title: {
-          fontSize: DESIGN_TOKENS.typography.sizes.lg,
-          fontWeight: '800',
-          color: colors.text,
-        },
-        closeBtn: {
-          width: DESIGN_TOKENS.touchTarget.minWidth,
-          height: DESIGN_TOKENS.touchTarget.minHeight,
-          borderRadius: 999,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: colors.backgroundSecondary,
-        },
-        body: { paddingHorizontal: DESIGN_TOKENS.spacing.lg },
         subheading: {
           fontSize: DESIGN_TOKENS.typography.sizes.sm,
           lineHeight: 18,
@@ -148,52 +114,42 @@ function AchievementsGalleryModal({ visible, onClose, data, ownerName }: Props) 
   );
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={i18nT('common:action.close')}>
-        <Pressable style={styles.sheet} onPress={() => {}}>
-          <View style={styles.header}>
-            <Text style={styles.title}>{i18nT('achievements:components.achievements.AchievementsGalleryModal.dostizheniya_b8ede63f')}</Text>
-            <Pressable
-              style={styles.closeBtn}
-              onPress={onClose}
-              accessibilityRole="button"
-              accessibilityLabel={i18nT('common:action.close')}
-            >
-              <Feather name="x" size={20} color={colors.text} />
-            </Pressable>
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title={i18nT('achievements:components.achievements.AchievementsGalleryModal.dostizheniya_b8ede63f')}
+      panelStyle={{ maxHeight: '90%' }}
+      modalContent={
+        <BadgeDetailSheet
+          visible={visible && detail !== null}
+          onClose={() => setDetail(null)}
+          detail={detail}
+          ownerName={ownerName}
+        />
+      }
+    >
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.rankBlock}>
+          <RankBar rank={data.rank} />
+        </View>
+
+        <Text style={styles.subheading}>
+          {i18nT('achievements:components.achievements.AchievementsGalleryModal.znachki_za_konkretnye_dostizheniya_sgruppiro_b9824e2b')}</Text>
+
+        {groups.map((group) => (
+          <View key={group.slug} style={styles.group}>
+            <Text style={styles.groupTitle}>{group.name}</Text>
+            <BadgeGrid
+              items={group.items}
+              size={68}
+              showDescriptions
+              onBadgePress={openDetail}
+            />
           </View>
-
-          <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
-            <View style={styles.rankBlock}>
-              <RankBar rank={data.rank} />
-            </View>
-
-            <Text style={styles.subheading}>
-              {i18nT('achievements:components.achievements.AchievementsGalleryModal.znachki_za_konkretnye_dostizheniya_sgruppiro_b9824e2b')}</Text>
-
-            {groups.map((group) => (
-              <View key={group.slug} style={styles.group}>
-                <Text style={styles.groupTitle}>{group.name}</Text>
-                <BadgeGrid
-                  items={group.items}
-                  size={68}
-                  showDescriptions
-                  onBadgePress={openDetail}
-                />
-              </View>
-            ))}
-            <View style={styles.footerSpace} />
-          </ScrollView>
-
-          <BadgeDetailSheet
-            visible={detail !== null}
-            onClose={() => setDetail(null)}
-            detail={detail}
-            ownerName={ownerName}
-          />
-        </Pressable>
-      </Pressable>
-    </Modal>
+        ))}
+        <View style={styles.footerSpace} />
+      </ScrollView>
+    </BottomSheet>
   );
 }
 

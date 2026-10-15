@@ -1,6 +1,6 @@
 import { memo, useMemo, useState } from 'react'
 import {
-  Modal,
+  ScrollView,
   Pressable,
   StyleSheet,
   Text,
@@ -8,6 +8,8 @@ import {
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import Feather from '@expo/vector-icons/Feather'
+
+import BottomSheet from '@/components/ui/BottomSheet'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -45,38 +47,7 @@ function BadgeDetailSheet({ visible, onClose, detail, ownerName }: Props) {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        backdrop: {
-          flex: 1,
-          backgroundColor: colors.overlay,
-          justifyContent: 'flex-end',
-        },
-        sheet: {
-          backgroundColor: colors.background,
-          borderTopLeftRadius: DESIGN_TOKENS.radii.xl,
-          borderTopRightRadius: DESIGN_TOKENS.radii.xl,
-          paddingTop: DESIGN_TOKENS.spacing.md,
-          paddingBottom: DESIGN_TOKENS.spacing.xxl,
-          paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-        },
-        header: {
-          flexDirection: 'row',
-          justifyContent: 'flex-end',
-        },
-        closeBtn: {
-          width: DESIGN_TOKENS.touchTarget.minWidth,
-          height: DESIGN_TOKENS.touchTarget.minHeight,
-          borderRadius: 999,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: colors.backgroundSecondary,
-        },
         center: { alignItems: 'center', gap: DESIGN_TOKENS.spacing.sm },
-        name: {
-          fontSize: DESIGN_TOKENS.typography.sizes.lg,
-          fontWeight: '800',
-          color: colors.text,
-          textAlign: 'center',
-        },
         metaRow: {
           flexDirection: 'row',
           alignItems: 'center',
@@ -187,125 +158,102 @@ function BadgeDetailSheet({ visible, onClose, detail, ownerName }: Props) {
     : 0
 
   return (
-    <>
-    <Modal
+    <BottomSheet
       visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={onClose}
+      onClose={onClose}
+      title={badge.name}
+      panelStyle={{ maxHeight: '90%' }}
+      modalContent={
+        <ShareBadgeSheet
+          visible={visible && shareOpen}
+          onClose={() => setShareOpen(false)}
+          context="detail"
+          subject={
+            canShare && userBadgeId != null
+              ? {
+                  achievementId: userBadgeId,
+                  slug: badge.slug,
+                  badge,
+                  ownerName,
+                  reason: badge.description,
+                }
+              : null
+          }
+        />
+      }
     >
-      <Pressable
-        style={styles.backdrop}
-        onPress={onClose}
-        accessibilityLabel={i18nT('common:action.close')}
-      >
-        <Pressable
-          style={styles.sheet}
-          onPress={() => {}}
-          testID="badge-detail-sheet"
-        >
-          <View style={styles.header}>
-            <Pressable
-              style={styles.closeBtn}
-              onPress={onClose}
-              accessibilityRole="button"
-              accessibilityLabel={i18nT('common:action.close')}
-            >
-              <Feather name="x" size={20} color={colors.text} />
-            </Pressable>
-          </View>
-
-          <View style={styles.center}>
-            <BadgeMedal badge={badge} size={96} earned={earned} />
-            <Text style={styles.name}>{badge.name}</Text>
-            <View style={styles.metaRow}>
-              {tl ? (
-                <View style={styles.chip}>
-                  <Feather name="award" size={12} color={tier.ring} />
-                  <Text style={styles.chipText}>{tl}</Text>
-                </View>
-              ) : null}
+      <ScrollView testID="badge-detail-sheet" showsVerticalScrollIndicator={false}>
+        <View style={styles.center}>
+          <BadgeMedal badge={badge} size={96} earned={earned} />
+          <View style={styles.metaRow}>
+            {tl ? (
               <View style={styles.chip}>
-                <Feather name="star" size={12} color={colors.primaryDark} />
-                <Text style={styles.chipText}>{i18nT('achievements:components.achievements.BadgeDetailSheet.xp_3878de4b', { value1: badge.points })}</Text>
+                <Feather name="award" size={12} color={tier.ring} />
+                <Text style={styles.chipText}>{tl}</Text>
               </View>
+            ) : null}
+            <View style={styles.chip}>
+              <Feather name="star" size={12} color={colors.primaryDark} />
+              <Text style={styles.chipText}>{i18nT('achievements:components.achievements.BadgeDetailSheet.xp_3878de4b', { value1: badge.points })}</Text>
             </View>
           </View>
+        </View>
 
-          {badge.description ? (
-            <View style={styles.block}>
-              <Text style={styles.blockLabel}>
-                {earned ? i18nT('achievements:components.achievements.BadgeDetailSheet.za_chto_poluchen_504e69c3') : i18nT('achievements:components.achievements.BadgeDetailSheet.kak_poluchit_d0b3d9d4')}
+        {badge.description ? (
+          <View style={styles.block}>
+            <Text style={styles.blockLabel}>
+              {earned ? i18nT('achievements:components.achievements.BadgeDetailSheet.za_chto_poluchen_504e69c3') : i18nT('achievements:components.achievements.BadgeDetailSheet.kak_poluchit_d0b3d9d4')}
+            </Text>
+            <Text style={styles.criteria}>{badge.description}</Text>
+          </View>
+        ) : null}
+
+        {showProgress ? (
+          <View style={styles.block}>
+            <Text style={styles.blockLabel}>{i18nT('achievements:components.achievements.BadgeDetailSheet.progress_638229b7')}</Text>
+            <View style={styles.progressNumbers}>
+              <Text style={styles.progressCount}>
+                {progress.current} / {progress.threshold}
               </Text>
-              <Text style={styles.criteria}>{badge.description}</Text>
-            </View>
-          ) : null}
-
-          {showProgress ? (
-            <View style={styles.block}>
-              <Text style={styles.blockLabel}>{i18nT('achievements:components.achievements.BadgeDetailSheet.progress_638229b7')}</Text>
-              <View style={styles.progressNumbers}>
-                <Text style={styles.progressCount}>
-                  {progress.current} / {progress.threshold}
-                </Text>
-                <Text style={styles.progressRemaining}>
-                  {i18nT('achievements:components.achievements.BadgeDetailSheet.remaining', { value1: remaining })}
-                </Text>
-              </View>
-              <View style={styles.track}>
-                <LinearGradient
-                  colors={[tier.highlight, tier.ring]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={[styles.fill, { width: `${ratio * 100}%` }]}
-                />
-              </View>
-            </View>
-          ) : null}
-
-          {earned ? (
-            <View style={styles.earnedRow}>
-              <Feather name="check-circle" size={16} color={colors.success} />
-              <Text style={styles.earnedText}>
-                {earnedAtLabel
-                  ? i18nT('achievements:components.achievements.BadgeDetailSheet.poluchen_value1_0c966f04', { value1: earnedAtLabel })
-                  : i18nT('achievements:components.achievements.BadgeDetailSheet.znachok_poluchen_66bd211f')}
+              <Text style={styles.progressRemaining}>
+                {i18nT('achievements:components.achievements.BadgeDetailSheet.remaining', { value1: remaining })}
               </Text>
             </View>
-          ) : null}
+            <View style={styles.track}>
+              <LinearGradient
+                colors={[tier.highlight, tier.ring]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[styles.fill, { width: `${ratio * 100}%` }]}
+              />
+            </View>
+          </View>
+        ) : null}
 
-          {canShare ? (
-            <Pressable
-              style={styles.shareBtn}
-              onPress={() => setShareOpen(true)}
-              accessibilityRole="button"
-              accessibilityLabel={i18nT('achievements:components.achievements.BadgeDetailSheet.podelitsya_dostizheniem_52b86d7a')}
-            >
-              <Feather name="share-2" size={16} color={colors.textOnPrimary ?? '#fff'} />
-              <Text style={styles.shareBtnText}>{i18nT('achievements:components.achievements.BadgeDetailSheet.podelitsya_00be0478')}</Text>
-            </Pressable>
-          ) : null}
-        </Pressable>
-      </Pressable>
-    </Modal>
+        {earned ? (
+          <View style={styles.earnedRow}>
+            <Feather name="check-circle" size={16} color={colors.success} />
+            <Text style={styles.earnedText}>
+              {earnedAtLabel
+                ? i18nT('achievements:components.achievements.BadgeDetailSheet.poluchen_value1_0c966f04', { value1: earnedAtLabel })
+                : i18nT('achievements:components.achievements.BadgeDetailSheet.znachok_poluchen_66bd211f')}
+            </Text>
+          </View>
+        ) : null}
 
-      <ShareBadgeSheet
-        visible={shareOpen}
-        onClose={() => setShareOpen(false)}
-        context="detail"
-        subject={
-          canShare && userBadgeId != null
-            ? {
-                achievementId: userBadgeId,
-                slug: badge.slug,
-                badge,
-                ownerName,
-                reason: badge.description,
-              }
-            : null
-        }
-      />
-    </>
+        {canShare ? (
+          <Pressable
+            style={styles.shareBtn}
+            onPress={() => setShareOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={i18nT('achievements:components.achievements.BadgeDetailSheet.podelitsya_dostizheniem_52b86d7a')}
+          >
+            <Feather name="share-2" size={16} color={colors.textOnPrimary ?? '#fff'} />
+            <Text style={styles.shareBtnText}>{i18nT('achievements:components.achievements.BadgeDetailSheet.podelitsya_00be0478')}</Text>
+          </Pressable>
+        ) : null}
+      </ScrollView>
+    </BottomSheet>
   )
 }
 

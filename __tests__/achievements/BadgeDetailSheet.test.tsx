@@ -146,4 +146,30 @@ describe('BadgeDetailSheet', () => {
     // sanity: лист действительно отрисован
     expect(getByTestId('share-card-preview')).toBeTruthy()
   })
+
+  it('closes only sharing and hides every child presentation with its parent', async () => {
+    const onClose = jest.fn()
+    const detail = { badge: makeBadge(), earned: true, userBadgeId: 104 }
+    const view = render(
+      <BadgeDetailSheet visible onClose={onClose} detail={detail} ownerName="Юлия" />,
+    )
+
+    fireEvent.press(view.getByLabelText('Поделиться достижением'))
+    await waitFor(() => expect(view.getByTestId('share-card-preview')).toBeTruthy())
+
+    const closeButtons = view.getAllByLabelText('Закрыть')
+    fireEvent.press(closeButtons[closeButtons.length - 1])
+    expect(view.queryByTestId('share-card-preview')).toBeNull()
+    expect(view.getByTestId('badge-detail-sheet')).toBeTruthy()
+    expect(onClose).not.toHaveBeenCalled()
+
+    fireEvent.press(view.getByLabelText('Поделиться достижением'))
+    await waitFor(() => expect(view.getByTestId('share-card-preview')).toBeTruthy())
+    view.rerender(
+      <BadgeDetailSheet visible={false} onClose={onClose} detail={detail} ownerName="Юлия" />,
+    )
+    expect(view.queryByTestId('share-card-preview')).toBeNull()
+    expect(view.queryByTestId('badge-detail-sheet')).toBeNull()
+  })
+
 })

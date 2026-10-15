@@ -1,5 +1,5 @@
 import React, { useMemo, useRef } from 'react'
-import { Modal, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import { KeyboardAvoidingView, Modal, PanResponder, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions, type StyleProp, type ViewStyle } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { asBottomDimension, useBottomChromeInset } from '@/components/layout/bottomChromeInset'
@@ -16,6 +16,12 @@ type Props = {
   onClose: () => void
   title: string
   children?: React.ReactNode
+  /** Retain a body's height limit without letting consumers replace panel layout/insets. */
+  panelStyle?: StyleProp<Pick<ViewStyle, 'maxHeight'>>
+  /** Forms opt in on iOS; Android Modal already resizes its window for the keyboard. */
+  keyboardAware?: boolean
+  /** Modal-layer siblings, e.g. ModalToastHost; never constrained by the panel. */
+  modalContent?: React.ReactNode
   /** iOS: окно листа действительно закрылось (`Modal.onDismiss`) — см. #2115 в `ActionListSheet`. */
   onDismiss?: () => void
 }
@@ -54,10 +60,11 @@ const WEB_ROOT_PROPS = { dataSet: { cardAction: 'true' } }
  *    Modal лежит поверх дока, поэтому отступа от края нет, а низ панели
  *    резервирует home indicator / навигационную панель.
  */
-const BottomSheet: React.FC<Props> = ({ visible, onClose, title, children, onDismiss }) => {
+const BottomSheet: React.FC<Props> = ({ visible, onClose, title, children, onDismiss, panelStyle, keyboardAware = false, modalContent }) => {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const isWeb = Platform.OS === 'web'
+  const { width: viewportWidth } = useWindowDimensions()
   const { bottom: chromeBottom } = useBottomChromeInset()
   const insets = useSafeAreaInsetsSafe()
 
@@ -86,6 +93,28 @@ const BottomSheet: React.FC<Props> = ({ visible, onClose, title, children, onDis
 
   const closeLabel = i18nT('common:action.close')
 
+  const panel = (
+    <View style={[styles.panel, panelStyle, panelBottom]} testID="bottom-sheet-panel">
+      <View style={styles.header} {...(swipeHandlers ?? {})}>
+        <View style={styles.handle} />
+        <View style={styles.headerRow}>
+          <Text style={styles.title} accessibilityRole="header">{title}</Text>
+          <CardActionPressable
+            accessibilityRole="button"
+            accessibilityLabel={closeLabel}
+            title={closeLabel}
+            onPress={onClose}
+            enableWebClickFallback
+            style={({ pressed }) => [styles.closeBtn, pressed && styles.closeBtnPressed]}
+          >
+            <Feather name="x" size={20} color={colors.text} />
+          </CardActionPressable>
+        </View>
+      </View>
+      {children}
+    </View>
+  )
+
   const sheet = (
     <Modal
       visible={visible}
@@ -94,32 +123,27 @@ const BottomSheet: React.FC<Props> = ({ visible, onClose, title, children, onDis
       onRequestClose={onClose}
       onDismiss={onDismiss}
     >
-      <View style={styles.root} testID="bottom-sheet-root" {...(isWeb ? WEB_ROOT_PROPS : null)}>
+      {/* Preserve quest-share's viewport compensation (e7794e549): a classic
+          scrollbar can narrow the RNW Modal container and offset its contents. */}
+      <View style={[styles.root, isWeb && viewportWidth > 0 && { width: viewportWidth }]} testID="bottom-sheet-root" {...(isWeb ? WEB_ROOT_PROPS : null)}>
         <Pressable
           accessibilityLabel={i18nT('shared:components.ui.ActionListSheet.zakryt_menyu_deystviy_85947952')}
           accessibilityRole="button"
           onPress={onClose}
           style={styles.backdrop}
+          testID="bottom-sheet-backdrop"
         />
-        <View style={[styles.panel, panelBottom]} testID="bottom-sheet-panel">
-          <View style={styles.header} {...(swipeHandlers ?? {})}>
-            <View style={styles.handle} />
-            <View style={styles.headerRow}>
-              <Text style={styles.title}>{title}</Text>
-              <CardActionPressable
-                accessibilityRole="button"
-                accessibilityLabel={closeLabel}
-                title={closeLabel}
-                onPress={onClose}
-                enableWebClickFallback
-                style={({ pressed }) => [styles.closeBtn, pressed && styles.closeBtnPressed]}
-              >
-                <Feather name="x" size={20} color={colors.text} />
-              </CardActionPressable>
-            </View>
-          </View>
-          {children}
-        </View>
+        {keyboardAware && Platform.OS === 'ios' ? (
+          <KeyboardAvoidingView
+            behavior="padding"
+            style={styles.keyboardContainer}
+            pointerEvents="box-none"
+            testID="bottom-sheet-keyboard-container"
+          >
+            {panel}
+          </KeyboardAvoidingView>
+        ) : panel}
+        {modalContent}
       </View>
     </Modal>
   )
@@ -152,6 +176,10 @@ const createStyles = (colors: ThemedColors) =>
       flex: 1,
       justifyContent: 'flex-end',
     },
+    keyboardContainer: {
+      flex: 1,
+      justifyContent: 'flex-end',
+    },
     backdrop: {
       ...StyleSheet.absoluteFillObject,
       backgroundColor: 'rgba(15, 23, 42, 0.28)',
@@ -171,6 +199,7 @@ const createStyles = (colors: ThemedColors) =>
       }),
     },
     header: {
+      flexShrink: 0,
       paddingBottom: 4,
     },
     handle: {

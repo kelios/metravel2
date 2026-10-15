@@ -10,14 +10,13 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Modal,
+  ScrollView,
   Platform,
   Pressable,
   Share,
   StyleSheet,
   Text,
   TextInput,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
@@ -41,7 +40,7 @@ import { showToast } from '@/utils/toast';
 import ModalToastHost from '@/components/ui/ModalToastHost';
 import { devWarn } from '@/utils/logger';
 import { useTranslation } from '@/i18n/LocaleProvider';
-import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe';
+import BottomSheet from '@/components/ui/BottomSheet'
 
 export interface QuestResultShareSubject {
   /** Числовой id квеста — для генератора карточки. */
@@ -93,10 +92,6 @@ function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const { t } = useTranslation();
-  const { width: viewportWidth } = useWindowDimensions();
-  // Через project-обёртку: на production web `react-native-safe-area-context`
-  // может не разрезолвиться, и сырой хук уронил бы лист целиком.
-  const insets = useSafeAreaInsetsSafe();
 
   const username = useAuthStore((s) => s.username);
 
@@ -287,12 +282,6 @@ function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
     typeof navigator !== 'undefined' &&
     typeof navigator.share === 'function';
 
-  // RN Web mounts Modal inside the body content box. On desktop a classic
-  // scrollbar can make that box 15px narrower than the visual viewport, which
-  // shifts an otherwise centered channel row to the left. Dimensions follows
-  // the actual viewport and also updates when mobile-web tests/users resize.
-  const backdropViewportStyle = Platform.OS === 'web' ? { width: viewportWidth } : undefined;
-
   type ChannelButton = {
     key: ShareChannelKey;
     /** Полное действие: доступное имя кнопки для screen reader. */
@@ -357,134 +346,84 @@ function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
   }
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable
-        style={[styles.backdrop, backdropViewportStyle]}
-        onPress={onClose}
-        accessibilityLabel={t('common:action.close')}
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title={t('questShareStatic:finaleShare.sheetTitle')}
+      panelStyle={{ maxHeight: '90%' }}
+      keyboardAware
+      modalContent={<ModalToastHost visible={visible} />}
+    >
+      <ScrollView
+        testID="quest-share-sheet"
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.body}
       >
-        <Pressable
-          style={[
-            styles.sheet,
-            { paddingBottom: Math.max(insets.bottom, DESIGN_TOKENS.spacing.lg) },
-          ]}
-          onPress={() => {}}
-          testID="quest-share-sheet"
-        >
-          <View style={styles.header}>
-            <Text style={styles.heading}>{t('questShareStatic:finaleShare.sheetTitle')}</Text>
+        {hasImage ? (
+          <View style={styles.preview} testID="quest-result-card-preview">
+            <ImageCardMedia
+              src={card!.imageUrl}
+              fit="contain"
+              blurBackground
+              blurRadius={18}
+              style={StyleSheet.absoluteFillObject}
+              alt={subject.questTitle}
+            />
+          </View>
+        ) : null}
+
+        {status !== 'unavailable' ? (
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>
+              {t('questShareStatic:finaleShare.heroNameLabel')}
+            </Text>
+            <TextInput
+              style={styles.input}
+              value={heroName}
+              onChangeText={setHeroName}
+              onBlur={() => {
+                if (heroName.trim() !== requestedHeroNameRef.current) {
+                  void loadCard(heroName);
+                }
+              }}
+              placeholder={t('questShareStatic:finaleShare.heroNamePlaceholder')}
+              placeholderTextColor={colors.textMuted}
+              maxLength={40}
+              returnKeyType="done"
+              accessibilityLabel={t('questShareStatic:finaleShare.heroNameLabel')}
+              testID="quest-result-hero-name"
+            />
+          </View>
+        ) : null}
+
+        <View style={styles.channels}>
+          {channels.map((channel) => (
             <Pressable
-              style={styles.closeBtn}
-              onPress={onClose}
+              key={channel.key}
+              style={({ pressed }) => [styles.channel, pressed && styles.channelPressed]}
+              onPress={channel.onPress}
               accessibilityRole="button"
-              accessibilityLabel={t('common:action.close')}
+              accessibilityLabel={channel.label}
+              testID={`quest-share-channel-${channel.key}`}
             >
-              <Feather name="x" size={20} color={colors.text} />
-            </Pressable>
-          </View>
-
-          {hasImage ? (
-            <View style={styles.preview} testID="quest-result-card-preview">
-              <ImageCardMedia
-                src={card!.imageUrl}
-                fit="contain"
-                blurBackground
-                blurRadius={18}
-                style={StyleSheet.absoluteFillObject}
-                alt={subject.questTitle}
-              />
-            </View>
-          ) : null}
-
-          {status !== 'unavailable' ? (
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>
-                {t('questShareStatic:finaleShare.heroNameLabel')}
+              <View style={styles.channelIcon}>
+                <Feather name={channel.icon} size={18} color={channel.color} />
+              </View>
+              <Text style={styles.channelLabel} numberOfLines={1}>
+                {channel.shortLabel}
               </Text>
-              <TextInput
-                style={styles.input}
-                value={heroName}
-                onChangeText={setHeroName}
-                onBlur={() => {
-                  if (heroName.trim() !== requestedHeroNameRef.current) {
-                    void loadCard(heroName);
-                  }
-                }}
-                placeholder={t('questShareStatic:finaleShare.heroNamePlaceholder')}
-                placeholderTextColor={colors.textMuted}
-                maxLength={40}
-                returnKeyType="done"
-                accessibilityLabel={t('questShareStatic:finaleShare.heroNameLabel')}
-                testID="quest-result-hero-name"
-              />
-            </View>
-          ) : null}
-
-          <View style={styles.channels}>
-            {channels.map((channel) => (
-              <Pressable
-                key={channel.key}
-                style={({ pressed }) => [styles.channel, pressed && styles.channelPressed]}
-                onPress={channel.onPress}
-                accessibilityRole="button"
-                accessibilityLabel={channel.label}
-                testID={`quest-share-channel-${channel.key}`}
-              >
-                <View style={styles.channelIcon}>
-                  <Feather name={channel.icon} size={18} color={channel.color} />
-                </View>
-                <Text style={styles.channelLabel} numberOfLines={1}>
-                  {channel.shortLabel}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </Pressable>
-      </Pressable>
-      <ModalToastHost visible={visible} />
-    </Modal>
+            </Pressable>
+          ))}
+        </View>
+      </ScrollView>
+    </BottomSheet>
   );
 }
 
 const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
-    backdrop: {
-      flex: 1,
-      backgroundColor: colors.overlay,
-      justifyContent: 'flex-end',
-    },
-    // Лист держится в нижней трети экрана телефона: подписи каналов добавили
-    // высоту, поэтому служебные отступы ужаты до sm (#1667). Нижняя кромка
-    // считается в рендере: `Modal` не приносит системных вставок, и без
-    // `Math.max(insets.bottom, ...)` подписи каналов уходят под home indicator
-    // iPhone (34pt) и жестовую панель Android — тот же приём, что в
-    // `components/navigation/OpenInMapsSheet.tsx`.
-    sheet: {
-      backgroundColor: colors.background,
-      borderTopLeftRadius: DESIGN_TOKENS.radii.xl,
-      borderTopRightRadius: DESIGN_TOKENS.radii.xl,
-      paddingTop: DESIGN_TOKENS.spacing.sm,
-      paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-      gap: DESIGN_TOKENS.spacing.sm,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    heading: {
-      fontSize: DESIGN_TOKENS.typography.sizes.md,
-      fontWeight: '800',
-      color: colors.text,
-    },
-    closeBtn: {
-      width: DESIGN_TOKENS.touchTarget.minWidth,
-      height: DESIGN_TOKENS.touchTarget.minHeight,
-      borderRadius: 999,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.backgroundSecondary,
-    },
+    body: { gap: DESIGN_TOKENS.spacing.sm },
     preview: {
       width: '100%',
       aspectRatio: 1200 / 630,
