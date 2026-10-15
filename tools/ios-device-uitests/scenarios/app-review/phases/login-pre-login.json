@@ -1,0 +1,54 @@
+{
+  "id": "review-login-pre-login",
+  "layer": "physical-ios",
+  "completeReviewScenes": [],
+  "completeReviewSegments": [],
+  "preconditions": [
+    "DRAFT source declaration only. Prepare a fresh guest app session with empty Email/Password fields, unaccepted Terms and no autofill. Independently qualify actual EN system Paste behavior and the current private-input canary before any credential input. No runtime, fixture, TestFlight or privacy proof is supplied by this phase."
+  ],
+  "steps": [
+    {
+      "op": "tapId",
+      "id": "footer-item-favorites",
+      "timeout": 30
+    },
+    {
+      "op": "waitUntil",
+      "text": "Login to your account",
+      "state": "hittable",
+      "timeout": 30
+    },
+    {
+      "op": "tapText",
+      "text": "Login",
+      "timeout": 30
+    },
+    {
+      "op": "waitUntil",
+      "text": "Welcome back",
+      "state": "hittable",
+      "timeout": 30
+    },
+    {
+      "op": "assert",
+      "id": "auth-terms-gate-hint",
+      "state": "exists"
+    },
+    {
+      "op": "tapId",
+      "id": "auth-terms-gate-checkbox",
+      "timeout": 30
+    },
+    {
+      "op": "waitUntil",
+      "id": "auth-terms-gate-hint",
+      "state": "absent",
+      "timeout": 5
+    },
+    {
+      "op": "assert",
+      "text": "Welcome back",
+      "state": "hittable"
+    }
+  ]
+}

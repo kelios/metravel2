@@ -1,0 +1,52 @@
+{
+  "id": "review-register-registration-input",
+  "layer": "physical-ios",
+  "completeReviewScenes": [],
+  "completeReviewSegments": [],
+  "steps": [
+    {
+      "op": "secretClipboard",
+      "key": "e1"
+    },
+    {
+      "op": "longPressPlaceholder",
+      "placeholder": "Email",
+      "sec": 1.2
+    },
+    {
+      "op": "tapText",
+      "text": "Paste",
+      "timeout": 10
+    },
+    {
+      "op": "secretClipboard",
+      "key": "p1"
+    },
+    {
+      "op": "longPressPlaceholder",
+      "placeholder": "Password",
+      "sec": 1.2
+    },
+    {
+      "op": "tapText",
+      "text": "Paste",
+      "timeout": 10
+    },
+    {
+      "op": "dismissKeyboard"
+    },
+    {
+      "op": "tapText",
+      "text": "Register",
+      "timeout": 30
+    },
+    {
+      "op": "tapId",
+      "id": "footer-item-home",
+      "timeout": 30
+    },
+    {
+      "op": "clearSecretClipboard"
+    }
+  ]
+}

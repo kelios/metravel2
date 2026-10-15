@@ -15,7 +15,12 @@
     {
       "id": "credentials",
       "visibility": "private",
-      "path": "../phases/login-credentials.json"
+      "path": "../phases/login-credentials.json",
+      "credentialExit": {
+        "submitStep": 7,
+        "leaveStep": 8,
+        "formText": "Welcome back"
+      }
     },
     {
       "id": "post-login",

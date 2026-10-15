@@ -84,3 +84,38 @@ The host SHALL invoke the existing runner in-process, preserve its per-phase dev
 #### Scenario: Insufficient budget or missing activation route
 - **WHEN** the remaining phase budget is too short or registration has no named activation receipt path
 - **THEN** no affected phase is dispatched and no successful flow receipt is produced
+
+### Requirement: Registration separates external activation from native login
+Registration SHALL use exactly pre-register, registration-input, post-register, activation-login-input and registered. A matching external activation receipt SHALL precede post-register; the following private login SHALL use the same opaque disposable account. Native incoming-link policy MUST NOT be expanded merely to simplify evidence automation.
+
+#### Scenario: Web activation alone
+- **WHEN** a disposable account is activated outside the app
+- **THEN** native signed-in coverage still requires the second private login and final public assertions
+
+### Requirement: Failed re-login is synchronized and independently correlated
+The preceding public phase SHALL assert the exact normalized EN rejection absent. The private phase SHALL submit, perform an exact bounded non-secret rejection tap, leave the form and clear the clipboard, with rejectionStep strictly between submit and leave. A matching independently reviewed actual native-response receipt SHALL prove prior valid same-fixture native login, successful deletion inside the delete phase, and POST login 401 invalid_credentials inside the private re-login phase. Separate host probes MUST NOT substitute.
+
+The rejection SHALL distinguish native-response-body with rawResponseBodyObserved=true from native-ui-source-classification with rawResponseBodyObserved=false. Derived classification SHALL bind the exact private rejection step, scenario/report/completed-execution hashes, candidate source and current normalizer/EN error-copy source digest, alongside genuine correlated native/server 401 evidence. Independent operator verification SHALL establish source provenance. A derived classification MUST NOT claim an observed raw response body.
+
+#### Scenario: Native UI classification without captured body
+- **WHEN** actual native UI synchronization and source evidence classify a correlated native 401 without observing its body
+- **THEN** the attestation declares derived classification, rawResponseBodyObserved=false and all required source/execution bindings; missing or mismatched bindings fail
+
+#### Scenario: Origin and API base parity
+- **WHEN** metadata names the API origin or its normalized /api base
+- **THEN** request correlation requires exactly one /api prefix, matching the app; missing or duplicated prefixes fail
+
+#### Scenario: Retained disposable login form
+- **WHEN** the same disposable fixture signs in natively and is deleted in the unchanged app process
+- **THEN** the deletion draft preserves accepted Terms and replaces both entire retained credential fields before re-login; exact edit-menu behavior is qualified first with dummy-only private canary evidence
+
+#### Scenario: Reused error or unrelated host request
+- **WHEN** stale-error absence is missing, synchronization is reordered, or the 401 came from an independent host probe
+- **THEN** complete account-delete flow evidence fails
+
+### Requirement: Independent observers know phase identity before dispatch
+Each phase SHALL have a unique atomically published 0600 public context before driver dispatch, containing the opaque run/account binding and frozen source/scenario identities. The final chain SHALL bind its raw hash, exact identity and timestamp. Secret values, credential digests and raw device identifiers MUST NOT be published.
+
+#### Scenario: Late or changed context
+- **WHEN** a context is modified, reused, mismatched or published after phase start
+- **THEN** whole-flow consistency fails

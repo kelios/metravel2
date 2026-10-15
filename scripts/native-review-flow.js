@@ -14,13 +14,15 @@ const CANDIDATE_KEYS = ['version', 'build', 'source', 'origin']
 const ENVIRONMENT_KEYS = ['apiUrl', 'locale', 'accountRole', 'deviceModel']
 const STAGES = {
   login: ['pre-login', 'credentials', 'post-login'],
-  register: ['pre-register', 'registration-input', 'registered'],
+  register: ['pre-register', 'registration-input', 'post-register', 'activation-login-input', 'registered'],
   'account-delete': ['pre-delete', 'delete', 'relogin-input', 'failed-relogin'],
 }
-const PRIVATE_STAGES = new Set(['credentials', 'registration-input', 'relogin-input'])
+const PRIVATE_STAGES = new Set(['credentials', 'registration-input', 'activation-login-input', 'relogin-input'])
+const REJECTION_TEXT = 'Invalid email or password'
 const hash = (value) => createHash('sha256').update(value).digest('hex')
 const read = (file) => { const raw = fs.readFileSync(file, 'utf8'); return { raw, value: JSON.parse(raw) } }
 const sourceHash = () => hash(fs.readFileSync(__filename))
+const normalizerSourceHash = () => hash(['api/auth.ts', 'utils/authFailure.ts', 'components/auth/LoginForm.tsx', 'i18n/locales/en/static/errors_static.ts'].map((file) => `${file}\0${hash(fs.readFileSync(path.join(ROOT, file)))}`).join('\n'))
 const entryHash = (entry) => hash(JSON.stringify(entry))
 const assert = (condition, message) => { if (!condition) throw new Error(message) }
 const same = (actual, expected, keys) => keys.every((key) => actual?.[key] === expected?.[key])
@@ -70,8 +72,12 @@ function loadFlow(file) {
       assert(scenario.steps.some((step) => step.op === 'secretClipboard'), 'Private phase requires private channel')
       assert(!scenario.steps.some((step) => step.op === 'wait'), 'Private phase cannot wait or capture')
       const exit = phase.credentialExit
-      assert(keysOnly(exit, ['submitStep', 'leaveStep', 'formId', 'formText']) && Number.isInteger(exit.submitStep) && Number.isInteger(exit.leaveStep) && exit.submitStep >= 0 && exit.leaveStep > exit.submitStep && exit.leaveStep === scenario.steps.length - 2, 'Reviewed private submit/leave boundary required')
+      assert(keysOnly(exit, ['submitStep', 'rejectionStep', 'leaveStep', 'formId', 'formText']) && Number.isInteger(exit.submitStep) && Number.isInteger(exit.leaveStep) && exit.submitStep >= 0 && exit.leaveStep > exit.submitStep && exit.leaveStep === scenario.steps.length - 2, 'Reviewed private submit/leave boundary required')
       assert(['tapId', 'tapText', 'return'].includes(scenario.steps[exit.submitStep]?.op) && ['tapId', 'tapText'].includes(scenario.steps[exit.leaveStep]?.op) && scenario.steps.at(-1).op === 'clearSecretClipboard', 'Private phase must submit, leave form and clear clipboard')
+      if (phase.id === 'relogin-input') {
+        const rejection = scenario.steps[exit.rejectionStep]
+        assert(Number.isInteger(exit.rejectionStep) && exit.rejectionStep > exit.submitStep && exit.rejectionStep < exit.leaveStep && rejection?.op === 'tapText' && rejection.text === REJECTION_TEXT && Number.isFinite(rejection.timeout) && rejection.timeout > 0 && rejection.timeout <= 30, 'Exact bounded rejection synchronization required')
+      } else assert(exit.rejectionStep === undefined, 'Unexpected rejection synchronization')
       assert(Number(typeof exit.formId === 'string' && exit.formId.length > 0) + Number(typeof exit.formText === 'string' && exit.formText.length > 0) === 1, 'Exact credential form boundary required')
     }
     return { ...phase, fullPath, scenario, sha256: hash(scenarioRaw) }
@@ -84,29 +90,71 @@ function loadFlow(file) {
     const form = phase.credentialExit.formId || phase.credentialExit.formText
     assert(previous?.op === 'assert' && ['exists', 'hittable'].includes(previous.state) && previous[selector] === form, 'Pre-input phase must assert the exact credential form')
     assert(next?.op === 'assert' && next.state === 'absent' && next[selector] === form, 'Public handoff must first assert credential form absent')
+    if (phase.id === 'relogin-input') {
+      const stale = phases[index - 1].scenario.steps.at(-2)
+      assert(stale?.op === 'assert' && stale.text === REJECTION_TEXT && stale.state === 'absent', 'Public stale rejection absence required')
+    }
   }
   return { flow, phases, sha256: hash(raw), file: path.resolve(file) }
 }
 function assertAttestation(receipt, kind, identity, flowSha256, now, after = -Infinity) {
-  assert(keysOnly(receipt, ['schemaVersion', 'kind', 'status', 'independentlyReviewed', 'candidate', 'environment', 'accountRef', 'runnerFingerprint', 'flowSha256', 'runnerSourceSha256', 'orchestratorSha256', 'startedAt', 'finishedAt', 'dummyOnly', 'noSecretArtifacts', 'privacyEvidenceSha256', 'accountKind', 'activated']) && receipt?.schemaVersion === 1 && receipt.kind === kind && receipt.status === 'passed' && receipt.independentlyReviewed === true && receipt.flowSha256 === flowSha256 && receipt.runnerSourceSha256 === runnerSourceHash() && receipt.orchestratorSha256 === sourceHash(), 'Missing matching independent prerequisite')
+  assert(keysOnly(receipt, ['schemaVersion', 'kind', 'status', 'independentlyReviewed', 'candidate', 'environment', 'accountRef', 'runnerFingerprint', 'flowSha256', 'runnerSourceSha256', 'orchestratorSha256', 'startedAt', 'finishedAt', 'dummyOnly', 'noSecretArtifacts', 'privacyEvidenceSha256', 'accountKind', 'activated', 'runRef', 'phaseId', 'contextSha256', 'nativeCorrelation']) && receipt?.schemaVersion === 1 && receipt.kind === kind && receipt.status === 'passed' && receipt.independentlyReviewed === true && receipt.flowSha256 === flowSha256 && receipt.runnerSourceSha256 === runnerSourceHash() && receipt.orchestratorSha256 === sourceHash(), 'Missing matching independent prerequisite')
   assertBinding(receipt, identity)
   assertTimes(receipt.startedAt, receipt.finishedAt, now, after)
   if (kind === 'dummy-canary') assert(receipt.dummyOnly === true && receipt.noSecretArtifacts === true && /^[a-f0-9]{64}$/.test(receipt.privacyEvidenceSha256 || ''), 'Dummy canary privacy review required')
-  else assert(receipt.accountKind === 'disposable' && receipt.activated === true, 'Disposable activation required')
+  else if (kind === 'activation') assert(receipt.accountKind === 'disposable' && receipt.activated === true, 'Disposable activation required')
+  else assert(kind === 'relogin-rejection' && receipt.accountKind === 'disposable' && receipt.runRef === identity.runRef && receipt.phaseId === 'relogin-input' && /^[a-f0-9]{64}$/.test(receipt.contextSha256 || ''), 'Native rejection binding required')
 }
-async function waitForActivation(file, identity, flowSha256, { deadline, after, now = Date.now, pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms)) }) {
-  assert(typeof file === 'string' && file.length > 0 && Number.isFinite(deadline), 'Explicit activation receipt path required')
+async function waitForAttestation(file, kind, identity, flowSha256, { deadline, after, now = Date.now, pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms)) }) {
+  const label = kind === 'activation' ? 'Activation' : 'Native rejection'
+  assert(typeof file === 'string' && file.length > 0 && Number.isFinite(deadline), `Explicit ${label.toLowerCase()} receipt path required`)
   // The external activation owner writes an atomic receipt. We only wait for
   // that named file within the already-running flow budget; never activate.
   while (true) {
     const remaining = deadline - now()
-    assert(remaining > 0, 'Activation prerequisite deadline exceeded')
+    assert(remaining > 0, `${label} prerequisite deadline exceeded`)
     if (fs.existsSync(file)) {
       const activation = read(file).value
-      assertAttestation(activation, 'activation', identity, flowSha256, now(), after)
+      assertAttestation(activation, kind, identity, flowSha256, now(), after)
       return activation
     }
     await pause(Math.min(250, remaining))
+  }
+}
+function waitForActivation(file, identity, flowSha256, options) {
+  return waitForAttestation(file, 'activation', identity, flowSha256, options)
+}
+function phaseContext(receipt, phase, entry, dispatchedAt) {
+  return { schemaVersion: 1, kind: 'native-phase-context', candidate: receipt.candidate, environment: receipt.environment, accountRef: receipt.accountRef, runnerFingerprint: receipt.runnerFingerprint, runRef: receipt.runRef, flow: receipt.flow, runnerSourceSha256: receipt.runnerSourceSha256, orchestratorSha256: receipt.orchestratorSha256, phase: { id: phase.id, visibility: phase.visibility, scenarioSha256: phase.sha256, previousSha256: entry.previousSha256 }, dispatchedAt }
+}
+function assertNativeRejection(attestation, receipt, entry, deletion, now, phase, report) {
+  assertAttestation(attestation, 'relogin-rejection', receipt, receipt.flow.sha256, now)
+  assert(attestation.contextSha256 === entry.contextSha256, 'Native rejection context mismatch')
+  const correlation = attestation.nativeCorrelation
+  assert(keysOnly(correlation, ['origin', 'evidenceSha256', 'priorValid', 'deletion', 'rejection']) && correlation.origin === 'native-device-network' && /^[a-f0-9]{64}$/.test(correlation.evidenceSha256 || ''), 'Actual native response correlation required')
+  const requests = new Set()
+  const base = receipt.environment.apiUrl.replace(/\/+$/, '')
+  // Match normalizeApiBaseUrl in utils/resolveApiBaseUrl.ts: metadata may
+  // name the origin or the already-normalized /api base.
+  const api = base.endsWith('/api') ? base : `${base}/api`
+  for (const [key, method, endpoint, statuses] of [['priorValid', 'POST', `${api}/user/login/`, [200]], ['deletion', 'DELETE', `${api}/user/delete-account/`, [200, 204]], ['rejection', 'POST', `${api}/user/login/`, [401]]]) {
+    const event = correlation[key]
+    const fields = ['accountRef', 'requestRef', 'observedAt', 'method', 'endpoint', 'status', ...(key === 'rejection' ? ['code', 'classificationBasis', 'rawResponseBodyObserved', 'uiSource'] : [])]
+    assert(keysOnly(event, fields) && event.accountRef === receipt.accountRef && opaque(event.requestRef) && !requests.has(event.requestRef) && event.method === method && event.endpoint === endpoint && statuses.includes(event.status), 'Native request identity/status mismatch')
+    requests.add(event.requestRef)
+    assertTimes(event.observedAt, event.observedAt, now)
+    assert(Date.parse(event.observedAt) >= Date.parse(attestation.startedAt) && Date.parse(event.observedAt) <= Date.parse(attestation.finishedAt), 'Native observation outside attestation')
+  }
+  const { priorValid, deletion: removed, rejection } = correlation
+  assert(deletion && Date.parse(priorValid.observedAt) < Date.parse(removed.observedAt) && Date.parse(removed.observedAt) >= Date.parse(deletion.startedAt) && Date.parse(removed.observedAt) <= Date.parse(deletion.finishedAt), 'Native deletion window mismatch')
+  assert(rejection.code === 'invalid_credentials' && Date.parse(rejection.observedAt) > Date.parse(removed.observedAt) && Date.parse(rejection.observedAt) >= Date.parse(entry.startedAt) && Date.parse(rejection.observedAt) <= Date.parse(entry.finishedAt), 'Native rejection window/code mismatch')
+  assert(['native-response-body', 'native-ui-source-classification'].includes(rejection.classificationBasis), 'Explicit native rejection classification basis required')
+  if (rejection.classificationBasis === 'native-response-body') {
+    assert(rejection.rawResponseBodyObserved === true && rejection.uiSource === undefined, 'Observed native response body required')
+  } else {
+    const evidence = rejection.uiSource
+    assert(rejection.rawResponseBodyObserved === false && keysOnly(evidence, ['candidateSource', 'normalizerSha256', 'scenarioSha256', 'reportSha256', 'executionSha256', 'rejectionStep', 'text']), 'Derived native rejection evidence required')
+    assert(evidence.candidateSource === receipt.candidate.source && evidence.normalizerSha256 === normalizerSourceHash() && evidence.scenarioSha256 === phase.sha256 && evidence.reportSha256 === entry.reportSha256 && evidence.executionSha256 === hash(JSON.stringify(report.execution)) && evidence.rejectionStep === phase.credentialExit.rejectionStep && evidence.text === REJECTION_TEXT, 'Native UI/source classification binding mismatch')
   }
 }
 function validateFlowReceipt(manifestFile, receiptFile, { now = Date.now(), expected } = {}) {
@@ -114,6 +162,7 @@ function validateFlowReceipt(manifestFile, receiptFile, { now = Date.now(), expe
     const loaded = loadFlow(manifestFile), receipt = read(receiptFile).value
     assert(keysOnly(receipt, ['schemaVersion', 'mode', 'status', 'candidate', 'environment', 'accountRef', 'runnerFingerprint', 'runRef', 'accountKind', 'flow', 'orchestratorSha256', 'runnerSourceSha256', 'canary', 'startedAt', 'finishedAt', 'phases', 'finalSha256']) && receipt.schemaVersion === 1 && receipt.mode === 'rehearsal-flow' && receipt.status === 'passed', 'No successful whole flow')
     assertIdentity(receipt)
+    if (loaded.flow.scene === 'account-delete') assert(receipt.environment.locale === 'en', 'Exact EN rejection locale required')
     if (expected) assertBinding(receipt, expected)
     assert(receipt.flow?.id === loaded.flow.id && receipt.flow?.sha256 === loaded.sha256 && receipt.orchestratorSha256 === sourceHash() && receipt.runnerSourceSha256 === runnerSourceHash(), 'Flow/orchestrator/runner changed')
     assert(receipt.accountKind === loaded.flow.accountKind && opaque(receipt.runRef), 'Invalid flow fixture/run binding')
@@ -123,15 +172,24 @@ function validateFlowReceipt(manifestFile, receiptFile, { now = Date.now(), expe
     assertAttestation(receipt.canary, 'dummy-canary', receipt, loaded.sha256, now)
     assert(Date.parse(receipt.canary.finishedAt) <= Date.parse(receipt.startedAt), 'Canary must precede private input')
     let predecessor = null, finish = Date.parse(receipt.startedAt)
-    const usedReports = new Set()
+    const usedReports = new Set(), usedContexts = new Set()
     for (const [index, phase] of loaded.phases.entries()) {
       const entry = receipt.phases[index]
-      assert(keysOnly(entry, ['id', 'visibility', 'scenarioSha256', 'previousSha256', 'report', 'reportSha256', 'startedAt', 'finishedAt', 'installedBefore', 'installedAfter', 'observedBeforeAt', 'observedAfterAt', 'activation']), 'Invalid phase receipt fields')
+      assert(keysOnly(entry, ['id', 'visibility', 'scenarioSha256', 'previousSha256', 'report', 'reportSha256', 'startedAt', 'finishedAt', 'installedBefore', 'installedAfter', 'observedBeforeAt', 'observedAfterAt', 'activation', 'rejection', 'context', 'contextSha256']), 'Invalid phase receipt fields')
       assert(entry.id === phase.id && entry.visibility === phase.visibility && entry.scenarioSha256 === phase.sha256 && entry.previousSha256 === predecessor, 'Phase order/scenario/predecessor mismatch')
       const reportFile = fs.realpathSync(path.resolve(path.dirname(receiptFile), entry.report))
       assert(!usedReports.has(reportFile), 'Reused phase report'); usedReports.add(reportFile)
       const { raw, value: report } = read(reportFile)
       assert(entry.reportSha256 === hash(raw), 'Phase report changed')
+      const contextFile = fs.realpathSync(path.resolve(path.dirname(receiptFile), entry.context))
+      assert(!usedContexts.has(contextFile), 'Reused phase context'); usedContexts.add(contextFile)
+      const context = read(contextFile)
+      assert(entry.contextSha256 === hash(context.raw), 'Phase context changed')
+      assertBinding(context.value, receipt)
+      assert(JSON.stringify(context.value) === JSON.stringify(phaseContext(receipt, phase, entry, context.value.dispatchedAt)), 'Phase context identity mismatch')
+      assertTimes(context.value.dispatchedAt, context.value.dispatchedAt, now, finish)
+      assert(Date.parse(context.value.dispatchedAt) <= Date.parse(report.startedAt), 'Phase context published after dispatch')
+
       assertBinding({ ...report, accountRef: receipt.accountRef, runnerFingerprint: report.runner?.fingerprint }, receipt)
       assert(report.schemaVersion === 1 && report.status === 'passed' && report.exitCode === 0 && report.layer === 'physical-ios' && report.mode === (phase.visibility === 'private' ? 'diagnostic' : 'rehearsal'), 'Incomplete phase execution')
       assert(report.attachmentPolicy?.system === 'keepNever' && report.attachmentPolicy?.user === 'keepNever', 'Authentication phases must disable all attachments')
@@ -146,10 +204,12 @@ function validateFlowReceipt(manifestFile, receiptFile, { now = Date.now(), expe
         assert(Date.parse(entry.observedBeforeAt) <= Date.parse(report.startedAt) && Date.parse(entry.observedAfterAt) <= Date.parse(receipt.finishedAt), 'Private observation boundary mismatch')
         finish = Date.parse(entry.observedAfterAt)
       } else assertObserved(report.observedCandidate, receipt.candidate)
-      if (phase.id === 'registered') {
+      if (phase.id === 'post-register') {
         assertAttestation(entry.activation, 'activation', receipt, loaded.sha256, now, Date.parse(receipt.phases[index - 1].finishedAt))
         assert(Date.parse(entry.activation.finishedAt) <= Date.parse(report.startedAt), 'Activation must precede signed-in assertions')
       } else assert(!entry.activation, 'Unexpected activation prerequisite')
+      if (phase.id === 'relogin-input') assertNativeRejection(entry.rejection, receipt, entry, receipt.phases.find((item) => item.id === 'delete'), now, phase, report)
+      else assert(!entry.rejection, 'Unexpected native rejection prerequisite')
       assert(finish <= runFinish, 'Phase exceeds flow finish')
       predecessor = entryHash(entry)
     }
@@ -171,12 +231,14 @@ async function main(args = process.argv.slice(2), env = process.env) {
     accountRef: env.IOS_QA_ACCOUNT_REF, runnerFingerprint: env.IOS_QA_RUNNER_FINGERPRINT,
   }
   assertIdentity(identity)
+  if (loaded.flow.scene === 'account-delete') assert(identity.environment.locale === 'en', 'Exact EN rejection locale required')
   assert(/^[A-Fa-f0-9-]{8,64}$/.test(env.IOS_QA_DEVICE || ''), 'Explicit device required')
   const canary = read(env.IOS_QA_CANARY_RECEIPT).value
   assertAttestation(canary, 'dummy-canary', identity, loaded.sha256, Date.now())
   const budget = Number(env.IOS_QA_FLOW_BUDGET_SEC || 600)
   assert(Number.isInteger(budget) && budget >= 10 && budget <= 600, 'Invalid flow budget')
   if (loaded.flow.scene === 'register') assert(typeof env.IOS_QA_ACTIVATION_RECEIPT === 'string' && env.IOS_QA_ACTIVATION_RECEIPT.length > 0, 'Explicit activation receipt path required')
+  if (loaded.flow.scene === 'account-delete') assert(typeof env.IOS_QA_RELOGIN_RECEIPT === 'string' && env.IOS_QA_RELOGIN_RECEIPT.length > 0, 'Explicit native rejection receipt path required')
   const out = path.resolve(env.IOS_QA_FLOW_OUT || path.join(ROOT, '.codex-temp/native-review-flow'))
   let ancestor = out
   while (!fs.existsSync(ancestor)) ancestor = path.dirname(ancestor)
@@ -206,7 +268,7 @@ async function main(args = process.argv.slice(2), env = process.env) {
       for (const phase of loaded.phases) {
         assert(hash(fs.readFileSync(loaded.file)) === loaded.sha256 && hash(fs.readFileSync(phase.fullPath)) === phase.sha256 && sourceHash() === receipt.orchestratorSha256 && runnerSourceHash() === receipt.runnerSourceSha256, 'Frozen flow changed during run')
         const entry = { id: phase.id, visibility: phase.visibility, scenarioSha256: phase.sha256, previousSha256: receipt.finalSha256 }
-        if (phase.id === 'registered') {
+        if (phase.id === 'post-register') {
           entry.activation = await waitForActivation(env.IOS_QA_ACTIVATION_RECEIPT, identity, loaded.sha256, { deadline, after: Date.parse(receipt.phases.at(-1).finishedAt) })
         }
         if (phase.visibility === 'private') { entry.installedBefore = await observe(`${phase.id}-before`); entry.observedBeforeAt = new Date().toISOString() }
@@ -216,6 +278,14 @@ async function main(args = process.argv.slice(2), env = process.env) {
         assert(phaseBudget >= 10, 'Insufficient remaining phase budget')
         const phaseOut = path.join(directory, phase.id)
         fs.mkdirSync(phaseOut, { mode: 0o700 })
+        entry.context = `${phase.id}-context.json`
+        const contextFile = path.join(directory, entry.context)
+        const contextRaw = JSON.stringify(phaseContext(receipt, phase, entry, new Date().toISOString()), null, 2)
+        fs.writeFileSync(`${contextFile}.tmp`, contextRaw, { mode: 0o600, flag: 'wx' })
+        fs.renameSync(`${contextFile}.tmp`, contextFile)
+        entry.contextSha256 = hash(contextRaw)
+        console.log(`Native phase context: ${path.relative(ROOT, contextFile)}`)
+
         await deviceRunner.main([...(phase.visibility === 'public' ? ['--rehearsal'] : []), `@${phase.fullPath}`, phase.id], {
           ...env, MT_QUALITY_GATE_LOCK_OWNED: '1', QA_PRIVATE_INPUT: phase.visibility === 'private' ? '1' : '0', IOS_QA_ATTACHMENTS: 'none', IOS_QA_OUT: phaseOut, IOS_QA_BUDGET_SEC: String(phaseBudget),
         })
@@ -234,6 +304,10 @@ async function main(args = process.argv.slice(2), env = process.env) {
         assert(report.scenario?.id === phase.scenario.id && report.scenario?.sha256 === phase.sha256 && report.runner?.sourceSha256 === receipt.runnerSourceSha256, 'Phase scenario/runner changed')
         assertTimes(report.startedAt, report.finishedAt, Date.now(), Date.parse(receipt.phases.at(-1)?.observedAfterAt || receipt.phases.at(-1)?.finishedAt || receipt.startedAt))
         if (phase.visibility === 'public') assertObserved(report.observedCandidate, identity.candidate)
+        if (phase.id === 'relogin-input') {
+          entry.rejection = await waitForAttestation(env.IOS_QA_RELOGIN_RECEIPT, 'relogin-rejection', receipt, loaded.sha256, { deadline })
+          assertNativeRejection(entry.rejection, receipt, entry, receipt.phases.find((item) => item.id === 'delete'), Date.now(), phase, report)
+        }
         receipt.phases.push(entry); receipt.finalSha256 = entryHash(entry)
       }
       receipt.status = 'passed'
@@ -250,5 +324,5 @@ async function main(args = process.argv.slice(2), env = process.env) {
     console.log(`FLOW EVIDENCE CONSISTENT: ${path.relative(ROOT, receiptFile)}; independent provenance, transport, role and privacy verification still required`)
   } finally { if (!quality.reentrant) releaseQualityGateLock() }
 }
-module.exports = { loadFlow, validateFlowReceipt, sourceHash, hash, entryHash, assertAttestation, assertIdentity, waitForActivation, main }
+module.exports = { loadFlow, validateFlowReceipt, sourceHash, normalizerSourceHash, hash, entryHash, assertAttestation, assertIdentity, waitForActivation, waitForAttestation, phaseContext, assertNativeRejection, main }
 if (require.main === module) main().catch(() => { console.error('NATIVE REVIEW FLOW BLOCKED: inspect private local evidence; no coverage granted'); process.exitCode = 1 })

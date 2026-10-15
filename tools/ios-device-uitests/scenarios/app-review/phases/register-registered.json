@@ -1,0 +1,45 @@
+{
+  "id": "review-register-registered",
+  "layer": "physical-ios",
+  "completeReviewScenes": [],
+  "completeReviewSegments": [],
+  "steps": [
+    {
+      "op": "assert",
+      "text": "Welcome back",
+      "state": "absent"
+    },
+    {
+      "op": "tapId",
+      "id": "footer-item-favorites",
+      "timeout": 30
+    },
+    {
+      "op": "waitUntil",
+      "id": "profile-header-identity-row",
+      "state": "exists",
+      "timeout": 30
+    },
+    {
+      "op": "tapText",
+      "text": "Profile menu",
+      "timeout": 30
+    },
+    {
+      "op": "tapText",
+      "text": "Settings",
+      "timeout": 30
+    },
+    {
+      "op": "waitUntil",
+      "id": "app-version-card",
+      "state": "exists",
+      "timeout": 30
+    },
+    {
+      "op": "assert",
+      "text": "You are logged in",
+      "state": "exists"
+    }
+  ]
+}

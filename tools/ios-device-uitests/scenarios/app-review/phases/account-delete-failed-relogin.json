@@ -1,0 +1,29 @@
+{
+  "id": "review-account-delete-failed-relogin",
+  "layer": "physical-ios",
+  "completeReviewScenes": [],
+  "completeReviewSegments": [],
+  "steps": [
+    {
+      "op": "assert",
+      "text": "Welcome back",
+      "state": "absent"
+    },
+    {
+      "op": "tapId",
+      "id": "footer-item-favorites",
+      "timeout": 30
+    },
+    {
+      "op": "waitUntil",
+      "text": "Login to your account",
+      "state": "hittable",
+      "timeout": 30
+    },
+    {
+      "op": "assert",
+      "id": "profile-header-identity-row",
+      "state": "absent"
+    }
+  ]
+}

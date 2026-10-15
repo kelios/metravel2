@@ -1,0 +1,45 @@
+{
+  "id": "review-account-delete-pre-delete",
+  "layer": "physical-ios",
+  "completeReviewScenes": [],
+  "completeReviewSegments": [],
+  "preconditions": [
+    "DRAFT source declaration only. Use the same disposable fixture immediately after its successful native email/password login in this unchanged app process; independently bind that actual login to the same accountRef, candidate and API. Never delete the permanent reviewer demo account.",
+    "The retained native LoginForm still has that fixture's Email/Password values and accepted Terms. No restart, alternate account or form reset may intervene. Re-login must replace both complete prefilled fields with Select All then Paste, never append, Cut or use literal credential input.",
+    "Before any real secret input, independently qualify the current no-attachment helper/private canary on non-secret dummy prefilled email and secure-password values; verify replacement through a non-secret boolean comparison only. Qualify exact EN system edit-menu labels. Do not capture an accessibility tree, screenshot or unknown clipboard contents. This JSON supplies no runtime/canary/activation/native-response proof."
+  ],
+  "steps": [
+    {
+      "op": "tapId",
+      "id": "footer-item-favorites",
+      "timeout": 30
+    },
+    {
+      "op": "waitUntil",
+      "id": "profile-header-identity-row",
+      "state": "exists",
+      "timeout": 30
+    },
+    {
+      "op": "tapText",
+      "text": "Profile menu",
+      "timeout": 30
+    },
+    {
+      "op": "tapText",
+      "text": "Settings",
+      "timeout": 30
+    },
+    {
+      "op": "waitUntil",
+      "id": "app-version-card",
+      "state": "exists",
+      "timeout": 30
+    },
+    {
+      "op": "assert",
+      "text": "You are logged in",
+      "state": "exists"
+    }
+  ]
+}

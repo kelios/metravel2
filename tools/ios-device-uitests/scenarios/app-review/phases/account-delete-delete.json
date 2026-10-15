@@ -1,0 +1,49 @@
+{
+  "id": "review-account-delete-delete",
+  "layer": "physical-ios",
+  "completeReviewScenes": [],
+  "completeReviewSegments": [],
+  "steps": [
+    {
+      "op": "tapText",
+      "text": "Delete account",
+      "timeout": 30
+    },
+    {
+      "op": "assert",
+      "text": "The account and your travels will be deleted permanently. Continue?",
+      "state": "exists"
+    },
+    {
+      "op": "tapText",
+      "text": "Delete",
+      "timeout": 30
+    },
+    {
+      "op": "waitUntil",
+      "text": "Welcome back",
+      "state": "hittable",
+      "timeout": 30
+    },
+    {
+      "op": "assert",
+      "id": "auth-terms-gate",
+      "state": "exists"
+    },
+    {
+      "op": "assert",
+      "id": "auth-terms-gate-hint",
+      "state": "absent"
+    },
+    {
+      "op": "assert",
+      "text": "Invalid email or password",
+      "state": "absent"
+    },
+    {
+      "op": "assert",
+      "text": "Welcome back",
+      "state": "hittable"
+    }
+  ]
+}

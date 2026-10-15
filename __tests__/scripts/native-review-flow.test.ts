@@ -1,6 +1,6 @@
 const fs = require('node:fs')
 const path = require('node:path')
-const { loadFlow, validateFlowReceipt, sourceHash, hash, entryHash, waitForActivation, main } = require('../../scripts/native-review-flow')
+const { loadFlow, validateFlowReceipt, sourceHash, normalizerSourceHash, hash, entryHash, waitForActivation, waitForAttestation, phaseContext, main } = require('../../scripts/native-review-flow')
 const deviceRunner = require('../../tools/ios-device-uitests/run')
 const { runnerSourceHash } = deviceRunner
 const { validateReadiness } = require('../../scripts/native-recording-readiness')
@@ -25,10 +25,62 @@ describe('whole native authentication flow consistency', () => {
       reports[index].execution.completedAssertions = scenarios[index].steps.filter((step: any) => ['assert', 'waitUntil'].includes(step.op)).length
       fs.writeFileSync(path.join(directory, `${index}-report.json`), JSON.stringify(reports[index]))
       Object.assign(receipt.phases[index], { previousSha256: previous, reportSha256: hash(JSON.stringify(reports[index])), scenarioSha256: reports[index].scenario.sha256 })
+      const entry = receipt.phases[index]
+      entry.context = `${index}-context.json`
+      const context = phaseContext(receipt, { ...phase, sha256: reports[index].scenario.sha256 }, entry, new Date(Date.parse(reports[index].startedAt) - 1).toISOString())
+      fs.writeFileSync(path.join(directory, entry.context), JSON.stringify(context))
+      entry.contextSha256 = hash(JSON.stringify(context))
+      if (entry.activation) entry.activation.flowSha256 = receipt.flow.sha256
+      if (entry.rejection) { entry.rejection.flowSha256 = receipt.flow.sha256; entry.rejection.contextSha256 = entry.contextSha256 }
+
       previous = entryHash(receipt.phases[index])
     }
     receipt.finalSha256 = previous
     fs.writeFileSync(receiptFile(), JSON.stringify(receipt))
+  }
+  const configureScene = (scene: string) => {
+    const names = scene === 'register' ? ['pre-register', 'registration-input', 'post-register', 'activation-login-input', 'registered'] : ['pre-delete', 'delete', 'relogin-input', 'failed-relogin']
+    const templates = scene === 'register' ? [0, 1, 0, 1, 2] : [0, 0, 1, 2]
+    const clone = (value: any) => JSON.parse(JSON.stringify(value))
+    const original = { phases: flow.phases, scenarios, reports, entries: receipt.phases }
+    flow.scene = scene; flow.completeReviewScenes = [scene]; flow.accountKind = receipt.accountKind = 'disposable'
+    flow.phases = []; scenarios = []; reports = []; receipt.phases = []
+    names.forEach((id, index) => {
+      const template = templates[index], isPrivate = template === 1
+      const phase = { ...clone(original.phases[template]), id, path: `${index}.json` }
+      const scenario = clone(original.scenarios[template]); scenario.id = `${flow.id}-${id}`
+      const report = clone(original.reports[template]); report.scenario.id = scenario.id
+      report.startedAt = new Date(now - 100000 + index * 10000).toISOString(); report.finishedAt = new Date(now - 95000 + index * 10000).toISOString()
+      const entry = { id, visibility: phase.visibility, report: `${index}-report.json`, startedAt: report.startedAt, finishedAt: report.finishedAt,
+        ...(isPrivate ? { installedBefore: { version: '1.0.5', build: '13' }, installedAfter: { version: '1.0.5', build: '13' }, observedBeforeAt: new Date(Date.parse(report.startedAt) - 1000).toISOString(), observedAfterAt: new Date(Date.parse(report.finishedAt) + 1000).toISOString() } : {}),
+      }
+      if (id === 'delete') scenario.steps.splice(-1, 0, { op: 'assert', text: 'Invalid email or password', state: 'absent' })
+      if (id === 'relogin-input') {
+        scenario.steps.splice(2, 0, { op: 'tapText', text: 'Invalid email or password', timeout: 30 })
+        phase.credentialExit.rejectionStep = 2; phase.credentialExit.leaveStep = 3
+      }
+      flow.phases.push(phase); scenarios.push(scenario); reports.push(report); receipt.phases.push(entry)
+    })
+    receipt.finishedAt = new Date(now - 40000).toISOString()
+    save()
+  }
+  const addNativeRejection = (basis = 'native-response-body') => {
+    const entry = receipt.phases[2], deletion = receipt.phases[1]
+    const base = receipt.environment.apiUrl.replace(/\/+$/, '')
+    const api = base.endsWith('/api') ? base : `${base}/api`
+    entry.rejection = { ...receipt.canary, kind: 'relogin-rejection', accountKind: 'disposable', runRef: receipt.runRef, phaseId: entry.id, contextSha256: entry.contextSha256,
+      startedAt: receipt.startedAt, finishedAt: receipt.finishedAt,
+      nativeCorrelation: { origin: 'native-device-network', evidenceSha256: 'd'.repeat(64),
+        priorValid: { accountRef: receipt.accountRef, requestRef: '33333333-3333-4333-8333-333333333333', observedAt: new Date(Date.parse(deletion.startedAt) - 1000).toISOString(), method: 'POST', endpoint: `${api}/user/login/`, status: 200 },
+        deletion: { accountRef: receipt.accountRef, requestRef: '44444444-4444-4444-8444-444444444444', observedAt: new Date(Date.parse(deletion.startedAt) + 1000).toISOString(), method: 'DELETE', endpoint: `${api}/user/delete-account/`, status: 204 },
+        rejection: { accountRef: receipt.accountRef, requestRef: '55555555-5555-4555-8555-555555555555', observedAt: new Date(Date.parse(entry.startedAt) + 1000).toISOString(), method: 'POST', endpoint: `${api}/user/login/`, status: 401, code: 'invalid_credentials', classificationBasis: basis, rawResponseBodyObserved: basis === 'native-response-body' },
+      },
+    }
+    save()
+    if (basis === 'native-ui-source-classification') {
+      entry.rejection.nativeCorrelation.rejection.uiSource = { candidateSource: receipt.candidate.source, normalizerSha256: normalizerSourceHash(), scenarioSha256: entry.scenarioSha256, reportSha256: entry.reportSha256, executionSha256: hash(JSON.stringify(reports[2].execution)), rejectionStep: flow.phases[2].credentialExit.rejectionStep, text: 'Invalid email or password' }
+      save()
+    }
   }
   const writeReceipt = () => fs.writeFileSync(receiptFile(), JSON.stringify(receipt))
   const check = () => validateFlowReceipt(manifestFile(), receiptFile(), { now })
@@ -101,6 +153,14 @@ describe('whole native authentication flow consistency', () => {
     })
     const dispatch = jest.spyOn(deviceRunner, 'main').mockImplementation(async (args: string[], phaseEnv: Record<string, string>) => {
       const index = flow.phases.findIndex((phase: any) => phase.id === args.at(-1))
+      const contextFile = path.join(path.dirname(phaseEnv.IOS_QA_OUT), `${flow.phases[index].id}-context.json`)
+      const context = JSON.parse(fs.readFileSync(contextFile, 'utf8'))
+      expect(context.runRef).toMatch(/^[a-f0-9-]{36}$/)
+      expect(context.phase.id).toBe(flow.phases[index].id)
+      expect(Date.parse(context.dispatchedAt)).toBeLessThanOrEqual(Date.now())
+      expect(fs.statSync(contextFile).mode & 0o777).toBe(0o600)
+      expect(fs.existsSync(`${contextFile}.tmp`)).toBe(false)
+
       expect(phaseEnv.QA_PRIVATE_INPUT).toBe(index === 1 ? '1' : '0')
       expect(phaseEnv.IOS_QA_ATTACHMENTS).toBe('none')
       expect(args.includes('--rehearsal')).toBe(index !== 1)
@@ -133,10 +193,7 @@ describe('whole native authentication flow consistency', () => {
   it.each(['budget', 'activation'])('validates the %s prerequisite before creating output or dispatching', async (kind: string) => {
     jest.useFakeTimers().setSystemTime(now)
     if (kind === 'activation') {
-      flow.scene = 'register'; flow.completeReviewScenes = ['register']; flow.accountKind = receipt.accountKind = 'disposable'
-      const names = ['pre-register', 'registration-input', 'registered']
-      names.forEach((id, index) => { flow.phases[index].id = receipt.phases[index].id = id; scenarios[index].id = reports[index].scenario.id = `${flow.id}-${id}` })
-      save()
+      configureScene('register')
     }
     const env = { ...mainEnvironment(), ...(kind === 'budget' ? { IOS_QA_FLOW_BUDGET_SEC: '0' } : {}) }
     const dispatch = jest.spyOn(deviceRunner, 'main')
@@ -264,11 +321,131 @@ describe('whole native authentication flow consistency', () => {
     await expect(waitForActivation(file, receipt, receipt.flow.sha256, { deadline: now + 1000, after: now - (kind === 'before-registration' ? 500 : 3000), now: () => now, pause })).rejects.toThrow()
     expect(pause).not.toHaveBeenCalled()
   })
-  it('requires disposable registration activation after input and before public assertions', () => {
-    flow.scene = 'register'; flow.completeReviewScenes = ['register']; flow.accountKind = receipt.accountKind = 'disposable'
-    const names = ['pre-register', 'registration-input', 'registered']
-    names.forEach((id, index) => { flow.phases[index].id = receipt.phases[index].id = id; scenarios[index].id = reports[index].scenario.id = `${flow.id}-${id}` })
+  it.each(['missing', 'bytes', 'late', 'reused', 'account', 'run'])('rejects %s phase context', (kind: string) => {
+    const file = path.join(directory, receipt.phases[1].context)
+    if (kind === 'missing') fs.unlinkSync(file)
+    if (kind === 'bytes') fs.appendFileSync(file, '\n')
+    if (kind === 'reused') receipt.phases[1].context = receipt.phases[0].context
+    if (['late', 'account', 'run'].includes(kind)) {
+      const context = JSON.parse(fs.readFileSync(file, 'utf8'))
+      if (kind === 'late') context.dispatchedAt = receipt.phases[1].finishedAt
+      if (kind === 'account') context.accountRef = '33333333-3333-4333-8333-333333333333'
+      if (kind === 'run') context.runRef = '33333333-3333-4333-8333-333333333333'
+      fs.writeFileSync(file, JSON.stringify(context)); receipt.phases[1].contextSha256 = hash(JSON.stringify(context))
+    }
+    writeReceipt()
+    expect(check().length).toBeGreaterThan(0)
+  })
+  it('requires real correlated native rejection before the final guest phase', () => {
+    configureScene('account-delete')
+    expect(check().length).toBeGreaterThan(0)
+    addNativeRejection()
+    expect(check()).toEqual([])
+  })
+  it('accepts explicitly derived native UI classification without claiming an observed response body', () => {
+    configureScene('account-delete'); addNativeRejection('native-ui-source-classification')
+    expect(receipt.phases[2].rejection.nativeCorrelation.rejection.rawResponseBodyObserved).toBe(false)
+    expect(check()).toEqual([])
+  })
+  it.each(['missing-basis', 'wrong-basis', 'claims-body', 'missing-ui', 'source', 'candidate', 'scenario', 'report', 'execution', 'step', 'text', 'status'])('rejects %s derived classification even with recomputed chain hashes', (kind: string) => {
+    configureScene('account-delete'); addNativeRejection('native-ui-source-classification')
+    const event = receipt.phases[2].rejection.nativeCorrelation.rejection
+    if (kind === 'missing-basis') delete event.classificationBasis
+    if (kind === 'wrong-basis') event.classificationBasis = 'host-response-body'
+    if (kind === 'claims-body') event.rawResponseBodyObserved = true
+    if (kind === 'missing-ui') delete event.uiSource
+    if (kind === 'source') event.uiSource.normalizerSha256 = 'f'.repeat(64)
+    if (kind === 'candidate') event.uiSource.candidateSource = 'f'.repeat(40)
+    if (kind === 'scenario') event.uiSource.scenarioSha256 = 'f'.repeat(64)
+    if (kind === 'report') event.uiSource.reportSha256 = 'f'.repeat(64)
+    if (kind === 'execution') event.uiSource.executionSha256 = 'f'.repeat(64)
+    if (kind === 'step') event.uiSource.rejectionStep = 0
+    if (kind === 'text') event.uiSource.text += '.'
+    if (kind === 'status') event.status = 403
+    let previous = null
+    for (const entry of receipt.phases) { entry.previousSha256 = previous; previous = entryHash(entry) }
+    receipt.finalSha256 = previous; writeReceipt()
+    expect(check().length).toBeGreaterThan(0)
+  })
+  it('does not label an unobserved body as direct native-response evidence', () => {
+    configureScene('account-delete'); addNativeRejection()
+    receipt.phases[2].rejection.nativeCorrelation.rejection.rawResponseBodyObserved = false
     save()
+    expect(check().length).toBeGreaterThan(0)
+  })
+  it('keeps composed deletion consent accepted and replaces complete retained credentials before re-login', () => {
+    const root = path.resolve(__dirname, '../../tools/ios-device-uitests/scenarios/app-review')
+    const remove = JSON.parse(fs.readFileSync(path.join(root, 'phases/account-delete-delete.json'), 'utf8'))
+    expect(remove.steps).toContainEqual({ op: 'assert', id: 'auth-terms-gate-hint', state: 'absent' })
+    expect(remove.steps.some((step: any) => step.id === 'auth-terms-gate-checkbox')).toBe(false)
+    const input = JSON.parse(fs.readFileSync(path.join(root, 'phases/account-delete-relogin-input.json'), 'utf8'))
+    for (const placeholder of ['Email', 'Password']) {
+      const index = input.steps.findIndex((step: any) => step.op === 'longPressPlaceholder' && step.placeholder === placeholder)
+      expect(index).toBeGreaterThanOrEqual(0)
+      expect(input.steps.slice(index + 1, index + 3)).toEqual([{ op: 'tapText', text: 'Select All', timeout: 10 }, { op: 'tapText', text: 'Paste', timeout: 10 }])
+    }
+    const manifest = JSON.parse(fs.readFileSync(path.join(root, 'flows/account-delete.json'), 'utf8'))
+    const exit = manifest.phases.find((phase: any) => phase.id === 'relogin-input').credentialExit
+    expect(input.steps[exit.submitStep].text).toBe('Login')
+    expect(input.steps[exit.rejectionStep].text).toBe('Invalid email or password')
+    expect(input.steps[exit.leaveStep].text).toBe('Back')
+    expect(input.steps.at(-1).op).toBe('clearSecretClipboard')
+  })
+  it.each(['https://example.invalid', 'https://example.invalid/', 'https://example.invalid/api', 'https://example.invalid/api/'])('matches real /api endpoints for declared API %s', (apiUrl: string) => {
+    configureScene('account-delete')
+    receipt.environment.apiUrl = receipt.canary.environment.apiUrl = apiUrl
+    for (const report of reports) report.environment.apiUrl = apiUrl
+    addNativeRejection()
+    expect(receipt.phases[2].rejection.nativeCorrelation.rejection.endpoint).toBe('https://example.invalid/api/user/login/')
+    expect(check()).toEqual([])
+  })
+  it.each(['host', 'wrong-code', 'wrong-status', 'wrong-api', 'missing-api-prefix', 'duplicate-api-prefix', 'wrong-run', 'wrong-account', 'wrong-event-account', 'wrong-locale', 'context', 'reused-request', 'before-deletion', 'outside-private', 'outside-deletion', 'unreviewed'])('rejects %s native attestation', (kind: string) => {
+    configureScene('account-delete'); addNativeRejection()
+    const proof = receipt.phases[2].rejection, events = proof.nativeCorrelation
+    if (kind === 'host') events.origin = 'host-probe'
+    if (kind === 'wrong-code') events.rejection.code = 'account_not_activated'
+    if (kind === 'wrong-status') events.rejection.status = 403
+    if (kind === 'wrong-api') events.rejection.endpoint = 'https://other.invalid/user/login/'
+    if (kind === 'missing-api-prefix') events.rejection.endpoint = 'https://example.invalid/user/login/'
+    if (kind === 'duplicate-api-prefix') events.rejection.endpoint = 'https://example.invalid/api/api/user/login/'
+    if (kind === 'wrong-run') proof.runRef = '33333333-3333-4333-8333-333333333333'
+    if (kind === 'wrong-account') proof.accountRef = '33333333-3333-4333-8333-333333333333'
+    if (kind === 'wrong-event-account') events.priorValid.accountRef = '33333333-3333-4333-8333-333333333333'
+    if (kind === 'wrong-locale') receipt.environment.locale = 'ru'
+    if (kind === 'context') proof.contextSha256 = 'f'.repeat(64)
+    if (kind === 'reused-request') events.rejection.requestRef = events.deletion.requestRef
+    if (kind === 'before-deletion') events.priorValid.observedAt = events.rejection.observedAt
+    if (kind === 'outside-private') events.rejection.observedAt = receipt.phases[3].startedAt
+    if (kind === 'outside-deletion') events.deletion.observedAt = receipt.phases[0].startedAt
+    if (kind === 'unreviewed') proof.independentlyReviewed = false
+    // Recompute chain without overwriting the deliberately changed proof binding.
+    let previous = null
+    for (const entry of receipt.phases) { entry.previousSha256 = previous; previous = entryHash(entry) }
+    receipt.finalSha256 = previous; writeReceipt()
+    expect(check().length).toBeGreaterThan(0)
+  })
+  it.each(['missing', 'period', 'order', 'timeout', 'stale'])('rejects %s rejection synchronization', (kind: string) => {
+    configureScene('account-delete'); addNativeRejection()
+    if (kind === 'missing') delete flow.phases[2].credentialExit.rejectionStep
+    if (kind === 'period') scenarios[2].steps[2].text += '.'
+    if (kind === 'order') flow.phases[2].credentialExit.rejectionStep = 1
+    if (kind === 'timeout') scenarios[2].steps[2].timeout = 0
+    if (kind === 'stale') scenarios[1].steps.splice(-2, 1)
+    save()
+    expect(check().length).toBeGreaterThan(0)
+  })
+  it('does not substitute three-stage registration or move activation after the second login', () => {
+    configureScene('register')
+    flow.phases.splice(2, 2); saveManifest()
+    expect(() => loadFlow(manifestFile())).toThrow('Missing, reordered or duplicate phases')
+  })
+  it('uses the same bounded wait for native rejection and refuses absent proof at deadline', async () => {
+    configureScene('account-delete'); addNativeRejection()
+    let clock = now
+    await expect(waitForAttestation(path.join(directory, 'missing-native.json'), 'relogin-rejection', receipt, receipt.flow.sha256, { deadline: now + 10, now: () => clock, pause: async (ms: number) => { clock += ms } })).rejects.toThrow('Native rejection prerequisite deadline exceeded')
+  })
+  it('requires disposable registration activation after input and before public assertions', () => {
+    configureScene('register')
     expect(check().length).toBeGreaterThan(0)
     receipt.phases[2].activation = { ...receipt.canary, kind: 'activation', accountKind: 'disposable', activated: true, startedAt: new Date(now - 83000).toISOString(), finishedAt: new Date(now - 82000).toISOString() }
     save()

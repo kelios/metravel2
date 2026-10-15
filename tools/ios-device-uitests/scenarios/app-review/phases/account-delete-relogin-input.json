@@ -1,0 +1,67 @@
+{
+  "id": "review-account-delete-relogin-input",
+  "layer": "physical-ios",
+  "completeReviewScenes": [],
+  "completeReviewSegments": [],
+  "steps": [
+    {
+      "op": "secretClipboard",
+      "key": "e1"
+    },
+    {
+      "op": "longPressPlaceholder",
+      "placeholder": "Email",
+      "sec": 1.2
+    },
+    {
+      "op": "tapText",
+      "text": "Select All",
+      "timeout": 10
+    },
+    {
+      "op": "tapText",
+      "text": "Paste",
+      "timeout": 10
+    },
+    {
+      "op": "secretClipboard",
+      "key": "p1"
+    },
+    {
+      "op": "longPressPlaceholder",
+      "placeholder": "Password",
+      "sec": 1.2
+    },
+    {
+      "op": "tapText",
+      "text": "Select All",
+      "timeout": 10
+    },
+    {
+      "op": "tapText",
+      "text": "Paste",
+      "timeout": 10
+    },
+    {
+      "op": "dismissKeyboard"
+    },
+    {
+      "op": "tapText",
+      "text": "Login",
+      "timeout": 30
+    },
+    {
+      "op": "tapText",
+      "text": "Invalid email or password",
+      "timeout": 30
+    },
+    {
+      "op": "tapText",
+      "text": "Back",
+      "timeout": 30
+    },
+    {
+      "op": "clearSecretClipboard"
+    }
+  ]
+}

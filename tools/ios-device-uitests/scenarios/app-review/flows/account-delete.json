@@ -20,7 +20,13 @@
     {
       "id": "relogin-input",
       "visibility": "private",
-      "path": "../phases/account-delete-relogin-input.json"
+      "path": "../phases/account-delete-relogin-input.json",
+      "credentialExit": {
+        "submitStep": 9,
+        "leaveStep": 11,
+        "formText": "Welcome back",
+        "rejectionStep": 10
+      }
     },
     {
       "id": "failed-relogin",

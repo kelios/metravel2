@@ -15,7 +15,27 @@
     {
       "id": "registration-input",
       "visibility": "private",
-      "path": "../phases/register-registration-input.json"
+      "path": "../phases/register-registration-input.json",
+      "credentialExit": {
+        "submitStep": 7,
+        "leaveStep": 8,
+        "formText": "Create your MeTravel account"
+      }
+    },
+    {
+      "id": "post-register",
+      "visibility": "public",
+      "path": "../phases/register-post-register.json"
+    },
+    {
+      "id": "activation-login-input",
+      "visibility": "private",
+      "path": "../phases/register-activation-login-input.json",
+      "credentialExit": {
+        "submitStep": 7,
+        "leaveStep": 8,
+        "formText": "Welcome back"
+      }
     },
     {
       "id": "registered",

@@ -28,3 +28,12 @@
 - [x] 5.3 Add synthetic positive and negative tests; preserve existing single-scene and six-segment rules.
 - [x] 5.5 Repair independent-review findings: in-process phase ownership, prerequisite preflight and mandatory keepNever system/user attachments across auth boundaries; add focused regression coverage without changing Swift or pinned helper products.
 - [ ] 5.4 Independent full diff review and real fixture/selector qualification; no draft/synthetic result substitutes for native E2E or video.
+
+## 6. Concrete native auth phases
+
+- [x] 6.1 Implement five-stage registration and draft source-bound phase JSONs without claiming readiness.
+- [x] 6.2 Enforce stale-error absence and ordered exact private rejection tap; require actual native same-fixture response attestation via the existing bounded wait.
+- [x] 6.3 Publish unique atomic public contexts before dispatch and bind them to receipts.
+- [x] 6.6 Repair independent-review findings: normalize actual /api request endpoints, preserve same-session consent and replace retained credentials, and distinguish source-classified native UI evidence from observed response bodies without inventing a verifier or coverage.
+- [ ] 6.4 Run focused synthetic positive/negative tests, changed-path lint and OpenSpec validation, then independent review.
+- [ ] 6.5 Qualify current helper dummy input/privacy and real exact-candidate selectors, activation and actual native-response verifier before any auth coverage.
