@@ -26,7 +26,7 @@ Reply и Notes ниже остаются черновиками. Отправк�
 | Исправления и новая запись | #2439, #2441, #2442 на борде `done`; #2440 и #2137 — `testing`. Source/unit и локальная проверка не заменяют новые сцены точного TestFlight-кандидата |
 | Полный manifest и приватность | Принятого полного пакета нет. Требуются все required-сцены и attestations из `scenes.json`, проверка manifest, затем непрерывный privacy просмотр финального файла с вердиктом по его SHA-256. Выборочный OCR этого не доказывает |
 | iPad | Текущее поручение на досъёмку — только iPhone. Сохранённая privacy-сцена iPhone portrait не закрывает required iPad landscape; универсальная готовность остаётся отдельным незакрытым условием |
-| ASC и exact IPA | 15.10 read-only попытка открыть ASC дошла до `/login`; форма входа не загрузилась. Выбранный build, последний ответ Apple, Notes и Tracking=No не прочитаны. Нужен вход владельца; затем сверка exact IPA и актуального ASC |
+| ASC и exact IPA | После входа владельца read-only сверка 15.10, 21:13 UTC: версия 1.0.5 отклонена, selected build 10, последнее письмо Apple 25.09 по 1.2/5.1.2(i), сообщений пять. TestFlight показывает builds 4–12, build 12 «Готово к отправке» в MeTravel Internal; build 13 в списке нет. В опубликованном App Privacy и его подробном preview только связанные/несвязанные данные, категории данных для отслеживания нет. Это сверка декларации ASC, не audit нового IPA |
 | Сеть | Exact-candidate `IOS-16` остаётся незакрытым. Dual-stack вход build 10 и внешняя IPv6-достижимость 24.09 не доказывают вход текущего кандидата в IPv6-only сети; протокол — в разборе отказа 14.09 |
 | Доставка и тексты | Нет принятого финального вложения или проверенной signed-out ссылки. После #2137 подставить фактические identity/таймкоды, сохранить важные действующие инструкции ASC и проверить полный Notes ≤4000. Гайд целиком остаётся историческим build 9 и пока не подходит как актуальное вложение |
 
@@ -36,6 +36,16 @@ exact-candidate `IOS-16` и фактический статус заявки. З
 сохраняется; эта сверка не разрешает signed build, upload, Reply, сохранение
 Notes, submit или storefront release. Для каждой внешней стадии действует
 отдельная команда владельца, закреплённая в карточках.
+
+Свежая read-only сверка также подтвердила ручной режим выпуска и действующие
+ASC Notes длиной 3983/4000: build 10, демо-вход 24.09 по dual-stack, старое
+видео build 9. В новом черновике ниже сохранены непересекающиеся инструкции
+о доступе, внешних сервисах и данных, регионах, правах и тестовом удалении
+аккаунта. Старые таймкоды и описание встроенных Instagram/Belkraj WebView
+не переносятся как факты нового кандидата. Перед отправкой проверяются
+истинность всех унаследованных деклараций для его IPA и полный лимит после
+подстановок; сам вход в ASC не разрешает публикацию. Поля Demo Account и
+контакта не извлекались, значения защищённых полей не сохранялись.
 
 ## Продолжение 13.10.2026: исправления и выборочная пересъёмка
 
@@ -320,14 +330,27 @@ Guideline 5.1.2(i): MeTravel does not track users. The revised app has no cookie
 ```text
 Candidate: [CANDIDATE_VERSION] ([CANDIDATE_BUILD]).
 
-MeTravel is a travel community with travel articles, maps, walking quests and personal trip plans. Guests can browse public content. Sign-in enables personal content and community actions. The review account is supplied in the protected Demo Account fields. Please use a disposable account for the in-app account-deletion demonstration; do not delete the permanent review account.
+1. Purpose and access
+MeTravel is a free travel community: articles, photos, maps, walking quests, favourites and trip plans, focused on Belarus and nearby destinations. Guests browse public content online. Use the protected Demo Account fields for account features. Delete only a disposable account via Settings > Delete account > confirm; keep the permanent review account. No special hardware, in-app purchases or subscriptions; external providers handle partner bookings/payments.
 
-User-generated content (1.2): Terms of Use and Community Guidelines state zero tolerance for objectionable content and abusive users. Agreement is required before registration or email/Apple/Google/Facebook sign-in becomes available. Content safety menus provide reporting and author blocking. Blocking immediately hides that author's content from the blocking user's feeds; the blocked-users list is in Settings. Every report and block emails the website administrator, who reviews reports within 24 hours and can remove offending content and ban abusive users. Comments, direct messages and trip chat are filtered; travel articles and quest reviews are pre-moderated.
+2. User-generated content (1.2)
+Terms and Community Guidelines state zero tolerance for objectionable content and abusive users. Agreement is required before registration or email/Apple/Google/Facebook sign-in. Safety menus provide reporting and blocking. Blocking immediately hides that author's content; manage blocked users in Settings. Every report/block emails the website administrator, who reviews reports within 24 hours and can remove content and ban users. Comments/messages/trip chat are filtered; articles/quest reviews are pre-moderated.
 
-Privacy (5.1.2): the app does not track users and has no cookie prompts or cookie-settings entry. Belkraj and Instagram links open in the external browser. App Privacy declares Tracking=No, confirmed for this candidate.
+3. Physical-device evidence
+Video: [IPHONE_VIDEO_ATTACHMENT_OR_URL]; physical [IPHONE_MODEL], [IPHONE_OS], [IPHONE_RECORDING_DATE]. Version/build is labelled per segment; retained 1.0.5 (12) clips are supplementary. Corrected block/modal-confirmation clips show [CANDIDATE_VERSION] ([CANDIDATE_BUILD]). Terms [EULA_TIMECODE]; report [REPORT_TIMECODE]; block/immediate hiding [BLOCK_TIMECODE].
+iPad: [IPAD_VIDEO_ATTACHMENT_OR_URL]; [IPAD_MODEL], [IPAD_OS], [IPAD_PHYSICAL_OR_SIMULATOR], [IPAD_RECORDING_DATE], [IPAD_CANDIDATE_IDENTITY]; privacy [PRIVACY_TIMECODE].
 
-Review evidence: [IPHONE_VIDEO_ATTACHMENT_OR_URL], physical [IPHONE_MODEL], [IPHONE_OS], [IPHONE_RECORDING_DATE]. Actual version/build is labelled per segment. Retained 1.0.5 (12) clips are supplementary; corrected block/modal-confirmation clips show [CANDIDATE_VERSION] ([CANDIDATE_BUILD]). Terms [EULA_TIMECODE]; report [REPORT_TIMECODE]; block and immediate hiding [BLOCK_TIMECODE].
-iPad evidence: [IPAD_VIDEO_ATTACHMENT_OR_URL], [IPAD_MODEL], [IPAD_OS], [IPAD_PHYSICAL_OR_SIMULATOR], [IPAD_RECORDING_DATE], candidate [IPAD_CANDIDATE_IDENTITY]; privacy [PRIVACY_TIMECODE].
+4. Privacy and services
+The app does not track users, has no cookie prompts/settings, and declares no tracking in App Privacy. Instagram/Belkraj links open externally; YouTube remains embedded. Our API handles accounts/content/plans/safety; quest progress/attempts support functionality/analytics linked to installation/user IDs. Apple/Google/Facebook exchange account details/tokens; Facebook uses Limited Login, with auto-init/auto-event/advertising-ID flags off and no Meta event/purchase logging. S3 stores media/backups; Gmail sends account emails; Expo/APNs use opt-in push/device tokens; optional Telegram linking associates an account.
+Maps/geocoding/routing/weather use Leaflet/OSM, Nominatim/BigDataCloud, ORS/Valhalla/OSRM, Open-Meteo; layers use Esri/OpenTopoMap/WaymarkedTrails/Overpass/Polish forestry/OpenWeatherMap. Requests include map areas/coordinates/destinations/searches. Belkraj/Tripvenue, Travelpayouts, Tripster/Ostrovok offers receive destination/partner context.
+
+5. Regions
+Free in 175 countries/regions; UI RU/BE/UK/PL/EN, articles/quests mainly Russian and not translated by UI switching. Owner confirms no extra MeTravel regional restrictions; third-party availability varies.
+
+6. Services and rights
+Travel information/planning, no medical/financial/gambling services. Owner confirms rights to photos/review screenshots and permission for Belkraj/Tripvenue and Tripster/Ostrovok via Travelpayouts. Authors retain rights and grant our Terms' operational licence.
+Terms: https://metravel.by/terms
+Privacy: https://metravel.by/privacy
 ```
 
 Notes заменяют прежний placeholder «existing paragraphs» полным черновиком;
