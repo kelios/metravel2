@@ -5,32 +5,58 @@ appId: by.metravel.app
 - runFlow: launch.yaml
 - tapOn: "Профиль"
 - assertVisible: "Войдите в аккаунт"
-- openLink: "metravel://login"
-- runFlow: confirm-ios-app-link.yaml
+- tapOn:
+    id: "empty-state-action"
 - extendedWaitUntil:
     visible:
-      id: "auth-terms-gate-hint"
+      text: "^С возвращением$"
     timeout: 15000
+# Login and registration remain mounted in the navigation stack and share
+# terms IDs. Verify the visible form title before its visible consent controls.
+- scrollUntilVisible:
+    element:
+      id: "auth-terms-gate-hint"
+    direction: DOWN
+    timeout: 15000
+    centerElement: true
 - assertVisible:
     id: "auth-terms-gate-checkbox"
 - tapOn:
     id: "auth-terms-gate-checkbox"
 - assertNotVisible:
     id: "auth-terms-gate-hint"
+- assertVisible:
+    id: "auth-terms-gate-checkbox"
 - tapOn:
     id: "auth-terms-gate-checkbox"
 - assertVisible:
     id: "auth-terms-gate-hint"
-- openLink: "metravel://registration"
-- runFlow: confirm-ios-app-link.yaml
+- scrollUntilVisible:
+    element:
+      text: "^Зарегистрируйтесь$"
+    direction: DOWN
+    timeout: 15000
+    centerElement: true
+- tapOn:
+    text: "^Зарегистрируйтесь$"
 - extendedWaitUntil:
     visible:
-      id: "auth-terms-gate-hint"
+      text: "^Создайте аккаунт MeTravel$"
     timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "auth-terms-gate-hint"
+    direction: DOWN
+    timeout: 15000
+    centerElement: true
+- assertVisible:
+    id: "auth-terms-gate-checkbox"
 - tapOn:
     id: "auth-terms-gate-checkbox"
 - assertNotVisible:
     id: "auth-terms-gate-hint"
+- assertVisible:
+    id: "auth-terms-gate-checkbox"
 - tapOn:
     id: "auth-terms-gate-checkbox"
 - assertVisible:

@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import YAML from 'yaml';
+import { mapIncomingAppLinkToHref } from '@/utils/incomingAppLinks';
 import { makeTempDir, runCli } from './cli-test-utils';
 
 const {
@@ -19,6 +21,29 @@ describe('native e2e source and result contract', () => {
     expect(loaded.files).toContain('auth-consent-entry.yaml');
     expect(loaded.definitionSha256).toMatch(/^[a-f0-9]{64}$/);
     expect(Object.values(manifest.suites).every((suite: any) => suite.completeReviewScenes.length === 0)).toBe(true);
+  });
+
+  it('uses only supported OS app links in the tracked Maestro flows', () => {
+    const appLinks: string[] = [];
+    const collect = (value: unknown): void => {
+      if (!value || typeof value !== 'object') return;
+      const command = value as Record<string, unknown>;
+      if ('openLink' in command) {
+        const link = typeof command.openLink === 'string'
+          ? command.openLink
+          : (command.openLink as { link?: string })?.link;
+        if (link?.startsWith('metravel://')) appLinks.push(link);
+      }
+      Object.values(command).forEach(collect);
+    };
+    for (const file of loadManifest().files) {
+      YAML.parseAllDocuments(fs.readFileSync(path.join(FLOW_ROOT, file), 'utf8'))
+        .forEach((doc) => collect(doc.toJSON()));
+    }
+    expect(appLinks.length).toBeGreaterThan(0);
+    // Auth uses internal UI navigation; OS /login and /registration links are
+    // intentionally rejected by the app's existing incoming-link policy.
+    expect(appLinks.filter((link) => mapIncomingAppLinkToHref(link) === null)).toEqual([]);
   });
 
   it.each([
