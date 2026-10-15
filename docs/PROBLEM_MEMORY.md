@@ -6790,3 +6790,12 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   это поле у генератора; handler тегов сохраняет прежнее владение. Реальный
   long-description → tags → updated-description контроль постоянно покрывает
   этот случай в `useInstagramPublishDraft.test.tsx`.
+
+
+### SDK57-HERMES-DEPENDENCY-PARITY-001 — supported SDK patch family
+
+- Current task: #2446, related #1940/#2138/#2137/#1411. Candidate 13 source had Expo 57.0.4, RN 0.86.0 and Hermes 250829098.0.14 with Reanimated/Worklets, affected by upstream production memory regression. A successful archive/IPA privacy audit does not clear this runtime risk.
+- Mechanism: direct/resolution RN pin and Expo install exclusions concealed supported-family drift; obsolete app.newArchEnabled also fails SDK 57 schema. Upstream: https://expo.dev/changelog/sdk-57#known-regressions.
+- Correction: Expo 57.0.30 supported family / RN 0.86.3 / transitive Hermes 250829098.0.17, rebased web/native safety patches, synchronized build 14. SDK guard rejects dependency/native lock/architecture drift, with negative fixtures.
+- Verification boundary: source checks do not prove memory or native UI. Require exact build 14 iPhone/iPad launch/navigation/animation memory, article/media/auth acceptance; web lazy chunks and Android blur/system bars controls after patch rebase. Keep render-html maintenance warning visible; do not replace/suppress to clear Doctor.
+- Rollback: owned source/lock/patch paths only; affected build 13 remains held from upload. OpenSpec: align-sdk57-hermes-release14.

@@ -35,5 +35,11 @@
 - [x] 6.2 Enforce stale-error absence and ordered exact private rejection tap; require actual native same-fixture response attestation via the existing bounded wait.
 - [x] 6.3 Publish unique atomic public contexts before dispatch and bind them to receipts.
 - [x] 6.6 Repair independent-review findings: normalize actual /api request endpoints, preserve same-session consent and replace retained credentials, and distinguish source-classified native UI evidence from observed response bodies without inventing a verifier or coverage.
-- [ ] 6.4 Run focused synthetic positive/negative tests, changed-path lint and OpenSpec validation, then independent review.
+- [x] 6.4 Run focused synthetic positive/negative tests, changed-path lint and OpenSpec validation, then independent review.
 - [ ] 6.5 Qualify current helper dummy input/privacy and real exact-candidate selectors, activation and actual native-response verifier before any auth coverage.
+
+## 7. Foreground clipboard writer
+
+- [x] 7.1 Implement one verified public runner foreground wrapper for staging/cleanup with deferred MeTravel restoration and fail-closed metadata-only verification, early new-generation ownership and failure recording only after inner restoration.
+- [x] 7.2 Add source-governance checks with negative mutated old/background/missing-restore/ownership fixtures; current main SDK14 passed4suites/200tests, Swift parse/typecheck, changed lint, prompt audit and strict OpenSpec validation.
+- [ ] 7.3 Independent review before a fresh helper build and dummy insertion/cleanup/privacy qualification; no real-input readiness from static pass.

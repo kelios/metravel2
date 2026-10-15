@@ -1,8 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { createHash } from 'crypto';
-import { execFileSync } from 'child_process';
-import { makeTempDir } from './cli-test-utils';
+import { makeTempDir, runCli } from './cli-test-utils';
 
 const {
   validateSteps, readConfig, runnerSourceHash, assertUnlocked, productHashes, validCache, runCommand, assertExecutionResult, main,
@@ -163,7 +162,6 @@ describe('physical XCTest runner contract without device access', () => {
 const fs = require('node:fs'), path = require('node:path');
 const program = path.basename(process.argv[1]), args = process.argv.slice(2);
 fs.appendFileSync(process.env.MOCK_CALLS, JSON.stringify({program, args}) + '\\n');
-if (program === 'python3') require('node:child_process').execFileSync(process.env.MOCK_PYTHON, args, {stdio:'inherit'});
 if (program === 'xcrun') {
  if (args[0] !== 'xcresulttool') console.log('passcodeRequired: false');
  else if (process.env.MOCK_RESULT === 'missing') process.exit(1);
@@ -187,11 +185,13 @@ if (program === 'xcodebuild') {
  }
 }
 `;
-    for (const command of ['ps', 'xcrun', 'xcodebuild', 'python3']) {
+    for (const command of ['ps', 'xcrun', 'xcodebuild']) {
       fs.writeFileSync(path.join(bin, command), fake, { mode: 0o700 });
     }
-    const python = execFileSync('python3', ['-c', 'import sys; print(sys.executable)'], { encoding: 'utf8' }).trim();
-    const env = { ...process.env, ...deviceEnv, ...(policy ? { IOS_QA_ATTACHMENTS: policy } : {}), PATH: `${bin}:${process.env.PATH}`, IOS_QA_OUT: path.join(temp, 'evidence'), MOCK_CALLS: calls, MOCK_KEY: path.basename(temp), MOCK_CACHE: path.join(temp, 'cache-path'), MOCK_PYTHON: python };
+    const python = runCli('python3', ['-c', 'import sys; print(sys.executable)'], { timeoutMs: 5000 });
+    expect(python.status).toBe(0);
+    fs.symlinkSync(python.stdout.trim(), path.join(bin, 'python3'));
+    const env = { ...process.env, ...deviceEnv, ...(policy ? { IOS_QA_ATTACHMENTS: policy } : {}), PATH: `${bin}:${process.env.PATH}`, IOS_QA_OUT: path.join(temp, 'evidence'), MOCK_CALLS: calls, MOCK_KEY: path.basename(temp), MOCK_CACHE: path.join(temp, 'cache-path') };
     const attachmentPolicy = policy ? { system: 'keepNever', user: 'keepNever' } : { system: 'deleteOnSuccess', user: 'keepAlways' };
     const runtimeTarget = (dir: string) => plist.parse(fs.readFileSync(path.join(env.IOS_QA_OUT, dir, 'run.xctestrun'), 'utf8')).TestConfigurations[0].TestTargets[0];
     const argv = [JSON.stringify([assertion]), 'same-label'];
@@ -220,9 +220,11 @@ if (program === 'xcodebuild') {
       const cachedTarget = plist.parse(fs.readFileSync(path.join(cache, 'Build/Products/driver.xctestrun'), 'utf8')).TestConfigurations[0].TestTargets[0];
       expect(cachedTarget).toEqual({ TestBundlePath: '__TESTROOT__/driver-binary' });
       const commands = fs.readFileSync(calls, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
-      const patches = commands.filter((call) => call.program === 'python3');
-      expect(patches).toHaveLength(3);
-      for (const patch of patches) expect(patch.args.slice(-2)).toEqual([attachmentPolicy.system, attachmentPolicy.user]);
+      for (const dir of dirs) expect(runtimeTarget(dir)).toMatchObject({
+        TestBundlePath: path.join(cache, 'Build/Products/driver-binary'),
+        SystemAttachmentLifetime: attachmentPolicy.system,
+        UserAttachmentLifetime: attachmentPolicy.user,
+      });
       expect(commands.filter((call) => call.args[0] === 'build-for-testing')).toHaveLength(1);
       expect(commands.filter((call) => call.args[0] === 'test-without-building')).toHaveLength(3);
       expect(commands.some((call) => call.args.includes('-allowProvisioningUpdates'))).toBe(false);
@@ -251,6 +253,62 @@ if (program === 'xcodebuild') {
     expect(swift).not.toContain('0..<25');
     expect(swift).not.toContain('label CONTAINS[c]');
     expect(runnerSourceHash()).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  test('clipboard staging and owned cleanup require the verified writer foreground and deferred target restoration', () => {
+    const swift = fs.readFileSync(path.join(ROOT, 'tools/ios-device-uitests/MetravelDeviceUITests/RunScriptTests.swift'), 'utf8');
+    const body = (source: string, name: string) => {
+      const start = source.indexOf(`private func ${name}(`);
+      if (start < 0) return '';
+      const opening = source.indexOf('{', start);
+      let depth = 1, end = opening + 1;
+      for (; end < source.length && depth > 0; end++) {
+        if (source[end] === '{') depth++;
+        if (source[end] === '}') depth--;
+      }
+      return source.slice(opening + 1, end - 1);
+    };
+    const problems = (source: string) => {
+      const stage = body(source, 'stageSecretClipboard');
+      const clear = body(source, 'clearSecretClipboard');
+      const outer = body(source, 'withForegroundClipboardWriter');
+      const writer = body(source, 'foregroundClipboardTransaction');
+      const failures = [];
+      if (![stage, clear].every((operation) => operation.includes('_ = withForegroundClipboardWriter {'))) failures.push('background clipboard access');
+      if (!writer.includes('let writerId = Bundle.main.bundleIdentifier') || !writer.includes('let testId = Bundle(for: RunScriptTests.self).bundleIdentifier') || !writer.includes('writerId == testId + ".xctrunner"') || !writer.includes('Bundle.main.bundleURL.pathExtension == "app"')) failures.push('wrong executing writer identity');
+      if (!writer.includes('XCUIApplication(bundleIdentifier: writerId)') || !writer.includes('writer.activate()') || !writer.includes('if !writer.wait(for: .runningForeground, timeout: 15)')) failures.push('missing bounded writer activation');
+      if (!writer.includes('defer {') || !writer.includes('target.activate()') || !writer.includes('target.wait(for: .runningForeground, timeout: 15)') || writer.indexOf('defer {') > writer.indexOf('writer.activate()')) failures.push('missing deferred target restore');
+      if (!writer.includes('onMain {') || !writer.includes('guard UIApplication.shared.applicationState == .active') || !writer.includes('succeeded = action()') || writer.indexOf('if !writer.wait') > writer.indexOf('onMain {') || writer.indexOf('applicationState == .active') > writer.indexOf('succeeded = action()')) failures.push('clipboard action before actual foreground');
+      if (!writer.includes('if !succeeded { failure = "Foreground clipboard operation failed" }') || !writer.includes('guard restored else') || !outer.includes('let failure = foregroundClipboardTransaction(action)') || outer.indexOf('XCTFail(failure)') < outer.indexOf('foregroundClipboardTransaction(action)') || !outer.includes('XCTFail(failure)')) failures.push('operation failure accepted');
+      if (/XCT(?:Fail|Assert\w*)\s*\(/.test(writer)) failures.push('test issue raised before restoration');
+      if (!stage.includes('pasteboard.numberOfItems == 1') || !stage.includes('stagedCount != previousCount') || !stage.includes('pasteboard.changeCount == stagedCount') || stage.includes('pasteboard.string') || stage.includes('pasteboard.items')) failures.push('unverified or payload-reading clipboard write');
+      if (!stage.includes('if stagedCount != previousCount { secretPasteboardChangeCount = stagedCount }') || stage.indexOf('secretPasteboardChangeCount = stagedCount') > stage.indexOf('guard stagedCount != previousCount')) failures.push('new generation unowned on verification failure');
+      if (!stage.includes('try FileManager.default.removeItem(at: file)') || !stage.includes('.localOnly: true') || !stage.includes('.expirationDate: Date().addingTimeInterval(60)')) failures.push('lost one-shot local expiry');
+      if (!clear.includes('guard pasteboard.changeCount == expectedChangeCount else') || clear.indexOf('guard pasteboard.changeCount') > clear.indexOf('pasteboard.items = []') || !clear.includes('pasteboard.numberOfItems == 0') || !clear.includes('pasteboard.changeCount != expectedChangeCount')) failures.push('lost clear ownership or verification');
+      if ([stage, clear, writer, outer].some((operation) => operation.includes('print('))) failures.push('clipboard logging');
+      return failures;
+    };
+    expect(problems(swift)).toEqual([]);
+    // These mutants represent the old background contract and concrete ways a
+    // future refactor could silently lose foreground, failure or ownership gates.
+    const clear = body(swift, 'clearSecretClipboard');
+    for (const mutant of [
+      swift.replace('_ = withForegroundClipboardWriter {', 'onMain {'),
+      swift.replace(clear, clear.replace('_ = withForegroundClipboardWriter {', 'onMain {')),
+      swift.replace('let writerId = Bundle.main.bundleIdentifier', 'let writerId = Bundle(for: RunScriptTests.self).bundleIdentifier'),
+      swift.replace('writer.activate()', '// removed writer activation'),
+      swift.replace('if !writer.wait(for: .runningForeground, timeout: 15)', 'if false'),
+      swift.replace('defer {\n                target.activate()', 'if false {\n                target.activate()'),
+      swift.replace('guard UIApplication.shared.applicationState == .active', 'guard true'),
+      swift.replace('if !succeeded { failure = "Foreground clipboard operation failed" }', 'if false { failure = "Foreground clipboard operation failed" }'),
+      swift.replace('pasteboard.numberOfItems == 1,', 'pasteboard.string == value,'),
+      swift.replace('if stagedCount != previousCount { secretPasteboardChangeCount = stagedCount }', '// lost ownership'),
+      swift.replace('failure = "Clipboard writer did not reach foreground"', 'XCTFail("Clipboard writer did not reach foreground")'),
+      swift.replace('restored = target.wait(for: .runningForeground, timeout: 15)', 'XCTAssertTrue(target.wait(for: .runningForeground, timeout: 15))'),
+      swift.replace('guard pasteboard.changeCount == expectedChangeCount else', 'guard true else'),
+      swift.replace('pasteboard.numberOfItems == 0', 'true'),
+      swift.replace('.localOnly: true', '.localOnly: false'),
+    ]) expect(problems(mutant).length).toBeGreaterThan(0);
   });
 
   test('persisted close/reopen regression checks dismissal and second opening', () => {

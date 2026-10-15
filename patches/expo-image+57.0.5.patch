@@ -1,8 +1,7 @@
 diff --git a/node_modules/expo-image/android/src/main/java/expo/modules/image/ExpoImageViewWrapper.kt b/node_modules/expo-image/android/src/main/java/expo/modules/image/ExpoImageViewWrapper.kt
-index 7abe582..d7cb526 100644
 --- a/node_modules/expo-image/android/src/main/java/expo/modules/image/ExpoImageViewWrapper.kt
 +++ b/node_modules/expo-image/android/src/main/java/expo/modules/image/ExpoImageViewWrapper.kt
-@@ -38,7 +38,6 @@ import expo.modules.kotlin.tracing.beginAsyncTraceBlock
+@@ -38,7 +38,6 @@
  import expo.modules.kotlin.tracing.trace
  import expo.modules.kotlin.viewevent.EventDispatcher
  import expo.modules.kotlin.views.ExpoView
@@ -10,7 +9,7 @@ index 7abe582..d7cb526 100644
  import java.lang.ref.WeakReference
  import kotlin.math.abs
  import kotlin.math.min
-@@ -444,7 +443,11 @@ class ExpoImageViewWrapper(context: Context, appContext: AppContext) : ExpoView(
+@@ -444,7 +443,11 @@
          diskCacheStrategy(DiskCacheStrategy.NONE)
        }
        .customize(blurRadius) {
@@ -25,7 +24,6 @@ index 7abe582..d7cb526 100644
  
 diff --git a/node_modules/expo-image/android/src/main/java/expo/modules/image/SafeBlurTransformation.kt b/node_modules/expo-image/android/src/main/java/expo/modules/image/SafeBlurTransformation.kt
 new file mode 100644
-index 0000000..17addb3
 --- /dev/null
 +++ b/node_modules/expo-image/android/src/main/java/expo/modules/image/SafeBlurTransformation.kt
 @@ -0,0 +1,72 @@

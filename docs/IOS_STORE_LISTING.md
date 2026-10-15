@@ -6,10 +6,12 @@ TestFlight build из #1423. Секреты, Team ID, demo-пароль и UDID 
 кладутся.
 
 Подготовленный source-кандидат: `app.json` → `expo.version` 1.0.5,
-`expo.ios.buildNumber` 13. Signed build и upload ещё не выполнены; этот номер
+`expo.ios.buildNumber` 14. Signed build и upload для 14 ещё не выполнены; этот номер
 не означает установленный TestFlight-кандидат. Исторические записи 13.10.2026
 сняты на 1.0.5 (12), source `4b7166e61`. Перед заполнением ASC сверить
-фактический processed build и source revision.
+фактический processed build и source revision. Build 13 остаётся историческим
+артефактом: не отправлять из-за затронутой Hermes memory regression; кандидат 14
+использует исправленную SDK 57 / RN 0.86.3 семью.
 
 Лимиты Apple (2026): name 30, subtitle 30, description 4000, keywords 100,
 promotional text 170. Основная локаль карточки — RU.

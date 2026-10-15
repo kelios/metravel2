@@ -1,9 +1,8 @@
 diff --git a/node_modules/@expo/metro-config/build/serializer/serializeChunks.js b/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
-index 1e5c598..e2009d4 100644
 --- a/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
 +++ b/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
-@@ -58,14 +58,11 @@ async function graphToSerialAssetsAsync(config, serializeChunkOptions, ...props)
-     const entryChunk = findEntryChunk(chunks, entryFile);
+@@ -61,14 +61,11 @@
+     const entryChunk = entryChunks.values().next().value;
      if (entryChunk) {
          removeEntryDepsFromAsyncChunks(entryChunk, chunks);
 -        const commonChunk = extractCommonChunk(chunks, graph, options);
@@ -21,10 +20,10 @@ index 1e5c598..e2009d4 100644
              createRuntimeChunk(entryChunk, chunks, graph, options);
          }
      }
-@@ -111,6 +108,18 @@ class Chunk {
-     // Chunks that are required to be loaded synchronously before this chunk.
-     // These are included in the HTML as <script> tags.
-     requiredChunks = new Set();
+@@ -121,6 +118,18 @@
+      * self-sufficient entry bundle.
+      */
+     sealed = false;
 +    // Extra entry paths used only to associate dependency chunks with an HTML route.
 +    matchingEntryPaths = new Set();
 +    // Shared chunks use compact numeric references in the runtime dependency manifest.
@@ -40,7 +39,7 @@ index 1e5c598..e2009d4 100644
      constructor(name, entries, graph, options, isAsync = false, isVendor = false, isEntry = false) {
          this.name = name;
          this.entries = entries;
-@@ -181,6 +190,26 @@ class Chunk {
+@@ -194,6 +203,26 @@
          }
          const targets = new Set();
          this._asyncTargets = targets;
@@ -67,13 +66,13 @@ index 1e5c598..e2009d4 100644
          if (this.options.includeAsyncPaths) {
              return targets;
          }
-@@ -295,6 +324,56 @@ class Chunk {
+@@ -308,6 +337,56 @@
              preModules: new Set(finalPreModules),
          });
          const relativeEntry = path_1.default.relative(this.options.projectRoot, this.name);
 +        const baseUrl = getBaseUrlOption(this.graph, this.options);
 +        const requiredAsyncChunks = [...new Set([...this.requiredChunks, ...this.sharedDependencies])]
-+            .filter((chunk) => chunk.isAsync)
++            .filter((chunk) => !chunk.sealed && chunk.isAsync)
 +        // METRAVEL_CHUNK_DEPS_BY_PATH: the manifest names the required shared chunks
 +        // by their hashed path, never by `sharedIndex`. The index is an ordinal of the
 +        // current build's group list and is not part of any content hash, so a chunk
@@ -124,7 +123,7 @@ index 1e5c598..e2009d4 100644
          const jsAsset = {
              filename: outputFile,
              originFilename: relativeEntry,
-@@ -308,14 +387,19 @@ class Chunk {
+@@ -321,14 +400,19 @@
                  }),
                  // Provide a list of module paths that can be used for matching chunks to routes.
                  // TODO: Move HTML serializing closer to this code so we can reduce passing this much data around.
@@ -146,21 +145,22 @@ index 1e5c598..e2009d4 100644
          };
          const assets = [jsAsset];
          // debugId is passed into `sourceMapString` so the bundler-map path
-@@ -524,36 +608,295 @@ function removeEntryDepsFromAsyncChunks(entryChunk, chunks) {
+@@ -557,36 +641,295 @@
          }
      }
  }
 -function extractCommonChunk(chunks, graph, options) {
--    const toCompare = [...chunks.values()];
--    const commonDependencies = [];
+-    const toCompare = [...chunks.values()].filter((chunk) => !chunk.sealed);
+-    const commonDependencies = new Set();
 -    while (toCompare.length) {
 -        const chunk = toCompare.shift();
 -        for (const chunk2 of toCompare) {
 -            if (chunk !== chunk2 && chunk.isAsync && chunk2.isAsync) {
--                const commonDeps = [...chunk.deps].filter((dep) => chunk2.deps.has(dep));
--                for (const dep of commonDeps) {
--                    chunk.deps.delete(dep);
--                    chunk2.deps.delete(dep);
+-                for (const dep of chunk.deps) {
+-                    if (chunk2.deps.has(dep)) {
+-                        chunk.deps.delete(dep);
+-                        chunk2.deps.delete(dep);
+-                        commonDependencies.add(dep);
 +// METRAVEL_SHARED_CHUNK_SYNC_DEPS: a shared chunk is not only delivered through its
 +// owners. When an `import()` target module lands inside a shared group, the async
 +// dependency path of that import points at the shared chunk, and the runtime loads it
@@ -209,11 +209,18 @@ index 1e5c598..e2009d4 100644
 +                    if (nested !== chunk && !targets.has(nested)) {
 +                        targets.add(nested);
 +                        changed = true;
-+                    }
-+                }
-+            }
-+        }
-+    }
+                     }
+                 }
+             }
+         }
+     }
+-    // If common dependencies were found, extract them to the shared chunk.
+-    if (commonDependencies.size) {
+-        return new Chunk('/__common.js', commonDependencies, graph, options, false, true);
+-    }
+-    return undefined;
+-}
+-function deduplicateAgainstKnownChunks(chunks, entryChunk, commonChunk) {
 +    for (const chunk of liveChunks) {
 +        for (const target of reachable.get(chunk)) {
 +            chunk.sharedDependencies.add(target);
@@ -252,7 +259,7 @@ index 1e5c598..e2009d4 100644
 +    return groupByDependency;
 +}
 +function extractSharedChunks(chunks, graph, options) {
-+    const asyncChunks = [...chunks.values()].filter((chunk) => chunk.isAsync);
++    const asyncChunks = [...chunks.values()].filter((chunk) => !chunk.sealed && chunk.isAsync);
 +    if (asyncChunks.length < 2) {
 +        return [];
 +    }
@@ -363,10 +370,9 @@ index 1e5c598..e2009d4 100644
 +                    bestLeft = left;
 +                    bestRight = right;
 +                    bestSimilarity = similarity;
-                 }
--                commonDependencies.push(...commonDeps);
-             }
-         }
++                }
++            }
++        }
 +        if (bestLeft < 0)
 +            break;
 +        const leftGroup = sharedGroups[bestLeft];
@@ -420,11 +426,7 @@ index 1e5c598..e2009d4 100644
 +        for (const dep of group.deps) {
 +            groupByDependency.set(dep, merged);
 +        }
-     }
--    // If common dependencies were found, extract them to the shared chunk.
--    if (commonDependencies.length) {
--        const commonDependenciesUnique = [...new Set(commonDependencies)];
--        return new Chunk('/__common.js', commonDependenciesUnique, graph, options, false, true);
++    }
 +    const routeScopedGroups = [...groupsByRouteKey.values()];
 +    // METRAVEL_SHARED_OWNERS_AFTER_MERGE: the merge above unions owners, so a group
 +    // that took another group's owners now owes them to everything its modules require
@@ -445,25 +447,24 @@ index 1e5c598..e2009d4 100644
 +        }
 +        chunks.add(sharedChunk);
 +        sharedChunks.push(sharedChunk);
-     }
--    return undefined;
++    }
 +    return sharedChunks;
- }
--function deduplicateAgainstKnownChunks(chunks, entryChunk, commonChunk) {
++}
 +function deduplicateAgainstKnownChunks(chunks, entryChunk) {
      // TODO: Optimize this pass more.
 -    // Remove all dependencies from async chunks that are already in the common chunk.
+-    for (const chunk of chunks) {
+-        if (!chunk.sealed && !chunk.isEntry && chunk !== commonChunk) {
 +    // Remove dependencies from async chunks that are already in the entry chunk.
-     for (const chunk of [...chunks.values()]) {
--        if (!chunk.isEntry && chunk !== commonChunk) {
-+        if (!chunk.isEntry) {
++    for (const chunk of [...chunks.values()]) {
++        if (!chunk.sealed && !chunk.isEntry) {
              for (const dep of chunk.deps) {
 -                if (entryChunk.deps.has(dep) || commonChunk?.deps.has(dep)) {
 +                if (entryChunk.deps.has(dep)) {
                      chunk.deps.delete(dep);
                  }
              }
-@@ -577,6 +920,9 @@ function createRuntimeChunk(entryChunk, chunks, graph, options) {
+@@ -610,6 +953,9 @@
      for (const chunk of chunks) {
          // Runtime chunk has to load before any other a.k.a all chunks require it.
          chunk.requiredChunks.add(runtimeChunk);

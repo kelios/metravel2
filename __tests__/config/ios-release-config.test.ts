@@ -211,6 +211,85 @@ process.stdout.write(JSON.stringify({
     expect(validateIosRelease(root)).toEqual([]);
   });
 
+  it.each([true, false])('rejects removed Expo newArchEnabled=%s', enabled => {
+    const testRoot = fixture({
+      'app.json': value => {
+        const config = JSON.parse(value);
+        config.expo.newArchEnabled = enabled;
+        return JSON.stringify(config);
+      },
+    });
+    expect(validateIosRelease(testRoot)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'IOS_NEW_ARCH_EXPO' }),
+    ]));
+  });
+
+  it.each([
+    ['expo', '~57.0.4'],
+    ['react-native', '0.86.0'],
+    ['react-native-reanimated', '4.5.0'],
+    ['react-native-worklets', '0.10.0'],
+    ['react-native-screens', '4.25.2'],
+  ])('rejects affected or mismatched %s', (name, version) => {
+    const testRoot = fixture({
+      'package.json': value => {
+        const config = JSON.parse(value);
+        config.dependencies[name] = version;
+        return JSON.stringify(config);
+      },
+    });
+    expect(validateIosRelease(testRoot)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'IOS_SDK_DEPENDENCY_PARITY' }),
+    ]));
+  });
+
+  it.each(['resolutions', 'overrides', 'install-exclusion', 'jest-preset'])('rejects hidden RN parity drift: %s', drift => {
+    const testRoot = fixture({
+      'package.json': value => {
+        const config = JSON.parse(value);
+        if (drift === 'resolutions') config.resolutions['react-native'] = '0.86.0';
+        if (drift === 'overrides') config.overrides['react-native'] = '0.86.0';
+        if (drift === 'install-exclusion') config.expo.install = { exclude: ['react-native'] };
+        if (drift === 'jest-preset') config.devDependencies['@react-native/jest-preset'] = '0.86.0';
+        return JSON.stringify(config);
+      },
+    });
+    expect(validateIosRelease(testRoot)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'IOS_SDK_DEPENDENCY_PARITY' }),
+    ]));
+  });
+
+  it('rejects affected Hermes in the JS lock', () => {
+    const testRoot = fixture({
+      'yarn.lock': value => value.replace(/250829098\.0\.17/g, '250829098.0.14'),
+    });
+    expect(validateIosRelease(testRoot)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'IOS_SDK_DEPENDENCY_PARITY' }),
+    ]));
+  });
+
+  it('rejects affected Hermes in the native lock', () => {
+    const testRoot = fixture({
+      'ios/Podfile.lock': value => value.replace(/250829098\.0\.17/g, '250829098.0.14'),
+    });
+    expect(validateIosRelease(testRoot)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'IOS_SDK_NATIVE_PARITY' }),
+    ]));
+  });
+
+  it('rejects disabled native New Architecture', () => {
+    const testRoot = fixture({
+      'ios/Podfile.properties.json': value => {
+        const config = JSON.parse(value);
+        config.newArchEnabled = 'false';
+        return JSON.stringify(config);
+      },
+    });
+    expect(validateIosRelease(testRoot)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'IOS_NEW_ARCH_PODS' }),
+    ]));
+  });
+
   it('rejects a stale build number in either Expo or committed Xcode settings', () => {
     const staleBuild = String(Number(EXPECTED.buildNumber) - 1);
     const expoRoot = fixture({

@@ -119,3 +119,18 @@ Each phase SHALL have a unique atomically published 0600 public context before d
 #### Scenario: Late or changed context
 - **WHEN** a context is modified, reused, mismatched or published after phase start
 - **THEN** whole-flow consistency fails
+
+### Requirement: Clipboard access occurs only in the verified writer foreground
+Staging and owned cleanup SHALL activate the verified executing .xctrunner app through public API, wait for foreground state, access UIPasteboard on main only while the process is active, and restore MeTravel in defer. The inner transaction SHALL return sanitized status and finish its restoration attempt before the outer wrapper records an XCTest issue. No explicit test issue SHALL be recorded inside the transaction or its defer. They SHALL fail closed if identity, foreground, metadata-only write or owned clear verification fails. New staged-generation ownership SHALL be recorded before subsequent verification can fail; real payloads SHALL NOT be read back. Staging SHALL preserve one-shot file consumption, local-only expiration and no-value logging. Cleanup SHALL preserve unrelated user clipboard changes through change-count ownership.
+
+#### Scenario: Old background writer
+- **WHEN** staging or cleanup bypasses the verified foreground wrapper
+- **THEN** the source contract rejects the helper before runtime
+
+#### Scenario: User replaces clipboard after staging
+- **WHEN** the current change count differs from the owned staged count
+- **THEN** cleanup preserves that clipboard and relinquishes ownership
+
+#### Scenario: Source checks pass
+- **WHEN** foreground sequencing compiles and governance checks pass
+- **THEN** real insertion, cleanup and privacy remain unqualified until an independently reviewed fresh dummy run

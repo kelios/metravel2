@@ -20,10 +20,10 @@ import { makeTempDir, runNodeCli } from './cli-test-utils'
 const ROOT = path.resolve(__dirname, '..', '..')
 const STUB_REL = 'metro-stubs/react-native-gesture-handler.js'
 const ROUTE_CONTEXT_STUB_REL = 'metro-stubs/expo-router-context.web.js'
-const EXPO_CHUNK_PATCH_REL = 'patches/@expo+metro-config+57.0.3.patch'
+const EXPO_CHUNK_PATCH_REL = 'patches/@expo+metro-config+57.0.13.patch'
 const EXPO_CHUNK_SERIALIZER_REL =
   'node_modules/@expo/metro-config/build/serializer/serializeChunks.js'
-const EXPO_ASYNC_RUNTIME_PATCH_REL = 'patches/expo+57.0.4.patch'
+const EXPO_ASYNC_RUNTIME_PATCH_REL = 'patches/expo+57.0.30.patch'
 const EXPO_ASYNC_RUNTIME_REL = 'node_modules/expo/src/async-require/asyncRequireModule.ts'
 const EXPO_CHUNK_PATCH_MARKER = 'METRAVEL_PER_ROUTE_COMMON_CHUNK'
 
@@ -97,6 +97,45 @@ describe('PERF-014 gesture-handler web stub — metro.config resolver', () => {
     const { customResolverOptions: _environment, ...clientWithoutEnvironment } = ctx
     const web = resolveRequest(clientWithoutEnvironment, 'expo-router/_ctx', 'web')
     expect(web.filePath.replace(/\\/g, '/').endsWith(ROUTE_CONTEXT_STUB_REL)).toBe(true)
+  })
+
+  it('preserves sealed worker dependencies while extracting route shared chunks', () => {
+    const result = runNodeCli(['-e', `
+const fs = require('fs');
+const Module = require('module');
+const serializer = require.resolve('@expo/metro-config/build/serializer/serializeChunks');
+const target = new Module(serializer, module);
+target.filename = serializer;
+target.paths = Module._nodeModulePaths(require('path').dirname(serializer));
+target._compile(fs.readFileSync(serializer, 'utf8') + '\\nexports.testChunks = { Chunk, extractSharedChunks, deduplicateAgainstKnownChunks, removeEntryDepsFromAsyncChunks };', serializer);
+const { Chunk, extractSharedChunks, deduplicateAgainstKnownChunks, removeEntryDepsFromAsyncChunks } = target.exports.testChunks;
+const mod = path => ({ path, dependencies: new Map() });
+const shared = mod('/shared.js'), workerOnly = mod('/worker-only.js');
+const a = mod('/app/a.tsx'), b = mod('/app/b.tsx'), w = mod('/worker.js'), e = mod('/entry.js');
+const graph = { dependencies: new Map([shared, workerOnly, a, b, w, e].map(m => [m.path, m])) };
+const chunk = (entry, isAsync, isEntry = false) => new Chunk(entry.path, new Set([entry]), graph, {}, isAsync, false, isEntry);
+const entry = chunk(e, false, true), routeA = chunk(a, true), routeB = chunk(b, true), worker = chunk(w, true, true);
+entry.deps.add(shared);
+for (const c of [routeA, routeB, worker]) c.deps.add(shared);
+worker.deps.add(workerOnly);
+worker.seal();
+const chunks = new Set([entry, routeA, routeB, worker]);
+// Entry dedupe must never strip the worker's independent registry.
+removeEntryDepsFromAsyncChunks(entry, chunks);
+routeA.deps.add(shared); routeB.deps.add(shared);
+const extracted = extractSharedChunks(chunks, graph, {});
+deduplicateAgainstKnownChunks(chunks, entry);
+console.log(JSON.stringify({ workerDeps: [...worker.deps].map(m => m.path).sort(),
+  sharedCount: extracted.length, workerRequires: worker.requiredChunks.size,
+  routeRequires: [routeA.requiredChunks.size, routeB.requiredChunks.size] }));
+`])
+    expect(result.status).toBe(0)
+    expect(JSON.parse(result.stdout.trim())).toEqual({
+      workerDeps: ['/shared.js', '/worker-only.js', '/worker.js'],
+      sharedCount: 1,
+      workerRequires: 0,
+      routeRequires: [1, 1],
+    })
   })
 
   it('keeps the per-route Expo chunk patch applied after install', () => {

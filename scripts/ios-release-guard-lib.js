@@ -20,7 +20,7 @@ const EXPECTED = Object.freeze({
     'applinks:metravel.by',
   ]),
   bundleIdentifier: 'by.metravel.app',
-  buildNumber: '13',
+  buildNumber: '14',
   deploymentTarget: '16.4',
   displayName: 'MeTravel',
   easCliVersion: '21.8.0',
@@ -613,7 +613,41 @@ function validateIosRelease(root = process.cwd(), options = {}) {
   if (app.name !== EXPECTED.displayName) fail('IOS_DISPLAY_NAME_EXPO', String(app.name));
   if (app.version !== EXPECTED.version) fail('IOS_VERSION_EXPO', String(app.version));
   if (app.scheme !== EXPECTED.scheme) fail('IOS_SCHEME_EXPO', String(app.scheme));
-  if (app.newArchEnabled !== true) fail('IOS_NEW_ARCH_EXPO', String(app.newArchEnabled));
+  // SDK 55+ always enables New Architecture; the removed app schema field
+  // must stay absent. Native properties and compiled plist are checked below.
+  if (Object.prototype.hasOwnProperty.call(app, 'newArchEnabled')) {
+    fail('IOS_NEW_ARCH_EXPO', 'newArchEnabled is obsolete in Expo SDK 57');
+  }
+  const releaseDependencies = {
+    expo: '~57.0.30',
+    'react-native': '0.86.3',
+    react: '19.2.3',
+    'react-dom': '19.2.3',
+    'react-native-reanimated': '4.5.1',
+    'react-native-worklets': '0.10.1',
+    'react-native-screens': '~4.26.0',
+  };
+  for (const [name, version] of Object.entries(releaseDependencies)) {
+    if (packageJson.dependencies?.[name] !== version) {
+      fail('IOS_SDK_DEPENDENCY_PARITY', `${name} must be ${version}`);
+    }
+  }
+  if (packageJson.resolutions?.['react-native'] !== '0.86.3' ||
+      packageJson.overrides?.['react-native'] !== '0.86.3' ||
+      packageJson.devDependencies?.['@react-native/jest-preset'] !== '0.86.3' ||
+      packageJson.devDependencies?.['jest-expo'] !== '~57.0.6' ||
+      packageJson.expo?.install?.exclude?.some(name => ['expo', 'react', 'react-dom', 'react-native'].includes(name))) {
+    fail('IOS_SDK_DEPENDENCY_PARITY', 'runtime, Jest preset and install checks must agree');
+  }
+  if (!/^react-native@0\.86\.3:\n {2}version "0\.86\.3"$/m.test(yarnLock) ||
+      !/^hermes-compiler@250829098\.0\.17:\n {2}version "250829098\.0\.17"$/m.test(yarnLock) ||
+      /^hermes-compiler@250829098\.0\.14:/m.test(yarnLock)) {
+    fail('IOS_SDK_DEPENDENCY_PARITY', 'lock must select corrected RN and transitive Hermes');
+  }
+  if (!/^ {2}- hermes-engine \(250829098\.0\.17\):/m.test(podfileLock) ||
+      !/^ {2}- React-Core \(0\.86\.3\):/m.test(podfileLock)) {
+    fail('IOS_SDK_NATIVE_PARITY', 'Pods must use RN 0.86.3 and corrected Hermes 250829098.0.17');
+  }
   if (app.ios?.supportsTablet !== true) fail('IOS_DEVICE_FAMILY_EXPO', String(app.ios?.supportsTablet));
   if (app.ios?.requireFullScreen !== false || app.orientation !== 'default') {
     fail(
@@ -758,12 +792,12 @@ function validateIosRelease(root = process.cwd(), options = {}) {
   if (eas.submit?.production?.ios?.bundleIdentifier !== EXPECTED.bundleIdentifier) {
     fail('IOS_SUBMIT_BUNDLE_ID', String(eas.submit?.production?.ios?.bundleIdentifier));
   }
-  if (packageJson.dependencies?.['expo-build-properties'] !== '~57.0.3') {
+  if (packageJson.dependencies?.['expo-build-properties'] !== '~57.0.22') {
     fail('IOS_BUILD_PROPERTIES_PIN', String(packageJson.dependencies?.['expo-build-properties']));
   }
-  if (!yarnLock.includes('expo-build-properties@~57.0.3:') ||
-      !yarnLock.includes('version "57.0.3"')) {
-    fail('IOS_BUILD_PROPERTIES_LOCK', 'expo-build-properties 57.0.3 must be locked');
+  if (!yarnLock.includes('expo-build-properties@~57.0.22:') ||
+      !yarnLock.includes('version "57.0.22"')) {
+    fail('IOS_BUILD_PROPERTIES_LOCK', 'expo-build-properties 57.0.22 must be locked');
   }
   const expectedScripts = {
     'ios:artifact:audit': 'node scripts/ios-artifact-audit.js',
@@ -830,7 +864,7 @@ function validateIosRelease(root = process.cwd(), options = {}) {
   if (pods.newArchEnabled !== 'true') fail('IOS_NEW_ARCH_PODS', String(pods.newArchEnabled));
   const projectPairs = [
     ['IOS_BUNDLE_ID_XCODE', /PRODUCT_BUNDLE_IDENTIFIER = by\.metravel\.app;/g, /PRODUCT_BUNDLE_IDENTIFIER = /g, 2],
-    ['IOS_BUILD_NUMBER_XCODE', /CURRENT_PROJECT_VERSION = 13;/g, /CURRENT_PROJECT_VERSION = /g, 2],
+    ['IOS_BUILD_NUMBER_XCODE', /CURRENT_PROJECT_VERSION = 14;/g, /CURRENT_PROJECT_VERSION = /g, 2],
     ['IOS_VERSION_XCODE', /MARKETING_VERSION = 1\.0\.5;/g, /MARKETING_VERSION = /g, 2],
     ['IOS_DEVICE_FAMILY_XCODE', /TARGETED_DEVICE_FAMILY = "1,2";/g, /TARGETED_DEVICE_FAMILY = /g, 2],
     ['IOS_DEPLOYMENT_TARGET_XCODE', /IPHONEOS_DEPLOYMENT_TARGET = 16\.4;/g, /IPHONEOS_DEPLOYMENT_TARGET = /g, 4],

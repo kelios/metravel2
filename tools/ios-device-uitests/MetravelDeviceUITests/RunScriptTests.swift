@@ -211,11 +211,20 @@ final class RunScriptTests: XCTestCase {
             guard !data.isEmpty, data.count <= 16384, let value = String(data: data, encoding: .utf8) else {
                 XCTFail("Ожидается непустой UTF-8 приватный файл до 16 KiB"); return
             }
-            onMain {
-                UIPasteboard.general.setItems([["public.utf8-plain-text": value]], options: [
+            _ = withForegroundClipboardWriter {
+                let pasteboard = UIPasteboard.general
+                let previousCount = pasteboard.changeCount
+                pasteboard.setItems([["public.utf8-plain-text": value]], options: [
                     .localOnly: true, .expirationDate: Date().addingTimeInterval(60)
                 ])
-                secretPasteboardChangeCount = UIPasteboard.general.changeCount
+                let stagedCount = pasteboard.changeCount
+                // Claim only our new generation before any later verification can
+                // fail, so tearDown can still attempt ownership-safe cleanup.
+                if stagedCount != previousCount { secretPasteboardChangeCount = stagedCount }
+                guard stagedCount != previousCount,
+                      pasteboard.numberOfItems == 1,
+                      pasteboard.changeCount == stagedCount else { return false }
+                return true
             }
         } catch {
             // Не печатаем error: он может содержать путь или данные.
@@ -226,12 +235,62 @@ final class RunScriptTests: XCTestCase {
 
     private func clearSecretClipboard() {
         guard let expectedChangeCount = secretPasteboardChangeCount else { return }
-        onMain {
-            if UIPasteboard.general.changeCount == expectedChangeCount {
-                UIPasteboard.general.items = []
+        _ = withForegroundClipboardWriter {
+            let pasteboard = UIPasteboard.general
+            guard pasteboard.changeCount == expectedChangeCount else {
+                // A later user copy belongs to the user, not to this helper.
+                secretPasteboardChangeCount = nil
+                return true
+            }
+            pasteboard.items = []
+            guard pasteboard.changeCount != expectedChangeCount,
+                  pasteboard.numberOfItems == 0 else { return false }
+            secretPasteboardChangeCount = nil
+            return true
+        }
+    }
+
+    /// Real-device clipboard access belongs to the executing foreground app,
+    /// not to the .xctest plugin while the target application is foreground.
+    private func withForegroundClipboardWriter(_ action: () -> Bool) -> Bool {
+        // Darwin XCTest may abort on a recorded issue. Raise our sanitized failure
+        // only after the inner transaction has finished its restoration attempt.
+        let failure = foregroundClipboardTransaction(action)
+        if let failure = failure { XCTFail(failure); return false }
+        return true
+    }
+
+    private func foregroundClipboardTransaction(_ action: () -> Bool) -> String? {
+        guard let target = app,
+              let writerId = Bundle.main.bundleIdentifier,
+              let testId = Bundle(for: RunScriptTests.self).bundleIdentifier,
+              Bundle.main.bundleURL.pathExtension == "app",
+              writerId == testId + ".xctrunner" else {
+            return "Clipboard writer application identity unavailable"
+        }
+        let writer = XCUIApplication(bundleIdentifier: writerId)
+        var restored = false
+        var failure: String?
+        do {
+            // Record no test issues inside this transaction or its defer.
+            defer {
+                target.activate()
+                restored = target.wait(for: .runningForeground, timeout: 15)
+            }
+            writer.activate()
+            if !writer.wait(for: .runningForeground, timeout: 15) {
+                failure = "Clipboard writer did not reach foreground"
+            } else {
+                var succeeded = false
+                onMain {
+                    guard UIApplication.shared.applicationState == .active else { return }
+                    succeeded = action()
+                }
+                if !succeeded { failure = "Foreground clipboard operation failed" }
             }
         }
-        secretPasteboardChangeCount = nil
+        guard restored else { return "Target foreground restoration failed" }
+        return failure
     }
 
     private func onMain(_ action: () -> Void) {

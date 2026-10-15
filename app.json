@@ -7,7 +7,6 @@
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "metravel",
-    "newArchEnabled": true,
     "userInterfaceStyle": "automatic",
     "assetBundlePatterns": [
       "assets/images/*",
@@ -19,7 +18,7 @@
       "supportsTablet": true,
       "requireFullScreen": false,
       "bundleIdentifier": "by.metravel.app",
-      "buildNumber": "13",
+      "buildNumber": "14",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "MeTravel uses your location to show nearby routes, places, and quest points.",
         "NSMotionUsageDescription": "MeTravel uses motion data to support location and direction features while you navigate routes and quests.",
