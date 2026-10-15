@@ -7,7 +7,7 @@ describe('ToastHost (web)', () => {
   it('does not let the global #root min-height:100vh stretch the toast container', async () => {
     // jsdom cannot parse CSS var() dimensions; retain the actual style assignment.
     const bottomAssignment = jest.spyOn(CSSStyleDeclaration.prototype, 'bottom', 'set');
-    const { container } = render(<ToastHost />);
+    render(<ToastHost />);
 
     act(() => {
       window.dispatchEvent(
@@ -17,7 +17,7 @@ describe('ToastHost (web)', () => {
       );
     });
 
-    const host = container.querySelector('div[role="status"]') as HTMLElement | null;
+    const host = document.body.querySelector('div[role="status"]') as HTMLElement | null;
     expect(host).toBeTruthy();
     // Regression: a global rule `#root, #root > div, #root > div > div { min-height: 100vh }`
     // matched the fixed toast container and stretched it to full height, pushing the card to
@@ -31,7 +31,7 @@ describe('ToastHost (web)', () => {
 
   it('renders an action button («Отменить») that runs the action', () => {
     const onPress = jest.fn();
-    const { container } = render(<ToastHost />);
+    render(<ToastHost />);
 
     act(() => {
       window.dispatchEvent(
@@ -41,19 +41,19 @@ describe('ToastHost (web)', () => {
       );
     });
 
-    const button = container.querySelector('[data-testid="toast-action"]') as HTMLElement;
+    const button = document.body.querySelector('[data-testid="toast-action"]') as HTMLElement;
     expect(button.textContent).toBe('Отменить');
     fireEvent.click(button);
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
   it('has no action button when none is passed', () => {
-    const { container } = render(<ToastHost />);
+    render(<ToastHost />);
     act(() => {
       window.dispatchEvent(
         new CustomEvent(WEB_TOAST_EVENT_NAME, { detail: { type: 'info', text1: 'Готово' } })
       );
     });
-    expect(container.querySelector('[data-testid="toast-action"]')).toBeNull();
+    expect(document.body.querySelector('[data-testid="toast-action"]')).toBeNull();
   });
 });

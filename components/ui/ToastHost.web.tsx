@@ -1,5 +1,6 @@
 import { webDockReserve } from '@/components/layout/bottomChromeInset';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Feather from '@expo/vector-icons/Feather';
 
 import { WEB_TOAST_EVENT_NAME, type ToastAction } from '@/utils/toast.web';
@@ -91,10 +92,7 @@ export default function ToastHost(_props: { overDock?: boolean } = {}) {
     zIndex: 99999,
     maxWidth: 420,
     width: 'calc(100% - 32px)',
-    // Глобальное правило `#root, #root > div, #root > div > div { min-height: 100vh }`
-    // матчит контейнер тоста (он — `#root > div > div`) и растягивал его на весь экран:
-    // карточка (static-блок) садилась вверху контейнера → за экран/под шапку, тост был не
-    // виден. Явно снимаем min-height, чтобы контейнер был по высоте карточки.
+    // Keep the host card-sized even if global CSS sets viewport minimum dimensions.
     minHeight: 0,
     height: 'fit-content',
     pointerEvents: 'auto',
@@ -139,9 +137,10 @@ export default function ToastHost(_props: { overDock?: boolean } = {}) {
     marginTop: 1,
   }), [accent]);
 
-  if (!payload?.text1 && !payload?.text2) return null;
+  if (typeof document === 'undefined' || (!payload?.text1 && !payload?.text2)) return null;
 
-  return (
+  // Escape RNW View stacking contexts so retained body-portal modals cannot cover feedback.
+  return createPortal(
     <div style={containerStyle} aria-live="polite" role="status">
       <div style={cardStyle}>
         <div style={iconStyle} aria-hidden="true">
@@ -183,6 +182,7 @@ export default function ToastHost(_props: { overDock?: boolean } = {}) {
           </button>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
