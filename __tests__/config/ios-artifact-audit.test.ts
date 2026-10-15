@@ -138,6 +138,17 @@ describe('iOS signed artifact audit', () => {
     expect(validateIosAppBundle(createAppBundle(), ARTIFACT_OPTIONS)).toEqual([]);
   });
 
+  it('rejects the previous build number in the compiled artifact', () => {
+    const appPath = createAppBundle(info => {
+      info.CFBundleVersion = String(Number(EXPECTED.buildNumber) - 1);
+    });
+    expect(validateIosAppBundle(appPath, ARTIFACT_OPTIONS)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'IOS_ARTIFACT_BUILD_NUMBER' }),
+      ])
+    );
+  });
+
   it('fails closed when the artifact drops iPad or resizable orientation support', () => {
     const iphoneOnlyPath = createAppBundle(info => {
       info.UIDeviceFamily = [1];
@@ -446,6 +457,11 @@ describe('iOS EAS artifact identity', () => {
     );
     expect(() => validateEasBuildMetadata(
       { ...metadata, gitCommitHash: 'different-revision' },
+      buildId,
+      revision
+    )).toThrow('exact current production release candidate');
+    expect(() => validateEasBuildMetadata(
+      { ...metadata, appBuildVersion: String(Number(EXPECTED.buildNumber) - 1) },
       buildId,
       revision
     )).toThrow('exact current production release candidate');

@@ -9,6 +9,17 @@ const FACEBOOK_PLUGIN = 'react-native-fbsdk-next'
 
 const cleanEnv = (value) => String(value || '').trim()
 
+function withFacebookIosPrivacy(config) {
+  const { withInfoPlist } = require('@expo/config-plugins')
+  return withInfoPlist(config, (mod) => {
+    // iOS initializes the SDK explicitly from the sign-in button.
+    mod.modResults.FacebookAutoInitEnabled = false
+    mod.modResults.FacebookAutoLogAppEventsEnabled = false
+    mod.modResults.FacebookAdvertiserIDCollectionEnabled = false
+    return mod
+  })
+}
+
 // `android.googleServicesFile` is the only switch that makes prebuild copy
 // google-services.json and apply the Gradle plugin; without it Firebase never
 // initialises and Android cannot obtain an Expo push token (#1818). The config
@@ -47,6 +58,9 @@ module.exports = ({ config }) => {
   )
 
   if (facebookEnabled && appID && clientToken) {
+    // Expo runs plist mods in reverse registration order: register this first
+    // so it restores the iOS privacy flags after the shared Facebook plugin.
+    plugins.push(withFacebookIosPrivacy)
     plugins.push([
       FACEBOOK_PLUGIN,
       {

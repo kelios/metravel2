@@ -5147,6 +5147,31 @@ guard, падающий в CI на попытке обойти этот конт
   этапом. Новая сборка нужна только по подтверждённому дефекту или отдельному
   требованию Apple; разрешение Reply/Notes не разрешает resubmit/release.
 
+### IOS-FACEBOOK-GENERATED-FLAGS-001 — prebuild возвращает Auto Init в iOS
+
+- **Инвариант:** генерация Expo сохраняет `FacebookAutoInitEnabled`,
+  `FacebookAutoLogAppEventsEnabled`, `FacebookAdvertiserIDCollectionEnabled`
+  в `false` на iOS; Android сохраняет свой существующий `AutoInitEnabled=true`.
+- **Surface/owner:** `app.config.js`, конфигурация сборки iOS/Android;
+  localization impact: none. Текущий release-поезд — `#1940`, связанные
+  прежние контракты — `#1895` и `#1918`, OpenSpec `ios-facebook-limited-login`.
+- **Подтверждение 15.10.2026:** checked-in iOS plist имеет три `false`,
+  общий Facebook plugin — `isAutoInitEnabled:true`. Установленный plugin
+  перезаписывает plist: отдельная проба даёт `[true,false,false]`.
+  `ios:release:guard` был зелёным, поскольку читал уже сохранённый native plist.
+  Это дефект повторной генерации, не доказательство трекинга в build 12.
+- **Механизм и решение:** именованный inline `withInfoPlist` регистрируется
+  перед Facebook plugin, чтобы его iOS action выполнился последним.
+  Обратный порядок исполняемой пробы возвращает `true`; общий `false`
+  нарушает Android build guard. Инициализация SDK при входе сохраняется.
+- **Controls:** фактическая композиция `withPlugins`/`compileModsAsync` в
+  `__tests__/config/ios-release-config.test.ts`: три iOS `false`, Android
+  Auto Init `true`. Приёмка точного IPA отдельно сверяет compiled flags,
+  privacy manifest и signed entitlements; source/unit этого не заменяют.
+- **Вердикт:** reuse текущей `#1940` для обнаруженной при подготовке релиза
+  ошибки; новые конкурирующие карточки не создаются. Старые приёмки
+  `#1895`/`#1918` не выдаются за проверку генерации или нового IPA.
+
 ### IOS-APP-REVIEW-PRIVACY-WEB-CONTENT-001 — приложение показывает cookie-UI и чужой веб-контент с cookies
 
 - **Инвариант:** в native-приложении нет cookie-UI (меню, ссылки и тексты, в

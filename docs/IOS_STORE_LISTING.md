@@ -5,10 +5,11 @@
 TestFlight build из #1423. Секреты, Team ID, demo-пароль и UDID сюда не
 кладутся.
 
-Версия в репозитории на момент черновика: `app.json` → `expo.version` 1.0.5,
-`expo.ios.buildNumber` 12 (1.0.5 (12), source `4b7166e61`; установленный
-TestFlight-кандидат для записей 13.10.2026). Исправленный кандидат 13 пока
-не собран; перед заполнением ASC сверить фактический выбранный build.
+Подготовленный source-кандидат: `app.json` → `expo.version` 1.0.5,
+`expo.ios.buildNumber` 13. Signed build и upload ещё не выполнены; этот номер
+не означает установленный TestFlight-кандидат. Исторические записи 13.10.2026
+сняты на 1.0.5 (12), source `4b7166e61`. Перед заполнением ASC сверить
+фактический processed build и source revision.
 
 Лимиты Apple (2026): name 30, subtitle 30, description 4000, keywords 100,
 promotional text 170. Основная локаль карточки — RU.

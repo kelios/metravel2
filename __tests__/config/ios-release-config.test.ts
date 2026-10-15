@@ -6,6 +6,7 @@ import path from 'path';
 
 const plist = require('@expo/plist').default;
 const {
+  EXPECTED,
   IOS_IPAD_ORIENTATIONS,
   validateIosRelease,
 } = require('../../scripts/ios-release-guard-lib');
@@ -147,8 +148,92 @@ describe('iOS release configuration', () => {
     }
   });
 
+  it('keeps regenerated Facebook privacy flags disabled when login is enabled', () => {
+    const generated = JSON.parse(execFileSync(process.execPath, ['-e', `
+const configure = require('./app.config.js');
+const { withPlugins, compileModsAsync } = require('@expo/config-plugins');
+async function generate(wrongOrder = false) {
+  const base = JSON.parse(JSON.stringify(require('./app.json').expo));
+  base.plugins.push(['react-native-fbsdk-next', { isAutoInitEnabled: true }]);
+  const resolved = configure({ config: base });
+  resolved._internal = { projectRoot: process.cwd() };
+  const facebook = resolved.plugins.filter(entry => Array.isArray(entry) && entry[0] === 'react-native-fbsdk-next');
+  if (wrongOrder) {
+    const privacyIndex = resolved.plugins.findIndex(entry => typeof entry === 'function' && entry.name === 'withFacebookIosPrivacy');
+    const [privacy] = resolved.plugins.splice(privacyIndex, 1);
+    resolved.plugins.push(privacy);
+  }
+  const transformed = withPlugins(resolved, resolved.plugins);
+  const compiled = await compileModsAsync(transformed, {
+    projectRoot: process.cwd(), platforms: ['ios', 'android'],
+    introspect: true, ignoreExistingNativeFiles: true,
+  });
+  const info = compiled._internal.modResults.ios.infoPlist;
+  const metadata = compiled._internal.modResults.android.manifest.manifest.application[0]['meta-data'];
+  return { resolved, facebook, info, metadata };
+}
+(async () => {
+const { resolved, facebook, info, metadata } = await generate();
+const wrongOrder = await generate(true);
+process.stdout.write(JSON.stringify({
+  pluginCount: facebook.length,
+  preservesOtherPlugins: resolved.plugins.includes('expo-image'),
+  preservesLogin: info.FacebookAppID === process.env.EXPO_PUBLIC_META_APP_ID,
+  trackingPermission: facebook[0][1].iosUserTrackingPermission,
+  flags: [info.FacebookAutoInitEnabled, info.FacebookAutoLogAppEventsEnabled, info.FacebookAdvertiserIDCollectionEnabled],
+  androidAutoInit: metadata.find(entry => entry.$['android:name'] === 'com.facebook.sdk.AutoInitEnabled').$['android:value'],
+  wrongOrderAutoInit: wrongOrder.info.FacebookAutoInitEnabled,
+}));
+})().catch(error => { console.error(error.message); process.exitCode = 1; });
+`], {
+      cwd: root,
+      env: {
+        ...process.env,
+        EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED: 'true',
+        EXPO_PUBLIC_META_APP_ID: '1234567890',
+        META_FACEBOOK_CLIENT_TOKEN: 'test-client-token',
+      },
+      encoding: 'utf8',
+    }));
+
+    expect(generated).toEqual({
+      pluginCount: 1,
+      preservesOtherPlugins: true,
+      preservesLogin: true,
+      trackingPermission: false,
+      flags: [false, false, false],
+      androidAutoInit: 'true',
+      wrongOrderAutoInit: true,
+    });
+  });
+
   it('keeps Expo, EAS, Xcode, plist, privacy, entitlement, and assets in parity', () => {
     expect(validateIosRelease(root)).toEqual([]);
+  });
+
+  it('rejects a stale build number in either Expo or committed Xcode settings', () => {
+    const staleBuild = String(Number(EXPECTED.buildNumber) - 1);
+    const expoRoot = fixture({
+      'app.json': value => {
+        const config = JSON.parse(value);
+        config.expo.ios.buildNumber = staleBuild;
+        return JSON.stringify(config);
+      },
+    });
+    const xcodeRoot = fixture({
+      'ios/metravel.xcodeproj/project.pbxproj': value => value.replace(
+        /CURRENT_PROJECT_VERSION = \d+;/g,
+        `CURRENT_PROJECT_VERSION = ${staleBuild};`
+      ),
+    });
+    for (const [testRoot, code] of [
+      [expoRoot, 'IOS_BUILD_NUMBER_EXPO'],
+      [xcodeRoot, 'IOS_BUILD_NUMBER_XCODE'],
+    ]) {
+      expect(validateIosRelease(testRoot)).toEqual(expect.arrayContaining([
+        expect.objectContaining({ code }),
+      ]));
+    }
   });
 
   it('does not fail on read when the untracked android/ directory is absent', () => {

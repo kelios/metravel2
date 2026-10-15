@@ -569,7 +569,7 @@ function TravelListItem({
       ) : null}
     </View>
   ) : selectable ? null : (
-    <ContentSafetyActions contentRef={safetyRef} authorName={authorDisplayName} appearance="surface" testIDPrefix="travel-card-safety" />
+    <ContentSafetyActions contentRef={safetyRef} authorName={authorDisplayName} appearance="surface" testID={`travel-card-${travelKey}-safety-menu`} testIDPrefix="travel-card-safety" />
   )
 
   // On narrow cards the meta row only has room for the country and compact badges.
