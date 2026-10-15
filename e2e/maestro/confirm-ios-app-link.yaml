@@ -1,12 +1,29 @@
-# Shared RU system-dialog handling after a metravel:// app link. Android does
-# not use this iOS confirmation; destination assertions remain in the caller.
+# Shared RU system-dialog handling for metravel:// app links. The closed launch
+# context cancels stale navigation; an omitted/app-link context opens a new link.
+# Android has no UI action; destination assertions remain in the caller.
 appId: by.metravel.app
 ---
+- assertTrue:
+    condition: ${typeof APP_LINK_CONTEXT === 'undefined' || APP_LINK_CONTEXT === 'launch' || APP_LINK_CONTEXT === 'app-link'}
+    label: Only launch or app-link confirmation context is supported
 - runFlow:
     when:
       platform: iOS
       visible:
         text: '^Открыть в приложении\s+«MeTravel»\?$'
     commands:
-      - tapOn:
-          text: '^Открыть$'
+      - runFlow:
+          when:
+            true: ${typeof APP_LINK_CONTEXT !== 'undefined' && APP_LINK_CONTEXT === 'launch'}
+          commands:
+            - tapOn:
+                text: '^Отменить$'
+            # Cancel may return to the URL caller; bring MeTravel back without
+            # following the stale link or clearing any app/account data.
+            - launchApp
+      - runFlow:
+          when:
+            true: ${typeof APP_LINK_CONTEXT === 'undefined' || APP_LINK_CONTEXT === 'app-link'}
+          commands:
+            - tapOn:
+                text: '^Открыть$'

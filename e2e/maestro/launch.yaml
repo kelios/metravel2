@@ -4,6 +4,12 @@
 appId: by.metravel.app
 ---
 - launchApp
+# An interrupted previous app link can leave its iOS confirmation above Home.
+# Cancel that pending navigation before checking the initial app shell.
+- runFlow:
+    file: confirm-ios-app-link.yaml
+    env:
+      APP_LINK_CONTEXT: launch
 - runFlow:
     when:
       true: ${typeof DEV_CLIENT !== 'undefined' && DEV_CLIENT == '1'}
