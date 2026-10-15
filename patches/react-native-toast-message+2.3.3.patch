@@ -1,0 +1,23 @@
+diff --git a/node_modules/react-native-toast-message/lib/src/Toast.js b/node_modules/react-native-toast-message/lib/src/Toast.js
+--- a/node_modules/react-native-toast-message/lib/src/Toast.js
++++ b/node_modules/react-native-toast-message/lib/src/Toast.js
+@@ -7,11 +7,14 @@
+     const { show, hide, isVisible, options, data } = useToast({
+         defaultOptions
+     });
+-    // This must use useCallback to ensure the ref doesn't get set to null and then a new ref every render.
+-    React.useImperativeHandle(ref, React.useCallback(() => ({
+-        show,
+-        hide
+-    }), [hide, show]));
++    // Keep registration stable for this mounted host, while forwarding to current methods.
++    // Changing the handle would promote a rerendered root above a later-mounted modal.
++    const methodsRef = React.useRef({ show, hide });
++    methodsRef.current = { show, hide };
++    React.useImperativeHandle(ref, () => ({
++        show: (...args) => methodsRef.current.show(...args),
++        hide: (...args) => methodsRef.current.hide(...args)
++    }), []);
+     return (<ToastUI isVisible={isVisible} options={options} data={data} hide={hide} show={show} config={config}/>);
+ });
+ let refs = [];
