@@ -15,6 +15,7 @@ appId: by.metravel.app
 # Квест открывается по id deep link'ом: Maestro на Android не вводит кириллицу
 # (`inputText` → «Unicode character input is not supported»), поиск по названию недоступен.
 - openLink: "metravel://quests/krakow/krakow-dragon"
+- runFlow: confirm-ios-app-link.yaml
 - extendedWaitUntil:
     visible: "Квест по Кракову: Вавельский дракон"
     timeout: 30000

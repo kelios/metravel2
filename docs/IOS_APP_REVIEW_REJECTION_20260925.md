@@ -17,9 +17,11 @@ Reply и Notes ниже остаются черновиками. Отправк�
 подтверждает состояние заявки сегодня. Номер 11 в плане 03–08.10 также
 исторический: сохранённые записи относятся к 1.0.5 (12), source `4b7166e61`;
 Подписанный build 13 собран из `c1da975db` и прошёл audit IPA, но удерживается
-от загрузки из-за выявленного риска Hermes. Исправление SDK для build 14
-ведётся в #2446; его подписанная сборка и runtime ещё не подтверждены.
-Номер отправляемой сборки заполняется только из фактической записи ASC и IPA.
+от загрузки из-за выявленного риска Hermes. Исправленный build 14 из
+`d561a59233a0a30b3bcda5b7a1ce5c9679b3cd59` собран, прошёл проверку точного
+подписанного IPA и загружен в Apple 15.10 в23:26:59UTC. Обработка Apple и
+появление в TestFlight ещё не подтверждены; на App Review он не отправлен.
+Номер выбранной для review сборки сверяется отдельно в ASC.
 
 Основание удержания13 — [официальное описание регрессии SDK57](https://expo.dev/changelog/sdk-57#known-regressions)
 для HermesV1 с Worklets/Reanimated, которые используются приложением. Проверка
@@ -35,6 +37,8 @@ Reply и Notes ниже остаются черновиками. Отправк�
 | iPad | Досъёмка 13.10 ограничивалась iPhone. Сейчас владелец подключил и разблокировал iPad mini 6 / iPadOS26.6.2 для проверки; фактическая проверка нового кандидата ещё не выполнена. Сохранённая privacy-сцена iPhone portrait не закрывает required iPad landscape |
 | ASC | После входа владельца read-only сверка 15.10, 21:13 UTC: версия 1.0.5 отклонена, selected build 10, последнее письмо Apple 25.09 по 1.2/5.1.2(i), сообщений пять. TestFlight показывает builds 4–12, build 12 «Готово к отправке» в MeTravel Internal; build 13 в списке нет. В опубликованном App Privacy и его подробном preview категории данных для отслеживания нет. Это сверка декларации ASC, не runtime-проверка нового кандидата |
 | Подписанный IPA13 | EAS `fb234cbc-95bd-4ebd-8968-47bc1f182f74`, завершён 15.10 в22:22:43UTC; SHA-256 `23bdb8f519a5573d2b75916572246b97a065651eb805cb6d76cd7cdd47c6714f`. Audit PASS:1.0.5(13), source `c1da975db`, SDK26.5, minimum16.4, families1/2, resizable, пять purpose strings/locales; три Facebook flags=false, tracking=false. Expo Doctor выявил рассогласование зависимостей; официальные release notes подтвердили, что используемый набор относится к затронутой регрессией Hermes семье, поэтому IPA не загружен. Измеренный OOM MeTravel не заявляется |
+| Подписанный IPA14 и загрузка | EAS `518e7243-af3f-4985-ac35-af288d28bdfd`, source `d561a59233a0a30b3bcda5b7a1ce5c9679b3cd59`, IPA SHA-256 `1b0aaab210433002edc7062aa56b0d0d0b49696a29b5eec015f384c0e3f58d70`. Audit PASS:1.0.5(14), SDK26.5/minimum16.4, universal/resizable, подпись/profile/production origin/entitlements, пять purpose strings/locales, три Facebook flags=false и tracking=false. Hermes250829098.0.17 подтверждён Pods/build logs, не прямым чтением binary. Canonical upload выполнена один раз; submission `6d18333d-4e20-4729-bed9-876e368d88d9` FINISHED, Apple transport accepted. Processing/TestFlight availability и exact-device QA ещё не подтверждены |
+| Web и simulator14 | Production web exact SHA: desktop/mobile каталог, статья/фото/richHTML, quests и меню двух чужих карточек PASS; ошибок console/network нет. Unsigned simulator Release14 того же source собран и запущен независимо от Metro. Первый guest-smoke остановлен системным диалогом открытия deep link; consent assertions пока не пройдены. Simulator и web не заменяют проверку signed TestFlight14 или видео |
 | Сеть | Свежая внешняя проверка 15.10,22:16UTC: A+AAAA на трёх DNS-резолверах; восемь GET каталога из US/DE/PL по IPv4/IPv6 — HTTP200 и валидный TLS. Exact-candidate `IOS-16` остаётся незакрытым: эти пробы и dual-stack вход build10 не доказывают вход нового кандидата на устройстве в IPv6-only сети. У владельца нет Ethernet; протокол и ограничение IPv4-only uplink — в разборе отказа14.09 |
 | Доставка и тексты | Нет принятого финального вложения или проверенной signed-out ссылки. После #2137 подставить фактические identity/таймкоды, сохранить важные действующие инструкции ASC и проверить полный Notes ≤4000. Гайд целиком остаётся историческим build 9 и пока не подходит как актуальное вложение |
 

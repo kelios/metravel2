@@ -1,0 +1,12 @@
+# Shared RU system-dialog handling after a metravel:// app link. Android does
+# not use this iOS confirmation; destination assertions remain in the caller.
+appId: by.metravel.app
+---
+- runFlow:
+    when:
+      platform: iOS
+      visible:
+        text: '^Открыть в приложении\s+«MeTravel»\?$'
+    commands:
+      - tapOn:
+          text: '^Открыть$'

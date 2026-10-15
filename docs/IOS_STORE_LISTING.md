@@ -6,8 +6,12 @@ TestFlight build из #1423. Секреты, Team ID, demo-пароль и UDID 
 кладутся.
 
 Подготовленный source-кандидат: `app.json` → `expo.version` 1.0.5,
-`expo.ios.buildNumber` 14. Signed build и upload для 14 ещё не выполнены; этот номер
-не означает установленный TestFlight-кандидат. Исторические записи 13.10.2026
+`expo.ios.buildNumber` 14, source `d561a59233a0a30b3bcda5b7a1ce5c9679b3cd59`.
+Signed IPA14 прошёл canonical audit и загружен в Apple 15.10.2026,23:26:59UTC
+(EAS `518e7243-af3f-4985-ac35-af288d28bdfd`, submission
+`6d18333d-4e20-4729-bed9-876e368d88d9` FINISHED). Processing и доступность
+TestFlight ещё не подтверждены; это не установленный или принятый кандидат
+и не App Review submit. Исторические записи 13.10.2026
 сняты на 1.0.5 (12), source `4b7166e61`. Перед заполнением ASC сверить
 фактический processed build и source revision. Build 13 остаётся историческим
 артефактом: не отправлять из-за затронутой Hermes memory regression; кандидат 14

@@ -6,6 +6,7 @@ appId: by.metravel.app
 - tapOn: "Профиль"
 - assertVisible: "Войдите в аккаунт"
 - openLink: "metravel://login"
+- runFlow: confirm-ios-app-link.yaml
 - extendedWaitUntil:
     visible:
       id: "auth-terms-gate-hint"
@@ -21,6 +22,7 @@ appId: by.metravel.app
 - assertVisible:
     id: "auth-terms-gate-hint"
 - openLink: "metravel://registration"
+- runFlow: confirm-ios-app-link.yaml
 - extendedWaitUntil:
     visible:
       id: "auth-terms-gate-hint"
