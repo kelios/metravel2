@@ -6,6 +6,9 @@ const path = require('node:path')
 const { createHash } = require('node:crypto')
 const { runnerSourceHash, validateSteps, assertExecutionReceipt } = require('../tools/ios-device-uitests/run')
 
+const { loadFlow, validateFlowReceipt } = require('./native-review-flow')
+const AUTH_SCENES = new Set(['login', 'register', 'account-delete'])
+
 const MAX_AGE_MS = 24 * 60 * 60 * 1000
 const CANDIDATE_KEYS = ['version', 'build', 'source', 'origin']
 const ENVIRONMENT_KEYS = ['apiUrl', 'locale', 'accountRole', 'deviceModel']
@@ -29,6 +32,9 @@ function validateReadiness(plan, { directory = process.cwd(), now = Date.now() }
     fail('No scenes requested')
     return failures
   }
+  const registration = plan.scenes.find((scene) => scene.id === 'register')
+  const deletion = plan.scenes.find((scene) => scene.id === 'account-delete')
+  if (registration && deletion && registration.accountRef !== deletion.accountRef) fail('Registration and deletion require the same disposable account reference')
   const currentRunner = runnerSourceHash()
   const catalog = require('../.codex/skills/metravel-app-review-evidence/scenes.json').scenes
   const knownScenes = new Map(catalog.map((scene) => [scene.id, scene]))
@@ -43,6 +49,20 @@ function validateReadiness(plan, { directory = process.cwd(), now = Date.now() }
     seen.add(key)
     if (plan.purpose === 'app-review' && !knownScenes.has(id)) fail(`${id}: unknown App Review scene`)
     if (segment !== undefined && (plan.purpose !== 'app-review' || typeof segment !== 'string' || !knownSegments.has(key))) fail(`${label}: unknown App Review segment mapping`)
+    if (scene.flow !== undefined) {
+      try {
+        if (plan.purpose !== 'app-review' || segment !== undefined || !AUTH_SCENES.has(id)) throw new Error('Invalid flow mapping')
+        const manifestFile = path.resolve(directory, scene.flow)
+        if (loadFlow(manifestFile).flow.scene !== id) throw new Error('Flow scene mismatch')
+        const failures = validateFlowReceipt(manifestFile, path.resolve(directory, scene.report), { now, expected: { ...plan, accountRef: scene.accountRef } })
+        failures.forEach((failure) => fail(`${label}: ${failure}`))
+      } catch { fail(`${label}: invalid complete auth flow mapping`) }
+      continue
+    }
+    if (plan.purpose === 'app-review' && AUTH_SCENES.has(id)) {
+      fail(`${label}: complete authentication scene requires a whole phased flow`)
+      continue
+    }
     try {
       if (!nonempty(scene.path) || !nonempty(scene.report)) throw new Error('scenario path and report are required')
       const raw = fs.readFileSync(path.resolve(directory, scene.path), 'utf8')

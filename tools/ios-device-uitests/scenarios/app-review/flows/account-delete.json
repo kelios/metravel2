@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "review-account-delete",
+  "status": "draft",
+  "reviewed": false,
+  "scene": "account-delete",
+  "accountKind": "disposable",
+  "completeReviewScenes": [],
+  "phases": [
+    {
+      "id": "pre-delete",
+      "visibility": "public",
+      "path": "../phases/account-delete-pre-delete.json"
+    },
+    {
+      "id": "delete",
+      "visibility": "public",
+      "path": "../phases/account-delete-delete.json"
+    },
+    {
+      "id": "relogin-input",
+      "visibility": "private",
+      "path": "../phases/account-delete-relogin-input.json"
+    },
+    {
+      "id": "failed-relogin",
+      "visibility": "public",
+      "path": "../phases/account-delete-failed-relogin.json"
+    }
+  ]
+}

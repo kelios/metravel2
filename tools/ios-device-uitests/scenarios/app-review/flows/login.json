@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "review-login",
+  "status": "draft",
+  "reviewed": false,
+  "scene": "login",
+  "accountKind": "reviewer-demo",
+  "completeReviewScenes": [],
+  "phases": [
+    {
+      "id": "pre-login",
+      "visibility": "public",
+      "path": "../phases/login-pre-login.json"
+    },
+    {
+      "id": "credentials",
+      "visibility": "private",
+      "path": "../phases/login-credentials.json"
+    },
+    {
+      "id": "post-login",
+      "visibility": "public",
+      "path": "../phases/login-post-login.json"
+    }
+  ]
+}

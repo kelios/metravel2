@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "review-register",
+  "status": "draft",
+  "reviewed": false,
+  "scene": "register",
+  "accountKind": "disposable",
+  "completeReviewScenes": [],
+  "phases": [
+    {
+      "id": "pre-register",
+      "visibility": "public",
+      "path": "../phases/register-pre-register.json"
+    },
+    {
+      "id": "registration-input",
+      "visibility": "private",
+      "path": "../phases/register-registration-input.json"
+    },
+    {
+      "id": "registered",
+      "visibility": "public",
+      "path": "../phases/register-registered.json"
+    }
+  ]
+}

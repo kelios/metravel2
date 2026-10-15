@@ -20,3 +20,11 @@
 - [ ] 4.2 Verify real assigned scene/segment readiness against exact installed candidate/source/backend/locale/role and fresh complete executable scenario with qualified reset/cleanup; no full parent claim from two children.
 - [ ] 4.3 Preserve real capture/video/privacy and exact TestFlight provenance gates; perform separately approved video verifier work before recording.
 - [ ] 4.4 Run openspec validate --all before eventual archive; do not archive while review/runtime gates remain open.
+
+## 5. Phased authentication extension
+
+- [x] 5.1 Add strict frozen flow/receipt validation, ordered identity/hash/time binding, opaque account reference and explicit whole-flow coverage.
+- [x] 5.2 Add rehearsal-only sequential host dispatch using one quality gate, existing child device locks, public rehearsals, private diagnostics, dummy canary and independently observed private candidate identity.
+- [x] 5.3 Add synthetic positive and negative tests; preserve existing single-scene and six-segment rules.
+- [x] 5.5 Repair independent-review findings: in-process phase ownership, prerequisite preflight and mandatory keepNever system/user attachments across auth boundaries; add focused regression coverage without changing Swift or pinned helper products.
+- [ ] 5.4 Independent full diff review and real fixture/selector qualification; no draft/synthetic result substitutes for native E2E or video.

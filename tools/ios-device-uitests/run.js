@@ -114,6 +114,10 @@ function readConfig(args, env = process.env) {
   let scenario
   try { scenario = JSON.parse(raw) } catch { fail('Invalid scenario JSON') }
   const steps = validateSteps(Array.isArray(scenario) ? scenario : scenario.steps, env.QA_PRIVATE_INPUT === '1')
+  if (env.IOS_QA_ATTACHMENTS !== undefined && env.IOS_QA_ATTACHMENTS !== 'none') fail('Invalid attachment policy')
+  if (env.IOS_QA_ATTACHMENTS === 'none' && steps.some((step) => ['shot', 'tree'].includes(step.op))) fail('Capture forbidden by attachment policy')
+  const keepNever = env.QA_PRIVATE_INPUT === '1' || env.IOS_QA_ATTACHMENTS === 'none'
+  const attachmentPolicy = { system: keepNever ? 'keepNever' : 'deleteOnSuccess', user: keepNever ? 'keepNever' : 'keepAlways' }
   const rehearsal = flags.has('--rehearsal')
   if (!Array.isArray(scenario) && (!SAFE_NAME.test(scenario.id || '') || scenario.layer !== 'physical-ios')) fail('Scenario requires id and layer=physical-ios')
   if (rehearsal) {
@@ -148,7 +152,7 @@ function readConfig(args, env = process.env) {
   const canonicalOut = path.join(fs.realpathSync(parent), path.relative(parent, out))
   if (!['.codex-temp', 'test-results'].some((base) => canonicalOut.startsWith(path.join(ROOT, base) + path.sep))) fail('IOS_QA_OUT must be inside .codex-temp/ or test-results/')
   if (env.IOS_QA_ALLOW_PROVISIONING_UPDATES && env.IOS_QA_ALLOW_PROVISIONING_UPDATES !== '1') fail('Invalid provisioning opt-in')
-  return { steps, scenario: { id: scenario.id || 'diagnostic', sha256: sha256(raw) }, rehearsal, validate: flags.has('--validate'), metadata, budget, device, bundle, out: canonicalOut, label, privateInput: env.QA_PRIVATE_INPUT === '1', provisioning: env.IOS_QA_ALLOW_PROVISIONING_UPDATES === '1' }
+  return { steps, scenario: { id: scenario.id || 'diagnostic', sha256: sha256(raw) }, rehearsal, validate: flags.has('--validate'), metadata, budget, device, bundle, out: canonicalOut, label, privateInput: env.QA_PRIVATE_INPUT === '1', attachmentPolicy, provisioning: env.IOS_QA_ALLOW_PROVISIONING_UPDATES === '1' }
 }
 function productHashes(directory) {
   const result = {}
@@ -204,7 +208,7 @@ async function main(args = process.argv.slice(2), env = process.env) {
   try {
     fs.mkdirSync(config.out, { recursive: true, mode: 0o700 })
     runDir = fs.mkdtempSync(path.join(config.out, config.label + '-'))
-    report = { schemaVersion: 1, status: 'failed', layer: 'physical-ios', mode: config.rehearsal ? 'rehearsal' : 'diagnostic', scenario: config.scenario, runner: { sourceSha256, fingerprint: null }, ...config.metadata, startedAt, finishedAt: null, exitCode: 1 }
+    report = { schemaVersion: 1, status: 'failed', layer: 'physical-ios', mode: config.rehearsal ? 'rehearsal' : 'diagnostic', scenario: config.scenario, runner: { sourceSha256, fingerprint: null }, ...config.metadata, attachmentPolicy: config.attachmentPolicy, startedAt, finishedAt: null, exitCode: 1 }
     const buildLog = path.join(runDir, 'build.log')
     const log = path.join(runDir, 'test.log')
     const command = (program, argv, options = {}) => runCommand(program, argv, { deadline, env, ...options })
@@ -239,9 +243,9 @@ async function main(args = process.argv.slice(2), env = process.env) {
     const runtime = path.join(runDir, 'run.xctestrun')
     fs.copyFileSync(path.join(cache, 'Build/Products', testRuns[0]), runtime)
     // __TESTROOT__ in an xctestrun is relative to its original products directory.
-    // Keep that location explicit when the runtime copy is patched for private mode.
-    const patch = `import plistlib,sys\np=sys.argv[1]\nwith open(p,'rb') as f: d=plistlib.load(f)\ndef visit(x):\n if isinstance(x,dict):\n  for k,v in list(x.items()):\n   if isinstance(v,str): x[k]=v.replace('__TESTROOT__',sys.argv[2])\n   else: visit(v)\n  if 'TestBundlePath' in x:\n   x['SystemAttachmentLifetime']='keepNever' if sys.argv[3]=='1' else 'deleteOnSuccess'\n   x['UserAttachmentLifetime']='keepNever' if sys.argv[3]=='1' else 'keepAlways'\n elif isinstance(x,list):\n  for v in x: visit(v)\nvisit(d)\nwith open(p,'wb') as f: plistlib.dump(d,f)\n`
-    await command('python3', ['-c', patch, runtime, path.join(cache, 'Build/Products'), config.privateInput ? '1' : '0'], { limit: 10000 })
+    // Apply explicit lifetimes to the runtime copy; cached products stay intact.
+    const patch = `import plistlib,sys\np=sys.argv[1]\nwith open(p,'rb') as f: d=plistlib.load(f)\ndef visit(x):\n if isinstance(x,dict):\n  for k,v in list(x.items()):\n   if isinstance(v,str): x[k]=v.replace('__TESTROOT__',sys.argv[2])\n   else: visit(v)\n  if 'TestBundlePath' in x:\n   x['SystemAttachmentLifetime']=sys.argv[3]\n   x['UserAttachmentLifetime']=sys.argv[4]\n elif isinstance(x,list):\n  for v in x: visit(v)\nvisit(d)\nwith open(p,'wb') as f: plistlib.dump(d,f)\n`
+    await command('python3', ['-c', patch, runtime, path.join(cache, 'Build/Products'), config.attachmentPolicy.system, config.attachmentPolicy.user], { limit: 10000 })
     const resultBundle = path.join(runDir, 'result.xcresult')
     await command('xcodebuild', ['test-without-building', '-xctestrun', runtime, ...destination, '-only-testing:MetravelDeviceUITests/RunScriptTests/testRunScript', '-parallel-testing-enabled', 'NO', '-maximum-concurrent-test-device-destinations', '1', '-resultBundlePath', resultBundle], { log, env: { ...env, TEST_RUNNER_QA_SCRIPT: JSON.stringify(config.steps), TEST_RUNNER_QA_BUNDLE: config.bundle, TEST_RUNNER_QA_PRIVATE_INPUT: config.privateInput ? '1' : '0' } })
     let summary, tests

@@ -51,3 +51,36 @@ Every child SHALL retain exact candidate, environment, runner, scenario hash, in
 #### Scenario: Historical child is stale
 - **WHEN** a child's rehearsal is older than 24 hours or has invalid timestamps
 - **THEN** readiness rejects it while preserving unrelated existing evidence
+
+### Requirement: Authentication evidence binds complete ordered phases
+A whole authentication flow SHALL bind frozen public rehearsal and private diagnostic phases to one candidate, environment, device model and opaque random account reference. Every phase SHALL have intended completed execution; zero private assertions MAY qualify but no empty or skipped dispatch qualifies. Scenario/report changes, omitted/reordered/reused phases, wrong predecessor, stale/overlapping timestamps and identity mismatches MUST fail. Only the whole reviewed flow MAY declare login/register/account-delete coverage; isolated post-login phases MUST NOT do so.
+
+#### Scenario: Private phase is safe to hand off
+- **WHEN** a matching independently reviewed dummy-canary attestation exists, the private scenario submits and leaves credentials, and actual installed identity is verified before and after
+- **THEN** the next public phase may execute without changing private diagnostic mode or adding fabricated candidate observations to its report
+
+#### Scenario: Activation and deletion share a disposable fixture
+- **WHEN** registration needs external activation
+- **THEN** a receipt bound to the same disposable account and flow is required before activated signed-in assertions, and deletion plus failed re-login retain that fixture
+
+#### Scenario: Partial or unreviewed draft
+- **WHEN** selectors or fixture bindings are draft, or only a public post-login phase passed
+- **THEN** no full authentication scene coverage is claimed
+
+#### Scenario: Consistency is not provenance
+- **WHEN** all receipt hashes match
+- **THEN** output reports consistency only and retains independent TestFlight/source, backend transport, role and final video/privacy verification requirements
+
+### Requirement: Authentication phases retain no automatic attachments
+Every public or private authentication phase SHALL use keepNever for system and user attachments, including failure before the first public assertion confirms that credentials are absent. The runner SHALL reject other explicit policy values and explicit capture under the no-attachment policy. The complete flow SHALL reject missing or downgraded reported lifetimes. Runtime policy changes SHALL leave cached helper products intact and require fresh source-bound qualification.
+
+#### Scenario: Public handoff fails with credentials still present
+- **WHEN** the first public credential-form absence assertion fails
+- **THEN** system and user attachments remain keepNever and the flow cannot claim success
+
+### Requirement: Phase cleanup retains operation ownership
+The host SHALL invoke the existing runner in-process, preserve its per-phase device-lock ownership and bounded subprocess cleanup, and refuse a phase that lacks its minimum remaining budget. Total budget and the explicit registration activation receipt path SHALL be validated before dispatch. The host SHALL NOT activate the account or extend the total deadline to start a phase.
+
+#### Scenario: Insufficient budget or missing activation route
+- **WHEN** the remaining phase budget is too short or registration has no named activation receipt path
+- **THEN** no affected phase is dispatched and no successful flow receipt is produced

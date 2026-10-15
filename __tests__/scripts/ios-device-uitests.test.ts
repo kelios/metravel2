@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { createHash } from 'crypto';
+import { execFileSync } from 'child_process';
 import { makeTempDir } from './cli-test-utils';
 
 const {
@@ -8,6 +9,7 @@ const {
 } = require('../../tools/ios-device-uitests/run');
 
 const ROOT = path.resolve(__dirname, '../..');
+const plist = require('@expo/plist').default;
 const deviceEnv = { IOS_QA_DEVICE: '00000000-0000000000000001' };
 const assertion = { op: 'waitUntil', id: 'stable-element', state: 'hittable', timeout: 5 };
 let temp: string;
@@ -86,6 +88,21 @@ describe('physical XCTest runner contract without device access', () => {
     expect(readConfig(['--validate', JSON.stringify([assertion])], deviceEnv).validate).toBe(true);
   });
 
+  test('requires the exact optional no-attachment policy and rejects explicit capture before activation', () => {
+    const steps = JSON.stringify([assertion]);
+    const config = readConfig([steps], { ...deviceEnv, IOS_QA_ATTACHMENTS: 'none' });
+    expect(config.privateInput).toBe(false);
+    expect(config.attachmentPolicy).toEqual({ system: 'keepNever', user: 'keepNever' });
+    expect(readConfig([steps], deviceEnv).attachmentPolicy).toEqual({ system: 'deleteOnSuccess', user: 'keepAlways' });
+    expect(readConfig([JSON.stringify([{ op: 'secretClipboard', key: 'dummy' }])], { ...deviceEnv, QA_PRIVATE_INPUT: '1' }).attachmentPolicy).toEqual({ system: 'keepNever', user: 'keepNever' });
+    for (const value of ['', 'all', 'false', '0']) {
+      expect(() => readConfig([steps], { ...deviceEnv, IOS_QA_ATTACHMENTS: value })).toThrow('Invalid attachment policy');
+    }
+    for (const op of ['shot', 'tree']) {
+      expect(() => readConfig([JSON.stringify([{ op }])], { ...deviceEnv, IOS_QA_ATTACHMENTS: 'none' })).toThrow('Capture forbidden');
+    }
+  });
+
   test('requires an explicit unlocked observation before building the helper', () => {
     expect(() => assertUnlocked('passcodeRequired: false')).not.toThrow();
     for (const state of ['', 'unrecognized format', 'passcodeRequired: true', 'passcodeRequired: false\npasscodeRequired: true']) {
@@ -138,7 +155,7 @@ describe('physical XCTest runner contract without device access', () => {
     await expect(runCommand('nonexistent-command-that-must-not-launch', [], { deadline: Date.now() - 1 })).rejects.toMatchObject({ code: 'TIMEOUT' });
   });
 
-  test('mocked installed-app runs reuse verified build and preserve every evidence directory', async () => {
+  test.each([undefined, 'none'])('mocked installed-app runs reuse verified build and preserve every evidence directory with attachment policy %s', async (policy) => {
     const bin = path.join(temp, 'bin');
     const calls = path.join(temp, 'calls.jsonl');
     fs.mkdirSync(bin);
@@ -146,6 +163,7 @@ describe('physical XCTest runner contract without device access', () => {
 const fs = require('node:fs'), path = require('node:path');
 const program = path.basename(process.argv[1]), args = process.argv.slice(2);
 fs.appendFileSync(process.env.MOCK_CALLS, JSON.stringify({program, args}) + '\\n');
+if (program === 'python3') require('node:child_process').execFileSync(process.env.MOCK_PYTHON, args, {stdio:'inherit'});
 if (program === 'xcrun') {
  if (args[0] !== 'xcresulttool') console.log('passcodeRequired: false');
  else if (process.env.MOCK_RESULT === 'missing') process.exit(1);
@@ -159,7 +177,7 @@ if (program === 'xcodebuild') {
   fs.writeFileSync(process.env.MOCK_CACHE, cache);
   const products = path.join(cache, 'Build/Products');
   fs.mkdirSync(products, {recursive:true});
-  fs.writeFileSync(path.join(products, 'driver.xctestrun'), 'mock manifest');
+  fs.writeFileSync(path.join(products, 'driver.xctestrun'), '<plist version="1.0"><dict><key>TestConfigurations</key><array><dict><key>TestTargets</key><array><dict><key>TestBundlePath</key><string>__TESTROOT__/driver-binary</string></dict></array></dict></array></dict></plist>');
   fs.writeFileSync(path.join(products, 'driver-binary'), 'v1');
  }
  if (args[0] === 'test-without-building' && process.env.MOCK_FAIL === '1') process.exit(65);
@@ -172,7 +190,10 @@ if (program === 'xcodebuild') {
     for (const command of ['ps', 'xcrun', 'xcodebuild', 'python3']) {
       fs.writeFileSync(path.join(bin, command), fake, { mode: 0o700 });
     }
-    const env = { ...process.env, ...deviceEnv, PATH: `${bin}:${process.env.PATH}`, IOS_QA_OUT: path.join(temp, 'evidence'), MOCK_CALLS: calls, MOCK_KEY: path.basename(temp), MOCK_CACHE: path.join(temp, 'cache-path') };
+    const python = execFileSync('python3', ['-c', 'import sys; print(sys.executable)'], { encoding: 'utf8' }).trim();
+    const env = { ...process.env, ...deviceEnv, ...(policy ? { IOS_QA_ATTACHMENTS: policy } : {}), PATH: `${bin}:${process.env.PATH}`, IOS_QA_OUT: path.join(temp, 'evidence'), MOCK_CALLS: calls, MOCK_KEY: path.basename(temp), MOCK_CACHE: path.join(temp, 'cache-path'), MOCK_PYTHON: python };
+    const attachmentPolicy = policy ? { system: 'keepNever', user: 'keepNever' } : { system: 'deleteOnSuccess', user: 'keepAlways' };
+    const runtimeTarget = (dir: string) => plist.parse(fs.readFileSync(path.join(env.IOS_QA_OUT, dir, 'run.xctestrun'), 'utf8')).TestConfigurations[0].TestTargets[0];
     const argv = [JSON.stringify([assertion]), 'same-label'];
     try {
       await main(argv, env);
@@ -182,15 +203,26 @@ if (program === 'xcodebuild') {
       for (const dir of passedDirs) {
         const report = JSON.parse(fs.readFileSync(path.join(env.IOS_QA_OUT, dir, 'report.json'), 'utf8'));
         expect(report).toMatchObject({ status: 'passed', layer: 'physical-ios', mode: 'diagnostic' });
+        expect(report.attachmentPolicy).toEqual(attachmentPolicy);
         expect(report.execution).toMatchObject({ totalTestCount: 1, passedTests: 1, completedAssertions: 1 });
         expect(JSON.stringify(report)).not.toContain(deviceEnv.IOS_QA_DEVICE);
+        expect(runtimeTarget(dir)).toMatchObject({ SystemAttachmentLifetime: attachmentPolicy.system, UserAttachmentLifetime: attachmentPolicy.user });
       }
       await expect(main(argv, { ...env, MOCK_FAIL: '1' })).rejects.toMatchObject({ exitCode: 65 });
       const dirs = fs.readdirSync(env.IOS_QA_OUT);
       expect(dirs).toHaveLength(3);
       const reports = dirs.map((dir) => JSON.parse(fs.readFileSync(path.join(env.IOS_QA_OUT, dir, 'report.json'), 'utf8')));
       expect(reports.filter((report) => report.status === 'failed')).toHaveLength(1);
+      expect(reports.find((report) => report.status === 'failed').attachmentPolicy).toEqual(attachmentPolicy);
+      const failedDir = dirs.find((dir) => JSON.parse(fs.readFileSync(path.join(env.IOS_QA_OUT, dir, 'report.json'), 'utf8')).status === 'failed')!;
+      expect(runtimeTarget(failedDir)).toMatchObject({ SystemAttachmentLifetime: attachmentPolicy.system, UserAttachmentLifetime: attachmentPolicy.user });
+      const cache = fs.readFileSync(env.MOCK_CACHE, 'utf8');
+      const cachedTarget = plist.parse(fs.readFileSync(path.join(cache, 'Build/Products/driver.xctestrun'), 'utf8')).TestConfigurations[0].TestTargets[0];
+      expect(cachedTarget).toEqual({ TestBundlePath: '__TESTROOT__/driver-binary' });
       const commands = fs.readFileSync(calls, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+      const patches = commands.filter((call) => call.program === 'python3');
+      expect(patches).toHaveLength(3);
+      for (const patch of patches) expect(patch.args.slice(-2)).toEqual([attachmentPolicy.system, attachmentPolicy.user]);
       expect(commands.filter((call) => call.args[0] === 'build-for-testing')).toHaveLength(1);
       expect(commands.filter((call) => call.args[0] === 'test-without-building')).toHaveLength(3);
       expect(commands.some((call) => call.args.includes('-allowProvisioningUpdates'))).toBe(false);

@@ -240,6 +240,21 @@ describe('native recording readiness', () => {
     write()
     expect(check()).toContain('ugc-report: scenario does not cover this complete App Review scene')
   })
+  it.each(['login', 'register', 'account-delete'])('cannot promote an isolated public phase into %s', (id: string) => {
+    plan.purpose = 'app-review'
+    plan.candidate.origin = report.candidate.origin = 'testflight'
+    plan.scenes[0].id = id
+    scenario.completeReviewScenes = [id]
+    write()
+    expect(check()).toContain(`${id}: complete authentication scene requires a whole phased flow`)
+  })
+  it('does not allow registration and deletion to switch disposable accounts', () => {
+    plan.scenes = [
+      { id: 'register', flow: 'missing-register.json', report: 'missing.json', accountRef: '11111111-1111-4111-8111-111111111111' },
+      { id: 'account-delete', flow: 'missing-delete.json', report: 'missing.json', accountRef: '22222222-2222-4222-8222-222222222222' },
+    ]
+    expect(check()).toContain('Registration and deletion require the same disposable account reference')
+  })
   it('rejects action-only scenarios and empty or duplicate scenes', () => {
     scenario.steps = [{ op: 'tapId', id: 'trigger' }]
     write()
