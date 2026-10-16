@@ -48,7 +48,7 @@
 ## 8. Existing-host storage refinement — D #2363 / E #2366
 
 - [x] 8.1 Record owner constraint, fresh host/package measurements, source mechanism and proposed physical-storage architecture D6; distinguish local prototypes from production evidence.
-- [ ] 8.2 Measure the complete translated export and a three-slot local prototype, including metadata, directory and temporary-file overhead; independently review the private storage plan and unchanged reserve.
-- [ ] 8.3 Agree and implement the bounded private file-index/storage-plan handshake, streaming verified hardlinks and physical-union inventory while retaining public v1 schemas and logical security limits.
-- [ ] 8.4 Align D cleanup/accounting and explicit bounded retention with E staging, including reader pins, interrupted-candidate recovery, metadata preservation and separate legacy backup.
+- [x] 8.2 Measure the complete translated export and a three-slot local prototype, including metadata, directory and temporary-file overhead; independently review the private storage plan and unchanged reserve. D6 records APFS and Linux evidence; production admission remains8.5.
+- [x] 8.3 Agree and implement the bounded private file-index/storage-plan handshake, streaming verified hardlinks and physical-union inventory while retaining public v1 schemas and logical security limits. Independent complete source review passed;34 focused Jest and31 canonical Make tests passed.
+- [x] 8.4 Align D cleanup/accounting and explicit bounded retention with E staging, including reader pins, interrupted-candidate recovery, metadata preservation and separate legacy backup. Locked retention CAS and explicit hash-bound abort refuse unknown/protected data; legacy is never a sharing source.
 - [ ] 8.5 Pass focused security/lifecycle/capacity regressions, independent review and normal release gates; verify real production peak allocation and every original D/E Done gate before completion.

@@ -3,12 +3,16 @@ import fs from 'fs'
 import path from 'path'
 import { makeTempDir, removeDir, runCli } from './cli-test-utils'
 
-const { checkReceipt, prepare, publish, recover, quote, overlay, readiness, baseline, checkInventory, publishCover } = require('@/scripts/quest-seo-operation')
+const { checkReceipt, prepare, publish, recover, quote, overlay, readiness, baseline, checkInventory, publishCover, abortStage } = require('@/scripts/quest-seo-operation')
 const { sha256 } = require('@/scripts/lib/questSeoContract')
 const fixtureManifest = fs.readFileSync(path.resolve('__tests__/fixtures/questSeoV1/quest-seo-manifest.v1.json'), 'utf8')
 const manifest = JSON.parse(fixtureManifest)
 const candidate = { release_id: manifest.release_id, frontend_sha: manifest.frontend_sha, manifest_sha256: sha256(fixtureManifest) }
 const prior = { schema_version: 1, release_id: 'previous', frontend_sha: 'b'.repeat(40), manifest_sha256: 'c'.repeat(64), tree_sha256: 'd'.repeat(64) }
+const GATEWAY_MARKER = '# QUEST_SEO_GATEWAY_PROBE_V1'
+const gatewayReceipt = { schema_version: 1, result: 'verified', probe_path: '/pl/quests/1/minsk-proof',
+  canonical_sha256: 'e'.repeat(64), running_sha256: 'e'.repeat(64), status: 404,
+  cache_control: 'no-store', pragma: 'no-cache', expires: '0' }
 const receipt = (id = candidate, result = 'activated', previous: string | null = prior.release_id) => ({
   schema_version: 1, result, release_id: id.release_id, frontend_sha: id.frontend_sha,
   manifest_sha256: id.manifest_sha256, previous_release_id: previous,
@@ -38,10 +42,12 @@ describe('private activation receipt', () => {
   })
 })
 
-function prepared(root: string) {
+function prepared(root: string, ruOnly = false) {
   const dist = path.join(root, 'dist')
   fs.mkdirSync(dist)
-  fs.writeFileSync(path.join(dist, 'quest-seo-manifest.v1.json'), fixtureManifest)
+  const contents = JSON.parse(fixtureManifest)
+  if (ruOnly) contents.clusters.forEach((cluster: any) => { cluster.members = { ru: cluster.members.ru } })
+  fs.writeFileSync(path.join(dist, 'quest-seo-manifest.v1.json'), ruOnly ? JSON.stringify(contents) : fixtureManifest)
   fs.writeFileSync(path.join(dist, '.build-source.json'), JSON.stringify({ sha: candidate.frontend_sha }))
   fs.writeFileSync(path.join(dist, 'index.html'), 'whole export')
   const file = path.join(root, 'private', 'state.json')
@@ -51,16 +57,39 @@ function prepared(root: string) {
   return { dist, file }
 }
 
-function remote(options: { failure?: string } = {}) {
+function remote(options: { failure?: string; gateway?: Record<string, unknown>; gatewayRaw?: string } = {}) {
   let current = prior
   const operations: string[] = []
   const t = {
-    app: 'app', nginx: 'nginx', remote: '/remote', ssh: jest.fn(() => ''),
-    operation: (action: string, args: string[]) => {
+    app: 'app', nginx: 'nginx', remote: '/remote', ssh: jest.fn((command: string, _transportOptions?: any) => {
+      if (!command.startsWith(GATEWAY_MARKER)) return ''
+      operations.push('gateway')
+      if (options.failure === 'gateway-network') throw new Error('gateway network unavailable')
+      return options.gatewayRaw ?? JSON.stringify({ ...gatewayReceipt, ...options.gateway })
+    }),
+    operation: (action: string, args: string[], transportOptions?: any) => {
       operations.push(action)
       if (action === 'inspect') return JSON.stringify({ schema_version: 1, kind: 'managed', current, previous: current === prior ? null : prior })
-      if (action === 'inventory') return JSON.stringify({ schema_version: 1, release_count: 1, total_bytes: 100 })
-      if (action === 'stage') return JSON.stringify({ schema_version: 1, result: 'staged', release_id: args[0] })
+      if (action === 'retain-v2') return JSON.stringify({ schema_version: 2, result: 'cleaned', active_release_id: current.release_id,
+        preserved: [current.release_id], removed: [], remaining_bytes: 100, remaining_allocated_bytes: 100 })
+      if (action === 'inventory-v2') return JSON.stringify({ schema_version: 2, release_count: 1, total_bytes: 3000000000,
+        allocated_bytes: 100, budget_bytes: Number(args[0]) })
+      if (action === 'storage-plan-v2') {
+        const index = JSON.parse(transportOptions.input.toString()), incremental = 100, directories = 4096, temporary = 4096, privateBytes = 8 * 1024 ** 2
+        const peak = 100 + incremental + directories + temporary + privateBytes
+        return JSON.stringify({ schema_version: 2, expected_current: args[0] === 'none' ? null : args[0], index_sha256: sha256(transportOptions.input),
+          budget_bytes: Number(args[1]), reserve_bytes: Number(args[2]), logical_bytes: index.files.reduce((sum: number, row: any) => sum + row.size, 0),
+          physical_bytes: 100, incremental_bytes: incremental, directory_allowance_bytes: directories, temporary_bytes: temporary,
+          private_index_bytes: privateBytes, peak_bytes: peak, required_free_bytes: peak - 100 + Number(args[2]), sources_sha256: 'e'.repeat(64), plan_sha256: 'f'.repeat(64) })
+      }
+      if (action === 'stage-v2') {
+        const frame = fs.readFileSync(transportOptions.stdio[0]), indexLength = frame.readUInt32BE(0), planLength = frame.readUInt32BE(4)
+        const plan = JSON.parse(frame.subarray(8 + indexLength, 8 + indexLength + planLength).toString())
+        return JSON.stringify({ schema_version: 2, result: 'staged', release_id: args[0], index_sha256: plan.index_sha256,
+          plan_sha256: plan.plan_sha256, allocated_bytes: 200 })
+      }
+      if (action === 'abort-stage-v2') return JSON.stringify({ schema_version: 2, result: 'aborted', release_id: args[0],
+        index_sha256: args[2], plan_sha256: args[3] })
       if (action === 'cover') {
         if (args[0] !== current.release_id) throw new Error('cover CAS refused')
         if (options.failure === 'cover' && current.release_id === candidate.release_id) throw new Error('cover publication failed')
@@ -91,17 +120,24 @@ describe('normal managed publication orchestration', () => {
     if (originalBudget === undefined) delete process.env.QUEST_SEO_MANAGED_MAX_BYTES
     else process.env.QUEST_SEO_MANAGED_MAX_BYTES = originalBudget
   })
-  it('persists exact archive/identity privately, validates then activates without an outer lock or cleanup', () => {
+  it('retains before planning physical storage, then validates and activates without cleanup inside activation', () => {
     const root = makeTempDir('quest-e-publish-')
     try {
       const p = prepared(root), r = remote()
       publish(r.t, p.dist, p.file, jest.fn())
       const state = JSON.parse(fs.readFileSync(p.file, 'utf8'))
       expect(state.phase).toBe('ready')
-      expect(r.operations).toEqual(['inspect', 'inventory', 'stage', 'validate', 'activate', 'cover'])
+      expect(r.operations).toEqual(['inspect', 'gateway', 'retain-v2', 'inventory-v2', 'storage-plan-v2', 'stage-v2', 'validate', 'activate', 'cover'])
       expect(r.current().release_id).toBe(candidate.release_id)
       expect(fs.statSync(p.file).mode & 0o777).toBe(0o600)
       expect(fs.statSync(`${p.file}.package.tar.gz`).mode & 0o777).toBe(0o600)
+      expect(fs.statSync(`${p.file}.files.v2.json`).mode & 0o777).toBe(0o600)
+      expect(fs.existsSync(`${p.file}.stage-v2`)).toBe(false)
+      expect(state.inventory.total_bytes).toBeGreaterThan(Number(process.env.QUEST_SEO_MANAGED_MAX_BYTES))
+      expect(state.storage_plan.peak_bytes).toBeLessThan(Number(process.env.QUEST_SEO_MANAGED_MAX_BYTES))
+      expect(state.storage_plan.reserve_bytes).toBe(1536 * 1024 ** 2)
+      expect(state.gateway_probe_path).toBe(gatewayReceipt.probe_path)
+      expect(state.gateway).toEqual(gatewayReceipt)
     } finally { removeDir(root) }
   })
   it.each(['validate', 'before-rename', 'after-rename'])('retains generations and actual-pointer evidence on %s failure', (failure) => {
@@ -151,18 +187,20 @@ describe('normal managed publication orchestration', () => {
     } finally { removeDir(root) }
   })
   it('refuses archive drift, stale CAS and normal legacy conversion before staging', () => {
-    for (const condition of ['archive', 'current', 'legacy']) {
+    for (const condition of ['archive', 'index', 'current', 'legacy']) {
       const root = makeTempDir('quest-e-refusal-')
       try {
         const p = prepared(root), r = remote()
         if (condition === 'archive') fs.appendFileSync(`${p.file}.package.tar.gz`, 'changed')
+        if (condition === 'index') fs.appendFileSync(`${p.file}.files.v2.json`, 'changed')
         if (condition === 'current') r.replace()
         if (condition === 'legacy') {
           const state = JSON.parse(fs.readFileSync(p.file, 'utf8')); state.base.kind = 'legacy'; state.base.current = null
           fs.writeFileSync(p.file, JSON.stringify(state))
         }
         expect(() => publish(r.t, p.dist, p.file, jest.fn())).toThrow()
-        expect(r.operations).not.toContain('stage')
+        expect(r.operations).not.toContain('stage-v2')
+        if (condition === 'archive' || condition === 'index') expect(r.operations).toEqual([])
       } finally { removeDir(root) }
     }
   })
@@ -186,7 +224,153 @@ describe('normal managed publication orchestration', () => {
       fs.writeFileSync(p.file, JSON.stringify(state))
       process.env.QUEST_SEO_OWNER_MAINTENANCE = '1'
       expect(() => baseline(r.t, p.file, jest.fn())).toThrow('quiesce and move')
-      expect(r.operations).not.toContain('stage')
+      expect(r.operations).not.toContain('stage-v2')
+    } finally {
+      if (original === undefined) delete process.env.QUEST_SEO_OWNER_MAINTENANCE; else process.env.QUEST_SEO_OWNER_MAINTENANCE = original
+      removeDir(root)
+    }
+  })
+  it('aborts an interrupted candidate only from its saved private plan and never automatically on failure', () => {
+    const root = makeTempDir('quest-e-abort-')
+    try {
+      const p = prepared(root), r = remote({ failure: 'validate' })
+      expect(() => abortStage(r.t, p.file)).toThrow('Saved private staging plan')
+      expect(r.operations).toEqual([])
+      expect(() => publish(r.t, p.dist, p.file, jest.fn())).toThrow('generations retained')
+      expect(r.operations).not.toContain('abort-stage-v2')
+      abortStage(r.t, p.file)
+      expect(r.operations.at(-1)).toBe('abort-stage-v2')
+      expect(JSON.parse(fs.readFileSync(p.file, 'utf8')).phase).toBe('aborted')
+      expect(r.current()).toEqual(prior)
+      expect(() => abortStage(r.t, p.file)).toThrow('Hash-bound interrupted staging state')
+    } finally { removeDir(root) }
+  })
+
+  it.each([200, 404])('requires the live canonical locale gateway with exact no-cache headers, accepting status %s', (status) => {
+    const root = makeTempDir('quest-e-gateway-')
+    try {
+      const p = prepared(root), r = remote({ gateway: { status } })
+      publish(r.t, p.dist, p.file, jest.fn())
+      const call = r.t.ssh.mock.calls.find(([command]: [string]) => command.startsWith(GATEWAY_MARKER))
+      expect(call?.[1]).toEqual({ timeout: 20000, maxBuffer: 4096 })
+      expect(r.operations.indexOf('gateway')).toBeLessThan(r.operations.indexOf('retain-v2'))
+      expect(JSON.parse(fs.readFileSync(p.file, 'utf8')).gateway.status).toBe(status)
+    } finally { removeDir(root) }
+  })
+
+  it('executes the emitted gateway program with mocked Docker/HTTP and bounded HEAD semantics', () => {
+    const root = makeTempDir('quest-e-gateway-program-')
+    try {
+      const p = prepared(root), r = remote()
+      publish(r.t, p.dist, p.file, jest.fn())
+      const command = r.t.ssh.mock.calls.find(([value]: [string]) => value.startsWith(GATEWAY_MARKER))?.[0]
+      const result = runCli('python3', ['-B', '-c', `
+import email.message,hashlib,pathlib,shlex,subprocess,sys,types,urllib.request
+command,root=sys.argv[1:]; code=shlex.split(command.partition(chr(10))[2])[2]
+root=pathlib.Path(root); config=root/'deploy/prod/nginx/nginx.conf'; config.parent.mkdir(parents=True); config.write_bytes(b'canonical gateway')
+digest=hashlib.sha256(config.read_bytes()).hexdigest()
+def docker(args,**options):
+ assert args==['docker','exec','nginx','sha256sum','/etc/nginx/conf/nginx.conf'] and options['timeout']==5 and options['check'] is True
+ return types.SimpleNamespace(stdout=(digest+'  /etc/nginx/conf/nginx.conf\\n').encode())
+subprocess.run=docker
+class Response:
+ status=404
+ headers=email.message.Message()
+ headers['Cache-Control']='no-store'; headers['Pragma']='no-cache'; headers['Expires']='0'
+ def __enter__(self):return self
+ def __exit__(self,*args):pass
+class Opener:
+ def open(self,request,timeout):
+  assert request.get_method()=='HEAD' and request.full_url=='https://metravel.by/pl/quests/1/minsk-proof' and timeout==5
+  return Response()
+def opener(*handlers):
+ assert handlers[-1].redirect_request(None,None,None,None,None,None) is None
+ return Opener()
+urllib.request.build_opener=opener
+sys.argv=['gateway',str(root),'nginx','/pl/quests/1/minsk-proof']
+exec(compile(code,'<emitted-gateway>','exec'))
+`, command, root])
+      expect(result.status).toBe(0)
+      expect(JSON.parse(result.stdout)).toEqual({ ...gatewayReceipt,
+        canonical_sha256: sha256('canonical gateway'), running_sha256: sha256('canonical gateway') })
+    } finally { removeDir(root) }
+  })
+
+  it.each([
+    ['legacy static headers', { cache_control: 'public, max-age=300', pragma: '', expires: '' }],
+    ['missing no-store', { cache_control: 'no-cache' }], ['digest mismatch', { running_sha256: 'f'.repeat(64) }],
+    ['stale caching pragma', { pragma: null }], ['expiry mismatch', { expires: '1' }],
+    ['upstream failure', { status: 503 }], ['redirect', { status: 301 }],
+    ['wrong probed path', { probe_path: '/en/quests/1/other' }], ['unexpected receipt field', { extra: true }],
+  ])('refuses %s before retention or staging', (_label, gateway) => {
+    const root = makeTempDir('quest-e-gateway-refuse-')
+    try {
+      const p = prepared(root), r = remote({ gateway })
+      expect(() => publish(r.t, p.dist, p.file, jest.fn())).toThrow()
+      expect(r.operations).toEqual(['inspect', 'gateway'])
+      expect(JSON.parse(fs.readFileSync(p.file, 'utf8')).phase).toBe('prepared')
+    } finally { removeDir(root) }
+  })
+
+  it.each(['network', 'oversized', 'duplicate'])('refuses %s gateway evidence before writes', (failure) => {
+    const root = makeTempDir('quest-e-gateway-wire-')
+    try {
+      const p = prepared(root), r = remote(failure === 'network' ? { failure: 'gateway-network' }
+        : { gatewayRaw: failure === 'oversized' ? ' '.repeat(4097) : JSON.stringify(gatewayReceipt).replace('{', '{"status":200,') })
+      expect(() => publish(r.t, p.dist, p.file, jest.fn())).toThrow()
+      expect(r.operations).toEqual(['inspect', 'gateway'])
+    } finally { removeDir(root) }
+  })
+
+  it.each(['/pl/quests/1/other', '/pl/quests/01/minsk-proof', '/pl/quests/1/minsk-proof?x=1', 'https://foreign.test/', null])(
+    'binds prepared probe %s to the checked manifest before contacting the server', (probe) => {
+      const root = makeTempDir('quest-e-gateway-path-')
+      try {
+        const p = prepared(root), r = remote(), state = JSON.parse(fs.readFileSync(p.file, 'utf8'))
+        state.gateway_probe_path = probe
+        fs.writeFileSync(p.file, JSON.stringify(state))
+        expect(() => publish(r.t, p.dist, p.file, jest.fn())).toThrow('Prepared publication mode or gateway probe path changed')
+        expect(r.operations).toEqual([])
+        expect(r.t.ssh).not.toHaveBeenCalled()
+      } finally { removeDir(root) }
+    })
+
+  it('rejects a forged RU-only flag and bypasses gateway probing only for an actual RU-only manifest', () => {
+    const root = makeTempDir('quest-e-gateway-mode-'), ruRoot = makeTempDir('quest-e-gateway-ru-')
+    try {
+      const p = prepared(root), r = remote(), state = JSON.parse(fs.readFileSync(p.file, 'utf8'))
+      state.ru_only = true; delete state.gateway_probe_path
+      fs.writeFileSync(p.file, JSON.stringify(state))
+      expect(() => publish(r.t, p.dist, p.file, jest.fn())).toThrow('Prepared publication mode or gateway probe path changed')
+      expect(r.operations).toEqual([])
+      const ru = prepared(ruRoot, true)
+      // Stop at validation: the fake remote's activation receipt is tied to the translated fixture.
+      const ruRemote = remote({ failure: 'validate' })
+      expect(() => publish(ruRemote.t, ru.dist, ru.file, jest.fn())).toThrow('source drift')
+      expect(ruRemote.operations).not.toContain('gateway')
+      expect(ruRemote.operations).toContain('stage-v2')
+      expect(JSON.parse(fs.readFileSync(ru.file, 'utf8')).gateway_probe_path).toBeUndefined()
+    } finally { removeDir(root); removeDir(ruRoot) }
+  })
+
+  it('cannot activate a translated baseline by forging the private RU-only flag when the server refuses its actual members', () => {
+    const root = makeTempDir('quest-e-baseline-members-'), original = process.env.QUEST_SEO_OWNER_MAINTENANCE
+    try {
+      const p = prepared(root), r = remote(), operation = r.t.operation
+      const state = JSON.parse(fs.readFileSync(p.file, 'utf8'))
+      state.base = { schema_version: 1, kind: 'legacy', current: null, previous: null }
+      state.ru_only = true
+      fs.writeFileSync(p.file, JSON.stringify(state))
+      r.t.operation = (action: string, args: string[], options?: any) => {
+        if (action === 'inspect') { r.operations.push(action); return JSON.stringify({ schema_version: 1, kind: 'absent', current: null, previous: null }) }
+        // stage_v2 checks the received manifest's actual member set for a none-CAS baseline.
+        if (action === 'stage-v2') { r.operations.push(action); throw new Error('First v1 generation must be RU-only') }
+        return operation(action, args, options)
+      }
+      process.env.QUEST_SEO_OWNER_MAINTENANCE = '1'
+      expect(() => baseline(r.t, p.file, jest.fn())).toThrow('First v1 generation must be RU-only')
+      expect(r.operations).not.toContain('validate')
+      expect(r.operations).not.toContain('activate')
     } finally {
       if (original === undefined) delete process.env.QUEST_SEO_OWNER_MAINTENANCE; else process.env.QUEST_SEO_OWNER_MAINTENANCE = original
       removeDir(root)

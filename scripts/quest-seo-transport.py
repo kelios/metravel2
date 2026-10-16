@@ -2,11 +2,13 @@
 """Private E transport over the existing SSH/app channel; never a serving API."""
 import contextlib
 import fcntl
+import gzip
 import io
 import hashlib
 import json
 import os
 import shutil
+import struct
 from pathlib import Path, PurePosixPath
 import stat
 import subprocess
@@ -16,6 +18,10 @@ import tempfile
 
 MAX_FILES = 50000
 MAX_BYTES = 2 * 1024 * 1024 * 1024
+MAX_INDEX_BYTES = 8 * 1024 * 1024
+MAX_SOURCE_FILES = 100000
+BACKEND_RESERVE = 1536 * 1024 * 1024
+INDEX_NAME = '.storage-index.v2.json'
 
 
 def require(condition, message):
@@ -86,12 +92,28 @@ def regular_tree(root):
             yield entry
 
 
-def pack(root, *, assets=False):
-    with tarfile.open(fileobj=sys.stdout.buffer, mode="w|gz", dereference=True) as archive:
+def pack(root, *, assets=False, compresslevel=1):
+    # Stream gzip separately: Python 3.11 tarfile stream mode has no compresslevel.
+    with gzip.GzipFile(fileobj=sys.stdout.buffer, mode='wb', compresslevel=compresslevel, mtime=0) as compressed, \
+            tarfile.open(fileobj=compressed, mode='w|', dereference=True) as archive:
         for entry in regular_tree(root):
             if assets and entry.suffix not in ('.js', '.css'):
                 continue
-            archive.add(entry, arcname=entry.relative_to(root).as_posix(), recursive=False)
+            member = archive.gettarinfo(entry, arcname=entry.relative_to(root).as_posix())
+            member.mtime = int(member.mtime) if member.isfile() else 0
+            member.mode = 0o644 if member.isfile() else 0o755
+            member.uid = member.gid = 0
+            member.uname = member.gname = ''
+            if member.isfile():
+                with file_at(root, entry.relative_to(root).as_posix()) as (source, _, __):
+                    before = os.fstat(source.fileno())
+                    require(before.st_size == member.size, 'Archive source changed')
+                    archive.addfile(member, source)
+                    after = os.fstat(source.fileno())
+                    require(file_identity(before) == file_identity(after) and before.st_ctime_ns == after.st_ctime_ns,
+                            'Archive source changed')
+            else:
+                archive.addfile(member)
 
 
 def unpack(root):
@@ -123,6 +145,304 @@ def unpack(root):
                     remaining -= len(chunk)
             os.chmod(target, 0o644)
             os.utime(target, (member.mtime, member.mtime))
+
+
+def canonical(value):
+    return json.dumps(value, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode('utf-8')
+
+
+def strict_json(raw):
+    def pairs(items):
+        result = {}
+        for key, value in items:
+            require(key not in result, 'Duplicate private JSON key')
+            result[key] = value
+        return result
+    return json.loads(raw, object_pairs_hook=pairs)
+
+
+def safe_parts(relative):
+    require(isinstance(relative, str), 'Relative path required')
+    parts = PurePosixPath(relative).parts
+    require(parts and len(parts) <= 64 and len(relative) <= 1024
+            and not relative.startswith('/') and '..' not in parts
+            and str(PurePosixPath(relative)) == relative and relative != '.', 'Private path refused')
+    return parts
+
+
+@contextlib.contextmanager
+def file_at(root, relative):
+    """Pin every physical parent; a final O_NOFOLLOW alone is insufficient."""
+    parts = safe_parts(relative)
+    directory = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        for part in parts[:-1]:
+            following = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory)
+            os.close(directory)
+            directory = following
+        fd = os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory)
+        with os.fdopen(fd, 'rb') as stream:
+            require(stat.S_ISREG(os.fstat(stream.fileno()).st_mode), 'Regular content file required')
+            yield stream, directory, parts[-1]
+    finally:
+        os.close(directory)
+
+
+def file_identity(info):
+    return (info.st_dev, info.st_ino, info.st_size, stat.S_IMODE(info.st_mode), info.st_mtime_ns)
+
+
+def stream_digest(source):
+    before = os.fstat(source.fileno())
+    require(before.st_size <= MAX_BYTES, 'Content file exceeds bound')
+    digest, size = hashlib.sha256(), 0
+    while chunk := source.read(1024 * 1024):
+        size += len(chunk)
+        require(size <= before.st_size, 'Content file changed')
+        digest.update(chunk)
+    after = os.fstat(source.fileno())
+    require(size == before.st_size and file_identity(before) == file_identity(after)
+            and before.st_ctime_ns == after.st_ctime_ns, 'Content file changed')
+    return digest.hexdigest(), after
+
+
+def build_index(root):
+    files, directories, index_bytes = [], [], 64
+    for entry in regular_tree(root):
+        relative = entry.relative_to(root).as_posix()
+        safe_parts(relative)
+        if entry.is_dir():
+            directories.append(relative)
+            index_bytes += len(canonical(relative)) + 1
+        else:
+            with file_at(root, relative) as (stream, _, __):
+                digest, info = stream_digest(stream)
+            files.append({'path': relative, 'size': info.st_size, 'sha256': digest,
+                          'mode': 0o644, 'mtime': info.st_mtime_ns // 1000000000})
+            index_bytes += len(canonical(files[-1])) + 1
+        require(index_bytes <= MAX_INDEX_BYTES, 'Private index exceeds bound')
+    result = {'schema_version': 2, 'files': sorted(files, key=lambda row: row['path']),
+              'directories': sorted(directories)}
+    raw = canonical(result)
+    parse_index(raw)
+    return raw
+
+
+def parse_index(raw):
+    require(0 < len(raw) <= MAX_INDEX_BYTES, 'Private index exceeds bound')
+    index = strict_json(raw)
+    require(isinstance(index, dict) and set(index) == {'schema_version', 'files', 'directories'}
+            and type(index['schema_version']) is int and index['schema_version'] == 2
+            and isinstance(index['files'], list) and isinstance(index['directories'], list), 'Private index schema mismatch')
+    require(0 < len(index['files']) and len(index['files']) + len(index['directories']) <= MAX_FILES,
+            'Private index path bound exceeded')
+    seen, total = set(), 0
+    for directory in index['directories']:
+        safe_parts(directory)
+        require(directory not in seen, 'Duplicate private index path')
+        seen.add(directory)
+    directory_paths = set(seen)
+    for row in index['files']:
+        require(isinstance(row, dict) and set(row) == {'path', 'size', 'sha256', 'mode', 'mtime'}, 'Private file schema mismatch')
+        parts = safe_parts(row['path'])
+        require(row['path'] not in seen and type(row['size']) is int and 0 <= row['size'] <= MAX_BYTES
+                and type(row['mode']) is int and row['mode'] == 0o644
+                and type(row['mtime']) is int and 0 <= row['mtime'] <= 2**53 - 1
+                and isinstance(row['sha256'], str) and len(row['sha256']) == 64
+                and all(c in '0123456789abcdef' for c in row['sha256']), 'Invalid private file entry')
+        require(all('/'.join(parts[:i]) in directory_paths for i in range(1, len(parts))), 'Missing private parent directory')
+        seen.add(row['path'])
+        total += row['size']
+        require(total <= MAX_BYTES, 'Private logical byte bound exceeded')
+    for directory in directory_paths:
+        parts = safe_parts(directory)
+        require(all('/'.join(parts[:i]) in directory_paths for i in range(1, len(parts))), 'Missing private parent directory')
+    require(raw == canonical(index), 'Noncanonical private index')
+    return index
+
+
+def content_key(row):
+    return row['sha256'], row['size'], row['mode'], row['mtime']
+
+
+def sync_directory(directory):
+    fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+@contextlib.contextmanager
+def pinned_sources(package, activation, releases):
+    """Caller holds operation_lock until every sealed source has a reader pin."""
+    with contextlib.ExitStack() as stack:
+        rows = []
+        if releases.exists():
+            inventory(package, activation, releases, 100 * MAX_BYTES)
+            for release in sorted(releases.iterdir()):
+                fd = os.open(release / '.reader.lock', os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+                reader = stack.enter_context(os.fdopen(fd, 'rb'))
+                require(stat.S_ISREG(os.fstat(fd).st_mode), 'Regular source reader lock required')
+                fcntl.flock(fd, fcntl.LOCK_SH)
+                rows.append((release, activation.sealed_identity(release)))
+        yield rows
+
+
+def source_lookup(rows, index):
+    lookup, count, digest, hashed = {}, 0, hashlib.sha256(), {}
+    wanted = {(r['size'], r['mode'], r['mtime']) for r in index['files']}
+    for release, identity in rows:
+        digest.update(canonical(identity))
+        root = release / 'dist'
+        for entry in regular_tree(root):
+            count += 1
+            require(count <= MAX_SOURCE_FILES, 'Retained source index bound exceeded')
+            relative = entry.relative_to(root).as_posix()
+            safe_parts(relative)
+            info = entry.lstat()
+            digest.update(canonical([release.name, relative, list(file_identity(info)), info.st_ctime_ns]))
+            if not stat.S_ISREG(info.st_mode) or info.st_mtime_ns % 1000000000:
+                continue
+            metadata = (info.st_size, stat.S_IMODE(info.st_mode), info.st_mtime_ns // 1000000000)
+            if metadata not in wanted:
+                continue
+            stamp = (*file_identity(info), info.st_ctime_ns)
+            if stamp not in hashed:
+                with file_at(root, relative) as (stream, _, __):
+                    value, checked = stream_digest(stream)
+                    require(file_identity(checked) == file_identity(info), 'Source identity changed')
+                    hashed[stamp] = value
+            key = (hashed[stamp], *metadata)
+            lookup.setdefault(key, (root, relative, file_identity(info)))
+    return lookup, digest.hexdigest()
+
+
+def storage_plan(package, activation, active, releases, raw, expected, budget, reserve, allocated_union, *, sources):
+    require(type(budget) is int and budget > 0 and type(reserve) is int and reserve >= BACKEND_RESERVE,
+            'Physical budget and unchanged backend reserve required')
+    require(activation.current_release() == expected, 'Storage plan CAS refused')
+    index = parse_index(raw)
+    lookup, sources_digest = source_lookup(sources, index)
+    block = os.statvfs(active.parent).f_frsize
+    require(0 < block <= 65536, 'Unsupported allocation unit')
+    rounded = lambda size: ((size + block - 1) // block) * block
+    existing = allocated_union([releases]) if releases.exists() else 0
+    distinct = set(lookup)
+    incremental = 0
+    for row in index['files']:
+        key = content_key(row)
+        if key not in distinct:
+            incremental += rounded(row['size'])
+            distinct.add(key)
+    # Includes dirents for every path, release/dist/reader and durable plan files.
+    directories = (len(index['files']) + len(index['directories']) + 8) * max(4096, block)
+    temporary = max(rounded(row['size']) for row in index['files'])
+    private = rounded(MAX_INDEX_BYTES) + rounded(16384)
+    peak = existing + incremental + directories + temporary + private
+    require(peak <= budget, 'Physical managed peak exceeds owner budget')
+    plan = {'schema_version': 2, 'expected_current': expected, 'index_sha256': hashlib.sha256(raw).hexdigest(),
+            'budget_bytes': budget, 'reserve_bytes': reserve, 'logical_bytes': sum(r['size'] for r in index['files']),
+            'physical_bytes': existing, 'incremental_bytes': incremental, 'directory_allowance_bytes': directories,
+            'temporary_bytes': temporary, 'private_index_bytes': private, 'peak_bytes': peak,
+            'required_free_bytes': peak - existing + reserve, 'sources_sha256': sources_digest}
+    plan['plan_sha256'] = hashlib.sha256(canonical(plan)).hexdigest()
+    free = os.statvfs(active.parent)
+    require(free.f_bavail * free.f_frsize >= plan['required_free_bytes'], 'Physical free space cannot preserve backend reserve')
+    return plan, lookup
+
+
+def write_private(path, raw):
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(fd, 'wb') as stream:
+        stream.write(raw)
+        stream.flush()
+        os.fsync(stream.fileno())
+    sync_directory(path.parent)
+
+
+def materialize(root, archive_stream, raw, lookup, plan, allocated_union, releases):
+    index = parse_index(raw)
+    files = {row['path']: row for row in index['files']}
+    directories, seen = set(index['directories']), set()
+    copied_blocks = 0
+    block = os.statvfs(releases).f_frsize
+    rounded = lambda size: ((size + block - 1) // block) * block
+    overhead = plan['physical_bytes'] + plan['directory_allowance_bytes'] + plan['private_index_bytes']
+    def headroom(incoming=0, temporary_blocks=0):
+        free = os.statvfs(releases)
+        require(free.f_bavail * free.f_frsize >= plan['reserve_bytes'] + incoming,
+                'Staging stopped before consuming backend reserve')
+        require(overhead + copied_blocks + temporary_blocks <= plan['budget_bytes'],
+                'Staging physical allocation exceeds owner budget')
+    headroom(plan['required_free_bytes'] - plan['reserve_bytes'])
+    for relative in sorted(directories, key=lambda value: (len(safe_parts(value)), value)):
+        headroom(max(4096, os.statvfs(releases).f_frsize))
+        root.joinpath(*safe_parts(relative)).mkdir()
+    with tarfile.open(fileobj=archive_stream, mode='r|gz') as archive:
+        for member in archive:
+            parts = safe_parts(member.name)
+            relative = '/'.join(parts)
+            require(relative not in seen and (member.isfile() or member.isdir()), 'Archive link/duplicate/special file refused')
+            seen.add(relative)
+            target = root.joinpath(*parts)
+            require(target.parent.resolve() == target.parent, 'Archive parent link refused')
+            if member.isdir():
+                require(relative in directories and member.size == 0, 'Archive directory/index mismatch')
+                continue
+            row = files.get(relative)
+            require(row and member.size == row['size'] and member.mode == row['mode']
+                    and member.mtime == row['mtime'], 'Archive metadata/index mismatch')
+            temporary = root.parent / '.storage-member.v2.tmp'
+            fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+            try:
+                digest, size = hashlib.sha256(), 0
+                with os.fdopen(fd, 'wb') as output, archive.extractfile(member) as source:
+                    remaining = member.size
+                    while remaining:
+                        chunk = source.read(min(remaining, 1024 * 1024))
+                        require(chunk, 'Truncated archive')
+                        headroom(len(chunk), rounded(size + len(chunk)))
+                        output.write(chunk)
+                        output.flush()
+                        size += len(chunk)
+                        headroom(temporary_blocks=os.fstat(output.fileno()).st_blocks * 512)
+                        digest.update(chunk)
+                        remaining -= len(chunk)
+                    output.flush()
+                    require(size == row['size'] and digest.hexdigest() == row['sha256'], 'Archive content/index mismatch')
+                    os.fchmod(output.fileno(), row['mode'])
+                    os.utime(output.fileno(), ns=(row['mtime'] * 1000000000,) * 2)
+                    os.fsync(output.fileno())
+                key = content_key(row)
+                if key in lookup:
+                    source_root, source_relative, expected_identity = lookup[key]
+                    with file_at(source_root, source_relative) as (source, parent, name):
+                        value, checked = stream_digest(source)
+                        require(value == row['sha256'] and file_identity(checked) == expected_identity,
+                                'Sealed source bytes or identity changed')
+                        named = os.stat(name, dir_fd=parent, follow_symlinks=False)
+                        require(file_identity(named) == file_identity(checked) and named.st_ctime_ns == checked.st_ctime_ns,
+                                'Sealed source path changed')
+                        os.link(name, target, src_dir_fd=parent, follow_symlinks=False)
+                        require(file_identity(target.lstat()) == expected_identity, 'Linked source identity changed')
+                        os.fsync(source.fileno())
+                    os.unlink(temporary)
+                else:
+                    os.rename(temporary, target)
+                    checked = target.lstat()
+                    copied_blocks += checked.st_blocks * 512
+                    lookup[key] = (root, relative, file_identity(checked))
+                sync_directory(target.parent)
+                headroom()
+            finally:
+                if os.path.exists(temporary):
+                    os.unlink(temporary)
+    require(seen == set(files) | directories, 'Archive omitted indexed paths')
+    for directory in sorted(directories, key=lambda value: len(safe_parts(value)), reverse=True):
+        sync_directory(root / directory)
+    sync_directory(root)
+    sync_directory(root.parent)
 
 
 @contextlib.contextmanager
@@ -226,6 +546,121 @@ def inventory(package, activation, releases, budget, incoming=0):
     return {'schema_version': 1, 'release_count': count, 'total_bytes': total}
 
 
+def physical_inventory(package, activation, releases, budget, allocated_union):
+    result = inventory(package, activation, releases, 100 * MAX_BYTES)
+    allocated = allocated_union([releases]) if releases.exists() else 0
+    require(budget > 0 and allocated <= budget, 'Managed physical inventory budget exceeded')
+    return {**result, 'schema_version': 2, 'allocated_bytes': allocated, 'budget_bytes': budget}
+
+
+def read_exact(stream, size):
+    chunks, remaining = [], size
+    while remaining:
+        chunk = stream.read(remaining)
+        require(chunk, 'Truncated private staging frame')
+        chunks.append(chunk)
+        remaining -= len(chunk)
+    return b''.join(chunks)
+
+
+def stage_v2(package, activation, active, releases, arguments, allocated_union):
+    release_id, expected_id, budget, reserve = arguments
+    package._match(package.SLUG, release_id)
+    expected = None if expected_id == 'none' else expected_id
+    index_size, plan_size = struct.unpack('>II', read_exact(sys.stdin.buffer, 8))
+    require(0 < index_size <= MAX_INDEX_BYTES and 0 < plan_size <= 16384, 'Private staging frame exceeds bound')
+    raw = read_exact(sys.stdin.buffer, index_size)
+    supplied = strict_json(read_exact(sys.stdin.buffer, plan_size))
+    with contextlib.ExitStack() as pins:
+        with package.operation_lock():
+            sources = pins.enter_context(pinned_sources(package, activation, releases))
+            plan, lookup = storage_plan(package, activation, active, releases, raw, expected,
+                                        int(budget), int(reserve), allocated_union, sources=sources)
+            require(supplied == plan, 'Storage plan changed; rebuild plan before transfer')
+            releases.mkdir(exist_ok=True)
+            release = releases / release_id
+            release.mkdir()  # An unknown or partial candidate is never swept/reused.
+            fd = os.open(release / '.reader.lock', os.O_CREAT | os.O_EXCL | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+            reader = pins.enter_context(os.fdopen(fd, 'rb'))
+            fcntl.flock(fd, fcntl.LOCK_SH)
+            write_private(release / INDEX_NAME, raw)
+            write_private(release / '.storage-plan.v2.json', canonical(plan))
+            root = release / 'dist'
+            root.mkdir()
+            sync_directory(releases)
+        materialize(root, sys.stdin.buffer, raw, lookup, plan, allocated_union, releases)
+        if expected is None:
+            baseline = package.QuestSeoPackage(root, release_id, validate_all=True)
+            require(all(set(cluster['members']) == {'ru'} for cluster in baseline.manifest['clusters']),
+                    'First v1 generation must be RU-only')
+        with package.operation_lock():
+            require(activation.current_release() == expected, 'Staging completion CAS refused')
+            allocated = allocated_union([releases])
+            require(allocated <= plan['budget_bytes'], 'Actual managed allocation exceeds owner budget')
+        return {'schema_version': 2, 'release_id': release_id, 'result': 'staged',
+                'index_sha256': plan['index_sha256'], 'plan_sha256': plan['plan_sha256'],
+                'allocated_bytes': allocated}
+
+
+def abort_stage_v2(package, activation, active, releases, arguments):
+    """Explicit hash-bound removal of one interrupted candidate; never a sweep."""
+    release_id, expected_id, index_hash, plan_hash = arguments
+    package._match(package.SLUG, release_id)
+    expected = None if expected_id == 'none' else expected_id
+    with package.operation_lock():
+        current = activation.current_release()
+        require(current == expected, 'Abort staging CAS refused')
+        prior = activation.retained_rollback(current)
+        require(release_id not in {current, prior}, 'Cannot abort active or rollback generation')
+        release = releases / release_id
+        require(release.resolve(strict=True) == release and release.is_dir(), 'Physical candidate required')
+        require(not (release / '.identity.json').exists() and not (release / '.identity.json').is_symlink(),
+                'Cannot abort sealed generation')
+        with file_at(release, '.reader.lock') as (reader, _, __):
+            fcntl.flock(reader.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            raw = package.regular_file(release, INDEX_NAME, MAX_INDEX_BYTES)
+            index = parse_index(raw)
+            plan_raw = package.regular_file(release, '.storage-plan.v2.json', 16384)
+            plan = strict_json(plan_raw)
+            require(hashlib.sha256(raw).hexdigest() == index_hash and isinstance(plan, dict)
+                    and plan.get('schema_version') == 2 and plan.get('expected_current') == expected
+                    and plan.get('index_sha256') == index_hash and plan.get('plan_sha256') == plan_hash
+                    and hashlib.sha256(canonical({k: v for k, v in plan.items() if k != 'plan_sha256'})).hexdigest() == plan_hash,
+                    'Abort private provenance mismatch')
+            allowed = {'.reader.lock', INDEX_NAME, '.storage-plan.v2.json', '.storage-member.v2.tmp', 'dist'}
+            require({p.name for p in release.iterdir()} <= allowed, 'Unknown candidate entry; owner inspection required')
+            for name, maximum in [('.reader.lock', 4096), (INDEX_NAME, MAX_INDEX_BYTES), ('.storage-plan.v2.json', 16384)]:
+                info = (release / name).lstat()
+                require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and info.st_size <= maximum,
+                        'Unsafe private candidate entry')
+            temporary = release / '.storage-member.v2.tmp'
+            if temporary.exists() or temporary.is_symlink():
+                info = temporary.lstat()
+                require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1
+                        and info.st_size <= max(row['size'] for row in index['files']), 'Unsafe private staging member')
+            root = release / 'dist'
+            require(root.is_dir() and root.resolve(strict=True) == root, 'Physical candidate dist required')
+            files = {row['path']: row for row in index['files']}
+            directories = set(index['directories'])
+            for entry in regular_tree(root):
+                relative = entry.relative_to(root).as_posix()
+                if entry.is_dir():
+                    require(relative in directories, 'Unknown candidate directory')
+                    continue
+                row = files.get(relative)
+                require(row is not None, 'Unknown candidate content')
+                with file_at(root, relative) as (source, _, __):
+                    digest, info = stream_digest(source)
+                    require((digest, info.st_size, stat.S_IMODE(info.st_mode), info.st_mtime_ns)
+                            == (row['sha256'], row['size'], row['mode'], row['mtime'] * 1000000000),
+                            'Candidate content does not match private index')
+            # The EX reader pin and operation lock stay held through removal.
+            shutil.rmtree(release)
+            sync_directory(releases)
+        return {'schema_version': 2, 'result': 'aborted', 'release_id': release_id,
+                'index_sha256': index_hash, 'plan_sha256': plan_hash}
+
+
 def backend():
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'metravel.settings')
     import django
@@ -299,6 +734,26 @@ def main():
                 digest.update(chunk)
         print(digest.hexdigest())
         return
+    if action == 'index-v2':
+        raw = build_index(Path(arguments[0]).absolute())
+        write_private(Path(arguments[1]).absolute(), raw)
+        print(hashlib.sha256(raw).hexdigest())
+        return
+    if action == 'frame-v2':
+        index_path, plan_path, archive_path = map(Path, arguments)
+        with index_path.open('rb') as source:
+            raw = source.read(MAX_INDEX_BYTES + 1)
+        parse_index(raw)
+        with plan_path.open('rb') as source:
+            plan = source.read(16385)
+        require(0 < len(plan) <= 16384, 'Private plan exceeds bound')
+        require(archive_path.stat().st_size <= MAX_BYTES + MAX_FILES * 4096, 'Compressed archive exceeds transport bound')
+        sys.stdout.buffer.write(struct.pack('>II', len(raw), len(plan)))
+        sys.stdout.buffer.write(raw)
+        sys.stdout.buffer.write(plan)
+        with archive_path.open('rb') as source:
+            shutil.copyfileobj(source, sys.stdout.buffer, 1024 * 1024)
+        return
     if action in ('pack', 'unpack'):
         (pack if action == 'pack' else unpack)(Path(arguments[0]).absolute())
         return
@@ -306,6 +761,8 @@ def main():
         legacy_operation(action, arguments)
         return
     package, activation, active, releases = backend()
+    if action in ('inventory-v2', 'storage-plan-v2', 'stage-v2'):
+        from quests.services.seo_storage import allocated_union
     if action == 'receipt':
         from django.core.management import call_command
         output = io.StringIO()
@@ -317,6 +774,29 @@ def main():
     elif action == 'inventory':
         with package.operation_lock():
             print(json.dumps(inventory(package, activation, releases, int(arguments[0]), int(arguments[1]))))
+    elif action == 'inventory-v2':
+        with package.operation_lock():
+            print(json.dumps(physical_inventory(package, activation, releases, int(arguments[0]), allocated_union)))
+    elif action == 'retain-v2':
+        from quests.services.seo_activation import cleanup_releases
+        expected, budget = arguments
+        # cleanup_releases owns its lock and revalidates active/rollback/readers.
+        result = cleanup_releases(keep_releases=2, max_bytes=2 * MAX_BYTES,
+                                  max_allocated_bytes=int(budget), expected_current=expected, apply=True)
+        require(result['active_release_id'] == expected, 'Retention current changed')
+        print(json.dumps(result))
+    elif action == 'storage-plan-v2':
+        expected_id, budget, reserve = arguments
+        raw = sys.stdin.buffer.read(MAX_INDEX_BYTES + 1)
+        with package.operation_lock(), pinned_sources(package, activation, releases) as sources:
+            plan, _ = storage_plan(package, activation, active, releases, raw,
+                                   None if expected_id == 'none' else expected_id,
+                                   int(budget), int(reserve), allocated_union, sources=sources)
+            print(json.dumps(plan))
+    elif action == 'stage-v2':
+        print(json.dumps(stage_v2(package, activation, active, releases, arguments, allocated_union)))
+    elif action == 'abort-stage-v2':
+        print(json.dumps(abort_stage_v2(package, activation, active, releases, arguments)))
     elif action == 'cover':
         print(json.dumps(publish_cover(package, activation, active, releases, arguments)))
     elif action == 'overlay':
@@ -335,29 +815,6 @@ def main():
                 else:
                     with tarfile.open(fileobj=sys.stdout.buffer, mode='w|gz'):
                         pass
-    elif action == 'stage':
-        release_id, expected_id, budget, incoming = arguments
-        package._match(package.SLUG, release_id)
-        with package.operation_lock():
-            require(activation.current_release() == (None if expected_id == 'none' else expected_id), "Staging CAS refused")
-            inventory(package, activation, releases, int(budget), int(incoming))
-            releases.mkdir(exist_ok=True)
-            release = releases / release_id
-            release.mkdir()  # Never overwrite/reuse an ID or remove an incomplete generation.
-            fd = os.open(release / '.reader.lock', os.O_CREAT | os.O_EXCL | os.O_RDWR | os.O_NOFOLLOW, 0o600)
-            reader = os.fdopen(fd, 'rb')
-            fcntl.flock(reader, fcntl.LOCK_SH)
-            root = release / 'dist'
-            root.mkdir()
-        try:
-            unpack(root)
-            if expected_id == 'none':
-                baseline = package.QuestSeoPackage(root, release_id, validate_all=True)
-                require(all(set(cluster['members']) == {'ru'} for cluster in baseline.manifest['clusters']),
-                        'First v1 generation must be RU-only')
-        finally:
-            reader.close()
-        print(json.dumps({'schema_version': 1, 'release_id': release_id, 'result': 'staged'}))
     elif action in ('validate', 'activate'):
         # The management command acquires operation_lock itself, no outer flock.
         from django.core.management import call_command

@@ -125,12 +125,13 @@ External-link impact: none; links are allowlisted internal routes. Existing exte
 
 Task Contract: #2208 remains planning/owner acceptance; future drafts and full contracts are in `implementation-cards.md` and must be created only after acceptance and Problem Memory refresh.
 
-### D6. Bounded physical release storage on the existing host — proposed 2026-10-16
+### D6. Bounded physical release storage on the existing host — 2026-10-16
 
 Status: architecture refinement requested by the owner after the #2363 package
-preparation exposed excessive storage. The owner requires using the existing
-server without lowering the backend reserve. This section is a design for the
-remaining D/E implementation, not evidence of a production storage change.
+preparation exposed excessive storage. Compatible private D/E implementation
+has passed independent source review; production activation is still pending.
+The existing server capacity and backend reserve remain unchanged. Local
+filesystem experiments and source checks are not production acceptance.
 
 Scope: private E staging/transport/inventory and D retention accounting. Reuse
 the full immutable export, single active pointer, CAS activation, reader locks,
@@ -231,6 +232,40 @@ not permission to increase the budget.
    legacy recovery backup. Never share inodes with mutable legacy, temporary or
    external trees. The measured compact baseline fits this initial stage without
    reducing the backend reserve. This design grants no deletion of that backup.
+
+The implemented interruption path is explicit `abort-stage`, never automatic
+garbage collection. It requires the saved index/plan hashes, locked current CAS,
+an exclusive candidate reader lock, an unsealed/nonactive/nonrollback ID and a
+verified indexed subset. The sole temporary member has a fixed private path
+outside public dist. Unknown entries or incomplete provenance refuse removal.
+An interruption before durable provenance still requires owner inspection.
+
+Normal translated publication also verifies the live Nginx gateway before
+retention or staging: its configuration digest must match canonical backend
+source, and a bounded HEAD of a translated canonical path must show the gateway
+cache policy. The path and RU-only mode are derived from the same validated
+manifest bytes as the prepared identity. This prevents a legacy `try_files`
+configuration from serving translated files directly while application exposure
+is false. Initial translated activation and canonical Nginx replacement therefore
+share one closed D maintenance window; recovery to old Nginx first restores the
+RU root. Subsequent releases use the normal publisher and its gateway gate.
+
+The final complete-export Linux experiment captured unchanged source hashes,
+admitted a three-generation peak of 1,367,846,912 bytes and actually allocated
+1,324,306,432 bytes; independent `du -s -B1` matched exactly. Retaining two
+generations preserved their content. Process peak RSS was 181,616,640 bytes
+under a 900-MiB/no-swap container with zero OOM events. Actual temporary
+allocation was 2,998,272 bytes, matching the plan. Reader-pinned retention
+refusal, interrupted-stage blocking, wrong-provenance refusal and exact abort
+recovery passed. This does not prove production Gunicorn/transport combined
+memory or actual host free space.
+
+Focused source evidence: 34 Jest tests, 31 canonical backend Make tests,
+scoped ESLint/Node/Python checks and independent complete source review pass.
+Streaming gzip level1 preserves identical expanded tar bytes and reduced
+compression from 29.806s to 9.927s on the full translated corpus; its archive
+grew from 216,398,673 to 260,516,274 bytes. Fresh whole-build/deploy timing must
+still satisfy the existing 300-second budget.
 
 Affected implementation paths: E `scripts/quest-seo-transport.py`,
 `scripts/quest-seo-operation.js` and focused transport tests; D storage accounting
