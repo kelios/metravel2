@@ -10,6 +10,10 @@ and account actions; visual generation itself does not publish or reschedule.
 Read [references/visual-brief.md](references/visual-brief.md) when creating the
 source manifest, prompts and final visual checks.
 
+Apply `docs/INSTAGRAM_CONTENT_SPEC.md` section 27 to each photo, reference, font, stock or
+AI asset. Retain provenance, applicable commercial terms/permission and file hashes in the
+package rights manifest; being on our site or being AI-generated does not establish rights.
+
 ## Establish what each slide must show
 
 Inspect the full current carousel, caption and relevant article/quest detail.

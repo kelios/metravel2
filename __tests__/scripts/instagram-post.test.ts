@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
-const { makeTempDir } = require('./cli-test-utils')
-const { listSlides, parseArgs, parseRange, readCaption } = require('../../scripts/instagram-post')
+const { makeTempDir, runCli } = require('./cli-test-utils')
+const { listSlides, parseArgs, parseRange, readCaption, verifyAccount } = require('../../scripts/instagram-post')
 
 describe('instagram-post', () => {
   const dir = makeTempDir('ig-post-')
@@ -11,6 +11,30 @@ describe('instagram-post', () => {
     const base = ['--carousel', dir, '--caption-file', 'c.txt']
     expect(parseArgs(base)).toMatchObject({ kind: 'carousel', publishApproved: false })
     expect(parseArgs([...base, '--publish-approved']).publishApproved).toBe(true)
+  })
+
+  it('refuses unverified media before credential loading or any rehearsal upload', () => {
+    const caption = path.join(dir, 'rehearsal-caption.txt')
+    const image = path.join(dir, 'rehearsal.jpg')
+    fs.writeFileSync(caption, 'Татры')
+    fs.writeFileSync(image, 'export')
+    const run = runCli(process.execPath, [path.join(__dirname, '../../scripts/instagram-post.js'), '--image', image, '--caption-file', caption])
+    expect(run.status).toBe(1)
+    expect(run.stderr).toContain('Instagram rights: --rights-file')
+    fs.rmSync(image)
+  })
+
+  it('verifies the token account before uploads instead of trusting the manifest account', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch')
+    try {
+      fetchMock.mockResolvedValue({ ok: true, json: async () => ({ username: 'another' }) } as Response)
+      await expect(verifyAccount({ token: 'fixture', igUserId: '123' })).rejects.toThrow('must be @metravelby')
+      fetchMock.mockResolvedValue({ ok: true, json: async () => ({}) } as Response)
+      await expect(verifyAccount({ token: 'fixture', igUserId: '123' })).rejects.toThrow('must be @metravelby')
+      fetchMock.mockResolvedValue({ ok: true, json: async () => ({ username: 'MeTravelBy' }) } as Response)
+      await expect(verifyAccount({ token: 'fixture', igUserId: '123' })).resolves.toBeUndefined()
+      expect(fetchMock.mock.calls.every(([, init]) => !init || !init.method || init.method === 'GET')).toBe(true)
+    } finally { fetchMock.mockRestore() }
   })
 
   it('rejects ambiguous or incomplete requests', () => {

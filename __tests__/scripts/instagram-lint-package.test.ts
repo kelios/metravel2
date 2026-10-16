@@ -1,5 +1,6 @@
 const fs = require('fs')
 const path = require('path')
+const crypto = require('crypto')
 const { makeTempDir, runCli } = require('./cli-test-utils')
 
 const SCRIPT = path.join(__dirname, '../../scripts/instagram/lint-package.py')
@@ -30,6 +31,16 @@ describe('instagram lint-package', () => {
     for (const [file, text] of Object.entries({ 'package.md': CHECKLIST, ...files })) {
       fs.writeFileSync(path.join(dir, file), text)
     }
+    const day = new Date().toISOString().slice(0, 10)
+    const sha256 = (file: string) => crypto.createHash('sha256').update(fs.readFileSync(path.join(dir, file))).digest('hex')
+    fs.writeFileSync(path.join(dir, 'final.jpg'), 'test export')
+    fs.writeFileSync(path.join(dir, 'evidence.txt'), 'Fixture: own image, organic Instagram worldwide, no third party material.')
+    fs.writeFileSync(path.join(dir, 'rights.json'), JSON.stringify({
+      version: 1, account: '@metravelby', reviewedAt: day, intendedPublishAt: day,
+      assets: [{ file: 'final.jpg', sha256: sha256('final.jpg'), kind: 'image', basis: 'owned', source: 'Fixture own image',
+        evidence: [{ file: 'evidence.txt', sha256: sha256('evidence.txt') }],
+        scope: { account: '@metravelby', platforms: ['instagram'], uses: ['organic'], territories: ['worldwide'], validFrom: day, validUntil: 'perpetual' } }],
+    }))
     return dir
   }
 
@@ -205,6 +216,12 @@ describe('instagram lint-package', () => {
 
     fs.rmSync(path.join(inline, 'package.md'))
     expect(lint(inline).rules).toEqual(['R18'])
+  })
+
+  it('requires rights evidence even for otherwise clean packages', () => {
+    const dir = makePackage('no-rights', { 'caption.txt': CLEAN_CAPTION })
+    fs.rmSync(path.join(dir, 'rights.json'))
+    expect(lint(dir)).toMatchObject({ status: 1, rules: ['R27'] })
   })
 
   it('rejects a call without a package folder', () => {

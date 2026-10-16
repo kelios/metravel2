@@ -3,7 +3,10 @@
 Copy the matching prompt and supply only inputs that are known. Resolve an
 open-browser reference from actual CUA state. These prompts request preparation
 or read-only review; append a concrete save/publish instruction only when that
-action is intended. They do not carry approvals between sessions.
+action is intended. They do not carry approvals between sessions. Every request applies
+`docs/INSTAGRAM_CONTENT_SPEC.md` section 27: asset-by-asset rights evidence, no upload without
+its gate, silence/checked own audio when music rights are missing, and no inference of rights
+from a platform audio label.
 
 ## Audit a post
 
@@ -60,3 +63,14 @@ action is intended. They do not carry approvals between sessions.
 > inspected insights script or visible CUA UI; distinguish missing data and
 > hypotheses. Return per-item pass/fail, raw evidence, precise repairs and
 > readiness for publication. Keep account state unchanged.
+
+
+## Audit music and media rights
+
+> Use $metravel-instagram-editor to audit all accessible @metravelby feed posts, Reels,
+> Stories/Highlights and scheduled entries. Record exact IDs/links, dates, actual baked and
+> platform-added audio, asset provenance, license evidence and cleared/unknown/restricted
+> per CONTENT_SPEC section 27. Report inspected/total and unavailable items; do not treat
+> no strikes, no monetization or original audio labels as rights evidence. Prepare exact
+> affected-post actions within my current authorization, preferring reversible archive where
+> it meets the request; verify every changed state and keep unresolved checks visible.

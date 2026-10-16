@@ -41,6 +41,9 @@ description: Instagram @metravelby — цепочка planner → researcher →
 Контекст для каждого агента (передай дословно):
 - Рабочий каталог репо: корень текущего чекаута (`$CLAUDE_PROJECT_DIR`, на этой машине
   `~/Sites/metravel2/metravel2`). Сегодняшнюю дату взять командой `date +%F`.
+- Каждая роль читает `docs/INSTAGRAM_CONTENT_SPEC.md` раздел 27: rights.json и evidence на
+  каждый asset; gate до upload/rehearsal/афиши/schedule/publish; без прав на музыку —
+  тишина/проверенный собственный звук.
 - ТЗ и жёсткие правила — `docs/INSTAGRAM_CONTENT_SPEC.md` (свой раздел по роли); календарь и
   метрики — `docs/INSTAGRAM_PLAN.md` нужным разделом.
 - Контент только по опубликованным статьям автора 1 (`userIds == "1"`) и квестам площадки;

@@ -10,6 +10,7 @@ For each slide record:
 | `source_url` / `source_field` | Article or quest/step and supporting fragment |
 | `place` / `anchors` | Verified visible landmark details that identify the scene |
 | `reference_path` / `provenance` | Inspected owner/site/licensed photograph or quest art |
+| `rights` | Entry in rights.json, SHA-256 and retained permission/license/AI terms per CONTENT_SPEC section 27 |
 | `medium` | Documentary photo, illustration or composite |
 | `audience` | Catalog age/family tags, task language/mechanics, and the owner's requested visual age |
 | `scene` / `motif` | What happens here and the supported legend clue |

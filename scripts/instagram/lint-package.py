@@ -12,8 +12,9 @@
   F10 — ответы на задания квеста не раскрыты (если в пакете есть quest_id или адрес квеста и
         локальный scripts/*-quest-data.js с answer_pattern — его читает node); совпадение, которое не
         ответ, снимается строкой `lint-allow: F10 <слово> — <причина>` в package.md;
-  F11 — у reel.mp4 есть звуковая дорожка и длина 15–40 с (если есть ffprobe);
+  F11 — reel.mp4 длится 15–40 с; тишина допустима (если есть ffprobe);
   F2  — титры Reel из spec.json держатся ≥ 1,5 с + 0,3 с на слово и не длиннее ~7 слов;
+  R27 — rights.json связывает конечные файлы и локальные доказательства прав через SHA-256;
   B1  — запрещённые по Беларуси источники, общий список
         scripts/content-source-denylist.json (тот же, что у scan-content-sources.js);
   R18 — в package.md чек-лист раздела 18: строка на каждый номер V1–V10 и F1–F13
@@ -329,8 +330,6 @@ def check_reel(package):
         return [finding('reel.mp4', 0, 'F11', 'ffprobe не прочитал файл')]
     data = json.loads(probe.stdout or '{}')
     hits = []
-    if not any(s.get('codec_type') == 'audio' for s in data.get('streams', [])):
-        hits.append(finding('reel.mp4', 0, 'F11', 'нет звуковой дорожки: музыка не вшита'))
     try:
         duration = float(data.get('format', {}).get('duration') or 0)
     except ValueError:  # ffprobe отдаёт «N/A», если длина не читается
@@ -338,6 +337,17 @@ def check_reel(package):
     if not REEL_MIN_S <= duration <= REEL_MAX_S:
         hits.append(finding('reel.mp4', 0, 'F11', 'длина %.1f с, нужно %d–%d' % (duration, REEL_MIN_S, REEL_MAX_S)))
     return hits
+
+
+def check_rights(package):
+    if not shutil.which('node'):
+        return [finding('rights.json', 0, 'R27', 'node не найден — права не проверены')]
+    run = subprocess.run(['node', os.path.join(ROOT, 'scripts', 'lib', 'instagramRights.js'),
+                          os.path.join(os.path.abspath(package), 'rights.json')],
+                         capture_output=True, text=True, check=False)
+    if run.returncode != 0:
+        return [finding('rights.json', 0, 'R27', run.stderr.strip() or 'проверка прав не прошла')]
+    return []
 
 
 def lint_package(package, spec_path=SPEC_PATH, denylist_path=DENYLIST_PATH, data_glob=QUEST_DATA_GLOB):
@@ -361,6 +371,7 @@ def lint_package(package, spec_path=SPEC_PATH, denylist_path=DENYLIST_PATH, data
     hits += check_reel(package)
     hits += check_reel_titles(package)
     hits += check_checklist(package)
+    hits += check_rights(package)
     return hits
 
 

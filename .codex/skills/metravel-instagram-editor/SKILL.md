@@ -25,6 +25,12 @@ For visual changes add `$metravel-instagram-visuals`.
 
 ## Non-negotiables
 
+Read `docs/INSTAGRAM_CONTENT_SPEC.md` section 27 before every content or account task: it is
+the canonical music/media rights policy for all five roles. Require asset-by-asset hashed
+`rights.json` evidence and its gate before any upload, rehearsal, schedule or publication;
+use silence or checked own voice/nature when music rights are unproven. For existing posts
+report cleared/unknown/restricted and audit coverage; unknown is neither illegal nor cleared.
+
 - Sources: only published, moderated author-1 articles (`userIds == "1"`) and project quests;
   every claim is quoted in `sources.md`. Quest answers are never revealed (F10).
 - One coherent story in Yulia's first-person voice, never fragments or service notes (V1–V6).

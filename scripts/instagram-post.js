@@ -8,6 +8,7 @@
 //   node scripts/instagram-post.js --image <file.jpg> --caption-file <txt>
 //   node scripts/instagram-post.js --reel <file.mp4> --caption-file <txt> [--trial manual|auto]
 //
+// Every run requires --rights-file <package/rights.json>, verified before token/network access.
 // Without --publish-approved the run is a rehearsal: media is uploaded and the containers
 // are created (Instagram deletes unpublished containers after 24 hours), nothing appears
 // in the account. --publish-approved is passed ONLY after the owner said «да» in chat to
@@ -18,6 +19,7 @@
 // are sent straight to Meta with the resumable upload protocol; larger ones are fetched by
 // Meta from a temporary tunnel to this machine (see servePublicly).
 
+const { validateRights } = require('./lib/instagramRights')
 const crypto = require('crypto')
 const { createToolSession, TokenError  } = require('./lib/metravel-tool-session');
 const fs = require('fs')
@@ -35,7 +37,7 @@ const TRIAL_STRATEGIES = { manual: 'MANUAL', auto: 'SS_PERFORMANCE' }
 
 function parseArgs(argv) {
   const args = { publishApproved: argv.includes('--publish-approved') }
-  for (const key of ['carousel', 'image', 'reel', 'caption-file', 'trial']) {
+  for (const key of ['carousel', 'image', 'reel', 'caption-file', 'trial', 'rights-file']) {
     const i = argv.indexOf(`--${key}`)
     if (i >= 0) args[key] = argv[i + 1]
   }
@@ -63,6 +65,13 @@ function listSlides(dir) {
   if (slides.length < 2) throw new Error(`A carousel needs at least 2 slides, ${dir} has ${slides.length}.`)
   if (slides.length > MAX_CAROUSEL_ITEMS) throw new Error(`A carousel takes at most ${MAX_CAROUSEL_ITEMS} slides.`)
   return slides
+}
+
+async function verifyAccount({ token, igUserId }) {
+  const profile = await gget(graphUrl(igUserId, { fields: 'username' }, token))
+  if (String(profile.username || '').toLowerCase() !== 'metravelby') {
+    throw new Error('Instagram rights: token account must be @metravelby before any media upload.')
+  }
 }
 
 async function gpost(pathname, params, token) {
@@ -214,12 +223,15 @@ async function createReelContainer(file, caption, trial, { token, igUserId }) {
 async function main() {
   const args = parseArgs(process.argv.slice(2))
   const caption = readCaption(args['caption-file'])
+  const files = args.kind === 'carousel' ? listSlides(args.carousel) : [args[args.kind]]
+  validateRights(args['rights-file'], files.map((file) => ({ file, kind: args.kind === 'reel' ? 'video' : 'image' })), { publishNow: args.publishApproved })
   const account = loadToken()
   if (!account.igUserId) throw new Error('ig_user_id missing in the token file — run instagram-insights.js --exchange-code first.')
+  await verifyAccount(account)
 
   let containerId
   if (args.kind === 'reel') containerId = await createReelContainer(args.reel, caption, args.trial, account)
-  else containerId = await createImageContainers(args.kind === 'carousel' ? listSlides(args.carousel) : [args.image], caption, account)
+  else containerId = await createImageContainers(files, caption, account)
   await waitUntilReady(containerId, account.token)
 
   if (!args.publishApproved) {
@@ -239,4 +251,4 @@ if (require.main === module) {
   })
 }
 
-module.exports = { listSlides, parseArgs, parseRange, readCaption }
+module.exports = { listSlides, parseArgs, parseRange, readCaption, verifyAccount }

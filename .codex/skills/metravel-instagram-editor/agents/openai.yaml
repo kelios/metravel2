@@ -1,4 +1,4 @@
 interface:
   display_name: "Instagram Editor"
   short_description: "Prepare and audit MeTravel Instagram content"
-  default_prompt: "Use $metravel-instagram-editor to prepare the requested Instagram post from verified MeTravel sources."
+  default_prompt: "Use $metravel-instagram-editor to prepare or audit Instagram content with verified sources and asset rights."
