@@ -28,9 +28,19 @@ const META_CHARSET_RE = /<meta\b[^>]*charset\s*=/i
 // tags are multi-byte in UTF-8, so a character-based check would under-count
 // how far into the document the charset declaration actually sits.
 function hasCharsetWithinPrescan(absPath) {
-  const buffer = fs.readFileSync(absPath)
-  const prescan = buffer.subarray(0, PRESCAN_BYTES).toString('latin1')
-  return META_CHARSET_RE.test(prescan)
+  const fd = fs.openSync(absPath, 'r')
+  try {
+    const buffer = Buffer.alloc(PRESCAN_BYTES)
+    let length = 0
+    while (length < buffer.length) {
+      const bytes = fs.readSync(fd, buffer, length, buffer.length - length, length)
+      if (bytes === 0) break
+      length += bytes
+    }
+    return META_CHARSET_RE.test(buffer.subarray(0, length).toString('latin1'))
+  } finally {
+    fs.closeSync(fd)
+  }
 }
 
 function checkDist(distDir) {
@@ -38,8 +48,14 @@ function checkDist(distDir) {
     throw new Error(`dist directory not found: ${distDir}`)
   }
   const files = listHtmlFiles(distDir, 'check for charset position')
+  const checkedInodes = new Map()
   const violations = files
-    .filter((absPath) => !hasCharsetWithinPrescan(absPath))
+    .filter((absPath) => {
+      const stats = fs.statSync(absPath, { bigint: true })
+      const inode = `${stats.dev}:${stats.ino}`
+      if (!checkedInodes.has(inode)) checkedInodes.set(inode, hasCharsetWithinPrescan(absPath))
+      return !checkedInodes.get(inode)
+    })
     .map((absPath) => path.relative(distDir, absPath).split(path.sep).join('/'))
   return { ok: violations.length === 0, total: files.length, violations }
 }

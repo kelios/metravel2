@@ -313,6 +313,31 @@ Security: locale allowlist, positive numeric city IDs, existing validated quest 
 
 Analytics: preserve quest ID/view/completion semantics and consent; prefixed paths are new page paths, not new quest IDs. Answer attempts keep actual step content locale. No event removals or user data in SEO artifacts; check one quest view per direct/SPA entry.
 
+### D7. Bounded release work on the existing host
+
+The first fresh storage-v2 RU preparation passed integrity but took320s against
+the unchanged300s release budget. Its final stage took81s. A separate read-only
+profile measured32.812s for preflight, immutable old-asset capture/download,
+unpack and overlay. The server root and database were unchanged by this probe.
+
+Capture the existing bounded Expo assets while cold Metro exports locally;
+apply them only after the finished HTML writers. The private captured state
+binds archive hash/size and the inspected base. Application rechecks that base
+before merging. The build owns the capture process group, propagates failure,
+cancels and waits on its own descendants on exit, and never publishes a partial
+capture. Keep the normal build lock, cold Metro, request pacing and capacity
+bounds. This is a private transient state, not a public v1 schema change.
+
+For v1, run the complete live-catalog quest guard once, after all HTML writers
+and overlay; the prior identical pre-postprocessing pass had no consumer other
+than early failure. Legacy keeps its existing guard placement. Retain separate
+R1/R2, finalizer preseal verification, independent postseal disk verification,
+index/archive checks and backend validation/CAS. Process each hardlinked HTML
+inode once while retaining every route and byte result. The charset guard reads
+exactly its1024-byte prescan window. Neither quality floors nor guards are
+disabled to reach the budget. Measure the next full preparation and publication;
+source work and isolated I/O tests do not establish production timing.
+
 ## Migration Plan
 
 E #2366 release implementation (owner authorized 2026-10-11): retain the normal

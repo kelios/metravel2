@@ -16,13 +16,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { promisify } = require('util');
 const { normalizeHeadCharset } = require('./lib/htmlCharset');
-
-const readdir = promisify(fs.readdir);
-const readFile = promisify(fs.readFile);
-const writeFile = promisify(fs.writeFile);
-const stat = promisify(fs.stat);
 
 const DEFAULT_BUILD_DIR = path.join(__dirname, '..', 'dist', 'prod');
 const buildDirArg = process.argv[2] ? String(process.argv[2]).trim() : '';
@@ -30,9 +24,9 @@ const buildDir = buildDirArg ? path.resolve(buildDirArg) : DEFAULT_BUILD_DIR;
 
 const BUILD_VERSION = `v${Date.now()}`;
 
-async function processHtmlFile(filePath) {
+function processHtmlFile(filePath) {
   try {
-    let content = await readFile(filePath, 'utf8');
+    let content = fs.readFileSync(filePath, 'utf8');
 
     // #2088: last full pass over every dist/prod/**/*.html file before the
     // build swaps into place — move <meta charset> to be the first child of
@@ -46,13 +40,13 @@ async function processHtmlFile(filePath) {
   <meta name="build-version" content="${BUILD_VERSION}">`;
 
     if (content.includes('name="build-version"')) {
-      await writeFile(filePath, content, 'utf8');
+      fs.writeFileSync(filePath, content, 'utf8');
       return true;
     }
 
     if (content.includes('</head>')) {
       content = content.replace('</head>', `${cacheMetaTags}\n</head>`);
-      await writeFile(filePath, content, 'utf8');
+      fs.writeFileSync(filePath, content, 'utf8');
       return true;
     }
     
@@ -63,15 +57,15 @@ async function processHtmlFile(filePath) {
   }
 }
 
-async function processDirectory(dir) {
-  const entries = await readdir(dir);
+function processDirectory(dir, processedInodes = new Set()) {
+  const entries = fs.readdirSync(dir);
   const results = [];
   
   for (const entry of entries) {
     const fullPath = path.join(dir, entry);
     let stats;
     try {
-      stats = await stat(fullPath);
+      stats = fs.statSync(fullPath, { bigint: true });
     } catch (err) {
       // Skip entries that readdir lists but stat cannot resolve (dangling
       // symlink / vanished file / flat-vs-dir name collision for a slug).
@@ -81,11 +75,16 @@ async function processDirectory(dir) {
     }
 
     if (stats.isDirectory()) {
-      const subResults = await processDirectory(fullPath);
+      const subResults = processDirectory(fullPath, processedInodes);
       results.push(...subResults);
     } else if (stats.isFile() && entry.endsWith('.html')) {
-      const processed = await processHtmlFile(fullPath);
+      // SSG writes flat and directory-index routes as hardlinks. Mutate their
+      // shared bytes once, while still reporting every successful route path.
+      // Keep failed attempts uncached so another alias retains its old retry.
+      const inode = `${stats.dev}:${stats.ino}`;
+      const processed = processedInodes.has(inode) || processHtmlFile(fullPath);
       if (processed) {
+        processedInodes.add(inode);
         results.push(fullPath);
       }
     }
@@ -103,7 +102,7 @@ async function main() {
   console.log(`🔍 Scanning for HTML files in: ${buildDir}`);
   console.log(`📦 Build version: ${BUILD_VERSION}`);
   
-  const processedFiles = await processDirectory(buildDir);
+  const processedFiles = processDirectory(buildDir);
   
   console.log(`\n✅ Added cache-bust meta tags to ${processedFiles.length} HTML files`);
   
@@ -113,7 +112,11 @@ async function main() {
   }
 }
 
-main().catch(err => {
-  console.error('❌ Script failed:', err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch(err => {
+    console.error('❌ Script failed:', err);
+    process.exit(1);
+  });
+}
+
+module.exports = { processDirectory };

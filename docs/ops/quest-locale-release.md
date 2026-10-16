@@ -40,10 +40,33 @@ must use that owner UID with writable directory access. Foreign roots, symlink
 paths, read-only app binds and mounts nested below static fail before any lock
 or package mutation; a dedicated `/app/static` bind is not required.
 
-Download old assets while holding the release reader pin. Apply the existing
-14-day/256-MiB overlay locally, preserving mtimes and the replaced generation's
-exception. After all postprocessing/marker/overlay, run the full quest static
-verifier, R2/finalizer, then package verifier. No mutation follows sealing.
+After the source/dependency gates, capture old assets in parallel with cold
+Metro, holding the release reader pin during download. The completed, closed
+private archive sits beside release state with a unique build nonce, size and
+SHA-256. The transient `captured` state binds that archive, state/export paths
+and the complete current sealed identity. A legacy root also binds its host
+device/inode, checked before and after download. No partial capture becomes
+applicable. Before SEO generation the build waits and propagates capture failure.
+The FIFO-controlled supervisor owns a detached IPC worker; cancellation signals
+only that worker's own process group, escalates TERM to KILL after five seconds,
+and waits before `.env` restoration or shared build-lock release. A completed
+capture remains owned until explicit finish, so cleanup never signals an old PID.
+The transport shell and its container-resolution SSH requests run inside that
+owned group from the start, including cancellation before download begins.
+The control FIFO stays writable throughout the finish wait so an interrupt can
+still replace that pending finish with bounded cancellation.
+
+After all HTML writers and the source marker, rerun static preflight and compare
+the actual full base identity (or legacy host device/inode). Validate nonce/path
+binding and the bounded private regular archive's hash/size before unpacking.
+Apply the existing 14-day/256-MiB overlay locally, preserving mtimes and the
+replaced generation's exception. Run the full live-catalog quest static verifier
+once here for v1, then R2/finalizer and the independent postseal package verifier.
+Legacy retains its earlier quest guard. Timings separately report parallel
+capture, its wait, late apply, live verification, sealing, postseal verification
+and private index/archive preparation. The 300-second budget, cold Metro,
+request pacing, storage ceilings and backend reserve remain unchanged. No
+mutation follows sealing.
 After postprocessing, prepare a private per-file index (at most 8 MiB / 50,000
 paths), recording path, SHA-256, size, mode and canonical whole-second mtime.
 Archive transfer rejects symlinks, archive hardlinks, special files, traversal,

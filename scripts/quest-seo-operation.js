@@ -4,7 +4,8 @@
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
-const { spawnSync } = require('child_process')
+const crypto = require('crypto')
+const { spawn, spawnSync } = require('child_process')
 const {
   MANIFEST_NAME, SHA, RELEASE_ID, parseStrictJson, validateManifest, sha256,
 } = require('./lib/questSeoContract')
@@ -16,6 +17,9 @@ const PLAN_KEYS = ['schema_version', 'expected_current', 'index_sha256', 'budget
   'logical_bytes', 'physical_bytes', 'incremental_bytes', 'directory_allowance_bytes', 'temporary_bytes',
   'private_index_bytes', 'peak_bytes', 'required_free_bytes', 'sources_sha256', 'plan_sha256']
 const BACKEND_RESERVE = 1536 * 1024 ** 2
+const CAPTURE_NONCE = /^[a-f0-9]{48}$/
+// The existing expanded 2-GiB / 50,000-entry bound plus gzip/tar framing.
+const MAX_CAPTURE_BYTES = 2 * 1024 ** 3 + 64 * 1024 ** 2
 const GATEWAY_PROBE_PATH = /^\/(be|uk|pl|en)\/quests\/[1-9][0-9]*\/[A-Za-z0-9_-]{1,100}$/
 const quote = (value) => `'${String(value).replace(/'/g, "'\\''")}'`
 
@@ -94,26 +98,223 @@ function preflight(t) {
     + `python3 -c ${quote(python)} static-preflight ${[t.remote, t.app, t.nginx].map(quote).join(' ')}`)
 }
 
-function overlay(t, dist, stateFile) {
+function legacyRootIdentity(t) {
+  const code = 'import json,os,stat,sys;p=sys.argv[1];s=os.lstat(p);'
+    + 'assert stat.S_ISDIR(s.st_mode) and os.path.realpath(p)==p;'
+    + 'print(json.dumps({"device":s.st_dev,"inode":s.st_ino}))'
+  const result = parseStrictJson(t.ssh(`python3 -c ${quote(code)} ${quote(`${t.remote}/static/dist`)}`), 'legacy root identity')
+  exactKeys(result, ['device', 'inode'])
+  require_([result.device, result.inode].every((v) => Number.isSafeInteger(v) && v >= 0), 'Invalid legacy root identity')
+  return result
+}
+
+function sameBase(expected, actual) {
+  return expected.kind === actual.kind && (expected.kind !== 'managed'
+    || ['schema_version', 'release_id', 'frontend_sha', 'manifest_sha256', 'tree_sha256']
+      .every((key) => expected.current?.[key] === actual.current?.[key]))
+}
+
+function capturePath(stateFile, nonce) {
+  require_(CAPTURE_NONCE.test(nonce || ''), 'Unique build capture nonce required')
+  require_(path.isAbsolute(stateFile) && fs.realpathSync(path.dirname(stateFile)) === path.dirname(stateFile),
+    'Canonical private state directory required')
+  return `${stateFile}.overlay-${nonce}.tar.gz`
+}
+
+function archiveDigest(fd) {
+  const hash = crypto.createHash('sha256'), chunk = Buffer.alloc(1024 * 1024)
+  let position = 0, size
+  while ((size = fs.readSync(fd, chunk, 0, chunk.length, position))) {
+    hash.update(chunk.subarray(0, size)); position += size
+    require_(position <= MAX_CAPTURE_BYTES, 'Captured archive exceeds bound')
+  }
+  return hash.digest('hex')
+}
+
+function openCapture(archive) {
+  const fd = fs.openSync(archive, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW)
+  try {
+    const info = fs.fstatSync(fd)
+    require_(info.isFile() && info.nlink === 1 && (info.mode & 0o077) === 0
+      && (typeof process.getuid !== 'function' || info.uid === process.getuid())
+      && info.size > 0 && info.size <= MAX_CAPTURE_BYTES, 'Bounded private regular capture required')
+    return { fd, info }
+  } catch (error) { fs.closeSync(fd); throw error }
+}
+
+function unchangedArchive(fd, info) {
+  const actual = fs.fstatSync(fd)
+  require_(actual.size === info.size && actual.mtimeMs === info.mtimeMs && actual.ctimeMs === info.ctimeMs,
+    'Captured archive changed while reading')
+}
+
+function captureOverlay(t, dist, stateFile, nonce) {
+  const archive = capturePath(stateFile, nonce)
+  require_(!fs.existsSync(stateFile) && !fs.lstatSync(path.dirname(stateFile)).isSymbolicLink(), 'Fresh capture state required')
   preflight(t)
   const base = inspect(t)
+  const legacyRoot = base.kind === 'legacy' ? legacyRootIdentity(t) : null
   checkInventory(t, 0)
-  const temporary = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'metravel-quest-overlay-')))
+  let complete = false
+  const output = fs.openSync(archive, 'wx', 0o600)
   try {
-    const archive = path.join(temporary, 'assets.tar.gz')
-    const output = fs.openSync(archive, 'wx', 0o600)
     try {
       t.operation('overlay', [base.kind, base.current?.release_id || 'none'], { stdio: ['ignore', output, 'pipe'] })
     } finally { fs.closeSync(output) }
+    require_(sameBase(base, inspect(t)) && (base.kind !== 'legacy'
+      || JSON.stringify(legacyRootIdentity(t)) === JSON.stringify(legacyRoot)), 'Active root changed during capture')
+    const { fd, info } = openCapture(archive)
+    let digest
+    try { digest = archiveDigest(fd); unchangedArchive(fd, info) } finally { fs.closeSync(fd) }
+    const state = { schema_version: 1, phase: 'captured', base, capture: {
+      nonce, state_file: stateFile, dist, archive, bytes: info.size, sha256: digest, legacy_root: legacyRoot,
+    } }
+    // Publish only the complete, closed, hash-bound result; never replace stale state.
+    const temporary = `${stateFile}.${nonce}.tmp`
+    try {
+      fs.writeFileSync(temporary, `${JSON.stringify(state, null, 2)}\n`, { flag: 'wx', mode: 0o600 })
+      fs.linkSync(temporary, stateFile)
+    } finally { fs.rmSync(temporary, { force: true }) }
+    complete = true
+  } finally { if (!complete) fs.rmSync(archive, { force: true }) }
+}
+
+function applyOverlay(t, dist, stateFile, nonce) {
+  const state = parseStrictJson(fs.readFileSync(stateFile, 'utf8'), 'captured release state')
+  const capture = state.capture, archive = capturePath(stateFile, nonce)
+  require_(state.schema_version === 1 && state.phase === 'captured' && capture?.nonce === nonce
+    && capture.state_file === stateFile && capture.dist === dist && capture.archive === archive,
+  'Fresh build-bound capture required')
+  preflight(t)
+  const actual = inspect(t)
+  require_(sameBase(state.base, actual) && (actual.kind !== 'legacy'
+    || JSON.stringify(legacyRootIdentity(t)) === JSON.stringify(capture.legacy_root)), 'Active root changed since capture')
+  const { fd, info } = openCapture(archive)
+  let temporary
+  try {
+    require_(Number.isSafeInteger(capture.bytes) && capture.bytes === info.size
+      && /^[a-f0-9]{64}$/.test(capture.sha256) && archiveDigest(fd) === capture.sha256, 'Captured archive digest/size mismatch')
+    unchangedArchive(fd, info)
+    temporary = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'metravel-quest-overlay-')))
     const previous = path.join(temporary, 'previous')
     fs.mkdirSync(previous)
-    const input = fs.openSync(archive, 'r')
-    try { run('python3', [TRANSPORT, 'unpack', previous], { stdio: [input, 'pipe', 'pipe'] }) }
-    finally { fs.closeSync(input) }
+    run('python3', [TRANSPORT, 'unpack', previous], { stdio: [fd, 'pipe', 'pipe'] })
+    unchangedArchive(fd, info)
     run('bash', [path.join(__dirname, 'deploy-expo-overlay.sh'), path.join(dist, '_expo/static'), previous,
       process.env.EXPO_OVERLAY_RETENTION_DAYS || '14', process.env.EXPO_OVERLAY_MAX_MB || '256'], { stdio: 'inherit' })
-    save(stateFile, { schema_version: 1, phase: 'overlaid', base })
-  } finally { fs.rmSync(temporary, { recursive: true, force: true }) }
+    save(stateFile, { schema_version: 1, phase: 'overlaid', base: state.base })
+    fs.unlinkSync(archive)
+  } finally {
+    fs.closeSync(fd)
+    if (temporary) fs.rmSync(temporary, { recursive: true, force: true })
+  }
+}
+
+function discardCapture(stateFile, nonce) {
+  const archive = capturePath(stateFile, nonce)
+  if (fs.existsSync(stateFile)) {
+    const state = parseStrictJson(fs.readFileSync(stateFile, 'utf8'), 'captured release state')
+    if (state.phase === 'captured' && state.capture?.nonce === nonce && state.capture.state_file === stateFile
+      && state.capture.archive === archive) fs.unlinkSync(stateFile)
+  }
+  fs.rmSync(archive, { force: true })
+  fs.rmSync(`${stateFile}.${nonce}.tmp`, { force: true })
+}
+
+function overlay(t, dist, stateFile) {
+  fs.mkdirSync(path.dirname(stateFile), { recursive: true })
+  // Preserve the original synchronous entrypoint's support for /tmp and other
+  // symlinked parent aliases while binding the private split flow physically.
+  stateFile = path.join(fs.realpathSync(path.dirname(stateFile)), path.basename(stateFile))
+  const nonce = crypto.randomBytes(24).toString('hex')
+  captureOverlay(t, dist, stateFile, nonce)
+  applyOverlay(t, dist, stateFile, nonce)
+}
+
+// The detached worker stays alive as its process-group leader until release.
+// Cancellation signals its OWN group, never a saved PID/PGID from another
+// process. Its IPC channel is private and is not inherited by capture-sync/SSH.
+function captureWorker(command) {
+  require_(typeof process.send === 'function' && process.connected, 'Private capture IPC required')
+  return new Promise((resolve) => {
+    let stopping = false, result = null
+    const child = spawn(command[0], command.slice(1), { stdio: ['ignore', 'inherit', 'inherit'] })
+    const cancel = () => {
+      if (stopping) return
+      stopping = true
+      process.kill(-process.pid, 'SIGTERM')
+      // Keep this group leader alive even if capture-sync exits first. A
+      // TERM-ignoring SSH descendant cannot outlive the bounded group kill.
+      setTimeout(() => process.kill(-process.pid, 'SIGKILL'), 5000)
+    }
+    for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP']) process.on(signal, () => {})
+    process.on('disconnect', cancel)
+    process.on('message', (message) => {
+      if (message === 'cancel') cancel()
+      else if (message === 'release' && result !== null && !stopping) {
+        process.removeListener('disconnect', cancel)
+        process.disconnect()
+        resolve(result)
+      }
+    })
+    child.on('error', (error) => console.error(`Capture process failed to start: ${error.message}`))
+    child.on('close', (code) => {
+      result = code === 0 ? 0 : 1
+      if (!stopping && process.connected) process.send({ result })
+    })
+  })
+}
+
+function superviseCapture(dist, stateFile, nonce, command = ['bash', path.join(__dirname, 'quest-seo-operation.sh'), 'capture-sync', dist, stateFile, nonce]) {
+  // Transport setup performs SSH too, so launch the wrapper inside the owned
+  // worker group rather than resolving containers before supervision begins.
+  capturePath(stateFile, nonce)
+  return new Promise((resolve, reject) => {
+    let requested = null, result = null, released = false, input = ''
+    const started = Date.now()
+    const worker = spawn(process.execPath, [__filename, 'capture-worker', JSON.stringify(command)], {
+      detached: true, stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
+    })
+    const request = (next) => {
+      if (requested === 'cancel' || released) return
+      requested = next
+      if (next === 'cancel') {
+        if (worker.connected) worker.send('cancel')
+      } else if (result !== null && worker.connected) {
+        released = true
+        worker.send('release')
+      }
+    }
+    const cancel = () => request('cancel')
+    for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP']) process.on(signal, cancel)
+    process.stdin.setEncoding('utf8')
+    process.stdin.on('data', (chunk) => {
+      input += chunk
+      if (input.length > 32) cancel()
+      else if (input.includes('\n')) request(input === 'finish\n' ? 'finish' : 'cancel')
+    })
+    process.stdin.on('end', () => { if (requested !== 'finish') cancel() })
+    worker.on('message', (message) => {
+      if (message && (message.result === 0 || message.result === 1)) {
+        result = message.result
+        console.log(`Quest asset capture (parallel with Metro): ${Date.now() - started} ms, status=${result}`)
+        if (requested === 'finish') request('finish')
+      }
+    })
+    worker.on('error', (error) => {
+      process.stdin.destroy()
+      for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP']) process.removeListener(signal, cancel)
+      reject(error)
+    })
+    worker.on('close', () => {
+      for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP']) process.removeListener(signal, cancel)
+      process.stdin.destroy()
+      try {
+        if (requested !== 'finish' || result !== 0) discardCapture(stateFile, nonce)
+        resolve(requested === 'finish' && released ? result : 1)
+      } catch (error) { reject(error) }
+    })
+  })
 }
 
 function identity(dist, bytes = fs.readFileSync(path.join(dist, MANIFEST_NAME), 'utf8')) {
@@ -421,12 +622,16 @@ function abortStage(t, file) {
 }
 
 function main(args) {
-  const [action, dist, stateFile] = args
+  const [action, dist, stateFile, nonce] = args
+  if (action === 'capture-worker') return captureWorker(JSON.parse(dist))
+  if (action === 'capture') return superviseCapture(path.resolve(dist), path.resolve(stateFile), nonce)
   if (action === 'prepare') { prepare(path.resolve(dist), path.resolve(stateFile)); return }
   const t = transport()
   if (action === 'receipt') process.stdout.write(t.operation('receipt'))
   else if (action === 'inspect') process.stdout.write(`${JSON.stringify(inspect(t))}\n`)
   else if (action === 'overlay') overlay(t, path.resolve(dist), path.resolve(stateFile))
+  else if (action === 'capture-sync') captureOverlay(t, path.resolve(dist), path.resolve(stateFile), nonce)
+  else if (action === 'apply') applyOverlay(t, path.resolve(dist), path.resolve(stateFile), nonce)
   else if (action === 'publish') publish(t, path.resolve(dist), path.resolve(stateFile))
   else if (action === 'recover') recover(t, path.resolve(dist))
   else if (action === 'baseline') baseline(t, path.resolve(dist))
@@ -436,6 +641,10 @@ function main(args) {
 }
 
 if (require.main === module) {
-  try { main(process.argv.slice(2)) } catch (error) { console.error(`ERROR: ${error.message}`); process.exitCode = 1 }
+  Promise.resolve().then(() => main(process.argv.slice(2))).then((status) => {
+    if (typeof status === 'number') process.exitCode = status
+  }).catch((error) => { console.error(`ERROR: ${error.message}`); process.exitCode = 1 })
 }
-module.exports = { checkReceipt, inspect, transport, quote, prepare, publish, recover, rollback, overlay, readiness, baseline, checkInventory, publishCover, storagePlan, verifyGateway, abortStage }
+module.exports = { checkReceipt, inspect, transport, quote, prepare, publish, recover, rollback, overlay,
+  captureOverlay, applyOverlay, superviseCapture, captureWorker,
+  readiness, baseline, checkInventory, publishCover, storagePlan, verifyGateway, abortStage }

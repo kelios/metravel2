@@ -3,7 +3,8 @@ import fs from 'fs'
 import path from 'path'
 import { makeTempDir, removeDir, runCli } from './cli-test-utils'
 
-const { checkReceipt, prepare, publish, recover, quote, overlay, readiness, baseline, checkInventory, publishCover, abortStage } = require('@/scripts/quest-seo-operation')
+const { checkReceipt, prepare, publish, recover, quote, overlay, captureOverlay, applyOverlay,
+  readiness, baseline, checkInventory, publishCover, abortStage } = require('@/scripts/quest-seo-operation')
 const { sha256 } = require('@/scripts/lib/questSeoContract')
 const fixtureManifest = fs.readFileSync(path.resolve('__tests__/fixtures/questSeoV1/quest-seo-manifest.v1.json'), 'utf8')
 const manifest = JSON.parse(fixtureManifest)
@@ -651,5 +652,114 @@ print('archive and real flock PASS')
       expect(result.status).toBe(0)
       expect(result.stdout).toContain('real flock PASS')
     } finally { removeDir(root) }
+  })
+})
+
+describe('early immutable asset capture and late apply', () => {
+  const nonce = 'a'.repeat(48)
+  let root: string, dist: string, file: string, r: ReturnType<typeof remote>, packed: Buffer
+  const originalBudget = process.env.QUEST_SEO_MANAGED_MAX_BYTES
+  beforeEach(() => {
+    root = fs.realpathSync(makeTempDir('quest-e-capture-'))
+    dist = path.join(root, 'dist'); file = path.join(root, 'state.json')
+    fs.mkdirSync(path.join(dist, '_expo/static'), { recursive: true })
+    const old = path.join(root, 'old'), archive = path.join(root, 'old.gz')
+    fs.mkdirSync(old); fs.writeFileSync(path.join(old, 'previous.js'), 'previous runtime')
+    const result = runCli('python3', ['-B', '-c', 'import subprocess,sys\nwith open(sys.argv[3],"wb") as f: subprocess.run([sys.executable,sys.argv[1],"pack",sys.argv[2]],stdout=f,check=True)', path.resolve('scripts/quest-seo-transport.py'), old, archive])
+    expect(result.status).toBe(0); packed = fs.readFileSync(archive)
+    r = remote()
+    const operation = r.t.operation
+    r.t.operation = (action: string, args: string[], options?: any) => {
+      if (action === 'overlay') { fs.writeSync(options.stdio[1], packed); return '' }
+      return operation(action, args, options)
+    }
+    process.env.QUEST_SEO_MANAGED_MAX_BYTES = '2147483648'
+  })
+  afterEach(() => {
+    if (originalBudget === undefined) delete process.env.QUEST_SEO_MANAGED_MAX_BYTES
+    else process.env.QUEST_SEO_MANAGED_MAX_BYTES = originalBudget
+    removeDir(root)
+  })
+  const state = () => JSON.parse(fs.readFileSync(file, 'utf8'))
+
+  it('closes and hashes the adjacent private archive without touching the future export, then applies it once', () => {
+    fs.rmSync(dist, { recursive: true })
+    captureOverlay(r.t, dist, file, nonce)
+    const captured = state()
+    expect(captured.phase).toBe('captured'); expect(fs.existsSync(dist)).toBe(false)
+    expect(captured.capture).toMatchObject({ nonce, state_file: file, dist, bytes: packed.length, sha256: sha256(packed) })
+    expect(captured.base.current).toEqual(prior)
+    expect(fs.statSync(captured.capture.archive).mode & 0o777).toBe(0o600)
+    fs.mkdirSync(path.join(dist, '_expo/static'), { recursive: true })
+    applyOverlay(r.t, dist, file, nonce)
+    expect(state().phase).toBe('overlaid')
+    expect(fs.readFileSync(path.join(dist, '_expo/static/previous.js'), 'utf8')).toBe('previous runtime')
+    expect(fs.existsSync(captured.capture.archive)).toBe(false)
+    expect(() => applyOverlay(r.t, dist, file, nonce)).toThrow('Fresh build-bound')
+  })
+
+  it('rejects failed and changed-base captures without publishing partial state or archive', () => {
+    const operation = r.t.operation
+    r.t.operation = (action: string, args: string[], options?: any) => {
+      if (action === 'overlay') { fs.writeSync(options.stdio[1], 'partial'); throw new Error('download failed') }
+      return operation(action, args, options)
+    }
+    expect(() => captureOverlay(r.t, dist, file, nonce)).toThrow('download failed')
+    expect(fs.existsSync(file)).toBe(false)
+    expect(fs.existsSync(`${file}.overlay-${nonce}.tar.gz`)).toBe(false)
+    r.t.operation = (action: string, args: string[], options?: any) => {
+      if (action === 'overlay') { fs.writeSync(options.stdio[1], packed); r.replace(); return '' }
+      return operation(action, args, options)
+    }
+    expect(() => captureOverlay(r.t, dist, file, nonce)).toThrow('changed during capture')
+    expect(fs.existsSync(file)).toBe(false)
+    expect(fs.existsSync(`${file}.overlay-${nonce}.tar.gz`)).toBe(false)
+  })
+
+  it.each(['release', 'tree'])('rechecks the complete current %s identity before touching the finished export', (field) => {
+    captureOverlay(r.t, dist, file, nonce)
+    if (field === 'release') r.replace()
+    else {
+      const operation = r.t.operation
+      r.t.operation = (action: string, args: string[], options?: any) => action === 'inspect'
+        ? JSON.stringify({ schema_version: 1, kind: 'managed', current: { ...prior, tree_sha256: 'e'.repeat(64) }, previous: null })
+        : operation(action, args, options)
+    }
+    expect(() => applyOverlay(r.t, dist, file, nonce)).toThrow('changed since capture')
+    expect(fs.existsSync(path.join(dist, '_expo/static/previous.js'))).toBe(false)
+  })
+
+  it.each(['digest', 'size', 'symlink', 'public-mode', 'nonce', 'dist', 'state-path'])('rejects a changed capture %s', (field) => {
+    captureOverlay(r.t, dist, file, nonce)
+    const captured = state(), archive = captured.capture.archive
+    if (field === 'digest') { const bytes = fs.readFileSync(archive); bytes[0] ^= 1; fs.writeFileSync(archive, bytes) }
+    if (field === 'size') fs.appendFileSync(archive, 'tampered')
+    if (field === 'symlink') { fs.renameSync(archive, `${archive}.original`); fs.symlinkSync(`${archive}.original`, archive) }
+    if (field === 'public-mode') fs.chmodSync(archive, 0o644)
+    if (field === 'nonce') captured.capture.nonce = 'b'.repeat(48)
+    if (field === 'dist') captured.capture.dist = `${dist}-old`
+    if (field === 'state-path') captured.capture.state_file = `${file}-old`
+    fs.writeFileSync(file, JSON.stringify(captured))
+    expect(() => applyOverlay(r.t, dist, file, nonce)).toThrow()
+    expect(fs.existsSync(path.join(dist, '_expo/static/previous.js'))).toBe(false)
+  })
+
+  it('checks the physical host legacy root before/after download and before late application', () => {
+    let inode = 10
+    const operation = r.t.operation
+    r.t.ssh = jest.fn((command: string) => command.startsWith('python3 -c') ? JSON.stringify({ device: 1, inode }) : '')
+    r.t.operation = (action: string, args: string[], options?: any) => action === 'inspect'
+      ? JSON.stringify({ schema_version: 1, kind: 'legacy', current: null, previous: null })
+      : operation(action, args, options)
+    captureOverlay(r.t, dist, file, nonce)
+    expect(state().capture.legacy_root).toEqual({ device: 1, inode: 10 })
+    inode = 11
+    expect(() => applyOverlay(r.t, dist, file, nonce)).toThrow('changed since capture')
+    fs.rmSync(file); fs.rmSync(`${file}.overlay-${nonce}.tar.gz`)
+    r.t.operation = (action: string, args: string[], options?: any) => {
+      if (action === 'overlay') { fs.writeSync(options.stdio[1], packed); inode += 1; return '' }
+      return action === 'inspect' ? JSON.stringify({ schema_version: 1, kind: 'legacy', current: null, previous: null }) : operation(action, args, options)
+    }
+    expect(() => captureOverlay(r.t, dist, file, nonce)).toThrow('changed during capture')
   })
 })

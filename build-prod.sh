@@ -42,7 +42,10 @@ STAGE_REPORT=''
 QUEST_SEO_MODE="${QUEST_SEO_MODE:-legacy}"
 QUEST_SEO_CANDIDATE=''
 QUEST_SEO_ARGS=()
-QUEST_SEO_VERIFY_ARGS=()
+QUEST_CAPTURE_PID=''
+QUEST_CAPTURE_CONTROL=''
+QUEST_CAPTURE_LOG=''
+QUEST_CAPTURE_NONCE=''
 
 # Время этапов (#2013). Выкат дорос до ~15 минут незаметно: длительность этапов
 # нигде не печаталась. Каждый этап закрывается строкой «⏱ этап: N с», а на
@@ -107,6 +110,39 @@ stop_prod_media_checks() {
   MEDIA_CHECKS_PID=''
 }
 
+# FD 9 is the build's private control FIFO, never a signal target. The Node
+# supervisor remains alive after early capture completion until finish/cancel;
+# wait therefore always refers to our child even when Bash has reaped it early.
+start_quest_overlay_capture() {
+  metravel_deploy_defaults
+  export EXPO_OVERLAY_RETENTION_DAYS EXPO_OVERLAY_MAX_MB DEPLOY_DISK_RESERVE_MB
+  mkdir -p "$(dirname "$QUEST_SEO_STATE_PATH")"
+  QUEST_CAPTURE_NONCE="$(node -e "process.stdout.write(require('crypto').randomBytes(24).toString('hex'))")"
+  QUEST_CAPTURE_CONTROL="$(mktemp -d "${QUEST_SEO_STATE_PATH}.control.XXXXXX")"
+  mkfifo -m 600 "$QUEST_CAPTURE_CONTROL/commands"
+  QUEST_CAPTURE_LOG="$QUEST_CAPTURE_CONTROL/capture.log"
+  exec 9<>"$QUEST_CAPTURE_CONTROL/commands"
+  node scripts/quest-seo-operation.js capture "dist/$ENV" "$QUEST_SEO_STATE_PATH" "$QUEST_CAPTURE_NONCE" \
+    <"$QUEST_CAPTURE_CONTROL/commands" >"$QUEST_CAPTURE_LOG" 2>&1 9>&- &
+  QUEST_CAPTURE_PID=$!
+}
+
+close_quest_overlay_capture() {
+  local command="$1" status=0
+  [[ -n "$QUEST_CAPTURE_PID" ]] || return 0
+  printf '%s\n' "$command" >&9
+  # A signal can interrupt this wait and enter on_exit. Keep cancel writable
+  # until the child is reaped so that cleanup can replace a pending finish.
+  wait "$QUEST_CAPTURE_PID" || status=$?
+  exec 9>&-
+  QUEST_CAPTURE_PID=''
+  cat "$QUEST_CAPTURE_LOG"
+  rm -rf "$QUEST_CAPTURE_CONTROL"
+  QUEST_CAPTURE_CONTROL=''
+  QUEST_CAPTURE_LOG=''
+  return "$status"
+}
+
 # .env общий для всех параллельных сессий в этом чекауте, а apply_env копирует
 # поверх него .env.$ENV. Без возврата исходника соседняя сессия молча получала
 # прод-конфиг: 08.09.2026 прерванная сборка оставила APP_ENV=production рядом с
@@ -140,6 +176,9 @@ on_exit() {
   # restore_env_file, иначе бросил бы общий .env прод-копией — ENV_BACKUP к
   # этому моменту уже обнулён, и повторной попытки не будет.
   trap '' INT TERM HUP
+  # Cancel and reap the private capture group BEFORE restoring .env or releasing
+  # the enclosing build mutex. Never kill a saved background PID.
+  close_quest_overlay_capture cancel || true
   print_stage_report || true
   stop_prod_media_checks
   if [[ -n "${MEDIA_CHECKS_LOG:-}" ]]; then
@@ -637,7 +676,6 @@ if [[ "$QUEST_SEO_MODE" != "legacy" ]]; then
   QUEST_SEO_RECEIPT_COMMAND="bash $(printf '%q' "$PWD/scripts/quest-seo-operation.sh") receipt"
   export QUEST_SEO_RECEIPT_COMMAND
   QUEST_SEO_ARGS=(--quest-seo-candidate "$QUEST_SEO_CANDIDATE" --quest-seo-publication-mode "$QUEST_SEO_MODE")
-  QUEST_SEO_VERIFY_ARGS=(--quest-seo-candidate-pending)
 fi
 
 assert_deployable_source "$ENV" "$ALLOW_DIRTY" "$DEPLOY"
@@ -648,6 +686,9 @@ install_deps
 
 if [[ "$DEPLOY" == "1" && "$ENV" == "prod" ]]; then
   start_prod_media_checks
+fi
+if [[ "$QUEST_SEO_MODE" != "legacy" ]]; then
+  start_quest_overlay_capture
 fi
 
 stage "экспорт Metro"
@@ -665,6 +706,10 @@ node scripts/guard-chunk-closure.js "dist/$ENV"
 if [[ -n "$MEDIA_CHECKS_PID" ]]; then
   stage "медиа-проверки прода (фон, ждём конца)"
   finish_prod_media_checks
+fi
+if [[ -n "$QUEST_CAPTURE_PID" ]]; then
+  stage "quest v1: ожидание захвата assets (фон Metro)"
+  close_quest_overlay_capture finish
 fi
 
 stage "генерация SEO-страниц"
@@ -708,8 +753,10 @@ node scripts/verify-static-travel-seo.js --dist "dist/$ENV" --api https://metrav
 # Квесты — отдельный контент-слой со своими страницами и city-лендингами.
 # Транзиентный сбой API однажды молча выкинул их все из билда, а гварды выше
 # смотрят только на travel-страницы. Сверяем живой каталог с тем, что собрано.
-echo "Проверка: quest-страницы и city-лендинги в статике..."
-node scripts/verify-static-quest-seo.js --dist "dist/$ENV" --api https://metravel.by ${QUEST_SEO_VERIFY_ARGS[@]+"${QUEST_SEO_VERIFY_ARGS[@]}"}
+if [[ "$QUEST_SEO_MODE" == "legacy" ]]; then
+  echo "Проверка: quest-страницы и city-лендинги в статике..."
+  node scripts/verify-static-quest-seo.js --dist "dist/$ENV" --api https://metravel.by
+fi
 node scripts/guard-site-owner-name.js --dist "dist/$ENV"
 
 stage "постобработка"
@@ -738,13 +785,15 @@ if [[ "$ENV" == "prod" ]]; then
 fi
 
 if [[ "$QUEST_SEO_MODE" != "legacy" ]]; then
-  stage "quest v1: pinned overlay и финализация"
-  metravel_deploy_defaults
-  export EXPO_OVERLAY_RETENTION_DAYS EXPO_OVERLAY_MAX_MB DEPLOY_DISK_RESERVE_MB
-  bash scripts/quest-seo-operation.sh overlay "dist/$ENV" "$QUEST_SEO_STATE_PATH"
+  stage "quest v1: проверка и применение захваченных assets"
+  bash scripts/quest-seo-operation.sh apply "dist/$ENV" "$QUEST_SEO_STATE_PATH" "$QUEST_CAPTURE_NONCE"
+  stage "quest v1: полная проверка live-каталога после HTML writers"
   node scripts/verify-static-quest-seo.js --dist "dist/$ENV" --api https://metravel.by --quest-seo-candidate-pending
+  stage "quest v1: R2 и финализация с preseal-проверкой"
   node scripts/finalize-quest-seo-package.js --dist "dist/$ENV" --candidate "$QUEST_SEO_CANDIDATE"
+  stage "quest v1: независимая postseal-проверка"
   node scripts/verify-static-quest-seo.js --dist "dist/$ENV" --quest-seo-package-only
+  stage "quest v1: private index и архив"
   node scripts/quest-seo-operation.js prepare "dist/$ENV" "$QUEST_SEO_STATE_PATH"
 fi
 

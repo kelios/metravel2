@@ -3,7 +3,7 @@ import path from 'path'
 
 import { makeTempDir, removeDir, runCli, writeTextFile } from './cli-test-utils'
 
-const { checkDist, PRESCAN_BYTES } = require('@/scripts/guard-html-charset')
+const { checkDist, hasCharsetWithinPrescan, PRESCAN_BYTES } = require('@/scripts/guard-html-charset')
 
 const repoRoot = process.cwd()
 const scriptPath = path.join(repoRoot, 'scripts/guard-html-charset.js')
@@ -18,7 +18,10 @@ describe('guard-html-charset', () => {
     distDir = makeTempDir('guard-html-charset-')
   })
 
-  afterEach(() => removeDir(distDir))
+  afterEach(() => {
+    jest.restoreAllMocks()
+    removeDir(distDir)
+  })
 
   it('passes when every HTML file declares charset within the prescan window', () => {
     writeTextFile(path.join(distDir, 'index.html'), '<html><head><meta charset="utf-8"/><title>x</title></head><body></body></html>')
@@ -71,6 +74,81 @@ describe('guard-html-charset', () => {
     const html = '<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>x</title></head><body></body></html>'
     writeTextFile(path.join(distDir, 'legacy-content-type.html'), html)
     expect(checkDist(distDir).violations).toEqual([])
+  })
+
+  it('checks each hardlinked inode once while reporting every route and violation', () => {
+    const flat = path.join(distDir, 'quest.html')
+    const index = path.join(distDir, 'quest', 'index.html')
+    const independent = path.join(distDir, 'other.html')
+    const html = '<html><head><title>Квест</title></head>' + 'x'.repeat(4096)
+    writeTextFile(flat, html)
+    fs.mkdirSync(path.dirname(index))
+    fs.linkSync(flat, index)
+    writeTextFile(independent, html)
+    const read = jest.spyOn(fs, 'readSync')
+
+    expect(checkDist(distDir)).toEqual({
+      ok: false,
+      total: 3,
+      violations: ['other.html', 'quest/index.html', 'quest.html'],
+    })
+    expect(read).toHaveBeenCalledTimes(2)
+    expect(read.mock.results.reduce((sum, result) => sum + Number(result.value), 0)).toBe(2 * PRESCAN_BYTES)
+    expect(fs.statSync(flat).ino).toBe(fs.statSync(index).ino)
+    expect(fs.statSync(flat).ino).not.toBe(fs.statSync(independent).ino)
+  })
+
+  it('keeps the byte boundary with a multibyte UTF-8 prefix and a clipped declaration', () => {
+    const marker = '<meta charset='
+    const prefixBytes = PRESCAN_BYTES - Buffer.byteLength(marker)
+    const prefix = 'я'.repeat(Math.floor(prefixBytes / 2)) + 'x'.repeat(prefixBytes % 2)
+    writeTextFile(path.join(distDir, 'boundary.html'), `${prefix}${marker}"utf-8">`)
+    writeTextFile(path.join(distDir, 'clipped.html'), `${prefix}x${marker}"utf-8">`)
+
+    expect(checkDist(distDir)).toEqual({ ok: false, total: 2, violations: ['clipped.html'] })
+  })
+
+  it('completes short reads without requesting bytes past the prescan window', () => {
+    const file = path.join(distDir, 'short-reads.html')
+    writeTextFile(file, 'x'.repeat(1000) + '<meta charset="utf-8">' + 'y'.repeat(5000))
+    const read = fs.readSync
+    const requests: Array<{ position: number; length: number; bytes: number }> = []
+    jest.spyOn(fs, 'readSync').mockImplementation(((fd: number, buffer: Buffer, offset: number, length: number, position: number) => {
+      const bytes = read(fd, buffer, offset, Math.min(length, 7), position)
+      requests.push({ position, length, bytes })
+      return bytes
+    }) as never)
+    const close = jest.spyOn(fs, 'closeSync')
+
+    expect(hasCharsetWithinPrescan(file)).toBe(true)
+    expect(requests.reduce((sum, request) => sum + request.bytes, 0)).toBe(PRESCAN_BYTES)
+    expect(requests.every((request) => request.position + request.length <= PRESCAN_BYTES)).toBe(true)
+    expect(requests.length).toBeGreaterThan(1)
+    expect(close).toHaveBeenCalledTimes(1)
+  })
+
+  it('closes the descriptor and propagates a read failure', () => {
+    const file = path.join(distDir, 'read-error.html')
+    writeTextFile(file, '<meta charset="utf-8">')
+    const failure = new Error('read failed')
+    const read = jest.spyOn(fs, 'readSync').mockImplementationOnce(() => { throw failure })
+    const close = jest.spyOn(fs, 'closeSync')
+
+    expect(() => hasCharsetWithinPrescan(file)).toThrow(failure)
+    expect(close).toHaveBeenCalledWith(read.mock.calls[0][0])
+  })
+
+  it('propagates a close failure instead of reporting a successful check', () => {
+    const file = path.join(distDir, 'close-error.html')
+    writeTextFile(file, '<meta charset="utf-8">')
+    const close = fs.closeSync
+    const failure = new Error('close failed')
+    jest.spyOn(fs, 'closeSync').mockImplementationOnce((fd) => {
+      close(fd)
+      throw failure
+    })
+
+    expect(() => checkDist(distDir)).toThrow(failure)
   })
 
   it('fails on a dist without HTML instead of passing vacuously', () => {
