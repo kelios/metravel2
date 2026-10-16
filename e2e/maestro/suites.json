@@ -11,6 +11,13 @@
       "checks": ["guest guard", "login and registration consent hint toggles in both directions"],
       "completeReviewScenes": []
     },
+    "article-native-smoke": {
+      "platforms": ["ios-simulator"],
+      "account": "guest",
+      "flows": ["article-native-rich-content.yaml"],
+      "checks": ["guest guard", "exact public article gallery caption", "two article HTML headings rendered by the native rich-content renderer", "return to the article gallery caption after reading"],
+      "completeReviewScenes": []
+    },
     "quest-regression": {
       "platforms": ["android"],
       "account": "guest",

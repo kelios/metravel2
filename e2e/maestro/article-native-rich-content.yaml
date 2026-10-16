@@ -1,0 +1,50 @@
+# Public guest regression for the SDK 57 native rich-HTML renderer. The fixed
+# article is the same Christmas-markets/Wroclaw article used by web acceptance.
+# Captions and view IDs do not attest image decode or sharp pixels; the tester
+# inspects hero/body images separately. No auth, content or account mutations.
+appId: by.metravel.app
+---
+- runFlow: launch.yaml
+- tapOn: "Профиль"
+- assertVisible: "Войдите в аккаунт"
+- openLink: "metravel://travels/rozhdestvenskie-iarmarki-polshi-2026-krakov-vrotslav-katovitse-gdansk-poznan-varshava-daty-adresa-i-sovety"
+- runFlow: confirm-ios-app-link.yaml
+- extendedWaitUntil:
+    visible:
+      id: "travel-details-hero"
+    timeout: 30000
+# Exact article-specific gallery metadata, not a generic article container.
+- assertVisible:
+    text: "^Вечерний Рынок Вроцлава после дождя: огни ярмарки, ёлка и отражения на брусчатке$"
+- scrollUntilVisible:
+    element:
+      id: "travel-quick-jump-description"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "travel-quick-jump-description"
+# These two headings are real article HTML rendered by StableContent.native,
+# not hero metadata, an app-owned loading placeholder or a web-only DOM check.
+- scrollUntilVisible:
+    element:
+      text: "^Даты и места одним списком$"
+    direction: DOWN
+    timeout: 30000
+- assertVisible:
+    text: "^Даты и места одним списком$"
+- scrollUntilVisible:
+    element:
+      text: "^Вроцлав: дождь на Рынке, гномы и кружки-сапожки$"
+    direction: DOWN
+    timeout: 30000
+- assertVisible:
+    text: "^Вроцлав: дождь на Рынке, гномы и кружки-сапожки$"
+# Restore the gallery after reading. This is also the final state for the
+# tester's separate visual inspection of the actual native hero image.
+- scrollUntilVisible:
+    element:
+      text: "^Вечерний Рынок Вроцлава после дождя: огни ярмарки, ёлка и отражения на брусчатке$"
+    direction: UP
+    timeout: 20000
+- assertVisible:
+    text: "^Вечерний Рынок Вроцлава после дождя: огни ярмарки, ёлка и отражения на брусчатке$"
