@@ -1,0 +1,6 @@
+# Independently restart/reopen the known article and execute the shared guest,
+# hero and exact-caption assertions. End at the gallery for separate native
+# photo inspection; metadata visibility does not attest decoded image pixels.
+appId: by.metravel.app
+---
+- runFlow: open-sdk-review-article.yaml

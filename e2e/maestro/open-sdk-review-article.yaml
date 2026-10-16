@@ -1,0 +1,17 @@
+# Shared assertion-bearing setup for the SDK 57 native article regressions.
+# launch.yaml restarts the app without clearing data; each case opens the same
+# public article at its gallery rather than depending on prior scroll state.
+appId: by.metravel.app
+---
+- runFlow: launch.yaml
+- tapOn: "Профиль"
+- assertVisible: "Войдите в аккаунт"
+- openLink: "metravel://travels/rozhdestvenskie-iarmarki-polshi-2026-krakov-vrotslav-katovitse-gdansk-poznan-varshava-daty-adresa-i-sovety"
+- runFlow: confirm-ios-app-link.yaml
+- extendedWaitUntil:
+    visible:
+      id: "travel-details-hero"
+    timeout: 30000
+# Exact article-specific gallery metadata, not an image-decode postcondition.
+- assertVisible:
+    text: "^Вечерний Рынок Вроцлава после дождя: огни ярмарки, ёлка и отражения на брусчатке$"

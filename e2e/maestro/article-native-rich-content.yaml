@@ -4,18 +4,7 @@
 # inspects hero/body images separately. No auth, content or account mutations.
 appId: by.metravel.app
 ---
-- runFlow: launch.yaml
-- tapOn: "Профиль"
-- assertVisible: "Войдите в аккаунт"
-- openLink: "metravel://travels/rozhdestvenskie-iarmarki-polshi-2026-krakov-vrotslav-katovitse-gdansk-poznan-varshava-daty-adresa-i-sovety"
-- runFlow: confirm-ios-app-link.yaml
-- extendedWaitUntil:
-    visible:
-      id: "travel-details-hero"
-    timeout: 30000
-# Exact article-specific gallery metadata, not a generic article container.
-- assertVisible:
-    text: "^Вечерний Рынок Вроцлава после дождя: огни ярмарки, ёлка и отражения на брусчатке$"
+- runFlow: open-sdk-review-article.yaml
 - scrollUntilVisible:
     element:
       id: "travel-quick-jump-description"
@@ -39,12 +28,3 @@ appId: by.metravel.app
     timeout: 30000
 - assertVisible:
     text: "^Вроцлав: дождь на Рынке, гномы и кружки-сапожки$"
-# Restore the gallery after reading. This is also the final state for the
-# tester's separate visual inspection of the actual native hero image.
-- scrollUntilVisible:
-    element:
-      text: "^Вечерний Рынок Вроцлава после дождя: огни ярмарки, ёлка и отражения на брусчатке$"
-    direction: UP
-    timeout: 20000
-- assertVisible:
-    text: "^Вечерний Рынок Вроцлава после дождя: огни ярмарки, ёлка и отражения на брусчатке$"

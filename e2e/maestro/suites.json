@@ -14,8 +14,8 @@
     "article-native-smoke": {
       "platforms": ["ios-simulator"],
       "account": "guest",
-      "flows": ["article-native-rich-content.yaml"],
-      "checks": ["guest guard", "exact public article gallery caption", "two article HTML headings rendered by the native rich-content renderer", "return to the article gallery caption after reading"],
+      "flows": ["article-native-rich-content.yaml", "article-native-gallery.yaml"],
+      "checks": ["guest guard", "exact public article gallery caption", "two article HTML headings rendered by the native rich-content renderer", "fresh article gallery reopen with hero and exact caption identity"],
       "completeReviewScenes": []
     },
     "quest-regression": {
