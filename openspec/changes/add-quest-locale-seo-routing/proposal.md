@@ -9,6 +9,7 @@ Published quest translations are now available through the accepted #2193 API, b
 - Define self-canonical pages, reciprocal HTML hreflang clusters, Russian x-default, language-bound hydration, explicit language switching, and safe handling of absent or withdrawn translations.
 - Define a common immutable SSG release package plus a proposed backend-owned live eligibility/static gateway for actual pages, production sitemap and Nginx routing; propose separately owned implementation cards after owner acceptance.
 - Keep city landing pages Russian in the first implementation, with no untranslated prefixed landing or hreflang claims.
+- Fit immutable release storage on the existing production disk, preserving the backend build reserve. The 2026-10-16 storage refinement in design D6 is proposed implementation work for #2363/#2366; it does not change the approved URL, manifest or live-eligibility contract.
 
 ## Capabilities
 

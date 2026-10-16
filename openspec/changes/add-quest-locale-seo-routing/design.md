@@ -125,6 +125,139 @@ External-link impact: none; links are allowlisted internal routes. Existing exte
 
 Task Contract: #2208 remains planning/owner acceptance; future drafts and full contracts are in `implementation-cards.md` and must be created only after acceptance and Problem Memory refresh.
 
+### D6. Bounded physical release storage on the existing host — proposed 2026-10-16
+
+Status: architecture refinement requested by the owner after the #2363 package
+preparation exposed excessive storage. The owner requires using the existing
+server without lowering the backend reserve. This section is a design for the
+remaining D/E implementation, not evidence of a production storage change.
+
+Scope: private E staging/transport/inventory and D retention accounting. Reuse
+the full immutable export, single active pointer, CAS activation, reader locks,
+checksums and existing overlay bounds. Platform impact: desktop web/mobile web
+delivery; Android/iOS none. Localization impact: RU/BE/UK/PL/EN package members,
+no new UI/editorial text. Public routes, manifest schema and serving API stay v1.
+
+#### Observed mechanism and measurements
+
+The normal SSG writer already atomically creates hardlinked `.html`/`index.html`
+pairs (`scripts/generate-seo-pages.js:3585`, #2227). Normal legacy publication
+preserves those links. E's `pack()` instead uses `dereference=True`
+(`scripts/quest-seo-transport.py:90`); `unpack()` writes each regular archive
+member into a new inode (`:101`). Thus E loses the existing storage guarantee.
+Its inventory (`:207`) and backend `cleanup_releases()` additionally sum logical
+per-path sizes rather than the physical union of retained files.
+
+Measured 2026-10-16: production free space 3,400,380 KiB; active legacy frontend
+598,492 KiB; nginx cache 318,172 KiB; database 537,792 KiB. Docker reported
+3.443 GB of images, only 30 MB reclaimable and zero build cache. These are
+individual measurements, not an exhaustive host-accounting sum.
+
+Prepared RU export: 8,181 regular paths, 818,031,782 logical bytes, but only
+498,952,687 bytes of distinct content. Exact metadata equality reduces the
+immediately shareable subset: fresh publication times must not accidentally
+extend or expire old chunk generations. A local streaming prototype using
+canonical whole-second timestamps and equal bytes/size/mode/time allocated
+594,825,216 bytes; independent `du -sk` returned 580,884 KiB. Whole seconds
+match the existing overlay selector and HTTP Last-Modified granularity.
+This is a local capacity experiment, not production acceptance.
+
+The complete translated export also passed canonical preparation: 852,365,360
+logical bytes, 483 members (RU 280, BE 50, UK 51, PL 52, EN 50), with equal
+R1/R2 receipts. A second local experiment materialized RU baseline, this actual
+translated export and a subsequent translated generation with newer HTML/current
+chunk timestamps. Their physical union was 1,294,065,664 bytes; independent
+`du -sk` returned 1,263,736 KiB. This leaves 316,547,072 bytes within the existing
+1,610,612,736-byte managed budget before Linux-specific directory/index/temporary
+allowances. The third generation models a later build, not a third independent
+production export. These local results support feasibility, not host admission.
+For this corpus, a conservative 4-KiB allowance for every file/directory entry
+across all three roots (125,419,520 bytes), the largest temporary member rounded
+to a block (2,998,272 bytes) and an 8-MiB private index give a local-model peak
+of 1,430,872,064 bytes, still 179,740,672 bytes below the managed budget. Actual
+Linux filesystem allocation and any interrupted state must replace this model
+in the admission check; this is not a blanket promise for future catalogue growth.
+The 1,610,612,736-byte backend build reserve remains separate and unchanged.
+Do not compare these physical measurements with three logical payload sizes.
+Translated preparation took 320 seconds versus the existing five-minute deploy
+budget; its SEO-generation cost remains a release issue to address/measure,
+not permission to increase the budget.
+
+#### Proposed storage and publication contract
+
+1. Keep complete independently readable release directories. Identical regular
+   files may share an inode inside a candidate and with verified sealed retained
+   releases. Require equal SHA-256, byte size, mode and canonical whole-second
+   mtime. Sharing is limited to content regular files inside `dist`; reader locks,
+   operation locks, identities, journals and private indexes are never shared.
+   Files with newer publication times remain separate; retain the existing
+   14-day/256-MiB overlay policy. Never chmod, touch or overwrite a shared inode.
+2. Keep archive symlinks, hardlink entries, traversal and special files forbidden.
+   Build a bounded private per-file index after all postprocessing, containing
+   relative path, size, SHA-256, mode and canonical mtime. Match archive members
+   against this index and verify incoming bytes before linking. Stream one
+   bounded temporary member, then link/rename; post-extraction deduplication
+   does not solve peak-space allocation. No private index enters public dist.
+3. Before transfer, compute a private storage plan against the actual current
+   release and sealed retained roots. Include index digest, expected current ID,
+   existing physical union, incremental allocation, directory allowance, largest
+   temporary member and free-space reserve. Bound a candidate index to 8 MiB and
+   50,000 entries, aggregate retained-source lookup to 100,000 entries, and hash
+   through bounded buffers rather than loading complete files/archives. Measure
+   resident memory against the existing container limit before release.
+   Stage rechecks the plan/CAS under the operation lock and pins reused sources
+   until materialization completes. An index is advisory: securely re-open and
+   verify source inode, bytes and metadata without symlink traversal before
+   linking, then fsync the new entry and parents.
+   A changed plan, unreadable source or hardlink failure refuses; there is no
+   unbudgeted full-copy fallback.
+4. Keep logical per-tree byte/path/count limits and checksum identity unchanged.
+   Add explicit physical counters based on unique `(device,inode)` and allocated
+   blocks. Do not silently redefine existing `total_bytes`/`remaining_bytes`:
+   version the private storage handshake and document both measurements.
+   Count every retained generation, protected reader, candidate, directory and
+   temporary allocation. Include retained partials and orphan temporary files in
+   the peak, not just this attempt's temporary member; an unresolved interrupted
+   candidate blocks new attempts until hash-bound provenance permits recovery.
+   Recheck actual free space while staging and stop before
+   consuming the backend reserve.
+5. Bound normal lifecycle to active, rollback and one candidate. Before staging,
+   a separate explicit retention step may remove only verified unprotected
+   managed generations; activation itself still does no cleanup. A reader-pinned
+   extra root refuses a new candidate until it can be retained within budget.
+   Unsealed/unknown candidates require provenance-based recovery, never a sweep.
+   Removing links is not assumed to free their logical size: recalculate usage.
+6. The first RU baseline is independently stored beside the unchanged whole
+   legacy recovery backup. Never share inodes with mutable legacy, temporary or
+   external trees. The measured compact baseline fits this initial stage without
+   reducing the backend reserve. This design grants no deletion of that backup.
+
+Affected implementation paths: E `scripts/quest-seo-transport.py`,
+`scripts/quest-seo-operation.js` and focused transport tests; D storage accounting
+in `quests/services/seo_activation.py` and focused backend tests; the shared
+private interface/runbooks. Agree the precise private handshake before code.
+
+Rejected: raising server capacity or borrowing backend reserve (owner constraint);
+removing rollback/reader protection; only compressing the uploaded tar (it is
+already 208,209,165 bytes but expands on disk); post-copy deduplication; blanket
+`--link-dest` or linking from mutable legacy; a quest-only second active root
+(breaks accepted full-export atomicity); a separate blob store and new GC.
+
+Validation: exact current translated-package measurement; actual inode/allocated
+block evidence and independent `du`; same bytes/time share while changed bytes
+or publication times remain independent; traversal/link/partial archive rejection;
+bounded memory and temporary allocation; stale plan/CAS and concurrent cleanup;
+reader survival, unlinking one generation without changing another, interrupted
+stage recovery and unchanged reserve; independent review and existing D/E gates;
+then fresh production peak-space, activation/rollback and sitemap acceptance.
+Prototype data alone cannot authorize conversion or close #2363/#2366.
+
+Risk/rollback: accidental in-place mutation could corrupt several logical roots.
+All writers must preserve replace-on-write, and no mutable source is reusable.
+Old full-copy readers can still read regular hardlinked roots, but old byte-sum
+gates can refuse publication; revert to fail-closed publication until the storage
+plan is repaired, without deleting retained roots or lowering reserve.
+
 ## Risks / Trade-offs
 
 - [Serving topology and live revocation are new backend dependencies] → owner accepts D5, backend owner confirms real serving root/cache chain before apply; no prefixed exposure until its gate passes. An API-unchanged gameplay contract does not mean zero backend work.

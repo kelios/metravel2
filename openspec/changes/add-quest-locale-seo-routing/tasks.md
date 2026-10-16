@@ -44,3 +44,11 @@
 - [ ] 7.1 Record all implementation card Done gates and real production evidence, actual available-language set and remaining content-quality exclusions; no mock-only or SKIPPED pass.
 - [x] 7.2 Document quest-only localization exception, feature contract, activation/revocation runbook and #1332 boundary; record optional 28-day search follow-up separately from functional acceptance. E #2366: `docs/RULES.md`, `docs/features/quest-locale-routing.md`, `docs/RELEASE.md` and `docs/ops/quest-locale-release.md`; live withdrawal and optional search follow-up remain separate from source completion.
 - [ ] 7.3 Run `openspec validate --all`, sync accepted delta and archive only when implementation is complete and separately authorized; planning #2208 closes only after owner acceptance and linked implementation cards exist.
+
+## 8. Existing-host storage refinement — D #2363 / E #2366
+
+- [x] 8.1 Record owner constraint, fresh host/package measurements, source mechanism and proposed physical-storage architecture D6; distinguish local prototypes from production evidence.
+- [ ] 8.2 Measure the complete translated export and a three-slot local prototype, including metadata, directory and temporary-file overhead; independently review the private storage plan and unchanged reserve.
+- [ ] 8.3 Agree and implement the bounded private file-index/storage-plan handshake, streaming verified hardlinks and physical-union inventory while retaining public v1 schemas and logical security limits.
+- [ ] 8.4 Align D cleanup/accounting and explicit bounded retention with E staging, including reader pins, interrupted-candidate recovery, metadata preservation and separate legacy backup.
+- [ ] 8.5 Pass focused security/lifecycle/capacity regressions, independent review and normal release gates; verify real production peak allocation and every original D/E Done gate before completion.

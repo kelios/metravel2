@@ -4,6 +4,26 @@ Make published quest translations independently crawlable while preserving Russi
 
 ## ADDED Requirements
 
+### Requirement: Bounded physical immutable-release storage
+The release system SHALL fit active, rollback, candidate and reader-protected roots on the existing host without lowering its backend-build reserve. Logical package safety limits and physical disk allocation SHALL be measured separately. Any storage sharing SHALL preserve complete readable roots, immutable bytes, publication-time semantics, checksum identity, one active pointer and existing reader protection. Unbudgeted copying, archive links, mutable source reuse and deleting protected roots SHALL NOT provide a fallback.
+
+#### Scenario: Reusable immutable file
+- **GIVEN** candidate and verified sealed source have equal bytes, size, mode and canonical publication time
+- **WHEN** the approved physical storage plan is materialized
+- **THEN** they may share a regular-file inode, and deleting one unprotected root does not change the other's content
+
+#### Scenario: Changed metadata or content
+- **WHEN** candidate content or its required publication time differs from a retained file
+- **THEN** the files remain independent and the incremental physical allocation is included before transfer
+
+#### Scenario: Insufficient physical headroom or changed plan
+- **WHEN** the candidate, temporary allocation and protected roots cannot fit with the backend reserve, or the pinned plan/current root changes
+- **THEN** staging refuses without activating a partial package, lowering reserve or deleting protected data
+
+#### Scenario: Initial legacy recovery backup
+- **WHEN** the first managed RU baseline is installed
+- **THEN** its required physical peak includes the preserved legacy backup, and no mutable legacy inode becomes shared with a managed release
+
 ### Requirement: Stable language-specific quest URLs
 The system SHALL retain existing Russian quest detail canonicals and city landing aliases. Eligible BE/UK/PL/EN quest details SHALL use `/be/quests/{numericCityId}/{questSlug}`, `/uk/quests/{numericCityId}/{questSlug}`, `/pl/quests/{numericCityId}/{questSlug}` and `/en/quests/{numericCityId}/{questSlug}` respectively, with unchanged quest identity and slug. Existing detail aliases SHALL retain their current canonical relationship. Language-prefixed city, country, catalogue and scenario landings SHALL NOT be introduced by this capability.
 
