@@ -15,8 +15,8 @@ For a changed-code acceptance pass, require reviewed code in `testing` before
 runtime probes. Default to the local stack and perform the session's backend
 refresh/readiness procedure from `docs/WORKFLOW_OPERATIONS.md` →
 `3.0 Локальный стек и обновление бэкенда перед тестированием` before the first
-probe. Use dev or production only when explicitly requested; record the actual
-API target. This skill does not grant permission to message other people.
+probe. Use the target assigned by the Task Contract and inherited acceptance pipeline;
+record the actual API target. Dev remains an explicit owner choice. This skill does not grant permission to message other people.
 
 ## When to use
 
@@ -38,6 +38,16 @@ API target. This skill does not grant permission to message other people.
 - Do not treat missing production-hosted media in local dev as a frontend regression by itself.
 - Do not rewrite product behavior to satisfy an outdated e2e expectation; update the test when the project rule is authoritative.
 - For travel performance or Lighthouse work, hand off to `$metravel-performance-analyst`.
+
+## Native handoff
+
+This skill executes browser tests. Native scenarios belong to
+`$metravel-ios-tester` or `$metravel-mobile-tester`; test authoring belongs to
+`$metravel-test-writer`. Use `docs/TESTING.md` →
+`Native scenario automation and recording readiness` to choose the actual layer
+and tracked suite. Playwright mobile viewport evidence cannot satisfy native
+UI, hardware or TestFlight coverage. Return the native gap and exact owner,
+without launching an additional device run for a web-only change.
 
 ## Typical commands
 

@@ -173,6 +173,9 @@ npm run test:run
   changes iOS/iPadOS-specific observable behavior, configuration, or runtime. Preserve
   mobile parity in implementation even when no native device gate is applicable.
 - Always self-verify at the assigned stage (mandatory):
+  - QA that creates complaints or moderation requests must complete the cleanup
+    and notification checks in [«Уборка тестовых жалоб и модерационных заявок»](./WORKFLOW_OPERATIONS.md#уборка-тестовых-жалоб-и-модерационных-заявок)
+    before reporting completion;
   - implementation and code-review agents verify source and automated code-level checks, then hand the reviewed/pushed diff to `testing`; the testing/acceptance agent verifies observable behavior end-to-end and never reports the task `done` while required QA is pending;
   - code review never opens a browser, simulator, or physical device and never uses runtime evidence as its verdict; it records the exact testing scenario in the handoff instead;
   - **never offload browser verification to the user.** Asking the user to scroll, hard-refresh, open devtools, run a console snippet, take a screenshot, or "tell me what you see" is NOT verification — it is offloading, and it is forbidden as a substitute for doing it yourself. The user reporting a bug is the input; confirming the fix in a browser is your job, not theirs;

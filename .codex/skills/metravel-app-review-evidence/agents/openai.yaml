@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel App Review Evidence"
-  short_description: "Verify Apple App Review demo package coverage."
-  default_prompt: "Use $metravel-app-review-evidence to check scene coverage, the scene manifest and Reply/Notes consistency for the exact iOS candidate before the owner decides on submit."
+  short_description: "Check Apple video and E2E evidence separately."
+  default_prompt: "Use $metravel-app-review-evidence to verify the E2E handoff, recorded scene coverage and exact-candidate App Review package before authorized delivery."

@@ -77,6 +77,15 @@ Output/validation: <artifact and checks>.
   `gpt-5.6-luna` с `medium`; repair или новый workflow — на `gpt-5.6-sol` с
   `medium`. Более сильную модель выбирает только root для узкого вопроса.
   Claude role files сохраняют поддерживаемое значение `model: sonnet`.
+- Native test/rehearsal/recording contract: `docs/TESTING.md` →
+  `Native scenario automation and recording readiness`. Physical Apple capture
+  принимает exact-candidate rehearsal через `npm run recording:ready`;
+  остальные поверхности используют свой target-specific passing suite report;
+  partial regression не доказывает полную App Review scene.
+- Для новых Apple video jobs: `docs/TESTING.md` →
+  `Apple video: E2E before capture`. Передавай frozen handoff со script hash,
+  passing E2E report, готовыми командами и общим attempt checkpoint; matching
+  E2E уже служит rehearsal. Новый агент не начинает обход/счётчик заново.
 - Readiness выполняется один раз на batch. Используй deterministic CLI,
   `ffprobe` и точечные кадры вместо frame dumps. Повторяй только изменённые или
   упавшие scenes; после двух одинаковых operational failures верни exact

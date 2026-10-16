@@ -12,14 +12,25 @@ nor physical-device/TestFlight behavior.
 subsystem from testing, native, and manual-test docs; use release OpenSpec only
 for candidate acceptance.
 
+## Repeatable native scenarios
+
+Use `docs/TESTING.md` → `Native scenario automation and recording readiness`
+for tracked suites, readiness identity, retry limits and coverage gaps. Execute
+only the assigned assertion-bearing suite in `testing`; actions or screenshots
+alone do not prove the business outcome. Maestro covers Android/iOS simulator UI;
+physical Apple-device scenarios use XCTest. New product bugs need a failing
+regression and implementation → review → affected retest. Capture requires a
+passing matching rehearsal; do not debug during recording. Report pass/fail/
+uncovered separately and do not repeat unchanged passing scope.
+
 ## Runtime entry
 
 For a changed-code acceptance pass, require reviewed code in `testing` before
 runtime probes. Default to the local stack and perform the session's backend
 refresh/readiness procedure from `docs/WORKFLOW_OPERATIONS.md` →
 `3.0 Локальный стек и обновление бэкенда перед тестированием` before the first
-probe. Use dev or production only when explicitly requested; record the actual
-API target. This skill does not grant permission to message other people.
+probe. Use the target assigned by the Task Contract and inherited acceptance pipeline;
+record the actual API target. Dev remains an explicit owner choice. This skill does not grant permission to message other people.
 
 ## Test Layers
 
@@ -43,8 +54,10 @@ API target. This skill does not grant permission to message other people.
    device's requests in the production nginx log. Mandatory before every submit;
    recipe in `.claude/skills/ios-device-qa/SKILL.md` → «IPv6-only сеть (NAT64)».
 
-Use `docs/MANUAL_TEST_CASES.md` cases `IOS-01..16` as the repeatable baseline;
-select only the cases required by the assigned Task Contract for non-release work.
+Use the assigned `IOS-*` cases from `docs/MANUAL_TEST_CASES.md`, including later
+case additions; select the cases/layers required by the Task Contract. Do not
+truncate the catalog to a historical numeric range or expand a narrow task into
+full release acceptance.
 
 ## Rules
 
@@ -99,3 +112,6 @@ Blockers:
 
 For a bug, lead with title, severity, exact reproduction, expected/actual,
 evidence, suspected owner layer, and whether the release candidate is blocked.
+
+A defect that fails the current Task Contract keeps that ticket unaccepted; a
+separate linked bug is appropriate only when current Acceptance Criteria pass.

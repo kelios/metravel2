@@ -14,14 +14,25 @@ the user explicitly asks to update tests. iPhone-specific QA belongs to
 browser case; for Android-specific scope add only the affected native section
 and matching `AND-USB-*` device case.
 
+## Repeatable native scenarios
+
+Use `docs/TESTING.md` → `Native scenario automation and recording readiness`
+for tracked suites, readiness identity, retry limits and coverage gaps. Execute
+only the assigned assertion-bearing suite in `testing`; actions or screenshots
+alone do not prove the business outcome. Maestro covers Android/iOS simulator UI;
+physical Apple-device scenarios use XCTest. New product bugs need a failing
+regression and implementation → review → affected retest. Capture requires a
+passing matching rehearsal; do not debug during recording. Report pass/fail/
+uncovered separately and do not repeat unchanged passing scope.
+
 ## Runtime entry
 
 For a changed-code acceptance pass, require reviewed code in `testing` before
 runtime probes. Default to the local stack and perform the session's backend
 refresh/readiness procedure from `docs/WORKFLOW_OPERATIONS.md` →
 `3.0 Локальный стек и обновление бэкенда перед тестированием` before the first
-probe. Use dev or production only when explicitly requested; record the actual
-API target. This skill does not grant permission to message other people.
+probe. Use the target assigned by the Task Contract and inherited acceptance pipeline;
+record the actual API target. Dev remains an explicit owner choice. This skill does not grant permission to message other people.
 
 ## What To Test
 
@@ -64,12 +75,15 @@ API target. This skill does not grant permission to message other people.
 - Use Playwright mobile viewport or browser preview for mobile-web scope.
 - Use local-build device evidence for Android-specific observable scope. A web
   viewport is not proof of Android behavior.
-- If Android is in scope and `adb devices -l` shows a connected device,
-  build/install locally and run the relevant `AND-USB-*` cases from
-  `docs/MANUAL_TEST_CASES.md`. If it is absent/locked/unauthorized, request the
-  exact connect/unlock/RSA action and continue; do not finish with a pending
-  verdict.
-- Prefer Maestro flows in `e2e/maestro/` for repeatable native regressions when Java/Maestro are available; if Maestro itself is blocked, run the matching manual device steps.
+- If Android is in scope, check `adb devices -l`, then reuse the prepared
+  installed candidate when app/source/backend identity matches the assignment.
+  Build/install locally once per required binary only when that identity is
+  missing or mismatched; an exact store candidate is handled by its release
+  operator instead. Run assigned `AND-USB-*` cases. Missing/locked/unauthorized
+  device requires the exact connect/unlock/RSA action and continuation.
+- Prefer tracked Maestro regressions for repeatable Android UI checks. A manual
+  fallback can provide assigned device evidence, but leaves the automation gate
+  blocked; record that gap and the exact environment repair.
 - Never print `.env.e2e` credentials, auth tokens, EAS secrets, or Google Play keys.
 
 ## Android USB Device Flow
@@ -78,9 +92,14 @@ API target. This skill does not grant permission to message other people.
 2. Verify the device with `adb devices -l`; when absent/locked/`unauthorized`,
    ask the owner to connect/unlock/accept the RSA prompt and resume after it.
 3. Record non-secret environment facts: model, Android release, API level, local build/install command, backend/API URL.
-4. Check the operation gate, then build/install locally: `cd android && ./gradlew :app:installDebug`, or `:app:assembleDebug` plus `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`.
-5. Force-stop and launch the installed app: `adb shell am force-stop by.metravel.app` then `adb shell monkey -p by.metravel.app 1`.
-6. Clear logcat before the tested action and capture only filtered crash/runtime lines after it:
+4. Verify the prepared candidate's app/source/backend identity. Reuse it across
+   cases; when a new local binary is required, check the operation gate and
+   build/install once through the Android local-build contract. Do not replace
+   an assigned exact store candidate with a debug build.
+5. Launch normally; force-stop/relaunch only when the assigned case requires a
+   cold-start/session precondition, not between every step or scene.
+6. Keep filtered crash/runtime capture for the batch and inspect checkpoints or
+   failure; clear logcat once before the assigned batch if needed, not per tap:
    `FATAL EXCEPTION|AndroidRuntime|ReactNativeJS|JSApplicationIllegalArgumentException|DevLauncher`.
 7. Run the relevant `AND-USB-*` cases and any matching `e2e/maestro/*.yaml` flows.
 8. Route confirmed Android/native bugs to `$metravel-android-developer`; route shared UI/layout bugs to `$metravel-ui-guardrails` or `$metravel-feature-builder`.
@@ -136,3 +155,6 @@ For bugs, lead with:
 - expected vs actual
 - evidence
 - likely owner/skill
+
+A defect that fails the current Task Contract keeps that ticket unaccepted; a
+separate linked bug is appropriate only when current Acceptance Criteria pass.

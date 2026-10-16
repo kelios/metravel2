@@ -28,9 +28,26 @@ Use this skill when the task is to add or update tests for a bug fix, refactor, 
   resource parity, locale persistence, formatting/plurals, SSR/hydration, and
   native lifecycle at the nearest reliable level without snapshotting whole catalogs.
 
+## Native regression ownership
+
+Author repeatable native scenarios as well as Jest/Playwright tests. Follow
+`docs/TESTING.md` → `Native scenario automation and recording readiness` for
+tracked scenario paths, readiness commands and the current coverage matrix.
+Use Maestro for Android/iOS simulator UI and the XCTest helper for physical
+Apple-device requirements. Reuse selectors and business postconditions across
+rehearsal and recording instead of inventing per-session tap scripts.
+
+For each newly discovered product bug, encode the failing outcome, then show
+red/green on the assigned runtime in `testing`; before review, validate the
+scenario statically and hand off the exact execution command. Use bounded
+condition waits and explicit success/absence/state assertions. A tap, screenshot
+or driver exit zero alone does not prove the business outcome. Name unsupported
+cases and test-data prerequisites rather than claiming full-device coverage.
+
 ## Repo specifics
 
-- Use `__tests__/` for Jest coverage and `e2e/` only when the requested test truly belongs in Playwright.
+- Use `__tests__/` for Jest, `e2e/*.spec.ts` for Playwright and the tracked native
+  scenario directories selected by the canonical testing contract.
 - Preserve project policies around external links, image architecture, immediate web hero behavior, and no direct cache-busting workarounds.
 - When updating governance-sensitive tests, keep docs and command references in sync.
 - Keep `__tests__/i18n/uiLiteralGovernance.test.ts` strict; fix app-owned copy

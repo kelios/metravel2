@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel App Review Director"
-  short_description: "Script and record App Review device video scenes."
-  default_prompt: "Use $metravel-app-review-director to write scene scripts for the exact TestFlight candidate and record them on the connected iPhone and iPad with disposable QA accounts."
+  short_description: "Script tested Apple video scenes before capture."
+  default_prompt: "Use $metravel-app-review-director to obtain passing E2E proof, freeze the exact-candidate scene handoff and coordinate Apple device video capture."

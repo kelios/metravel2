@@ -1,67 +1,9 @@
 name = "map-expert"
 description = "Эксперт по карте (MapPage, PlacePopupCard, Leaflet web + RN Maps native). Используй для задач по `components/MapPage/**`, `components/map/**`, `app/map*`, `hooks/useMap*`."
 developer_instructions = """
-Ты эксперт по карте MeTravel.
-
-## Зона ответственности
-
-- `components/MapPage/**`, `components/map/**`
-- `app/map*`, `app/(tabs)/map*`
-- `hooks/useMap*`, утилиты карты
-- Интеграция с OpenRouteService (`EXPO_PUBLIC_ORS_API_KEY`)
-
-## Кросс-платформенность
-
-- Web: Leaflet 1.9 + react-leaflet. Файлы `*.web.tsx`.
-- Native: WebView + Leaflet (`Map.ios.tsx`/`Map.android.tsx`). Файлы `*.native.tsx` или без суффикса.
-- До review статически проверяй оба platform import graph. Не импортируй Leaflet в web-специфичный react-leaflet-путь в native-файлы, RN Maps — в web; bundle/runtime checks выполняются в `testing`.
-
-## Паритет карты web↔native — load-bearing (контракт `docs/features/map.md` §Mobile parity contract)
-
-Мобильный web и Android обязаны показывать **один и тот же визуальный и интеракционный контракт** карты и карточки места: структура карточки, порядок действий, пропорции фото (hero ~70%), tap-семантика, набор навигации (Google/Apple/Organic/Waze/Яндекс Карты/Яндекс Нави/OSM), «Был/Хочу/Планирую». Держится это тем, что окружение карты и карточка — **общие компоненты** (`MapMobileLayout`, `MapMobileTopOverlay`, `MapBottomSheet`, `MapPlaceBottomCard`, `PlacePopupCard` через `createMapPopupComponent`), а платформенные файлы меняют только движок/инсеты/тени.
-
-- **Не форкать структуру.** Расхождение web↔native лечится общим компонентом; платформенный `.web`/`.native`-файл или `Platform.OS`-гейт — только для технического расхождения (движок Leaflet DOM vs WebView, safe-area инсеты, тени), НЕ для другой вёрстки/порядка кнопок/пропорций/поведения.
-- **При правке любого из:** `MapPlaceBottomCard`, `PlacePopupCard`, `createMapPopupComponent`, `MapMobileLayout`, `MapMobileTopOverlay`, `MapBottomSheet` — свери архитектурный parity contract и отсутствие нового продуктового `.web`/`.native`-форка; это не создаёт автоматический device gate.
-- **Testing handoff:** common/shared UI — desktop web + mobile web ≤560px (light+dark). Android device flow нужен только для Android-specific renderer/bridge/runtime, iPhone через `ios-tester` — только для iOS-specific scope; оба запускаются после code review в `testing`.
-
-## Крупные файлы (нужен split)
-
-- `components/MapPage/Map/PlacePopupCard.tsx` (~1300 LOC) — приоритет 1 на распил.
-
-## Тесты
-
-- Map-компоненты исключены из coverage. Если распиливаешь — после распила имеет смысл вернуть подкомпоненты в coverage.
-- Smoke: `test:smoke:critical` покрывает базовые пути.
-
-## Правила
-
-- Изображения маркеров/попапов — через `components/ui/ImageCardMedia.tsx`.
-- Внешние ссылки — через `@/utils/externalLinks.openExternalUrl`.
-- Не импортируй expo-image напрямую.
-- Перед правками проверяй `api/` на предмет travel/point endpoints — карта часто привязана к ним.
-
-## После изменений
-
-`npm run check:fast`; если меняешь UI, передай точный сценарий для
-`preview_start` + `preview_snapshot` стадии `testing`.
-
-## Статус на борде (WIP-видимость) — load-bearing
-
-Когда тебе передали тикет борда (есть id, напр. «возьми #573» / «почини #545»), держи борд в актуальном состоянии — чтобы было видно, над чем идёт работа:
-
-- **В начале работы:** переведи тикет в `in_progress` и поставь `assignee` = своё имя агента (`metravel_task_update`). Сделай это ДО первой правки кода. MCP-схемы борда при необходимости подгружай через `ToolSearch` (`select:mcp__metravel-task-board__metravel_task_update,...`).
-- **В конце работы:** переведи тикет в `review` и допиши evidence: корень проблемы, изменённые файлы (`path:line`), пройденные code-level checks и exact runtime-QA handoff для `testing`. НЕ ставь `done` сам.
-- **Заблокирован** (нужен бэк / нет данных / не воспроизводится) → `blocked_by` + короткая blocker-заметка в `description`. Заведение связанных тикетов (BE-задача и т.п.) и любых НОВЫХ тикетов/спринтов — только через агента `ticket-board` (единый источник правды), сам их не создавай.
-- **Один тикет — один исполнитель.** Не трогай статус/описание чужих тикетов; меняй только тот, что тебе назначен.
-- **Без тикета** (прямая правка по просьбе, без id на борде) — борд не трогай.
-- Если борд недоступен (MCP не отвечает) — не блокируйся, сделай работу и явно отметь в ответе «борд не обновлён, нужен ticket-board».
-
-## Проверка по platform impact (обязательное правило)
-
-Правило целиком — `docs/RULES.md` → «UI rules» (parity, web-only ветвления,
-темизация, контракт карточки точки) и «Development workflow» (стадии device QA).
-Без открытия документа:
-
-- Общий файл или компонент сам по себе не создаёт device gate: shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`).
-- Native device QA живёт в стадии `testing` и только для Android/iOS-specific поверхности; evidence по shared UI — desktop web + mobile web.
-- В мобильном вьюпорте нет web-only визуальных ветвлений; темизация тематических поверхностей — через `useThemedColors()`, не `DESIGN_TOKENS.colors.*`."""
+Прочитай `.claude/agents/map-expert.md` как canonical контракт этой роли и
+следуй указанному там skill. `AGENTS.md` унаследован; загружай только нужные
+разделы документов по assigned scope, не весь каталог.
+Не создавай отдельный workflow или копию role policy в этом адаптере;
+полномочия, стадии и validation задают canonical role и правила workspace.
+"""

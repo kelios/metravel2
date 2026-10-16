@@ -4,11 +4,13 @@ Canonical policy reference: see [docs/RULES.md](./RULES.md) for mandatory projec
 
 ## Default verification target and local-stack preflight
 
-- The default target of every verification run is the **local stack** of this
-  machine: local Django backend on `http://localhost:8000` plus Expo web
-  (`npx expo start --web`). The dev stand `192.168.50.36` and production
-  `metravel.by` are opt-in per command, on the owner's explicit request only —
-  never by editing the defaults in `.env` or `metro.config.js`.
+- Before review, source checks and development use this machine's **local
+  stack**: Django on `http://localhost:8000` and Expo web. Board-task acceptance
+  after review/push/deploy uses production as specified by
+  `docs/WORKFLOW_OPERATIONS.md` → «3.3.1 Production-target validation and task
+  closure». Native runs declare the API actually used by the installed app;
+  editing `.env` does not retarget an installed release. The dev stand
+  `192.168.50.36` still requires an explicit owner request.
 - **Update the backend before the first probe of every testing session.** The
   local checkout drifts silently while the API keeps answering `200` (measured
   2026-08-29: 26 commits behind `origin/master`, six unapplied migrations), and
@@ -67,6 +69,219 @@ Canonical policy reference: see [docs/RULES.md](./RULES.md) for mandatory projec
   A still-running temporal gate, such as a 72-hour observation window, remains
   in `testing`. Irrelevant or out-of-scope device evidence does not block
   `done`; if every in-scope check passes and no work remains, close the task.
+
+## Native scenario automation and recording readiness
+
+The test author owns executable native regressions; the platform tester owns
+runtime acceptance; the recorder captures an already passing scenario. Store
+and exact TestFlight gates remain in WORKFLOW_OPERATIONS §3.2.1. Do not turn a
+recording task into repeated exploratory taps, driver rewrites or app debugging.
+
+1. **Before review:** map the requested behavior to a tracked scenario and
+   postconditions. A newly found regression gets a test at the nearest reliable
+   layer; native-only interaction needs native assertions, not only a web test.
+   Include negative/error/retry and open → close → reopen states when relevant.
+   Setup, fixture IDs, expected account role, locale and cleanup are explicit.
+2. **In testing:** run the smallest affected suite. Maestro supports Android
+   targets and iOS simulators here; physical iPhone/iPad uses the existing
+   XCTest helper. Web, simulator and physical evidence are distinct. One owner
+   leases a target; read the active-session/process/lock state before use.
+   The runner lock does not retroactively protect an older handwritten helper.
+3. **Rehearsal:** prepare the same scene actions and assertions on the required
+   installed candidate. Bind version/build, source/provenance, backend, locale,
+   account role, device model, scenario hash and helper identity. Reuse passing
+   unchanged results within 24h; changed inputs invalidate only affected scenes.
+   A regression from a pre-opened screen is partial coverage, not a full
+   registration/moderation/deletion scene. Verify binary/TestFlight provenance
+   separately; an environment variable does not attest the installed source.
+   For asynchronous mutations, wait for the explicit final acknowledgement or
+   other committed-state postcondition before capturing success. Optimistic
+   counters, selected states and fixed sleeps do not prove completion. Correlate
+   request/response and capture timestamps when diagnosing missing feedback;
+   pending state must not show success, and rejection must exercise rollback or
+   retry. A screenshot taken before the response cannot establish a missing
+   success message. Keep this wait bounded and preserve the first failed state.
+4. **Before physical Apple capture:** run `npm run recording:ready -- <plan.json>`.
+   Every scene in this bounded batch needs a fresh matching physical rehearsal.
+   For App Review the scenario must explicitly declare `completeReviewScenes`
+   and the plan uses `purpose: "app-review"`, `candidate.origin: "testflight"`.
+   No current partial regression declares complete App Review coverage. This
+   gate therefore refuses to promote them into completed Apple scenes.
+   Web/Android/simulator capture uses its own passing target-specific executable
+   scenario report and identity checkpoint; do not send those reports to this
+   physical-only gate or substitute them for physical evidence.
+5. **Capture:** prepare commands, input/canary/account and output before asking
+   for unlock. Readiness once per batch; capture one scene, first successful
+   take is final, no repeated XCTest after capture. Aim for 30–90s footage and
+   ≤3 min per prepared scene. A failed product assertion ends that attempt:
+   preserve evidence → implementation → regression → review → narrow retest.
+   Two identical operational failures without a changed precondition require
+   the exact connect/unlock/trust/login/environment unblock. Changing driver or
+   debugger does not reset this budget. Never change auto-lock/security settings.
+6. **Resume/cleanup:** save completed scene IDs, exact inputs, first failed step,
+   artifact paths and next command in the ignored batch checkpoint. Rerun only
+   changed/failed scope; do not restart catalog/Home/account setup without a
+   stated reason. Complaint/account/block cleanup follows WORKFLOW_OPERATIONS
+   §3.1.1; it is part of the scenario even on failure. Final video/privacy and
+   App Review manifest verification remain separate from rehearsal readiness.
+
+### Apple video: E2E before capture
+
+For new Apple recordings, use these stages in order. The director owns the
+handoff; the test owner proves the scenario; the recorder executes it; the
+editor and packager process the evidence. Owner-recorded fallback follows the
+same prepared scenario and does not waive the pre-capture E2E requirement.
+
+| Stage | Required result | Failure route |
+| --- | --- | --- |
+| Prepare and test | Each assigned scene has a complete tracked executable flow, replayable fixture recipe, business assertions and passing E2E report on the assigned evidence layer | Missing coverage or product failure goes to test/implementation owner before capture |
+| Freeze | Matching exact-candidate readiness passes; save the frozen capture handoff below | Missing, stale or mismatched proof stays in preparation |
+| Capture | Execute the frozen actions and assertions once, with continuous capture of every public action | First failed assertion or unexpected UI stops capture and preserves evidence |
+| Edit and package | Source hashes, transparent cuts, video/privacy review and required-scene coverage | Repair only the failed export/segment/package item; never restart the whole route |
+
+A full passing assertion-bearing E2E run can also be the rehearsal; do not run
+the same scene again just to rename that result "rehearsal". The existing
+physical gate consumes the matching XCTest `--rehearsal` report. A prose catalog,
+static check, mocked API test, optimistic state, screenshot or `SKIPPED` is not
+that pass. Keep lower-layer tests for business permutations; require actual
+native E2E for the device interaction shown in the assigned scene. Private-input
+canary and public assertions remain separate; a public segment alone cannot
+claim the complete auth/register/delete flow.
+
+Save one ignored `<out>/capture-handoff.json` before capture. It is an operational
+handoff, not a new runner schema. It references the existing gate's `plan.json`
+and contains:
+
+- candidate/source/provenance, device model/OS, backend, locale, account role and
+  driver identity; no credentials, emails or device identifiers;
+- each scene id, tracked script path and SHA-256, passing E2E report and final
+  business assertion, named screenshot checkpoints and expected end state;
+- tested setup/reset/cleanup recipe, fixture baseline and fresh disposable-account
+  recipe where E2E consumed the previous account; bind the role/recipe, not secrets;
+- exact capture and runner commands, public start/stop boundaries, planned private
+  cuts, output paths and a per-scene capture timeout (normally 90s; a longer
+  boundary needs the measured E2E duration/reason recorded before capture);
+- completed/failed scene ids and artifacts, readiness inputs, first failure,
+  elapsed capture time, attempts per cause and exact next command.
+
+Both the E2E proof and capture command reference the same frozen script hash.
+The recorder still executes its bounded assertions: a last-frame success cannot
+supersede a failed assertion. Prepare capture-source/driver/input readiness
+before asking for unlock, then unlock only the next active device. Do not hold
+an idle second device unlocked. Helper startup before the first user action is
+preparation; trim an intact leading/trailing idle interval with source timecodes
+rather than reshooting. Never cut away an in-flow failure, required wait or
+missing action to imply success. Record a necessary private/setup interruption
+as an explicit segment boundary.
+
+The first product failure ends that capture attempt: checkpoint → test owner →
+regression/fix/review → passing affected E2E → updated handoff. No selector
+invention, coordinate guessing, debugger/CDP probes, helper rebuilds or app fixes
+inside the capture role. A capture-only fault permits one retake of the affected
+scene after its cause is corrected. Two identical operational failures without
+a changed precondition stop that cause with the exact unblock; the checkpoint
+budget carries across new agents, tools and resumed chats. Do not recheck a scene
+merely because a new actor took over. Reuse matching successful E2E/readiness
+within the existing 24h limit and recorded footage for the same exact candidate;
+a changed input invalidates the affected proof, not unrelated completed work.
+
+### Commands and budgets
+
+Static validation does not access a target:
+
+```bash
+npm run e2e:native:check
+IOS_QA_DEVICE=<selected-device-id> npm run e2e:ios:device -- --validate @tools/ios-device-uitests/scenarios/travel-sections-close-reopen.json
+```
+
+XCTest API types can also be checked before device access with the installed
+simulator SDK (this does not launch a simulator, sign or install a helper):
+
+```bash
+METRAVEL_QA_XCODE=$(xcode-select -p)
+mkdir -p .codex-temp/ios-typecheck-cache
+swiftc -typecheck -swift-version 5 -sdk "$(xcrun --sdk iphonesimulator --show-sdk-path)" -target arm64-apple-ios15.1-simulator -F "$METRAVEL_QA_XCODE/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks" -I "$METRAVEL_QA_XCODE/Platforms/iPhoneSimulator.platform/Developer/usr/lib" -module-cache-path .codex-temp/ios-typecheck-cache tools/ios-device-uitests/MetravelDeviceUITests/RunScriptTests.swift
+```
+
+Runtime commands belong only to `testing` after the operation gate; substitute
+actual installed identity and explicitly selected target (never commit its ID):
+
+```bash
+npm run e2e:native -- --suite guest-smoke --platform ios-simulator --device <simulator-id> --account guest --locale ru --api-url <actual-api-origin> --version <installed-version> --build <installed-build>
+# Same entry point: --platform android; quest-regression/recommendations are Android-only.
+IOS_QA_DEVICE=<selected-device-id> npm run e2e:ios:device -- @tools/ios-device-uitests/scenarios/travel-sections-close-reopen.json modal-reopen
+```
+
+Maestro suites live in `e2e/maestro/suites.json`; each flow is bounded to 150s,
+whole suite to 600s, no automatic action retries. Missing/skipped/failed JUnit
+cases fail. The report distinguishes declared API origin/workspace source from
+verified installed version/build. Current text selectors support RU only.
+
+Physical JSON supports `waitUntil`/`assert` with exactly one `id` or exact `text`
+selector and `state: exists | absent | hittable | value | count`. Example:
+`{"op":"waitUntil","id":"travel-sections-sheet","state":"hittable","timeout":5}`.
+`tapId`/`tapText` reject ambiguous matches; scrolling is bounded to three swipes.
+`run.sh` validates before `xcrun`, requires `IOS_QA_DEVICE`, writes unique ignored
+run directories and never overwrites old evidence. Budget defaults to 300s,
+`IOS_QA_BUDGET_SEC` allows 10–600s. The helper uses `build-for-testing` once and
+`test-without-building` only when source/Xcode/target and product hashes match.
+There is no implicit `-allowProvisioningUpdates`; setting
+`IOS_QA_ALLOW_PROVISIONING_UPDATES=1` still requires existing exact authority.
+Private input/canary remains a separate diagnostic stage with recording stopped.
+
+For a physical rehearsal add `--rehearsal`, use a tracked object scenario
+`{id, layer:"physical-ios", steps:[...]}`, and supply non-secret metadata:
+`IOS_QA_CANDIDATE_VERSION`, `IOS_QA_CANDIDATE_BUILD`, `IOS_QA_CANDIDATE_SOURCE`
+(full SHA), `IOS_QA_CANDIDATE_ORIGIN`, `IOS_QA_API_URL`, `IOS_QA_LOCALE`,
+`IOS_QA_ACCOUNT_ROLE`, `IOS_QA_DEVICE_MODEL`. Arrays remain diagnostic-only.
+Raw credentials, user emails and target identifiers never belong in a plan or
+report. Store them only in the existing private-input channel when authorized.
+
+A recording plan (ignored JSON, paths relative to it) contains:
+
+```json
+{
+  "schemaVersion": 1, "purpose": "regression",
+  "candidate": {"version":"<version>","build":"<build>","source":"<full-sha>","origin":"development"},
+  "environment": {"apiUrl":"<actual-origin>","locale":"ru","accountRole":"guest","deviceModel":"<model>"},
+  "runnerFingerprint": "<from-rehearsal-report>",
+  "scenes": [{"id":"travel-sections-close-reopen","path":"<tracked-scenario.json>","report":"<rehearsal-report.json>"}]
+}
+```
+
+The gate rejects failed/diagnostic/simulator/stale evidence, edited scenarios or
+helper source, changed candidate/environment and incomplete scene coverage. It
+validates evidence consistency; it does not verify video privacy, network
+transport or a cryptographic installation attestation.
+
+### Coverage and audit baseline (2026-10-15)
+
+| Surface | Tracked automation | Remaining requirement |
+| --- | --- | --- |
+| Android / iOS simulator | Guest guard, login/registration consent toggle | Actual provider-disabled semantics, all providers, activation, session and deletion |
+| Android | Quest reviews close/reopen, intro points, GPX share; seeded recommendation shelves | Run selected suite on actual candidate; current selectors RU only |
+| Physical iOS | Travel sections close/reopen with presence/absence/hittability assertions | Starts on a prepared detail screen; does not prove a complete App Review scene |
+| App Review required scenes | Descriptive catalog `.codex/skills/metravel-app-review-evidence/scenes.json` | Complete scripted login/register/delete, report all UGC types, block/feed restoration, native feedback and error/retry, IPv6 and candidate attestations |
+
+No complete App Review scene is currently claimed by the native suite manifest.
+The catalog is a requirements inventory, not an executable suite. The outstanding
+physical/menu scenarios in session 2137 remain that session's scope. A static
+`--check` or mocked runner test is never reported as an application e2e pass.
+
+The web suite also has evidence boundaries: `e2e/auth-logout.spec.ts` exercises
+live email login/profile/reload/logout and cookie handling, but belongs to the
+separate `live-contract` suite, excluded from default by
+`scripts/e2e-suite-classification.js`. `auth-smoke` covers browsing;
+`google-signin.spec.ts` mocks the SDK and sign-in API, and `trust-safety.spec.ts`
+mocks report APIs. These do not prove real OAuth, all UGC types or device sheets.
+The 2026-10-15 inventory found no complete registration → delivered activation
+mail → sign-in or account-deletion web e2e. Require the assigned real contract
+and native interaction checks before recording, rather than inferring them from
+a green default suite.
+Reuse existing focused unit/Playwright assertions for consent, validation,
+block/cache and retry permutations. Native gates add actual modal dismissal,
+feedback visibility, reopen, keyboard/accessibility and system integration;
+they do not repeat every already-covered business permutation on each device.
 
 ## Governance commands
 

@@ -10,6 +10,18 @@ description: "QA-обход iPhone-приложения на симулятор�
 — читай их в `.claude/skills/android-qa-sweep/SKILL.md`, пункты 9–12 чеклиста, и
 применяй один в один.
 
+## Автоматизация до ручного обхода
+
+Следуй `docs/TESTING.md` → `Native scenario automation and recording readiness`:
+tracked Maestro-сценарии с bounded waits и business assertions на iOS simulator,
+XCTest helper только для физического Apple device. Выбирай suite по Task Contract,
+не расширяй его до всех экранов и пяти локалей для точечной задачи. Идентичность
+app/source/backend/locale/account/runner входит в результат; smoke не означает
+полное покрытие. Новый продуктовый баг получает failing regression, затем
+implementation → review → retest. Запись готового сценария начинается только
+после passing suite; во время capture не исследуй UI. После двух одинаковых
+operational failures сообщи exact unblock и сохрани checkpoint.
+
 ## Предусловия
 
 1. Окружение: `npm run ios:environment:check` — Xcode/SDK, пригодный iPhone-симулятор,
@@ -69,15 +81,20 @@ processed TestFlight build. Физическим iPhone и TestFlight-слоем
    блоки, контраст, высота шапки ≤20% вьюпорта, safe area под Dynamic Island и home
    indicator, тап-таргеты ≥44 pt) → интеракции: каждая кнопка, скроллы медленные и
    быстрые, скролл до конца списка, тогглы в обе стороны, реальный ввод и сохранение форм
-   с тест-аккаунтом. После каждого действия — проверка логов на ошибку.
-3. **iPad (обязательно, релиз universal):** `supportsTablet: true`, guard требует
+   с тест-аккаунтом. Эти проверки применяй к назначенным сценариям и их рискам;
+   непрерывный log capture проверяется на checkpoints/failure, не отдельной
+   командой после каждого тапа. Ручной обход дополняет непокрытые assertions.
+3. **iPad (когда Task Contract затрагивает iPad или universal release gate):**
+   `supportsTablet: true`, guard требует
    `TARGETED_DEVICE_FAMILY = "1,2"`. На iPad-симуляторе проверь full-screen, resizable
    window (Split View), portrait и landscape — по `docs/WORKFLOW_OPERATIONS.md` это
    симуляторный слой, устройство для него не нужно. Растянутый iPhone-макет, обрезки по
    ширине и залипшие фиксированные ширины — дефект.
-4. **Локали:** RU/BE/UK/PL/EN — переключение и холодный перезапуск; ищи обрезанный и
-   непереведённый текст, съехавшую вёрстку на длинных строках.
-5. **Отчёт:** `artifacts/ios-qa/QA_REPORT_<ЭКРАН>.md` — таблица обхода + находки
+4. **Локали:** выбери затронутые локали по Task Contract. Матрица RU/BE/UK/PL/EN
+   нужна при изменении locale lifecycle/общего i18n-контракта или release gate;
+   для точечного сценария не добавляй её автоматически. Проверяй переключение и
+   холодный перезапуск там, где это назначенный кейс; ищи обрезки и untranslated UI.
+5. **Отчёт:** `.codex-temp/ios-qa/QA_REPORT_<ЭКРАН>.md` — таблица обхода + находки
    `### F-NN (critical/major/minor/info)` со скринами и, где известно, `файл:строка`.
    Отдельным блоком — что осталось непроверенным и на каком слое это проверять.
 6. **Борд:** через `ticket-board` — тикеты `[IOS-NN] суть`, `area=front`, с моделью
@@ -88,8 +105,9 @@ processed TestFlight build. Физическим iPhone и TestFlight-слоем
    лечится платформенным файлом, после правки общего файла обязательна web-проверка.
    Каждый фикс верифицируется повторным скрином и во **всех** состояниях тронутого
    компонента, а не только на том пути, который менялся.
-8. **Регресс:** `npm run test:run` + `npm run typecheck` + `npm run lint` до зелёного;
-   при правке конфигурации дополнительно `npm run ios:release:guard`.
+8. **Регресс:** failed/affected suite и релевантные соседние состояния. Code-level
+   checks выполняет исполнитель/reviewer; полный lint/Jest не повторять в QA
+   после каждого шага. Для изменённой конфигурации — назначенный guard.
 
 ## Что можно и нельзя
 

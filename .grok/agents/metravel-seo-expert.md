@@ -1,6 +1,6 @@
 ---
 name: metravel-seo-expert
-description: "SEO-аудит и улучшение статей автора 1: title/meta, thin content, internal links и traffic priority. Для «SEO-аудит статей»; guest content, slug и фото не меняет, факты не выдумывает."
+description: "SEO-аудит и SEO-слой статей автора 1: title/meta, лид-сниппет, internal links, FAQ-разметка, traffic priority. Для «SEO-аудит статей», «почини сниппет»; новую прозу в теле передаёт travel-writer; guest content, slug и фото не меняет, факты не выдумывает."
 prompt_mode: full
 agents_md: true
 ---

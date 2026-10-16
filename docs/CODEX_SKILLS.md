@@ -78,10 +78,11 @@ triggers и ограничения принадлежат frontmatter/`SKILL.md`
 - Workflow хранится в body; project-wide contract — в canonical docs с exact
   heading, а не в каждом skill.
 - `agents/openai.yaml` не дублирует body.
-- `.agents/skills` владеет общими процедурами; одноимённые `.claude/skills`
-  сохраняются как совместимые копии. `audit:prompts` проверяет их metadata и
-  совпадение текста. OpenSpec сохраняет vendor-различия адаптеров; это не дубли
-  для механического удаления.
+- `.claude/skills` — источник общих процедур; `.agents/skills` генерируется
+  `npm run sync:agent-skills` (включая adapters `.claude/commands` →
+  `source-command-*`). Правь источник, затем синхронизируй зеркало.
+  `audit:prompts` проверяет metadata и совпадение текста. OpenSpec сохраняет
+  vendor-различия адаптеров; это не дубли для механического удаления.
 - `.github/skills/metravel-*` — зеркало для Copilot, маршрутизируемое по имени из
   `.github/copilot-instructions.md`. Источник правды — `.codex/skills/<имя>`,
   зеркало собирает `npm run sync:copilot-skills` побайтовой копией каталога;
@@ -91,8 +92,11 @@ triggers и ограничения принадлежат frontmatter/`SKILL.md`
   `npm run sync:copilot-skills:check` (входит в `npm run lint`) и `audit:prompts`.
   `speckit-*` там vendor spec-kit
   (`.specify/integrations/copilot.manifest.json`), руками не править.
-- `.claude/agents` — источник ролей, `.grok/agents` генерируется через
-  `node .grok/scripts/sync-agents.mjs`. Команды служат короткими входами в skills.
+- `.claude/agents` — источник ролей; `.codex/agents/*.toml` — короткие adapters
+  к matching `.claude/agents/<name>.md`, без отдельной копии role policy.
+  `audit:prompts` проверяет delegation, metadata и существование источника.
+  `.grok/agents` генерируется через `node .grok/scripts/sync-agents.mjs`.
+  Команды служат короткими входами в skills.
 - Metadata-аудит не доказывает согласованность полномочий, окружений и стадий:
   эти контракты проверяются по каноническим документам при ревью промптов.
 - После изменений: `npm run audit:prompts` и validator `skill-creator` для

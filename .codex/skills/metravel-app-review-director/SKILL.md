@@ -1,14 +1,15 @@
 ---
 name: metravel-app-review-director
-description: Prepare scene scripts and record the Apple App Review demo video on the physical iPhone and iPad for an exact TestFlight candidate. Use when Apple asks for a device video (Guideline 2.1) or when registration, report/block, account-deletion or sign-in scenes must be captured with disposable QA accounts.
+description: Prepare Apple App Review device video after passing E2E tests and freeze scene scripts for an exact TestFlight candidate. Use for Apple demo/video requests and registration, sign-in, moderation or deletion evidence on iPhone/iPad.
 ---
 
 # Metravel App Review Director
 
-Turn the scene catalog into executable device scripts, record each scene on
-the physical devices, and hand the raw files to `$metravel-evidence-editor`
-and `$metravel-app-review-evidence`. This role does not edit video, write
-Reply/Notes, build, upload, submit or touch App Store Connect.
+Coordinate passing E2E → frozen scene handoff → physical capture → evidence.
+Use `$metravel-test-writer` / `$metravel-ios-tester` for missing tests or failures,
+`$metravel-scenario-recorder` for prepared capture, then the editor and packager.
+The director can execute a prepared scene under the recorder contract; recording
+does not include product/debugger investigation, video editing or store actions.
 
 `AGENTS.md` is inherited. Operational contracts:
 `.claude/skills/ios-device-qa/SKILL.md` (driver, private input, TCC),
@@ -20,13 +21,14 @@ and «3.2.1 iOS testing and release operations» (operation gate),
 
 1. Fix the candidate from App Store Connect/TestFlight: `version (build)`,
    source SHA, IPA SHA-256 if archived. Video of any other build is invalid.
-2. `source scripts/ios-device-qa.sh` (bash), list devices, confirm both are
-   unlocked and that the installed `by.metravel.app` shows the same
-   `version (build)`; record model and OS, never UDID. Latest stable OS is
-   required on the primary video device; the other device is a compatibility
-   pass.
-3. Primary video: the device on the latest OS (12.09.2026: iPad mini 6,
-   iPadOS 26.6.2). Compatibility: the other device, same scene ids, shorter.
+2. `source scripts/ios-device-qa.sh` (bash), inventory devices and select the
+   next active target. Prepare its command/capture/input channel before asking
+   for unlock; never require both devices unlocked at once. Verify installed
+   version/build and provenance; record model/OS, never UDID.
+3. Select the primary device from the current candidate requirement and verified
+   OS state; historical model/OS snapshots do not select today's target. Run the
+   assigned compatibility cases on the other family without duplicating every
+   scene unless the Task Contract explicitly requires both.
 4. Take a crash-report baseline before the first scene and diff it after the
    last one.
 
@@ -45,69 +47,74 @@ and «3.2.1 iOS testing and release operations» (operation gate),
   cut. Neither path types the password through the model.
 - Author for `ugc-report`/`ugc-block`/`ugc-flag-content`/
   `ugc-block-hides-content`: the existing `E2E_EMAIL2` user (public profile,
-  trip, comment and message exist). Report and block are reversible: unblock afterwards
-  and tell the owner the moderation report id to dismiss.
-- Cleanup: the delete scene destroys the disposable account; verify with a
-  failed login. Nothing else on production is mutated.
+  trip, comment and message exist). Plan cleanup before report/block and retain
+  exact created ids. Perform cleanup and verify moderation/notification state per
+  `docs/WORKFLOW_OPERATIONS.md` → «Уборка тестовых жалоб и модерационных заявок»;
+  handing ids to the owner is not cleanup.
+- Prepare only the test fixtures and account actions authorized for this batch;
+  report/block also mutate production state. Restore toggles and report cleanup.
+  The delete scene destroys only the disposable account; verify failed re-login.
 
-## 3. Scene scripts
+## 3. E2E pass and frozen handoff
 
-For every `required` id in
-`.codex/skills/metravel-app-review-evidence/scenes.json` write
-`<out>/scenes/<id>.json`: helper steps (`tapText`, `tapId`, `wait`,
-`longPressPlaceholder` + explicit Paste tap, `terminate`/`activate`), the
-expected end state, and which frames show the build (TestFlight card or
-Settings version/build at scene start). Rules:
+Follow `docs/TESTING.md` → `Apple video: E2E before capture` for the staged
+handoff and shared stop budget. `scenes.json` next to the evidence skill is the
+requirements catalog, not executable coverage. Map each assigned scene to its
+complete tracked flow, business assertions and actual passing E2E result. A
+mocked/unit result or a passing public auth segment cannot stand for the full
+native flow. Missing coverage goes to the test author before device capture.
 
-- one scene = one file = one recording; no unrelated waiting on an unlocked
-  device (prepare the next command before asking for unlock);
-- secret screens: `QA_PRIVATE_INPUT=1`, `secretClipboard` → paste →
-  `clearSecretClipboard`; no `tree`/`shot`/`type` there; run the dummy canary
-  once per runner build before real credentials;
-- Do Not Disturb on, notifications and Messages never in frame, EN locale
-  unless the scene tests locales;
-- `purchases`: not recorded; the manifest carries `notApplicable` with
-  evidence (no IAP dependency, ASC Free).
+A matching full E2E pass is already the rehearsal; do not perform a second
+identical rehearsal. Reuse valid proof under the canonical identity/24h rules.
+Prepare replayable fixtures using the tested recipe: registration/deletion E2E
+may have consumed its disposable account. Reset report/block state and retain
+cleanup receipts before recording the same behavior with the assigned role.
 
-## 4. Recording
+Freeze `<out>/capture-handoff.json` with scene/script hashes, exact commands,
+passing reports, assertions, setup/reset/cleanup, private cuts, capture deadlines
+and inherited attempt counters. For each physical batch run
+`node scripts/native-recording-readiness.js <plan.json>`; the command checks
+existing proof, it does not run E2E. A failed/missing/mismatched proof blocks
+capture. Recheck only if an input changes; do not rebuild/test per tap.
 
-Capture is QuickTime Player → File → New Movie Recording with the device as
-camera source and no microphone, driven through desktop automation; the
-device's own Screen Recording is the fallback. Start capture before the
-first step, run `tools/ios-device-uitests/run.sh` with the scene JSON, stop
-after the expected state is visible, save as
-`.codex-temp/app-review-<date>/device/<device>/<id>.mov`, then run
-`node .codex/skills/metravel-evidence-editor/scripts/media-report.mjs` and
-store the report beside the file. The private-input protocol pauses capture
-for the paste segment: split the scene into `<id>-a.mov`/`<id>-b.mov` and
-record the cut in the checkpoint; the editor labels it.
+Secret input uses the verified private channel with capture stopped; canary
+once per runner build, public assertions outside private mode. Keep notifications
+out of frame; use the assigned locale (EN unless testing another). `purchases`
+is N/A only with evidence of no paid features. Do not invent N/A to bypass a gap.
 
-One take, no dead time. Everything that can be prepared happens before
-capture starts: helper build and dummy canary, the secret file already in
-the runner container, the whole scene in one `QA_SCRIPT` (including
-`secretClipboard` → `longPressPlaceholder` → Paste → `clearSecretClipboard`
-→ submit), the activation command dry-run, and a rehearsal of the scene
-without capture. A recorded scene is a continuous 30–90 s run; never wait
-for a person, debug, or read trees while capture is running. If a pause is
-unavoidable, stop capture and continue in a new file. A take with idle
-waiting is a draft, not evidence: re-record it.
+## 4. Capture the prepared scene
 
-Budget: about three minutes of wall clock per scene. The dummy canary runs
-once per runner build, not per scene; at most one rehearsal per scene; the
-first take whose expected end state is visible in the last frames is final
-(no second take "for quality", no post-take XCTest verification — the video
-is the verification); short steps are merged into one `QA_SCRIPT` so
-`xcodebuild` is not launched per tap; checkpoint and board notes are written
-once per batch, plus once after any failure.
+Verify the capture source/method once before the batch. Use QuickTime Movie
+Recording with the physical device as camera and no microphone, or the device's
+Screen Recording fallback, through supported automation. Prepare the helper,
+input/canary, fixture reset and exact commands before the active-device unlock.
 
-Rerun only a failed scene, once, after fixing the observed cause. Two
-identical operational failures (lock, trust, signing, capture source) → stop
-and name the exact owner action.
+Start capture before the first public action, execute the same frozen script
+and assertions with `tools/ios-device-uitests/run.sh`, then stop on the expected
+committed-state acknowledgement. Save originals under
+`.codex-temp/app-review-<date>/device/<model>/<id>.mov`; use a public model slug,
+never the owner's device name. For a private interruption, stop and resume as
+`<id>-a.mov` / `<id>-b.mov`, preserving and labelling the cut. Never record secrets.
+
+Use event/postcondition waits, not a fixed sleep after a tap or an optimistic
+counter. Any failed assertion or unexpected screen stops the attempt. Preserve
+its evidence and hand it to the test owner; do not change selectors, probe CDP,
+patch the helper or explore UI during recording. New agents inherit the same
+failure/attempt checkpoint. A capture-only fault gets one corrected retake of
+that scene; identical operational failures follow the shared stop budget.
+
+Aim for 30–90s of useful footage and about three minutes of capture work per
+prepared scene; track preparation and product-fix time separately. Keep a first
+successful take, trim intact empty lead-in/tail in editing and do not reshoot
+for cosmetic pacing. No post-take replay: use the capture run's assertion result
+and recorded outcome. Do not hide an in-flow failure or claim success from only
+the last frame. Run the media-report helper once per new raw file; unchanged
+source hashes and completed scene results carry forward to the next actor.
 
 ## 5. Handoff
 
 Write `<out>/checkpoint.json` (candidate, devices, scene → file, SHA-256,
-result, cut notes, next scene) after every scene and a per-device draft
+script hash, E2E and capture assertion results, cut notes, attempt budget, next command) once per batch and immediately on failure, plus a per-device draft
 manifest in the `$metravel-app-review-evidence` schema with real timecodes
 from the raw files. Hand raw files to `$metravel-evidence-editor`; the final
 manifest and privacy playback belong to `$metravel-app-review-evidence`.

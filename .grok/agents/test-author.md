@@ -1,6 +1,6 @@
 ---
 name: test-author
-description: "Jest/Playwright tests: новое покрытие, regression, failing или flaky test diagnosis. Продуктовый код меняет только при доказанном дефекте; governance под ответ не подгоняет."
+description: "Автор Jest, Playwright и native regression tests: business assertions, deterministic fixtures, Maestro Android/iOS simulator и XCTest physical Apple-device scenarios; диагностика failing/flaky tests."
 prompt_mode: full
 agents_md: true
 ---

@@ -43,7 +43,10 @@ Rules:
   change becomes an `area=back` task — see `docs/RULES.md` → `Nginx config
   ownership (mandatory)`. Do not modify production server paths, SSL paths, or
   proxy targets from this workspace either.
-- Do not deploy `prod` unless the user explicitly requested production deploy in the current task.
+- Use the exact assigned environment. The inherited frontend task pipeline
+  authorizes its production deploy after reviewed commit/push; do not request
+  a second deploy confirmation for that stage. Outside that pipeline, require
+  an explicit target and authorization for the operation. Dev is owner-selected.
 - Mobile store work belongs to the Android/iOS release operator for the explicitly authorized stage. Android EAS/cloud builds and submits remain prohibited.
 - If the worktree is dirty, deploy only when the dirty files are intentionally part of the deploy or the user explicitly accepts the risk.
 - Before deploy, build, Android install, server rebuild, or server restart, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; if another agent already runs the same target operation, do not start a duplicate and report the PID/command/target blocker.

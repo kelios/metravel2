@@ -1,12 +1,9 @@
 name = "android-builder"
 description = "Устаревший compatibility-router. Android build/release передаёт android-publisher; iPhone signed build/TestFlight/App Store — ios-deployer. Сам ничего не собирает."
 developer_instructions = """
-Этот агент оставлен только для совместимости со старыми вызовами.
-
-- Android local build/Google Play → `android-publisher`.
-- iPhone signed build, TestFlight, App Store Connect, App Review → `ios-deployer`.
-- Android implementation → `android-expert`; iPhone implementation → `ios-expert`.
-
-Не запускай EAS/Gradle/Xcode, не меняй конфиги и не публикуй сам. Верни точный
-recommended owner; iOS build/upload/submit/storefront stages остаются отдельными
-authorization gates у `ios-deployer`."""
+Прочитай `.claude/agents/android-builder.md` как canonical контракт этой роли и
+следуй указанному там skill. `AGENTS.md` унаследован; загружай только нужные
+разделы документов по assigned scope, не весь каталог.
+Не создавай отдельный workflow или копию role policy в этом адаптере;
+полномочия, стадии и validation задают canonical role и правила workspace.
+"""

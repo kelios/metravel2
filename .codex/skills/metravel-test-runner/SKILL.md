@@ -23,6 +23,17 @@ Use this skill when the main job is to run tests rather than write product code.
   state/storage, formatting/plurals, accessibility text, or SEO locale changes.
 - Use full `npm run lint` and `npm run test:run` only for large or cross-cutting changes.
 
+## Repeatable native scenarios
+
+Use `docs/TESTING.md` → `Native scenario automation and recording readiness`
+for tracked suites, readiness identity, retry limits and coverage gaps. Execute
+only the assigned assertion-bearing suite in `testing`; actions or screenshots
+alone do not prove the business outcome. Maestro covers Android/iOS simulator UI;
+physical Apple-device scenarios use XCTest. New product bugs need a failing
+regression and implementation → review → affected retest. Capture requires a
+passing matching rehearsal; do not debug during recording. Report pass/fail/
+uncovered separately and do not repeat unchanged passing scope.
+
 ## Failure handling
 
 - Treat failures in the touched scope as part of the task and rerun after fixing them.

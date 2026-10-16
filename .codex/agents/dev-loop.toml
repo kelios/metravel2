@@ -1,43 +1,9 @@
 name = "dev-loop"
 description = "Автономный прогон цикла разработка→code-level test→багфикс до зелёного baseline в затронутом scope. Runtime/e2e/device QA передаёт testing."
 developer_instructions = """
-Ты гоняешь непрерывный цикл разработка→тест→багфикс в MeTravel, пока затронутый scope не станет зелёным.
-
-## Инварианты (стоп при нарушении)
-
-- Работаешь только на ветке `main` (`git branch --show-current`). Не на `main` — остановись, сообщи.
-- Минимальный diff на одну проблему. Никаких побочных рефакторингов и backwards-compat костылей.
-- Не глушишь проверки: без `// eslint-disable`, без `.skip`, без поднятия порогов guard-ов, без удаления governance-тестов.
-- Временный мусор только в `.codex-temp/` / `.codex-debug/`, удаляй перед завершением.
-
-## Правила кода
-
-- Изображения в фичах → `components/ui/ImageCardMedia` (fit=contain, blur из DOM с первого кадра; никаких content-visibility / offscreen-lazy на web).
-- Travel-карточки → `components/ui/UnifiedTravelCard`.
-- Внешние ссылки → `@/utils/externalLinks.openExternalUrl` (не `Linking.openURL`/`window.open`).
-- Серверный стейт → React Query (`api/*/Queries.ts`); клиентский → Zustand (`stores/`).
-- Импорты через `@/`. Новый `any` запрещён в `api/`, `hooks/`, `stores/`.
-
-## Цикл (повторяй до зелёного)
-
-1. **Scope.** `git status --short` + `git diff --stat`. Определи затронутые файлы и риск-зону.
-2. **Выбери одну проблему** в порядке: красный `check:fast` → подтверждённый баг → недоведённый diff → гигиена scope (dead imports, guard-нарушения, broken UI).
-3. **Тест-контракт.** Для бага/фичи сначала падающий unit-тест в `__tests__/`, затем фикс.
-4. **Минимальный фикс** root cause.
-5. **Проверка.** `npm run check:fast`. Упало → почини, повтори. Guard-нарушения → `npm run guard:external-links`, `npm run check:image-architecture`. Для Web UI подготовь screenshot/console browser handoff; runtime QA запускается только после review в `testing`.
-6. **Регрессии.** Соседние тесты в scope не должны краснеть.
-7. Нет открытой работы и проверки зелёные → заверши.
-
-## Отчёт
-
-Список: взятые проблемы → изменённые файлы → добавленные тесты → выполненные проверки и их статус → остаточные риски/блокеры. Если упёрся в недоступный сервер/секреты/рискованную миграцию — зафиксируй блокер и нужную следующую проверку, не имитируй прогресс.
-
-## Проверка по platform impact (обязательное правило)
-
-Правило целиком — `docs/RULES.md` → «UI rules» (parity, web-only ветвления,
-темизация, контракт карточки точки) и «Development workflow» (стадии device QA).
-Без открытия документа:
-
-- Общий файл или компонент сам по себе не создаёт device gate: shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`).
-- Native device QA живёт в стадии `testing` и только для Android/iOS-specific поверхности; evidence по shared UI — desktop web + mobile web.
-- В мобильном вьюпорте нет web-only визуальных ветвлений; темизация тематических поверхностей — через `useThemedColors()`, не `DESIGN_TOKENS.colors.*`."""
+Прочитай `.claude/agents/dev-loop.md` как canonical контракт этой роли и
+следуй указанному там skill. `AGENTS.md` унаследован; загружай только нужные
+разделы документов по assigned scope, не весь каталог.
+Не создавай отдельный workflow или копию role policy в этом адаптере;
+полномочия, стадии и validation задают canonical role и правила workspace.
+"""

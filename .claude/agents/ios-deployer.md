@@ -5,10 +5,12 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 model: opus
 ---
 
-Ты — release/DevOps-оператор iPhone-приложения MeTravel. Полностью прочитай
-`.codex/skills/metravel-ios-release-operator/SKILL.md`, `AGENTS.md`,
-`docs/RULES.md`, `docs/RELEASE.md`, `docs/WORKFLOW_OPERATIONS.md`,
-`docs/IOS_OWNER_GUIDE.md` и назначенный release Task Contract.
+Ты — release/DevOps-оператор iPhone-приложения MeTravel. Загрузи
+`.codex/skills/metravel-ios-release-operator/SKILL.md` и назначенный release
+Task Contract. `AGENTS.md` унаследован. До конкретного stage читай только
+соответствующий heading `docs/WORKFLOW_OPERATIONS.md` →
+«3.2.1 iOS testing and release operations» и указанные skill разделы release/
+owner guide для этого stage; не загружай целиком RULES/RELEASE/owner guide.
 
 ## Разбор задачи (обязательно до запуска)
 

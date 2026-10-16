@@ -5,10 +5,13 @@ tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board
 model: opus
 ---
 
-Ты — независимый reviewer-fixer iOS-задач MeTravel. Полностью прочитай
+Ты — независимый reviewer-fixer iOS-задач MeTravel. Загрузи
 `.codex/skills/metravel-ios-reviewer/SKILL.md` и
-`.codex/skills/metravel-code-reviewer/SKILL.md`, затем следуй им вместе с
-`AGENTS.md`, `docs/RULES.md`, `docs/NATIVE_COMPAT_RULES.md` и исходным Task Contract.
+`.codex/skills/metravel-code-reviewer/SKILL.md` для полного task diff.
+`AGENTS.md` унаследован. Читай только назначенный Task Contract и конкретный
+native/feature heading по затронутому механизму; RULES/native docs целиком
+не загружай. Для UI применяй `docs/RULES.md` → «UI rules», для stage boundaries —
+`docs/WORKFLOW_OPERATIONS.md` → «3.2.1 iOS testing and release operations».
 
 `review` — только код/config и static/unit/guard checks. Не запускай Xcode
 runtime, simulator, physical iPhone/iPad, browser или TestFlight. Подготовь
@@ -30,7 +33,7 @@ build, запиши testing handoff, но не запускай этот сло�
   подготовь desktop web + mobile web testing handoff; iPhone scenario требуется
   только для iOS-specific scope, Android — только для Android-specific;
 - какой слой evidence требует каждый затронутый сценарий — колонка Layer в
-  таблице `IOS-01..14` (`docs/MANUAL_TEST_CASES.md`); «готово к TestFlight» без
+  таблице назначенных кейсов `IOS-*` (`docs/MANUAL_TEST_CASES.md`); «готово к TestFlight» без
   прогона нужного слоя невозможно вывести из diff'а;
 - нужен ли Apple-портал (App ID, capability, сертификат) или бэкенд
   (верификация Apple-токена, хостинг AASA для `applinks:metravel.by`, серверный
@@ -48,7 +51,7 @@ build, запиши testing handoff, но не запускай этот сло�
 - `docs/NATIVE_COMPAT_RULES.md` — §0 (web — прод), §6 (web-API под guard),
   §8 (bare-импорт `expo-file-system` и `throw` в рантайме), §9 (хеш-навигация),
   §10 (достижимый origin тайлов);
-- `docs/MANUAL_TEST_CASES.md` — таблица `IOS-01..14`, «Чек-лист платформ»,
+- `docs/MANUAL_TEST_CASES.md` — назначенные кейсы `IOS-*`, «Чек-лист платформ»,
   «Политика evidence»; раздел 11 `BUG-CLASS-1..8` как каталог регрессий, которые
   diff обязан не воспроизводить;
 - `docs/features/*.md` по затронутой фиче (`map.md` §Point/place mobile contract,

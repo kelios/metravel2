@@ -93,4 +93,66 @@ const auditSkillFamily = (root, canonicalRoot, canonicalLabel = '.agents/skills'
   return result
 }
 
-module.exports = { auditSkillFamily, descriptionErrors, skillMetadataErrors }
+// Agent metadata is deliberately restricted to one-line quoted TOML scalars.
+// Only inspect the header: example snippets in developer_instructions are not metadata.
+const tomlAgentHeader = (source) => source.split(/^developer_instructions\s*=/m)[0]
+const tomlHeaderScalar = (header, key) => {
+  const raw = header.match(new RegExp(`^${key}\\s*=\\s*(.+?)\\s*$`, 'm'))?.[1]
+  if (!raw) return ''
+  if (/^'[^'\r\n]*'$/.test(raw)) return raw.slice(1, -1)
+  try {
+    const value = JSON.parse(raw)
+    return typeof value === 'string' ? value : ''
+  } catch { return '' }
+}
+
+const codexAgentMetadataErrors = (source, expectedName) => {
+  const header = tomlAgentHeader(source)
+  const errors = []
+  if (tomlHeaderScalar(header, 'name') !== expectedName) {
+    errors.push(`adapter name must match filename (${expectedName})`)
+  }
+  const description = tomlHeaderScalar(header, 'description').trim()
+  if (!description) errors.push('missing quoted adapter description')
+  else if (Array.from(description).length > MAX_CATALOG_DESCRIPTION_LENGTH) {
+    errors.push(`description must be <=${MAX_CATALOG_DESCRIPTION_LENGTH} characters (found ${Array.from(description).length}); keep capability + concrete triggers and move workflow to the body`)
+  }
+  const instructions = source.match(/^developer_instructions\s*=\s*(?:"""([\s\S]*?)"""|'''([\s\S]*?)''')/m)
+  if (!instructions) {
+    errors.push('missing multiline developer_instructions')
+  } else if (!(instructions[1] || instructions[2] || '').includes(`.claude/agents/${expectedName}.md`)) {
+    errors.push(`developer_instructions must delegate canonical .claude/agents/${expectedName}.md`)
+  }
+  return errors
+}
+
+const auditCodexAgentFamily = (root, repoRoot) => {
+  const result = { count: 0, errors: [] }
+  if (!fs.existsSync(root)) {
+    result.errors.push({ file: root, message: 'missing Codex agent directory' })
+    return result
+  }
+  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith('.toml')) continue
+    result.count += 1
+    const name = entry.name.slice(0, -5)
+    const file = path.join(root, entry.name)
+    const source = fs.readFileSync(file, 'utf8')
+    for (const message of codexAgentMetadataErrors(source, name)) result.errors.push({ file, message })
+    const canonicalRole = `.claude/agents/${name}.md`
+    if (!fs.existsSync(path.join(repoRoot, canonicalRole))) {
+      result.errors.push({ file, message: `missing canonical role ${canonicalRole}` })
+    }
+    // Required same-role delegation prevents independent policy copies; target existence
+    // still cannot prove the semantic correctness of the canonical role itself.
+    const references = new Set(source.match(/\.(?:claude\/agents\/[\w-]+\.md|codex\/skills\/[\w-]+\/SKILL\.md)/g) || [])
+    for (const reference of references) {
+      if (!fs.existsSync(path.join(repoRoot, reference))) {
+        result.errors.push({ file, message: `missing canonical instruction ${reference}` })
+      }
+    }
+  }
+  return result
+}
+
+module.exports = { auditSkillFamily, descriptionErrors, skillMetadataErrors, codexAgentMetadataErrors, auditCodexAgentFamily }

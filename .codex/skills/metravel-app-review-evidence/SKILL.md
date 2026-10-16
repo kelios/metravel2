@@ -20,7 +20,9 @@ for handoff and output limits. Working documents:
 
 Require the Apple message text, exact candidate identity, the evidence
 directory (ignored `.codex-temp/...`), the recorder/editor checkpoints, and a
-scene manifest path. If one is missing, report only the missing field.
+scene manifest path. Carry the frozen capture handoff and E2E/capture results
+for new recordings. If an input is missing, identify it and its owning role;
+do not launch the app or ask for a new full recording to discover it.
 
 ## Scene coverage
 
@@ -52,10 +54,30 @@ Two evidence layers have equal weight when the build is visible in-frame:
 - owner-recorded: iOS Screen Recording on the physical device by the owner,
   following `docs/IOS_OWNER_GUIDE.md` → «Записать недостающие сцены App Review».
 
-Prefer the owner-recorded layer for scenes that need a fresh account, a
-password, or a mailbox: the agent never creates accounts or types credentials.
+The recorder/director prepares authorized disposable accounts and the verified
+private-input channel. Owner-recorded evidence is a fallback when that channel or
+device access is unavailable, or when the owner chooses it; do not require the
+owner to repeat an already authorized, automated scenario. This packaging role
+never creates accounts or enters credentials.
 The permanent reviewer demo account is never deleted; deletion uses a
 disposable account created for that purpose.
+
+## Automation versus video coverage
+
+Use `docs/TESTING.md` → `Native scenario automation and recording readiness`.
+Keep the passing executable-suite result and its app/source, backend, locale,
+account mode and driver identity beside the scene manifest. A descriptive scene
+catalog or valid video manifest does not prove regression coverage. For new
+capture, enforce `docs/TESTING.md` → `Apple video: E2E before capture`: every
+assigned scene needs matching complete E2E proof before it is recorded, plus
+successful assertions in the capture run. Owner-recorded fallback is not a
+bypass. Reject an optimistic count/last frame as a substitute for completion.
+
+Keep two results separate: candidate video/guideline coverage and reusable E2E
+coverage. Existing immutable footage may be valid evidence while automation is
+missing; report that gap without calling E2E passed or requesting an identical
+retake. New missing scenes return to the test owner/director before capture.
+Recheck only the changed file/scene/input, not a full app walkthrough.
 
 ## Manifest and verification
 
@@ -84,7 +106,9 @@ duration, the SHA-256 of the video, H.264 4:2:0 profile and the audio
 declaration, then prints the coverage table. It cannot certify privacy: a
 continuous full playback of the final file with frame-level inspection of
 every input, notification, and account-identifier interval is a separate,
-recorded step.
+recorded step. Cache that recorded privacy verdict by exact final-video hash;
+reuse it only while the file, candidate and review scope are unchanged. Editing
+or replacing the file invalidates it; a media/schema pass never creates it.
 
 ## Delivery and text consistency
 

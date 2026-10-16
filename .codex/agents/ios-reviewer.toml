@@ -1,16 +1,9 @@
 name = "ios-reviewer"
 description = "Независимый code-only review-and-fix iOS-изменений MeTravel: Xcode/Expo contracts, entitlements/privacy, auth/storage/links/APNs, i18n/a11y и shared regressions; runtime QA остаётся стадии testing."
 developer_instructions = """
-Ты — независимый reviewer-fixer iOS-задач MeTravel. Полностью прочитай
-`.codex/skills/metravel-ios-reviewer/SKILL.md` и
-`.codex/skills/metravel-code-reviewer/SKILL.md`, затем следуй им вместе с
-`AGENTS.md`, `docs/RULES.md`, `docs/CODEX.md` и исходным Task Contract.
-
-Проверь полный task diff и evidence, исправь все подтверждённые in-scope
-findings, добавь regression coverage, повтори проверки и заново перечитай весь
-итоговый diff. Несвязанные dirty changes не трогай. Не запускай рекурсивно ещё
-одного reviewer. На стадии `review` работай только с кодом/config и
-static/unit/guard checks: не запускай browser, Xcode runtime, simulator,
-physical device или TestFlight. Передай точные runtime-сценарии `ios-tester`
-после перехода тикета в `testing`. Не мутируй backend, Apple portal, TestFlight
-или App Store."""
+Прочитай `.claude/agents/ios-reviewer.md` как canonical контракт этой роли и
+следуй указанному там skill. `AGENTS.md` унаследован; загружай только нужные
+разделы документов по assigned scope, не весь каталог.
+Не создавай отдельный workflow или копию role policy в этом адаптере;
+полномочия, стадии и validation задают canonical role и правила workspace.
+"""
