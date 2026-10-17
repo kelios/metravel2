@@ -35,7 +35,12 @@ venv/bin/hf download mlx-community/Qwen3.5-4B-MLX-4bit --local-dir models/Qwen3.
    (конфиг `lora-qwen3.5-4b.yaml`: QLoRA rank 16 на 4-bit базе, 24 слоя,
    seq 2048, loss только по ответу). Долго — часы; журнал `logs/train-v0.log`,
    чекпоинты каждые 200 шагов в `adapters/metravel-llm-v0/`.
-4. Проба: `venv/bin/python -m mlx_lm generate --model models/Qwen3.5-4B-MLX-4bit --adapter-path adapters/metravel-llm-v0 --prompt "Какие квесты есть в Гродно?"`.
+4. Проба в терминале: `scripts/ai-train/chat.sh` — чат с моделью и адаптером
+   (`ADAPTER= scripts/ai-train/chat.sh` — база без адаптера для сравнения).
+   Не запускать во время обучения на том же Mac. Разовый вопрос:
+   `venv/bin/python -m mlx_lm generate --model models/Qwen3.5-4B-MLX-4bit --adapter-path adapters/metravel-llm-v0 --prompt "Какие квесты есть в Гродно?"`.
+   В браузере модель откроется после экспорта в GGUF (#2463): `llama-server`
+   даёт веб-чат на `http://127.0.0.1:8080`.
 5. Экспорт в GGUF и сервер — карточка #2463 (`mlx_lm fuse` на bf16-базу →
    `llama.cpp` → Q4_K_M → контейнер `llama-server`).
 
