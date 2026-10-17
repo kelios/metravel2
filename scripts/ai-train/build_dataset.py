@@ -100,7 +100,8 @@ def paragraphs(text: str) -> list[str]:
     return [p.strip() for p in text.split("\n\n") if p.strip()]
 
 
-def chunk(text: str, size: int = CHUNK_CHARS) -> list[str]:
+def chunk(text: str, size: int | None = None) -> list[str]:
+    size = size or CHUNK_CHARS
     out, cur = [], ""
     for p in paragraphs(text):
         if cur and len(cur) + len(p) + 2 > size:
@@ -294,15 +295,18 @@ def split(records: list[dict], valid_share: float, test_share: float):
 
 
 def main() -> int:
+    global CHUNK_CHARS
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--raw", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--seed", type=int, default=20261017)
     ap.add_argument("--valid-share", type=float, default=0.03)
     ap.add_argument("--test-share", type=float, default=0.02)
+    ap.add_argument("--chunk-chars", type=int, default=CHUNK_CHARS, help="max characters per article section sample (≈ tokens × 3)")
     args = ap.parse_args()
     raw, out = Path(args.raw), Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
+    CHUNK_CHARS = args.chunk_chars
     records = build(raw, args.seed)
     rng = random.Random(args.seed)
     rng.shuffle(records)

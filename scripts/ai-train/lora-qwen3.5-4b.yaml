@@ -6,16 +6,16 @@ train: true
 fine_tune_type: lora
 optimizer: adamw
 mask_prompt: true          # loss only on assistant tokens
-num_layers: 24             # of 36 decoder layers get adapters
-batch_size: 2
-grad_accumulation_steps: 4 # effective batch 8
-iters: 3000
+num_layers: 8              # of 36 decoder layers get adapters (16/2048 and 24/2048 → Metal OOM on a loaded 16 GB M1)
+batch_size: 1
+grad_accumulation_steps: 8 # effective batch 8
+iters: 1000                # ≈ 1.1 epochs of 7.2k samples; resume with --resume-adapter-file
 learning_rate: 1.0e-4
-max_seq_length: 2048
+max_seq_length: 1024       # dataset built with --chunk-chars 2600 so sections fit
 grad_checkpoint: true
 steps_per_report: 20
 steps_per_eval: 200
-val_batches: 25
+val_batches: 10
 save_every: 200
 adapter_path: adapters/metravel-llm-v0
 seed: 20261017
@@ -28,4 +28,4 @@ lr_schedule:
   name: cosine_decay
   warmup: 100
   warmup_init: 1.0e-6
-  arguments: [1.0e-4, 3000, 1.0e-6]
+  arguments: [1.0e-4, 1000, 1.0e-6]
