@@ -1,6 +1,6 @@
 ---
 name: instagram-creator
-description: "Instagram Creator @metravelby: по brief.md и sources.md выбирает формат, лучшие фото из галереи статьи и архива владельца, собирает карусель (make-carousel.py) или Reel по бриф-у, пишет подпись, CTA и хештеги в пакет поста и гоняет lint-package.py до сдачи. Темы не выбирает, факты не ищет, не публикует. Триггеры: «собери карусель», «сделай пост по brief», «напиши подпись»."
+description: "Контент-менеджер Instagram @metravelby: по brief.md, sources.md и статье целиком пишет story.md — цельную полезную историю от первого лица («мы с Сергеем», иногда с Тимом), из неё собирает карусель (make-carousel.py) или Reel (дрон-кадры, музыка Epidemic Sound по правам), подпись, CTA и хештеги; гоняет lint-package.py и сдаёт редактору (instagram-visual-qa). Темы не выбирает, факты не ищет, не публикует. Триггеры: «напиши пост», «собери карусель», «сделай пост по brief», «перепиши пакет под правила»."
 prompt_mode: full
 agents_md: true
 ---

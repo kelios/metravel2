@@ -17,7 +17,8 @@ const CLEAN_CAPTION = [
 
 // Чек-лист раздела 18 строкой на номер: по пакету без него линт даёт R18.
 const CHECKLIST = [
-  ...Array.from({ length: 10 }, (_, i) => `- V${i + 1} да.`),
+  'Состав поездки: мы с Сергеем.',
+  ...Array.from({ length: 11 }, (_, i) => `- V${i + 1} да.`),
   ...Array.from({ length: 13 }, (_, i) => `- F${i + 1} да.`),
 ].join('\n')
 
@@ -191,17 +192,21 @@ describe('instagram lint-package', () => {
   it('requires a section 18 checklist line per V/F number in package.md', () => {
     const missing = makePackage('checklist-missing', {
       'caption.txt': CLEAN_CAPTION,
-      'package.md': 'Чек-лист V1–V10, F1–F13 (раздел 18)\n- V2/V3: сначала предмет\n- V1 да\n',
+      'package.md': 'Чек-лист V1–V11, F1–F13 (раздел 18)\n- V2/V3: сначала предмет\n- V1 да\n',
     })
     const { status, hits } = lint(missing)
     expect(status).toBe(1)
-    expect(hits).toEqual([expect.objectContaining({ rule: 'R18', source: 'package.md' })])
-    expect(hits[0].message).toMatch(/нет строк: V2, V3, V4, .*F13$/)
+    expect(hits).toEqual([
+      expect.objectContaining({ rule: 'R16', source: 'package.md' }),
+      expect.objectContaining({ rule: 'R18', source: 'package.md' }),
+    ])
+    expect(hits[1].message).toMatch(/нет строк: V2, V3, V4, .*F13$/)
 
     const inline = makePackage('checklist-inline', {
       'caption.txt': CLEAN_CAPTION,
       'package.md': [
-        'V1 да (один порядок) · V2 да · V3 да · V4 да · V5 да · V6 да; V7 n/a',
+        '- **Состав поездки**: мы с Сергеем и Тимом',
+        'V1 да (один порядок) · V2 да · V3 да · V4 да · V5 да · V6 да; V7 n/a · V11 да',
         '- V8 ✓ без клише',
         '- V9 2–4 предложения на слайд',
         '- V10 неприменимо (подборка).',

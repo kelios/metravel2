@@ -8,6 +8,8 @@ const ACCOUNT = '@metravelby'
 const KINDS = ['image', 'video', 'audio', 'font', 'reference']
 const BASES = ['owned', 'licensed', 'ai-generated', 'meta-sound-collection', 'public-domain']
 const MEDIA = /\.(jpe?g|png|webp|mp4|mov|m4v)$/i
+// Control sheets of the editor/creator (section 0: `qa-sheet.jpg`, `contact-sheet*.jpg` live in the package root) are review aids, never uploads.
+const CONTROL_SHEET = /(?:^|[-_.])(?:qa|contact|control)-?sheet/i
 
 function fail(message) { throw new Error(`Instagram rights: ${message}`) }
 function hash(file) { return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex') }
@@ -54,7 +56,7 @@ function exportedFiles(root) {
   for (const dir of [root, path.join(root, 'carousel'), path.join(root, 'slides')]) {
     if (!fs.existsSync(dir)) continue
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (entry.isFile() && MEDIA.test(entry.name)) files.push(path.join(dir, entry.name))
+      if (entry.isFile() && MEDIA.test(entry.name) && !CONTROL_SHEET.test(entry.name)) files.push(path.join(dir, entry.name))
     }
   }
   return files

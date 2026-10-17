@@ -17,8 +17,10 @@
   R27 — rights.json связывает конечные файлы и локальные доказательства прав через SHA-256;
   B1  — запрещённые по Беларуси источники, общий список
         scripts/content-source-denylist.json (тот же, что у scan-content-sources.js);
-  R18 — в package.md чек-лист раздела 18: строка на каждый номер V1–V10 и F1–F13
-        с отметкой («- V1 да: …», «V10 не применяется»).
+  R18 — в package.md чек-лист раздела 18: строка на каждый номер V1–V11 и F1–F13
+        с отметкой («- V1 да: …», «V10 не применяется»);
+  R16 — в package.md есть строка «Состав поездки: …» (кто ходил — «мы с Сергеем», «я одна»,
+        с Тимом/Джери; раздел 25) — голос «я/мы» в тексте сверяется с ней глазами.
 
 Текст слайдов берётся из spec.json (make-carousel.py, вместе с name точек карты) и
 slides.txt (слайды другого скрипта или титры Reel: один слайд — блок через пустую строку).
@@ -60,10 +62,11 @@ QUEST_ID_RE = re.compile(r'(?:quest_id\s*[=:]\s*[`"\']?|by-quest-id/)([a-z0-9][a
 # Адрес квеста по F7 — metravel.by/quests/<city_id>/<quest_id>: квест в пакете находится и без строки quest_id.
 QUEST_URL_RE = re.compile(r'\bquests/\d+/([a-z0-9][a-z0-9-]+)', re.I)
 ALLOW_RE = re.compile(r'^\s*lint-allow:\s*(F10)\s+(.+?)\s+—\s+\S', re.M)
-CHECKLIST_ITEMS = ['V%d' % n for n in range(1, 11)] + ['F%d' % n for n in range(1, 14)]
+CHECKLIST_ITEMS = ['V%d' % n for n in range(1, 12)] + ['F%d' % n for n in range(1, 14)]
+TRIP_PARTY_RE = re.compile(r'^\s*[-*]?\s*\**Состав поездки\**\s*:\s*\S', re.M | re.I)
 # Пункт чек-листа: строка списка «- V1 …» или номер после «·», «;», «.» с отметкой словом, галочкой
 # или прочерком — «V2 да (…) · V3 да», «F4 да — 1750 знаков», «V10 неприменимо», «F10 n/a», «F10 — ·».
-# Диапазон «V1–V10» и «V2/V3» пунктом не считаются.
+# Диапазон «V1–V11» и «V2/V3» пунктом не считаются.
 CHECKLIST_ITEM_RE = re.compile(
     r'^\s*[-*]\s*\**([VF]\d{1,2})\**(?![\d/–-])'
     r'|(?:^\s*|[·;]\s*|\.\s+)\**([VF]\d{1,2})\**'
@@ -251,15 +254,20 @@ TITLE_MIN_S, TITLE_PER_WORD_S, TITLE_MAX_WORDS = 1.5, 0.3, 7
 
 
 def check_checklist(package):
-    """Раздел 18: creator проходит V1–V10 и F1–F13 строкой на номер в package.md."""
+    """Раздел 18: creator проходит V1–V11 и F1–F13 строкой на номер в package.md;
+    раздел 25: строка «Состав поездки: …» (R16)."""
     path = os.path.join(package, 'package.md')
     if not os.path.exists(path):
-        return [finding('package.md', 0, 'R18', 'нет package.md с чек-листом V1–V10, F1–F13')]
-    present = {a or b for a, b in CHECKLIST_ITEM_RE.findall(read(path))}
+        return [finding('package.md', 0, 'R18', 'нет package.md с чек-листом V1–V11, F1–F13')]
+    text = read(path)
+    hits = []
+    if not TRIP_PARTY_RE.search(text):
+        hits.append(finding('package.md', 0, 'R16', 'нет строки «Состав поездки: …» (кто ходил — раздел 25)'))
+    present = {a or b for a, b in CHECKLIST_ITEM_RE.findall(text)}
     missing = [item for item in CHECKLIST_ITEMS if item not in present]
-    if not missing:
-        return []
-    return [finding('package.md', 0, 'R18', 'в чек-листе нет строк: %s' % ', '.join(missing))]
+    if missing:
+        hits.append(finding('package.md', 0, 'R18', 'в чек-листе нет строк: %s' % ', '.join(missing)))
+    return hits
 
 
 def reel_title_items(data):

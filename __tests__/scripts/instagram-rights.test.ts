@@ -33,6 +33,16 @@ describe('Instagram rights evidence gate', () => {
     expect(validate).toThrow('SHA-256 mismatch')
   })
 
+  it('ignores review control sheets in the package root but not other unlisted exports', () => {
+    save()
+    fs.writeFileSync(path.join(dir, 'qa-sheet.jpg'), 'sheet')
+    fs.writeFileSync(path.join(dir, 'contact-sheet-r2.jpg'), 'sheet')
+    expect(() => validateRights(manifestFile)).not.toThrow()
+    fs.writeFileSync(path.join(dir, 'extra.jpg'), 'export')
+    expect(() => validateRights(manifestFile)).toThrow('missing from rights.json: extra.jpg')
+    for (const name of ['qa-sheet.jpg', 'contact-sheet-r2.jpg', 'extra.jpg']) fs.rmSync(path.join(dir, name))
+  })
+
   it('requires the manifest even for rehearsals and every selected upload', () => {
     expect(() => validateRights(undefined, [image])).toThrow('--rights-file')
     const unlisted = path.join(dir, 'other.jpg')
