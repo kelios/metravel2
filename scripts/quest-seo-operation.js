@@ -534,6 +534,26 @@ function publishPrepared(t, stateFile, health = readiness) {
     }
     throw error
   }
+  retainAfterReady(t, stateFile, state, id.release_id)
+}
+
+// The pre-staging pass protects the old current and its rollback, so every
+// publication ends with three generations on disk (#2461). Once the new
+// pointer passed readiness, trim back to it and its rollback. Publication is
+// already complete: a refusal (a reader pins the oldest generation, the
+// pointer moved on) only leaves the next pre-staging pass to finish the job.
+function retainAfterReady(t, stateFile, state, current) {
+  const mib = (bytes) => Math.round(Number(bytes) / 1024 ** 2)
+  try {
+    const budget = managedBudget()
+    const result = retain(t, current, budget)
+    state.post_ready_retention = result
+    save(stateFile, state)
+    console.log(`📊 Поколения quest v1 после выката: ${result.preserved.length} (снято ${result.removed.length}), `
+      + `занято ${mib(result.remaining_allocated_bytes)} из ${mib(budget)} МиБ`)
+  } catch (error) {
+    console.log(`⚠️  Ретеншен поколений quest v1 после выката не выполнен: ${error.message}; добьёт следующий выкат`)
+  }
 }
 
 function baseline(t, file, health = readiness) {
@@ -574,6 +594,7 @@ function recover(t, file, health = readiness) {
   health(t, state.identity, deadline)
   state.phase = 'ready'
   save(file, state)
+  retainAfterReady(t, file, state, state.identity.release_id)
 }
 
 function abortStage(t, file) {

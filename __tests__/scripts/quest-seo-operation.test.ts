@@ -78,7 +78,7 @@ function prepared(root: string, ruOnly = false) {
   return { dist, file }
 }
 
-function remote(options: { failure?: string; gateway?: Record<string, unknown>; gatewayRaw?: string } = {}) {
+function remote(options: { failure?: string; gateway?: Record<string, unknown>; gatewayRaw?: string; postRetain?: 'refuse' } = {}) {
   let current = prior
   const operations: string[] = []
   const t = {
@@ -91,8 +91,13 @@ function remote(options: { failure?: string; gateway?: Record<string, unknown>; 
     operation: (action: string, args: string[], transportOptions?: any) => {
       operations.push(action)
       if (action === 'inspect') return JSON.stringify({ schema_version: 1, kind: 'managed', current, previous: current === prior ? null : prior })
-      if (action === 'retain-v2') return JSON.stringify({ schema_version: 2, result: 'cleaned', active_release_id: current.release_id,
-        preserved: [current.release_id], removed: [], remaining_bytes: 100, remaining_allocated_bytes: 100 })
+      if (action === 'retain-v2') {
+        const after = current.release_id === candidate.release_id
+        if (after && options.postRetain === 'refuse') throw new Error('Protected generations exceed retention bounds')
+        return JSON.stringify({ schema_version: 2, result: 'cleaned', active_release_id: current.release_id,
+          preserved: after ? [current.release_id, prior.release_id] : [current.release_id], removed: [],
+          remaining_bytes: 100, remaining_allocated_bytes: after ? 300 : 100 })
+      }
       if (action === 'inventory-v2') return JSON.stringify({ schema_version: 2, release_count: 1, total_bytes: 3000000000,
         allocated_bytes: 100, budget_bytes: Number(args[0]) })
       if (action === 'transfer-plan-v3') {
@@ -156,7 +161,7 @@ describe('normal managed publication orchestration', () => {
       publish(r.t, p.dist, p.file, jest.fn())
       const state = JSON.parse(fs.readFileSync(p.file, 'utf8'))
       expect(state.phase).toBe('ready')
-      expect(r.operations).toEqual(['inspect', 'gateway', 'retain-v2', 'inventory-v2', 'transfer-plan-v3', 'stage-v3', 'validate', 'activate', 'cover'])
+      expect(r.operations).toEqual(['inspect', 'gateway', 'retain-v2', 'inventory-v2', 'transfer-plan-v3', 'stage-v3', 'validate', 'activate', 'cover', 'retain-v2'])
       expect(r.current().release_id).toBe(candidate.release_id)
       expect(fs.statSync(p.file).mode & 0o777).toBe(0o600)
       expect(fs.statSync(`${p.file}.package.tar.gz`).mode & 0o777).toBe(0o600)
@@ -196,8 +201,45 @@ describe('normal managed publication orchestration', () => {
       expect(r.operations.filter((x) => x === 'activate')).toHaveLength(failure === 'validate' ? 0 : 1)
       if (failure === 'after-rename') {
         recover(r.t, p.file, jest.fn())
-        expect(JSON.parse(fs.readFileSync(p.file, 'utf8')).activated.previous_release_id).toBe(prior.release_id)
+        const recovered = JSON.parse(fs.readFileSync(p.file, 'utf8'))
+        expect(recovered.activated.previous_release_id).toBe(prior.release_id)
+        expect(recovered.post_ready_retention.preserved).toEqual([candidate.release_id, prior.release_id])
       } else expect(() => recover(r.t, p.file, jest.fn())).toThrow('another release')
+    } finally { removeDir(root) }
+  })
+  it('trims back to the new current and its rollback only after readiness, reporting the generation count', () => {
+    const root = makeTempDir('quest-e-post-retain-')
+    const log = jest.spyOn(console, 'log').mockImplementation(() => {})
+    try {
+      const p = prepared(root), r = remote()
+      publish(r.t, p.dist, p.file, jest.fn())
+      const state = JSON.parse(fs.readFileSync(p.file, 'utf8'))
+      expect(state.phase).toBe('ready')
+      expect(state.post_ready_retention.active_release_id).toBe(candidate.release_id)
+      expect(state.post_ready_retention.preserved).toEqual([candidate.release_id, prior.release_id])
+      expect(log).toHaveBeenCalledWith(expect.stringMatching(/^📊 Поколения quest v1 после выката: 2 \(снято 0\)/))
+    } finally { log.mockRestore(); removeDir(root) }
+  })
+  it('keeps a ready publication when post-readiness retention is refused', () => {
+    const root = makeTempDir('quest-e-post-retain-refused-')
+    const log = jest.spyOn(console, 'log').mockImplementation(() => {})
+    try {
+      const p = prepared(root), r = remote({ postRetain: 'refuse' })
+      expect(() => publish(r.t, p.dist, p.file, jest.fn())).not.toThrow()
+      const state = JSON.parse(fs.readFileSync(p.file, 'utf8'))
+      expect(state.phase).toBe('ready')
+      expect(state.post_ready_retention).toBeUndefined()
+      expect(r.current().release_id).toBe(candidate.release_id)
+      expect(log).toHaveBeenCalledWith(expect.stringMatching(/^⚠️ {2}Ретеншен .*exceed retention bounds/))
+    } finally { log.mockRestore(); removeDir(root) }
+  })
+  it('does not trim generations when readiness fails and the publication rolls back', () => {
+    const root = makeTempDir('quest-e-post-retain-rollback-')
+    try {
+      const p = prepared(root), r = remote()
+      const health = jest.fn().mockImplementationOnce(() => { throw new Error('readiness failed') })
+      expect(() => publish(r.t, p.dist, p.file, health)).toThrow('readiness failed')
+      expect(r.operations.filter((action) => action === 'retain-v2')).toHaveLength(1)
     } finally { removeDir(root) }
   })
   it('rolls back health failure through the same backend command and preserves archive evidence', () => {
