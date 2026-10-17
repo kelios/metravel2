@@ -18,7 +18,8 @@
 const fs = require('fs');
 const path = require('path');
 const { loadSsgCatalogs } = require('../i18n/babel-inline-plugin');
-const { fetchJson } = require('./lib/fetchJson');
+const { fetchJson, fetchJsonOnce, withRetries } = require('./lib/fetchJson');
+const { readSeoInputs, writeSeoInputs, validateIdentity } = require('./lib/seoInputsCapture');
 const {
   BUILD_FETCH_RATE_PER_SEC,
   BUILD_FETCH_MIN_INTERVAL_MS,
@@ -80,6 +81,7 @@ const {
   createSsgTranslator,
   runRevisionReceiptCommand,
   writeCandidateFile,
+  publishedTranslatedLocales,
 } = require('./lib/questLocalePackage');
 const { canonicalPath: questCanonicalPath, insertQuestLocaleSlots } = require('./lib/questSeoContract');
 const { scoreDetailCohort } = require('./lib/questDetailCohort');
@@ -1075,13 +1077,13 @@ function extractCollectionItems(result) {
   return [];
 }
 
-async function fetchQuestCatalog() {
+async function fetchQuestCatalog({ fetchJson: read = fetchJson, apiBase = API_BASE } = {}) {
   const quests = [];
-  let nextUrl = `${API_BASE}/api/quests/`;
+  let nextUrl = `${apiBase}/api/quests/`;
   let page = 1;
   while (nextUrl && page <= 50) {
     console.log(`  📡 Fetching quests page ${page}...`);
-    const result = await fetchJson(nextUrl);
+    const result = await read(nextUrl);
     const items = extractCollectionItems(result).filter((q) => questRouteKey(q));
     quests.push(...items);
     nextUrl = (result && typeof result === 'object' && (result.next_page_url || result.next)) || null;
@@ -1090,24 +1092,24 @@ async function fetchQuestCatalog() {
   return quests;
 }
 
-function normalizeApiEndpoint(endpoint) {
+function normalizeApiEndpoint(endpoint, apiBase = API_BASE) {
   const raw = String(endpoint || '').trim();
   if (!raw) return '';
   if (raw.startsWith('http://') || raw.startsWith('https://')) {
     return raw.replace(/\/+$/, '');
   }
   if (!raw.startsWith('/')) return '';
-  return `${API_BASE}${raw}`.replace(/\/+$/, '');
+  return `${apiBase}${raw}`.replace(/\/+$/, '');
 }
 
-async function resolveArticleEndpointCandidates() {
+async function resolveArticleEndpointCandidates({ fetchJson: read = fetchJson, apiBase = API_BASE } = {}) {
   const fromApiIndex = [];
   try {
-    const indexPayload = await fetchJson(`${API_BASE}/api/`);
+    const indexPayload = await read(`${apiBase}/api/`);
     if (indexPayload && typeof indexPayload === 'object') {
       for (const [key, value] of Object.entries(indexPayload)) {
         if (!/articles?/i.test(String(key))) continue;
-        const normalized = normalizeApiEndpoint(value);
+        const normalized = normalizeApiEndpoint(value, apiBase);
         if (normalized) fromApiIndex.push(normalized);
       }
     }
@@ -1118,10 +1120,10 @@ async function resolveArticleEndpointCandidates() {
   return Array.from(
     new Set([
       ...fromApiIndex,
-      `${API_BASE}/api/articles`,
-      `${API_BASE}/api/articles/`,
-      `${API_BASE}/api/article`,
-      `${API_BASE}/api/article/`,
+      `${apiBase}/api/articles`,
+      `${apiBase}/api/articles/`,
+      `${apiBase}/api/article`,
+      `${apiBase}/api/article/`,
     ].map((value) => value.replace(/\/+$/, '')))
   );
 }
@@ -3977,7 +3979,250 @@ const STATIC_PAGES = [
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
+// The network producer has no dist dependency. One request pacer covers every
+// endpoint/fallback; no other API producer runs alongside this process.
+async function collectSeoInputs({ apiBase = API_BASE, candidate = Boolean(QUEST_SEO_CANDIDATE),
+  publicationMode = QUEST_SEO_PUBLICATION_MODE, receiptCommand = QUEST_SEO_RECEIPT_COMMAND,
+  fetchJson: fetchInput, readReceipt = runRevisionReceiptCommand,
+  pace = createRequestPacer(BUILD_FETCH_MIN_INTERVAL_MS) } = {}) {
+  const rawTravelDetails = new Map();
+  const request = async (url) => {
+    if (new URL(url).origin !== new URL(apiBase).origin) throw new Error('SEO input endpoint changed API origin');
+    await pace();
+    const value = await (fetchInput || fetchJsonOnce)(url);
+    const parsed = new URL(url);
+    if (/^\/api\/travels\/[1-9][0-9]*\/$/.test(parsed.pathname) && !parsed.search && !parsed.hash) rawTravelDetails.set(url, value);
+    return value;
+  };
+  // Include retries and id→slug fallbacks in the same request budget.
+  const read = (url) => fetchInput ? request(url) : withRetries(() => request(url), {
+    onRetry: ({ error, attempt, attempts, delayMs }) =>
+      console.warn(`  ⚠️  ${error.message} — retry ${attempt}/${attempts - 1} in ${delayMs}ms`),
+  });
+  // --- 1b. Quest catalog ---
+  // Travel SSG needs the quest catalog before travel pages are written so city
+  // articles can include crawlable "quest for this city" links in the HTML.
+  // #2365: receipt R1 precedes every content read of the package build.
+  const questSeoReceipt = candidate ? readReceipt(receiptCommand) : null;
+  if (questSeoReceipt) {
+    console.log(`\n🔏 Quest SEO receipt R1: ${questSeoReceipt.quests.length} published quests, digest ${questSeoReceipt.receipt_digest}`);
+  }
+  console.log('\n🧩 Fetching quests from API...');
+  let quests = [];
+  const questBundleMap = new Map();
+  try {
+    quests = await fetchQuestCatalog({ fetchJson: read, apiBase });
+    console.log(`  📦 Got ${quests.length} quests`);
+
+    if (quests.length > 0) {
+      console.log(
+        `  📥 Fetching quest details for location matching (concurrency: ${QUEST_DETAIL_CONCURRENCY}, ≤${BUILD_FETCH_RATE_PER_SEC} req/s)...`
+      );
+      let bundleFailures = 0;
+      const bundles = await batchAsync(
+        quests,
+        QUEST_DETAIL_CONCURRENCY,
+        async (quest, i) => {
+          const route = questRouteKey(quest);
+          if (!route) return null;
+          if ((i + 1) % 20 === 0 || i === quests.length - 1) {
+            console.log(`  📡 Fetched ${i + 1}/${quests.length} quest details...`);
+          }
+          try {
+            return await read(`${apiBase}/api/quests/by-quest-id/${encodeURIComponent(route.questId)}/`);
+          } catch (err) {
+            // A package candidate cannot measure a page whose bundle it lost:
+            // a thin RU anchor would silently drop every translation (#2365).
+            if (candidate) throw err;
+            bundleFailures++;
+            console.warn(`  ⚠️  Quest bundle not available for ${route.questId}: ${err.message}`);
+            return null;
+          }
+        }
+      );
+      quests.forEach((quest, i) => {
+        const route = questRouteKey(quest);
+        if (route && bundles[i]) questBundleMap.set(route.questId, bundles[i]);
+      });
+      // A single missing bundle only costs one quest its rich intro; zero
+      // bundles means the by-quest-id endpoint is gone and every quest page
+      // would ship degraded.
+      if (questBundleMap.size === 0) {
+        throw new Error(
+          `no quest detail bundle resolved for ${quests.length} quests (${bundleFailures} request errors) — /api/quests/by-quest-id/ is unavailable`
+        );
+      }
+      if (bundleFailures > 0) {
+        console.warn(`  ⚠️  ${bundleFailures}/${quests.length} quest bundles missing — those quests ship without rich intro data`);
+      }
+    }
+    if (questSeoReceipt) assertCatalogMatchesReceipt(quests, questSeoReceipt, questRouteKey);
+  } catch (err) {
+    // Silently skipping quests used to ship a release without any quest page,
+    // city landing or travel quest promo. Fail the build instead: build-prod.sh
+    // aborts before the deploy step.
+    console.error('❌ Failed to fetch quests:', err.message);
+    console.error('   Quest pages, city landings and travel quest promos would be missing from this build.');
+    throw new Error(`Quest catalog unavailable: ${err.message}`);
+  }
+
+  // --- 2. Travel pages ---
+  console.log('\n🌍 Fetching travels from API...');
+  let travels = [];
+  try {
+    const perPage = 500;
+    let page = 1;
+    let hasMore = true;
+
+    while (hasMore) {
+      const params = new URLSearchParams({
+        page: String(page),
+        perPage: String(perPage),
+        where: JSON.stringify({ publish: 1, moderation: 1 }),
+      });
+
+      const url = `${apiBase}/api/travels/?${params}`;
+      console.log(`  📡 Fetching page ${page}...`);
+      const result = await read(url);
+
+      let items = [];
+      let total = 0;
+      let hasNext = false;
+
+      if (Array.isArray(result)) {
+        items = result;
+        total = result.length;
+      } else if (result && typeof result === 'object') {
+        items = result.data || result.results || result.items || [];
+        total = typeof result.total === 'number' ? result.total
+              : typeof result.count === 'number' ? result.count
+              : items.length;
+        // Use next_page_url/next from Laravel-style pagination if available
+        hasNext = !!(result.next_page_url || result.next);
+      }
+
+      travels = travels.concat(items);
+      console.log(`  📦 Got ${items.length} items (total so far: ${travels.length}/${total})`);
+
+      hasMore = hasNext || (travels.length < total && items.length > 0 && items.length === perPage);
+      page++;
+    }
+  } catch (err) {
+    // A mid-pagination failure leaves a partial catalog, and a partial catalog
+    // silently drops every travel past the failing page from static SEO — the
+    // travel-body gate in build-prod.sh cannot see that. All-or-nothing.
+    console.error('❌ Failed to fetch travels:', err.message);
+    console.error(`   Travel catalog is incomplete (${travels.length} fetched) — refusing to generate a partial static tree.`);
+    throw new Error(`Travel catalog unavailable: ${err.message}`);
+  }
+
+  let travelDetails = [];
+  if (travels.length > 0) {
+    // Fetch detail for each travel (description + gallery) with concurrency limit
+    const travelsWithId = travels.filter((t) => t.id);
+    console.log(
+      `\n📥 Fetching details for ${travelsWithId.length} travels (concurrency: ${TRAVEL_DETAIL_CONCURRENCY}, ≤${BUILD_FETCH_RATE_PER_SEC} req/s)...`
+    );
+    const failedDetails = [];
+    let attemptedDetails = 0;
+    const details = await batchAsync(
+      travelsWithId,
+      TRAVEL_DETAIL_CONCURRENCY,
+      async (travel, i) => {
+        attemptedDetails += 1;
+        if ((i + 1) % 50 === 0 || i === travelsWithId.length - 1) {
+          console.log(`  📡 Fetched ${i + 1}/${travelsWithId.length} details...`);
+        }
+        try {
+          return await fetchTravelDetail(travel.id, travel.slug, { fetchJson: read, apiBase });
+        } catch (err) {
+          // Collect every miss instead of bailing on the first one: the whole
+          // list tells apart "one deleted article" from "the limiter closed".
+          failedDetails.push({
+            id: travel.id,
+            slug: travel.slug || '',
+            statusCode: err.statusCode,
+            message: err.message,
+          });
+          return null;
+        }
+      },
+      {
+        // A dead API costs 6 requests and ~13 s per article. Walking the whole
+        // catalog to prove it would hold the build for ~20 minutes before
+        // reporting a failure that was obvious after the first few dozen.
+        shouldStop: () => failedDetails.length >= MAX_DETAIL_FAILURES_BEFORE_ABORT,
+      }
+    );
+
+    if (attemptedDetails < travelsWithId.length) {
+      console.error(
+        `⛔ Stopped after ${failedDetails.length} failed details — the API is not answering, the remaining ${travelsWithId.length - attemptedDetails} of ${travelsWithId.length} were not attempted.`
+      );
+    }
+    assertTravelDetailsComplete(failedDetails, travelsWithId.length, { attempted: attemptedDetails });
+
+    travelDetails = travelsWithId.map((travel, i) => [travel.id, details[i]]);
+  }
+  console.log('\n📰 Fetching articles from API...');
+  let articles = [];
+  const articleErrors = [];
+  const articleParams = new URLSearchParams({
+    page: '1',
+    perPage: '500',
+    where: JSON.stringify({ publish: 1, moderation: 1 }),
+  });
+  const articleCandidates = await resolveArticleEndpointCandidates({ fetchJson: read, apiBase });
+
+  for (const endpoint of articleCandidates) {
+    const url = `${endpoint}/?${articleParams}`;
+    try {
+      const result = await read(url);
+      const items = extractCollectionItems(result);
+      if (items.length > 0) {
+        articles = items;
+        console.log(`  📦 Got ${articles.length} articles from ${endpoint}`);
+        break;
+      }
+      articleErrors.push(`${endpoint} returned empty result`);
+    } catch (err) {
+      articleErrors.push(err.message);
+    }
+  }
+
+  if (articles.length === 0) {
+    const diagnostics = articleErrors.length > 0 ? articleErrors[0] : 'no article endpoint candidates';
+    console.log(`⚠️  Articles API not available (skipping): ${diagnostics}`);
+  }
+
+  const localizedBundles = [];
+  if (candidate && publicationMode === 'translations') {
+    const tasks = questSeoReceipt.quests.flatMap((record) =>
+      publishedTranslatedLocales(record).map((locale) => ({ questId: record.quest_slug, locale })));
+    const bundles = await batchAsync(tasks, QUEST_DETAIL_CONCURRENCY,
+      ({ questId, locale }) => read(`${apiBase}/api/quests/by-quest-id/${encodeURIComponent(questId)}/?lang=${encodeURIComponent(locale)}`));
+    tasks.forEach(({ questId, locale }, i) => localizedBundles.push([`${locale}/${questId}`, bundles[i]]));
+  }
+  return { questSeoReceipt, quests, questBundles: [...questBundleMap], travels, travelDetails, articles, localizedBundles, rawTravelDetails: [...rawTravelDetails] };
+}
+
+function inputIdentity() {
+  return { nonce: getArg('quest-seo-input-nonce', ''), frontend_sha: getArg('frontend-sha', ''),
+    api_origin: new URL(API_BASE).origin, publication_mode: QUEST_SEO_PUBLICATION_MODE };
+}
+
+function privateInputFile(argument) {
+  const file = path.resolve(argument);
+  if (!QUEST_SEO_CANDIDATE || !path.relative(DIST_DIR, file).startsWith(`..${path.sep}`)) {
+    throw new Error('Private SEO inputs must be outside dist and belong to a package build');
+  }
+  return file;
+}
+
 async function main() {
+  const inputArgument = getArg('quest-seo-inputs', '');
+  const inputFile = inputArgument ? privateInputFile(inputArgument) : '';
+  const capturedInputs = inputFile ? readSeoInputs(inputFile, inputIdentity()) : null;
   const indexPath = path.join(DIST_DIR, 'index.html');
   if (!fs.existsSync(indexPath)) {
     console.error(`❌ index.html not found at ${indexPath}`);
@@ -4066,175 +4311,15 @@ async function main() {
     console.log(`  ✅ ${page.route}${(page.route === '/' || page.route === '/search') ? ' (with SSG skeleton)' : ''}`);
   }
 
-  // --- 1b. Quest catalog ---
-  // Travel SSG needs the quest catalog before travel pages are written so city
-  // articles can include crawlable "quest for this city" links in the HTML.
-  // #2365: receipt R1 precedes every content read of the package build.
-  const questSeoReceipt = QUEST_SEO_CANDIDATE ? runRevisionReceiptCommand(QUEST_SEO_RECEIPT_COMMAND) : null;
-  let questSeoReceiptIndex = null;
-  if (questSeoReceipt) {
-    console.log(`\n🔏 Quest SEO receipt R1: ${questSeoReceipt.quests.length} published quests, digest ${questSeoReceipt.receipt_digest}`);
-  }
-  console.log('\n🧩 Fetching quests from API...');
-  let quests = [];
-  const questBundleMap = new Map();
-  let questPromoCatalog = [];
-  try {
-    quests = await fetchQuestCatalog();
-    console.log(`  📦 Got ${quests.length} quests`);
-
-    if (quests.length > 0) {
-      console.log(
-        `  📥 Fetching quest details for location matching (concurrency: ${QUEST_DETAIL_CONCURRENCY}, ≤${BUILD_FETCH_RATE_PER_SEC} req/s)...`
-      );
-      let bundleFailures = 0;
-      const bundles = await batchAsync(
-        quests,
-        QUEST_DETAIL_CONCURRENCY,
-        async (quest, i) => {
-          const route = questRouteKey(quest);
-          if (!route) return null;
-          if ((i + 1) % 20 === 0 || i === quests.length - 1) {
-            console.log(`  📡 Fetched ${i + 1}/${quests.length} quest details...`);
-          }
-          try {
-            return await fetchJson(`${API_BASE}/api/quests/by-quest-id/${encodeURIComponent(route.questId)}/`);
-          } catch (err) {
-            // A package candidate cannot measure a page whose bundle it lost:
-            // a thin RU anchor would silently drop every translation (#2365).
-            if (QUEST_SEO_CANDIDATE) throw err;
-            bundleFailures++;
-            console.warn(`  ⚠️  Quest bundle not available for ${route.questId}: ${err.message}`);
-            return null;
-          }
-        },
-        { minIntervalMs: BUILD_FETCH_MIN_INTERVAL_MS }
-      );
-      quests.forEach((quest, i) => {
-        const route = questRouteKey(quest);
-        if (route && bundles[i]) questBundleMap.set(route.questId, bundles[i]);
-      });
-      // A single missing bundle only costs one quest its rich intro; zero
-      // bundles means the by-quest-id endpoint is gone and every quest page
-      // would ship degraded.
-      if (questBundleMap.size === 0) {
-        throw new Error(
-          `no quest detail bundle resolved for ${quests.length} quests (${bundleFailures} request errors) — /api/quests/by-quest-id/ is unavailable`
-        );
-      }
-      if (bundleFailures > 0) {
-        console.warn(`  ⚠️  ${bundleFailures}/${quests.length} quest bundles missing — those quests ship without rich intro data`);
-      }
-      questPromoCatalog = buildQuestPromoCatalog(quests, questBundleMap);
-    }
-    if (questSeoReceipt) questSeoReceiptIndex = assertCatalogMatchesReceipt(quests, questSeoReceipt, questRouteKey);
-  } catch (err) {
-    // Silently skipping quests used to ship a release without any quest page,
-    // city landing or travel quest promo. Fail the build instead: build-prod.sh
-    // aborts before the deploy step.
-    console.error('❌ Failed to fetch quests:', err.message);
-    console.error('   Quest pages, city landings and travel quest promos would be missing from this build.');
-    throw new Error(`Quest catalog unavailable: ${err.message}`);
-  }
-
-  // --- 2. Travel pages ---
-  console.log('\n🌍 Fetching travels from API...');
-  let travels = [];
-  try {
-    const perPage = 500;
-    let page = 1;
-    let hasMore = true;
-
-    while (hasMore) {
-      const params = new URLSearchParams({
-        page: String(page),
-        perPage: String(perPage),
-        where: JSON.stringify({ publish: 1, moderation: 1 }),
-      });
-
-      const url = `${API_BASE}/api/travels/?${params}`;
-      console.log(`  📡 Fetching page ${page}...`);
-      const result = await fetchJson(url);
-
-      let items = [];
-      let total = 0;
-      let hasNext = false;
-
-      if (Array.isArray(result)) {
-        items = result;
-        total = result.length;
-      } else if (result && typeof result === 'object') {
-        items = result.data || result.results || result.items || [];
-        total = typeof result.total === 'number' ? result.total
-              : typeof result.count === 'number' ? result.count
-              : items.length;
-        // Use next_page_url/next from Laravel-style pagination if available
-        hasNext = !!(result.next_page_url || result.next);
-      }
-
-      travels = travels.concat(items);
-      console.log(`  📦 Got ${items.length} items (total so far: ${travels.length}/${total})`);
-
-      hasMore = hasNext || (travels.length < total && items.length > 0 && items.length === perPage);
-      page++;
-    }
-  } catch (err) {
-    // A mid-pagination failure leaves a partial catalog, and a partial catalog
-    // silently drops every travel past the failing page from static SEO — the
-    // travel-body gate in build-prod.sh cannot see that. All-or-nothing.
-    console.error('❌ Failed to fetch travels:', err.message);
-    console.error(`   Travel catalog is incomplete (${travels.length} fetched) — refusing to generate a partial static tree.`);
-    throw new Error(`Travel catalog unavailable: ${err.message}`);
-  }
+  const inputs = capturedInputs || await collectSeoInputs();
+  const { questSeoReceipt, quests, travels } = inputs;
+  const questBundleMap = new Map(inputs.questBundles);
+  const questPromoCatalog = buildQuestPromoCatalog(quests, questBundleMap);
+  const questSeoReceiptIndex = questSeoReceipt ? assertCatalogMatchesReceipt(quests, questSeoReceipt, questRouteKey) : null;
+  const localizedBundles = new Map(inputs.localizedBundles);
 
   if (travels.length > 0) {
-    // Fetch detail for each travel (description + gallery) with concurrency limit
-    const travelsWithId = travels.filter((t) => t.id);
-    console.log(
-      `\n📥 Fetching details for ${travelsWithId.length} travels (concurrency: ${TRAVEL_DETAIL_CONCURRENCY}, ≤${BUILD_FETCH_RATE_PER_SEC} req/s)...`
-    );
-    const failedDetails = [];
-    let attemptedDetails = 0;
-    const details = await batchAsync(
-      travelsWithId,
-      TRAVEL_DETAIL_CONCURRENCY,
-      async (travel, i) => {
-        attemptedDetails += 1;
-        if ((i + 1) % 50 === 0 || i === travelsWithId.length - 1) {
-          console.log(`  📡 Fetched ${i + 1}/${travelsWithId.length} details...`);
-        }
-        try {
-          return await fetchTravelDetail(travel.id, travel.slug);
-        } catch (err) {
-          // Collect every miss instead of bailing on the first one: the whole
-          // list tells apart "one deleted article" from "the limiter closed".
-          failedDetails.push({
-            id: travel.id,
-            slug: travel.slug || '',
-            statusCode: err.statusCode,
-            message: err.message,
-          });
-          return null;
-        }
-      },
-      {
-        minIntervalMs: BUILD_FETCH_MIN_INTERVAL_MS,
-        // A dead API costs 6 requests and ~13 s per article. Walking the whole
-        // catalog to prove it would hold the build for ~20 minutes before
-        // reporting a failure that was obvious after the first few dozen.
-        shouldStop: () => failedDetails.length >= MAX_DETAIL_FAILURES_BEFORE_ABORT,
-      }
-    );
-
-    if (attemptedDetails < travelsWithId.length) {
-      console.error(
-        `⛔ Stopped after ${failedDetails.length} failed details — the API is not answering, the remaining ${travelsWithId.length - attemptedDetails} of ${travelsWithId.length} were not attempted.`
-      );
-    }
-    assertTravelDetailsComplete(failedDetails, travelsWithId.length, { attempted: attemptedDetails });
-
-    const detailMap = new Map();
-    travelsWithId.forEach((t, i) => detailMap.set(t.id, details[i]));
+    const detailMap = new Map(inputs.travelDetails);
 
     // FE-IDX-3: build the related-travels index once for crawlable internal links.
     const relatedIndex = buildRelatedIndex(travels);
@@ -4482,16 +4567,18 @@ async function main() {
         receipt: questSeoReceipt,
         receiptIndex: questSeoReceiptIndex,
         catalogs: I18N_CATALOGS,
-        fetchLocalizedBundle: (questId, locale) =>
-          fetchJson(`${API_BASE}/api/quests/by-quest-id/${encodeURIComponent(questId)}/?lang=${encodeURIComponent(locale)}`),
+        fetchLocalizedBundle: (questId, locale) => {
+          const key = `${locale}/${questId}`;
+          if (!localizedBundles.has(key)) throw new Error(`Missing collected exact-lang bundle: ${key}`);
+          return localizedBundles.get(key);
+        },
         buildLocalizedPage: ({ quest, route, bundle, translator }) => buildQuestDetailPageHtml({
           baseHtml: questBaseHtml, quest, bundle, route, detailLinks: questDetailLinksIndex.get(route.path) || null, ssg: translator,
         }),
         findSpoilers: (html, bundle) => findQuestSpoilerLeaks(html, bundle, buildQuestRouteDigest(bundle)).errors,
         writeDistFile: (relativePath, html) => writeFileSafe(path.join(DIST_DIR, relativePath), html),
-        mapBounded: (items, fn) => batchAsync(items, QUEST_DETAIL_CONCURRENCY, (item) => fn(item), {
-          minIntervalMs: BUILD_FETCH_MIN_INTERVAL_MS,
-        }),
+        // Captured in memory: applying network pacing here would add 25s of idle time.
+        mapBounded: (items, fn) => batchAsync(items, QUEST_DETAIL_CONCURRENCY, (item) => fn(item)),
         log: (line) => console.log(line),
       });
       writeCandidateFile(path.resolve(QUEST_SEO_CANDIDATE), candidate, DIST_DIR);
@@ -4649,36 +4736,7 @@ async function main() {
   }
 
   // --- 3. Article pages ---
-  console.log('\n📰 Fetching articles from API...');
-  let articles = [];
-  const articleErrors = [];
-  const articleParams = new URLSearchParams({
-    page: '1',
-    perPage: '500',
-    where: JSON.stringify({ publish: 1, moderation: 1 }),
-  });
-  const articleCandidates = await resolveArticleEndpointCandidates();
-
-  for (const endpoint of articleCandidates) {
-    const url = `${endpoint}/?${articleParams}`;
-    try {
-      const result = await fetchJson(url);
-      const items = extractCollectionItems(result);
-      if (items.length > 0) {
-        articles = items;
-        console.log(`  📦 Got ${articles.length} articles from ${endpoint}`);
-        break;
-      }
-      articleErrors.push(`${endpoint} returned empty result`);
-    } catch (err) {
-      articleErrors.push(err.message);
-    }
-  }
-
-  if (articles.length === 0) {
-    const diagnostics = articleErrors.length > 0 ? articleErrors[0] : 'no article endpoint candidates';
-    console.log(`⚠️  Articles API not available (skipping): ${diagnostics}`);
-  }
+  const articles = inputs.articles;
 
   if (articles.length > 0) {
     console.log(`📝 Generating ${articles.length} article pages...`);
@@ -4915,11 +4973,21 @@ if (typeof module !== 'undefined' && module.exports) {
     readRequiredQuestCountryTemplate,
     patchNoindexFallbackTemplate,
     STATIC_PAGES,
+    collectSeoInputs,
+    main,
   };
 }
 
 if (require.main === module) {
-  main().catch((err) => {
+  const collectArgument = getArg('collect-inputs', '');
+  const collectFile = collectArgument ? privateInputFile(collectArgument) : '';
+  if (collectFile) {
+    validateIdentity(inputIdentity());
+  }
+  const action = collectFile
+    ? collectSeoInputs().then((inputs) => writeSeoInputs(collectFile, inputIdentity(), inputs))
+    : main();
+  action.catch((err) => {
     console.error('❌ Fatal error:', err);
     process.exit(1);
   });

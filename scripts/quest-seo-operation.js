@@ -5,9 +5,10 @@ const fs = require('fs')
 const os = require('os')
 const path = require('path')
 const crypto = require('crypto')
-const { spawn, spawnSync } = require('child_process')
+const { spawnSync } = require('child_process')
+const { captureWorker, supervise } = require('./lib/ownedProcessSupervisor')
 const {
-  MANIFEST_NAME, SHA, RELEASE_ID, parseStrictJson, validateManifest, sha256,
+  MANIFEST_NAME, SHA, RELEASE_ID, parseStrictJson, validateManifest, sha256, canonicalJson,
 } = require('./lib/questSeoContract')
 
 const TRANSPORT = path.join(__dirname, 'quest-seo-transport.py')
@@ -62,7 +63,7 @@ function transport(env = process.env) {
   const python = `import base64;exec(compile(base64.b64decode('${code}'),'<quest-seo-transport>','exec'))`
   const ssh = (command, options) => run('ssh', ['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15', target, command], options)
   const operation = (action, args = [], options) => ssh(
-    `docker exec${['stage-v2', 'storage-plan-v2'].includes(action) ? ' -i' : ''} ${quote(app)} python -c ${quote(python)} ${[action, ...args].map(quote).join(' ')}`, options)
+    `docker exec${['stage-v2', 'storage-plan-v2', 'stage-v3', 'transfer-plan-v3'].includes(action) ? ' -i' : ''} ${quote(app)} python -c ${quote(python)} ${[action, ...args].map(quote).join(' ')}`, options)
   return { operation, ssh, remote, app, nginx }
 }
 
@@ -231,89 +232,12 @@ function overlay(t, dist, stateFile) {
   applyOverlay(t, dist, stateFile, nonce)
 }
 
-// The detached worker stays alive as its process-group leader until release.
-// Cancellation signals its OWN group, never a saved PID/PGID from another
-// process. Its IPC channel is private and is not inherited by capture-sync/SSH.
-function captureWorker(command) {
-  require_(typeof process.send === 'function' && process.connected, 'Private capture IPC required')
-  return new Promise((resolve) => {
-    let stopping = false, result = null
-    const child = spawn(command[0], command.slice(1), { stdio: ['ignore', 'inherit', 'inherit'] })
-    const cancel = () => {
-      if (stopping) return
-      stopping = true
-      process.kill(-process.pid, 'SIGTERM')
-      // Keep this group leader alive even if capture-sync exits first. A
-      // TERM-ignoring SSH descendant cannot outlive the bounded group kill.
-      setTimeout(() => process.kill(-process.pid, 'SIGKILL'), 5000)
-    }
-    for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP']) process.on(signal, () => {})
-    process.on('disconnect', cancel)
-    process.on('message', (message) => {
-      if (message === 'cancel') cancel()
-      else if (message === 'release' && result !== null && !stopping) {
-        process.removeListener('disconnect', cancel)
-        process.disconnect()
-        resolve(result)
-      }
-    })
-    child.on('error', (error) => console.error(`Capture process failed to start: ${error.message}`))
-    child.on('close', (code) => {
-      result = code === 0 ? 0 : 1
-      if (!stopping && process.connected) process.send({ result })
-    })
-  })
-}
-
 function superviseCapture(dist, stateFile, nonce, command = ['bash', path.join(__dirname, 'quest-seo-operation.sh'), 'capture-sync', dist, stateFile, nonce]) {
-  // Transport setup performs SSH too, so launch the wrapper inside the owned
-  // worker group rather than resolving containers before supervision begins.
+  // Transport setup performs SSH too, so run it inside the owned worker group.
   capturePath(stateFile, nonce)
-  return new Promise((resolve, reject) => {
-    let requested = null, result = null, released = false, input = ''
-    const started = Date.now()
-    const worker = spawn(process.execPath, [__filename, 'capture-worker', JSON.stringify(command)], {
-      detached: true, stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
-    })
-    const request = (next) => {
-      if (requested === 'cancel' || released) return
-      requested = next
-      if (next === 'cancel') {
-        if (worker.connected) worker.send('cancel')
-      } else if (result !== null && worker.connected) {
-        released = true
-        worker.send('release')
-      }
-    }
-    const cancel = () => request('cancel')
-    for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP']) process.on(signal, cancel)
-    process.stdin.setEncoding('utf8')
-    process.stdin.on('data', (chunk) => {
-      input += chunk
-      if (input.length > 32) cancel()
-      else if (input.includes('\n')) request(input === 'finish\n' ? 'finish' : 'cancel')
-    })
-    process.stdin.on('end', () => { if (requested !== 'finish') cancel() })
-    worker.on('message', (message) => {
-      if (message && (message.result === 0 || message.result === 1)) {
-        result = message.result
-        console.log(`Quest asset capture (parallel with Metro): ${Date.now() - started} ms, status=${result}`)
-        if (requested === 'finish') request('finish')
-      }
-    })
-    worker.on('error', (error) => {
-      process.stdin.destroy()
-      for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP']) process.removeListener(signal, cancel)
-      reject(error)
-    })
-    worker.on('close', () => {
-      for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP']) process.removeListener(signal, cancel)
-      process.stdin.destroy()
-      try {
-        if (requested !== 'finish' || result !== 0) discardCapture(stateFile, nonce)
-        resolve(requested === 'finish' && released ? result : 1)
-      } catch (error) { reject(error) }
-    })
+  return supervise(command, 'Quest asset capture').then((code) => {
+    if (code !== 0) discardCapture(stateFile, nonce)
+    return code
   })
 }
 
@@ -422,13 +346,13 @@ function preparedIndex(state) {
   return index
 }
 
-function storagePlan(t, state, budget, expected) {
-  const index = preparedIndex(state)
+function storageReserve() {
   const diskReserve = process.env.DEPLOY_DISK_RESERVE_MB || '720'
   require_(/^[1-9][0-9]*$/.test(diskReserve) && Number.isSafeInteger(Number(diskReserve) * 1024 ** 2), 'Invalid deploy disk reserve')
-  const reserve = Math.max(BACKEND_RESERVE, Number(diskReserve) * 1024 ** 2)
-  const plan = parseStrictJson(t.operation('storage-plan-v2', [expected || 'none', budget, String(reserve)],
-    { input: index, stdio: ['pipe', 'pipe', 'pipe'] }), 'private storage plan')
+  return Math.max(BACKEND_RESERVE, Number(diskReserve) * 1024 ** 2)
+}
+
+function validateStoragePlan(plan, state, budget, expected, reserve) {
   exactKeys(plan, PLAN_KEYS)
   const counters = PLAN_KEYS.filter((key) => key.endsWith('_bytes'))
   require_(plan.schema_version === 2 && plan.expected_current === expected && plan.index_sha256 === state.index_sha256
@@ -439,6 +363,39 @@ function storagePlan(t, state, budget, expected) {
     && plan.required_free_bytes === plan.peak_bytes - plan.physical_bytes + reserve
     && plan.peak_bytes <= Number(budget), 'Invalid private storage plan')
   return plan
+}
+
+function storagePlan(t, state, budget, expected) {
+  const reserve = storageReserve()
+  const plan = parseStrictJson(t.operation('storage-plan-v2', [expected || 'none', budget, String(reserve)],
+    { input: preparedIndex(state), stdio: ['pipe', 'pipe', 'pipe'] }), 'private storage plan')
+  return validateStoragePlan(plan, state, budget, expected, reserve)
+}
+
+function transferPlan(t, state, budget, expected) {
+  const index = preparedIndex(state), reserve = storageReserve()
+  const raw = t.operation('transfer-plan-v3', [expected || 'none', budget, String(reserve)],
+    { input: index, stdio: ['pipe', 'pipe', 'pipe'], maxBuffer: 8 * 1024 ** 2 + 16384 })
+  require_(Buffer.byteLength(raw) <= 8 * 1024 ** 2 + 16384, 'Private transfer plan exceeds bound')
+  const transfer = parseStrictJson(raw, 'private transfer plan')
+  exactKeys(transfer, ['schema_version', 'storage_plan', 'required_paths', 'transfer_plan_sha256'])
+  validateStoragePlan(transfer.storage_plan, state, budget, expected, reserve)
+  const first = new Map()
+  const pathOrder = (a, b) => Buffer.compare(Buffer.from(a), Buffer.from(b))
+  for (const row of parseStrictJson(index.toString(), 'private index').files.sort((a, b) => pathOrder(a.path, b.path))) {
+    const key = canonicalJson([row.sha256, row.size, row.mode, row.mtime])
+    if (!first.has(key)) first.set(key, row.path)
+  }
+  const representatives = new Set(first.values())
+  require_(transfer.schema_version === 3 && Array.isArray(transfer.required_paths)
+    && transfer.required_paths.every((item) => typeof item === 'string' && representatives.has(item))
+    && canonicalJson(transfer.required_paths) === canonicalJson([...new Set(transfer.required_paths)].sort(pathOrder)),
+  'Invalid private transfer paths')
+  const { transfer_plan_sha256: digest, ...unsigned } = transfer
+  const { plan_sha256: planDigest, ...unsignedPlan } = transfer.storage_plan
+  require_(sha256(canonicalJson(unsigned)) === digest && sha256(canonicalJson(unsignedPlan)) === planDigest,
+    'Private transfer plan hash mismatch')
+  return transfer
 }
 
 function verifyGateway(t, probePath) {
@@ -515,27 +472,31 @@ function publishPrepared(t, stateFile, health = readiness) {
   if (expected) state.retention = retain(t, expected, budget)
   const { inventory } = checkInventory(t, 0)
   state.inventory = inventory
-  state.storage_plan = storagePlan(t, state, budget, expected)
+  state.transfer_plan = transferPlan(t, state, budget, expected)
+  state.storage_plan = state.transfer_plan.storage_plan
   save(stateFile, state)
   try {
     const guard = `bash -s -- preflight ${quote(t.remote)} ${Math.ceil((state.storage_plan.peak_bytes - state.storage_plan.physical_bytes) / 1024)} ${quote(process.env.DEPLOY_DISK_RESERVE_MB || '720')} 1536`
     t.ssh(guard, { input: fs.readFileSync(path.join(__dirname, 'deploy-disk-guard.sh')) })
-    const planFile = `${stateFile}.plan.v2.json`, frame = `${stateFile}.stage-v2`
-    save(planFile, state.storage_plan)
+    const planFile = `${stateFile}.plan.v3.json`, frame = `${stateFile}.stage-v3`
+    save(planFile, state.transfer_plan)
     let staged
     try {
       const output = fs.openSync(frame, 'wx', 0o600)
-      try { run('python3', [TRANSPORT, 'frame-v2', state.index, planFile, state.archive], { stdio: ['ignore', output, 'pipe'] }) }
+      try { run('python3', [TRANSPORT, 'frame-v3', state.index, planFile, state.archive], { stdio: ['ignore', output, 'pipe'] }) }
       finally { fs.closeSync(output) }
       const input = fs.openSync(frame, 'r')
-      try { staged = parseStrictJson(t.operation('stage-v2', [id.release_id, expected || 'none', budget, String(state.storage_plan.reserve_bytes)], { stdio: [input, 'pipe', 'pipe'] }), 'staging receipt') }
+      try { staged = parseStrictJson(t.operation('stage-v3', [id.release_id, expected || 'none', budget, String(state.storage_plan.reserve_bytes)], { stdio: [input, 'pipe', 'pipe'] }), 'staging receipt') }
       finally { fs.closeSync(input) }
     } finally { fs.rmSync(frame, { force: true }) }
-    exactKeys(staged, ['schema_version', 'release_id', 'result', 'index_sha256', 'plan_sha256', 'allocated_bytes'])
-    require_(staged.schema_version === 2 && staged.release_id === id.release_id && staged.result === 'staged'
+    exactKeys(staged, ['schema_version', 'release_id', 'result', 'index_sha256', 'plan_sha256', 'transfer_plan_sha256', 'allocated_bytes', 'max_rss_bytes'])
+    require_(staged.schema_version === 3 && staged.release_id === id.release_id && staged.result === 'staged'
       && staged.index_sha256 === state.index_sha256 && staged.plan_sha256 === state.storage_plan.plan_sha256
+      && staged.transfer_plan_sha256 === state.transfer_plan.transfer_plan_sha256
+      && Number.isSafeInteger(staged.max_rss_bytes) && staged.max_rss_bytes > 0
       && Number.isSafeInteger(staged.allocated_bytes) && staged.allocated_bytes >= 0
       && staged.allocated_bytes <= Number(budget), 'Staging identity mismatch')
+    state.staged = staged
     state.validated = activate(t, id, expected, 'validated')
     state.phase = 'validated'
     save(stateFile, state)
@@ -647,4 +608,4 @@ if (require.main === module) {
 }
 module.exports = { checkReceipt, inspect, transport, quote, prepare, publish, recover, rollback, overlay,
   captureOverlay, applyOverlay, superviseCapture, captureWorker,
-  readiness, baseline, checkInventory, publishCover, storagePlan, verifyGateway, abortStage }
+  readiness, baseline, checkInventory, publishCover, storagePlan, transferPlan, verifyGateway, abortStage }

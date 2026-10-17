@@ -42,6 +42,7 @@ const https = require('https')
 const http = require('http')
 
 const { fetchJson } = require('./lib/fetchJson')
+const { capturedTravelReaderFromArgs } = require('./lib/capturedTravelDetails')
 const { mapWithConcurrency } = require('./lib/concurrency')
 const {
   BUILD_FETCH_RATE_PER_SEC,
@@ -359,6 +360,8 @@ function log(...parts) {
 }
 
 async function main() {
+  const capturedRead = capturedTravelReaderFromArgs(args, SITE, fetchJson)
+  const readJson = capturedRead || fetchJson
   const families = FULL ? FULL_FAMILIES : RISKY_FAMILIES
   const limit = travelLimit()
 
@@ -367,7 +370,7 @@ async function main() {
 
   const rows = await readPagedList({
     fetchPage: (page, pageSize) =>
-      fetchJson(`${SITE}/api/travels/?page=${page}&perPage=${pageSize}`, { timeoutMs: REQUEST_TIMEOUT_MS }),
+      readJson(`${SITE}/api/travels/?page=${page}&perPage=${pageSize}`, { timeoutMs: REQUEST_TIMEOUT_MS }),
     pageSize: TRAVELS_PER_PAGE,
   })
   const ids = rows.map((row) => row?.id).filter((id) => Number.isFinite(Number(id)))
@@ -384,6 +387,10 @@ async function main() {
     site: SITE,
     families,
     concurrency: concurrency(),
+    fetchJson: readJson,
+    // The private reader paces only real misses, including the unfiltered
+    // catalogue. Captured in-memory hits do not consume network slots.
+    ...(capturedRead ? { minIntervalMs: 0 } : {}),
   })
 
   const unreadable = perTravel.filter((item) => item.error)
@@ -405,6 +412,7 @@ async function main() {
 
   const report = {
     site: SITE,
+    ...(capturedRead ? { buildInputReuse: { ...capturedRead.stats } } : {}),
     scannedTravels: scanIds.length,
     catalogTravels: ids.length,
     families: [...families],
@@ -512,6 +520,8 @@ function printReport(report) {
       `кадров: ${report.checkedMedia} (уникальных адресов: ${report.checkedUniqueMedia}, ` +
       `проб по сети: ${report.checkedProbes ?? report.checkedUniqueMedia})`,
   )
+
+  if (report.buildInputReuse) console.log(`   build inputs: ${report.buildInputReuse.reused_details} raw details reused, ${report.buildInputReuse.fetched_requests} live API requests`)
 
   printItems('❌ Не отдаётся (битые картинки в тексте)', report.broken)
   printItems('❌ Фото точки, которой в маршруте нет (умрёт при следующей правке)', report.dangling)

@@ -30,6 +30,7 @@
 const https = require('https')
 const http = require('http')
 
+const { capturedTravelReaderFromArgs } = require('./lib/capturedTravelDetails')
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText')
 const { mapWithConcurrency } = require('./lib/concurrency')
 const {
@@ -1193,10 +1194,11 @@ async function scanArticleBodyLadders(softFetch, travels) {
 }
 
 async function collectTargets() {
+  const readJson = capturedTravelReaderFromArgs(args, SITE, fetchJson) || fetchJson
   // Молчаливый catch тут опасен: пустой список целей выглядит как «нечего
   // проверять», хотя причина — недоступный API. Причину всегда печатаем.
   const softFetch = (url) =>
-    fetchJson(url).catch((error) => {
+    readJson(url).catch((error) => {
       console.error(`⚠️  Источник целей недоступен: ${url} — ${error instanceof Error ? error.message : error}`)
       return null
     })
@@ -1223,7 +1225,7 @@ async function collectTargets() {
     console.error(`${notice.severity === 'warning' ? '⚠️ ' : 'ℹ️ '} ${notice.message}`)
   }
 
-  return { targets, travels, softFetch, notices }
+  return { targets, travels, softFetch, notices, buildInputReuse: readJson.stats }
 }
 
 function withWidth(url, width) {
@@ -1240,6 +1242,7 @@ function printSummary(summary) {
 
   // Уведомления уходят в stderr ещё до проб, а итог — в stdout: без этого хвоста
   // «Проверено семейств: 5» читается как полный набор (#1955).
+  if (summary.buildInputReuse) console.log(`   build inputs: ${summary.buildInputReuse.reused_details} raw details reused, ${summary.buildInputReuse.fetched_requests} live API requests`)
   const absentFamilies = summary.targetNotices.map((notice) => notice.family)
   console.log(
     `\n📊 Проверено семейств: ${summary.totalTargets}` +
@@ -1351,7 +1354,7 @@ async function main() {
     }
   }
 
-  const { targets, travels, softFetch, notices } = await collectTargets()
+  const { targets, travels, softFetch, notices, buildInputReuse } = await collectTargets()
   if (targets.length === 0) {
     console.error('❌ Публичный API не отдал ни одного медиа-URL — проверять нечего, гейт считается упавшим')
     process.exit(1)
@@ -1398,6 +1401,7 @@ async function main() {
   const coverageIssues = coverage.issues
 
   const summary = {
+    ...(buildInputReuse ? { buildInputReuse: { ...buildInputReuse } } : {}),
     site: SITE,
     allowKnownBroken: ALLOW_KNOWN_BROKEN,
     totalTargets: checked.length,

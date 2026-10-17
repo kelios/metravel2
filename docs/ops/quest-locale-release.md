@@ -67,11 +67,26 @@ capture, its wait, late apply, live verification, sealing, postseal verification
 and private index/archive preparation. The 300-second budget, cold Metro,
 request pacing, storage ceilings and backend reserve remain unchanged. No
 mutation follows sealing.
+For v1, collect SEO inputs while cold Metro exports: complete R1 precedes API
+content reads. A private bounded0600 file in a0700 build-owned directory binds
+nonce, frontend SHA, API origin, mode and the captured R1. Offline rendering
+rejects incomplete/mismatched inputs and never falls back to HTTP. Retain the
+same late R2/preseal/postseal guards. Normal exit and trapped INT/TERM/HUP reap
+the owned collector group before env restoration or build unlock. Uncatchable
+Bash SIGKILL triggers bounded group cancellation through owner loss, including
+when FIFO EOF is not delivered; it cannot restore `.env` or promise unlock
+ordering. Inspect the interrupted build state before another build.
+Only after collection has finished may media audits start. Their network work
+overlaps offline rendering and finishes before late API guards. Each retains
+its own unfiltered catalogue, scan IDs, mandatory upload anchors and media
+probes. Successful raw same-origin numeric travel-detail responses may be read
+from this exact validated build input; missing IDs still use original paced
+live requests. No cross-run cache or concurrent independent API producers.
 After postprocessing, prepare a private per-file index (at most 8 MiB / 50,000
 paths), recording path, SHA-256, size, mode and canonical whole-second mtime.
-Archive transfer rejects symlinks, archive hardlinks, special files, traversal,
+Archive verification rejects symlinks, archive hardlinks, special files, traversal,
 duplicates, unreadable subtrees and any mismatch with that index. Each incoming
-member is hashed through one bounded temporary file. Equal content files may
+new unique member is hashed through one bounded temporary file. Equal content files may
 share an inode only within the candidate or with a sealed reader-pinned managed
 generation, and only when size, SHA-256, mode and canonical mtime all match.
 Secure no-follow parent opens and source byte/identity rechecks precede every
@@ -93,11 +108,26 @@ provenance-based recovery decision; retaining its bytes does not imply success.
 Streaming uses just one private `.storage-member.v2.tmp` beside `dist`, with no
 temporary members exposed inside the public tree.
 
+Private transfer-v3 wraps the unchanged storage-v2 plan and a deterministic
+hash-bound list of missing content representatives. The local framer verifies
+the entire prepared archive against its full index, then transmits only those
+regular bodies. Stage recomputes both plans before candidate creation, rejects
+any missing/extra/duplicate/unsafe body, writes/fsyncs each new unique body once
+and reconstructs all indexed paths with verified hardlinks. A zero-body delta
+is valid only when every key is verified in pinned sealed sources. V2 actions
+remain supported. On-disk index/plan and abort-stage-v2 provenance stay v2;
+public manifest, logical limits, physical peak/reserve and backend CAS stay
+unchanged. The full prepared archive/index remain local integrity evidence.
+
 Private state, adjacent `*.package.tar.gz`, `*.files.v2.json` and `*.plan.v2.json`
 persist outside the disposable worktree under `.codex-temp/deploy/`, alongside
-the log. They record actual SHA, ID, manifest/archive/index digests, separate
+the log. V3 publication writes `*.plan.v3.json`; `state.storage_plan` remains v2
+and separate `state.transfer_plan`/stage receipt bind the v3 wrapper hash.
+The private v3 stage receipt records the staging process's actual peak RSS in
+`max_rss_bytes`; this diagnostic does not alter resource admission or limits.
+They record actual SHA, ID, manifest/archive/index digests, separate
 logical/physical inventory, the peak plan, receipts and failure/actual-pointer
-evidence. A bounded local `*.stage-v2` frame is removed after transfer. On the
+evidence. A bounded local `*.stage-v3` frame is removed after transfer. On the
 server, index/plan provenance lives beside `dist`, never inside public dist.
 Older prepared state without a v2 index requires fresh preparation with current
 tooling; publication does not guess its storage needs or relax the budget.
@@ -123,6 +153,11 @@ are required: a config file alone cannot establish that workers reloaded, and
 one response alone cannot establish the complete canonical configuration.
 Missing headers, legacy static handling, a mismatched config, redirects,
 network failures and 5xx stop before generation retention or copying.
+Canonical backend config must also reject direct `/static/dist` and
+`/static/quest-seo-releases` aliases, owned `/static/legacy-2363-` backup paths
+and `/static/.quest-seo-` state, including normalized equivalents. They cannot
+bypass live eligibility or expose unactivated/retained HTML. Ordinary static
+quest media and Expo assets remain positive controls.
 
 Validate-only is not activation. Check exact receipt keys/schema/result, ID,
 SHA, actual manifest digest, prior ID, `static/dist` and relative release root.

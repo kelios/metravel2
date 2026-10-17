@@ -5,7 +5,7 @@ import { makeTempDir, removeDir, runCli } from './cli-test-utils'
 
 const { checkReceipt, prepare, publish, recover, quote, overlay, captureOverlay, applyOverlay,
   readiness, baseline, checkInventory, publishCover, abortStage } = require('@/scripts/quest-seo-operation')
-const { sha256 } = require('@/scripts/lib/questSeoContract')
+const { sha256, canonicalJson } = require('@/scripts/lib/questSeoContract')
 const fixtureManifest = fs.readFileSync(path.resolve('__tests__/fixtures/questSeoV1/quest-seo-manifest.v1.json'), 'utf8')
 const manifest = JSON.parse(fixtureManifest)
 const candidate = { release_id: manifest.release_id, frontend_sha: manifest.frontend_sha, manifest_sha256: sha256(fixtureManifest) }
@@ -75,19 +75,27 @@ function remote(options: { failure?: string; gateway?: Record<string, unknown>; 
         preserved: [current.release_id], removed: [], remaining_bytes: 100, remaining_allocated_bytes: 100 })
       if (action === 'inventory-v2') return JSON.stringify({ schema_version: 2, release_count: 1, total_bytes: 3000000000,
         allocated_bytes: 100, budget_bytes: Number(args[0]) })
-      if (action === 'storage-plan-v2') {
+      if (action === 'transfer-plan-v3') {
         const index = JSON.parse(transportOptions.input.toString()), incremental = 100, directories = 4096, temporary = 4096, privateBytes = 8 * 1024 ** 2
         const peak = 100 + incremental + directories + temporary + privateBytes
-        return JSON.stringify({ schema_version: 2, expected_current: args[0] === 'none' ? null : args[0], index_sha256: sha256(transportOptions.input),
+        const plan: Record<string, any> = { schema_version: 2, expected_current: args[0] === 'none' ? null : args[0], index_sha256: sha256(transportOptions.input),
           budget_bytes: Number(args[1]), reserve_bytes: Number(args[2]), logical_bytes: index.files.reduce((sum: number, row: any) => sum + row.size, 0),
           physical_bytes: 100, incremental_bytes: incremental, directory_allowance_bytes: directories, temporary_bytes: temporary,
-          private_index_bytes: privateBytes, peak_bytes: peak, required_free_bytes: peak - 100 + Number(args[2]), sources_sha256: 'e'.repeat(64), plan_sha256: 'f'.repeat(64) })
+          private_index_bytes: privateBytes, peak_bytes: peak, required_free_bytes: peak - 100 + Number(args[2]), sources_sha256: 'e'.repeat(64) }
+        plan.plan_sha256 = sha256(canonicalJson(plan))
+        const first = new Map()
+        for (const row of index.files.sort((a: any, b: any) => a.path < b.path ? -1 : 1)) {
+          const key = canonicalJson([row.sha256, row.size, row.mode, row.mtime])
+          if (!first.has(key)) first.set(key, row.path)
+        }
+        const transfer = { schema_version: 3, storage_plan: plan, required_paths: [...first.values()].sort() }
+        return JSON.stringify({ ...transfer, transfer_plan_sha256: sha256(canonicalJson(transfer)) })
       }
-      if (action === 'stage-v2') {
+      if (action === 'stage-v3') {
         const frame = fs.readFileSync(transportOptions.stdio[0]), indexLength = frame.readUInt32BE(0), planLength = frame.readUInt32BE(4)
-        const plan = JSON.parse(frame.subarray(8 + indexLength, 8 + indexLength + planLength).toString())
-        return JSON.stringify({ schema_version: 2, result: 'staged', release_id: args[0], index_sha256: plan.index_sha256,
-          plan_sha256: plan.plan_sha256, allocated_bytes: 200 })
+        const transfer = JSON.parse(frame.subarray(8 + indexLength, 8 + indexLength + planLength).toString()), plan = transfer.storage_plan
+        return JSON.stringify({ schema_version: 3, result: 'staged', release_id: args[0], index_sha256: plan.index_sha256,
+          plan_sha256: plan.plan_sha256, transfer_plan_sha256: transfer.transfer_plan_sha256, allocated_bytes: 200, max_rss_bytes: 123456 })
       }
       if (action === 'abort-stage-v2') return JSON.stringify({ schema_version: 2, result: 'aborted', release_id: args[0],
         index_sha256: args[2], plan_sha256: args[3] })
@@ -128,17 +136,32 @@ describe('normal managed publication orchestration', () => {
       publish(r.t, p.dist, p.file, jest.fn())
       const state = JSON.parse(fs.readFileSync(p.file, 'utf8'))
       expect(state.phase).toBe('ready')
-      expect(r.operations).toEqual(['inspect', 'gateway', 'retain-v2', 'inventory-v2', 'storage-plan-v2', 'stage-v2', 'validate', 'activate', 'cover'])
+      expect(r.operations).toEqual(['inspect', 'gateway', 'retain-v2', 'inventory-v2', 'transfer-plan-v3', 'stage-v3', 'validate', 'activate', 'cover'])
       expect(r.current().release_id).toBe(candidate.release_id)
       expect(fs.statSync(p.file).mode & 0o777).toBe(0o600)
       expect(fs.statSync(`${p.file}.package.tar.gz`).mode & 0o777).toBe(0o600)
       expect(fs.statSync(`${p.file}.files.v2.json`).mode & 0o777).toBe(0o600)
-      expect(fs.existsSync(`${p.file}.stage-v2`)).toBe(false)
+      expect(fs.existsSync(`${p.file}.stage-v3`)).toBe(false)
       expect(state.inventory.total_bytes).toBeGreaterThan(Number(process.env.QUEST_SEO_MANAGED_MAX_BYTES))
       expect(state.storage_plan.peak_bytes).toBeLessThan(Number(process.env.QUEST_SEO_MANAGED_MAX_BYTES))
       expect(state.storage_plan.reserve_bytes).toBe(1536 * 1024 ** 2)
+      expect(state.staged.max_rss_bytes).toBe(123456)
       expect(state.gateway_probe_path).toBe(gatewayReceipt.probe_path)
       expect(state.gateway).toEqual(gatewayReceipt)
+    } finally { removeDir(root) }
+  })
+  it.each([0, -1, 1.5, null, '123456'])('refuses malformed peak RSS %j before validation or activation', maxRss => {
+    const root = makeTempDir('quest-e-rss-refusal-')
+    try {
+      const p = prepared(root), r = remote(), operation = r.t.operation
+      r.t.operation = (action: string, args: string[], options?: any) => {
+        const raw = operation(action, args, options)
+        return action === 'stage-v3' ? JSON.stringify({ ...JSON.parse(raw), max_rss_bytes: maxRss }) : raw
+      }
+      expect(() => publish(r.t, p.dist, p.file, jest.fn())).toThrow('generations retained')
+      expect(r.operations).not.toContain('validate')
+      expect(r.operations).not.toContain('activate')
+      expect(r.current()).toEqual(prior)
     } finally { removeDir(root) }
   })
   it.each(['validate', 'before-rename', 'after-rename'])('retains generations and actual-pointer evidence on %s failure', (failure) => {
@@ -200,7 +223,7 @@ describe('normal managed publication orchestration', () => {
           fs.writeFileSync(p.file, JSON.stringify(state))
         }
         expect(() => publish(r.t, p.dist, p.file, jest.fn())).toThrow()
-        expect(r.operations).not.toContain('stage-v2')
+        expect(r.operations).not.toContain('stage-v3')
         if (condition === 'archive' || condition === 'index') expect(r.operations).toEqual([])
       } finally { removeDir(root) }
     }
@@ -225,7 +248,7 @@ describe('normal managed publication orchestration', () => {
       fs.writeFileSync(p.file, JSON.stringify(state))
       process.env.QUEST_SEO_OWNER_MAINTENANCE = '1'
       expect(() => baseline(r.t, p.file, jest.fn())).toThrow('quiesce and move')
-      expect(r.operations).not.toContain('stage-v2')
+      expect(r.operations).not.toContain('stage-v3')
     } finally {
       if (original === undefined) delete process.env.QUEST_SEO_OWNER_MAINTENANCE; else process.env.QUEST_SEO_OWNER_MAINTENANCE = original
       removeDir(root)
@@ -349,7 +372,7 @@ exec(compile(code,'<emitted-gateway>','exec'))
       const ruRemote = remote({ failure: 'validate' })
       expect(() => publish(ruRemote.t, ru.dist, ru.file, jest.fn())).toThrow('source drift')
       expect(ruRemote.operations).not.toContain('gateway')
-      expect(ruRemote.operations).toContain('stage-v2')
+      expect(ruRemote.operations).toContain('stage-v3')
       expect(JSON.parse(fs.readFileSync(ru.file, 'utf8')).gateway_probe_path).toBeUndefined()
     } finally { removeDir(root); removeDir(ruRoot) }
   })
@@ -364,8 +387,8 @@ exec(compile(code,'<emitted-gateway>','exec'))
       fs.writeFileSync(p.file, JSON.stringify(state))
       r.t.operation = (action: string, args: string[], options?: any) => {
         if (action === 'inspect') { r.operations.push(action); return JSON.stringify({ schema_version: 1, kind: 'absent', current: null, previous: null }) }
-        // stage_v2 checks the received manifest's actual member set for a none-CAS baseline.
-        if (action === 'stage-v2') { r.operations.push(action); throw new Error('First v1 generation must be RU-only') }
+        // stage_v3 checks the received manifest's actual member set for a none-CAS baseline.
+        if (action === 'stage-v3') { r.operations.push(action); throw new Error('First v1 generation must be RU-only') }
         return operation(action, args, options)
       }
       process.env.QUEST_SEO_OWNER_MAINTENANCE = '1'

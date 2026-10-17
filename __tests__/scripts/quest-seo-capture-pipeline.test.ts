@@ -1,7 +1,6 @@
 /** @jest-environment node */
 import fs from 'fs'
 import path from 'path'
-import { execFileSync } from 'child_process'
 import { makeTempDir, removeDir, runCli } from './cli-test-utils'
 
 const operation = path.resolve('scripts/quest-seo-operation.js')
@@ -84,8 +83,7 @@ const timer = setInterval(() => {
 
   function assertStopped(pidFile: string) {
     const pid = fs.readFileSync(path.join(root, pidFile), 'utf8')
-    let status = ''
-    try { status = execFileSync('ps', ['-p', pid, '-o', 'stat='], { encoding: 'utf8' }).trim() } catch { /* absent */ }
+    const status = runCli('ps', ['-p', pid, '-o', 'stat='], { timeoutMs: 1000 }).stdout.trim()
     expect(status === '' || status.startsWith('Z')).toBe(true)
   }
 
@@ -172,6 +170,26 @@ const timer = setInterval(() => {
     const observed = fs.readFileSync(path.join(root, 'observed-env'), 'utf8')
     expect(observed.length).toBeGreaterThan(0)
     expect(observed.replaceAll(production, '')).toBe('')
+  }, 15000)
+
+  it('cancels a pending finish when its Bash owner dies and closes the FIFO', async () => {
+    const began = Date.now()
+    const result = run('slow', "trap - EXIT\nprintf '%s' \"$QUEST_CAPTURE_PID\" > supervisor.pid\nprintf 'finish\\n' >&9\nkill -KILL $$")
+    expect(result.status).not.toBe(0)
+    // The dead shell cannot wait; retain fixture bytes until the independent
+    // supervisor completes its bounded process-group cancellation.
+    for (const name of ['supervisor.pid', 'capture.pid', 'descendant.pid']) {
+      const pid = fs.readFileSync(path.join(root, name), 'utf8')
+      while (true) {
+        const status = runCli('ps', ['-p', pid, '-o', 'stat='], { timeoutMs: 1000 }).stdout.trim()
+        if (!status || status.startsWith('Z') || Date.now() - began >= 8000) break
+        await new Promise(resolve => setTimeout(resolve, 50))
+      }
+    }
+    expect(Date.now() - began).toBeLessThan(10000)
+    expect(fs.readFileSync(path.join(root, 'signals'), 'utf8')).toContain('descendant TERM')
+    assertStopped('supervisor.pid'); assertStopped('capture.pid'); assertStopped('descendant.pid')
+    expect(fs.readdirSync(root).filter(name => name.startsWith('state.json') && !name.includes('.control.'))).toEqual([])
   }, 15000)
 
   it('keeps one v1 live guard after the final HTML writer and apply, plus all independent package gates', () => {

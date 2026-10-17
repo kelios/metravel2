@@ -7,6 +7,7 @@ import io
 import hashlib
 import json
 import os
+import resource
 import shutil
 import struct
 from pathlib import Path, PurePosixPath
@@ -19,6 +20,7 @@ import tempfile
 MAX_FILES = 50000
 MAX_BYTES = 2 * 1024 * 1024 * 1024
 MAX_INDEX_BYTES = 8 * 1024 * 1024
+MAX_TRANSFER_PLAN_BYTES = MAX_INDEX_BYTES + 16384
 MAX_SOURCE_FILES = 100000
 BACKEND_RESERVE = 1536 * 1024 * 1024
 INDEX_NAME = '.storage-index.v2.json'
@@ -352,6 +354,115 @@ def storage_plan(package, activation, active, releases, raw, expected, budget, r
     return plan, lookup
 
 
+def transfer_plan(plan, index, lookup):
+    """v3 changes the wire set only; the durable allocation plan stays v2."""
+    known, required = set(lookup), []
+    for row in sorted(index['files'], key=lambda item: item['path']):
+        key = content_key(row)
+        if key not in known:
+            required.append(row['path'])
+            known.add(key)
+    result = {'schema_version': 3, 'storage_plan': plan, 'required_paths': required}
+    result['transfer_plan_sha256'] = hashlib.sha256(canonical(result)).hexdigest()
+    require(len(canonical(result)) <= MAX_TRANSFER_PLAN_BYTES, 'Private transfer plan exceeds bound')
+    return result
+
+
+def parse_transfer_plan(raw, index_raw):
+    require(0 < len(raw) <= MAX_TRANSFER_PLAN_BYTES, 'Private transfer plan exceeds bound')
+    value = strict_json(raw)
+    require(isinstance(value, dict) and set(value) == {'schema_version', 'storage_plan', 'required_paths', 'transfer_plan_sha256'}
+            and type(value['schema_version']) is int and value['schema_version'] == 3
+            and isinstance(value['storage_plan'], dict) and isinstance(value['required_paths'], list),
+            'Private transfer plan schema mismatch')
+    plan = value['storage_plan']
+    require(plan.get('schema_version') == 2 and plan.get('index_sha256') == hashlib.sha256(index_raw).hexdigest()
+            and plan.get('plan_sha256') == hashlib.sha256(canonical({k: v for k, v in plan.items() if k != 'plan_sha256'})).hexdigest(),
+            'Private transfer storage plan mismatch')
+    require(value['transfer_plan_sha256'] == hashlib.sha256(canonical({k: v for k, v in value.items() if k != 'transfer_plan_sha256'})).hexdigest(),
+            'Private transfer plan hash mismatch')
+    # The sender cannot know retained source bytes. It can still reject aliases,
+    # unknown paths and non-deterministic representatives before writing a frame.
+    first = {}
+    for row in sorted(parse_index(index_raw)['files'], key=lambda item: item['path']):
+        first.setdefault(content_key(row), row['path'])
+    representatives = set(first.values())
+    paths = value['required_paths']
+    require(all(isinstance(path, str) and path in representatives for path in paths)
+            and paths == sorted(set(paths)), 'Private transfer path set mismatch')
+    return value
+
+
+def verify_tar_tail(archive, compressed):
+    # Our tar writers pad one fixed record. Bound expanded padding as well as
+    # validating the gzip trailer, so an extra zero stream cannot evade limits.
+    buffered = archive.fileobj.buf
+    require(len(buffered) <= tarfile.RECORDSIZE and not any(buffered),
+            'Unexpected trailing archive content')
+    remainder = compressed.read(tarfile.RECORDSIZE - len(buffered) + 1)
+    require(len(buffered) + len(remainder) <= tarfile.RECORDSIZE and not any(remainder),
+            'Unexpected trailing archive content')
+
+
+def frame_v3(index_path, plan_path, archive_path, output):
+    """Validate the full prepared archive while streaming only new unique bodies."""
+    with file_at(index_path.parent, index_path.name) as (source, _, __):
+        raw = source.read(MAX_INDEX_BYTES + 1)
+    index = parse_index(raw)
+    with file_at(plan_path.parent, plan_path.name) as (source, _, __):
+        plan_raw = source.read(MAX_TRANSFER_PLAN_BYTES + 1)
+    plan = parse_transfer_plan(plan_raw, raw)
+    files = {row['path']: row for row in index['files']}
+    directories, required, seen = set(index['directories']), set(plan['required_paths']), set()
+    output.write(struct.pack('>II', len(raw), len(plan_raw)))
+    output.write(raw)
+    output.write(plan_raw)
+    with file_at(archive_path.parent, archive_path.name) as (source, _, __):
+        before = os.fstat(source.fileno())
+        require(before.st_size <= MAX_BYTES + MAX_FILES * 4096, 'Compressed archive exceeds transport bound')
+        with gzip.GzipFile(fileobj=source, mode='rb') as compressed, \
+                tarfile.open(fileobj=compressed, mode='r|') as archive, \
+                gzip.GzipFile(fileobj=output, mode='wb', compresslevel=1, mtime=0) as encoded, \
+                tarfile.open(fileobj=encoded, mode='w|') as filtered:
+            for member in archive:
+                relative = '/'.join(safe_parts(member.name))
+                require(relative not in seen and (member.isfile() or member.isdir()), 'Archive link/duplicate/special file refused')
+                seen.add(relative)
+                if member.isdir():
+                    require(relative in directories and member.size == 0, 'Archive directory/index mismatch')
+                    continue
+                row = files.get(relative)
+                require(row and member.size == row['size'] and member.mode == row['mode']
+                        and member.mtime == row['mtime'], 'Archive metadata/index mismatch')
+                with archive.extractfile(member) as body:
+                    class VerifiedBody:
+                        size = 0
+                        digest = hashlib.sha256()
+
+                        def read(self, size=-1):
+                            chunk = body.read(size)
+                            self.size += len(chunk)
+                            self.digest.update(chunk)
+                            return chunk
+
+                    checked = VerifiedBody()
+                    if relative in required:
+                        # Drop inherited PAX data and emit only a regular body.
+                        outgoing = tarfile.TarInfo(relative)
+                        outgoing.size, outgoing.mode, outgoing.mtime = row['size'], row['mode'], row['mtime']
+                        filtered.addfile(outgoing, checked)
+                    else:
+                        while checked.read(1024 * 1024):
+                            pass
+                    require(checked.size == row['size'] and checked.digest.hexdigest() == row['sha256'],
+                            'Archive content/index mismatch')
+            require(seen == set(files) | directories, 'Archive omitted indexed paths')
+            verify_tar_tail(archive, compressed)
+        after = os.fstat(source.fileno())
+        require(file_identity(before) == file_identity(after) and before.st_ctime_ns == after.st_ctime_ns,
+                'Prepared archive changed during filtering')
+
+
 def write_private(path, raw):
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     with os.fdopen(fd, 'wb') as stream:
@@ -440,6 +551,114 @@ def materialize(root, archive_stream, raw, lookup, plan, allocated_union, releas
                     os.unlink(temporary)
     require(seen == set(files) | directories, 'Archive omitted indexed paths')
     for directory in sorted(directories, key=lambda value: len(safe_parts(value)), reverse=True):
+        sync_directory(root / directory)
+    sync_directory(root)
+    sync_directory(root.parent)
+
+
+@contextlib.contextmanager
+def parent_at(root, relative):
+    parts = safe_parts(relative)
+    directory = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        for part in parts[:-1]:
+            following = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory)
+            os.close(directory)
+            directory = following
+        yield directory, parts[-1]
+    finally:
+        os.close(directory)
+
+
+def link_content(root, relative, row, source_entry):
+    source_root, source_relative, expected_identity = source_entry
+    with file_at(source_root, source_relative) as (source, parent, name), parent_at(root, relative) as (target_parent, target_name):
+        value, checked = stream_digest(source)
+        require(value == row['sha256'] and file_identity(checked) == expected_identity,
+                'Sealed source bytes or identity changed')
+        named = os.stat(name, dir_fd=parent, follow_symlinks=False)
+        require(file_identity(named) == file_identity(checked) and named.st_ctime_ns == checked.st_ctime_ns,
+                'Sealed source path changed')
+        os.link(name, target_name, src_dir_fd=parent, dst_dir_fd=target_parent, follow_symlinks=False)
+        linked = os.stat(target_name, dir_fd=target_parent, follow_symlinks=False)
+        require(file_identity(linked) == expected_identity, 'Linked source identity changed')
+        os.fsync(source.fileno())
+        os.fsync(target_parent)
+
+
+def materialize_v3(root, archive_stream, raw, lookup, transfer, releases):
+    index = parse_index(raw)
+    plan = transfer['storage_plan']
+    files = {row['path']: row for row in index['files']}
+    required, seen = set(transfer['required_paths']), set()
+    copied_blocks = 0
+    block = os.statvfs(releases).f_frsize
+    rounded = lambda size: ((size + block - 1) // block) * block
+    overhead = plan['physical_bytes'] + plan['directory_allowance_bytes'] + plan['private_index_bytes']
+
+    def headroom(incoming=0, temporary_blocks=0):
+        free = os.statvfs(releases)
+        require(free.f_bavail * free.f_frsize >= plan['reserve_bytes'] + incoming,
+                'Staging stopped before consuming backend reserve')
+        require(overhead + copied_blocks + temporary_blocks <= plan['budget_bytes'],
+                'Staging physical allocation exceeds owner budget')
+
+    headroom(plan['required_free_bytes'] - plan['reserve_bytes'])
+    for relative in sorted(index['directories'], key=lambda value: (len(safe_parts(value)), value)):
+        headroom(max(4096, block))
+        with parent_at(root, relative) as (parent, name):
+            os.mkdir(name, dir_fd=parent)
+    # Reading gzip through EOF verifies its CRC/trailer even after tar's end marker.
+    with gzip.GzipFile(fileobj=archive_stream, mode='rb') as compressed, tarfile.open(fileobj=compressed, mode='r|') as archive:
+        for member in archive:
+            relative = '/'.join(safe_parts(member.name))
+            require(relative in required and relative not in seen and member.isfile(),
+                    'Delta archive path/link/duplicate/special file refused')
+            seen.add(relative)
+            row = files[relative]
+            require(member.size == row['size'] and member.mode == row['mode']
+                    and member.mtime == row['mtime'], 'Delta archive metadata/index mismatch')
+            temporary = root.parent / '.storage-member.v2.tmp'
+            fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+            try:
+                digest, size = hashlib.sha256(), 0
+                with os.fdopen(fd, 'wb') as output, archive.extractfile(member) as source:
+                    remaining = member.size
+                    while remaining:
+                        chunk = source.read(min(remaining, 1024 * 1024))
+                        require(chunk, 'Truncated delta archive')
+                        headroom(len(chunk), rounded(size + len(chunk)))
+                        output.write(chunk)
+                        output.flush()
+                        size += len(chunk)
+                        headroom(temporary_blocks=os.fstat(output.fileno()).st_blocks * 512)
+                        digest.update(chunk)
+                        remaining -= len(chunk)
+                    require(size == row['size'] and digest.hexdigest() == row['sha256'], 'Delta archive content/index mismatch')
+                    os.fchmod(output.fileno(), row['mode'])
+                    os.utime(output.fileno(), ns=(row['mtime'] * 1000000000,) * 2)
+                    os.fsync(output.fileno())
+                with parent_at(root, relative) as (parent, name):
+                    # Target is absent in this exclusively owned new generation.
+                    require(not os.path.lexists(root / relative), 'Delta target already exists')
+                    os.rename(temporary, name, dst_dir_fd=parent)
+                    checked = os.stat(name, dir_fd=parent, follow_symlinks=False)
+                    copied_blocks += checked.st_blocks * 512
+                    lookup[content_key(row)] = (root, relative, file_identity(checked))
+                    os.fsync(parent)
+                headroom()
+            finally:
+                if os.path.lexists(temporary):
+                    os.unlink(temporary)
+        require(seen == required, 'Delta archive omitted required paths')
+        verify_tar_tail(archive, compressed)
+    for row in sorted(index['files'], key=lambda item: item['path']):
+        if row['path'] not in required:
+            key = content_key(row)
+            require(key in lookup, 'Delta source missing')
+            headroom()
+            link_content(root, row['path'], row, lookup[key])
+    for directory in sorted(index['directories'], key=lambda value: len(safe_parts(value)), reverse=True):
         sync_directory(root / directory)
     sync_directory(root)
     sync_directory(root.parent)
@@ -564,19 +783,30 @@ def read_exact(stream, size):
 
 
 def stage_v2(package, activation, active, releases, arguments, allocated_union):
+    return stage(package, activation, active, releases, arguments, allocated_union, version=2)
+
+
+def stage_v3(package, activation, active, releases, arguments, allocated_union):
+    return stage(package, activation, active, releases, arguments, allocated_union, version=3)
+
+
+def stage(package, activation, active, releases, arguments, allocated_union, *, version):
     release_id, expected_id, budget, reserve = arguments
     package._match(package.SLUG, release_id)
     expected = None if expected_id == 'none' else expected_id
     index_size, plan_size = struct.unpack('>II', read_exact(sys.stdin.buffer, 8))
-    require(0 < index_size <= MAX_INDEX_BYTES and 0 < plan_size <= 16384, 'Private staging frame exceeds bound')
+    require(0 < index_size <= MAX_INDEX_BYTES and 0 < plan_size <= (MAX_TRANSFER_PLAN_BYTES if version == 3 else 16384),
+            'Private staging frame exceeds bound')
     raw = read_exact(sys.stdin.buffer, index_size)
-    supplied = strict_json(read_exact(sys.stdin.buffer, plan_size))
+    plan_raw = read_exact(sys.stdin.buffer, plan_size)
+    supplied = parse_transfer_plan(plan_raw, raw) if version == 3 else strict_json(plan_raw)
     with contextlib.ExitStack() as pins:
         with package.operation_lock():
             sources = pins.enter_context(pinned_sources(package, activation, releases))
             plan, lookup = storage_plan(package, activation, active, releases, raw, expected,
                                         int(budget), int(reserve), allocated_union, sources=sources)
-            require(supplied == plan, 'Storage plan changed; rebuild plan before transfer')
+            transfer = transfer_plan(plan, parse_index(raw), lookup) if version == 3 else None
+            require(supplied == (transfer if version == 3 else plan), 'Storage plan changed; rebuild plan before transfer')
             releases.mkdir(exist_ok=True)
             release = releases / release_id
             release.mkdir()  # An unknown or partial candidate is never swept/reused.
@@ -588,7 +818,10 @@ def stage_v2(package, activation, active, releases, arguments, allocated_union):
             root = release / 'dist'
             root.mkdir()
             sync_directory(releases)
-        materialize(root, sys.stdin.buffer, raw, lookup, plan, allocated_union, releases)
+        if version == 3:
+            materialize_v3(root, sys.stdin.buffer, raw, lookup, transfer, releases)
+        else:
+            materialize(root, sys.stdin.buffer, raw, lookup, plan, allocated_union, releases)
         if expected is None:
             baseline = package.QuestSeoPackage(root, release_id, validate_all=True)
             require(all(set(cluster['members']) == {'ru'} for cluster in baseline.manifest['clusters']),
@@ -597,9 +830,14 @@ def stage_v2(package, activation, active, releases, arguments, allocated_union):
             require(activation.current_release() == expected, 'Staging completion CAS refused')
             allocated = allocated_union([releases])
             require(allocated <= plan['budget_bytes'], 'Actual managed allocation exceeds owner budget')
-        return {'schema_version': 2, 'release_id': release_id, 'result': 'staged',
-                'index_sha256': plan['index_sha256'], 'plan_sha256': plan['plan_sha256'],
-                'allocated_bytes': allocated}
+        result = {'schema_version': version, 'release_id': release_id, 'result': 'staged',
+                  'index_sha256': plan['index_sha256'], 'plan_sha256': plan['plan_sha256'],
+                  'allocated_bytes': allocated}
+        if version == 3:
+            result['transfer_plan_sha256'] = transfer['transfer_plan_sha256']
+            # Private diagnostics only: Linux reports KiB, Darwin reports bytes.
+            result['max_rss_bytes'] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * (1 if sys.platform == 'darwin' else 1024)
+        return result
 
 
 def abort_stage_v2(package, activation, active, releases, arguments):
@@ -754,6 +992,9 @@ def main():
         with archive_path.open('rb') as source:
             shutil.copyfileobj(source, sys.stdout.buffer, 1024 * 1024)
         return
+    if action == 'frame-v3':
+        frame_v3(*map(lambda value: Path(value).absolute(), arguments), sys.stdout.buffer)
+        return
     if action in ('pack', 'unpack'):
         (pack if action == 'pack' else unpack)(Path(arguments[0]).absolute())
         return
@@ -761,7 +1002,7 @@ def main():
         legacy_operation(action, arguments)
         return
     package, activation, active, releases = backend()
-    if action in ('inventory-v2', 'storage-plan-v2', 'stage-v2'):
+    if action in ('inventory-v2', 'storage-plan-v2', 'stage-v2', 'transfer-plan-v3', 'stage-v3'):
         from quests.services.seo_storage import allocated_union
     if action == 'receipt':
         from django.core.management import call_command
@@ -785,16 +1026,18 @@ def main():
                                   max_allocated_bytes=int(budget), expected_current=expected, apply=True)
         require(result['active_release_id'] == expected, 'Retention current changed')
         print(json.dumps(result))
-    elif action == 'storage-plan-v2':
+    elif action in ('storage-plan-v2', 'transfer-plan-v3'):
         expected_id, budget, reserve = arguments
         raw = sys.stdin.buffer.read(MAX_INDEX_BYTES + 1)
         with package.operation_lock(), pinned_sources(package, activation, releases) as sources:
-            plan, _ = storage_plan(package, activation, active, releases, raw,
+            plan, lookup = storage_plan(package, activation, active, releases, raw,
                                    None if expected_id == 'none' else expected_id,
                                    int(budget), int(reserve), allocated_union, sources=sources)
-            print(json.dumps(plan))
+            print(json.dumps(transfer_plan(plan, parse_index(raw), lookup) if action == 'transfer-plan-v3' else plan))
     elif action == 'stage-v2':
         print(json.dumps(stage_v2(package, activation, active, releases, arguments, allocated_union)))
+    elif action == 'stage-v3':
+        print(json.dumps(stage_v3(package, activation, active, releases, arguments, allocated_union)))
     elif action == 'abort-stage-v2':
         print(json.dumps(abort_stage_v2(package, activation, active, releases, arguments)))
     elif action == 'cover':

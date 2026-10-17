@@ -46,6 +46,11 @@ QUEST_CAPTURE_PID=''
 QUEST_CAPTURE_CONTROL=''
 QUEST_CAPTURE_LOG=''
 QUEST_CAPTURE_NONCE=''
+SEO_INPUT_PID=''
+SEO_INPUT_CONTROL=''
+SEO_INPUT_LOG=''
+SEO_INPUT_NONCE=''
+SEO_INPUT_ARGS=()
 
 # Время этапов (#2013). Выкат дорос до ~15 минут незаметно: длительность этапов
 # нигде не печаталась. Каждый этап закрывается строкой «⏱ этап: N с», а на
@@ -74,20 +79,21 @@ print_stage_report() {
   echo "⏱  Итого: ${SECONDS} с"
 }
 
-# Медиа-проверки прода — в фоне, пока Metro собирает бандл (#2013). Обе смотрят
+# Медиа-проверки прода — в фоне экспорта (legacy) или offline SEO (v1). Обе смотрят
 # не выкатываемый фронтенд, а медиа из прод-API: `post-deploy-media-check.js`
 # сверяет вес, кэш и ресайз по URL из `/api/travels/` и `/api/quests/` (#1195),
 # `audit-article-body-media.js` щупает картинки тел статей (#1834, #1088).
 # Выкат их результата не меняет, а в хвосте выката они добавляли 75 с. Экспорт
-# грузит локальный CPU, эти проверки — сеть; генерация SEO ждёт их конца, чтобы
-# два темповых обхода прод-API (#1966) никогда не шли одновременно. Вердикт,
+# грузит локальный CPU, эти проверки — сеть. В v1 они стартуют только после
+# завершения SEO collection и читают её raw details; свои каталоги, anchor IDs
+# и media-пробы сохраняют. Перед API-гвардами ждём их конца (#1966). Вердикт,
 # как и прежде, сборку не валит.
 start_prod_media_checks() {
   MEDIA_CHECKS_LOG="$(mktemp -t metravel-media-checks 2>/dev/null || mktemp /tmp/metravel-media-checks.XXXXXX)"
   (
-    node scripts/post-deploy-media-check.js --url https://metravel.by \
+    node scripts/post-deploy-media-check.js --url https://metravel.by ${SEO_INPUT_ARGS[@]+"${SEO_INPUT_ARGS[@]}"} \
       || echo "⚠️  Проверка медиа-контракта прода нашла замечания — посмотри: npm run test:media:postdeploy:verbose"
-    node scripts/audit-article-body-media.js --url https://metravel.by \
+    node scripts/audit-article-body-media.js --url https://metravel.by ${SEO_INPUT_ARGS[@]+"${SEO_INPUT_ARGS[@]}"} \
       || echo "⚠️  В телах статей есть битые или осиротевшие картинки — посмотри: npm run test:media:body -- --verbose"
   ) >"$MEDIA_CHECKS_LOG" 2>&1 &
   MEDIA_CHECKS_PID=$!
@@ -97,7 +103,7 @@ finish_prod_media_checks() {
   [[ -n "$MEDIA_CHECKS_PID" ]] || return 0
   wait "$MEDIA_CHECKS_PID" || true
   MEDIA_CHECKS_PID=''
-  echo "Медиа-проверки прода (шли в фоне во время экспорта):"
+  echo "Медиа-проверки прода (фоновый этап):"
   cat "$MEDIA_CHECKS_LOG"
   rm -f "$MEDIA_CHECKS_LOG"
   MEDIA_CHECKS_LOG=''
@@ -143,6 +149,38 @@ close_quest_overlay_capture() {
   return "$status"
 }
 
+# FD 8 remains writable until the owned worker has been reaped, including when
+# TERM interrupts a finish wait. Capture files stay private and build-local.
+start_seo_input_collection() {
+  SEO_INPUT_CONTROL="$(mktemp -d "${QUEST_SEO_STATE_PATH}.seo-inputs.XXXXXX")"
+  SEO_INPUT_NONCE="$(node -e "process.stdout.write(require('crypto').randomBytes(24).toString('hex'))")"
+  SEO_INPUT_LOG="$SEO_INPUT_CONTROL/collection.log"
+  mkfifo -m 600 "$SEO_INPUT_CONTROL/commands"
+  exec 8<>"$SEO_INPUT_CONTROL/commands"
+  local command
+  command="$(node -e 'process.stdout.write(JSON.stringify(process.argv.slice(1)))' \
+    "$(command -v node)" "$PWD/scripts/generate-seo-pages.js" --api https://metravel.by \
+    --collect-inputs "$SEO_INPUT_CONTROL/inputs.json" --quest-seo-input-nonce "$SEO_INPUT_NONCE" \
+    --frontend-sha "$BUILD_SOURCE_SHA" "${QUEST_SEO_ARGS[@]}")"
+  node scripts/seo-inputs-supervisor.js supervise "$command" \
+    <"$SEO_INPUT_CONTROL/commands" >"$SEO_INPUT_LOG" 2>&1 8>&- 9>&- &
+  SEO_INPUT_PID=$!
+  SEO_INPUT_ARGS=(--quest-seo-inputs "$SEO_INPUT_CONTROL/inputs.json" \
+    --quest-seo-input-nonce "$SEO_INPUT_NONCE" --frontend-sha "$BUILD_SOURCE_SHA" \
+    --quest-seo-publication-mode "$QUEST_SEO_MODE")
+}
+
+close_seo_input_collection() {
+  local command="$1" status=0
+  [[ -n "$SEO_INPUT_PID" ]] || return 0
+  printf '%s\n' "$command" >&8
+  wait "$SEO_INPUT_PID" || status=$?
+  exec 8>&-
+  SEO_INPUT_PID=''
+  cat "$SEO_INPUT_LOG"
+  return "$status"
+}
+
 # .env общий для всех параллельных сессий в этом чекауте, а apply_env копирует
 # поверх него .env.$ENV. Без возврата исходника соседняя сессия молча получала
 # прод-конфиг: 08.09.2026 прерванная сборка оставила APP_ENV=production рядом с
@@ -178,7 +216,9 @@ on_exit() {
   trap '' INT TERM HUP
   # Cancel and reap the private capture group BEFORE restoring .env or releasing
   # the enclosing build mutex. Never kill a saved background PID.
+  close_seo_input_collection cancel || true
   close_quest_overlay_capture cancel || true
+  if [[ -n "$SEO_INPUT_CONTROL" ]]; then rm -rf "$SEO_INPUT_CONTROL"; fi
   print_stage_report || true
   stop_prod_media_checks
   if [[ -n "${MEDIA_CHECKS_LOG:-}" ]]; then
@@ -684,11 +724,12 @@ echo "🔁 Старт сборки..."
 stage "зависимости"
 install_deps
 
-if [[ "$DEPLOY" == "1" && "$ENV" == "prod" ]]; then
+if [[ "$DEPLOY" == "1" && "$ENV" == "prod" && "$QUEST_SEO_MODE" == "legacy" ]]; then
   start_prod_media_checks
 fi
 if [[ "$QUEST_SEO_MODE" != "legacy" ]]; then
   start_quest_overlay_capture
+  start_seo_input_collection
 fi
 
 stage "экспорт Metro"
@@ -712,9 +753,21 @@ if [[ -n "$QUEST_CAPTURE_PID" ]]; then
   close_quest_overlay_capture finish
 fi
 
+if [[ -n "$SEO_INPUT_PID" ]]; then
+  stage "quest v1: ожидание SEO-данных (фон Metro)"
+  close_seo_input_collection finish
+  # The collector is reaped before a media audit can produce API requests.
+  # Audits keep their own full catalogue/mandatory upload anchors. Their network
+  # overlaps only the offline renderer, and is finished before API guards.
+  if [[ "$DEPLOY" == "1" && "$ENV" == "prod" ]]; then start_prod_media_checks; fi
+fi
 stage "генерация SEO-страниц"
 echo "Генерация SEO-страниц..."
-node scripts/generate-seo-pages.js --dist "dist/$ENV" --api https://metravel.by ${QUEST_SEO_ARGS[@]+"${QUEST_SEO_ARGS[@]}"}
+node scripts/generate-seo-pages.js --dist "dist/$ENV" --api https://metravel.by ${QUEST_SEO_ARGS[@]+"${QUEST_SEO_ARGS[@]}"} ${SEO_INPUT_ARGS[@]+"${SEO_INPUT_ARGS[@]}"}
+if [[ -n "$MEDIA_CHECKS_PID" ]]; then
+  stage "медиа-проверки прода (фон offline SEO, ждём конца)"
+  finish_prod_media_checks
+fi
 
 stage "проверки статики"
 
@@ -808,7 +861,7 @@ if [[ "$DEPLOY" == "1" ]]; then
     echo "Пост-деплой проверка SEO на проде..."
     # Не валит билд (деплой уже выполнен) — только сигнализирует о замечаниях.
     # Проверки медиа прода (#1195, #1834, #1088) выкатываемый HTML не читают и
-    # прошли в фоне во время экспорта — см. start_prod_media_checks.
+    # прошли в фоне — см. start_prod_media_checks.
     node scripts/post-deploy-seo-check.js --url https://metravel.by --limit 30 \
       || echo "⚠️  Пост-деплой SEO-проверка нашла замечания — посмотри: npm run test:seo:postdeploy:verbose"
   fi

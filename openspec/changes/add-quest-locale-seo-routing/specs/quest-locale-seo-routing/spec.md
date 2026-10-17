@@ -113,6 +113,44 @@ Eligible quest pages SHALL offer crawlable explicit links to the active release'
 - **WHEN** a requested language has no eligible version
 - **THEN** no prefixed URL is offered as that version and the existing Russian entry remains reachable through an explicit link
 
+### Requirement: Build-scoped publication inputs
+The build SHALL capture complete R1 before API content reads and bind all
+captured SEO inputs to its nonce, frontend SHA, API origin and publication mode.
+Only a bounded, private, completely closed input SHALL be admitted by offline
+rendering. Collection MAY overlap cold Metro while preserving the aggregate
+request cap and independent media-audit coverage. Render SHALL preserve all
+existing eligibility/quality checks and final R1/R2 fencing. Normal build exit
+and trapped signals SHALL cancel and reap owned collection descendants before
+env restoration or unlock. Loss of an uncatchable Bash parent SHALL trigger
+bounded owned-group cancellation; env restoration and unlock ordering are not
+guaranteed for that uncatchable termination.
+
+#### Scenario: Captured input belongs to another or incomplete build
+- **WHEN** input is incomplete, mutated or disagrees with nonce, SHA, API origin or publication mode
+- **THEN** rendering refuses without network fallback or activating a candidate
+
+#### Scenario: Source changes after early collection
+- **WHEN** a relevant writer commits after captured R1 and before final R2
+- **THEN** the existing full revision fence rejects the release
+
+### Requirement: Missing-content transfer preserves the complete package
+The private transfer protocol MAY omit bodies already verified in sealed pinned
+sources, while retaining the full prepared archive and index as evidence. Its
+hash-bound plan SHALL derive the exact missing content set from unchanged v2
+physical accounting and metadata. Stage SHALL revalidate that plan and current
+CAS before candidate creation, accept exactly those regular bodies and
+reconstruct the complete tree through verified hardlinks without copy fallback.
+Public v1 schemas, logical limits, physical peak/reserve, reader protection,
+retention and provenance-bound interrupted-stage recovery SHALL be preserved.
+
+#### Scenario: Delta stream or source differs from its frozen plan
+- **WHEN** a body is missing, extra, duplicate, unsafe or corrupt, or source/index/current identity disagrees
+- **THEN** staging refuses, leaves the active root intact and preserves bounded recoverable provenance
+
+#### Scenario: Every content key is reusable
+- **WHEN** the exact full index is already represented in verified sealed sources
+- **THEN** a zero-body delta reconstructs an independently readable complete candidate without changing shared inode metadata
+
 ### Requirement: Coherent actual publication and withdrawal
 Actual served quest pages, sitemap membership and alternate clusters SHALL use the same eligibility resolver. Each response SHALL pin one active immutable package and one consistent live publication snapshot. Activation SHALL switch the validated package as a whole: an advertised URL must have matching HTML and HTTP 200 within that snapshot, not a generic application shell. Newly prefixed publication SHALL include only eligible canonical details, retaining existing Russian detail availability, city pages and other sitemap sections. Missing, withdrawn and below-threshold prefixed details SHALL return HTTP 404 with noindex; they SHALL NOT redirect silently to Russian or leak old indexable HTML. Requests taking their live snapshot after a withdrawal commit SHALL exclude that version from serving, sitemap, sibling alternates and visible version links, including conditional/cache requests. In-flight responses and separate requests spanning a commit may reflect different snapshots; existing translation-write success semantics SHALL NOT change. A live eligibility read failure SHALL NOT serve stale translated success or be interpreted as withdrawal.
 

@@ -338,6 +338,51 @@ exactly its1024-byte prescan window. Neither quality floors nor guards are
 disabled to reach the budget. Measure the next full preparation and publication;
 source work and isolated I/O tests do not establish production timing.
 
+### D8. Collect once and transfer only missing immutable content
+
+The D7 translated preparation passed integrity but took309.693s against the
+unchanged300s budget. Production serves the certified RU release; exposure is
+false. The owned QA fixture was removed after the refusal.
+
+Split SEO collection from rendering. A build-owned worker takes complete R1
+before API content reads, then collects existing RU, exact-language, travel and
+article inputs while cold Metro runs. Its bounded private atomically completed
+input binds nonce, frontend SHA, API origin, mode and R1. Render without HTTP or
+network pacing for in-memory data. Preserve quality, coverage, spoiler checks
+and original R1/R2. Normal exit and trapped signals cancel and reap owned
+descendants before env restoration or unlock. Uncatchable Bash death triggers
+bounded owned-group cancellation without claiming env restoration or unlock
+ordering. Media audits retain independent catalogues and mandatory anchors;
+serialize network producers under the existing request cap.
+The existing media tail is approximately75s. Reuse only captured successful raw
+same-origin numeric travel-detail responses before SEO normalization; each
+audit still reads its own catalogue, mandatory anchors and media URLs. Missing
+IDs use original paced live requests. Captured hits incur no network pacing.
+Reuse is confined to the same validated private build input, never a persistent
+cache or a substitute for an audit's independent coverage.
+
+A private transfer-v3 wrapper derives exact missing content keys from unchanged
+storage-v2 accounting and verified sealed sources. Send one regular body per
+missing key, reject missing/extra/duplicate/unsafe entries, and reconstruct the
+full index through verified hardlinks. Recompute exact plan and CAS under the
+existing lock before candidate creation. Keep v2 on-disk metadata/abort
+provenance, public manifest v1, logical limits, physical peak equation, readers,
+retention,1536MiB reserve and validation. Full prepared archive/index remain
+integrity evidence. V2 remains supported.
+
+Backend canonical Nginx denies HTTP aliases of active/candidate/retained roots,
+owned legacy backup and private journals under /static/. Exact and ^~ siblings
+precede the broad alias and use the existing blank404/noindex/no-store handler.
+Do not edit the foreign old pin or stage translations before old ingress stops.
+Only local plan/frame work may precede the closed window; stage revalidates it.
+
+Rejected alternatives: larger limits, uncoordinated network prefetchers, and
+optimizing temporary writes while uploading every byte. Risk: capture/source
+races or insufficient reuse; fail closed and keep certified RU. Rollback uses
+existing CAS. Require failure/lifecycle/byte-parity tests, independent review,
+real Nginx compilation, fresh complete prepare/publication≤300s and initial
+closed window≤180s. Estimates do not establish live timing.
+
 ## Migration Plan
 
 E #2366 release implementation (owner authorized 2026-10-11): retain the normal
