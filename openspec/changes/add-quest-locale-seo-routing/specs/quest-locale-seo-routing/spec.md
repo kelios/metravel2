@@ -206,3 +206,19 @@ direct rendering. Public serving/manifest/storage contracts SHALL not change.
 - **WHEN** a descriptor has extra keys, a missing or mismatched-id raw target, a foreign or queried URL, or normalization mismatch
 - **THEN** capture validation fails before offline rendering or publication
 - **AND** numeric section/framing sizes are recorded before size refusal without increasing the128MiB limit or exposing content
+
+### Requirement: Bounded gateway-first production transition
+The first canonical gateway configuration SHALL be enabled over the unchanged
+certified RU root with exposure false before normal online translation
+publication. Complete staging and hashing SHALL NOT consume the closed window.
+
+#### Scenario: Switch the canonical gateway while retaining Russian service
+- **GIVEN** the exact managed RU seal, false exposure and frozen runtime/config models have been checked under the rollout lease
+- **WHEN** the configuration-only window changes the Nginx config bind
+- **THEN** the RU pointer and bytes remain unchanged, canonical configuration and RU readiness pass, and prefixed/private alias requests return404
+- **AND** the whole operation stays within300s and closed window within180s without changing capacity or reserve
+
+#### Scenario: Configuration transition refuses or fails
+- **WHEN** the remaining budget or frozen runtime proof is insufficient
+- **THEN** the operation refuses before ingress interruption
+- **AND** a failure after interruption certifies the exact RU/retained pair and restores canonical configuration, preserving both packages and failure evidence without reopening old broad aliases over retained translations

@@ -199,10 +199,16 @@ QUEST_SEO_OWNER_MAINTENANCE=1 QUEST_SEO_MANAGED_MAX_BYTES="$OWNER_BYTE_BUDGET" \
 
 This requires a prepared RU-only archive, absent pointer and validate/activate
 CAS `none`; the remote transport also checks actual first-generation members.
-Preserve the backup and retain RU rollback. The first translated generation and
-canonical gateway switch belong to one coordinated D maintenance window: stop
-public Nginx access, use the exact private stage/validate/activate primitives,
-then start Nginx with the canonical config mount before restoring public access.
+Preserve the backup and retain RU rollback. First certify the unchanged managed
+RU root with exposure false, then switch only Nginx to the canonical config
+under the frozen runtime/EX lease. Verify RU readiness, false-prefix rejection
+and private-path denials before ending that bounded configuration window.
+Only then stage/validate/activate translations through the ordinary online
+publisher. Transfer and complete package hashing must not consume the closed
+window. The earlier combined translated-config operator failed its180s budget
+on17October and restored certified RU; that run is not release acceptance.
+Its executable entry is retired; use the canonical-RU-only transition followed
+by the ordinary online publisher.
 Do not use the ordinary translated publisher while the legacy config is pinned;
 its live gateway check deliberately refuses that ordering. Exposure remains a D
 decision after A/B/E acceptance. No normal command converts a legacy directory

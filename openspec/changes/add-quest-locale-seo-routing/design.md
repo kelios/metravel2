@@ -447,6 +447,33 @@ Rollback leaves the certified RU root/exposure false; no failed captured-only
 state can be activated. Fresh full-size/timing proof and the original D/E live
 acceptance remain required.
 
+### D10 — canonical gateway before online translation publication
+
+The17October D9 full prepare passed213.918s at89,388,285capture bytes. The
+combined initial window failed: stage/validate/activate consumed most of180s
+before configuration/readiness; bounded recovery restored certified RU/old
+Nginx after370.950s whole. This is failed operational evidence, not acceptance.
+Measured stage allocated919,130,112B and peakRSS141,987,840B; capacity/reserve
+were not the cause. A sealed retained translated candidate also requires the
+canonical private aliases to be denied even while the RU pointer is restored.
+
+Select a configuration-only window over the exact certified RU root/exposure
+false: verify the clean source, known current/rollback pair, frozen private
+OLD/NEXT models, app/infra and canonical compile, acquire the same EX lease,
+then change only the Nginx config bind. Keep root bytes/pointer unchanged.
+Require canonical hash, RU readiness, false-prefix404 and direct-private-path
+404 before success. Full preflight stays outside ingress interruption; refuse
+before stop without sufficient remaining budget. Recovery certifies the exact
+RU/retained pair and starts canonical Nginx; an old broad alias cannot be
+reopened while a translated package remains retained. Keep whole300s/closed180s
+unchanged.
+
+Next use normal online v3 publication with a fresh full build and owned canary;
+no old-pin translated publisher or reuse of failed acceptance is permitted.
+Reject increasing time/resource bounds or omitting integrity checks. Validate
+the pure phase/recovery cases and independently review the frozen operator
+before execution; remeasure normal whole publication and original live gates.
+
 ## Validation Plan
 
 Planning: `openspec validate add-quest-locale-seo-routing --type change --strict`, `npm run audit:prompts`, evidence-backed baseline, independent architecture review. Owner acceptance is not inferred from green validators.
