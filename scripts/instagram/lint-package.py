@@ -14,6 +14,14 @@
         ответ, снимается строкой `lint-allow: F10 <слово> — <причина>` в package.md;
   F11 — reel.mp4 длится 15–40 с; тишина допустима (если есть ffprobe);
   F2  — титры Reel из spec.json держатся ≥ 1,5 с + 0,3 с на слово и не длиннее ~7 слов;
+        слайд карусели (spec.json) — не больше 4 предложений и 50 слов тела (без кикера и
+        заголовка): длиннее — текстовая стена, которую с телефона не читают (замер 18.10.2026:
+        принятые слайды 28–49 слов, отвергнутые редактором 60–82);
+  V3  — при строке «Состав поездки: мы …» глагол похода в единственном числе («я прошла»,
+        «стартовала», «ночевала») на слайдах, в подписи и story.md — поход вдвоём рассказан от
+        «я»; снимается строкой `lint-allow: V3 <слово> — <причина>` (Юля реально была одна в
+        этом эпизоде); глаголы рассказа («рассказываю», «покажу») и чувства («я давно хотела»)
+        не ловятся — рассказчик по V3 Юля;
   R27 — rights.json связывает конечные файлы и локальные доказательства прав через SHA-256;
   B1  — запрещённые по Беларуси источники, общий список
         scripts/content-source-denylist.json (тот же, что у scan-content-sources.js);
@@ -61,7 +69,20 @@ HASHTAG_RE = re.compile(r'(?<![\w#])#[\w]+', re.U)
 QUEST_ID_RE = re.compile(r'(?:quest_id\s*[=:]\s*[`"\']?|by-quest-id/)([a-z0-9][a-z0-9-]+)', re.I)
 # Адрес квеста по F7 — metravel.by/quests/<city_id>/<quest_id>: квест в пакете находится и без строки quest_id.
 QUEST_URL_RE = re.compile(r'\bquests/\d+/([a-z0-9][a-z0-9-]+)', re.I)
-ALLOW_RE = re.compile(r'^\s*lint-allow:\s*(F10)\s+(.+?)\s+—\s+\S', re.M)
+ALLOW_RE = re.compile(r'^\s*lint-allow:\s*(F10|V3)\s+(.+?)\s+—\s+\S', re.M)
+SLIDE_BODY_KEYS = ('subtitle', 'text', 'note', 'items', 'points')
+SLIDE_WORDS_MAX = 50
+SLIDE_SENTENCES_MAX = 4
+SENTENCE_END_RE = re.compile(r'[.!?…]+(?:\s+|$)')
+# Состав «мы …» без пометки соло: тогда поход, рассказанный от «я», — находка V3.
+TRIP_PARTY_WE_RE = re.compile(r'^\s*[-*]?\s*\**Состав поездки\**\s*:\s*\**\s*мы\b', re.M | re.I)
+TRIP_PARTY_SOLO_RE = re.compile(r'\b(?:я\s+одна|одна|соло|без\s+Серге)', re.I)
+# Глаголы похода/поездки в 1-м лице единственного числа (женский род прошедшего времени);
+# глаголы рассказа и чувств сюда не входят.
+SOLO_TRIP_VERB_RE = re.compile(
+    r'(?<![\w-])(?:сходила|ходила|прошла|пошла|стартовала|ездила|съездила|поехала|приехала|доехала|'
+    r'добралась|ночевала|заночевала|зашла|заходила|поднялась|спустилась|гуляла|погуляла|обошла|'
+    r'объехала|проехала|прилетела|улетела|долетела|доплыла|припарковалась)(?![\w-])', re.I | re.U)
 CHECKLIST_ITEMS = ['V%d' % n for n in range(1, 12)] + ['F%d' % n for n in range(1, 14)]
 TRIP_PARTY_RE = re.compile(r'^\s*[-*]?\s*\**Состав поездки\**\s*:\s*\S', re.M | re.I)
 # Пункт чек-листа: строка списка «- V1 …» или номер после «·», «;», «.» с отметкой словом, галочкой
@@ -232,7 +253,76 @@ def allowed_answers(package):
     path = os.path.join(package, 'package.md')
     if not os.path.exists(path):
         return set()
-    return {normalize_answer_text(word.strip('«»"\' ')) for _, word in ALLOW_RE.findall(read(path))}
+    return {normalize_answer_text(word.strip('«»"\' ')) for rule, word in ALLOW_RE.findall(read(path)) if rule == 'F10'}
+
+
+def lint_allows(package, rule):
+    """Слова из строк `lint-allow: <rule> <слово> — <причина>` в package.md."""
+    path = os.path.join(package, 'package.md')
+    if not os.path.exists(path):
+        return set()
+    return {word.strip('«»"\' ').lower() for found, word in ALLOW_RE.findall(read(path)) if found == rule}
+
+
+def trip_party_line(package):
+    path = os.path.join(package, 'package.md')
+    if not os.path.exists(path):
+        return ''
+    m = TRIP_PARTY_RE.search(read(path))
+    if not m:
+        return ''
+    text = read(path)
+    return text[m.start():text.find('\n', m.start()) if text.find('\n', m.start()) != -1 else len(text)]
+
+
+def check_voice_party(package, lines):
+    """V3: состав «мы …» (без «одна»/«без Сергея»), а поход рассказан от «я» — «я прошла»,
+    «стартовала», «ночевала» на слайде, в подписи или story.md."""
+    party = trip_party_line(package)
+    if not party or not TRIP_PARTY_WE_RE.search(party) or TRIP_PARTY_SOLO_RE.search(party):
+        return []
+    allowed = lint_allows(package, 'V3')
+    hits = []
+    for source, number, text in lines:
+        for m in SOLO_TRIP_VERB_RE.finditer(text):
+            if m.group(0).lower() in allowed:
+                continue
+            hits.append(finding(source, number, 'V3',
+                                'поход вдвоём («%s») рассказан от «я»: «%s» — переписать от «мы» или '
+                                'lint-allow: V3 %s — <почему Юля была одна>' % (
+                                    party.split(':', 1)[1].strip().strip('*')[:40], m.group(0), m.group(0))))
+    return hits
+
+
+def check_slide_density(package):
+    """F2 для карусели: слайд spec.json — не больше SLIDE_SENTENCES_MAX предложений и
+    SLIDE_WORDS_MAX слов тела (subtitle/text/note/items/points; кикер и заголовок не считаются)."""
+    spec = os.path.join(package, 'spec.json')
+    if not os.path.exists(spec):
+        return []
+    data = json.loads(read(spec))
+    hits = []
+    for index, slide in enumerate(data.get('slides', []) if isinstance(data, dict) else [], 1):
+        parts = []
+        for key in SLIDE_BODY_KEYS:
+            value = slide.get(key)
+            for item in (value if isinstance(value, list) else [value]):
+                if isinstance(item, dict):
+                    item = item.get('name')
+                if isinstance(item, str) and item.strip():
+                    parts.append(item.strip())
+        body = ' '.join(parts)
+        if not body:
+            continue
+        words = len(body.split())
+        sentences = len([part for part in SENTENCE_END_RE.split(body) if part.strip()])
+        where = 'spec.json слайд %02d' % index
+        if words > SLIDE_WORDS_MAX:
+            hits.append(finding(where, 0, 'F2', '%d слов на слайде, предел %d — разнести на два слайда или '
+                                'убрать лишнее в подпись' % (words, SLIDE_WORDS_MAX)))
+        if sentences > SLIDE_SENTENCES_MAX:
+            hits.append(finding(where, 0, 'F2', '%d предложений на слайде, предел %d' % (sentences, SLIDE_SENTENCES_MAX)))
+    return hits
 
 
 def check_quest_answers(package, lines, data_glob=QUEST_DATA_GLOB):
@@ -372,8 +462,12 @@ def lint_package(package, spec_path=SPEC_PATH, denylist_path=DENYLIST_PATH, data
         path = os.path.join(package, name)
         if os.path.exists(path):
             sources += [(name, n, line) for n, line in enumerate(read(path).splitlines(), 1)]
+    story_path = os.path.join(package, 'story.md')
+    story = [('story.md', n, line) for n, line in enumerate(read(story_path).splitlines(), 1)] if os.path.exists(story_path) else []
     hits = check_caption(caption)
     hits += scan(public, voice)
+    hits += check_voice_party(package, public + story)
+    hits += check_slide_density(package)
     hits += scan(public + sources, belarus)
     hits += check_quest_answers(package, public, data_glob)
     hits += check_reel(package)

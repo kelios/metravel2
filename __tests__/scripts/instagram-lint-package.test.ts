@@ -223,6 +223,47 @@ describe('instagram lint-package', () => {
     expect(lint(inline).rules).toEqual(['R18'])
   })
 
+  it('flags a trip told from «я» when the party line says «мы», unless lint-allow explains it (V3)', () => {
+    const soloCaption = CLEAN_CAPTION.replace('мы с Сергеем поехали', 'я поехала')
+    const dir = makePackage('voice-we', {
+      'caption.txt': soloCaption,
+      'story.md': 'Утром я стартовала с парковки, а потом мы шли лесом. Рассказываю по порядку.',
+    })
+    const first = lint(dir)
+    expect(first.rules).toEqual(['V3', 'V3'])
+    expect(first.hits.map((h: { source: string }) => h.source).sort()).toEqual(['caption.txt', 'story.md'])
+    expect(first.hits[0].message).toMatch(/рассказан от «я»/)
+    fs.appendFileSync(path.join(dir, 'package.md'), [
+      '', 'lint-allow: V3 поехала — Юля ехала одна, Сергей встречал на месте',
+      'lint-allow: V3 стартовала — то же', '',
+    ].join('\n'))
+    expect(lint(dir).rules).toEqual([])
+
+    const solo = makePackage('voice-solo', {
+      'caption.txt': soloCaption,
+      'package.md': CHECKLIST.replace('мы с Сергеем', 'я одна'),
+    })
+    expect(lint(solo).rules).toEqual([])
+  })
+
+  it('flags carousel slides denser than 4 sentences or 50 body words (F2)', () => {
+    const long = Array.from({ length: 51 }, (_, i) => `слово${i}`).join(' ') + '.'
+    const dir = makePackage('dense', {
+      'caption.txt': CLEAN_CAPTION,
+      'spec.json': JSON.stringify({ slides: [
+        { type: 'list', kicker: 'Старт', title: 'Парковка в Kolonia — длинный заголовок не считается', items: [long] },
+        { type: 'list', title: 'Лес', text: 'Раз. Два. Три. Четыре. Пять.' },
+        { type: 'list', title: 'Норма', text: 'Раз. Два. Три. Четыре.' },
+        { type: 'map', title: 'Карта', points: [{ name: 'Kolonia' }, { name: 'Приют PTTK, 1290 м' }] },
+      ] }),
+    })
+    const { rules, hits } = lint(dir)
+    expect(rules).toEqual(['F2', 'F2'])
+    expect(hits.map((h: { source: string }) => h.source)).toEqual(['spec.json слайд 01', 'spec.json слайд 02'])
+    expect(hits[0].message).toMatch(/51 слов на слайде, предел 50/)
+    expect(hits[1].message).toMatch(/5 предложений на слайде, предел 4/)
+  })
+
   it('requires rights evidence even for otherwise clean packages', () => {
     const dir = makePackage('no-rights', { 'caption.txt': CLEAN_CAPTION })
     fs.rmSync(path.join(dir, 'rights.json'))
