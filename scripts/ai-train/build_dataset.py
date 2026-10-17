@@ -271,7 +271,11 @@ def build(raw: Path, seed: int) -> list[dict]:
         out.append(sample(SYSTEM, "Что за квесты на metravel.by?", f"Это городские квесты-прогулки: идёшь по точкам, читаешь историю места, выполняешь задание на месте и открываешь следующий шаг. Всего {len(quests_ru)} квестов; больше всего в городах: {summary}. Каталог: {SITE}/quests", "quest_about", "qabout"))
 
     # --- negatives: places absent from the corpus
-    haystack = " ".join(t["title"] + " " + (t.get("countryName") or "") for t in travels).lower()
+    # Articles and quests alike: a quest in Japan means "no material about Japan" is false.
+    haystack = " ".join(
+        [t["title"] + " " + (t.get("countryName") or "") for t in travels]
+        + [q["title"] + " " + (q.get("city_name") or "") + " " + (q.get("country_name") or "") for q in quests_ru]
+    ).lower()
     fallback = [article_line(t) for t in travels]
     for place in NEGATIVE_PLACES:
         if place.lower() in haystack:

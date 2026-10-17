@@ -5,43 +5,66 @@
 План и карточки — `docs/LOCAL_AI_ASSISTANT_PLAN.md` § 8 (#2462, #2463, #2458,
 #2457, #2460).
 
-## Окружение (Mac M1, 16 ГБ)
+## Окружение (MacBook M5 Pro, 24 ГБ; обучение перенесено с iMac 18.10.2026)
 
-Внутренний диск Mac забит, поэтому всё живёт на APFS-образе на SSD T7.
-exFAT напрямую не годится: AppleDouble-файлы `._*.py` ломают `transformers`.
+Папка обучения вне репозитория — `~/metravel-ai` на внутреннем APFS-диске
+(нужно ~10 ГБ; exFAT напрямую не годится: AppleDouble-файлы `._*.py` ломают
+`transformers`, на iMac это решали APFS-образом `hdiutil create -fs APFS -type SPARSE`).
 
 ```bash
-hdiutil create -size 250g -fs APFS -type SPARSE -volname metravel-ai /Volumes/T7/metravel-ai.sparseimage
-hdiutil attach /Volumes/T7/metravel-ai.sparseimage      # → /Volumes/metravel-ai
-cd /Volumes/metravel-ai && uv venv venv --python 3.12 && uv pip install --python venv/bin/python mlx-lm huggingface_hub
+brew install uv llama.cpp
+mkdir -p ~/metravel-ai && cd ~/metravel-ai
+uv venv venv --python 3.12 && uv pip install --python venv/bin/python mlx-lm huggingface_hub
 venv/bin/hf download mlx-community/Qwen3.5-4B-MLX-4bit --local-dir models/Qwen3.5-4B-MLX-4bit
 ```
 
-Раскладка `/Volumes/metravel-ai`: `models/` базы, `data/raw/` экспорт,
-`data/sft/` датасет, `adapters/` результаты LoRA, `logs/` журналы и копии
-конфигов каждого запуска.
+Раскладка `~/metravel-ai`: `models/` базы, `data/raw/` экспорт, `data/sft/`
+датасет, `adapters/` результаты LoRA, `logs/` журналы, копии конфигов и отчёты
+оценки каждого запуска.
+
+### Память при обучении (mlx-lm 0.32, замер 18.10.2026)
+
+В режиме обучения линейные слои Qwen3.5 (Gated DeltaNet) идут по запасному
+пути без Metal-ядра и держат состояние рекуррентности на каждый токен для
+обратного прохода. Один пример в 1024 токена при 4–6 слоях под LoRA стоит
+~15 ГБ, при 8 слоях ~20 ГБ, батч 2 × 1024 — 27+ ГБ (лимит рабочего набора GPU
+на 24 ГБ — 18 ГБ, на 16 ГБ M1 — ещё меньше). Поэтому конфиг: батч 1, seq 1024,
+6 слоёв, без накопления градиента (два графа по 1024 токена тоже не влезают): эпоха = 7,7 тыс. шагов. Скорость — десятки токенов в секунду, полная
+эпоха — часы; Metro, colima и сборки на этом Mac во время обучения не запускать.
+Запуск под `caffeinate -i`, чтобы ноутбук не уснул. `train.sh` выставляет
+`MLX_DISABLE_COMPILE=1`: скомпилированный шаг тренера (`mx.compile`) ломает
+экономию gradient checkpointing на этих слоях — пик 20,9 ГБ вместо 15,4 и втрое
+медленнее.
 
 ## Шаги
 
 1. Экспорт корпуса (только публичный прод-API, чтение, пауза между запросами):
-   `python3 -I scripts/ai-train/export_corpus.py --out /Volumes/metravel-ai/data/raw`
+   `python3 -I scripts/ai-train/export_corpus.py --out ~/metravel-ai/data/raw` (≈10 мин)
    (`--quest-locales ru,pl,en` для переводов квестов; v0 — RU).
-2. Датасет: `python3 -I scripts/ai-train/build_dataset.py --raw …/data/raw --out …/data/sft`
+2. Датасет: `python3 -I scripts/ai-train/build_dataset.py --raw ~/metravel-ai/data/raw --out ~/metravel-ai/data/sft --chunk-chars 2600`
    → `train/valid/test.jsonl` в формате `messages` и `stats.json`. Виды
    примеров: карточки и разделы статей, плюсы/минусы/советы, подборки по
    стране/месяцу/дням, карточки/точки/финалы квестов, квесты по городу и
    стране, отказы по направлениям без материалов, «о сайте».
-3. Обучение: `AI_HOME=/Volumes/metravel-ai RUN=v0 scripts/ai-train/train.sh`
-   (конфиг `lora-qwen3.5-4b.yaml`: QLoRA rank 16 на 4-bit базе, 24 слоя,
-   seq 2048, loss только по ответу). Долго — часы; журнал `logs/train-v0.log`,
-   чекпоинты каждые 200 шагов в `adapters/metravel-llm-v0/`.
+3. Обучение: `cd ~/metravel-ai && nohup caffeinate -i env AI_HOME=$HOME/metravel-ai RUN=v0 <репо>/scripts/ai-train/train.sh &`
+   (конфиг `lora-qwen3.5-4b.yaml`: QLoRA rank 16 на 4-bit базе, 6 слоёв,
+   seq 1024, батч 1 без накопления, loss только по ответу). Долго — часы;
+   журнал `logs/train-v0.log`, чекпоинты каждые 500 шагов в
+   `adapters/metravel-llm-v0/`. Проба перед полным прогоном:
+   `… train.sh --iters 12 --steps-per-report 2 --val-batches 1 --adapter-path adapters/probe`.
 4. Проба в терминале: `scripts/ai-train/chat.sh` — чат с моделью и адаптером
    (`ADAPTER= scripts/ai-train/chat.sh` — база без адаптера для сравнения).
    Не запускать во время обучения на том же Mac. Разовый вопрос:
    `venv/bin/python -m mlx_lm generate --model models/Qwen3.5-4B-MLX-4bit --adapter-path adapters/metravel-llm-v0 --prompt "Какие квесты есть в Гродно?"`.
    В браузере модель откроется после экспорта в GGUF (#2463): `llama-server`
    даёт веб-чат на `http://127.0.0.1:8080`.
-5. Экспорт в GGUF и сервер — карточка #2463 (`mlx_lm fuse` на bf16-базу →
+5. Оценка: `AI_HOME=~/metravel-ai ~/metravel-ai/venv/bin/python scripts/ai-train/eval.py --adapter adapters/metravel-llm-v0 --out logs/eval-v0`
+   — 40 вопросов из `eval_prompts.jsonl` (18 посетителя по материалам, 10
+   негативов, 2 на польском, 10 редакционных) для базы и адаптера бок о бок;
+   автопроверка: все ссылки — реальные страницы metravel.by (по `data/raw`),
+   без чужих сайтов, честный отказ на негативах; отчёт `logs/eval-v0/report.md`
+   с колонкой для ручной оценки. Не запускать во время обучения.
+6. Экспорт в GGUF и сервер — карточка #2463 (`mlx_lm fuse` на bf16-базу →
    `llama.cpp` → Q4_K_M → контейнер `llama-server`).
 
 Данные и веса в репозиторий не попадают; секретов нет (API публичный).

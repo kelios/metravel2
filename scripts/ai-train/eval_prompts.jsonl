@@ -1,0 +1,40 @@
+{"id": "v01", "group": "visitor", "lang": "ru", "expect": "answer", "prompt": "Какие квесты есть в Гродно?"}
+{"id": "v02", "group": "visitor", "lang": "ru", "expect": "answer", "prompt": "Есть ли у вас квест по Минску для детей?"}
+{"id": "v03", "group": "visitor", "lang": "ru", "expect": "answer", "prompt": "Сколько времени занимает квест «Квест по Кракову: Вавельский дракон»?"}
+{"id": "v04", "group": "visitor", "lang": "ru", "expect": "answer", "prompt": "Что за квест «Приказ № 1: три дня Брестской крепости»?"}
+{"id": "v05", "group": "visitor", "lang": "ru", "expect": "answer", "prompt": "Какие квесты есть в Таллине?"}
+{"id": "v06", "group": "visitor", "lang": "ru", "expect": "answer", "prompt": "Что за квесты на metravel.by и как они проходят?"}
+{"id": "v07", "group": "visitor", "lang": "ru", "expect": "answer", "prompt": "Что есть на metravel.by про Хорватию?"}
+{"id": "v08", "group": "visitor", "lang": "ru", "expect": "answer", "prompt": "Куда поехать в октябре, если я в Польше?"}
+{"id": "v09", "group": "visitor", "lang": "ru", "expect": "answer", "prompt": "Есть ли маршрут по Беларуси на один день?"}
+{"id": "v10", "group": "visitor", "lang": "ru", "expect": "answer", "prompt": "Расскажи о статье «Адршпашские скалы в Чехии: где снимали Нарнию»."}
+{"id": "v11", "group": "visitor", "lang": "ru", "expect": "answer", "prompt": "Какие плюсы и минусы у поездки «Сандомир: что посмотреть за день — замок и подземелья»?"}
+{"id": "v12", "group": "visitor", "lang": "ru", "expect": "answer", "prompt": "Что посмотреть в Доломитах? Есть ли у вас маршруты по Италии?"}
+{"id": "v13", "group": "visitor", "lang": "ru", "expect": "answer", "prompt": "Куда съездить из Кракова на один день?"}
+{"id": "v14", "group": "visitor", "lang": "ru", "expect": "answer", "prompt": "Что вы писали про Маврикий?"}
+{"id": "v15", "group": "visitor", "lang": "ru", "expect": "answer", "prompt": "Какие советы даёт metravel.by по поездке «Форты Кракова: австрийские укрепления XIX века»?"}
+{"id": "v16", "group": "visitor", "lang": "ru", "expect": "answer", "prompt": "Есть ли статьи про Словакию и Татры?"}
+{"id": "v17", "group": "visitor", "lang": "ru", "expect": "answer", "prompt": "Кто ведёт metravel.by?"}
+{"id": "v18", "group": "visitor", "lang": "ru", "expect": "answer", "prompt": "Посоветуй, куда поехать в мае в Беларуси."}
+{"id": "n01", "group": "negative", "lang": "ru", "expect": "refuse", "prompt": "Есть ли на metravel.by что-нибудь про Исландию?"}
+{"id": "n02", "group": "negative", "lang": "ru", "expect": "refuse", "prompt": "Посоветуй маршрут по Таиланду на две недели."}
+{"id": "n03", "group": "negative", "lang": "ru", "expect": "refuse", "prompt": "Что посмотреть в Египте, какие экскурсии из Хургады?"}
+{"id": "n04", "group": "negative", "lang": "ru", "expect": "refuse", "prompt": "Есть ли у вас статьи про Непал и треккинг к Эвересту?"}
+{"id": "n05", "group": "negative", "lang": "ru", "expect": "refuse", "prompt": "Куда поехать на Кубе?"}
+{"id": "n06", "group": "negative", "lang": "ru", "expect": "refuse", "prompt": "Расскажи о вашем маршруте по Марокко."}
+{"id": "n07", "group": "negative", "lang": "ru", "expect": "refuse", "prompt": "Какие квесты есть в Австралии?"}
+{"id": "n08", "group": "negative", "lang": "ru", "expect": "refuse", "prompt": "Есть ли квест по Нью-Йорку?"}
+{"id": "n09", "group": "negative", "lang": "ru", "expect": "refuse", "prompt": "Что вы писали про Мексику и Канкун?"}
+{"id": "n10", "group": "negative", "lang": "ru", "expect": "refuse", "prompt": "Посоветуй отели в Шри-Ланке."}
+{"id": "p01", "group": "pl", "lang": "pl", "expect": "answer", "prompt": "Jakie questy miejskie macie w Krakowie?"}
+{"id": "p02", "group": "pl", "lang": "pl", "expect": "answer", "prompt": "Czy na metravel.by są artykuły o Tatrach słowackich?"}
+{"id": "e01", "group": "editor", "lang": "ru", "expect": "answer", "prompt": "Собери список наших статей про Беларусь на один день для подборки на главную."}
+{"id": "e02", "group": "editor", "lang": "ru", "expect": "answer", "prompt": "Какие точки маршрута в статье «GR21: пешком по Алебастровому берегу Нормандии»?"}
+{"id": "e03", "group": "editor", "lang": "ru", "expect": "answer", "prompt": "Напиши короткий анонс для соцсетей по статье «Рождественские ярмарки Польши 2026: Краков, Вроцлав, Катовице, Гданьск, Познань, Варшава — даты, адреса и советы» со ссылкой."}
+{"id": "e04", "group": "editor", "lang": "ru", "expect": "answer", "prompt": "Подбери три наши статьи для подборки «Польша осенью»."}
+{"id": "e05", "group": "editor", "lang": "ru", "expect": "answer", "prompt": "Перечисли квесты по Витебску с длительностью и уровнем сложности."}
+{"id": "e06", "group": "editor", "lang": "ru", "expect": "answer", "prompt": "Чем заканчивается квест «Квест по Гродно: королевский город над Неманом»?"}
+{"id": "e07", "group": "editor", "lang": "ru", "expect": "answer", "prompt": "Приведи начало статьи «Несвиж и Мир: расстояние и маршрут на два дня» с metravel.by."}
+{"id": "e08", "group": "editor", "lang": "ru", "expect": "answer", "prompt": "Сколько у нас статей про Италию и какие?"}
+{"id": "e09", "group": "editor", "lang": "ru", "expect": "answer", "prompt": "Что рассказывает точка 1 квеста «Квест по центру Минска: в поисках цмока»?"}
+{"id": "e10", "group": "editor", "lang": "ru", "expect": "answer", "prompt": "Какие статьи про Маврикий можно связать внутренними ссылками с «Маврикий на автомобиле: аренда и маршрут»?"}

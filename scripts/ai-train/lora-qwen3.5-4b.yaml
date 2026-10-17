@@ -1,22 +1,31 @@
 # mlx-lm LoRA config for metravel-llm v0 (Qwen3.5-4B, 4-bit base, QLoRA).
-# Run with scripts/ai-train/train.sh; paths are relative to the training volume.
+# Run with scripts/ai-train/train.sh; paths are relative to the training folder.
+#
+# Memory (mlx-lm 0.32, measured 2026-10-18 on M5 Pro 24 GB): in train mode the
+# Gated DeltaNet layers of Qwen3.5 run through the non-kernel fallback
+# (gated_delta_ops), which keeps the per-token recurrence state for backprop.
+# One 1024-token sample costs ~15 GB with 4–6 adapter layers and ~20 GB with 8;
+# batch 2 × 1024 needs 27+ GB (over the 18 GB Metal working set → OOM, same on
+# the 16 GB M1). Gradient accumulation keeps every micro-step graph until
+# mx.eval, so two 1024-token samples OOM the same way. Hence batch 1 × seq 1024,
+# 6 layers, no accumulation: one epoch = 7.7k steps.
 model: models/Qwen3.5-4B-MLX-4bit
 data: data/sft
 train: true
 fine_tune_type: lora
 optimizer: adamw
 mask_prompt: true          # loss only on assistant tokens
-num_layers: 8              # of 36 decoder layers get adapters (16/2048 and 24/2048 → Metal OOM on a loaded 16 GB M1)
-batch_size: 2
-grad_accumulation_steps: 1 # >1 keeps all micro-step graphs until mx.eval → Metal OOM on 16 GB
-iters: 3800                # ≈ 1 epoch of 7.7k samples at batch 2; resume with --resume-adapter-file
+num_layers: 6              # last 6 of 32 decoder layers (4 linear + 2 full attention); 8 → ~20 GB peak
+batch_size: 1              # one 1024-token sample ≈ 15 GB peak; batch 2 ≈ 27 GB
+grad_accumulation_steps: 1 # 2 × 1024-token samples → OOM (graphs of all micro-steps are kept)
+iters: 7700                # ≈ 1 epoch of 7.7k samples at batch 1; resume with --resume-adapter-file
 learning_rate: 5.0e-5
 max_seq_length: 1024       # dataset built with --chunk-chars 2600 so sections fit
 grad_checkpoint: true
 steps_per_report: 20
-steps_per_eval: 500
+steps_per_eval: 1000
 val_batches: 10
-save_every: 250
+save_every: 500
 adapter_path: adapters/metravel-llm-v0
 seed: 20261017
 lora_parameters:
@@ -28,4 +37,4 @@ lr_schedule:
   name: cosine_decay
   warmup: 100
   warmup_init: 1.0e-6
-  arguments: [5.0e-5, 3800, 1.0e-6]
+  arguments: [5.0e-5, 7700, 1.0e-6]

@@ -10,6 +10,11 @@ set -euo pipefail
 AI_HOME="${AI_HOME:-/Volumes/metravel-ai}"
 CONFIG="${CONFIG:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lora-qwen3.5-4b.yaml}"
 RUN="${RUN:-$(date +%Y%m%d-%H%M)}"
+# mlx-lm compiles the train step (mx.compile); for Qwen3.5 the compiled graph
+# defeats gradient checkpointing in the Gated DeltaNet fallback: peak 20.9 GB
+# vs 15.4 GB uncompiled for one 1024-token sample, and 3× slower (measured
+# 2026-10-18, mlx 0.32.4). Uncompiled fits the 18 GB Metal working set.
+export MLX_DISABLE_COMPILE="${MLX_DISABLE_COMPILE:-1}"
 cd "$AI_HOME"
 mkdir -p logs adapters
 cp "$CONFIG" "logs/train-$RUN.config.yaml"
