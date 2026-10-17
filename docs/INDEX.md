@@ -150,6 +150,9 @@ scope.
 Стратегия и append-only operational logs:
 
 - `docs/GROWTH_PLAN.md` — шестимесячный plan с baseline/review dates;
+- `docs/LOCAL_AI_ASSISTANT_PLAN.md` — предложение (17.10.2026): локальный
+  AI-помощник на данных сайта — RAG-индекс, выбор моделей, два контура
+  (редакция на Mac, подбор на сайте), ограничения прода и план по этапам;
 - `docs/ARTICLE_ATTENTION_LOG.md` — журнал article attention cycles;
 - `docs/QUEST_DEMAND_LOG.md` — журнал quest demand cycles;
 - `docs/QUEST_LEGENDS_BY_PL.md` — сводка досье легенд областных центров Беларуси
