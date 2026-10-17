@@ -15,6 +15,7 @@
 
 const crypto = require('crypto')
 const { buildQuestLocalePath } = require('../../utils/questLocaleRouting')
+const { appShellState } = require('./expoStaticShell')
 
 const LOCALES = Object.freeze(['ru', 'be', 'uk', 'pl', 'en'])
 const TRANSLATED_LOCALES = Object.freeze(LOCALES.slice(1))
@@ -458,7 +459,10 @@ function touristTrips(value, found = []) {
   return found
 }
 
-/** Stored member HTML, exactly as the backend `validate_document` reads it. */
+/**
+ * Stored member HTML, exactly as the backend `validate_document` reads it,
+ * plus the frontend-only app-shell rule for translated members (#2449).
+ */
 function memberDocumentIssues(html, { locale, canonicalPath: pathname, indexable }) {
   const issues = []
   const doc = scanHtmlDocument(html)
@@ -483,6 +487,13 @@ function memberDocumentIssues(html, { locale, canonicalPath: pathname, indexable
   const trips = doc.ldJson.flatMap((payload) => touristTrips(payload))
   if (trips.length !== 1 || trips[0].url !== canonical || trips[0].mainEntityOfPage !== canonical || trips[0].inLanguage !== locale) {
     issues.push(`expected one TouristTrip with url/mainEntityOfPage ${canonical} and inLanguage ${locale}`)
+  }
+  if (locale !== 'ru') {
+    // #2449: the RU export's `#root` renders another route in Russian; a
+    // translated member that hydrates it fails with React #418.
+    const shell = appShellState(html)
+    if (shell.hydrates) issues.push('translated member must not request Expo hydration')
+    if (shell.emptyRoots !== shell.roots) issues.push('translated member must ship an empty #root')
   }
   return { issues, doc }
 }

@@ -85,6 +85,7 @@ const {
   publishedTranslatedLocales,
 } = require('./lib/questLocalePackage');
 const { canonicalPath: questCanonicalPath, insertQuestLocaleSlots } = require('./lib/questSeoContract');
+const { disableExpoRouterHydration, emptyAppRoot } = require('./lib/expoStaticShell');
 const { scoreDetailCohort } = require('./lib/questDetailCohort');
 const {
   buildQuestCityWalkModel,
@@ -1490,12 +1491,6 @@ function injectHiddenH1(baseHtml, headingText) {
   return applyHtmlFragment(baseHtml, /<body[^>]*>/i, ssgHeading, 'after');
 }
 
-function disableExpoRouterHydration(baseHtml) {
-  const hydrateFlag = /globalThis\.__EXPO_ROUTER_HYDRATE__\s*=\s*true\s*;?/;
-  if (!hydrateFlag.test(baseHtml)) return baseHtml;
-  return baseHtml.replace(hydrateFlag, 'globalThis.__EXPO_ROUTER_HYDRATE__=false;');
-}
-
 function injectJsonLd(baseHtml, payload, marker) {
   if (!payload || typeof payload !== 'object') return baseHtml;
 
@@ -2355,7 +2350,12 @@ function buildQuestDetailPageHtml({ baseHtml, quest, bundle, route, detailLinks 
     // post-deploy-seo-check). 'article' тут было копипастой из travel-блока.
     ogType: 'website',
   });
-  if (!isRu) html = localizeQuestDocumentShell(html, ssg);
+  // #2449: `#root` of the RU export is the Russian render of the tabs quest
+  // route, while the browser renders `/{locale}/quests/…` through the web
+  // adapter of `app/[...missing].web.tsx` in the URL locale. Hydrating it always
+  // failed with React #418 and showed Russian chrome until JS replaced it, so a
+  // translated member mounts client-side; its crawlable body stays outside.
+  if (!isRu) html = emptyAppRoot(disableExpoRouterHydration(localizeQuestDocumentShell(html, ssg)));
 
   html = injectBreadcrumbJsonLd(html, {
     '@context': 'https://schema.org',

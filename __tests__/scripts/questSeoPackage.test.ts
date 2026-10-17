@@ -21,6 +21,7 @@ const {
   writeCandidateFile,
 } = require('@/scripts/lib/questLocalePackage')
 const { verifyQuestSeoPackage, listPrefixedQuestArtifacts } = require('@/scripts/lib/questSeoPackageVerify')
+const { appShellState } = require('@/scripts/lib/expoStaticShell')
 const { scoreDetailCohort } = require('@/scripts/lib/questDetailCohort')
 const gsp = require('@/scripts/generate-seo-pages')
 const { verifyQuestSeoPackageState } = require('@/scripts/verify-static-quest-seo')
@@ -39,7 +40,10 @@ const BASE_HTML = [
   '<!DOCTYPE html><html  lang="ru" dir="ltr"><head><meta charset="utf-8"/>',
   '<title>Квест | Metravel</title><meta property="og:locale" content="ru_RU"/>',
   '<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","name":"MeTravel"}]}</script>',
-  '</head><body><div id="root">Загружаем квест…</div></body></html>',
+  // As exported by Expo: the hydration flag and the RU render of the app shell (#2449).
+  '<script>globalThis.__EXPO_ROUTER_HYDRATE__=true;</script>',
+  '</head><body><div id="root"><div class="css-view"><a data-skip-link="true">Перейти к основному содержимому</a>',
+  '<div><div>Загружаем квест…</div></div></div></div></body></html>',
 ].join('')
 
 // Deterministic lowercase "words" (no digits/capitals — the depth skeleton drops those).
@@ -459,6 +463,37 @@ describe('bounded slots', () => {
     expect(doc.alternates).toEqual([])
     expect(doc.anchors).toEqual([])
     expect(JSON.parse(doc.servingScripts[0].body).versions).toEqual([])
+  })
+})
+
+describe('translated members mount client-side (#2449)', () => {
+  const route = questRouteKey(QUESTS[0])
+  const buildPl = () => contract.insertQuestLocaleSlots(gsp.buildQuestDetailPageHtml({
+    baseHtml: BASE_HTML, quest: QUESTS[0], bundle: bundle(QUESTS[0], 'pl', 2), route, ssg: createSsgTranslator(CATALOGS, 'pl'),
+  }))
+
+  it('drops the RU app render and the hydration request from translated members only', () => {
+    const ru = gsp.buildQuestDetailPageHtml({ baseHtml: BASE_HTML, quest: QUESTS[0], bundle: bundle(QUESTS[0], 'ru', 1), route })
+    expect(appShellState(ru)).toEqual({ hydrates: true, roots: 1, emptyRoots: 0 })
+    expect(ru).toContain('Загружаем квест…')
+
+    const pl = buildPl()
+    expect(appShellState(pl)).toEqual({ hydrates: false, roots: 1, emptyRoots: 1 })
+    expect(pl).not.toMatch(/Перейти к основному содержимому|Загружаем квест/)
+    expect(pl).toContain('Trasa: 2 punkty')
+  })
+
+  it('rejects a translated member that would hydrate the RU app render', () => {
+    const options = { locale: 'pl', canonicalPath: contract.canonicalPath(4, QUESTS[0].quest_id, 'pl'), indexable: true }
+    const pl = buildPl()
+    expect(contract.memberDocumentIssues(pl, options).issues).toEqual([])
+    const legacy = pl
+      .replace('__EXPO_ROUTER_HYDRATE__=false;', '__EXPO_ROUTER_HYDRATE__=true;')
+      .replace('<div id="root"></div>', '<div id="root"><div>Загружаем квест…</div></div>')
+    expect(contract.memberDocumentIssues(legacy, options).issues).toEqual([
+      'translated member must not request Expo hydration',
+      'translated member must ship an empty #root',
+    ])
   })
 })
 
