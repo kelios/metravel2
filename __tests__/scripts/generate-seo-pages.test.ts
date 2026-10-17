@@ -2807,6 +2807,46 @@ describe('#1394 build-time fetch of travel details', () => {
   });
 
   describe('fetchTravelDetail', () => {
+    it('uses the shared pure normalizer without changing its public export', () => {
+      expect(require('@/scripts/generate-seo-pages').normalizeTravelDetail).toBe(
+        require('@/scripts/lib/travelDetail').normalizeTravelDetail,
+      );
+    });
+
+    it('accepts raw data only after normalization, preserving both accepted forms', async () => {
+      const raw = { description: '<p>body</p>', rich_text: { recommendation: 'audit-only' } };
+      const onAccepted = jest.fn();
+      const normalized = await fetchTravelDetail(641, '', { apiBase, fetchJson: async () => raw, onAccepted });
+      expect(onAccepted).toHaveBeenCalledTimes(1);
+      expect(onAccepted).toHaveBeenCalledWith(`${apiBase}/api/travels/641/`, raw, normalized);
+      expect(normalized.rich_text).toBeUndefined();
+    });
+
+    it.each(['numeric', 'slug'])('propagates an acceptance hook failure from %s without falling back or wrapping it', async mode => {
+      const failure = new Error('private capture refused');
+      const calls: string[] = [];
+      const fetchJson = async (url: string) => {
+        calls.push(url);
+        if (mode === 'slug' && !url.includes('by-slug')) throw httpError(503, url);
+        return { description: '<p>body</p>' };
+      };
+      await expect(fetchTravelDetail(641, 'fixture', { apiBase, fetchJson,
+        onAccepted: async () => { throw failure; },
+      })).rejects.toBe(failure);
+      expect(calls).toHaveLength(mode === 'numeric' ? 1 : 2);
+    });
+
+    it('does not accept an invalid numeric 200, then accepts its normalized slug fallback', async () => {
+      const accepted = jest.fn();
+      const detail = await fetchTravelDetail(641, 'fixture', { apiBase,
+        fetchJson: async (url: string) => url.includes('by-slug') ? { description: 'fallback' } : ['invalid'],
+        onAccepted: accepted,
+      });
+      expect(detail.description).toBe('fallback');
+      expect(accepted).toHaveBeenCalledTimes(1);
+      expect(accepted.mock.calls[0][0]).toBe(`${apiBase}/api/travels/by-slug/fixture/`);
+    });
+
     it('нормализует ответ by-id', async () => {
       const detail = await fetchTravelDetail(641, 'usadba-bohvicev-podorosk', {
         apiBase,

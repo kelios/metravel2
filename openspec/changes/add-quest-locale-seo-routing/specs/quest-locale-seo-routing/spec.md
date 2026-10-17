@@ -184,3 +184,25 @@ Actual served quest pages, sitemap membership and alternate clusters SHALL use t
 #### Scenario: Unrelated page regression control
 - **WHEN** a quest language release is activated
 - **THEN** Russian detail canonicals, city landing aliases, country landings, the quest catalogue, scenario landing and article routes preserve their existing address contracts
+
+### Requirement: Lossless single-copy bounded build inputs
+The private build capture SHALL preserve complete source coverage within its
+existing128MiB ceiling and SHALL store an accepted numeric travel detail once.
+Normalized references and fallback values SHALL use the same pure normalizer as
+direct rendering. Public serving/manifest/storage contracts SHALL not change.
+
+#### Scenario: Accepted numeric detail is reused without a duplicate body
+- **GIVEN** a complete collection contains a normalized travel detail and its accepted canonical numeric raw response
+- **WHEN** private capture v2 is encoded
+- **THEN** the normalized slot references that exact raw response after equality validation, while all raw-only fields remain available to independent media audits
+- **AND** offline rendering reconstructs the same normalized values and byte-identical pages without HTTP
+
+#### Scenario: Numeric response fails before an accepted slug fallback
+- **WHEN** the numeric request fails or its payload fails normalization and the by-slug response succeeds
+- **THEN** the successful normalized fallback is stored inline and the failed numeric response is not reusable raw input
+- **AND** capture-hook errors propagate without being converted into a network fallback
+
+#### Scenario: Invalid private reference or excessive capture refuses publication
+- **WHEN** a descriptor has extra keys, a missing or mismatched-id raw target, a foreign or queried URL, or normalization mismatch
+- **THEN** capture validation fails before offline rendering or publication
+- **AND** numeric section/framing sizes are recorded before size refusal without increasing the128MiB limit or exposing content

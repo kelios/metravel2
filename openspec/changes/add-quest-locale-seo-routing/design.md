@@ -407,6 +407,46 @@ the separately owned D operational gate. E never edits backend/Nginx configurati
 5. In `testing`, probe production `.build-source.json`, release identity, canonical/status/language/alternates/sitemap parity, JS-disabled content and hydrated desktop/mobile behavior; then withdraw/re-publish a dedicated test translation under authorized test-content operations and observe fresh and conditional/cached responses. Use a fresh test quest rather than changing creative production copy.
 6. Rollback swaps to the retained package; live withdrawal filtering stays enforced, so rollback cannot resurrect removed translations. If routing/gateway is rolled back, first remove all prefixed exposure/links/alternates/sitemap together and retain real prefixed 404 responses; RU canonicals remain untouched. A frontend-only revert is insufficient after backend activation.
 
+## D9: Single-copy bounded private input capture
+
+The first complete D8 translated preparation on17October2026 stopped before
+publication:429travel details were fetched, but the private input payload exceeded
+the unchanged128MiB bound. Whole preparation165.449s is a failed operation, not a
+timing or package pass. The encoded size of individual sections was not recorded.
+Both normalized `travelDetails` and full `rawTravelDetails` were serialized; the
+same large body/media fields therefore occupied the capture twice.
+
+Keep the legacy in-memory eight-key collection and all source coverage. Move the
+three pure travel-detail normalization/extraction functions to one shared module.
+Record raw numeric responses only after normalization accepts them; an accepted
+callback executes outside network/fallback catches, so storage failure cannot
+masquerade as a reason to try another endpoint.
+
+Private capture envelope v2 keeps the same identity/R1/hash fields and eight
+payload keys. Its `travelDetails` values are exact one-key descriptors: `raw_url`
+references the matching canonical same-origin numeric response, or `inline`
+contains the successful normalized fallback when no accepted numeric raw exists.
+Encoding a reference requires equality with the shared normalizer's result;
+mismatch refuses rather than duplicating inline data. Missing, extra, foreign,
+queried, duplicate or mismatched-id references refuse before rendering. The full
+travel list and every quest/article/locale input stay unchanged.
+
+The capture reader validates v2 and the encoded payload hash, but returns the
+encoded view. Only the generator materializes normalized details through the
+same pure normalizer, with zero HTTP. Independent media processes consume raw
+details directly and retain their own catalogues, anchors, probes and paced
+fallback requests. Direct collection/rendering keeps its legacy normalized form.
+
+Before full-payload serialization, emit numeric per-section UTF-8 byte counts,
+payload/capture/limit bytes and raw-reference/inline counts, including exact JSON
+framing. Do not log content. Keep the existing payload headroom,128MiB physical
+capture ceiling, atomic0700/0600 publication, no-follow bounded reads, complete
+R1/R2 and late/preseal/postseal guards. Generic compression/string tables,
+partitioning, larger limits, dropped fields and render-time refetch are rejected.
+Rollback leaves the certified RU root/exposure false; no failed captured-only
+state can be activated. Fresh full-size/timing proof and the original D/E live
+acceptance remain required.
+
 ## Validation Plan
 
 Planning: `openspec validate add-quest-locale-seo-routing --type change --strict`, `npm run audit:prompts`, evidence-backed baseline, independent architecture review. Owner acceptance is not inferred from green validators.

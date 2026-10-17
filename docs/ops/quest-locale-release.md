@@ -82,6 +82,12 @@ its own unfiltered catalogue, scan IDs, mandatory upload anchors and media
 probes. Successful raw same-origin numeric travel-detail responses may be read
 from this exact validated build input; missing IDs still use original paced
 live requests. No cross-run cache or concurrent independent API producers.
+Private capture v2 stores accepted numeric travel bodies once; normalized
+travel-detail slots reference those exact raw records after shared-normalizer
+equality checks. Successful slug fallbacks remain inline when no accepted numeric
+raw exists. Only the generator materializes references; media audits read raw
+records directly. Numeric section/framing byte diagnostics precede size refusal.
+The128MiB capture limit, source completeness and all final guards remain fixed.
 After postprocessing, prepare a private per-file index (at most 8 MiB / 50,000
 paths), recording path, SHA-256, size, mode and canonical whole-second mtime.
 Archive verification rejects symlinks, archive hardlinks, special files, traversal,

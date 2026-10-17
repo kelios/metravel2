@@ -6,6 +6,7 @@ import { makeTempDir, removeDir, runCli } from './cli-test-utils'
 const contract = require('../../scripts/lib/questSeoContract')
 const capture = require('../../scripts/lib/seoInputsCapture')
 const { collectSeoInputs } = require('../../scripts/generate-seo-pages')
+const { normalizeTravelDetail } = require('../../scripts/lib/travelDetail')
 const generator = path.resolve('scripts/generate-seo-pages.js')
 const identity = { nonce: 'a'.repeat(48), frontend_sha: 'b'.repeat(40), api_origin: 'https://metravel.by', publication_mode: 'translations' }
 const quest = { quest_id: 'minsk-fixture', city_id: '4', city_name: 'Минск', city_alias: 'minsk', title: 'Контрольный маршрут', points: 1, duration_min: 60 }
@@ -33,6 +34,23 @@ function payload() {
     travels: [], travelDetails: [], rawTravelDetails: [], articles: [{ id: 42, name: 'Контрольная статья', description: 'Контроль' }],
     localizedBundles: ['be', 'uk', 'pl', 'en'].map(locale => [`${locale}/${quest.quest_id}`, bundle(locale)]) }
 }
+function completeRawDetail(id = 116) {
+  return { id, description: '<p>тело статьи</p>', media: { article_body: { gallery: [{ src: '/gallery/116/frame.webp' }] } },
+    gallery: [{ url: 'https://images.invalid/one.jpg' }], travelAddress: [{ id: 1, coord: '53.9,27.5' }],
+    coordsMeTravel: ['53.9,27.5'], countryCode: 'BY', user: { id: 1, name: 'Юля' },
+    userName: 'julia', author_name: 'Юля', authorName: 'Julia', owner_name: 'Юлия', ownerName: 'J.',
+    userId: 1, user_id: '1', user_ids: [1], userTravelsCount: 12,
+    youtube_link: 'https://www.youtube.com/watch?v=fixture', recommendation: '<p>совет</p>', plus: '<p>плюс</p>', minus: '<p>минус</p>',
+    rating: 4.5, rating_count: 3, user_rating: 5, number_days: 2, monthName: 'Май', year: 2026,
+    rich_text: { recommendation: { safe_html: '<img src="https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/fixture.jpg">' } } }
+}
+function withTravelDetails() {
+  const input = payload(), raw = completeRawDetail()
+  input.travels = [{ id: raw.id, slug: 'fixture', name: 'Поездка в Минск' }] as any
+  input.travelDetails = [[raw.id, normalizeTravelDetail(raw)]] as any
+  input.rawTravelDetails = [[`${identity.api_origin}/api/travels/${raw.id}/`, raw]] as any
+  return input
+}
 
 describe('build-local SEO input capture', () => {
   let root: string, file: string
@@ -52,6 +70,70 @@ describe('build-local SEO input capture', () => {
     expect(capture.readSeoInputs(file, identity)).toEqual(input)
     expect(() => capture.writeSeoInputs(file, identity, input)).toThrow()
     expect(capture.readSeoInputs(file, identity)).toEqual(input)
+  })
+  it('stores numeric raw once and losslessly materializes every normalizer field while retaining raw-only audit fields', () => {
+    const input = withTravelDetails()
+    capture.writeSeoInputs(file, identity, input)
+    const envelope = JSON.parse(fs.readFileSync(file, 'utf8'))
+    expect(envelope.schema_version).toBe(2)
+    expect(envelope.inputs.travelDetails).toEqual([[116, { raw_url: `${identity.api_origin}/api/travels/116/` }]])
+    expect(envelope.inputs.rawTravelDetails).toEqual(input.rawTravelDetails)
+    expect(envelope.payload_sha256).toBe(contract.sha256(JSON.stringify(envelope.inputs)))
+    const encoded = capture.readSeoInputs(file, identity)
+    expect(encoded).toEqual(envelope.inputs)
+    expect(capture.materializeTravelDetails(encoded, identity)).toEqual(input.travelDetails)
+    expect(encoded.rawTravelDetails[0][1].rich_text).toEqual(completeRawDetail().rich_text)
+    expect(Object.keys(capture.materializeTravelDetails(encoded, identity)[0][1])).toHaveLength(26)
+    expect(encoded.travelDetails).toEqual(envelope.inputs.travelDetails) // Materialization does not mutate media readers' view.
+  })
+  it('reports exact UTF-8 section, payload and envelope bytes without content', () => {
+    const input = withTravelDetails()
+    capture.writeSeoInputs(file, identity, input)
+    const logged = (console.log as jest.Mock).mock.calls.find(([line]) => line.startsWith('SEO inputs bytes: '))[0]
+    const sizes = JSON.parse(logged.slice('SEO inputs bytes: '.length))
+    const bytes = fs.readFileSync(file), envelope = JSON.parse(bytes.toString('utf8'))
+    expect(sizes.limit_bytes).toBe(128 * 1024 ** 2)
+    expect(sizes.payload_bytes).toBe(Buffer.byteLength(JSON.stringify(envelope.inputs)))
+    expect(sizes.capture_bytes).toBe(bytes.length)
+    expect(sizes.raw_ref_count).toBe(1)
+    expect(sizes.inline_count).toBe(0)
+    expect(Object.keys(sizes.section_bytes).sort()).toEqual(Object.keys(input).sort())
+    for (const [key, value] of Object.entries(envelope.inputs)) {
+      expect(sizes.section_bytes[key]).toBe(Buffer.byteLength(JSON.stringify({ [key]: value })) - 2)
+    }
+    expect(Object.values(sizes.section_bytes).reduce((sum: number, count: any) => sum + count, 9)).toBe(sizes.payload_bytes)
+    expect(logged).not.toContain('тело статьи')
+  })
+  it('refuses a normalized/raw mismatch without falling back to a duplicated inline detail', () => {
+    const input = withTravelDetails()
+    ;(input.travelDetails[0][1] as any).recommendation = '<p>different</p>'
+    expect(() => capture.writeSeoInputs(file, identity, input)).toThrow(/normalized travel detail mismatch/)
+    expect(fs.readdirSync(root)).toEqual([])
+  })
+  it.each(['missing', 'foreign', 'query', 'hash', 'id-mismatch', 'extra', 'empty', 'bad-type', 'inline-with-raw', 'duplicate-detail', 'duplicate-raw'])('rejects %s references even with a recomputed payload hash', mode => {
+    capture.writeSeoInputs(file, identity, withTravelDetails())
+    const envelope = JSON.parse(fs.readFileSync(file, 'utf8')), inputs = envelope.inputs
+    const descriptor = inputs.travelDetails[0][1]
+    if (mode === 'missing') inputs.rawTravelDetails = []
+    if (mode === 'foreign') descriptor.raw_url = 'https://other.invalid/api/travels/116/'
+    if (mode === 'query') descriptor.raw_url += '?fresh=1'
+    if (mode === 'hash') descriptor.raw_url += '#detail'
+    if (mode === 'id-mismatch') inputs.travelDetails[0][0] = 117
+    if (mode === 'extra') descriptor.inline = normalizeTravelDetail(completeRawDetail())
+    if (mode === 'empty') inputs.travelDetails[0][1] = {}
+    if (mode === 'bad-type') descriptor.raw_url = 116
+    if (mode === 'inline-with-raw') inputs.travelDetails[0][1] = { inline: normalizeTravelDetail(completeRawDetail()) }
+    if (mode === 'duplicate-detail') inputs.travelDetails.push(inputs.travelDetails[0])
+    if (mode === 'duplicate-raw') inputs.rawTravelDetails.push(inputs.rawTravelDetails[0])
+    envelope.payload_sha256 = contract.sha256(JSON.stringify(inputs))
+    fs.writeFileSync(file, JSON.stringify(envelope))
+    expect(() => capture.readSeoInputs(file, identity)).toThrow()
+    expect(() => capture.materializeTravelDetails(inputs, identity)).toThrow()
+  })
+  it('does not publish or retain a partial file after a write failure', () => {
+    jest.spyOn(fs, 'writeFileSync').mockImplementationOnce(() => { throw new Error('disk full') })
+    expect(() => capture.writeSeoInputs(file, identity, payload())).toThrow('disk full')
+    expect(fs.readdirSync(root)).toEqual([])
   })
   it.each([
     { nonce: 'c'.repeat(48) }, { frontend_sha: 'c'.repeat(40) },
@@ -137,6 +219,33 @@ describe('build-local SEO input capture', () => {
     expect(data.localizedBundles).toHaveLength(4)
     expect(fs.readdirSync(root)).toEqual([])
   })
+  it.each(['invalid-200', 'http-failure'])('keeps accepted slug fallback inline after %s and leaves numeric audit requests paced', async mode => {
+    const raw = completeRawDetail(), numeric = `${identity.api_origin}/api/travels/116/`
+    const data = await collectSeoInputs({ apiBase: identity.api_origin, candidate: true, publicationMode: 'translations',
+      pace: async () => {}, readReceipt: () => receipt(), fetchJson: async (url: string) => {
+        const parsed = new URL(url)
+        if (parsed.pathname === '/api/quests/') return [quest]
+        if (parsed.pathname.startsWith('/api/quests/by-quest-id/')) return bundle(parsed.searchParams.get('lang') || 'ru')
+        if (parsed.pathname === '/api/travels/') return [{ id: raw.id, slug: 'fixture' }]
+        if (url === numeric) { if (mode === 'http-failure') throw new Error('HTTP 503'); return ['invalid'] }
+        if (parsed.pathname === '/api/travels/by-slug/fixture/') return raw
+        if (parsed.pathname === '/api/') return { articles: '/api/articles/' }
+        if (parsed.pathname === '/api/articles/') return [{ id: 42 }]
+        throw new Error(`Unexpected fixture URL ${url}`)
+      } })
+    expect(Object.keys(data).sort()).toEqual(Object.keys(payload()).sort())
+    expect(data.travelDetails).toEqual([[116, normalizeTravelDetail(raw)]])
+    expect(data.rawTravelDetails).toEqual([])
+    capture.writeSeoInputs(file, identity, data)
+    const encoded = capture.readSeoInputs(file, identity)
+    expect(encoded.travelDetails).toEqual([[116, { inline: normalizeTravelDetail(raw) }]])
+    expect(capture.materializeTravelDetails(encoded, identity)).toEqual(data.travelDetails)
+    const pace = jest.fn(async () => {}), fetchJson = jest.fn(async () => raw)
+    const read = require('../../scripts/lib/capturedTravelDetails').createCapturedTravelReader({ file, identity, pace, fetchJson })
+    expect(await read(numeric)).toEqual(raw)
+    expect(pace).toHaveBeenCalledTimes(1)
+    expect(fetchJson).toHaveBeenCalledWith(numeric, undefined)
+  })
   it.each(['catalogue', 'ru-bundle', 'translation', 'travel-detail'])('refuses failed %s producer rather than publishing partial inputs', async mode => {
     const run = collectSeoInputs({ candidate: true, pace: async () => {}, readReceipt: () => receipt(),
       fetchJson: async (url: string) => {
@@ -156,12 +265,15 @@ describe('build-local SEO input capture', () => {
   })
 
   it('renders byte-identical complete output from captured input with zero HTTP, retaining quality and R1', () => {
-    const input = payload()
+    const input = withTravelDetails(), fallback = completeRawDetail(117)
+    input.travels.push({ id: 117, slug: 'slug-fallback', name: 'Поездка с запасным адресом' } as never)
+    input.travelDetails.push([117, normalizeTravelDetail(fallback)] as never)
     const receiptPath = path.join(root, 'receipt.cjs')
     fs.writeFileSync(receiptPath, `process.stdout.write(${JSON.stringify(JSON.stringify(receipt()))})`)
     const preload = path.join(root, 'producer.cjs')
     fs.writeFileSync(preload, `
 const input=${JSON.stringify(input)};
+const fallback=${JSON.stringify(fallback)};
 const f=require(${JSON.stringify(path.resolve('scripts/lib/fetchJson.js'))});
 f.fetchJsonOnce=f.fetchJson=async url=>{
  if(process.env.FORBID_NETWORK==='1') throw Error('HTTP must not occur while rendering');
@@ -169,6 +281,9 @@ f.fetchJsonOnce=f.fetchJson=async url=>{
  if(u.pathname==='/api/quests/')return input.quests;
  if(u.pathname.startsWith('/api/quests/by-quest-id/'))return u.searchParams.has('lang')?new Map(input.localizedBundles).get(u.searchParams.get('lang')+'/'+input.quests[0].quest_id):input.questBundles[0][1];
  if(u.pathname==='/api/travels/')return input.travels;
+ if(u.pathname==='/api/travels/116/')return input.rawTravelDetails[0][1];
+ if(u.pathname==='/api/travels/117/')return ['invalid numeric response'];
+ if(u.pathname==='/api/travels/by-slug/slug-fallback/')return fallback;
  if(u.pathname==='/api/')return {articles:'/api/articles/'};
  if(u.pathname==='/api/articles/')return input.articles;
  throw Error('Unexpected fixture URL '+url);
@@ -192,6 +307,8 @@ f.fetchJsonOnce=f.fetchJson=async url=>{
     if (collected.status !== 0) throw new Error(collected.stderr + collected.stdout)
     expect(collected.status).toBe(0)
     expect(fs.existsSync(path.join(root, 'not-exported-yet'))).toBe(false)
+    const encoded = capture.readSeoInputs(file, identity)
+    expect(encoded.travelDetails).toEqual([[116, { raw_url: `${identity.api_origin}/api/travels/116/` }], [117, { inline: normalizeTravelDetail(fallback) }]])
     const second = runCli(process.execPath, ['--require', preload, generator, '--dist', offline, '--quest-seo-candidate', path.join(root, 'offline-candidate.json'), ...options,
       '--quest-seo-inputs', file, '--quest-seo-input-nonce', identity.nonce, '--frontend-sha', identity.frontend_sha], { env: { FORBID_NETWORK: '1' }, timeoutMs: 20000 })
     if (second.status !== 0) throw new Error(second.stderr + second.stdout)
@@ -201,9 +318,59 @@ f.fetchJsonOnce=f.fetchJson=async url=>{
         ? tree(path.join(dir, name), prefix + name + '/') : { [prefix + name]: fs.readFileSync(path.join(dir, name), 'utf8') }))
     }
     expect(tree(offline)).toEqual(tree(online))
+    expect(fs.readFileSync(path.join(offline, 'travels/fixture.html'), 'utf8')).toContain('тело статьи')
+    expect(fs.readFileSync(path.join(offline, 'travels/slug-fallback.html'), 'utf8')).toContain('тело статьи')
     expect(fs.existsSync(path.join(offline, 'pl/quests/4/minsk-fixture.html'))).toBe(true)
     expect(JSON.parse(fs.readFileSync(path.join(root, 'offline-candidate.json'), 'utf8'))).toEqual(JSON.parse(fs.readFileSync(path.join(root, 'online-candidate.json'), 'utf8')))
   })
+  it('removes the large-body duplicate under the fixed 128 MiB limit and reports refusal before full serialization', () => {
+    const script = `
+const fs=require('fs'),path=require('path'),assert=require('assert');
+const capture=require(${JSON.stringify(path.resolve('scripts/lib/seoInputsCapture.js'))});
+const {normalizeTravelDetail}=require(${JSON.stringify(path.resolve('scripts/lib/travelDetail.js'))});
+const {sha256}=require(${JSON.stringify(path.resolve('scripts/lib/questSeoContract.js'))});
+const input=${JSON.stringify(payload())}, identity=${JSON.stringify(identity)};
+const body='<p>'+('body & media '.repeat(Math.ceil(70*1024**2/13))).slice(0,70*1024**2)+'</p>';
+const raw={id:116,description:body,rich_text:{recommendation:{safe_html:'audit-only'}}};
+input.travels=[{id:116,slug:'large',name:'Large fixture'}];
+input.travelDetails=[[116,normalizeTravelDetail(raw)]];
+input.rawTravelDetails=[[identity.api_origin+'/api/travels/116/',raw]];
+const legacyBytes=Object.entries(input).reduce((sum,[key,value])=>sum+Buffer.byteLength(JSON.stringify(key))+1+Buffer.byteLength(JSON.stringify(value)),9);
+assert.equal(capture.MAX_INPUT_BYTES,128*1024**2);
+assert(legacyBytes>capture.MAX_INPUT_BYTES);
+let fullSerializations=0, diagnostic;
+const stringify=JSON.stringify;
+JSON.stringify=function(value,...rest){if(value&&value.travelDetails&&value.rawTravelDetails)fullSerializations++;return stringify(value,...rest)};
+console.log=line=>{if(line.startsWith('SEO inputs bytes: '))diagnostic=JSON.parse(line.slice('SEO inputs bytes: '.length))};
+capture.writeSeoInputs(process.argv[1],identity,input);
+assert.equal(fullSerializations,1);
+const size=fs.statSync(process.argv[1]).size;
+assert.equal(diagnostic.capture_bytes,size);
+assert(size<capture.MAX_INPUT_BYTES-8192);
+const encoded=capture.readSeoInputs(process.argv[1],identity);
+assert.deepStrictEqual(encoded.travelDetails,[[116,{raw_url:identity.api_origin+'/api/travels/116/'}]]);
+const detail=capture.materializeTravelDetails(encoded,identity)[0][1];
+assert.equal(sha256(detail.description),sha256(body));
+assert.deepStrictEqual(encoded.rawTravelDetails[0][1].rich_text,raw.rich_text);
+const before=fullSerializations;
+raw.extra_raw_body=body;
+assert.throws(()=>capture.writeSeoInputs(process.argv[1]+'.oversize',identity,input),/payload exceeds bound/);
+assert.equal(fullSerializations,before);
+assert(diagnostic.payload_bytes>capture.MAX_INPUT_BYTES);
+assert.equal(diagnostic.limit_bytes,128*1024**2);
+assert.equal(diagnostic.raw_ref_count,1);
+assert.equal(diagnostic.inline_count,0);
+assert(!fs.existsSync(process.argv[1]+'.oversize'));
+assert(!fs.existsSync(process.argv[1]+'.oversize.partial'));
+process.stdout.write(stringify({legacy_bytes:legacyBytes,capture_bytes:size,limit_bytes:capture.MAX_INPUT_BYTES}));`
+    const result = runCli(process.execPath, ['-e', script, file], { timeoutMs: 30000 })
+    if (result.status !== 0) throw new Error(result.stderr + result.stdout)
+    expect(result.status).toBe(0)
+    const sizes = JSON.parse(result.stdout)
+    expect(sizes.legacy_bytes).toBeGreaterThan(128 * 1024 ** 2)
+    expect(sizes.capture_bytes).toBeLessThan(128 * 1024 ** 2 - 8192)
+    expect(sizes.limit_bytes).toBe(128 * 1024 ** 2)
+  }, 35000)
   it('reuses exact RAW detail responses while preserving independent catalogue, missing IDs and uploads anchors', async () => {
     const { createCapturedTravelReader } = require('../../scripts/lib/capturedTravelDetails')
     const bodyAudit = require('../../scripts/audit-article-body-media')

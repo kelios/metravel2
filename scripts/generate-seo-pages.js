@@ -19,7 +19,8 @@ const fs = require('fs');
 const path = require('path');
 const { loadSsgCatalogs } = require('../i18n/babel-inline-plugin');
 const { fetchJson, fetchJsonOnce, withRetries } = require('./lib/fetchJson');
-const { readSeoInputs, writeSeoInputs, validateIdentity } = require('./lib/seoInputsCapture');
+const { readSeoInputs, writeSeoInputs, validateIdentity, materializeTravelDetails } = require('./lib/seoInputsCapture');
+const { normalizeTravelDetail } = require('./lib/travelDetail');
 const {
   BUILD_FETCH_RATE_PER_SEC,
   BUILD_FETCH_MIN_INTERVAL_MS,
@@ -871,122 +872,6 @@ function buildRedirectStubHtml(toSlug) {
 `;
 }
 
-/** Fetch a single travel detail (description + gallery). */
-function extractTravelDetailAuthorFields(detail) {
-  const authorFields = {};
-
-  if (detail && typeof detail.user === 'object' && detail.user) {
-    authorFields.user = detail.user;
-  }
-
-  if (typeof detail?.userName === 'string' && detail.userName.trim()) {
-    authorFields.userName = detail.userName;
-  }
-
-  if (typeof detail?.author_name === 'string' && detail.author_name.trim()) {
-    authorFields.author_name = detail.author_name;
-  }
-
-  if (typeof detail?.authorName === 'string' && detail.authorName.trim()) {
-    authorFields.authorName = detail.authorName;
-  }
-
-  if (typeof detail?.owner_name === 'string' && detail.owner_name.trim()) {
-    authorFields.owner_name = detail.owner_name;
-  }
-
-  if (typeof detail?.ownerName === 'string' && detail.ownerName.trim()) {
-    authorFields.ownerName = detail.ownerName;
-  }
-
-  if (typeof detail?.userId !== 'undefined' && detail.userId !== null && detail.userId !== '') {
-    authorFields.userId = detail.userId;
-  }
-
-  if (typeof detail?.user_id !== 'undefined' && detail.user_id !== null && detail.user_id !== '') {
-    authorFields.user_id = detail.user_id;
-  }
-
-  const rawUserIds = typeof detail?.userIds !== 'undefined' ? detail.userIds : detail?.user_ids;
-  if (typeof rawUserIds !== 'undefined' && rawUserIds !== null && rawUserIds !== '') {
-    authorFields.userIds = rawUserIds;
-  }
-
-  if (typeof detail?.userTravelsCount !== 'undefined' && detail.userTravelsCount !== null) {
-    authorFields.userTravelsCount = detail.userTravelsCount;
-  }
-
-  return authorFields;
-}
-
-function extractTravelDetailContentFields(detail) {
-  const contentFields = {};
-
-  if (typeof detail?.youtube_link === 'string') {
-    contentFields.youtube_link = detail.youtube_link;
-  }
-
-  if (typeof detail?.recommendation === 'string') {
-    contentFields.recommendation = detail.recommendation;
-  }
-
-  if (typeof detail?.plus === 'string') {
-    contentFields.plus = detail.plus;
-  }
-
-  if (typeof detail?.minus === 'string') {
-    contentFields.minus = detail.minus;
-  }
-
-  if (typeof detail?.rating !== 'undefined' && detail.rating !== null) {
-    contentFields.rating = detail.rating;
-  }
-
-  if (typeof detail?.rating_count !== 'undefined' && detail.rating_count !== null) {
-    contentFields.rating_count = detail.rating_count;
-  }
-
-  if (typeof detail?.user_rating !== 'undefined' && detail.user_rating !== null) {
-    contentFields.user_rating = detail.user_rating;
-  }
-
-  if (typeof detail?.number_days !== 'undefined' && detail.number_days !== null) {
-    contentFields.number_days = detail.number_days;
-  }
-
-  if (typeof detail?.monthName === 'string') {
-    contentFields.monthName = detail.monthName;
-  }
-
-  if (typeof detail?.year !== 'undefined' && detail.year !== null && detail.year !== '') {
-    contentFields.year = detail.year;
-  }
-
-  return contentFields;
-}
-
-function normalizeTravelDetail(detail) {
-  // A 200 carrying something that is not a travel object would spread into an
-  // all-empty page and pass every downstream check — the same silent
-  // degradation #1394 is about, just arriving over a healthy connection.
-  if (!detail || typeof detail !== 'object' || Array.isArray(detail)) {
-    throw new Error(`unexpected detail payload: ${Object.prototype.toString.call(detail)}`);
-  }
-  return {
-    description: detail.description || '',
-    // #1116: media-манифест обязателен здесь — из него hero preload берёт тот же
-    // вариант, что запросит клиент. Без него preload уходил в клиентскую сборку
-    // (`?v=…&q=82`), расходился с LCP-`<img>` и грел лишний файл.
-    media: detail.media || null,
-    gallery: Array.isArray(detail.gallery) ? detail.gallery : [],
-    travelAddress: Array.isArray(detail.travelAddress) ? detail.travelAddress : [],
-    coordsMeTravel: Array.isArray(detail.coordsMeTravel) ? detail.coordsMeTravel : [],
-    countryCode: detail.countryCode || '',
-    ...extractTravelDetailAuthorFields(detail),
-    ...extractTravelDetailContentFields(detail),
-  };
-}
-
 /**
  * Fetch one travel detail, by id with a by-slug fallback.
  *
@@ -999,11 +884,19 @@ async function fetchTravelDetail(id, slug, deps = {}) {
   const fetchDetail = deps.fetchJson || fetchJson;
   const apiBase = deps.apiBase || API_BASE;
 
-  let idError;
+  const idUrl = `${apiBase}/api/travels/${id}/`;
+  let raw, normalized, idError;
   try {
-    return normalizeTravelDetail(await fetchDetail(`${apiBase}/api/travels/${id}/`));
+    raw = await fetchDetail(idUrl);
+    normalized = normalizeTravelDetail(raw);
   } catch (err) {
     idError = err;
+  }
+  if (!idError) {
+    // Acceptance/storage errors are not endpoint failures and must never cause
+    // a by-slug retry (nor hide an unsuccessful private capture).
+    await deps.onAccepted?.(idUrl, raw, normalized);
+    return normalized;
   }
 
   if (!slug) {
@@ -1014,9 +907,10 @@ async function fetchTravelDetail(id, slug, deps = {}) {
     throw failure;
   }
 
+  const slugUrl = `${apiBase}/api/travels/by-slug/${encodeURIComponent(slug)}/`;
   try {
-    const slugUrl = `${apiBase}/api/travels/by-slug/${encodeURIComponent(slug)}/`;
-    return normalizeTravelDetail(await fetchDetail(slugUrl));
+    raw = await fetchDetail(slugUrl);
+    normalized = normalizeTravelDetail(raw);
   } catch (slugError) {
     // Keep the status codes on the error: with a hundred failures the histogram
     // in the build gate is what tells "the limiter closed" from "an article was
@@ -1029,6 +923,8 @@ async function fetchTravelDetail(id, slug, deps = {}) {
     failure.idStatusCode = idError.statusCode;
     throw failure;
   }
+  await deps.onAccepted?.(slugUrl, raw, normalized);
+  return normalized;
 }
 
 /** Group failures by status so the first log line names the kind of incident. */
@@ -3989,10 +3885,7 @@ async function collectSeoInputs({ apiBase = API_BASE, candidate = Boolean(QUEST_
   const request = async (url) => {
     if (new URL(url).origin !== new URL(apiBase).origin) throw new Error('SEO input endpoint changed API origin');
     await pace();
-    const value = await (fetchInput || fetchJsonOnce)(url);
-    const parsed = new URL(url);
-    if (/^\/api\/travels\/[1-9][0-9]*\/$/.test(parsed.pathname) && !parsed.search && !parsed.hash) rawTravelDetails.set(url, value);
-    return value;
+    return (fetchInput || fetchJsonOnce)(url);
   };
   // Include retries and id→slug fallbacks in the same request budget.
   const read = (url) => fetchInput ? request(url) : withRetries(() => request(url), {
@@ -4134,7 +4027,14 @@ async function collectSeoInputs({ apiBase = API_BASE, candidate = Boolean(QUEST_
           console.log(`  📡 Fetched ${i + 1}/${travelsWithId.length} details...`);
         }
         try {
-          return await fetchTravelDetail(travel.id, travel.slug, { fetchJson: read, apiBase });
+          return await fetchTravelDetail(travel.id, travel.slug, { fetchJson: read, apiBase,
+            onAccepted: (url, raw) => {
+              // Keep only accepted exact numeric responses; slug fallbacks stay
+              // in the legacy normalized collection without an audit cache hit.
+              if (/^[1-9][0-9]*$/.test(String(travel.id))
+                && url === `${new URL(apiBase).origin}/api/travels/${travel.id}/`) rawTravelDetails.set(url, raw);
+            },
+          });
         } catch (err) {
           // Collect every miss instead of bailing on the first one: the whole
           // list tells apart "one deleted article" from "the limiter closed".
@@ -4319,7 +4219,7 @@ async function main() {
   const localizedBundles = new Map(inputs.localizedBundles);
 
   if (travels.length > 0) {
-    const detailMap = new Map(inputs.travelDetails);
+    const detailMap = new Map(capturedInputs ? materializeTravelDetails(inputs, inputIdentity()) : inputs.travelDetails);
 
     // FE-IDX-3: build the related-travels index once for crawlable internal links.
     const relatedIndex = buildRelatedIndex(travels);
