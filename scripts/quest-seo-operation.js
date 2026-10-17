@@ -502,6 +502,9 @@ function publishPrepared(t, stateFile, health = readiness) {
     save(stateFile, state)
     state.activation_started_at = Date.now()
     state.activated = activate(t, id, expected)
+    // The 30-second readiness budget bounds the live, not-yet-verified pointer.
+    // Full-tree validation before the switch (~41 s on prod) is not part of it.
+    state.activated_at = Date.now()
     state.phase = 'activated'
     save(stateFile, state)
   } catch (error) {
@@ -512,12 +515,18 @@ function publishPrepared(t, stateFile, health = readiness) {
     throw new Error(`${error.message}; generations retained; inspect/recover with ${stateFile}`)
   }
   try {
-    publishCover(t, id, state.activation_started_at + 30000)
-    health(t, id, state.activation_started_at + 30000)
+    publishCover(t, id, state.activated_at + 30000)
+    health(t, id, state.activated_at + 30000)
     state.phase = 'ready'
     save(stateFile, state)
   } catch (error) {
-    rollback(t, state, stateFile, health)
+    // Keep the forward failure even if the rollback itself fails afterwards;
+    // rollback() persists it, and nothing local may delay the rollback.
+    state.failure = error.message
+    try { rollback(t, state, stateFile, health) } catch (rollbackError) {
+      try { save(stateFile, state) } catch { /* the thrown message still carries both errors */ }
+      throw new Error(`${error.message}; rollback failed: ${rollbackError.message}`)
+    }
     throw error
   }
 }
@@ -538,8 +547,8 @@ function baseline(t, file, health = readiness) {
 function rollback(t, state, file, health = readiness) {
   const prior = state.base.current
   require_(prior, 'No retained prior release; owner recovery required')
-  const deadline = Date.now() + 30000
   state.rollback = activate(t, prior, state.identity.release_id)
+  const deadline = Date.now() + 30000
   state.phase = 'rolled-back'
   save(file, state)
   publishCover(t, prior, deadline)
@@ -552,8 +561,8 @@ function recover(t, file, health = readiness) {
   const actual = inspect(t)
   require_(state.identity && actual.current?.release_id === state.identity.release_id,
     'Actual pointer is another release; owner must inspect, no stale retry')
-  const deadline = Date.now() + 30000
   state.activated = activate(t, state.identity, actual.current.release_id, 'activated', state.base.current?.release_id || null)
+  const deadline = Date.now() + 30000
   state.phase = 'activated'
   save(file, state)
   publishCover(t, state.identity, deadline)

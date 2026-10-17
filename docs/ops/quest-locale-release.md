@@ -176,7 +176,10 @@ Rollback and recovery republish the corresponding active cover. This existing
 shared asset stays outside dist; no sealed package bytes are changed.
 Readiness requires exact 200, source marker, public controls including the
 shared cover, and Nginx validation/graceful reload within one 30-second deadline.
-Do not restart app.
+That deadline starts when the activation receipt returns, i.e. once the pointer
+is live: backend full-tree validation before the switch is not part of it
+(41 s on the production host for a full translated export, 17.10.2026). The
+same holds for rollback and recovery activations. Do not restart app.
 
 Initial conversion is a separately authorized D maintenance operation. Prepare
 a complete RU-only baseline without publication through the same entrypoint:

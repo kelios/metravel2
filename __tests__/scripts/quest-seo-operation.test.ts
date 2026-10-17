@@ -194,7 +194,9 @@ describe('normal managed publication orchestration', () => {
     const root = makeTempDir('quest-e-newer-')
     try {
       const p = prepared(root), r = remote()
-      expect(() => publish(r.t, p.dist, p.file, () => { r.replace(); throw new Error('health failed') })).toThrow('CAS refused')
+      expect(() => publish(r.t, p.dist, p.file, () => { r.replace(); throw new Error('health failed') }))
+        .toThrow('health failed; rollback failed: CAS refused')
+      expect(JSON.parse(fs.readFileSync(p.file, 'utf8')).failure).toBe('health failed')
       expect(r.current().release_id).toBe('newer-owner-release')
       expect(fs.existsSync(`${p.file}.package.tar.gz`)).toBe(true)
     } finally { removeDir(root) }
@@ -208,7 +210,56 @@ describe('normal managed publication orchestration', () => {
       expect(health).toHaveBeenCalledTimes(1)
       expect(health.mock.calls[0].slice(0, 2)).toEqual([r.t, prior])
       expect(r.operations.slice(-3)).toEqual(['cover', 'activate', 'cover'])
+      expect(JSON.parse(fs.readFileSync(p.file, 'utf8'))).toMatchObject({ phase: 'rolled-back', failure: 'cover publication failed' })
     } finally { removeDir(root) }
+  })
+  // Production full-tree validation inside activation took 41 s (17.10.2026);
+  // a deadline anchored before the switch expired before the cover was tried.
+  function slowActivation(r: ReturnType<typeof remote>, clock: { offset: number }) {
+    const operation = r.t.operation, coverTimeouts: number[] = []
+    r.t.operation = (action: string, args: string[], options?: any) => {
+      if (action === 'cover') coverTimeouts.push(options.timeout)
+      const output = operation(action, args, options)
+      if (action === 'activate') clock.offset += 41000
+      return output
+    }
+    return coverTimeouts
+  }
+  it('starts the readiness deadline when a slow activation has switched the pointer', () => {
+    const root = makeTempDir('quest-e-slow-activation-'), clock = { offset: 0 }, realNow = Date.now
+    const now = jest.spyOn(Date, 'now').mockImplementation(() => realNow() + clock.offset)
+    try {
+      const p = prepared(root), r = remote(), coverTimeouts = slowActivation(r, clock), health = jest.fn()
+      publish(r.t, p.dist, p.file, health)
+      const state = JSON.parse(fs.readFileSync(p.file, 'utf8'))
+      expect(state.phase).toBe('ready')
+      expect(state.activated_at - state.activation_started_at).toBeGreaterThanOrEqual(41000)
+      expect(coverTimeouts[0]).toBeGreaterThan(25000)
+      expect(health.mock.calls[0][2]).toBe(state.activated_at + 30000)
+    } finally { now.mockRestore(); removeDir(root) }
+  })
+  it('gives rollback and recovery their own readiness budget after a slow activation', () => {
+    const root = makeTempDir('quest-e-slow-recovery-'), replayRoot = makeTempDir('quest-e-slow-replay-')
+    const clock = { offset: 0 }, realNow = Date.now
+    const now = jest.spyOn(Date, 'now').mockImplementation(() => realNow() + clock.offset)
+    try {
+      const p = prepared(root), r = remote(), coverTimeouts = slowActivation(r, clock)
+      const health = jest.fn().mockImplementationOnce(() => { throw new Error('readiness failed') })
+      expect(() => publish(r.t, p.dist, p.file, health)).toThrow('readiness failed')
+      expect(r.current()).toEqual(prior)
+      expect(r.operations.slice(-3)).toEqual(['cover', 'activate', 'cover'])
+      expect(coverTimeouts).toHaveLength(2)
+      expect(coverTimeouts[1]).toBeGreaterThan(25000)
+      expect(health.mock.calls[1][2]).toBeGreaterThan(Date.now() + 25000)
+
+      const q = prepared(replayRoot), s = remote({ failure: 'after-rename' }), replayTimeouts = slowActivation(s, clock)
+      expect(() => publish(s.t, q.dist, q.file, jest.fn())).toThrow('generations retained')
+      const replayHealth = jest.fn()
+      recover(s.t, q.file, replayHealth)
+      expect(JSON.parse(fs.readFileSync(q.file, 'utf8')).phase).toBe('ready')
+      expect(replayTimeouts[0]).toBeGreaterThan(25000)
+      expect(replayHealth.mock.calls[0][2]).toBeGreaterThan(Date.now() + 25000)
+    } finally { now.mockRestore(); removeDir(root); removeDir(replayRoot) }
   })
   it('refuses archive drift, stale CAS and normal legacy conversion before staging', () => {
     for (const condition of ['archive', 'index', 'current', 'legacy']) {
