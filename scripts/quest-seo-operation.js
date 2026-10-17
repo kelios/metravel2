@@ -62,8 +62,13 @@ function transport(env = process.env) {
   const code = fs.readFileSync(TRANSPORT).toString('base64')
   const python = `import base64;exec(compile(base64.b64decode('${code}'),'<quest-seo-transport>','exec'))`
   const ssh = (command, options) => run('ssh', ['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15', target, command], options)
+  // Publisher work (packing, staging, ~41 s full-tree validation) shares the
+  // single production CPU with Gunicorn; nice keeps request serving first.
+  // The cover step runs inside the 30-second post-switch readiness budget;
+  // niced work gets a longer default bound than the generic 120 s.
   const operation = (action, args = [], options) => ssh(
-    `docker exec${['stage-v2', 'storage-plan-v2', 'stage-v3', 'transfer-plan-v3'].includes(action) ? ' -i' : ''} ${quote(app)} python -c ${quote(python)} ${[action, ...args].map(quote).join(' ')}`, options)
+    `docker exec${['stage-v2', 'storage-plan-v2', 'stage-v3', 'transfer-plan-v3'].includes(action) ? ' -i' : ''} ${quote(app)}${action === 'cover' ? '' : ' nice -n 10'} python -c ${quote(python)} ${[action, ...args].map(quote).join(' ')}`,
+    action === 'cover' ? options : { timeout: 300000, ...options })
   return { operation, ssh, remote, app, nginx }
 }
 

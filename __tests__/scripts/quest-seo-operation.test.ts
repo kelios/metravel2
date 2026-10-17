@@ -37,6 +37,26 @@ describe('private activation receipt', () => {
       expect(() => checkReceipt(raw, candidate, 'activated', 'previous')).toThrow()
     }
   })
+  it('runs publisher operations at reduced CPU priority inside the app container', () => {
+    const calls: { command: string, timeout: number }[] = []
+    jest.isolateModules(() => {
+      jest.doMock('child_process', () => ({ ...jest.requireActual('child_process'),
+        spawnSync: (_bin: string, args: string[], options: { timeout: number }) => {
+          calls.push({ command: args[args.length - 1], timeout: options.timeout })
+          return { status: 0, stdout: '', stderr: '' }
+        } }))
+      const t = require('@/scripts/quest-seo-operation').transport({ PROD_SSH_TARGET: 'target', PROD_REMOTE_DIR: '/remote',
+        QUEST_SEO_APP_CONTAINER: 'app', QUEST_SEO_NGINX_CONTAINER: 'nginx' })
+      t.operation('inspect')
+      t.operation('stage-v3', ['x'])
+      t.operation('cover', ['x'], { timeout: 1234 })
+    })
+    jest.dontMock('child_process')
+    expect(calls.map((call) => call.command.split(' python -c ')[0])).toEqual([
+      "docker exec 'app' nice -n 10", "docker exec -i 'app' nice -n 10", "docker exec 'app'"])
+    // Niced work gets its own bound; cover keeps the readiness deadline.
+    expect(calls.map((call) => call.timeout)).toEqual([300000, 300000, 1234])
+  })
   it('quotes transport arguments as literal shell data', () => {
     const value = "space ' $(touch unwanted) `command`"
     expect(runCli('sh', ['-c', `printf %s ${quote(value)}`]).stdout).toBe(value)

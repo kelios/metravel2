@@ -26,6 +26,15 @@ generation refuses staging. Activation performs no cleanup. Initial legacy
 conversion retains its separately managed whole backup and never shares its
 mutable inodes.
 
+Publisher operations run inside the app container at `nice -n 10` with a
+300-second transport bound: they share the single production CPU with Gunicorn,
+and request serving must win. The shared-cover step keeps normal priority and
+its own deadline because it runs inside the 30-second post-switch readiness
+budget. Readers
+never take the operation lock and retention never probes the active/rollback
+reader locks (backend D13), so neither a long validation nor retention can
+stall quest pages.
+
 The private storage handshake is version 2; public manifest/activation/serving
 contracts remain v1. `total_bytes` and backend `remaining_bytes` retain their
 logical per-path meanings. Private `allocated_bytes` and
