@@ -208,6 +208,25 @@ describe('useMapController (#991 smoke)', () => {
     expect(result.current.mapPanelProps.travelsTotal).toBe(0)
   })
 
+  it('#2450 — a background refetch of the same key (next page) keeps the total for the auto-fit', () => {
+    const { result, rerender } = renderHook(() => useMapController(baseParams))
+    expect(result.current.mapPanelProps.travelsTotal).toBe(0)
+
+    // Same query key, real data already on screen: isFetching without placeholder.
+    mockMapFetching = true
+    mockMapPlaceholder = false
+    rerender()
+    expect(result.current.mapPanelProps.travelsTotal).toBe(0)
+    expect(result.current.mapPanelProps.travelsTotal).not.toBeNull()
+
+    // Debounced input of a NEW anchor/radius → not this query's set.
+    mockMapFetching = false
+    mockMapDebouncing = true
+    rerender()
+    expect(result.current.mapPanelProps.travelsTotal).toBeNull()
+    mockMapDebouncing = false
+  })
+
   it('#1291 — stays closed while the map screen query is unfocused and disabled', () => {
     const { result } = renderHook(() =>
       useMapController({ ...baseParams, isFocused: false }),

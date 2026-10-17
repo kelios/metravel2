@@ -485,8 +485,13 @@ export function useMapController({
   // still shows the PREVIOUS query's placeholder points and total. `null` tells
   // the radius auto-fit "not this query's settled set" so it fits the circle
   // instead of tightening to stale points (one boolean flip per change, not the
-  // per-flag rebuilds the latch removed).
-  const travelsTotalForFit = resultsSettledNow ? total : null;
+  // per-flag rebuilds the latch removed). A background refetch of the SAME key
+  // (`isFetching` with real data, e.g. the next list page) keeps the total valid:
+  // nulling it there skipped the first tighten-to-results fit entirely
+  // (e2e map-place-sources: the map stayed on the circle at z11 and the marker
+  // landed under the top overlay).
+  const travelsTotalForFit =
+    isFocused && !isPlaceholderData && !isDebouncingFilters ? total : null;
 
   const mapPanelProps = useMemo(
     () => ({
