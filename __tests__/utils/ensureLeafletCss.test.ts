@@ -26,9 +26,10 @@ describe('ensureLeafletCss', () => {
     expect(ensureLeafletCss()).toBe(true)
 
     expect(document.getElementById('metravel-markercluster-css')).toBeTruthy()
-    expect(
-      document.getElementById('metravel-markercluster-overrides')?.textContent,
-    ).toContain('@keyframes metravelClusterPulse')
+    const clusterOverrides = document.getElementById('metravel-markercluster-overrides')?.textContent
+    expect(clusterOverrides).toContain('@keyframes metravelUserPulse')
+    // #2451 — no infinite pulse animation on clusters.
+    expect(clusterOverrides).not.toContain('metravelClusterPulse')
     const overrides = document.getElementById('metravel-leaflet-overrides')?.textContent
     expect(overrides).toBeTruthy()
     expect(overrides).toContain('leaflet-popup-close-button')

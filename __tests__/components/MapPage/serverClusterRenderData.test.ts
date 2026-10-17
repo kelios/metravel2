@@ -133,3 +133,36 @@ describe('buildServerClusterRenderData', () => {
     ]);
   });
 });
+
+describe('splitSingletonClusters (#2451)', () => {
+  const { splitSingletonClusters } = require('@/components/MapPage/Map/serverClusterRenderData');
+  const point = (id: number) => ({ id, coord: `53.${id},27.5`, address: `P${id}` });
+  const cluster = (key: string, count: number, items: any[]) => ({
+    key,
+    count,
+    center: [53.9, 27.5] as [number, number],
+    bounds: [
+      [53.8, 27.4],
+      [54, 27.6],
+    ] as [[number, number], [number, number]],
+    items,
+  });
+
+  it('turns single-point backend clusters into places and keeps real clusters', () => {
+    const multi = cluster('m', 5, [point(1)]);
+    const single = cluster('s', 1, [point(2)]);
+    const result = splitSingletonClusters([multi, single]);
+    expect(result.clusters).toEqual([multi]);
+    expect(result.singletons).toEqual([point(2)]);
+  });
+
+  it('keeps a count-1 cluster without a preview item as a cluster', () => {
+    const empty = cluster('e', 1, []);
+    expect(splitSingletonClusters([empty]).clusters).toEqual([empty]);
+  });
+
+  it('returns the input array itself when there is nothing to split', () => {
+    const input = [cluster('m', 3, [])];
+    expect(splitSingletonClusters(input).clusters).toBe(input);
+  });
+});

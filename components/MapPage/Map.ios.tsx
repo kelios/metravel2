@@ -11,10 +11,7 @@ import {
 } from './Map/serverClusterRenderData';
 import { getThemedNativeBaseTileUrl } from '@/config/mapWebLayers';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
-import {
-  downloadTileToDisk,
-  getCachedTileDataUrl,
-} from '@/utils/mapTileCache';
+import { resolveViewportPublication } from '@/hooks/map/mapViewportCoverage';
 import type { MapMovePayload } from './Map/types';
 import {
   groupMapPlaces,
@@ -23,11 +20,12 @@ import {
 } from '@/api/mapPlaces';
 import { resolveSelectedNativePlace, toNativeClusterPayload, toNativeMarkerPayload } from './Map/nativeMarkerPayload';
 import {
-  isSameViewportSnapshot,
   normalizeRoutePoint,
   parseNativeMapBridgeMessage,
   type NativeViewportSnapshot,
 } from './Map/nativeBridge';
+import { useNativeTileBridge } from './Map/nativeTileBridgeController';
+import { useNativeMapChannels, type NativeMapRoutePayload } from './Map/nativeMapChannelController';
 import { normalizeRoutePointsWithMarkers, type NativeRoutePointMarkersPayload } from './Map/nativeRoutePointMarkersScript';
 import { buildNativeMapHtml } from './Map/nativeMapHtml';
 import { openNativeMapLink } from './Map/openNativeMapLink';
@@ -36,8 +34,7 @@ import {
   buildNativeSetOverlayCommand,
   collectNativeResultCoords,
 } from './Map/nativeMapUiApi';
-import { fetchTileWithRetry } from './Map/tileFetchRetry';
-import { serializeForInlineScript } from '@/utils/webViewBridge';
+import { devLog } from '@/utils/logger';
 import type { MapUiApi } from '@/types/mapUi';
 import { useBottomSheetStore } from '@/stores/bottomSheetStore';
 import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig';
@@ -158,10 +155,6 @@ const DEFAULT_LNG = DEFAULT_MAP_CENTER.longitude;
 // оригинального трека нет вовсе.
 const EMPTY_TRACK_SEGMENTS: [number, number][][] = [];
 
-// Семафор на сетевые загрузки тайлов: #807 nginx zone режет бурст → 429/серо.
-const MAX_TILE_FETCH = 3;
-
-
 /** #1773 — предел ожидания первого тайла, после которого индикатор снимаем. */
 const FIRST_TILE_LOADER_TIMEOUT_MS = 3000;
 
@@ -214,6 +207,7 @@ const Map: React.FC<TravelProps> = ({
     [travel?.travelAddress?.data, travel?.data],
   );
   const [viewportSnapshot, setViewportSnapshot] = useState<NativeViewportSnapshot | null>(null);
+  const viewportPublishedRef = useRef<NativeViewportSnapshot | null>(null);
   const [localCoordinates, setLocalCoordinates] = useState<Coordinates | null>(propCoordinates);
   const [isLoading, setIsLoading] = useState(true);
   const themeColors = useThemedColors();
@@ -267,6 +261,8 @@ const Map: React.FC<TravelProps> = ({
     zoom: viewportSnapshot?.zoom ?? 10,
     filters: mapClusterFilters,
     enabled: isConnected && mode === 'radius' && !pointsOnly,
+    // The WebView does not re-fit on a radius change: no viewport to wait for.
+    awaitRadiusRefit: false,
   });
   const serverClusterRenderData = useMemo(
     () => buildServerClusterRenderData(serverClusterQuery.data),
@@ -302,10 +298,13 @@ const Map: React.FC<TravelProps> = ({
     !serverClusterQuery.isError &&
     radiusFilteredServerClusterRenderData.hasServerData &&
     !categoryFilterUnresolved;
-  const renderedNativePoints =
-    shouldUseServerClusterData && radiusFilteredServerClusterRenderData.markers.length > 0
-      ? radiusFilteredServerClusterRenderData.markers
-      : travelAddress;
+  // #2453 — при серверных данных рисуются ТОЛЬКО серверные одиночные маркеры,
+  // даже пустые: раньше пустой список подменялся всем travelAddress, и карта
+  // рисовала кластеры и под ними все точки списка (каждая догрузка страницы
+  // списка — полная перерисовка).
+  const renderedNativePoints = shouldUseServerClusterData
+    ? radiusFilteredServerClusterRenderData.markers
+    : travelAddress;
   const renderedNativeClusters = useMemo(
     () => (shouldUseServerClusterData ? radiusFilteredServerClusterRenderData.clusters : []),
     [radiusFilteredServerClusterRenderData.clusters, shouldUseServerClusterData],
@@ -347,61 +346,6 @@ const Map: React.FC<TravelProps> = ({
     }
   }, []);
 
-  // ─────────────── Офлайн-кэш тайлов (Фаза 0: прозрачный кэш) ───────────────
-  // Онлайн-статус для TILE_REQ: держим в ref, чтобы async-обработчик не читал
-  // устаревшее замыкание. Default true до первого ответа NetInfo — онлайн-путь.
-  const isOnlineRef = useRef(true);
-  isOnlineRef.current = isConnected;
-  const previousIsConnectedRef = useRef(isConnected);
-  const pendingNetworkRedrawRef = useRef(false);
-
-  const redrawBaseTilesAfterReconnect = useCallback(() => {
-    injectMapCommand(
-      'window.__metravelBaseTileLayer && window.__metravelBaseTileLayer.redraw && window.__metravelBaseTileLayer.redraw(); window.__metravelScheduleInvalidate && window.__metravelScheduleInvalidate("network-reconnect")',
-    );
-  }, [injectMapCommand]);
-
-  // A cache miss completed while offline is a terminal tileerror inside
-  // Leaflet. Network recovery alone does not retry it, so refresh the existing
-  // layer exactly once on false -> true without remounting the WebView (#1665).
-  useEffect(() => {
-    const wasConnected = previousIsConnectedRef.current;
-    previousIsConnectedRef.current = isConnected;
-    if (wasConnected || !isConnected) return;
-    if (!isReadyRef.current) {
-      pendingNetworkRedrawRef.current = true;
-      return;
-    }
-    pendingNetworkRedrawRef.current = false;
-    redrawBaseTilesAfterReconnect();
-  }, [isConnected, redrawBaseTilesAfterReconnect]);
-
-  // Шаблон URL базовой подложки ({z}/{x}/{y} подставляем при сетевом промахе).
-  const nativeTileTemplate = useMemo(() => getThemedNativeBaseTileUrl(), []);
-
-  // Промахи кэша при онлайне качаем ограниченным пулом, попадания идут мимо.
-  const tileFetchActiveRef = useRef(0);
-  const tileFetchQueueRef = useRef<Array<() => void>>([]);
-
-  const acquireTileSlot = useCallback((): Promise<void> => {
-    if (tileFetchActiveRef.current < MAX_TILE_FETCH) {
-      tileFetchActiveRef.current += 1;
-      return Promise.resolve();
-    }
-    return new Promise((resolve) => {
-      tileFetchQueueRef.current.push(() => {
-        tileFetchActiveRef.current += 1;
-        resolve();
-      });
-    });
-  }, []);
-
-  const releaseTileSlot = useCallback(() => {
-    tileFetchActiveRef.current = Math.max(0, tileFetchActiveRef.current - 1);
-    const next = tileFetchQueueRef.current.shift();
-    if (next) next();
-  }, []);
-
   // #1773 — пока не приехал первый тайл, WebView показывает пустой холст Leaflet
   // (#ddd). На «Моих точках» это читалось как «карта не открылась». Держим
   // индикатор загрузки до первого тайла (или короткого таймаута ниже).
@@ -413,72 +357,24 @@ const Map: React.FC<TravelProps> = ({
     setIsLoading(false);
   }, []);
 
-  const setWebViewTile = useCallback(
-    (key: string, dataUrl: string) => {
-      markFirstTileSettled();
-      injectMapCommand(
-        `window.__metravelSetTile && window.__metravelSetTile(${serializeForInlineScript(key)}, ${serializeForInlineScript(dataUrl)})`,
-      );
-    },
-    [injectMapCommand, markFirstTileSettled],
-  );
-
-  // #1561 — один промах сети НЕ должен навсегда оставлять серую клетку. Слот
-  // семафора на время паузы отпускаем (он берётся внутри `download`), иначе
-  // backoff одного тайла держит очередь остальных.
-  const downloadTileWithRetry = useCallback(
-    (z: number, x: number, y: number, url: string): Promise<boolean> =>
-      fetchTileWithRetry({
-        download: async () => {
-          await acquireTileSlot();
-          try {
-            return await downloadTileToDisk(z, x, y, url);
-          } finally {
-            releaseTileSlot();
-          }
-        },
-        isOnline: () => isOnlineRef.current,
-        wait: (ms) =>
-          new Promise<void>((resolve) => {
-            setTimeout(resolve, ms);
-          }),
-      }),
-    [acquireTileSlot, releaseTileSlot],
-  );
-
-  const handleTileRequest = useCallback(
-    async (z: number, x: number, y: number, key: string) => {
-      try {
-        const cached = await getCachedTileDataUrl(z, x, y);
-        if (cached) {
-          setWebViewTile(key, cached);
-          return;
-        }
-        // Офлайн и нет в кэше → пустой тайл (документированная политика: без
-        // сети догружать нечего, bulk-предзагрузка OSM запрещена).
-        if (!isOnlineRef.current) {
-          setWebViewTile(key, '');
-          return;
-        }
-        // Онлайн-промах: качаем реальный тайл (и попутно кэшируем), затем отдаём
-        // как data-URL. Картинка онлайн не меняется — те же тайлы прокси.
-        const url = nativeTileTemplate
-          .replace('{z}', String(z))
-          .replace('{x}', String(x))
-          .replace('{y}', String(y));
-        const ok = await downloadTileWithRetry(z, x, y, url);
-        if (!ok) {
-          setWebViewTile(key, '');
-          return;
-        }
-        const dataUrl = await getCachedTileDataUrl(z, x, y);
-        setWebViewTile(key, dataUrl ?? '');
-      } catch {
-        setWebViewTile(key, '');
-      }
-    },
-    [downloadTileWithRetry, nativeTileTemplate, setWebViewTile],
-  );
+  // #2452 — подложку в онлайне грузит сам WebView; RN держит только мостовой
+  // fallback (диск/ретраи), сетевой режим слоя и фоновое наполнение кэша.
+  const nativeTileTemplate = useMemo(() => getThemedNativeBaseTileUrl(), []);
+  const {
+    handleTileRequest,
+    handleTileCancel,
+    handleTilesState,
+    handleTileCapture,
+    handleCaptureDisabled,
+    handleReady: handleTileReady,
+    resetPage: resetTilePage,
+  } = useNativeTileBridge({
+    injectMapCommand,
+    isReadyRef,
+    isConnected,
+    tileTemplate: nativeTileTemplate,
+    onTileDelivered: markFirstTileSettled,
+  });
 
   // F-17 — RN-layout → Leaflet invalidateSize bridge. Когда контейнер карты
   // получает финальную высоту ПОСЛЕ инициализации WebView (карта смонтирована на
@@ -486,7 +382,7 @@ const Map: React.FC<TravelProps> = ({
   // высоту после первого layout, и WebView успел закэшировать меньший размер →
   // серая полоса ~150px сверху), DOM-событие `resize` внутри WebView не стреляет.
   // Ловим изменение высоты контейнера в RN и дёргаем тот же __metravelScheduleInvalidate,
-  // что уже вызывается на init/resize/renderPoints — лишний invalidateSize безвреден.
+  // что вызывается на init/resize/ready (#2453: не на движение и не на данные).
   // #2172 — и ширину тоже: свёрнутая панель на iPad/Android-планшете, Split View,
   // Stage Manager и поворот меняют ширину карты при той же высоте, а DOM `resize`
   // внутри WebView при смене размера родительского View не гарантирован.
@@ -569,54 +465,42 @@ const Map: React.FC<TravelProps> = ({
     return () => sub.remove();
   }, [injectMapCommand]);
 
-  // Полезная нагрузка для WebView: точки/маршрут/режим/центр. Меняется по приходу
-  // данных, но HTML при этом НЕ пересобирается — маркеры дорисовываются injectJavaScript.
-  const mapPayload = useMemo(
+  // #2453 — данные уходят в WebView независимыми каналами с diff по ключу
+  // (Map/nativeMapChannelController.ts): смена центра или токена маршрута не
+  // пересериализует маркеры, новый ответ кластеров — точки. HTML при этом НЕ
+  // пересобирается.
+  const routePayload = useMemo<NativeMapRoutePayload>(
     () => ({
-      points: nativeMarkerPayload,
-      clusters: nativeClusterPayload,
+      mode,
       routePoints: selectedRoute.latLngs,
       routePointMarkers: selectedRoute.markers,
       routeLine: routeLineLatLngs,
       routeApproximate: routeLineApproximate,
       originalTrackSegments: originalTrackSegmentLatLngs,
-      mode,
-      center: { lat: centerLat, lng: centerLng },
-      usesServerClusters: shouldUseServerClusterData,
-      pointsOnly,
       routePointsInteractive,
       routeReplacementToken,
     }),
     [
-      nativeMarkerPayload,
-      nativeClusterPayload,
+      mode,
       selectedRoute,
       routeLineLatLngs,
       routeLineApproximate,
       originalTrackSegmentLatLngs,
-      mode,
-      centerLat,
-      centerLng,
-      shouldUseServerClusterData,
-      pointsOnly,
       routePointsInteractive,
       routeReplacementToken,
     ],
   );
-
-  // #1773 — всплеск renderPoints. Готовность приезжает дважды (onLoadEnd + READY),
-  // и каждое обновление центра/вьюпорта пересобирает payload заново: на «Моих
-  // точках» WebView получал ~11 команд подряд и не успевал отрисовать даже
-  // подложку. Байт-в-байт повтор не шлём вовсе (перерисовывать нечего).
-  const lastPayloadRef = useRef<string | null>(null);
-
-  const pushPayload = useCallback(() => {
-    if (!isReadyRef.current) return;
-    const serialized = serializeForInlineScript(mapPayload);
-    if (serialized === lastPayloadRef.current) return;
-    lastPayloadRef.current = serialized;
-    injectMapCommand(`window.__metravelRenderPoints && window.__metravelRenderPoints(${serialized})`);
-  }, [injectMapCommand, mapPayload]);
+  const { pushAll: pushMapChannels, resetSentState: resetMapChannels } = useNativeMapChannels({
+    injectMapCommand,
+    isReadyRef,
+    markers: nativeMarkerPayload,
+    clusters: nativeClusterPayload,
+    pointsOnly,
+    usesServerClusters: shouldUseServerClusterData,
+    route: routePayload,
+    centerLat,
+    centerLng,
+  });
 
   // Реальная гео пользователя для маркера «вы здесь». null когда координаты
   // невалидны — синяя точка тогда не рисуется (fallback-Минск отсекается в
@@ -684,18 +568,11 @@ const Map: React.FC<TravelProps> = ({
 
   // Ref на последние push-функции — чтобы обработчики onLoadEnd/onMessage слали
   // актуальные данные без устаревшего замыкания.
-  const pushPayloadRef = useRef(pushPayload);
-  pushPayloadRef.current = pushPayload;
   const pushUserLocationRef = useRef(pushUserLocation);
   pushUserLocationRef.current = pushUserLocation;
   // F-49 — always-fresh onMapMove for the WebView message handler.
   const onMapMoveRef = useRef(onMapMove);
   onMapMoveRef.current = onMapMove;
-
-  // Перерисовать маркеры при любом изменении данных (если WebView уже готов).
-  useEffect(() => {
-    pushPayload();
-  }, [pushPayload]);
 
   // Перерисовать/очистить маркер пользователя при изменении гео.
   useEffect(() => {
@@ -724,11 +601,8 @@ const Map: React.FC<TravelProps> = ({
         'window.__metravelScheduleInvalidate && window.__metravelScheduleInvalidate("rn-layout-pending")',
       );
     }
-    if (pendingNetworkRedrawRef.current && isOnlineRef.current) {
-      pendingNetworkRedrawRef.current = false;
-      redrawBaseTilesAfterReconnect();
-    }
-    pushPayloadRef.current();
+    handleTileReady();
+    pushMapChannels();
     pushUserLocationRef.current();
     autoCenterOnTrustedUserIfNeeded();
     // Переприменяем включённые оверлеи после (ре)загрузки WebView.
@@ -739,7 +613,7 @@ const Map: React.FC<TravelProps> = ({
         buildNativeSetOverlayCommand(id, true),
       );
     });
-  }, [autoCenterOnTrustedUserIfNeeded, injectMapCommand, redrawBaseTilesAfterReconnect]);
+  }, [autoCenterOnTrustedUserIfNeeded, handleTileReady, injectMapCommand, pushMapChannels]);
 
   // Статичный HTML-каркас: карта + функция window.__metravelRenderPoints.
   // Мемоизирован по теме — стабилен между обновлениями данных, поэтому WebView
@@ -749,13 +623,21 @@ const Map: React.FC<TravelProps> = ({
     [themeColors, markerShadowColor],
   );
 
+  // #2452 — объект source мемоизирован: литерал на каждый рендер со строкой
+  // ~190 КБ заставлял WebView сравнивать HTML на каждом обновлении данных.
+  const webViewSource = useMemo(
+    () => ({ html: htmlContent, baseUrl: 'https://metravel.by/' }),
+    [htmlContent],
+  );
+
   // #1773 — пересборка HTML (смена темы) ПЕРЕЗАГРУЖАЕТ страницу WebView: она
   // теряет и маркеры, и тайлы. Сбрасываем кэш отправленного payload и защёлку
   // первого тайла, иначе дедупликация не даст переслать точки в свежую страницу
   // (там, где payload не зависит от вьюпорта — каталог квестов, режим маршрута,
   // офлайн — карта осталась бы пустой), а индикатор загрузки не вернулся бы.
   useEffect(() => {
-    lastPayloadRef.current = null;
+    resetMapChannels();
+    resetTilePage();
     firstTileSettledRef.current = false;
     // Свежая страница ещё не готова: инъекции до её onLoadEnd уходят в мёртвый
     // документ, но занимали бы кэш отправки.
@@ -767,7 +649,8 @@ const Map: React.FC<TravelProps> = ({
       if (firstTileTimerRef.current) clearTimeout(firstTileTimerRef.current);
       firstTileTimerRef.current = null;
     };
-  }, [htmlContent]);
+    // Колбэки сброса стабильны: эффект срабатывает на пересборку HTML.
+  }, [htmlContent, resetMapChannels, resetTilePage]);
 
   return (
     <View
@@ -787,7 +670,7 @@ const Map: React.FC<TravelProps> = ({
         // палатки): Overpass отдаёт ACAO '*' и WFS отражает Origin — но только при
         // непустом Origin. Тайлы (Waymarked, OSM) грузятся как <img> и CORS не
         // затрагивает, поэтому маршруты-треки рисовались и без baseUrl.
-        source={{ html: htmlContent, baseUrl: 'https://metravel.by/' }}
+        source={webViewSource}
         style={styles.map}
         javaScriptEnabled={true}
         domStorageEnabled={true}
@@ -811,7 +694,26 @@ const Map: React.FC<TravelProps> = ({
               return;
             }
             if (message.type === 'TILE_REQ') {
-              void handleTileRequest(message.z, message.x, message.y, message.key);
+              handleTileRequest(message);
+              return;
+            }
+            if (message.type === 'TILE_CANCEL') {
+              handleTileCancel(message.keys);
+              return;
+            }
+            if (message.type === 'MAP_TILES_STATE') {
+              // Подложка догрузила вьюпорт: индикатор больше не нужен (#1773).
+              markFirstTileSettled();
+              devLog('[map-tiles]', message.state);
+              handleTilesState(message.state);
+              return;
+            }
+            if (message.type === 'TILE_CAPTURE') {
+              handleTileCapture(message.gen, message.tiles);
+              return;
+            }
+            if (message.type === 'TILE_CAPTURE_DISABLED') {
+              handleCaptureDisabled(message.reason);
               return;
             }
             if (message.type === 'MAP_CLICK') {
@@ -819,21 +721,18 @@ const Map: React.FC<TravelProps> = ({
               onMapClick?.(message.longitude, message.latitude);
               return;
             }
-            if (message.type === 'MAP_MOVED') {
-              // F-49 — новый центр карты после панорамирования/зума.
-              if (message.move) {
-                onMapMoveRef.current?.(message.move);
-              }
-            }
             if (message.type === 'MAP_MOVED' || message.type === 'MAP_VIEWPORT') {
-              if (message.viewport) {
-                const nextViewport = message.viewport;
-                setViewportSnapshot((current) =>
-                  isSameViewportSnapshot(current, nextViewport)
-                    ? current
-                    : nextViewport,
-                );
-              }
+              // F-49 — новый центр карты после панорамирования/зума.
+              if (message.move) onMapMoveRef.current?.(message.move);
+              if (!message.viewport) return;
+              // #2450/#2453 — общий контракт покрытия с web: state (и запрос
+              // кластеров) меняется только при выходе за опубликованную область
+              // или смене округлённого зума.
+              const published = resolveViewportPublication(viewportPublishedRef.current, message.viewport);
+              if (!published?.bbox) return;
+              const snapshot: NativeViewportSnapshot = { bbox: published.bbox, zoom: published.zoom };
+              viewportPublishedRef.current = snapshot;
+              setViewportSnapshot(snapshot);
               return;
             }
             if (message.type === 'ROUTE_POINT_MOVED' || message.type === 'ROUTE_POINT_TAP') {

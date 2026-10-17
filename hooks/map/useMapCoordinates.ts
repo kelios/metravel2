@@ -115,6 +115,9 @@ function distanceMeters(a: Coordinates, b: Coordinates): number {
  * На web стартует с кеша/дефолта, затем получает current fix; только подтверждённый
  * fix становится current/userLocation, а viewport anchors остаются недоверенными.
  */
+/** Свежий доверенный фикс, при котором возврат на экран не заказывает новый (#2450). */
+export const LOCATION_REFOCUS_TTL_MS = 5 * 60 * 1000;
+
 export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
   const routeIsFocused = useIsFocused();
   const isFocused = options.isFocused ?? routeIsFocused;
@@ -132,7 +135,7 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
   const readWebCachedCoordinates = useCallback(() => readWebCachedLocation(), []);
 
   // Initialize with last known coordinates on web to avoid default-center flicker.
-  const [coordinates, setCoordinates] = useState<Coordinates>(
+  const [coordinates, setCoordinatesState] = useState<Coordinates>(
     () => initialCachedLocation
       ? {
           latitude: initialCachedLocation.latitude,
@@ -140,6 +143,18 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
         }
       : DEFAULT_COORDINATES,
   );
+  // #2450 — равные координаты (±1e-5 ≈ 1 м) не создают новый объект: иначе каждый
+  // возврат на экран и каждый принудительный фикс пересобирали якорь, mapPanelProps
+  // и все производные, хотя карта никуда не сдвинулась.
+  const setCoordinates = useCallback((next: Coordinates) => {
+    setCoordinatesState((prev) =>
+      prev &&
+      Math.abs(prev.latitude - next.latitude) < 1e-5 &&
+      Math.abs(prev.longitude - next.longitude) < 1e-5
+        ? prev
+        : next,
+    );
+  }, []);
   // Origin of the current viewport coordinates. Cache is last-known viewport
   // only: it may center the map, but it is not a trusted current user position.
   const [coordinatesSource, setCoordinatesSource] = useState<CoordinatesSource>(
@@ -193,7 +208,7 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
       canAskAgain: true,
     });
     return true;
-  }, []);
+  }, [setCoordinates]);
 
   const applyTrustedLocation = useCallback((
     location: LocationSnapshot,
@@ -280,7 +295,7 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
       timestamp: next.timestamp ?? Date.now(),
     });
     return true;
-  }, [cacheWebCoordinates]);
+  }, [cacheWebCoordinates, setCoordinates]);
 
   const markLiveLocationRefreshing = useCallback(() => {
     setLocationState((current) =>
@@ -529,7 +544,7 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
         maximumAge: PRECISE_LOCATION_MAXIMUM_AGE_MS,
       });
     });
-  }, [applyTrustedLocation, clearLocationWatch, readWebCachedCoordinates, startLocationWatch]);
+  }, [applyTrustedLocation, clearLocationWatch, readWebCachedCoordinates, setCoordinates, startLocationWatch]);
 
   const requestLocation = useCallback(async (signal?: AbortSignal) => {
     let nativePermissionGranted = false;
@@ -716,6 +731,7 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
       }
     }
   }, [
+    setCoordinates,
     applyCachedViewportLocation,
     applyTrustedLocation,
     clearLocationWatch,
@@ -728,6 +744,18 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
       clearLocationWatch();
       return;
     }
+    // #2450 — возврат на экран со свежим доверенным фиксом не заказывает новую
+    // геолокацию (с её loading-состоянием, force-фиксом и перезапросом данных):
+    // достаточно возобновить foreground watch. Новый фикс — только если прошлый
+    // старше LOCATION_REFOCUS_TTL_MS или его не было.
+    const trusted = lastTrustedLocationRef.current;
+    const trustedAge = trusted?.timestamp != null ? Date.now() - trusted.timestamp : Infinity;
+    if (trusted && trustedAge < LOCATION_REFOCUS_TTL_MS) {
+      startLocationWatch();
+      return () => {
+        clearLocationWatch();
+      };
+    }
     const abortController = new AbortController();
     requestLocation(abortController.signal);
 
@@ -735,7 +763,7 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
       abortController.abort();
       clearLocationWatch();
     };
-  }, [clearLocationWatch, isFocused, requestLocation]);
+  }, [clearLocationWatch, isFocused, requestLocation, startLocationWatch]);
 
   useEffect(() => {
     if (!isFocused) {
@@ -792,7 +820,7 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
         lng,
       });
     }
-  }, []);
+  }, [setCoordinates]);
 
   const openLocationSettings = useCallback(async () => {
     if (Platform.OS === 'web') return false;

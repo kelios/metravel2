@@ -377,4 +377,19 @@ describe('useMapPopupAutoPan', () => {
       configurable: true,
     })
   })
+
+  // #2451 — the sheet height is read lazily: a sheet snap must not hand the
+  // marker layer a new popupProps object (nor re-render the map).
+  it('keeps popupProps identity when the bottom-sheet getter value changes', () => {
+    let offset = 120
+    const getOffset = () => offset
+    const mapRef = { current: null }
+    const { result, rerender } = renderHook(() =>
+      useMapPopupAutoPan({ mapRef, mapPaneWidth: 393, popupBottomOffset: getOffset }),
+    )
+    const first = result.current.popupAutoPanPadding
+    offset = 480
+    rerender({})
+    expect(result.current.popupAutoPanPadding).toBe(first)
+  })
 })

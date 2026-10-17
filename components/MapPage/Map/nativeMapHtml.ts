@@ -3,6 +3,7 @@ import {
   getActiveOverlayLayers,
   getThemedBaseAttribution,
   getThemedBaseMaxZoom,
+  getThemedNativeBaseTileUrl,
   type WebMapLayerDefinition,
 } from '@/config/mapWebLayers';
 import type { ThemedColors } from '@/hooks/useTheme';
@@ -27,6 +28,7 @@ import {
 } from './mapMarkerStyles';
 import { buildNativeWeatherTempLabelsScript } from './nativeWeatherTempLabelsScript';
 import { NATIVE_MAP_VIEW_COMMANDS_SCRIPT } from './nativeMapViewCommandsScript';
+import { buildNativeMapLayersScript } from './nativeMapLayersScript';
 import { NATIVE_ROUTE_POINT_MARKERS_SCRIPT } from './nativeRoutePointMarkersScript';
 import { NATIVE_ROUTE_CLUSTER_SCRIPT } from './nativeRouteClusterScript';
 import {
@@ -129,8 +131,13 @@ ${NATIVE_BASE_MIN_ZOOM_SCRIPT}
           zoomControl: false,
           preferCanvas: true,
           fadeAnimation: false,
-          zoomAnimation: false,
-          markerZoomAnimation: false,
+          // #2453 — анимированный зум: старый уровень масштабируется CSS-ом,
+          // пока грузится новый, вместо скачка с полным сбросом подложки.
+          // #1561 от анимации не зависит: ключ тайла уникален по seq, minZoom
+          // следит за размером через resize, новый уровень тайлов всё так же
+          // запрашивается на zoomend (updateWhenZooming: false).
+          zoomAnimation: true,
+          markerZoomAnimation: true,
           minZoom: window.${NATIVE_BASE_MIN_ZOOM_GLOBAL}
         }).setView([${DEFAULT_LAT}, ${DEFAULT_LNG}], 10);
         map.__userCenter = [${DEFAULT_LAT}, ${DEFAULT_LNG}];
@@ -150,11 +157,16 @@ ${NATIVE_BASE_MIN_ZOOM_SCRIPT}
           } catch (err) {}
         });
 
-        // F-49 — сообщаем RN центр карты (с дебаунсом) после панорамирования/зума,
-        // чтобы экран мог предложить «Искать в этой области». Не шлём, если центр
-        // почти не сдвинулся относительно последнего отправленного (jitter-гард).
-        var __metravelMoveTimer = null;
+        // #2453 — ОДНО сообщение вьюпорта на жест: MAP_VIEWPORT с дебаунсом
+        // 300 мс после moveend/zoomend (zoomend и следующий за ним moveend
+        // сливаются), плюс одно стартовое. Раньше на зум уходили MAP_VIEWPORT
+        // сразу, MAP_MOVED через 300 мс и ещё MAP_VIEWPORT после каждого рендера.
+        // F-49: \`centerMoved\` — центр сдвинулся относительно последнего такого
+        // сообщения (jitter-гард «Искать в этой области»), \`byUser\` — жест.
+        // Размер карты от движения не меняется, поэтому invalidateSize здесь нет.
+        var __metravelViewportTimer = null;
         var __metravelLastSentCenter = null;
+        var __metravelLastViewportKey = null;
         var __metravelUserGesturePending = false;
         var __metravelProgrammaticMoveUntil = 0;
         function __metravelMarkUserGesture() {
@@ -163,68 +175,56 @@ ${NATIVE_BASE_MIN_ZOOM_SCRIPT}
             __metravelUserGesturePending = true;
           } catch (e) {}
         }
-        function __metravelViewportPayload(type) {
+        function __metravelPostViewport(reason) {
           try {
             var c = map.getCenter ? map.getCenter() : null;
             var b = map.getBounds ? map.getBounds() : null;
             var sw = b && b.getSouthWest ? b.getSouthWest() : null;
             var ne = b && b.getNorthEast ? b.getNorthEast() : null;
             var zoom = map.getZoom ? Number(map.getZoom()) : NaN;
-            if (!c || !isFinite(c.lat) || !isFinite(c.lng) || !sw || !ne || !isFinite(zoom)) return null;
+            if (!c || !isFinite(c.lat) || !isFinite(c.lng) || !sw || !ne || !isFinite(zoom)) return;
+            var bbox = {
+              south: Math.min(sw.lat, ne.lat),
+              west: Math.min(sw.lng, ne.lng),
+              north: Math.max(sw.lat, ne.lat),
+              east: Math.max(sw.lng, ne.lng)
+            };
+            var viewportKey = [zoom, bbox.south, bbox.west, bbox.north, bbox.east]
+              .map(function(value) { return value.toFixed(6); }).join('|');
+            if (reason !== 'init' && viewportKey === __metravelLastViewportKey) return;
+            __metravelLastViewportKey = viewportKey;
             var payload = {
-              type: type,
+              type: 'MAP_VIEWPORT',
               lat: c.lat,
               lng: c.lng,
               zoom: zoom,
-              bbox: {
-                south: Math.min(sw.lat, ne.lat),
-                west: Math.min(sw.lng, ne.lng),
-                north: Math.max(sw.lat, ne.lat),
-                east: Math.max(sw.lng, ne.lng)
-              }
+              bbox: bbox,
+              byUser: __metravelUserGesturePending,
+              centerMoved: false
             };
-            if (type === 'MAP_MOVED' && __metravelUserGesturePending) {
-              payload.userInitiated = true;
-            }
-            return payload;
-          } catch (e) { return null; }
-        }
-        function __metravelPostViewport(type) {
-          try {
-            var payload = __metravelViewportPayload(type);
-            if (!payload) return;
-            if (type === 'MAP_MOVED') {
-              if (__metravelLastSentCenter &&
-                  Math.abs(__metravelLastSentCenter.lat - payload.lat) < 0.0001 &&
-                  Math.abs(__metravelLastSentCenter.lng - payload.lng) < 0.0001) {
-                return;
-              }
-              __metravelLastSentCenter = { lat: payload.lat, lng: payload.lng };
+            if (reason !== 'init' && (!__metravelLastSentCenter ||
+                Math.abs(__metravelLastSentCenter.lat - c.lat) >= 0.0001 ||
+                Math.abs(__metravelLastSentCenter.lng - c.lng) >= 0.0001)) {
+              payload.centerMoved = true;
+              __metravelLastSentCenter = { lat: c.lat, lng: c.lng };
+              __metravelUserGesturePending = false;
             }
             if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
               window.ReactNativeWebView.postMessage(JSON.stringify(payload));
             }
-            if (type === 'MAP_MOVED') {
-              __metravelUserGesturePending = false;
-            }
           } catch (e) {}
         }
-        function __metravelEmitMapMove() { __metravelPostViewport('MAP_MOVED'); }
+        function __metravelScheduleViewport() {
+          if (__metravelViewportTimer) clearTimeout(__metravelViewportTimer);
+          __metravelViewportTimer = setTimeout(function() {
+            __metravelViewportTimer = null;
+            __metravelPostViewport('settle');
+          }, 300);
+        }
         map.on('dragstart', __metravelMarkUserGesture);
         map.on('zoomstart', __metravelMarkUserGesture);
-        map.on('moveend', function() {
-          try {
-            window.__metravelScheduleInvalidate('moveend');
-            if (__metravelMoveTimer) clearTimeout(__metravelMoveTimer);
-            __metravelMoveTimer = setTimeout(__metravelEmitMapMove, 300);
-          } catch (e) {}
-        });
-        map.on('zoomend', function() {
-          try {
-            window.__metravelScheduleInvalidate('zoomend');
-            __metravelPostViewport('MAP_VIEWPORT');
-          } catch (e) {}
-        });
+        map.on('moveend', __metravelScheduleViewport);
+        map.on('zoomend', __metravelScheduleViewport);
 
 ${NATIVE_MAP_VIEW_COMMANDS_SCRIPT}
         // Центрируем только на реальной точке пользователя, если она есть
@@ -252,6 +252,7 @@ ${NATIVE_MAP_VIEW_COMMANDS_SCRIPT}
 ${buildNativeTileBridgeScript({
   attribution: getThemedBaseAttribution(),
   maxZoom: getThemedBaseMaxZoom(),
+  tileUrlTemplate: getThemedNativeBaseTileUrl(),
 })}
 
 ${buildInvalidateSchedulerScript({
@@ -263,12 +264,6 @@ ${buildInvalidateSchedulerScript({
         const markersLayer = L.layerGroup().addTo(map);
         const clustersLayer = L.layerGroup().addTo(map);
         const routeLayer = L.layerGroup().addTo(map);
-        // Radius-mode data updates can arrive after every zoom/pan through the
-        // server-cluster query. Auto-fitting on each payload fights the user's
-        // gesture and causes Android WebView to visibly pan back and redraw
-        // clusters. Do one initial positioning pass only; user gestures and
-        // explicit cluster/marker taps remain in control after that.
-        var __metravelDidInitialRadiusPosition = false;
         // Отдельный pane держит «вы здесь» выше POI/cluster markerPane (600), но
         // ниже tooltip/popup (650/700). Порядок добавления layerGroup сам по себе
         // pane не меняет: прежний circleMarker жил в overlayPane (400) и мог быть
@@ -381,383 +376,7 @@ ${NATIVE_ROUTE_CLUSTER_SCRIPT}
         // и могут содержать <, >, ", ' и & — без эскейпа это XSS в WebView (#113).
 ${ESCAPE_HTML_FN_SCRIPT}
 
-        window.__metravelRenderPoints = function(payload) {
-          try {
-            const data = payload || {};
-            const points = Array.isArray(data.points) ? data.points : [];
-            const clusters = Array.isArray(data.clusters) ? data.clusters : [];
-            const routePoints = Array.isArray(data.routePoints) ? data.routePoints : [];
-            const routeLine = Array.isArray(data.routeLine) ? data.routeLine : routePoints;
-            const routeApproximate = data.routeApproximate === true;
-            // #1847 — оригинал приходит списком линий: по одной на каждый трек
-            // файла. Склеенный плоский список рисовал между несмежными треками
-            // прямую, которой в исходном файле нет.
-            const originalTrackSegments = (Array.isArray(data.originalTrackSegments)
-              ? data.originalTrackSegments
-              : []).filter(function(segment) {
-                return Array.isArray(segment) && segment.length >= 2;
-              });
-            const routeMode = data.mode || 'radius';
-            const usesServerClusters = data.usesServerClusters === true;
-            const pointsOnly = data.pointsOnly === true;
-            // #1781 — точки маршрута планировщика тянутся и открывают действия
-            // только у владельца поездки. У гостя маркеры остаются как были:
-            // не перетаскиваются и не перехватывают тап.
-            const routePointsInteractive = data.routePointsInteractive === true;
-            // #2073 — подсказка о перетаскивании маркера: RN accessibilityHint до маркеров внутри этого WebView не доходит, поэтому строка ставится прямо на их DOM-узел.
-            const routePointMarkerHint = ${serializeForInlineScript(i18nT('tripsStatic:plan.map.markerHint'))};
-            // #1820 — счётчик оптовых замен маршрута (шаблон, импорт трека).
-            // Его рост — единственный признак «маршрут заменили целиком».
-            const routeReplacementToken = data.routeReplacementToken;
-            // #2059 — номера точек планировщика и их отступы кадра (иначе null).
-            const routePointMarkers = data.routePointMarkers || null;
-            const routeFitPadding = routePointMarkers && routePointMarkers.fitPadding;
-            window.__metravelMapMode = routeMode;
-            if (data.center && isFinite(data.center.lat) && isFinite(data.center.lng)) {
-              map.__userCenter = [data.center.lat, data.center.lng];
-            }
-
-            clustersLayer.clearLayers();
-            routeLayer.clearLayers();
-            // #2071 — проводка кластера точек маршрута целиком живёт в
-            // nativeRouteClusterScript.ts (disposeRoutePointClusterGroup ниже
-            // снимает прежнюю группу; ensureRoutePointClusterGroup создаёт новую
-            // в route-ветке, если payload просит кластеры).
-            disposeRoutePointClusterGroup(map);
-            const bounds = L.latLngBounds();
-
-            // #1773 — RN шлёт renderPoints и при изменениях, которые маркеров не
-            // касаются (центр, маршрут, вьюпорт): на «Моих точках» это давало ~11
-            // полных перестроек 869 маркеров за первые секунды. Если набор точек
-            // тот же — маркеры не трогаем, незавершённая порционная отрисовка
-            // предыдущего вызова продолжается.
-            const pointsJson = JSON.stringify(points);
-            const samePoints = window.__metravelLastPointsJson === pointsJson;
-            window.__metravelLastPointsJson = pointsJson;
-            if (!samePoints) {
-              markersLayer.clearLayers();
-              // Поколение рендера: маркеры добавляются порциями через setTimeout,
-              // поэтому хвост предыдущего набора обязан остановиться — иначе он
-              // дорисует старые маркеры уже ПОСЛЕ clearLayers().
-              window.__metravelRenderGeneration = (window.__metravelRenderGeneration || 0) + 1;
-            }
-            const renderGeneration = window.__metravelRenderGeneration;
-
-            clusters.forEach(function(cluster) {
-              if (!cluster || !Array.isArray(cluster.center) || cluster.center.length < 2) return;
-              const lat = Number(cluster.center[0]);
-              const lng = Number(cluster.center[1]);
-              if (!isFinite(lat) || !isFinite(lng)) return;
-              const marker = L.marker([lat, lng], { icon: makeClusterIcon(cluster.count) }).addTo(clustersLayer);
-              marker.on('click', function() {
-                try {
-                  if (Array.isArray(cluster.bounds) && cluster.bounds.length >= 2) {
-                    map.fitBounds(cluster.bounds, { padding: [50, 50] });
-                    return;
-                  }
-                  map.setView([lat, lng], Math.min((map.getZoom ? map.getZoom() : 10) + 2, 18));
-                } catch (err) {}
-              });
-              bounds.extend([lat, lng]);
-            });
-
-            // points приходит уже сгруппированным по местам (#1573): один элемент —
-            // одно физическое место, один Leaflet-маркер, один hit target. RN шлёт
-            // сюда узкую проекцию (placeKey/id/coord/categoryName/sourceCount), а не
-            // полные записи: массив источников места здесь не нужен и не сериализуется.
-            const addPointMarker = function(point, pointIndex) {
-              if (!point || !point.coord) return;
-              const parts = String(point.coord).split(',').map(Number);
-              const lat = parts[0];
-              const lng = parts[1];
-              if (!isFinite(lat) || !isFinite(lng)) return;
-
-              // Зона кемпинга: рисуем полупрозрачный круг ПОД маркером для точек,
-              // у которых categoryName содержит 'Кемпинг' или 'Лагерь'. Бэкенд не
-              // отдаёт полигон-геометрию, поэтому зона — L.circle фиксированного
-              // радиуса 250м (визуальная зона, НЕ search radius). Круг добавляется
-              // в markersLayer, который чистится в начале __metravelRenderPoints,
-              // поэтому зоны не накапливаются при ре-рендере точек.
-              const categoryName = String(point.categoryName || '');
-              const isCamping = categoryName.indexOf('Кемпинг') !== -1 || categoryName.indexOf('Лагерь') !== -1;
-              if (isCamping) {
-                L.circle([lat, lng], {
-                  radius: 250,
-                  color: '#2e7d32',
-                  weight: 2,
-                  opacity: 0.8,
-                  fillColor: '#4caf50',
-                  fillOpacity: 0.18,
-                  interactive: false
-                }).addTo(markersLayer);
-              }
-
-              const marker = L.marker([lat, lng], { icon: markerIcon }).addTo(markersLayer);
-
-              // F-46 — на native НЕ открываем Leaflet-попап (зеркало web-фикса):
-              // тап по маркеру только отдаёт выбор в RN, экран показывает нижнюю
-              // карточку места (MapPlaceBottomCard), где есть вся навигация попапа.
-              // Основной идентификатор выбора — placeKey физического места (#1573):
-              // он переживает переупорядочивание и обновление dataset между рендером
-              // и тапом. id/coord/индекс остаются legacy-fallback переходного периода.
-              marker.on('click', function(event) {
-                try {
-                  // Leaflet bubbles marker clicks to the map. Without stopping
-                  // that event RN receives SELECT_PLACE followed by MAP_CLICK
-                  // and immediately dismisses the card it has just opened.
-                  if (event && L && L.DomEvent) L.DomEvent.stopPropagation(event);
-                  if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-                    window.ReactNativeWebView.postMessage(JSON.stringify({
-                      type: 'SELECT_PLACE',
-                      placeKey: point.placeKey == null ? null : String(point.placeKey),
-                      index: pointIndex,
-                      id: point.id == null ? null : String(point.id),
-                      coord: point.coord == null ? null : String(point.coord)
-                    }));
-                  }
-                } catch (err) {}
-              });
-            };
-
-            // #1773 — границы считаем отдельным числовым проходом (без DOM), чтобы
-            // fitBounds ниже работал сразу, ещё до отрисовки самих маркеров.
-            points.forEach(function(point) {
-              if (!point || !point.coord) return;
-              const parts = String(point.coord).split(',').map(Number);
-              if (!isFinite(parts[0]) || !isFinite(parts[1])) return;
-              bounds.extend([parts[0], parts[1]]);
-            });
-
-            // #1773 — «Мои точки» на iPhone открывались пустым серым холстом: 869
-            // маркеров добавлялись в DOM одним синхронным проходом и держали JS
-            // WebView ~10 с, а тайлы приезжают в тот же поток инъекцией
-            // __metravelSetTile из RN и просто ждали своей очереди. Рисуем порциями
-            // и отдаём поток между ними: подложка появляется сразу, маркеры
-            // дорисовываются следом. Итоговый набор маркеров не меняется.
-            const MARKER_CHUNK = 100;
-            const scheduleChunk = function(fn) {
-              if (typeof window.requestAnimationFrame === 'function') {
-                // rAF отдаёт кадр между порциями — тайлы успевают отрисоваться.
-                window.requestAnimationFrame(fn);
-                return;
-              }
-              setTimeout(fn, 0);
-            };
-            const renderMarkerChunk = function(start) {
-              if (window.__metravelRenderGeneration !== renderGeneration) return;
-              const end = Math.min(start + MARKER_CHUNK, points.length);
-              for (var i = start; i < end; i += 1) {
-                addPointMarker(points[i], i);
-              }
-              if (end < points.length) {
-                scheduleChunk(function() { renderMarkerChunk(end); });
-              }
-            };
-            if (!samePoints) scheduleChunk(function() { renderMarkerChunk(0); });
-
-            // #1851 — оригинальный трек не зависит от точек маршрута: файл
-            // грузят раньше, чем расставляют точки, и до #1851 весь route-блок
-            // висел под условием routePoints.length >= 1. Трек приезжал в payload,
-            // легенда его обещала (собственный гейт на RN-стороне), а слой
-            // оставался пустым. Условие линии маршрута не меняется — она
-            // по-прежнему рисуется только от своих точек (гейты ниже).
-            if (routeMode === 'route' && (routePoints.length >= 1 || originalTrackSegments.length)) {
-              const routeBounds = L.latLngBounds();
-              // #1820 — защёлку кадра снимает только явный сигнал оптовой замены
-              // маршрута: счётчик применений шаблона и импортов трека из
-              // RouteBuilder. Выводить замену из самих точек нельзя — повторное
-              // применение ТОГО ЖЕ шаблона возвращает неперетащенные точки с
-              // прежними координатами, и от частичной правки такая замена
-              // неотличима. Снятие стоит до всех читателей флага ниже: подгонки
-              // по линии, по оригинальному треку и по единственной точке.
-              if (map.__metravelRouteReplacementToken !== routeReplacementToken) {
-                map.__metravelRouteReplacementToken = routeReplacementToken;
-                map.__metravelRouteFitLocked = false;
-              }
-              // #2071 P2-1 — renderPoints прилетает и на смену activeIndex
-              // (открыть/закрыть точку в редакторе), которая геометрию не
-              // трогает вовсе. Без этого ключа кадр перестраивался бы на
-              // КАЖДЫЙ такой вызов, пока владелец не потянет маркер (тот
-              // единственный момент, что раньше ставил fitLocked) — активная
-              // точка прыгала бы к обзору всего маршрута и сбрасывала фокус
-              // #2066/#2058. Тот же приём, что map.__lastPointsFitKey у
-              // pointsOnly-ветки ниже: кадр трогаем только когда РЕАЛЬНО
-              // изменились точки/линия/оригинал/оптовая замена.
-              const routeFitKey = JSON.stringify([routePoints, routeLine, originalTrackSegments, routeReplacementToken]);
-              const routeGeometryChanged = map.__metravelRouteFitKey !== routeFitKey;
-              map.__metravelRouteFitKey = routeFitKey;
-              if (routeLine.length >= 2) {
-                // #2056 — маршрут с переездами рисуется по отрезкам (drawRouteLines), кадр — по всей routeLine.
-                const routePolyline = drawRouteLines(routeLine, routeApproximate, routePointMarkers, routeLayer);
-                routeLine.forEach(function(point) {
-                  if (Array.isArray(point) && isFinite(point[0]) && isFinite(point[1])) {
-                    routeBounds.extend(point);
-                  }
-                });
-                try {
-                  // #1781 — после ручного перетаскивания маркера кадр не двигаем:
-                  // подгонка существует для формы маршрута, а не для того, чтобы
-                  // отменять наведённый пользователем вид.
-                  if (routeGeometryChanged && !map.__metravelRouteFitLocked) {
-                    map.fitBounds(routePolyline.getBounds(), metravelFitOptions(routeFitPadding, [70, 70]));
-                  }
-                } catch (e) {}
-              }
-              // Оригинальный трек — отдельные полилинии поверх линии маршрута:
-              // упрощённые точки и построенная по ним линия остаются на карте.
-              if (originalTrackSegments.length) {
-                originalTrackSegments.forEach(function(segment) {
-                  L.polyline(segment, {
-                    color: ORIGINAL_TRACK_COLOR,
-                    weight: 3,
-                    opacity: 0.95,
-                    lineCap: 'round',
-                    lineJoin: 'round'
-                  }).addTo(routeLayer);
-                  segment.forEach(function(point) {
-                    if (Array.isArray(point) && isFinite(point[0]) && isFinite(point[1])) {
-                      routeBounds.extend(point);
-                    }
-                  });
-                });
-              }
-              // #2071 — кластеризация точек маршрута, паритет с web
-              // (mapClusterGroup.ts + FOCUS_POINT_ZOOM): порог и радиус
-              // приходят в payload (tripPlanMapMarkers.ts), а не задаются здесь
-              // числом. null/undefined — маршрут короткий, точки остаются как
-              // раньше, каждая своим маркером в routeLayer.
-              ensureRoutePointClusterGroup(map, routePointMarkers && routePointMarkers.cluster);
-              routePoints.forEach(function(point, index) {
-                if (!Array.isArray(point) || !isFinite(point[0]) || !isFinite(point[1])) return;
-                const isStart = index === 0;
-                const isEnd = routePoints.length > 1 && index === routePoints.length - 1;
-                // #2071 — активная точка остаётся крупнее и вне кластера (та же
-                // логика, что у web: TripPlanRouteMarkers.tsx исключает
-                // activeIndex из группы кластеров). Держанная (только что
-                // брошенная, P2-2) — вне кластера тем же путём, что web решил
-                // heldIndex/isDroppedAt.
-                const isActive = !!(routePointMarkers && routePointMarkers.activeIndex === index);
-                const isHeld = isRoutePointHeld(map.__metravelRouteHeldPoint, index, point);
-                // #1781 — L.Draggable есть только у L.Marker, у circleMarker его нет
-                // вовсе. Поэтому точка маршрута рисуется divIcon той же геометрии:
-                // диаметр = 2*radius + weight, заливка и рамка — прежние цвета.
-                const marker = L.marker(point, {
-                  icon: routePointIcon(routePointMarkers, index, isStart, isEnd, isActive),
-                  draggable: routePointsInteractive,
-                  interactive: routePointsInteractive,
-                  keyboard: false,
-                  title: routePointsInteractive ? routePointMarkerHint : undefined,
-                  zIndexOffset: isActive ? 1000 : 0
-                });
-                addRoutePointMarkerToLayer(marker, routeLayer, map.__metravelRoutePointClusterGroup, isActive || isHeld);
-                if (routePointsInteractive) {
-                  // #2073 — aria-description добавляет ту же подсказку в accessibility-дерево (title выше — только тултип Leaflet).
-                  const routePointMarkerElement = marker.getElement ? marker.getElement() : null;
-                  if (routePointMarkerElement) {
-                    routePointMarkerElement.setAttribute('aria-description', routePointMarkerHint);
-                  }
-                  // #2071 — маркер в кластере не всегда получает DOM-узел сразу:
-                  // пока точки свёрнуты в кластер, дочерний маркер не в DOM, и
-                  // getElement() выше отдаёт null. add стреляет каждый раз, когда
-                  // маркер реально появляется (первый показ, спайдерфай, зум выше
-                  // порога) — тем же приёмом, что и web (TripPlanRouteMarkers.tsx).
-                  marker.on('add', function() {
-                    const element = marker.getElement ? marker.getElement() : null;
-                    if (element) element.setAttribute('aria-description', routePointMarkerHint);
-                  });
-                  marker.on('dragstart', function() {
-                    // Кадр перестаёт подгоняться под маршрут: дальше видом
-                    // управляет пользователь, а не форма линии.
-                    map.__metravelRouteFitLocked = true;
-                  });
-                  marker.on('dragend', function(event) {
-                    try {
-                      const position = event && event.target && event.target.getLatLng
-                        ? event.target.getLatLng()
-                        : null;
-                      if (!position || !isFinite(position.lat) || !isFinite(position.lng)) return;
-                      // #2071 P2-2 — держим точку вне кластера, пока она стоит
-                      // там, куда её бросили: следующий renderPoints (тот же
-                      // повод, что уже вызывает numbers/activeIndex-обновления)
-                      // иначе вернул бы её в кластер соседа, и точка «пропала»
-                      // бы там, где её оставил владелец.
-                      map.__metravelRouteHeldPoint = { index: index, lat: position.lat, lng: position.lng };
-                      if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-                        window.ReactNativeWebView.postMessage(JSON.stringify({
-                          type: 'ROUTE_POINT_MOVED',
-                          index: index,
-                          lat: position.lat,
-                          lng: position.lng
-                        }));
-                      }
-                    } catch (e) {}
-                  });
-                  marker.on('click', function(event) {
-                    try {
-                      // Без этого Leaflet поднимет клик до карты, и MAP_CLICK
-                      // добавит новую точку прямо поверх выбранной.
-                      if (event && event.originalEvent) L.DomEvent.stopPropagation(event);
-                      if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-                        window.ReactNativeWebView.postMessage(JSON.stringify({
-                          type: 'ROUTE_POINT_TAP',
-                          index: index
-                        }));
-                      }
-                    } catch (e) {}
-                  });
-                }
-                routeBounds.extend(point);
-              });
-              // #1858 — кадр считается ОДИН раз и после отрисовки маркеров:
-              // раньше подгонка по треку стояла выше routePoints.forEach, а
-              // центровка одиночной точки — ниже, и при «трек + первая точка»
-              // побеждала последняя, отменяя наведение на трек зумом 14.
-              // Теперь при наличии трека кадр берётся по объединению границ
-              // трека, линии и точек (паритет с web: TripPlanRouteMap.web.tsx:390
-              // подгоняется по объединению трека и точек), а центровка зумом 14 остаётся
-              // ровно для маршрута без трека, где она единственный источник кадра.
-              if (originalTrackSegments.length) {
-                // Оригинал может выходить за пределы упрощённой линии: когда та
-                // есть, кадр подогнался по ней выше — досаживаем его на общие
-                // границы. Когда линии нет, эта подгонка кадр и ставит.
-                try {
-                  if (routeGeometryChanged && routeBounds.isValid() && !map.__metravelRouteFitLocked) {
-                    map.fitBounds(routeBounds, metravelFitOptions(routeFitPadding, [70, 70]));
-                  }
-                } catch (e) {}
-              } else if (routeGeometryChanged && routePoints.length >= 1 && routeLine.length < 2 && routeBounds.isValid() && !map.__metravelRouteFitLocked) {
-                try {
-                  map.setView(routeBounds.getCenter(), Math.max(map.getZoom ? map.getZoom() : 13, 14));
-                } catch (e) {}
-              }
-            } else if (pointsOnly) {
-              // Каталог квестов (pointsOnly): рефит при СМЕНЕ набора точек — выбор
-              // города меняет маркеры, карта обязана перелететь на них. Зеркало web
-              // keyed-рефита (dataKey по id/coord): ручной пан не меняет набор точек,
-              // поэтому не дёргает карту. Radius-режим сюда не заходит и сохраняет
-              // одноразовую защёлку ниже.
-              var dataKey = points
-                .map(function (p) { return p && p.id != null ? ('id:' + p.id) : ('c:' + (p && p.coord)); })
-                .join('|');
-              if (bounds.isValid() && map.__lastPointsFitKey !== dataKey) {
-                map.fitBounds(bounds, { padding: [50, 50] });
-                map.__lastPointsFitKey = dataKey;
-                __metravelDidInitialRadiusPosition = true;
-              } else if (!__metravelDidInitialRadiusPosition && !bounds.isValid() && map.__userCenter) {
-                map.setView(map.__userCenter, map.getZoom ? map.getZoom() : 10);
-                __metravelDidInitialRadiusPosition = true;
-              }
-            } else if (!__metravelDidInitialRadiusPosition && bounds.isValid() && !usesServerClusters) {
-              map.fitBounds(bounds, { padding: [50, 50] });
-              __metravelDidInitialRadiusPosition = true;
-            } else if (!__metravelDidInitialRadiusPosition && map.__userCenter) {
-              map.setView(map.__userCenter, map.getZoom ? map.getZoom() : 10);
-              __metravelDidInitialRadiusPosition = true;
-            }
-            window.__metravelScheduleInvalidate('renderPoints');
-            setTimeout(function() { __metravelPostViewport('MAP_VIEWPORT'); }, 0);
-          } catch (e) {}
-        };
+${buildNativeMapLayersScript()}
 
         // ───────────────────────── Оверлеи (web-parity) ─────────────────────────
         // На web эти слои рисует useMapApi (Overpass/WFS/tile). На native повторяем
@@ -1050,5 +669,5 @@ ${buildNativeWeatherTempLabelsScript()}
         if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
           window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'READY' }));
         }
-        setTimeout(function() { __metravelPostViewport('MAP_VIEWPORT'); }, 0);`,
+        setTimeout(function() { __metravelPostViewport('init'); }, 0);`,
   });

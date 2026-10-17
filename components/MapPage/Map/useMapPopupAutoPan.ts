@@ -3,7 +3,16 @@ import { useCallback, useMemo } from 'react'
 type UseMapPopupAutoPanArgs = {
   mapRef: React.MutableRefObject<any>
   mapPaneWidth: number
-  popupBottomOffset: number
+  /**
+   * Bottom-sheet reserve. Pass a stable getter (#2451): it is read when a popup
+   * opens, so a sheet snap neither re-renders the map nor changes `popupProps`.
+   */
+  popupBottomOffset: number | (() => number)
+}
+
+const resolveOffset = (value: number | (() => number)): number => {
+  const resolved = typeof value === 'function' ? value() : value
+  return Number.isFinite(resolved) ? resolved : 0
 }
 
 type PopupSafeArea = {
@@ -82,7 +91,7 @@ export function useMapPopupAutoPan({
         const safeArea = getPopupSafeArea({
           mapWidth: mapRect.width,
           mapHeight: mapRect.height,
-          popupBottomOffset,
+          popupBottomOffset: resolveOffset(popupBottomOffset),
         })
         const popupRect = {
           left: popupRectAbs.left - mapRect.left,
@@ -230,7 +239,7 @@ export function useMapPopupAutoPan({
     const safeArea = getPopupSafeArea({
       mapWidth: effectiveWidth,
       mapHeight: effectiveHeight,
-      popupBottomOffset,
+      popupBottomOffset: resolveOffset(popupBottomOffset),
     })
     const maxWidth = isVeryNarrow
       ? Math.min(284, Math.max(240, effectiveWidth - 28))

@@ -12,6 +12,7 @@ import {
   buildServerClusterRenderData,
   filterServerClusterRenderDataByRadius,
   getRadiusFilterLimit,
+  splitSingletonClusters,
 } from './serverClusterRenderData';
 
 type SafeCoordinates = Coordinates & { zoom: number };
@@ -64,21 +65,17 @@ type UseMapRenderDataArgs = {
   mode: MapMode;
   radius?: string;
   pointsOnly: boolean;
-  mapInstance: any;
   leafletReady: boolean;
   leafletRuntimeReady: boolean;
-  mapClusterFilters?: MapClustersFilters;
-  categoryFilterUnresolved: boolean;
-  /**
-   * Freeze the server-cluster refetch (keeps the last data, no new query) while a
-   * marker popup is open. A marker tap flies/zooms the map → viewport bbox/zoom
-   * change → cluster refetch → marker REMOUNT → the just-opened popup is destroyed
-   * ("opens then instantly closes"). Freezing keeps the tapped marker mounted; the
-   * clusters catch up to the settled viewport once the popup closes.
-   */
-  freezeServerClusters?: boolean;
 };
 
+/**
+ * Page-level render data of the web map. Viewport- and cluster-driven state is
+ * deliberately NOT here (#2451): it lives in `useServerPlaceLayerData`, called
+ * by a leaf component inside the MapContainer, so a viewport snapshot or a
+ * cluster response re-renders only the place layers, not the whole Map.web tree
+ * (controls, popup factory, routing, MapLogicComponent).
+ */
 export function useMapRenderData({
   travelData,
   safeCoordinates,
@@ -92,12 +89,8 @@ export function useMapRenderData({
   mode,
   radius,
   pointsOnly,
-  mapInstance,
   leafletReady,
   leafletRuntimeReady,
-  mapClusterFilters,
-  categoryFilterUnresolved,
-  freezeServerClusters = false,
 }: UseMapRenderDataArgs) {
   const coordinatesLatLng = useMemo(
     () => ({ lat: safeCoordinates.latitude, lng: safeCoordinates.longitude }),
@@ -159,45 +152,101 @@ export function useMapRenderData({
     });
   }, [coordinatesLatLng, filterCenter, mode, pointsOnly, radiusInMeters, travelData]);
 
-  // The marker index is owned by the layers that fill it (MarkerClusterGroup diffs it,
-  // ClusterLayer registers/unregisters through its ref callback). It used to be wiped
-  // wholesale whenever `filteredTravelData` changed, which was only safe while the
-  // cluster layer rebuilt every marker right after and re-registered them all. With
-  // the keyed diff (#1347) surviving markers are never re-created, so that blanket
-  // clear left the index permanently empty and `MapUiApi.openPopupForCoord` (tap a
-  // place card → open its popup) silently found nothing.
+  // The marker index is owned by the layer that fills it (MarkerClusterGroup diffs
+  // it). It used to be wiped wholesale whenever `filteredTravelData` changed, which
+  // was only safe while the cluster layer rebuilt every marker right after and
+  // re-registered them all. With the keyed diff (#1347) surviving markers are never
+  // re-created, so that blanket clear left the index permanently empty and
+  // `MapUiApi.openPopupForCoord` (tap a place card → open its popup) found nothing.
   useEffect(() => {
     const markerIndex = markerByCoordRef.current;
     return () => markerIndex.clear();
   }, [markerByCoordRef]);
 
-  const canRenderMap = leafletReady && leafletRuntimeReady;
-  const viewportSnapshot = useMapViewportSnapshot(
-    mapInstance,
-    safeCoordinates.zoom,
-    mode === 'radius' && !pointsOnly && canRenderMap,
-  );
+  return {
+    canRenderMap: leafletReady && leafletRuntimeReady,
+    centerOnUserLocation,
+    coordinatesLatLng,
+    filterCenter,
+    filteredTravelData,
+    radiusInMeters,
+    userLocationLatLng,
+  };
+}
+
+type UseServerPlaceLayerDataArgs = {
+  mapInstance: any;
+  /** Zoom used until the map reports its own (cold start). */
+  fallbackZoom: number;
+  mode: MapMode;
+  pointsOnly: boolean;
+  canRenderMap: boolean;
+  /** Client points (already radius-filtered) — the fallback when the backend has nothing. */
+  travelData: Point[];
+  /** Radius filter anchor (rounded `filterCenter`, or the raw center). */
+  radiusCenter: { lat: number; lng: number } | null;
+  radiusInMeters: number | null;
+  mapClusterFilters?: MapClustersFilters;
+  categoryFilterUnresolved: boolean;
+  /**
+   * Freeze the server-cluster refetch (keeps the last data, no new query) while a
+   * marker popup is open. A marker tap flies/zooms the map → viewport bbox/zoom
+   * change → cluster refetch → marker REMOUNT → the just-opened popup is destroyed
+   * ("opens then instantly closes"). Freezing keeps the tapped marker mounted; the
+   * clusters catch up to the settled viewport once the popup closes.
+   */
+  freezeServerClusters?: boolean;
+};
+
+/**
+ * Leaf-level data of the place layers: viewport snapshot → backend clusters →
+ * `{ markers, clusters }`.
+ *
+ * Contract (#2451):
+ * - `clusters` — backend clusters of 2+ points for the imperative
+ *   ServerClusterLayer (geometric keys, see `serverClusterRenderData`);
+ * - `markers` — every individual place for MarkerClusterGroup: backend markers
+ *   plus single-point backend clusters, or the client points when the backend has
+ *   no usable data (error, unresolved category, route mode, empty response).
+ * Both layers stay mounted, so crossing the backend's cluster/marker zoom
+ * threshold diffs items in place instead of swapping whole layers.
+ */
+export function useServerPlaceLayerData({
+  mapInstance,
+  fallbackZoom,
+  mode,
+  pointsOnly,
+  canRenderMap,
+  travelData,
+  radiusCenter,
+  radiusInMeters,
+  mapClusterFilters,
+  categoryFilterUnresolved,
+  freezeServerClusters = false,
+}: UseServerPlaceLayerDataArgs) {
+  const serverEnabled = mode === 'radius' && !pointsOnly && canRenderMap;
+  const viewportSnapshot = useMapViewportSnapshot(mapInstance, fallbackZoom, serverEnabled);
   const serverClusterQuery = useMapClusters({
     bbox: viewportSnapshot.bbox,
     zoom: viewportSnapshot.zoom,
     filters: mapClusterFilters,
     // While a popup is open we freeze the query (enabled=false). react-query keeps
-    // the last data (placeholderData), so `serverClusters` stays referentially
-    // stable → ClusterLayer does not remount markers → the open popup survives the
-    // marker-tap fly/zoom. On popupclose the query re-enables and catches up to the
-    // settled viewport.
-    enabled: mode === 'radius' && !pointsOnly && canRenderMap && !freezeServerClusters,
+    // the last data (placeholderData), so the rendered items stay referentially
+    // stable and the open popup survives the marker-tap fly/zoom. On popupclose the
+    // query re-enables and catches up to the settled viewport.
+    enabled: serverEnabled && !freezeServerClusters,
   });
   const serverClusterRenderData = useMemo(
     () => buildServerClusterRenderData(serverClusterQuery.data),
     [serverClusterQuery.data],
   );
-  const radiusFilteredServerClusterRenderData = useMemo(() => {
-    const center = filterCenter ?? coordinatesLatLng;
-    return mode === 'radius'
-      ? filterServerClusterRenderDataByRadius(serverClusterRenderData, center, radiusInMeters)
-      : serverClusterRenderData;
-  }, [coordinatesLatLng, filterCenter, mode, radiusInMeters, serverClusterRenderData]);
+  const radiusFilteredServerClusterRenderData = useMemo(
+    () =>
+      mode === 'radius'
+        ? filterServerClusterRenderDataByRadius(serverClusterRenderData, radiusCenter, radiusInMeters)
+        : serverClusterRenderData,
+    [mode, radiusCenter, radiusInMeters, serverClusterRenderData],
+  );
 
   const shouldUseServerClusterData =
     mode === 'radius' &&
@@ -205,32 +254,26 @@ export function useMapRenderData({
     radiusFilteredServerClusterRenderData.hasServerData &&
     !categoryFilterUnresolved;
 
-  const nextMarkers =
-    shouldUseServerClusterData && radiusFilteredServerClusterRenderData.markers.length > 0
-      ? radiusFilteredServerClusterRenderData.markers
-      : filteredTravelData;
-  const nextClusters =
-    shouldUseServerClusterData && radiusFilteredServerClusterRenderData.clusters.length > 0
-      ? radiusFilteredServerClusterRenderData.clusters
-      : EMPTY_CLUSTERS;
+  const { nextMarkers, nextClusters } = useMemo(() => {
+    if (!shouldUseServerClusterData) {
+      return { nextMarkers: travelData, nextClusters: EMPTY_CLUSTERS };
+    }
+    const { clusters, singletons } = splitSingletonClusters(
+      radiusFilteredServerClusterRenderData.clusters,
+    );
+    const serverMarkers = radiusFilteredServerClusterRenderData.markers;
+    return {
+      nextMarkers: singletons.length ? [...serverMarkers, ...singletons] : serverMarkers,
+      nextClusters: clusters.length ? clusters : EMPTY_CLUSTERS,
+    };
+  }, [radiusFilteredServerClusterRenderData, shouldUseServerClusterData, travelData]);
 
-  // Signatures are O(n) string building, and this hook re-runs on every Map.web render
-  // (theme, pane width, bottom-sheet state…). Key them on array identity — that is the
-  // only thing that can change what the signature says.
+  // Signatures are O(n) string building — key them on array identity, the only
+  // thing that can change what the signature says.
   const markersSig = useMemo(() => markersSignature(nextMarkers), [nextMarkers]);
   const clustersSig = useMemo(() => clustersSignature(nextClusters), [nextClusters]);
-  const renderedMarkers = useStableByContent(nextMarkers, markersSig);
-  const renderedServerClusters = useStableByContent(nextClusters, clustersSig);
+  const markers = useStableByContent(nextMarkers, markersSig);
+  const clusters = useStableByContent(nextClusters, clustersSig);
 
-  return {
-    canRenderMap,
-    centerOnUserLocation,
-    coordinatesLatLng,
-    filterCenter,
-    filteredTravelData,
-    radiusInMeters,
-    renderedMarkers,
-    renderedServerClusters,
-    userLocationLatLng,
-  };
+  return { markers, clusters };
 }

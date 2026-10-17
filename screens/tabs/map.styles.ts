@@ -716,14 +716,12 @@ export const getStyles = (
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: themedColors.warning,
         zIndex: 1010,
-        ...(Platform.OS === 'web'
-          ? ({
-              backgroundColor: themedColors.warningSoft,
-              boxShadow: '0 8px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.05)',
-              backdropFilter: 'blur(18px)',
-              WebkitBackdropFilter: 'blur(18px)',
-            } as any)
-          : themedColors.shadows.medium),
+        // #2451: mobile web — opaque tinted surface, no backdrop blur re-sampling the map per frame.
+        ...(Platform.OS !== 'web'
+          ? themedColors.shadows.medium
+          : isMobile
+            ? ({ backgroundColor: themedColors.surface, backgroundImage: `linear-gradient(${themedColors.warningSoft}, ${themedColors.warningSoft})`, boxShadow: '0 2px 8px rgba(0,0,0,0.10)' } as any)
+            : ({ backgroundColor: themedColors.warningSoft, boxShadow: '0 8px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.05)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)' } as any)),
       },
       /**
        * Строка статуса: иконка + текст. На мобиле в ней же прячется место под

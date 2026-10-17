@@ -1,8 +1,8 @@
 import { renderHook } from '@testing-library/react-native'
 
 // Freeze regression (#map-popup-instant-close): tapping a marker flies/zooms the
-// map, which changes the viewport bbox/zoom → server-cluster refetch → ClusterLayer
-// remounts markers → the just-opened Leaflet popup is destroyed. useMapRenderData
+// map, which changes the viewport bbox/zoom → server-cluster refetch → markers
+// remount → the just-opened Leaflet popup is destroyed. The place-layer data hook
 // must disable the cluster query while a popup is open so the marker stays mounted.
 
 // `mock`-prefixed so babel-jest allows it inside the hoisted jest.mock factory.
@@ -26,24 +26,19 @@ jest.mock('@/hooks/map/useMapViewportSnapshot', () => ({
   readMapViewportSnapshot: () => ({ bbox: null, zoom: 11 }),
 }))
 
-jest.mock('@/components/MapPage/Map/useMapUserLocation', () => ({
-  useMapUserLocation: () => ({ centerOnUserLocation: jest.fn(), userLocationLatLng: null }),
-}))
+import { useServerPlaceLayerData } from '@/components/MapPage/Map/useMapRenderData'
 
-import { useMapRenderData } from '@/components/MapPage/Map/useMapRenderData'
-
+// #2451 — the cluster query lives in the leaf place-layer hook (inside the
+// MapContainer), not in the page-level useMapRenderData.
 const baseArgs = () => ({
-  travelData: [],
-  safeCoordinates: { latitude: 53.9006, longitude: 27.559, zoom: 11 },
-  coordinates: { latitude: 53.9006, longitude: 27.559 },
-  mapRef: { current: {} } as any,
-  markerByCoordRef: { current: new Map() } as any,
-  mode: 'radius' as const,
-  radius: '50',
-  pointsOnly: false,
   mapInstance: {},
-  leafletReady: true,
-  leafletRuntimeReady: true,
+  fallbackZoom: 11,
+  mode: 'radius' as const,
+  pointsOnly: false,
+  canRenderMap: true,
+  travelData: [],
+  radiusCenter: { lat: 53.901, lng: 27.559 },
+  radiusInMeters: 50000,
   categoryFilterUnresolved: false,
 })
 
@@ -52,27 +47,34 @@ const lastEnabled = (): boolean => {
   return (calls[calls.length - 1][0] as any).enabled
 }
 
-describe('useMapRenderData — server-cluster freeze while a popup is open', () => {
+describe('useServerPlaceLayerData — server-cluster freeze while a popup is open', () => {
   beforeEach(() => mockUseMapClusters.mockClear())
 
   it('enables the cluster query by default (no popup open)', () => {
-    renderHook(() => useMapRenderData({ ...baseArgs(), freezeServerClusters: false }))
+    renderHook(() => useServerPlaceLayerData({ ...baseArgs(), freezeServerClusters: false }))
     expect(lastEnabled()).toBe(true)
   })
 
   it('disables the cluster query while a popup is open (freeze)', () => {
-    renderHook(() => useMapRenderData({ ...baseArgs(), freezeServerClusters: true }))
+    renderHook(() => useServerPlaceLayerData({ ...baseArgs(), freezeServerClusters: true }))
     expect(lastEnabled()).toBe(false)
   })
 
   it('re-enables the cluster query once the popup closes (unfreeze)', () => {
     const { rerender } = renderHook(
       (props: { freeze: boolean }) =>
-        useMapRenderData({ ...baseArgs(), freezeServerClusters: props.freeze }),
+        useServerPlaceLayerData({ ...baseArgs(), freezeServerClusters: props.freeze }),
       { initialProps: { freeze: true } },
     )
     expect(lastEnabled()).toBe(false)
     rerender({ freeze: false })
     expect(lastEnabled()).toBe(true)
+  })
+
+  it('keeps the cluster query off outside radius mode and for points-only maps', () => {
+    renderHook(() => useServerPlaceLayerData({ ...baseArgs(), mode: 'route' as const }))
+    expect(lastEnabled()).toBe(false)
+    renderHook(() => useServerPlaceLayerData({ ...baseArgs(), pointsOnly: true }))
+    expect(lastEnabled()).toBe(false)
   })
 })

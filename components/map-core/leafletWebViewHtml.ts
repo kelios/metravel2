@@ -136,8 +136,15 @@ export const buildInvalidateSchedulerScript = ({
       : `function ${schedulerName}(stage) {`;
   const declarationClose = mode === 'window-prop' ? '        };' : '        }';
 
-  const helperAndScheduler = `        function ${helperName}(stage) {
+  // #2453 — каскад коалесцируется: повторный вызов до конца прежнего
+  // каскада снимает его ещё не сработавшие таймеры и начинает заново, а не
+  // наслаивает второй набор (раньше N вызовов подряд = 4×N invalidateSize с
+  // принудительным reflow). Счётчик вызовов invalidateSize — для замера.
+  const timersVar = `__${helperName}Timers`;
+  const helperAndScheduler = `        var ${timersVar} = [];
+        function ${helperName}(stage) {
           try {
+            window.__metravelInvalidateCount = (window.__metravelInvalidateCount || 0) + 1;
             map.invalidateSize({ animate: false, pan: false });
           } catch (e) {
             try { map.invalidateSize(); } catch (err) {}
@@ -146,9 +153,11 @@ export const buildInvalidateSchedulerScript = ({
 
         ${declaration}
           try {
+            for (var i = 0; i < ${timersVar}.length; i += 1) clearTimeout(${timersVar}[i]);
+            ${timersVar} = [];
             ${helperName}(stage);
             [80, 240, 600].forEach(function(delay) {
-              setTimeout(function() { ${helperName}(stage); }, delay);
+              ${timersVar}.push(setTimeout(function() { ${helperName}(stage); }, delay));
             });
           } catch (e) {}
 ${declarationClose}`;

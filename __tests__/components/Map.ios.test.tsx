@@ -2,6 +2,7 @@
 import React from 'react';
 import { act, render } from '@testing-library/react-native';
 import { View } from 'react-native';
+import { padViewportBBox } from '@/hooks/map/mapViewportCoverage';
 
 const mockInjectJavaScript = jest.fn();
 let mockIsConnected = true;
@@ -119,18 +120,30 @@ describe('Map.ios Component', () => {
     return webView!;
   };
 
+  // #2453 — данные уходят независимыми каналами (центр/маршрут/кластеры/маркеры).
+  const CHANNEL_COMMANDS = [
+    '__metravelSetCenter',
+    '__metravelSetRoute',
+    '__metravelSetClusters',
+    '__metravelSetMarkers',
+  ];
+  const channelCalls = (channel?: string) =>
+    mockInjectJavaScript.mock.calls
+      .map((call) => call?.[0] as string)
+      .filter((script) =>
+        typeof script === 'string' &&
+        (channel ? script.includes(channel) : CHANNEL_COMMANDS.some((name) => script.includes(name))));
+
   const getInjectedPayloadScript = (rendered: ReturnType<typeof render>) => {
     const webView = getWebView(rendered);
     act(() => {
       webView.props.onLoadEnd();
     });
     expect(mockInjectJavaScript).toHaveBeenCalled();
-    // #1773 — payload больше не дублируется байт-в-байт, поэтому последним
-    // вызовом может быть маркер геопозиции. Берём последнюю команду рендера точек.
-    const renderCalls = mockInjectJavaScript.mock.calls
-      .map((call) => call?.[0] as string)
-      .filter((script) => typeof script === 'string' && script.includes('__metravelRenderPoints'));
-    return renderCalls.at(-1) as string;
+    // Последняя команда каждого канала, склеенная в одну строку для проверок.
+    return CHANNEL_COMMANDS
+      .map((channel) => channelCalls(channel).at(-1) ?? '')
+      .join('\n');
   };
 
   it('should render without crashing', () => {
@@ -161,9 +174,14 @@ describe('Map.ios Component', () => {
     expect(html).toContain('preferCanvas: true');
     expect(html).toContain('fadeAnimation: false');
     expect(html).toContain("window.__metravelScheduleInvalidate('init')");
-    expect(html).toContain("window.__metravelScheduleInvalidate('moveend')");
-    expect(html).toContain("window.__metravelScheduleInvalidate('renderPoints')");
     expect(html).toContain("window.addEventListener('resize'");
+    // #2453 — размер карты от движения и данных не меняется: каскад
+    // invalidateSize больше не висит на moveend/zoomend/renderPoints.
+    expect(html).not.toContain("__metravelScheduleInvalidate('moveend')");
+    expect(html).not.toContain("__metravelScheduleInvalidate('zoomend')");
+    expect(html).not.toContain("__metravelScheduleInvalidate('renderPoints')");
+    // #2452 — подложку в онлайне грузит сам WebView по шаблону прокси.
+    expect(html).toContain('/proxy/tiles/osm/{z}/{x}/{y}.png');
   });
 
   it('draws single POI markers with the shared brand bird divIcon (not the teardrop pin)', () => {
@@ -193,7 +211,9 @@ describe('Map.ios Component', () => {
     expect(html).toContain("marker.on('click'");
     expect(html).toContain('L.DomEvent.stopPropagation(event)');
     expect(html).toContain("type: 'SELECT_PLACE'");
-    expect(html).toContain('index: pointIndex');
+    // #2453 — выбор идёт по стабильному placeKey; индекс в массиве не шлётся.
+    expect(html).toContain('placeKey: point.placeKey == null ? null : String(point.placeKey)');
+    expect(html).not.toContain('index: pointIndex');
     expect(html).toContain('id: point.id == null ? null : String(point.id)');
     expect(html).toContain('coord: point.coord == null ? null : String(point.coord)');
     expect(html).not.toContain("type: 'MAP_CLICK', lat: lat, lng: lng");
@@ -592,18 +612,21 @@ describe('Map.ios Component', () => {
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
 
+    // #2452 — redraw серых клеток делает сам WebView при смене режима слоя
+    // офлайн → онлайн (см. nativeTileBridge.network.test.ts): RN шлёт ровно одну
+    // команду смены режима.
     const reconnectScripts = mockInjectJavaScript.mock.calls
       .map(([script]) => String(script))
-      .filter((script) => script.includes('network-reconnect'));
+      .filter((script) => script.includes('__metravelSetTileNetwork(true'));
     expect(reconnectScripts).toHaveLength(1);
-    expect(reconnectScripts[0]).toContain('window.__metravelBaseTileLayer.redraw()');
+    expect(reconnectScripts[0]).toContain('window.__metravelSetTileNetwork(true)');
 
     mockInjectJavaScript.mockClear();
     rendered.rerender(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     expect(
-      mockInjectJavaScript.mock.calls.some(([script]) => String(script).includes('network-reconnect'))
+      mockInjectJavaScript.mock.calls.some(([script]) => String(script).includes('__metravelSetTileNetwork'))
     ).toBe(false);
   });
 
@@ -621,18 +644,24 @@ describe('Map.ios Component', () => {
     );
 
     expect(
-      mockInjectJavaScript.mock.calls.some(([script]) => String(script).includes('network-reconnect'))
+      mockInjectJavaScript.mock.calls.some(([script]) => String(script).includes('__metravelSetTileNetwork'))
     ).toBe(false);
 
+    act(() => {
+      webView.props.onLoadEnd();
+    });
+    // Вторая готовность (READY из моста) не повторяет redraw.
     act(() => {
       webView.props.onLoadEnd();
     });
 
     const reconnectScripts = mockInjectJavaScript.mock.calls
       .map(([script]) => String(script))
-      .filter((script) => script.includes('network-reconnect'));
+      .filter((script) => script.includes('__metravelSetTileNetwork'));
     expect(reconnectScripts).toHaveLength(1);
-    expect(reconnectScripts[0]).toContain('window.__metravelBaseTileLayer.redraw()');
+    // Страница могла набрать серых клеток в онлайн-режиме до готовности:
+    // redraw принудительный, даже если флаг слоя уже «онлайн».
+    expect(reconnectScripts[0]).toContain('window.__metravelSetTileNetwork(true, true)');
   });
 
   // #2172 — collapsing the tablet panel, Split View, Stage Manager and rotation
@@ -709,19 +738,16 @@ describe('Map.ios Component', () => {
     });
     rendered.rerender(<Map travel={bigTravel} coordinates={mockCoordinates} />);
 
-    const renderCalls = mockInjectJavaScript.mock.calls
-      .map((call) => call?.[0] as string)
-      .filter((script) => typeof script === 'string' && script.includes('__metravelRenderPoints'));
-    expect(renderCalls).toHaveLength(1);
-    expect(renderCalls[0]).toContain('"id":"840"');
+    // #2453 — повтор того же набора даёт пустой diff: маркеры уходят один раз.
+    const markerCalls = channelCalls('__metravelSetMarkers');
+    expect(markerCalls).toHaveLength(1);
+    expect(markerCalls[0]).toContain('"id":"840"');
+    expect(channelCalls('__metravelRenderPoints')).toHaveLength(0);
   });
 
   it('пересылает точки заново после перезагрузки страницы WebView', () => {
     const rendered = render(<Map travel={mockTravel} coordinates={mockCoordinates} />);
-    const renderPointsCalls = () =>
-      mockInjectJavaScript.mock.calls
-        .map((call) => call?.[0] as string)
-        .filter((script) => typeof script === 'string' && script.includes('__metravelRenderPoints'));
+    const renderPointsCalls = () => channelCalls('__metravelSetMarkers');
 
     act(() => {
       getWebView(rendered).props.onLoadEnd();
@@ -763,14 +789,171 @@ describe('Map.ios Component', () => {
       });
     });
 
+    // #2450/#2453 — публикуется область с запасом (общий контракт покрытия с web).
     expect(mockUseMapClusters).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        bbox: { south: 53.1, west: 27.1, north: 54.1, east: 28.1 },
+        bbox: padViewportBBox({ south: 53.1, west: 27.1, north: 54.1, east: 28.1 }),
         zoom: 9,
         filters: { query: 'замок', category: [5] },
         enabled: true,
       }),
     );
+  });
+
+  it('#2453: a viewport inside the published area does not touch state', () => {
+    const rendered = render(<Map travel={mockTravel} coordinates={mockCoordinates} />);
+    const webView = getWebView(rendered);
+    const sendViewport = (bbox: Record<string, number>, zoom: number) =>
+      act(() => {
+        webView.props.onMessage({
+          nativeEvent: { data: JSON.stringify({ type: 'MAP_VIEWPORT', bbox, zoom, lat: 53.6, lng: 27.6 }) },
+        });
+      });
+
+    sendViewport({ south: 53.1, west: 27.1, north: 54.1, east: 28.1 }, 9);
+    const callsAfterFirst = mockUseMapClusters.mock.calls.length;
+
+    // Небольшой пан внутри запаса на том же зуме: resolveViewportPublication → null,
+    // setState не вызывается — компонент не перерисовывается, запроса нет.
+    sendViewport({ south: 53.15, west: 27.15, north: 54.15, east: 28.15 }, 9);
+    expect(mockUseMapClusters.mock.calls.length).toBe(callsAfterFirst);
+
+    // Смена округлённого зума публикует новый snapshot.
+    sendViewport({ south: 53.3, west: 27.3, north: 53.8, east: 27.8 }, 10);
+    expect(mockUseMapClusters.mock.calls.length).toBeGreaterThan(callsAfterFirst);
+    expect(mockUseMapClusters).toHaveBeenLastCalledWith(expect.objectContaining({ zoom: 10 }));
+  });
+
+  it('#2453: one viewport message routes the moved centre to onMapMove only when it moved', () => {
+    const onMapMove = jest.fn();
+    const rendered = render(<Map travel={mockTravel} coordinates={mockCoordinates} onMapMove={onMapMove} />);
+    const webView = getWebView(rendered);
+    const bbox = { south: 53.1, west: 27.1, north: 54.1, east: 28.1 };
+    act(() => {
+      webView.props.onMessage({
+        nativeEvent: { data: JSON.stringify({ type: 'MAP_VIEWPORT', bbox, zoom: 9, lat: 53.6, lng: 27.6, byUser: true, centerMoved: false }) },
+      });
+    });
+    expect(onMapMove).not.toHaveBeenCalled();
+    act(() => {
+      webView.props.onMessage({
+        nativeEvent: { data: JSON.stringify({ type: 'MAP_VIEWPORT', bbox, zoom: 9, lat: 53.7, lng: 27.7, byUser: true, centerMoved: true }) },
+      });
+    });
+    expect(onMapMove).toHaveBeenCalledTimes(1);
+    expect(onMapMove).toHaveBeenCalledWith(expect.objectContaining({
+      latitude: 53.7,
+      longitude: 27.7,
+      userInitiated: true,
+    }));
+  });
+
+  it('#2453: with server data only server markers are drawn, never the whole list', () => {
+    mockUseMapClusters.mockReturnValue({
+      data: {
+        clusters: [
+          {
+            id: 'cluster-1',
+            center: { lat: 53.95, lng: 27.6 },
+            count: 12,
+            bounds: { south: 53.8, west: 27.4, north: 54.1, east: 27.8 },
+            previewItems: [],
+          },
+        ],
+        markers: [],
+        totalCount: 12,
+        source: 'server',
+        generatedAt: '2026-07-04T00:00:00Z',
+      },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      isDebouncing: false,
+    });
+    const rendered = render(<Map travel={mockTravel} coordinates={mockCoordinates} />);
+    getInjectedPayloadScript(rendered);
+    const markers = channelCalls('__metravelSetMarkers').at(-1) ?? '';
+    expect(markers).toContain('"add":[]');
+    expect(markers).toContain('"usesServerClusters":true');
+    expect(markers).not.toContain('"coord":"53.9,27.5"');
+  });
+
+  it('#2453: a centre change does not re-serialize markers', () => {
+    const rendered = render(<Map travel={mockTravel} coordinates={mockCoordinates} />);
+    getInjectedPayloadScript(rendered);
+    const markerCallsBefore = channelCalls('__metravelSetMarkers').length;
+    const centerCallsBefore = channelCalls('__metravelSetCenter').length;
+
+    rendered.rerender(<Map travel={mockTravel} coordinates={{ latitude: 52.1, longitude: 23.7 }} />);
+
+    expect(channelCalls('__metravelSetCenter').length).toBe(centerCallsBefore + 1);
+    expect(channelCalls('__metravelSetCenter').at(-1)).toContain('{"lat":52.1,"lng":23.7}');
+    expect(channelCalls('__metravelSetMarkers').length).toBe(markerCallsBefore);
+  });
+
+  it('#2453: one new list point is sent as a single add', () => {
+    const rendered = render(<Map travel={mockTravel} coordinates={mockCoordinates} />);
+    getInjectedPayloadScript(rendered);
+    const extra = {
+      id: 3,
+      lat: '53.7',
+      lng: '27.7',
+      coord: '53.7,27.7',
+      address: 'Third',
+      categoryName: 'Attraction',
+    };
+    rendered.rerender(
+      <Map
+        travel={{ travelAddress: { data: [...mockTravel.travelAddress.data, extra] } }}
+        coordinates={mockCoordinates}
+      />
+    );
+    const patch = channelCalls('__metravelSetMarkers').at(-1) ?? '';
+    expect(patch).toContain('"coord":"53.7,27.7"');
+    expect(patch).not.toContain('"coord":"53.9,27.5"');
+    expect(patch).toContain('"removeKeys":[]');
+    expect(patch).not.toContain('"reset":true');
+  });
+
+  it('#2452: captured tiles are written to the cache without any inject back; tainted canvas warns once', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const rendered = render(<Map travel={mockTravel} coordinates={mockCoordinates} />);
+    const webView = getWebView(rendered);
+    act(() => {
+      webView.props.onLoadEnd();
+    });
+    mockInjectJavaScript.mockClear();
+    act(() => {
+      webView.props.onMessage({
+        nativeEvent: { data: JSON.stringify({ type: 'TILE_CAPTURE', gen: 0, tiles: [['10/585/333', 'data:image/png;base64,AAAA']] }) },
+      });
+      webView.props.onMessage({ nativeEvent: { data: JSON.stringify({ type: 'TILE_CAPTURE_DISABLED', reason: 'SecurityError' }) } });
+      webView.props.onMessage({ nativeEvent: { data: JSON.stringify({ type: 'TILE_CAPTURE_DISABLED', reason: 'SecurityError' }) } });
+    });
+    expect(mockInjectJavaScript).not.toHaveBeenCalled();
+    expect(warn.mock.calls.filter(([text]) => String(text).includes('tile capture disabled'))).toHaveLength(1);
+    warn.mockRestore();
+  });
+
+  it('#2452: tile requests and cancels go through the fallback bridge, not one inject per tile', () => {
+    const rendered = render(<Map travel={mockTravel} coordinates={mockCoordinates} />);
+    const webView = getWebView(rendered);
+    act(() => {
+      webView.props.onLoadEnd();
+    });
+    mockInjectJavaScript.mockClear();
+    act(() => {
+      webView.props.onMessage({
+        nativeEvent: { data: JSON.stringify({ type: 'TILE_REQ', z: 10, x: 1, y: 2, key: '10/1/2#1', fallback: true }) },
+      });
+      webView.props.onMessage({
+        nativeEvent: { data: JSON.stringify({ type: 'TILE_CANCEL', keys: ['10/1/2#1'] }) },
+      });
+    });
+    // Отменённый тайл не отвечается одиночным __metravelSetTile.
+    expect(
+      mockInjectJavaScript.mock.calls.some(([script]) => String(script).includes('__metravelSetTile('))
+    ).toBe(false);
   });
 
   it('injects server clusters into the native WebView payload', () => {
@@ -804,12 +987,12 @@ describe('Map.ios Component', () => {
     // The native renderer must receive the same stable geometric key as web so
     // an unchanged cluster is not recreated after every pan/refetch (#1347).
     expect(injectedScript).toContain(
-      '"clusters":[{"key":"53.9500|27.6000|12"',
+      '__metravelSetClusters({"add":[{"key":"53.9500|27.6000|12"',
     );
     expect(injectedScript).toContain('"count":12');
     expect(injectedScript).toContain('"usesServerClusters":true');
     expect(getWebViewHtml(rendered)).toContain('makeClusterIcon');
-    expect(getWebViewHtml(rendered)).toContain("__metravelPostViewport('MAP_VIEWPORT')");
+    expect(getWebViewHtml(rendered)).toContain("__metravelPostViewport('init')");
   });
 
   it('should handle empty travel data', () => {
@@ -823,7 +1006,11 @@ describe('Map.ios Component', () => {
       <Map travel={emptyTravel} coordinates={mockCoordinates} />
     );
     
-    expect(getInjectedPayloadScript(rendered)).toContain('"points":[]');
+    // Первая отправка маркеров — сброс страницы даже для пустого набора, чтобы
+    // WebView выполнил стартовое позиционирование.
+    const markers = getInjectedPayloadScript(rendered);
+    expect(markers).toContain('"add":[]');
+    expect(markers).toContain('"reset":true');
   });
 
   it('should use default coordinates when not provided', () => {
@@ -835,7 +1022,7 @@ describe('Map.ios Component', () => {
     // D2: центр по умолчанию — `DEFAULT_MAP_CENTER` из `constants/mapConfig.ts`,
     // а не прежний захардкоженный 53.8828449/27.7273595.
     expect(getWebViewHtml(rendered)).toContain('setView([53.9006, 27.559], 10)');
-    expect(injectedScript).toContain('"center":{"lat":53.9006,"lng":27.559}');
+    expect(injectedScript).toContain('__metravelSetCenter({"lat":53.9006,"lng":27.559})');
   });
 
   it('should parse coordinates correctly', () => {

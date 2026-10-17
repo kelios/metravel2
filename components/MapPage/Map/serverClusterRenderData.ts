@@ -118,6 +118,29 @@ export const buildServerClusterRenderData = (
   };
 };
 
+/**
+ * #2451 — split backend single-point clusters off as plain places.
+ *
+ * A backend "cluster" of one point is a place: it is drawn with the place
+ * marker and must open the same card/popup as every other place. Routing those
+ * points through the place-marker layer (keyed by `placeKey`) gives them one
+ * identity across zoom levels and responses, instead of a cluster key that
+ * changes with the cluster geometry, and keeps the cluster layer free of
+ * per-marker popups. Clusters without a preview item stay clusters.
+ */
+export const splitSingletonClusters = (
+  clusters: ClusterData[],
+): { clusters: ClusterData[]; singletons: Point[] } => {
+  const multi: ClusterData[] = [];
+  const singletons: Point[] = [];
+  for (const cluster of clusters) {
+    const only = cluster.count === 1 ? cluster.items[0] : undefined;
+    if (only) singletons.push(only);
+    else multi.push(cluster);
+  }
+  return singletons.length === 0 ? { clusters, singletons } : { clusters: multi, singletons };
+};
+
 export const getRadiusFilterLimit = (radiusMeters: number): number =>
   radiusMeters + Math.max(RADIUS_FILTER_TOLERANCE_METERS, radiusMeters * RADIUS_FILTER_TOLERANCE_RATIO);
 

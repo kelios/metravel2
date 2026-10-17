@@ -94,6 +94,15 @@ interface MapLogicProps {
   disableFitBounds: boolean;
   L: any;
   travelData: Point[];
+  /**
+   * #2450 — server total of the radius result set. The radius auto-fit may tighten
+   * the view to `travelData` only when it IS the whole result set; the first page
+   * of 30 nearest points out of 576 used to zoom a 200 km radius into a 20 km box.
+   * `null` → the active query has not settled (placeholder points of the previous
+   * radius/anchor) → never tighten, fit the circle. `undefined` (prop omitted) →
+   * treat the loaded set as complete (legacy callers).
+   */
+  travelsTotal?: number | null;
   /** Wait for the first result set before applying the initial web viewport. */
   initialResultsSettled?: boolean;
   /** Called once, synchronously after the initial viewport (or explicit fallback) is applied. */
@@ -132,6 +141,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   disableFitBounds,
   L,
   travelData,
+  travelsTotal,
   initialResultsSettled = true,
   onInitialViewReady,
   circleCenter,
@@ -161,6 +171,12 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   const hasSignaledInitialViewReadyRef = useRef(false);
 
   const hasRadiusResults = (travelData ?? []).length > 0;
+  const radiusResultsComplete =
+    travelsTotal === undefined
+      ? true
+      : typeof travelsTotal === 'number' &&
+        Number.isFinite(travelsTotal) &&
+        (travelData ?? []).length >= travelsTotal;
   // Whether we know enough to draw/fit the radius circle around the user (or the
   // resolved center). When true the default radius view is "circle around me",
   // even with zero results — the circle must be visible from first paint.
@@ -446,7 +462,8 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     if (hasValidCircle && circleBounds) {
       targetBounds = circleBounds;
 
-      if (inRadiusPointCoords.length > 0) {
+      // Tighten only when the loaded points are the WHOLE result set (#2450).
+      if (inRadiusPointCoords.length > 0 && radiusResultsComplete) {
         try {
           const pointBounds = (L as any).latLngBounds(
             inRadiusPointCoords.map(([lng, lat]) => (L as any).latLng(lat, lng)),
@@ -685,6 +702,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     hintCenter,
     syncZoomFromMap,
     hasRadiusResults,
+    radiusResultsComplete,
     hasValidRadiusCircle,
     canAutoFitRadiusView,
     compactPane,

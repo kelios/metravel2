@@ -270,8 +270,44 @@ debounce/placeholder fetch, `MapLogicComponent` не применяет radius a
 
 Гейт монотонный для смонтированного `MapContainer`: последующие background
 refetch, pagination, pan/zoom и переключение `radius`/`route` не снимают и не
-пересоздают базовый слой. Это не debounce и не затрагивает Android WebView
-renderer, который сохраняет собственный tile lifecycle.
+пересоздают базовый слой. С #2450 защёлка живёт в самом `useMapController`
+(`initialResultsSettled` — `useState`, один переход `false → true`), поэтому
+флаги `loading/isFetching/isPlaceholderData/isDebouncingFilters` в
+`mapPanelProps` не входят и не перерисовывают рендерер на каждом тике
+запроса. Это не debounce и не затрагивает Android WebView renderer, который
+сохраняет собственный tile lifecycle.
+
+### Web-слой мест и кластеров (#2451, поезд MAP-PERF 17.10.2026)
+
+- Серверные кластеры рисует `Map/ServerClusterLayer.tsx` — один императивный
+  `L.layerGroup` на карту с keyed-diff по `cluster.key` (центр до 4 знаков +
+  count): повтор того же набора — 0 add / 0 remove, группа удаляется только при
+  размонтировании; попапов и RN-поддерева у кластера нет, тап даёт
+  `onClusterTap()` и `onClusterZoom({center, bounds, key, items})`. Иконки —
+  один `divIcon` на класс `size|label|theme` (`Map/serverClusterIcons.ts`).
+- Отдельные места (серверные `markers`, кластеры из одной точки через
+  `splitSingletonClusters`, а без серверных данных — клиентские точки) рисует
+  всегда смонтированный `MarkerClusterGroup` с ключом `placeKey`; переключения
+  слоёв по порогу зума больше нет, на границе меняются только элементы.
+  Следствие: соседние одиночные точки бэка могут клиентски сгруппироваться.
+- Состояние вьюпорта и запроса кластеров живёт в листе внутри `MapContainer`
+  (`Map/MapWebPlacesLayer.tsx`, `useServerPlaceLayerData` в
+  `useMapRenderData.ts`): ответ кластеров не перерисовывает дерево `Map.web`.
+  `MapWebLeafletCanvas` в `React.memo`, обработчики `useMapEvents` стабильны
+  (`createStableMapEventsHook`), колбэки `RoutingMachine` мемоизированы.
+- `Map.web` не подписан на `useBottomSheetStore`: высота листа читается
+  `getState()` внутри обработчиков (фит, автопан попапа —
+  `useMapPopupAutoPan` получает геттер), паддинг фита —
+  `Map/mapFitBoundsPadding.ts` с устойчивой identity.
+- Маркер места на web — `buildPlaceMarkerIconHtml` (`mapMarkerStyles.ts`): ≤2
+  DOM-узла, птица как SVG data URI фоном, без `will-change`/`translateZ`, тень
+  ≤8 px; кластер — 1 узел без бесконечного пульса. Native WebView держит прежний
+  `buildBirdMarkerHtml`, но без `will-change`/`translateZ` на каждом маркере
+  (полный перевод на лёгкий вариант — после замера на эмуляторе). `geoBanner` на mobile web — непрозрачный фон без `backdropFilter`.
+- Тайлы (`useMapInstance`): `updateWhenIdle: L.Browser.mobile`, `keepBuffer:
+  mobile ? 2 : 4`.
+- `ClusterLayer.tsx` остаётся только у встроенной карты travel
+  (`TravelMap.web.tsx`).
 
 Статический HTML bootstrap заранее загружает Leaflet/MarkerCluster CSS и может
 сделать только connection-level preconnect к внешнему proxy в local/dev. Он не
@@ -298,12 +334,34 @@ renderer, который сохраняет собственный tile lifecycl
 
 `components/MapPage/Map.ios.tsx` владеет протоколом основной native-карты:
 
-- RN → WebView: render points/clusters, user location, zoom, center, overlays,
-  resize invalidation и tile responses;
-- WebView → RN: `READY`, `SELECT_PLACE`, `MAP_CLICK`, `MAP_MOVED`,
-  `MAP_VIEWPORT`, `TILE_REQ`;
+- RN → WebView (#2453, поезд MAP-PERF): независимые каналы с diff по ключу
+  вместо одного снимка состояния — `__metravelSetMarkers({add, removeKeys,
+  reset?, pointsOnly, usesServerClusters})` по `placeKey`,
+  `__metravelSetClusters({add, removeKeys, reset?})` по ключу кластера,
+  `__metravelSetRoute(route)`, `__metravelSetCenter({lat,lng})`; плюс user
+  location, zoom, overlays, resize invalidation и пакетные ответы тайлов
+  `__metravelSetTiles([[key,dataUrl],…])`, `__metravelSetTileNetwork(online,
+  forceRedraw?)`, `__metravelCaptureTiles(keys, gen)`. Генераторы скрипта —
+  `Map/nativeMapLayersScript.ts`, diff на стороне RN — `Map/nativeMarkerDiff.ts`
+  и `Map/nativeMapChannelController.ts`; `__metravelRenderPoints` остаётся
+  совместимой обёрткой. Повтор того же набора — пустой diff, `clearLayers` не
+  вызывается, смена центра или маршрута не пересериализует маркеры;
+- WebView → RN: `READY`, `SELECT_PLACE`, `MAP_CLICK`, одно `MAP_VIEWPORT
+  {lat,lng,zoom,bbox,byUser,centerMoved}` через 300 мс после `moveend`/`zoomend`
+  (парсер `MAP_MOVED` оставлен для совместимости), `TILE_REQ` (только fallback),
+  `TILE_CANCEL`, `MAP_TILES_STATE`, `TILE_CAPTURE`, `TILE_CAPTURE_DISABLED`.
+  Приёмник вьюпорта в `Map.ios.tsx` проходит через общий
+  `resolveViewportPublication` (`hooks/map/mapViewportCoverage.ts`): вьюпорт
+  внутри уже загруженной области не трогает state и не даёт запроса кластеров;
+- при серверных данных кластеров карта рисует только серверные `markers` (даже
+  пустые), без подстановки всего списка `travelAddress`;
+- `__metravelScheduleInvalidate` → `invalidateSize` запускается только на
+  `rn-layout`/`resize`/`ready` (каскад коалесцируется в
+  `components/map-core/leafletWebViewHtml.ts`), не на `moveend`/`zoomend` и не
+  после рендера точек; `zoomAnimation`/`markerZoomAnimation` включены;
 - dynamic payload передаётся через безопасную JSON-сериализацию и
-  `injectJavaScript`, а не через пересборку HTML на каждое изменение данных.
+  `injectJavaScript`, а не через пересборку HTML на каждое изменение данных;
+  `source={{html}}` мемоизирован — страница перезагружается только при смене темы.
 - `onMapUiApiReady` отдаёт **полный** `MapUiApi` (`types/mapUi.ts`), собранный
   `Map/nativeMapUiApi.ts` (#2218): `zoomIn`/`zoomOut`, `centerOnUser`,
   `fitToResults` (кадр по текущим местам, одиночное место — зум 14),
@@ -327,13 +385,42 @@ renderer, который сохраняет собственный tile lifecycl
 
 ### Native base tile lifecycle
 
-`components/MapPage/Map/nativeTileBridgeScript.ts` владеет мостом базовой
-подложки для iOS и Android (Android — реэкспорт `Map.ios`). Прямой
-`L.tileLayer` не используется: каждый реально запрошенный тайл идёт через
-прозрачный дисковый кэш в RN. Bulk/prefetch регионов запрещён политикой
-tile.openstreetmap.org.
+`components/MapPage/Map/nativeTileBridgeScript.ts` владеет базовой подложкой
+для iOS и Android (Android — реэкспорт `Map.ios`). С #2452 (поезд MAP-PERF
+17.10.2026) владелец загрузки тайлов в онлайне — сам WebView: тайл ставится как
+`<img crossOrigin="anonymous" src=шаблон>` (тот же `/proxy/tiles/osm/{z}/{x}/{y}.png`,
+прокси отдаёт `Access-Control-Allow-Origin: *`), поэтому работают HTTP-кэш
+WebView, параллельность браузера и отмена снятых тайлов (`_removeTile` подменяет
+`src` и шлёт `TILE_CANCEL` раз в кадр). До этого каждый тайл шёл через RN как
+base64 отдельным `injectJavaScript` (≈30 сообщений и 0,5–0,7 МБ через мост на
+экран, 3 параллельных загрузки, FIFO без отмены) — главная причина «карта
+тупит» в приложении.
 
-Инварианты моста:
+Мост остаётся запасным путём и каналом офлайн-кэша:
+
+- сетевая ошибка тайла → один `TILE_REQ {…, fallback: true}`; RN отвечает из
+  дискового кэша или качает с ретраями (#1561) и инжектит пакетом
+  `__metravelSetTiles` не чаще раза в кадр (`Map/nativeTileFallbackQueue.ts`:
+  LIFO, 4 параллельно, тайлы прежнего зума получают пустой ответ сразу);
+- офлайн (NetInfo) → слой целиком на мостовом пути; переход offline → online —
+  ровно один `redraw()` через `__metravelSetTileNetwork(online, forceRedraw?)`
+  (контроль MAP-IOS-TILE-GRAY-001 / #1665 сохранён); уход в офлайн redraw не
+  делает, иначе тайлы из HTTP-кэша WebView сменились бы мостовыми, которых на
+  диске может не быть;
+- дисковый кэш (7 дней, формат прежний) наполняется БЕЗ повторной загрузки:
+  после `MAP_TILES_STATE` (событие `load` слоя, несёт `bbox`/`zoom`) RN считает
+  недостающие тайлы вьюпорта (`listViewportTiles` + `hasFreshCachedTile`, ≤48)
+  и инжектит `__metravelCaptureTiles(keys, gen)`; WebView в idle рисует уже
+  загруженные и ещё стоящие в DOM картинки в canvas и отвечает `TILE_CAPTURE
+  {gen, tiles:[[z/x/y, dataUrl],…]}` пакетами ≤8; RN проверяет ключ `z/x/y`,
+  PNG base64 и размер ≤400 КБ и пишет файл (`writeTileDataUrlToDisk`), ничего не
+  инжектируя обратно. `movestart`/`zoomstart` и новый `gen` обрывают захват;
+  `SecurityError` (tainted canvas, прокси без CORS) один раз шлёт
+  `TILE_CAPTURE_DISABLED` и выключает захват до перезагрузки страницы, в
+  двойную сетевую загрузку не откатывается. Bulk/prefetch регионов по-прежнему
+  запрещён политикой tile.openstreetmap.org.
+
+Инварианты мостового пути (действуют для fallback и офлайна):
 
 - **ключ pending уникален на DOM-тайл.** Leaflet отдаёт в `createTile`
   ОБЁРНУТЫЕ координаты (`_wrapCoords`), поэтому на низком зуме несколько разных
@@ -573,6 +660,39 @@ type MapPlaceSource = {
 | `stores/routeStore.ts` | route points, geometry и route state |
 | `hooks/useMapScreenController.ts` | screen-level derived state и stable callbacks |
 | component state | selected place, WebView readiness, local popup/layout state |
+
+### Контракт вьюпорта и запросов (#2450, поезд MAP-PERF 17.10.2026)
+
+Жест на карте не равен сетевому запросу. Общие для web и native правила живут в
+чистом модуле `hooks/map/mapViewportCoverage.ts`:
+
+- опубликованный snapshot вьюпорта (`{bbox, zoom}`) берётся с запасом
+  `VIEWPORT_MARGIN_RATIO = 0.35` с каждой стороны; новый snapshot публикуется
+  только когда видимая область вышла за покрытие или сменился округлённый зум
+  (`resolveViewportPublication`). Сдвиг до трети экрана — без запроса. Web —
+  `useMapViewportSnapshot`, native — приёмник `MAP_VIEWPORT` в `Map.ios.tsx`;
+- `useMapClusters` привязывает bbox запроса и ключа кэша к тайловой сетке
+  текущего зума (`snapBBoxToTileGrid`): возврат в район попадает в кэш;
+- запрос кластеров удерживается, пока карту двигаем мы
+  (`programmaticMoveSignal` → `useProgrammaticMapMoveSettled`), и после смены
+  радиуса до прихода нового вьюпорта (окно 900 мс, только web — native-карта
+  после смены радиуса не рефитит и шлёт запрос сразу после дебаунса,
+  `awaitRadiusRefit: false`): смена радиуса — один запрос кластеров и один
+  запрос списка;
+- `mapPanelProps.initialResultsSettled` — защёлка контроллера; флаги
+  `loading/isFetching/isPlaceholderData/isDebouncingFilters` в пропсы рендерера
+  не входят, статус показывают только статусные элементы UI;
+- авто-фит радиуса (`MapLogicComponent`) ужимает вид до загруженных точек только
+  когда они — весь набор (`travelsTotal <= loaded`), иначе показывает круг; пока
+  активный запрос не устоялся (placeholder прежнего радиуса/якоря), контроллер
+  передаёт `travelsTotal: null`, и фит после смены радиуса — всегда круг;
+- потеря фокуса экрана приостанавливает запросы, но не сносит данные и `total`;
+  возврат со свежим фиксом геолокации (< `LOCATION_REFOCUS_TTL_MS`, 5 мин) не
+  заказывает новый фикс и не меняет объект координат.
+
+Замер «до/после» — `.codex-temp/map-perf/probe.mjs <baseUrl> <cpuRate>`
+(Playwright, Pixel 5, CPU ×4): запросы `/api/map/clusters/` на жест, DOM-мутации
+панели карты, число маркеров, итоговый зум.
 
 ## Point/place mobile contract
 

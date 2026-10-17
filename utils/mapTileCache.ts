@@ -59,7 +59,7 @@ const clampTile = (value: number, z: number): number => {
   return Math.min(max, Math.max(0, Math.floor(value)));
 };
 
-interface TileCoord {
+export interface TileCoord {
   z: number;
   x: number;
   y: number;
@@ -158,6 +158,78 @@ export const downloadTileToDisk = async (
     }
     const info = await FileSystem.getInfoAsync(path);
     return info.exists && typeof info.size === 'number' ? info.size : AVG_TILE_BYTES;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Есть ли на диске свежий (≤7 дней) тайл. Захват тайлов из WebView (#2452)
+ * спрашивает это, чтобы не снимать уже лежащий тайл повторно. Устаревший файл
+ * не удаляется здесь — его перезапишет следующий захват или скачивание.
+ */
+export const hasFreshCachedTile = async (
+  z: number,
+  x: number,
+  y: number,
+): Promise<boolean> => {
+  try {
+    const info = await FileSystem.getInfoAsync(tilePath(z, x, y));
+    if (!info.exists || info.isDirectory) return false;
+    return isTileCacheEntryFresh(info.modificationTime);
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Тайлы ТЕКУЩЕГО видимого вьюпорта на одном зуме — ровно то, что пользователь
+ * сейчас видит и WebView уже загрузил по сети (#2452); по этому списку RN
+ * просит WebView снять недостающие в кэше тайлы, сам их не скачивает. Это не bulk-предзагрузка
+ * региона: перечисляется один экран одного зума, с жёстким потолком `maxTiles`
+ * (тайлы ближе к центру — первыми, они же первыми и качаются), поэтому
+ * политика OSM не нарушается.
+ */
+export const listViewportTiles = (
+  bbox: OfflineBBox,
+  zoom: number,
+  maxTiles: number,
+): TileCoord[] => {
+  const z = Math.max(0, Math.min(22, Math.round(Number(zoom))));
+  if (!Number.isFinite(z) || maxTiles <= 0) return [];
+  const tiles = enumerateTiles(bbox, z, z);
+  const cx = lngToTileX((bbox.west + bbox.east) / 2, z);
+  const cy = latToTileY((bbox.north + bbox.south) / 2, z);
+  return tiles
+    .map((tile) => ({ tile, d: (tile.x + 0.5 - cx) ** 2 + (tile.y + 0.5 - cy) ** 2 }))
+    .sort((a, b) => a.d - b.d)
+    .slice(0, maxTiles)
+    .map(({ tile }) => tile);
+};
+
+/** Потолок одного захваченного тайла: защита диска от мусорного data-URL. */
+const MAX_CAPTURED_TILE_BASE64_CHARS = 400 * 1024;
+
+/**
+ * Пишет на диск тайл, снятый из уже загруженной WebView-картинки (#2452):
+ * тот же PNG-файл и тот же 7-дневный срок, что у `downloadTileToDisk`, но без
+ * повторной сетевой загрузки. Возвращает размер в байтах или null.
+ */
+export const writeTileDataUrlToDisk = async (
+  z: number,
+  x: number,
+  y: number,
+  dataUrl: string,
+): Promise<number | null> => {
+  try {
+    if (!dataUrl.startsWith(PNG_DATA_URL_PREFIX)) return null;
+    const base64 = dataUrl.slice(PNG_DATA_URL_PREFIX.length);
+    if (!base64 || base64.length > MAX_CAPTURED_TILE_BASE64_CHARS || !/^[A-Za-z0-9+/=]+$/.test(base64)) {
+      return null;
+    }
+    await ensureDir(tileDir(z));
+    await FileSystem.writeAsStringAsync(tilePath(z, x, y), base64, { encoding: 'base64' });
+    return Math.floor((base64.length * 3) / 4);
   } catch {
     return null;
   }

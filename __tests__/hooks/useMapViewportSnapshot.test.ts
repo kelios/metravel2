@@ -91,11 +91,11 @@ describe('useMapViewportSnapshot stickiness', () => {
     await flushFrame();
 
     const first = result.current;
-    // 0.2 of the 0.2° lat span / 0.4° lng span.
-    expect(first.bbox?.south).toBeCloseTo(53.76, 6);
-    expect(first.bbox?.north).toBeCloseTo(54.04, 6);
-    expect(first.bbox?.west).toBeCloseTo(27.32, 6);
-    expect(first.bbox?.east).toBeCloseTo(27.88, 6);
+    // #2450 — 0.35 of the 0.2° lat span / 0.4° lng span (VIEWPORT_MARGIN_RATIO).
+    expect(first.bbox?.south).toBeCloseTo(53.73, 6);
+    expect(first.bbox?.north).toBeCloseTo(54.07, 6);
+    expect(first.bbox?.west).toBeCloseTo(27.26, 6);
+    expect(first.bbox?.east).toBeCloseTo(27.94, 6);
 
     // Small pan: still inside the padded area → same snapshot object, no refetch.
     map.view.south += 0.02;

@@ -53,22 +53,26 @@ interface UseMapInstanceProps {
  * запрашивает следующий zoom и режет тайлы до 128px, что резко увеличивает
  * нагрузку на прокси и даёт "шахматку" при первичном auto-fit карты.
  */
-export const getThemedBaseLayerOptions = () => ({
+export const getThemedBaseLayerOptions = (mobile = false) => ({
   attribution: getThemedBaseAttribution(),
   maxZoom: getThemedBaseMaxZoom(),
-  // Сглаживаем зум: держим больше окружающих тайлов в памяти, не перезапрашиваем
-  // во время зум-анимации (грузим по её завершении) и плавно проявляем загруженные
-  // тайлы. Без этого Leaflet рисует «шахматку» из серых пустых ячеек при зуме.
-  keepBuffer: 4,
+  // Сглаживаем зум: держим окружающие тайлы в памяти, не перезапрашиваем во время
+  // зум-анимации (грузим по её завершении) и плавно проявляем загруженные тайлы.
+  // На телефоне (#2451) — мобильные дефолты Leaflet: тайлы догружаются по
+  // окончании пана (`updateWhenIdle`), а буфер вдвое меньше, иначе каждый пан
+  // держит и декодирует лишние кольца тайлов на слабом CPU/GPU.
+  keepBuffer: mobile ? 2 : 4,
   updateWhenZooming: false,
-  updateWhenIdle: false,
+  updateWhenIdle: mobile,
   fadeAnimation: true,
   crossOrigin: getOsmTileCrossOrigin(),
 });
 
 const createThemedBaseLayer = (L: any) => {
   if (!L) return null;
-  return attachTileRetry(L.tileLayer(getThemedBaseTileUrl(), getThemedBaseLayerOptions()));
+  return attachTileRetry(
+    L.tileLayer(getThemedBaseTileUrl(), getThemedBaseLayerOptions(Boolean(L.Browser?.mobile))),
+  );
 };
 
 export function useMapInstance({

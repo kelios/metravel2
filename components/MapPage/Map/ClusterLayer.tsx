@@ -1,12 +1,12 @@
 // components/MapPage/map/ClusterLayer.tsx
+// Declarative cluster layer of the travel-detail map (TravelMap.web). The /map
+// page renders backend clusters through the imperative ServerClusterLayer (#2451).
 import React, { useMemo, useCallback } from 'react'
 import { View, Text } from 'react-native'
 import { useThemedColors, useTheme } from '@/hooks/useTheme'
 import { strToLatLng } from './utils'
 import type { Point, ClusterData } from './types'
-import { DESIGN_TOKENS } from '@/constants/designSystem'
-
-import { buildClusterIconHtml } from './mapMarkerStyles'
+import { getServerClusterIcon } from './serverClusterIcons'
 import MarkerPopup from './MarkerPopup'
 import { formatMapPoints } from '@/utils/mapPointCount'
 import { getMapPlaceKey, groupMapPlaces, materializeMapPlaceRecord } from '@/api/mapPlaces'
@@ -85,61 +85,17 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
     return groupMapPlaces(items)
   }, [expandedClusterKey, expandedClusterItems, safeClusters])
 
-  const clusterIconsCache = useMemo(() => {
-    const leaflet = L ?? (window as any)?.L
-    if (!leaflet?.divIcon) return new Map()
-
-    const cache = new Map()
-    ;[2, 5, 10, 20, 50, 100, 200].forEach((count) => {
-      const { metrics, html } = buildClusterIconHtml({
-        count,
-        accentColor: String(DESIGN_TOKENS.colors.primary),
-        textColor: String(DESIGN_TOKENS.colors.textOnPrimary),
-        isDark,
-      })
-      cache.set(
-        count,
-        leaflet.divIcon({
-          className: 'metravel-cluster-icon',
-          html,
-          iconSize: [metrics.size, metrics.size],
-          iconAnchor: [metrics.size / 2, metrics.size / 2],
-        }),
-      )
-    })
-
-    return cache
-  }, [L, isDark])
-
+  // #2451 — one shared divIcon per visual class (size|label|theme): a re-render
+  // hands Leaflet the SAME icon instance, so `setIcon` never rebuilds the DOM.
   const clusterIcon = useCallback(
-    (count: number, thumbUrl?: string) => {
-      const leaflet = L ?? (window as any)?.L
-      if (!leaflet?.divIcon) return undefined
-
+    (count: number) => {
       if (!Number.isFinite(count) || count < 0 || count > 10000) {
         console.warn('[Map] Invalid cluster count:', count)
         return undefined
       }
-
-      if (!thumbUrl && clusterIconsCache.has(count)) {
-        return clusterIconsCache.get(count)
-      }
-      const { metrics, html } = buildClusterIconHtml({
-        count,
-        thumbUrl,
-        accentColor: String(DESIGN_TOKENS.colors.primary),
-        textColor: String(DESIGN_TOKENS.colors.textOnPrimary),
-        isDark,
-      })
-
-      return leaflet.divIcon({
-        className: 'metravel-cluster-icon',
-        html,
-        iconSize: [metrics.size, metrics.size],
-        iconAnchor: [metrics.size / 2, metrics.size / 2],
-      })
+      return getServerClusterIcon(L ?? (window as any)?.L, count, isDark)
     },
-    [L, clusterIconsCache, isDark],
+    [L, isDark],
   )
 
   // Cluster/marker icons are Leaflet `<div role="button">` nodes. Browsers only
@@ -362,8 +318,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
           )
         }
 
-        const thumbItem = cluster.items.find((p) => p.travelImageThumbUrl)
-        const icon = clusterIcon(cluster.count, thumbItem?.travelImageThumbUrl)
+        const icon = clusterIcon(cluster.count)
         const clusterAccessibleName = i18nT('map:components.MapPage.Map.ClusterLayer.klaster_value1_01722671', { value1: formatMapPoints(cluster.count) })
         return (
           <Marker

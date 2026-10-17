@@ -102,10 +102,10 @@ const mockReactLeaflet = (() => {
 })()
 
 // Mock internal Map modules to keep the test suite lightweight (prevents OOM in jest workers)
-jest.mock('@/components/MapPage/Map/ClusterLayer', () => {
+jest.mock('@/components/MapPage/Map/ServerClusterLayer', () => {
   const RN = require('react-native')
   const View = RN.View
-  return function ClusterLayer(props: any) {
+  return function ServerClusterLayer(props: any) {
     mockClusterLayerProps(props)
     // Simulate that clustered rendering uses Leaflet divIcon under the hood.
     try {
@@ -113,7 +113,7 @@ jest.mock('@/components/MapPage/Map/ClusterLayer', () => {
     } catch {
       // noop
     }
-    return <View testID="cluster-layer" />
+    return <View testID={props.clusters?.length ? 'cluster-layer' : 'cluster-layer-empty'} />
   }
 })
 
@@ -1126,7 +1126,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       expect(queryByTestId('marker-cluster-group')).toBeTruthy()
     })
 
-    it('renders backend clusters through ClusterLayer when server cluster data is available', async () => {
+    it('renders backend clusters through ServerClusterLayer when server cluster data is available', async () => {
       mockMapClustersResult = {
         ...mockMapClustersResult,
         data: {
@@ -1179,7 +1179,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       )
       expect(queryByTestId('cluster-layer')).toBeTruthy()
       expect(mockClusterLayerProps).toHaveBeenCalled()
-      expect(mockClusterLayerProps.mock.calls[0]?.[0]?.clusters?.[0]).toEqual(
+      expect(mockClusterLayerProps.mock.calls.at(-1)?.[0]?.clusters?.[0]).toEqual(
         expect.objectContaining({
           // Geometric key (#1347) — the backend id is re-hashed per request.
           key: '53.9000|27.5600|42',
@@ -1187,7 +1187,65 @@ describe('MapPageComponent (Map.web.tsx)', () => {
           center: [53.9, 27.56],
         })
       )
-      expect(mockMarkerClusterGroupProps).not.toHaveBeenCalled()
+      // #2451 — the place layer stays mounted next to the cluster layer (no layer
+      // swap at the backend cluster/marker threshold), but the client fallback
+      // points are NOT drawn under backend clusters.
+      expect(mockMarkerClusterGroupProps.mock.calls.at(-1)?.[0]?.points).toEqual([])
+    })
+
+    it('draws backend markers and single-point clusters as places while clusters are shown (#2451)', async () => {
+      const serverPoint = (id: number, lat: number, lng: number) => ({
+        id,
+        lat: String(lat),
+        lng: String(lng),
+        coord: `${lat},${lng}`,
+        address: `Server place ${id}`,
+        categoryName: 'Test',
+        urlTravel: `/travels/server-${id}`,
+      })
+      mockMapClustersResult = {
+        ...mockMapClustersResult,
+        isError: false,
+        data: {
+          clusters: [
+            {
+              id: 'multi',
+              center: { lat: 53.9, lng: 27.56 },
+              count: 12,
+              bounds: { south: 53.8, west: 27.4, north: 54.0, east: 27.7 },
+              previewItems: [serverPoint(1, 53.9, 27.56)],
+            },
+            {
+              id: 'single',
+              center: { lat: 53.95, lng: 27.6 },
+              count: 1,
+              bounds: { south: 53.95, west: 27.6, north: 53.95, east: 27.6 },
+              previewItems: [serverPoint(2, 53.95, 27.6)],
+            },
+          ],
+          markers: [serverPoint(3, 53.91, 27.58)],
+          totalCount: 14,
+          source: 'server',
+          generatedAt: '2026-10-17T00:00:00Z',
+        },
+      }
+
+      renderWithProviders(
+        <MapPageComponent
+          {...defaultProps}
+          mode="radius"
+          travel={{ data: [{ id: 99, coord: '53.9,27.5667', address: 'Client point' }] } as any}
+        />
+      )
+      await act(async () => {})
+
+      const clusters = mockClusterLayerProps.mock.calls.at(-1)?.[0]?.clusters ?? []
+      expect(clusters.map((cluster: any) => cluster.count)).toEqual([12])
+      const points = mockMarkerClusterGroupProps.mock.calls.at(-1)?.[0]?.points ?? []
+      expect(points.map((point: any) => point.address).sort()).toEqual([
+        'Server place 2',
+        'Server place 3',
+      ])
     })
 
     it('filters backend clusters by selected radius before rendering', async () => {

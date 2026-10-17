@@ -190,6 +190,24 @@ describe('useMapController (#991 smoke)', () => {
     expect(result.current.mapPanelProps.initialResultsSettled).toBe(true)
   })
 
+  it('#2450 — keeps the startup latch open but withholds the stale total during a refetch', () => {
+    const { result, rerender } = renderHook(() => useMapController(baseParams))
+    expect(result.current.mapPanelProps.initialResultsSettled).toBe(true)
+    expect(result.current.mapPanelProps.travelsTotal).toBe(0)
+
+    // Radius/anchor change: placeholder points of the previous query.
+    mockMapFetching = true
+    mockMapPlaceholder = true
+    rerender()
+    expect(result.current.mapPanelProps.initialResultsSettled).toBe(true)
+    expect(result.current.mapPanelProps.travelsTotal).toBeNull()
+
+    mockMapFetching = false
+    mockMapPlaceholder = false
+    rerender()
+    expect(result.current.mapPanelProps.travelsTotal).toBe(0)
+  })
+
   it('#1291 — stays closed while the map screen query is unfocused and disabled', () => {
     const { result } = renderHook(() =>
       useMapController({ ...baseParams, isFocused: false }),

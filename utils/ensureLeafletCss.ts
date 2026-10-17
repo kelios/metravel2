@@ -214,7 +214,8 @@ function getMarkerClusterOverridesCSS(): string {
     '.marker-cluster{box-shadow:var(--shadow-card)!important;cursor:pointer!important;transition:box-shadow 0.15s ease,filter 0.15s ease!important}',
     '.marker-cluster:hover{box-shadow:var(--shadow-hover)!important;filter:brightness(1.03)!important}',
     '.leaflet-cluster-anim .leaflet-marker-icon,.leaflet-cluster-anim .leaflet-marker-shadow{transition:transform 0.3s ease-out,opacity 0.3s ease-out!important}',
-    '@keyframes metravelClusterPulse{0%,100%{transform:scale(0.92);opacity:0.46}50%{transform:scale(1.04);opacity:0.74}}',
+    // #2451: clusters no longer pulse (an infinite animation per cluster kept the
+    // compositor busy); only the user-location dot keeps its pulse.
     '@keyframes metravelUserPulse{0%{transform:scale(0.6);opacity:0.5}70%{opacity:0}100%{transform:scale(2.6);opacity:0}}',
   ].join('\n')
 }

@@ -22,6 +22,7 @@ import {
   WEB_MAP_OVERLAY_LAYERS,
   getThemedBaseAttribution,
   getThemedBaseMaxZoom,
+  getThemedNativeBaseTileUrl,
 } from '@/config/mapWebLayers';
 import { buildTravelMapNativeHtml } from '@/components/MapPage/Map/travelMapNativeHtml';
 import { buildQuestNativeMapHtml } from '@/components/quests/questNativeMapHtml';
@@ -361,8 +362,11 @@ describe('buildNativeMapHtml — engine regression invariants', () => {
       buildNativeTileBridgeScript({
         attribution: getThemedBaseAttribution(),
         maxZoom: getThemedBaseMaxZoom(),
+        // #2452 — в онлайне WebView грузит тайлы сам по шаблону native-прокси.
+        tileUrlTemplate: getThemedNativeBaseTileUrl(),
       }),
     );
+    expect(html).toContain(JSON.stringify(getThemedNativeBaseTileUrl()));
     // Ключ pending уникален на DOM-тайл, снятый тайл чистит свою запись, а пустой
     // ответ RN виден как ошибка тайла, а не как «загруженная» серая клетка.
     expect(html).toContain("'#' + __metravelTileSeq");

@@ -1,5 +1,4 @@
 import {
-  isSameViewportSnapshot,
   normalizeRoutePoint,
   parseNativeMapBridgeMessage,
 } from '@/components/MapPage/Map/nativeBridge'
@@ -56,12 +55,9 @@ describe('native map bridge', () => {
     expect(parseNativeMapBridgeMessage('{"type":"OPEN_URL","url":{"bad":true}}')).toBeNull()
   })
 
-  it('normalizes route point order and compares viewport snapshots with tolerance', () => {
+  it('normalizes route point order', () => {
     expect(normalizeRoutePoint([27.56, 53.9])).toEqual([53.9, 27.56])
     expect(normalizeRoutePoint([181, 53.9])).toBeNull()
-    const snapshot = { zoom: 10, bbox: { south: 53, west: 27, north: 54, east: 28 } }
-    expect(isSameViewportSnapshot(snapshot, { ...snapshot, zoom: 10.005 })).toBe(true)
-    expect(isSameViewportSnapshot(snapshot, { ...snapshot, zoom: 10.02 })).toBe(false)
   })
 
   // #1781 — точки маршрута планировщика правятся прямо с карты: WebView отдаёт

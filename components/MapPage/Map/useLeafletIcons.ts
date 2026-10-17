@@ -3,8 +3,8 @@ import { useMemo } from 'react'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 
 import {
-  buildBirdMarkerHtml,
   buildMapPinHtml,
+  buildPlaceMarkerIconHtml,
   buildUserLocationHtml,
   USER_LOCATION_MARKER_SIZE,
 } from './mapMarkerStyles'
@@ -14,8 +14,9 @@ export const useLeafletIcons = (L: any) => {
     if (!L || typeof L.divIcon !== 'function') return null
     if (typeof document === 'undefined') return null
 
+    // #2451 — light place marker: two DOM nodes, no GPU-layer hints.
     const makeBirdPin = () => {
-      const html = buildBirdMarkerHtml()
+      const html = buildPlaceMarkerIconHtml()
       return L.divIcon({
         className: 'metravel-pin-marker metravel-pin-marker-bird',
         html,

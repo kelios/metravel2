@@ -57,7 +57,12 @@ describe('useMapClusters', () => {
 
     const [bboxArg, zoomArg] = mockFetchMapClusters.mock.calls[0]
     expect(zoomArg).toBe(9)
-    expect(bboxArg.south).toBeCloseTo(53.5)
+    // #2450 — the request bbox is snapped outward to the zoom-9 tile grid, so it
+    // contains the viewport instead of repeating its raw edges.
+    expect(bboxArg.south).toBeLessThanOrEqual(53.5)
+    expect(bboxArg.north).toBeGreaterThanOrEqual(54.3)
+    expect(bboxArg.west).toBeLessThanOrEqual(26.5)
+    expect(bboxArg.east).toBeGreaterThanOrEqual(28.5)
   })
 
   it('passes radius anchor filters to the cluster endpoint', async () => {

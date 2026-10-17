@@ -8,7 +8,7 @@ export type { Point, Coordinates, TransportMode, MapMode } from '@/components/ma
 import type { Point, TransportMode, MapMode, Coordinates } from '@/components/map-core/types';
 
 export interface MapProps {
-  travel?: { data?: Point[] };
+  travel?: { data?: Point[]; total?: number | null };
   /**
    * Web startup gate: the first result set has either resolved or failed, so the
    * renderer can apply its final initial view before attaching the base tiles.

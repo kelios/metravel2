@@ -1,5 +1,5 @@
 import type { RouteResultPublisher } from '@/types/route';
-import React from 'react'
+import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 import { ActivityIndicator, Platform, Text, View } from 'react-native'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -9,10 +9,10 @@ import RoutingMachine from '../RoutingMachine'
 import type { Point } from './types'
 import { MapLayers } from './MapLayers'
 import { MapLogicComponent } from './MapLogicComponent'
-import MarkerClusterGroup from './MarkerClusterGroup'
 import { RouteMarkersLayer } from './RouteMarkersLayer'
-import ClusterLayer from './ClusterLayer'
-import type { ClusterData } from './types'
+import MapWebPlacesLayer from './MapWebPlacesLayer'
+import type { ServerClusterZoomPayload } from './ServerClusterLayer'
+import type { MapClustersFilters } from '@/api/map'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -111,6 +111,32 @@ export const NoPointsMessage: React.FC = () => (
 
 export { getClusterZoomFitBoundsOptions } from './clusterFitBounds'
 
+type MapEventHandlers = Record<string, ((event: any) => void) | undefined>
+
+/**
+ * #2451 — react-leaflet's `useMapEvents(handlers)` re-subscribes (`map.off` +
+ * `map.on`) whenever the handlers object changes identity, and its callers pass
+ * an inline object literal, i.e. a fresh one on every render. This wrapper hands
+ * react-leaflet one stable proxy per event name (keyed by the set of names) that
+ * forwards to the latest handler, so a re-render no longer rewires map events.
+ */
+export const createStableMapEventsHook = (useMapEventsImpl: (handlers: any) => any) =>
+  function useStableMapEvents(handlers: MapEventHandlers) {
+    const latestRef = useRef(handlers)
+    useEffect(() => {
+      latestRef.current = handlers
+    })
+    const names = Object.keys(handlers ?? {}).sort().join('|')
+    const proxies = useMemo(() => {
+      const next: Record<string, (event: any) => void> = {}
+      for (const name of names ? names.split('|') : []) {
+        next[name] = (event: any) => latestRef.current?.[name]?.(event)
+      }
+      return next
+    }, [names])
+    return useMapEventsImpl(proxies)
+  }
+
 type MapWebLeafletCanvasProps = {
   rl: ReactLeafletNS
   L: any
@@ -132,6 +158,8 @@ type MapWebLeafletCanvasProps = {
   coordinatesLatLng: { lat: number; lng: number }
   disableFitBounds: boolean
   travelData: Point[]
+  /** #2450 — server total of the radius result set (see MapLogicComponent.travelsTotal). */
+  travelsTotal?: number | null
   initialResultsSettled: boolean
   onInitialViewReady: () => void
   fitBoundsPadding: { paddingTopLeft: [number, number]; paddingBottomRight: [number, number] }
@@ -160,14 +188,13 @@ type MapWebLeafletCanvasProps = {
   setFullRouteCoords: (coords: [number, number][]) => void
   setRouteElevationStats?: (gainMeters: number | null, lossMeters: number | null) => void
   orsApiKey: string | undefined
-  markers: Point[]
-  serverClusters?: ClusterData[]
-  onServerClusterZoom?: (payload: {
-    center: [number, number]
-    bounds: [[number, number], [number, number]]
-    key: string
-    items: Point[]
-  }) => void
+  /** Inputs of the leaf place layers (#2451): they own viewport + cluster state. */
+  pointsOnly: boolean
+  radiusCenter: { lat: number; lng: number } | null
+  mapClusterFilters?: MapClustersFilters
+  categoryFilterUnresolved: boolean
+  freezeServerClusters: boolean
+  onServerClusterZoom?: (payload: ServerClusterZoomPayload) => void
   PopupComponent: any
   popupAutoPanPadding: any
   handleMarkerZoom: (
@@ -183,7 +210,7 @@ type MapWebLeafletCanvasProps = {
   compactPane?: boolean
 }
 
-export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
+const MapWebLeafletCanvasComponent: React.FC<MapWebLeafletCanvasProps> = ({
   rl,
   L,
   colors,
@@ -204,6 +231,7 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
   coordinatesLatLng,
   disableFitBounds,
   travelData,
+  travelsTotal = null,
   initialResultsSettled,
   onInitialViewReady,
   fitBoundsPadding,
@@ -232,8 +260,11 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
   setFullRouteCoords,
   setRouteElevationStats,
   orsApiKey,
-  markers,
-  serverClusters,
+  pointsOnly,
+  radiusCenter,
+  mapClusterFilters,
+  categoryFilterUnresolved,
+  freezeServerClusters,
   onServerClusterZoom,
   PopupComponent,
   popupAutoPanPadding,
@@ -246,6 +277,40 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
 }) => {
   const { MapContainer, Marker, Popup, Tooltip, Circle, TileLayer, useMap, useMapEvents } = rl
   const Polyline = (rl as any)?.Polyline as any
+
+  const stableUseMapEvents = useMemo(
+    () => (typeof useMapEvents === 'function' ? createStableMapEventsHook(useMapEvents) : useMapEvents),
+    [useMapEvents],
+  )
+
+  // Stable RoutingMachine callbacks: inline arrows re-rendered the routing layer
+  // on every canvas render.
+  const handleRoutingLoading = useCallback(
+    (loading: boolean) => {
+      try {
+        setRoutingLoading?.(loading)
+      } catch {
+        // noop
+      }
+    },
+    [setRoutingLoading],
+  )
+  const handleRoutingErrors = useCallback(
+    (next: any) => {
+      try {
+        setErrors(next)
+      } catch {
+        // noop
+      }
+      const routingMsg = (next as any)?.routing
+      try {
+        setRoutingError?.(typeof routingMsg === 'string' && routingMsg.trim() ? routingMsg : null)
+      } catch {
+        // noop
+      }
+    },
+    [setErrors, setRoutingError],
+  )
 
   if (!canRenderMap || !hasValidReactLeafletHooks) return null
 
@@ -287,6 +352,7 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
         disableFitBounds={disableFitBounds}
         L={L}
         travelData={travelData}
+        travelsTotal={travelsTotal}
         initialResultsSettled={initialResultsSettled}
         onInitialViewReady={onInitialViewReady}
         circleCenter={circleCenterLatLng}
@@ -303,7 +369,7 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
         leafletOverlayLayersRef={leafletOverlayLayersRef}
         leafletControlRef={leafletControlRef}
         useMap={useMap}
-        useMapEvents={useMapEvents}
+        useMapEvents={stableUseMapEvents}
         hintCenter={hintCenterLatLng}
         compactPane={compactPane}
       />
@@ -352,34 +418,8 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
         <RoutingMachine
           routePoints={routePointsForRouting}
           transportMode={transportMode}
-          setRoutingLoading={(loading) => {
-            try {
-              setRoutingLoading?.(loading)
-            } catch {
-              // noop
-            }
-          }}
-          setErrors={(next) => {
-            try {
-              setErrors(next)
-            } catch {
-              // noop
-            }
-            const routingMsg = (next as any)?.routing
-            if (typeof routingMsg === 'string' && routingMsg.trim()) {
-              try {
-                setRoutingError?.(routingMsg)
-              } catch {
-                // noop
-              }
-            } else {
-              try {
-                setRoutingError?.(null)
-              } catch {
-                // noop
-              }
-            }
-          }}
+          setRoutingLoading={handleRoutingLoading}
+          setErrors={handleRoutingErrors}
           rebuildRevision={rebuildRevision}
           publishRouteResult={publishRouteResult}
           setRouteDistance={setRouteDistance}
@@ -390,50 +430,44 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
         />
       ) : null}
 
-      {canRenderMap &&
-      customIcons?.meTravel &&
-      Array.isArray(serverClusters) &&
-      serverClusters.length > 0 &&
-      PopupComponent ? (
-        <ClusterLayer
+      {customIcons?.meTravel && PopupComponent ? (
+        <MapWebPlacesLayer
           L={L}
-          clusters={serverClusters}
-          Marker={Marker}
+          useMap={useMap as any}
           Popup={Popup}
           Tooltip={Tooltip}
-          PopupContent={PopupComponent}
-          popupProps={popupAutoPanPadding}
-          onMarkerClick={handleMarkerZoom}
-          onMarkerInstance={onMarkerInstance}
-          onClusterZoom={onServerClusterZoom ?? (() => {})}
-          onClusterTap={onClusterTap}
-          markerIcon={customIcons.meTravel}
-          markerOpacity={travelMarkerOpacity}
-          hintCenter={hintCenterLatLng}
-          useMap={useMap as any}
-          suppressLeafletPopupOnSelect={suppressLeafletPopupOnSelect}
-        />
-      ) : canRenderMap &&
-      customIcons?.meTravel &&
-      markers.length > 0 &&
-      PopupComponent ? (
-        <MarkerClusterGroup
-          L={L}
-          useMap={useMap as any}
-          points={markers}
+          mapInstance={mapInstance}
+          fallbackZoom={safeZoom}
+          mode={mode}
+          pointsOnly={pointsOnly}
+          canRenderMap={canRenderMap}
+          travelData={travelData}
+          radiusCenter={radiusCenter}
+          radiusInMeters={radiusInMeters}
+          mapClusterFilters={mapClusterFilters}
+          categoryFilterUnresolved={categoryFilterUnresolved}
+          freezeServerClusters={freezeServerClusters}
           markerIcon={customIcons.meTravel}
           markerOpacity={travelMarkerOpacity}
           PopupContent={PopupComponent}
-          Popup={Popup}
-          Tooltip={Tooltip}
-          popupProps={popupAutoPanPadding}
+          // Mobile web shows the bottom card; no Leaflet popup is bound, so the
+          // popup options (they change with pane width) must not reach the layer.
+          popupProps={suppressLeafletPopupOnSelect ? undefined : popupAutoPanPadding}
           suppressLeafletPopupOnSelect={suppressLeafletPopupOnSelect}
+          hintCenter={hintCenterLatLng}
           onMarkerClick={handleMarkerZoom}
           onMarkerInstance={onMarkerInstance}
           onClusterTap={onClusterTap}
-          hintCenter={hintCenterLatLng}
+          onServerClusterZoom={onServerClusterZoom}
         />
       ) : null}
     </MapContainer>
   )
 }
+
+/**
+ * #2451 — memoized: Map.web re-renders for many reasons that do not concern the
+ * Leaflet tree (controls, theme of overlays, routing state). With stable props
+ * the canvas — and MapLogicComponent / the layers under it — skip those renders.
+ */
+export const MapWebLeafletCanvas = React.memo(MapWebLeafletCanvasComponent)

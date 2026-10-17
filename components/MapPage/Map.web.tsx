@@ -30,6 +30,7 @@ import {
 import { useLeafletLoader } from '@/hooks/useLeafletLoader'
 import { useMapPopupAutoPan } from './Map/useMapPopupAutoPan'
 import { useMapRenderData } from './Map/useMapRenderData'
+import { getMapFitBoundsPadding, useStablePadding } from './Map/mapFitBoundsPadding'
 import { useMapWebLayoutEffects } from './Map/useMapWebLayoutEffects'
 import {
   buildRouteLineLatLngObjects,
@@ -83,6 +84,9 @@ function getViewportWidth(): number | null {
   if (typeof window === 'undefined' || !Number.isFinite(window.innerWidth)) return null
   return window.innerWidth
 }
+
+/** Current bottom-sheet reserve, read imperatively (#2451 — no subscription). */
+const readSheetBottomOffset = (): number => useBottomSheetStore.getState().getControlsBottomOffset()
 
 const MapControlsReactive: React.FC<
   Omit<React.ComponentProps<typeof MapControls>, 'bottomOffset'>
@@ -210,8 +214,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const colors = useThemedColors()
   const themeContextValue = useTheme()
   const styles = useMemo(() => getStyles(colors), [colors])
-  const popupBottomOffset = useBottomSheetStore((s) => s.getControlsBottomOffset())
-  const bottomSheetState = useBottomSheetStore((s) => s.state)
+  // #2451 — no bottom-sheet subscriptions here: a sheet snap used to re-render the
+  // whole map tree. Its height/state are read via getState() inside the handlers.
   const requestBottomSheetCollapse = useMapPanelStore((s) => s.requestCollapse)
 
   useEffect(() => {
@@ -257,6 +261,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
     }
   }, [])
 
+  // #2450 — server total of the active radius query: the radius auto-fit tightens
+  // to the loaded points only when they are the whole result set.
+  const travelsTotal = typeof travel?.total === 'number' ? travel.total : null
   const travelData = useMemo(
     () => (Array.isArray(travel?.data) ? travel.data : []),
     [travel?.data],
@@ -266,10 +273,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
     canRenderMap,
     centerOnUserLocation,
     coordinatesLatLng,
+    filterCenter,
     filteredTravelData,
     radiusInMeters,
-    renderedMarkers,
-    renderedServerClusters,
     userLocationLatLng,
   } = useMapRenderData({
     travelData,
@@ -284,12 +290,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
     mode,
     radius,
     pointsOnly,
-    mapInstance,
     leafletReady,
     leafletRuntimeReady: Boolean(L && rl),
-    mapClusterFilters,
-    categoryFilterUnresolved,
-    freezeServerClusters: isPopupOpen,
   })
   const travelMarkerOpacity = mode === 'route' ? 0.7 : 1
 
@@ -308,7 +310,11 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
       const currentZoom = typeof map.getZoom === 'function' ? map.getZoom() : mapZoomRef.current
       const maxZoom = typeof map.getMaxZoom === 'function' ? map.getMaxZoom() : DEFAULT_MAX_ZOOM
-      const focusPlan = getMarkerFocusPlan({ currentZoom, maxZoom, bottomSheetState })
+      const focusPlan = getMarkerFocusPlan({
+        currentZoom,
+        maxZoom,
+        bottomSheetState: useBottomSheetStore.getState().state,
+      })
 
       if (focusPlan.shouldCollapseSheet) requestBottomSheetCollapse()
 
@@ -405,12 +411,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
         ignoreOptionalMapRuntimeError()
       }
     },
-    [
-      bottomSheetState,
-      onMarkerSelect,
-      requestBottomSheetCollapse,
-      suppressLeafletPopupOnSelect,
-    ],
+    [onMarkerSelect, requestBottomSheetCollapse, suppressLeafletPopupOnSelect],
   )
 
   const handleZoomIn = useCallback(() => safeInvoke(() => mapRef.current?.zoomIn?.()), [])
@@ -708,47 +709,18 @@ const MapPageComponent: React.FC<Props> = (props) => {
   })
 
   // Radius default view = the whole circle around the user, with breathing room.
-  // On desktop the left panel is a flex SIBLING of the map (it shrinks the map
-  // host, never overlays it), so the circle bounds are already inside the visible
-  // pane — we only add symmetric air. On mobile the map is full-bleed and the
-  // bottom sheet overlays the lower part of the map, so we reserve its current
-  // height (popupBottomOffset, ~120px collapsed) at the bottom so the circle is
-  // never hidden behind the sheet. The user marker (circle center) always stays
-  // in view because the bounds always contain it.
-  const fitBoundsPadding = useMemo(() => {
-    if (mode !== 'radius') {
-      return {
-        paddingTopLeft: [24, 140] as [number, number],
-        paddingBottomRight: [360, 220] as [number, number],
-      }
-    }
-
-    const isCompact =
-      mapPaneWidth > 0
-        ? mapPaneWidth <= COMPACT_POPUP_MAX_WIDTH
-        : (getViewportWidth() ?? 0) <= COMPACT_POPUP_MAX_WIDTH
-
-    // Horizontal/top air is symmetric; the circle sits inside the visible pane.
-    const AIR = 24
-
-    if (isCompact) {
-      // Mobile: reserve the bottom-sheet height so the lower arc of the circle
-      // clears the sheet, plus a little air. Top gets room for the floating
-      // controls row.
-      const bottomReserve = Math.max(popupBottomOffset, 96) + AIR
-      return {
-        paddingTopLeft: [AIR, 72] as [number, number],
-        paddingBottomRight: [AIR, bottomReserve] as [number, number],
-      }
-    }
-
-    // Desktop: panel already excluded from the pane — just symmetric air so the
-    // circle never touches the map edges.
-    return {
-      paddingTopLeft: [AIR, AIR + 56] as [number, number],
-      paddingBottomRight: [AIR, AIR + 24] as [number, number],
-    }
-  }, [mode, mapPaneWidth, popupBottomOffset])
+  // Desktop: the panel is a flex SIBLING of the map, so only symmetric air. Mobile:
+  // the bottom sheet overlays the map, so its current height is reserved at the
+  // bottom (`getMapFitBoundsPadding`). The sheet height is read at render time via
+  // getState() (#2451 — no subscription) and the object keeps its identity while
+  // the numbers are unchanged, so MapLogicComponent effects do not re-run.
+  const isCompactPane =
+    mapPaneWidth > 0
+      ? mapPaneWidth <= COMPACT_POPUP_MAX_WIDTH
+      : (getViewportWidth() ?? 0) <= COMPACT_POPUP_MAX_WIDTH
+  const fitBoundsPadding = useStablePadding(
+    getMapFitBoundsPadding(mode, isCompactPane, readSheetBottomOffset()),
+  )
 
   const handleServerClusterZoom = useCallback(
     (payload: {
@@ -772,7 +744,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
           Number.isFinite(east) &&
           typeof map.fitBounds === 'function'
         ) {
-          map.fitBounds(L.latLngBounds([[south, west], [north, east]]), fitBoundsPadding as any)
+          // Padding is computed at tap time: the sheet may have moved since render.
+          const padding = getMapFitBoundsPadding(mode, isCompactPane, readSheetBottomOffset())
+          map.fitBounds(L.latLngBounds([[south, west], [north, east]]), padding as any)
           return
         }
 
@@ -787,7 +761,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
         ignoreOptionalMapRuntimeError()
       }
     },
-    [L, fitBoundsPadding],
+    [L, mode, isCompactPane],
   )
 
   const useCompactPopupLayout = useMemo(() => {
@@ -805,7 +779,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const { popupAutoPanPadding } = useMapPopupAutoPan({
     mapRef,
     mapPaneWidth,
-    popupBottomOffset,
+    popupBottomOffset: readSheetBottomOffset,
   })
 
   // Keep PopupComponent identity stable across GPS updates: precise coords via the
@@ -876,6 +850,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
         coordinatesLatLng={coordinatesLatLng}
         disableFitBounds={disableFitBounds}
         travelData={filteredTravelData}
+        travelsTotal={travelsTotal}
         initialResultsSettled={initialResultsSettled}
         onInitialViewReady={handleInitialViewReady}
         fitBoundsPadding={fitBoundsPadding}
@@ -904,8 +879,11 @@ const MapPageComponent: React.FC<Props> = (props) => {
         setFullRouteCoords={setFullRouteCoords}
         setRouteElevationStats={setRouteElevationStats}
         orsApiKey={ORS_API_KEY}
-        markers={renderedMarkers}
-        serverClusters={renderedServerClusters}
+        pointsOnly={pointsOnly}
+        radiusCenter={filterCenter ?? coordinatesLatLng}
+        mapClusterFilters={mapClusterFilters}
+        categoryFilterUnresolved={categoryFilterUnresolved}
+        freezeServerClusters={isPopupOpen}
         onServerClusterZoom={handleServerClusterZoom}
         PopupComponent={PopupComponent}
         popupAutoPanPadding={popupAutoPanPadding}
@@ -1011,6 +989,7 @@ export const arePropsEqual = (prevProps: Props, nextProps: Props): boolean => {
   if (prevProps.onMarkerSelect !== nextProps.onMarkerSelect) return false
   if (prevProps.onMapBackgroundTap !== nextProps.onMapBackgroundTap) return false
 
+  if ((prevProps.travel?.total ?? null) !== (nextProps.travel?.total ?? null)) return false
   const prevData = prevProps.travel?.data ?? []
   const nextData = nextProps.travel?.data ?? []
   if (prevData.length !== nextData.length) return false

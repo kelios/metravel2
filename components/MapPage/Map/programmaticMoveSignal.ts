@@ -23,6 +23,7 @@ const now = (): number =>
 /** Open (or extend) the self-induced-motion window. Default covers a 0.35s flyTo. */
 export function beginProgrammaticMapMove(durationMs = 500): void {
   suppressUntil = Math.max(suppressUntil, now() + durationMs)
+  notify()
 }
 
 /** Milliseconds left in the current self-induced-motion window (0 when inactive). */
@@ -33,4 +34,36 @@ export function programmaticMapMoveRemainingMs(): number {
 
 export function isProgrammaticMapMoveActive(): boolean {
   return programmaticMapMoveRemainingMs() > 0
+}
+
+// --- Подписка (#2450) ----------------------------------------------------------
+// useMapClusters держит запрос кластеров, пока карту двигаем МЫ (авто-фит после
+// смены радиуса, flyTo к месту): иначе первый запрос уходит со старым bbox и новым
+// радиусом, а второй — после фита, и каждая смена радиуса стоит два запроса.
+
+type Listener = () => void
+const listeners = new Set<Listener>()
+
+/** Уведомить подписчиков об открытии/продлении окна программного движения. */
+function notify(): void {
+  listeners.forEach((listener) => {
+    try {
+      listener()
+    } catch {
+      // noop — подписчик не должен ронять сигнал
+    }
+  })
+}
+
+export function subscribeProgrammaticMapMove(listener: Listener): () => void {
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+  }
+}
+
+/** Только для тестов: сбросить окно и подписчиков. */
+export function __resetProgrammaticMapMoveForTests(): void {
+  suppressUntil = 0
+  listeners.clear()
 }

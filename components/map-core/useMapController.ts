@@ -467,19 +467,34 @@ export function useMapController({
 
   // Map panel props — единый поведенческий контракт для ОБОИХ рендер-адаптеров
   // (Map.web и Map.ios): web и native получают идентичный набор данных/колбеков.
+  // #1291 — fail closed until the active query has produced its own settled
+  // result. `!loading` alone is briefly true for an unfocused/disabled query
+  // and while debounce/placeholder data still belongs to the previous anchor.
+  // #2450 — the renderers latch the first `true` anyway, so the latch lives here:
+  // fetch-lifecycle flags (loading/isFetching/placeholder/debounce) no longer sit
+  // in `mapPanelProps` deps, otherwise every radius/filter change rebuilt the
+  // renderer props ~5 times (pending → debounced → fetching → data → settled) and
+  // re-rendered the whole map tree each time.
+  const resultsSettledNow =
+    isFocused && !loading && !isFetching && !isPlaceholderData && !isDebouncingFilters;
+  const [initialResultsSettled, setInitialResultsSettled] = useState(false);
+  useEffect(() => {
+    if (resultsSettledNow) setInitialResultsSettled(true);
+  }, [resultsSettledNow]);
+  // The latch keeps the startup gate open, but a radius/anchor change after it
+  // still shows the PREVIOUS query's placeholder points and total. `null` tells
+  // the radius auto-fit "not this query's settled set" so it fits the circle
+  // instead of tightening to stale points (one boolean flip per change, not the
+  // per-flag rebuilds the latch removed).
+  const travelsTotalForFit = resultsSettledNow ? total : null;
+
   const mapPanelProps = useMemo(
     () => ({
       travelsData,
-      // #1291 — fail closed until the active query has produced its own settled
-      // result. `!loading` alone is briefly true for an unfocused/disabled query
-      // and while debounce/placeholder data still belongs to the previous anchor.
-      // Map.web latches the first `true`, so later refetches never remove layers.
-      initialResultsSettled:
-        isFocused &&
-        !loading &&
-        !isFetching &&
-        !isPlaceholderData &&
-        !isDebouncingFilters,
+      // #2450 — total of the active radius query: the radius auto-fit may tighten
+      // the view to the loaded points only when they are the whole result set.
+      travelsTotal: travelsTotalForFit,
+      initialResultsSettled,
       coordinates: mapPanelCoordinates,
       coordinatesAreFallback: mapPanelCoordinatesAreFallback,
       userLocation,
@@ -512,11 +527,8 @@ export function useMapController({
     }),
     [
       travelsData,
-      isFocused,
-      loading,
-      isFetching,
-      isPlaceholderData,
-      isDebouncingFilters,
+      travelsTotalForFit,
+      initialResultsSettled,
       mapPanelCoordinates,
       mapPanelCoordinatesAreFallback,
       routePoints,

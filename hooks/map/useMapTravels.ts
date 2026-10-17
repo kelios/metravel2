@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { fetchTravelsForMap, fetchTravelsNearRoute } from '@/api/map';
 import { buildTravelQueryParams } from '@/utils/filterQuery';
@@ -16,6 +16,9 @@ import { offlineCatalog } from '@/services/offline/offlineCatalog';
 import { readAllMapPointsOffline } from '@/services/offline/mapOfflineAdapter';
 
 const MAP_TRAVELS_PER_PAGE = 30;
+
+const roundAnchorCoordinate = (value: number | undefined): number | undefined =>
+  typeof value === 'number' && Number.isFinite(value) ? Math.round(value * 1e4) / 1e4 : value;
 
 /**
  * Ширина коридора вдоль построенного маршрута (км в каждую сторону).
@@ -235,10 +238,11 @@ export function useMapTravels({
   const isRouteBuilt = fullRouteCoords.length >= 2;
   const dataMode: 'radius' | 'route' = mode === 'route' && !isRouteBuilt ? 'radius' : mode;
 
-  // Условие активации запроса
-  const isEnabled = useMemo(() => {
-    if (!isFocused) return false;
-
+  // Условие активации запроса. #2450 — фокус экрана отделён от «вход валиден»:
+  // при уходе с вкладки запрос только приостанавливается, а данные остаются на
+  // карте и в списке (раньше blur отдавал `[]`/total=0, сносил все маркеры, а
+  // возврат перестраивал экран заново).
+  const hasActiveInput = useMemo(() => {
     const hasValidCoordinates =
       typeof coordinates?.latitude === 'number' &&
       typeof coordinates?.longitude === 'number' &&
@@ -251,7 +255,8 @@ export function useMapTravels({
     if (dataMode === 'route' && fullRouteCoords.length >= 2) return true;
 
     return false;
-  }, [isFocused, coordinates, dataMode, fullRouteCoords.length]);
+  }, [coordinates, dataMode, fullRouteCoords.length]);
+  const isEnabled = hasActiveInput && isFocused;
 
   const categorySelection = useMemo(
     () => resolveMapCategorySelection(
@@ -296,8 +301,10 @@ export function useMapTravels({
     () => {
       const radiusNum = Number(filterValues.radius);
       const params = {
-        lat: coordinates?.latitude,
-        lng: coordinates?.longitude,
+        // #2450 — 4 знака (~11 м): дрожание GPS между возвратами на экран не
+        // должно менять queryKey и перезапрашивать первую страницу.
+        lat: roundAnchorCoordinate(coordinates?.latitude),
+        lng: roundAnchorCoordinate(coordinates?.longitude),
         // Санитизируем: "0"/"abc"/пусто → дефолт, иначе radius=0/NaN даёт пустую выдачу.
         radius: Number.isFinite(radiusNum) && radiusNum > 0
           ? String(radiusNum)
@@ -328,6 +335,9 @@ export function useMapTravels({
 
   const enabledRadius = isEnabled && queryParams.mode === 'radius';
   const enabledRoute = isEnabled && queryParams.mode === 'route' && !!queryParams.routeKey;
+  // Данные показываем по валидному входу, а не по фокусу: см. hasActiveInput.
+  const showRadiusData = hasActiveInput && queryParams.mode === 'radius';
+  const showRouteData = hasActiveInput && queryParams.mode === 'route' && !!queryParams.routeKey;
  
    // Страница — обычный объект {items,total}. Раньше total хранился как non-enumerable
    // свойство на массиве, но structural-sharing TanStack Query его не копирует →
@@ -418,17 +428,17 @@ export function useMapTravels({
     if (queryParams.mode === 'radius') {
       // Симметрично route-ветке: при выключенном радиус-режиме не отдаём
       // stale-данные из кэша (placeholderData).
-      if (!enabledRadius) return [];
+      if (!showRadiusData) return [];
       const pages = radiusQuery.data?.pages ?? [];
       return pages.flatMap((p) => p?.items ?? []);
     }
 
     // In route mode, only show data when route is actually built;
     // otherwise placeholderData keeps stale results from the previous query.
-    if (!enabledRoute) return [];
+    if (!showRouteData) return [];
 
     return routeQuery.data ?? [];
-  }, [queryParams.mode, radiusQuery.data?.pages, routeQuery.data, enabledRoute, enabledRadius]);
+  }, [queryParams.mode, radiusQuery.data?.pages, routeQuery.data, showRouteData, showRadiusData]);
 
   const isLoading = queryParams.mode === 'radius' ? radiusQuery.isLoading : routeQuery.isLoading;
   const isFetching = queryParams.mode === 'radius' ? radiusQuery.isFetching : routeQuery.isFetching;
@@ -443,12 +453,20 @@ export function useMapTravels({
   const hasMore = queryParams.mode === 'radius' ? Boolean(radiusQuery.hasNextPage) : false;
   const isFetchingNextPage =
     queryParams.mode === 'radius' ? Boolean(radiusQuery.isFetchingNextPage) : false;
+  // #2450 — стабильная ссылка: раньше loadMore зависел от всего объекта запроса и
+  // менял identity на каждый тик жизненного цикла (fetching → data → placeholder),
+  // перерисовывая список и панели.
+  const radiusQueryRef = useRef(radiusQuery);
+  radiusQueryRef.current = radiusQuery;
+  const dataModeRef = useRef(queryParams.mode);
+  dataModeRef.current = queryParams.mode;
   const loadMore = useCallback(() => {
-    if (queryParams.mode !== 'radius') return;
-    if (!radiusQuery.hasNextPage) return;
-    if (radiusQuery.isFetchingNextPage) return;
-    void radiusQuery.fetchNextPage();
-  }, [queryParams.mode, radiusQuery]);
+    if (dataModeRef.current !== 'radius') return;
+    const query = radiusQueryRef.current;
+    if (!query.hasNextPage) return;
+    if (query.isFetchingNextPage) return;
+    void query.fetchNextPage();
+  }, []);
 
   // Нормализуем данные
   const allTravelsData = useMemo(() => {
@@ -507,19 +525,19 @@ export function useMapTravels({
   const total = useMemo(() => {
     if (usesOfflineIndex || isClientCategoryFilter) return filteredTravelsData.length;
     if (queryParams.mode === 'radius') {
-      if (!enabledRadius) return 0;
+      if (!showRadiusData) return 0;
       const t = radiusQuery.data?.pages?.[0]?.total;
       return typeof t === 'number' ? t : allTravelsData.length;
     }
-    if (!enabledRoute) return 0;
+    if (!showRouteData) return 0;
     return allTravelsData.length;
   }, [
     usesOfflineIndex,
     isClientCategoryFilter,
     filteredTravelsData.length,
     queryParams.mode,
-    enabledRadius,
-    enabledRoute,
+    showRadiusData,
+    showRouteData,
     radiusQuery.data?.pages,
     allTravelsData.length,
   ]);

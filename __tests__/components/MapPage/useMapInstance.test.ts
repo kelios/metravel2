@@ -39,6 +39,16 @@ describe('getThemedBaseLayerOptions', () => {
     expect(options.subdomains).toBeUndefined();
     expect(options.detectRetina).toBeUndefined();
   });
+
+  // #2451 — на телефоне тайлы грузятся по окончании пана и буфер меньше.
+  it('uses Leaflet mobile tile defaults on phones and the wide buffer on desktop', () => {
+    expect(getThemedBaseLayerOptions(true)).toEqual(
+      expect.objectContaining({ updateWhenIdle: true, keepBuffer: 2, updateWhenZooming: false }),
+    );
+    expect(getThemedBaseLayerOptions(false)).toEqual(
+      expect.objectContaining({ updateWhenIdle: false, keepBuffer: 4, updateWhenZooming: false }),
+    );
+  });
 });
 
 describe('useMapInstance startup gate', () => {

@@ -28,6 +28,8 @@ const LazyWebMap = React.lazy(() =>
 
 interface MapPanelProps {
     travelsData: any[];
+    /** #2450 — total of the active radius query (server count), for the radius auto-fit. */
+    travelsTotal?: number | null;
     /** First map result set is no longer loading; used only by the web tile startup gate. */
     initialResultsSettled?: boolean;
     coordinates: LatLng | null;
@@ -89,6 +91,7 @@ function Placeholder({ text = i18nT('map:components.MapPage.MapPanel.karta_dostu
 
 const MapPanel: React.FC<MapPanelProps> = ({
                                                travelsData,
+                                               travelsTotal = null,
                                                initialResultsSettled = true,
                                                coordinates,
                                                userLocation,
@@ -126,10 +129,13 @@ const MapPanel: React.FC<MapPanelProps> = ({
 	    // ✅ ИСПРАВЛЕНИЕ: Уникальный ключ для карты без недетерминированного SSR
     const [mapKeyVersion, setMapKeyVersion] = useState(0);
 
-    const travelProp = useMemo(() => ({ data: travelsData }), [travelsData]);
+    const travelProp = useMemo(
+        () => ({ data: travelsData, total: travelsTotal ?? null }),
+        [travelsData, travelsTotal],
+    );
     const nativeTravelProp = useMemo(
-        () => ({ data: travelsData }),
-        [travelsData],
+        () => ({ data: travelsData, total: travelsTotal ?? null }),
+        [travelsData, travelsTotal],
     );
 
     // Safe coordinates with defaults - MUST be before any early returns
