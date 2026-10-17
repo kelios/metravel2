@@ -49,6 +49,8 @@ const BUILD_STUB = [
   '  [[ -L node_modules ]] && echo "node_modules=symlink"',
   '  [[ -L .env.prod ]] && echo "env_prod=symlink"',
   '  echo "head=$(git rev-parse HEAD)"',
+  '  echo "quest_seo_mode=${QUEST_SEO_MODE:-unset}"',
+  '  echo "quest_seo_budget=${QUEST_SEO_MANAGED_MAX_BYTES:-unset}"',
   '} > "$STUB_OUT"',
   'echo "▶ stub stage"',
   'echo "noise line"',
@@ -109,7 +111,16 @@ function makeFixture(): Fixture {
 function runDeploy(fixture: Fixture, args: string[], env: Record<string, string> = {}) {
   return runCli('bash', [path.join(fixture.repo, 'scripts/deploy-prod.sh'), ...args], {
     cwd: fixture.repo,
-    env: { ...GIT_ENV, DEPLOY: '0', STUB_OUT: fixture.stubOut, ...env },
+    // runCli inherits process.env: empty quest SEO values keep an operator's
+    // exported mode out of the default assertions (empty means unset to the wrapper).
+    env: {
+      ...GIT_ENV,
+      DEPLOY: '0',
+      STUB_OUT: fixture.stubOut,
+      QUEST_SEO_MODE: '',
+      QUEST_SEO_MANAGED_MAX_BYTES: '',
+      ...env,
+    },
   })
 }
 
@@ -165,6 +176,8 @@ describe('scripts/deploy-prod.sh', () => {
         node_modules: 'symlink',
         env_prod: 'symlink',
         head: first,
+        quest_seo_mode: 'translations',
+        quest_seo_budget: '1610612736',
       })
       expect(result.stdout).toContain(`🚀 Прод-выкат ${first.slice(0, 9)}`)
       expect(result.stdout).toContain('noise line')
@@ -181,7 +194,7 @@ describe('scripts/deploy-prod.sh', () => {
     }
   })
 
-  it('defaults to origin/main and replaces a worktree left by an interrupted rollout', () => {
+  it('defaults to origin/main, replaces a worktree left by an interrupted rollout and keeps explicit quest SEO values', () => {
     const fixture = makeFixture()
     try {
       git(fixture.repo, ['worktree', 'add', '--detach', '-q', fixture.worktree, 'HEAD'])
@@ -191,6 +204,10 @@ describe('scripts/deploy-prod.sh', () => {
 
       expect(result.status).toBe(0)
       expect(readStubOut(fixture).head).toBe(git(fixture.repo, ['rev-parse', 'origin/main']))
+      // An explicit operator mode (owner ru-only maintenance) is never overridden.
+      const explicit = runDeploy(fixture, [], { QUEST_SEO_MODE: 'ru-only', QUEST_SEO_MANAGED_MAX_BYTES: '123' })
+      expect(explicit.status).toBe(0)
+      expect(readStubOut(fixture)).toMatchObject({ quest_seo_mode: 'ru-only', quest_seo_budget: '123' })
       expect(fs.existsSync(fixture.worktree)).toBe(false)
       expect(worktreeCount(fixture)).toBe(1)
     } finally {

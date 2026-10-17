@@ -27,13 +27,20 @@ model: sonnet
 
 Выкатывай по одному из двух оснований: штатный шаг пайплайна борда (тикет в `testing`, код
 запушен в `main`, sha назван — отдельная команда владельца не нужна) или прямая команда
-владельца. Вне этих оснований не деплоить «заодно». Путь `scripts/fix-prod.sh` — только по
-явной просьбе о recovery, причина фиксируется в отчёте.
+владельца. Вне этих оснований не деплоить «заодно». Recovery — только по явной просьбе, причина
+фиксируется в отчёте: на управляемом v1-корне сначала `bash scripts/quest-seo-operation.sh
+inspect`, затем `rollback|recover|abort-stage <state>` по runbook
+`docs/ops/quest-locale-release.md`; `scripts/fix-prod.sh` — только legacy-корень.
 
 ## Как выкатывать
 
-1. Из основного чекаута `/Users/juliasavran/Sites/metravel2/metravel2`, один вызов Bash с
-   таймаутом 600000 мс:
+1. Из основного чекаута `/Users/juliasavran/Sites/metravel2/metravel2`, один вызов Bash
+   **в фоне** (`run_in_background: true`) и ожидание его уведомления о завершении. С 17.10.2026
+   прод-корень — управляемый v1-указатель, и скрипт по умолчанию публикует переводной пакет
+   (`QUEST_SEO_MODE=translations`, бюджет владельца `QUEST_SEO_MANAGED_MAX_BYTES`): выкат идёт
+   ~15 минут, дольше 600000-мс таймаута foreground-Bash. Оборванный посреди staging выкат
+   оставляет незапечатанное поколение, которое блокирует следующие публикации до явного
+   `abort-stage`, поэтому процесс выката не прерывать:
 
    ```bash
    DEPLOY_QUIET=1 scripts/deploy-prod.sh <sha>
@@ -54,7 +61,8 @@ model: sonnet
      смоук `/health`, `/`, `/api/travels/`;
    - снимает worktree на любом выходе и печатает общее время.
 2. Отчёт — из вывода: таблица «⏱ Время этапов», строка «⏱ Выкат целиком», маркер
-   `✅ Public readiness confirmed`, итоги медиа-проверок прода (идут в фоне во время экспорта),
+   `✅ Public readiness passed` (v1; legacy печатал `✅ Public readiness confirmed`), итоги
+   медиа-проверок прода (в v1 они не запускаются),
    итог `post-deploy-seo-check`, `✅ Прод отдаёт /.build-source.json с sha …`, строки смоука.
    Полный лог — путь в последней строке; открывай его только при сбое и только нужным куском
    (`grep`, `tail`). Время выката больше 5 минут — отметь в отчёте, какой этап вырос.
@@ -62,6 +70,15 @@ model: sonnet
    причину по хвосту лога (скрипт печатает последние 40 строк).
 
 ## Что делает build-prod.sh — для разбора сбоев
+
+С 17.10.2026 штатный путь — v1 (`QUEST_SEO_MODE=translations` по умолчанию в
+`scripts/deploy-prod.sh`): гейт источника → захват прошлых assets и SEO-данных параллельно
+с экспортом Metro → генерация и проверки → применение assets → полная проверка live-каталога
+→ R2, финализация и postseal-проверка → приватный индекс и архив → публикация: проверка
+gateway, retention, план хранения, staging, validate, CAS-активация → cover и readiness за
+30 с после переключения указателя → при сбое автооткат на прежний релиз. Ошибка печатает
+`generations retained; inspect/recover with <state>`. Шаги ниже, где упомянуты rsync,
+`static/dist.new`/`dist.old` и `MT_REMOTE_DEPLOY_OK`, относятся к legacy-корню.
 
 1. Гейт источника: sha в лог, чистый `git status`, `HEAD` достижим из `origin/main`.
 2. `yarn install --frozen-lockfile` (node_modules общий — секунды).
@@ -88,9 +105,12 @@ model: sonnet
 
 ## Откат
 
-Автооткат встроен и отрабатывает до выхода скрипта. После успешного выката `static/dist.old`
-удаляется, поэтому откат — это выкат предыдущего рабочего коммита той же командой:
-`DEPLOY_QUIET=1 scripts/deploy-prod.sh <предыдущий-sha>`. Руками не запускать
+Автооткат встроен и отрабатывает до выхода скрипта. В v1 откат и восстановление —
+`bash scripts/quest-seo-operation.sh rollback|recover|abort-stage <state>` по state-файлу
+выката (`.codex-temp/deploy/prod-<sha>-<ts>.log.quest-seo.json`, runbook
+`docs/ops/quest-locale-release.md`); `scripts/fix-prod.sh` — legacy-путь и на управляемом
+корне отказывает. Повторная публикация предыдущего рабочего коммита той же командой
+`DEPLOY_QUIET=1 scripts/deploy-prod.sh <предыдущий-sha>` тоже допустима. Руками не запускать
 `docker compose restart|recreate|up|down` для `app`/`nginx`: frontend-деплой не управляет
 lifecycle контейнеров (`docs/PROBLEM_MEMORY.md`, OPS-DEPLOY-LIFECYCLE-001).
 

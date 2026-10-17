@@ -5,7 +5,11 @@ isolated worktree and source/config/static gates. Backend C/D owns the private
 v1 contract, Nginx, initial maintenance conversion and exposure. This transport
 never changes backend tracked files.
 
-`QUEST_SEO_MODE=legacy` is the default. Explicit `ru-only` or `translations`
+`QUEST_SEO_MODE=legacy` is the `build-prod.sh` default (build-only preview,
+`preprod`/`dev`). Since 17 October 2026 the production entrypoint
+`scripts/deploy-prod.sh` defaults to `translations` with the owner-selected
+budget below, because legacy publication refuses the managed production root;
+an explicit operator value still wins. `ru-only` or `translations`
 builds full v1 exports. Both use complete private R1/R2 receipts without a quest
 or locale selector. RU-only limits generated members and keeps all five error
 artifacts. Transport/partial-catalogue/fence failures reject the whole package.
@@ -147,7 +151,11 @@ server, index/plan provenance lives beside `dist`, never inside public dist.
 Older prepared state without a v2 index requires fresh preparation with current
 tooling; publication does not guess its storage needs or relax the budget.
 
-For an already managed root, after source review and authorized target:
+For an already managed root, after source review and authorized target, the
+ordinary `DEPLOY_QUIET=1 scripts/deploy-prod.sh <sha>` publishes translations:
+since 17 October 2026 the wrapper defaults to `QUEST_SEO_MODE=translations` and
+`QUEST_SEO_MANAGED_MAX_BYTES=1610612736`; an explicit operator value such as
+`ru-only` still wins. The explicit form:
 
 ```bash
 QUEST_SEO_MODE=translations QUEST_SEO_MANAGED_MAX_BYTES="$OWNER_BYTE_BUDGET" \

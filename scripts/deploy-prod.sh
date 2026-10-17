@@ -28,6 +28,14 @@ fi
 
 TARGET="${1:-origin/main}"
 DEPLOY="${DEPLOY:-1}"
+# Since 17.10.2026 the production static root is a managed v1 pointer (#2363)
+# and legacy publication refuses it: the ordinary deploy publishes the
+# translated package within the owner-selected physical budget. An explicit
+# operator value (for example ru-only owner maintenance) still wins. DEPLOY=0
+# takes the same v1 path: asset capture and inventory read prod over SSH and
+# need a clean prod checkout; the SSH-free preview is `DEPLOY=0 ./build-prod.sh prod`.
+export QUEST_SEO_MODE="${QUEST_SEO_MODE:-translations}"
+export QUEST_SEO_MANAGED_MAX_BYTES="${QUEST_SEO_MANAGED_MAX_BYTES:-1610612736}"
 # Фиксированный путь: worktree, брошенный прерванным выкатом, находится и
 # снимается следующим, а не копится рядом под новым именем.
 WT="$(dirname "$MT")/worktrees/deploy-prod"
