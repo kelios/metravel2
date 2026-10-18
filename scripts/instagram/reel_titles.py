@@ -104,11 +104,19 @@ def overlay(title, kicker=None, subtitle=None, anchor="bottom", size=64, brand=F
             draw.text((X0 - min(0, s_font.getbbox(line)[0]), y), line, font=s_font, fill=WHITE)
             y += s_step
     if brand:
+        # Подвал как у каруселей: птичка + @metravelby на тёмной пилюле (поправка 18.10.2026 —
+        # без пилюли подпись на светлой листве давала контраст 2,9:1; пилюля не зависит от полосы).
         bird = Image.open(BIRD).convert("RGBA")
         bird.thumbnail((44, 44))
         by = Y1 - 70
+        b_font = font("bold", 30)
+        pw = bird.width + 12 + draw.textlength("@metravelby", font=b_font) + 32
+        pill = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        ImageDraw.Draw(pill).rounded_rectangle((X0 - 14, by - 14, X0 - 14 + pw, by + 48), radius=31, fill=(0, 0, 0, 165))
+        img.alpha_composite(pill)
+        draw = ImageDraw.Draw(img)
         img.paste(bird, (X0, by - 4), bird)
-        draw.text((X0 + bird.width + 12, by), "@metravelby", font=font("bold", 30), fill=WHITE)
+        draw.text((X0 + bird.width + 12, by), "@metravelby", font=b_font, fill=WHITE)
     return img
 
 
