@@ -112,11 +112,11 @@ def overlay(title, kicker=None, subtitle=None, anchor="bottom", size=64, brand=F
         b_font = font("bold", 30)
         pw = bird.width + 12 + draw.textlength("@metravelby", font=b_font) + 32
         pill = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-        ImageDraw.Draw(pill).rounded_rectangle((X0 - 14, by - 14, X0 - 14 + pw, by + 48), radius=31, fill=(0, 0, 0, 165))
+        ImageDraw.Draw(pill).rounded_rectangle((X0, by - 14, X0 + pw, by + 48), radius=31, fill=(0, 0, 0, 165))  # левый край пилюли = x 160 (поле брифа шаг 5), содержимое с отступом 14
         img.alpha_composite(pill)
         draw = ImageDraw.Draw(img)
-        img.paste(bird, (X0, by - 4), bird)
-        draw.text((X0 + bird.width + 12, by), "@metravelby", font=b_font, fill=WHITE)
+        img.paste(bird, (X0 + 14, by - 4), bird)
+        draw.text((X0 + 14 + bird.width + 12, by), "@metravelby", font=b_font, fill=WHITE)
     return img
 
 
