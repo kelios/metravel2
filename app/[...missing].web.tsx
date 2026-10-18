@@ -4,11 +4,14 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native'
 
 import CustomHeader from '@/components/layout/CustomHeader'
 import FreezeWhenBlurred from '@/components/layout/FreezeWhenBlurred'
-import StandaloneScreen from '@/components/layout/StandaloneScreen'
-import { NotFoundContent } from '@/components/screens/NotFoundContent'
 import { useThemedColors } from '@/hooks/useTheme'
 import { parseQuestLocaleRoute } from '@/utils/questLocaleRouting'
 import { readSyncImport } from '@/utils/syncImport'
+
+// Явное расширение: без него платформенное разрешение вернуло бы этот же адаптер.
+// Нативный catch-all остаётся в том же web-чанке — `scripts/lib/expoStaticShell.js`
+// (`onlyChunk`) ждёт ровно один чанк `[...missing]` для boot-скриптов переводной детали.
+import NotFoundScreen from './[...missing].tsx'
 
 // Lazy on purpose (#2389): a static import made the whole quest screen part of
 // this catch-all's module graph, and the shared-chunk split then shipped it as
@@ -56,7 +59,7 @@ export default function QuestLocaleRouteScreen() {
   // One component type for the life of this mount: switching lazy → loaded
   // after a commit would remount the whole quest screen.
   const [QuestByIdScreen] = useState(() => loadedQuestScreen ?? LazyQuestByIdScreen)
-  if (!route) return <StandaloneScreen><NotFoundContent /></StandaloneScreen>
+  if (!route) return <NotFoundScreen />
 
   // CustomHeader owns the top inset for this root Stack route, as on contact.
   return (
