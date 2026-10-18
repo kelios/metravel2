@@ -44,11 +44,19 @@ const BOOT_FILES: Record<string, string> = {
   '__shared-3-0c.js': '__d(function(){},2,[]);',
   ...Object.fromEntries(['be', 'uk', 'pl', 'en'].map((locale) => [`locale-${locale}-0d.js`, '__d(function(){},3,[]);'])),
 }
-function writeBootChunks(dist: string) {
+function writeBootChunks(dist: string, withBothRouteChunks = false) {
   const dir = path.join(dist, '_expo', 'static', 'js', 'web')
   fs.mkdirSync(dir, { recursive: true })
   for (const [name, body] of Object.entries(BOOT_FILES)) fs.writeFileSync(path.join(dir, name), body)
-  return readQuestLocaleBootChunks(dir, contract.TRANSLATED_LOCALES)
+  const routes = ['[...missing]-0a1b.js']
+  if (withBothRouteChunks) {
+    routes.push('[...missing]-0e2f.js')
+    fs.writeFileSync(path.join(dir, routes[1]), `globalThis.__METRAVEL_CHUNK_DEPS__??={};globalThis.__METRAVEL_CHUNK_DEPS__["${WEB_JS}${routes[1]}"]=["${WEB_JS}__shared-8-0f.js"];__d(function(){},4,[]);`)
+    fs.writeFileSync(path.join(dir, '__shared-8-0f.js'), '__d(function(){},5,[]);')
+  }
+  const catchAllHtml = `<head>${routes.map((name) => `<script src="${WEB_JS}${name}" defer></script>`).join('')}<script src="${WEB_JS}entry-0123abcd.js" defer></script></head>`
+  fs.writeFileSync(path.join(dist, '[...missing].html'), catchAllHtml)
+  return readQuestLocaleBootChunks(dir, contract.TRANSLATED_LOCALES, catchAllHtml)
 }
 
 const BASE_HTML = [
@@ -149,13 +157,13 @@ function detailLinksFor(quest: Q) {
 
 async function buildCase(options: {
   published?: Record<string, string[]>; localized?: (quest: Q, locale: string, i: number) => unknown;
-  fetchError?: Error; ruWords?: Record<string, number>; publicationMode?: string; withLinks?: boolean; withoutBootChunks?: boolean;
+  fetchError?: Error; ruWords?: Record<string, number>; publicationMode?: string; withLinks?: boolean; withoutBootChunks?: boolean; withBothRouteChunks?: boolean;
 } = {}) {
   const root = makeTempDir('quest-seo-package-')
   const dist = path.join(root, 'dist')
   fs.mkdirSync(dist, { recursive: true })
   fs.writeFileSync(path.join(dist, '.build-source.json'), JSON.stringify({ sha: SHA }))
-  const bootChunks = writeBootChunks(dist)
+  const bootChunks = writeBootChunks(dist, options.withBothRouteChunks)
   const ruBundles = Object.fromEntries(QUESTS.map((quest, i) => [quest.quest_id, bundle(quest, 'ru', 100 + i, { words: options.ruWords?.[quest.quest_id] })]))
   const { pages, quality } = ruPages(QUESTS, ruBundles)
   for (const page of pages) {
@@ -604,6 +612,18 @@ describe('boot chunks of translated members (#2465)', () => {
     fs.writeFileSync(path.join(dir, 'locale-pl-ffee.js'), '__d(function(){},3,[]);')
     finalize(c, c.receiptText)
     expect(verifyQuestSeoPackage(c.dist).failures).toEqual([])
+  })
+
+  it('ships both authoritative route chunks and verifies the second route dependency', async () => {
+    const c = await buildCase({ withBothRouteChunks: true })
+    const file = path.join(c.dist, contract.memberHtmlPath(4, 'quest-alpha', 'pl'))
+    const html = fs.readFileSync(file, 'utf8')
+    const scripts = [...html.matchAll(/<script src="([^"]+)" defer><\/script>/g)].map((match) => match[1].replace(WEB_JS, ''))
+    expect(scripts).toEqual(['__shared-3-0c.js', '__shared-8-0f.js', '[...missing]-0a1b.js', '[...missing]-0e2f.js', 'locale-pl-0d.js', 'entry-0123abcd.js'])
+    finalize(c, c.receiptText)
+    expect(verifyQuestSeoPackage(c.dist).failures).toEqual([])
+    fs.unlinkSync(path.join(c.dist, '_expo', 'static', 'js', 'web', '__shared-8-0f.js'))
+    expect(verifyQuestSeoPackage(c.dist).failures.some((failure: string) => failure.includes('__shared-8-0f.js'))).toBe(true)
   })
 
   it('rejects a translated member that would load its route after entry', async () => {
