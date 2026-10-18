@@ -5,7 +5,7 @@
  * чтобы unique (quest, order) не сработал посреди сдвига.
  */
 
-const { applyCreate, planInsert, validateCreate } = require('@/scripts/apply-quest-patches')
+const { applyCreate, applyPatch, applyReorder, planInsert, validateCreate } = require('@/scripts/apply-quest-patches')
 
 const STEPS = [
   { id: 10, step_id: 'intro', order: 0, is_intro: true },
@@ -111,5 +111,39 @@ describe('apply-quest-patches create_step #2423', () => {
     await expect(applyCreate(patch({ quest_db_id: 8 }), 'f', transport, { fetchBundle: async () => [bundle()] }))
       .rejects.toThrow('quest_db_id 8')
     expect(calls).toEqual([])
+  })
+
+  it('dry-run последовательно моделирует перестановку, две вставки и смену роли без HTTP-записей и мутации снимка', async () => {
+    const original = { id: 7, quest_id: 'q', intro: JSON.stringify(STEPS[0]), steps: JSON.stringify(STEPS.slice(1)) }
+    const before = JSON.parse(JSON.stringify(original))
+    const fetchBundle = jest.fn().mockResolvedValue([original])
+    const request = jest.fn()
+    const transport = { api: 'https://x', dryRun: true, session: { request } }
+    const log = jest.spyOn(console, 'log').mockImplementation(() => {})
+    const options = { fetchBundle }
+    try {
+      await applyReorder({ quest_id: 'q', quest_db_id: 7, reorder: ['b', 'a', 'c'] }, 'f', transport, options)
+      await applyCreate(patch(), 'f', transport, options)
+      await applyCreate(patch({ after_step_id: 'new-point', create_step: { ...SPEC, step_id: 'second-point' } }), 'f', transport, options)
+      // This reorder is invalid until the earlier role change is simulated.
+      const finalOrder = { quest_id: 'q', quest_db_id: 7, reorder: ['a', 'new-point', 'second-point', 'c', 'b'] }
+      await expect(applyReorder(finalOrder, 'f', transport, options)).rejects.toThrow('после финала c')
+      await applyPatch({ quest_id: 'q', step_id: 'b', step_db_id: 12, changes: { point_role: 'optional', poi_info: null } }, 'f', transport, options)
+      await applyReorder(finalOrder, 'f', transport, options)
+      expect((await applyReorder(finalOrder, 'f', transport, options)).skipped).toBe(true)
+      expect((await applyCreate(patch(), 'f', transport, options)).skipped).toBe(true)
+      expect((await applyCreate(patch({ after_step_id: 'new-point', create_step: { ...SPEC, step_id: 'second-point' } }), 'f', transport, options)).skipped).toBe(true)
+      const createdEndpoints = log.mock.calls
+        .filter((args) => args[0] === '[DRY] PATCH' && !/\/(11|12|13)\/$/.test(String(args[1])))
+        .map((args) => args[1])
+      expect(new Set(createdEndpoints).size).toBe(2)
+      expect(request).not.toHaveBeenCalled()
+      expect(fetchBundle).toHaveBeenCalledTimes(1)
+      expect(original).toEqual(before)
+      // A new invocation must not inherit the previous invocation's additions.
+      await expect(applyReorder(finalOrder, 'f', { ...transport }, options)).rejects.toThrow('лишние new-point,second-point')
+    } finally {
+      log.mockRestore()
+    }
   })
 })

@@ -144,7 +144,7 @@ describe('questAdapters', () => {
       expect(bullets('и 6')).toBe(false);
     });
 
-    it('current steps 136 and 372 keep their exact and free-text answer contracts', () => {
+    it('current steps 136 and 372 keep their tower-count and free-text answer contracts', () => {
       const fortress = require('@/scripts/brest-fortress-quest-data.js') as Array<{
         steps: Array<{ step_id: string; answer_pattern: { type: string; value: string } }>;
       }>;
@@ -153,11 +153,13 @@ describe('questAdapters', () => {
       }>;
       const holmskie = fortress[0].steps.find((step) => step.step_id === 'holmskie')!;
       const shops = soviet[0].steps.find((step) => step.step_id === '5-dohodnye-doma')!;
-      const bullets = buildAnswerChecker(holmskie.answer_pattern.type, holmskie.answer_pattern.value);
+      const towers = buildAnswerChecker(holmskie.answer_pattern.type, holmskie.answer_pattern.value);
       const shopCheck = buildAnswerChecker(shops.answer_pattern.type, shops.answer_pattern.value);
 
-      expect(bullets('ад куль')).toBe(true);
-      expect(bullets('от снега')).toBe(false);
+      expect(holmskie.answer_pattern.type).toBe('exact');
+      expect(towers('2')).toBe(true);
+      expect(towers('1')).toBe(false);
+      expect(towers('3')).toBe(false);
       expect(shops.answer_pattern.type).toBe('any_text');
       expect(shopCheck('кафэ і магазіны')).toBe(true);
       expect(shopCheck('магазіны')).toBe(true);
