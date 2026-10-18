@@ -146,7 +146,8 @@ model: opus
   `owned`, производное от собственного знака); обложки квестов с сайта (ИИ, ChatGPT/gpt-image по
   C2PA) брать можно и нужно — решение владельца 18.10.2026: basis `ai-generated`, evidence —
   `.codex-temp/instagram/quest-covers-ai-decision-2026-10-18.txt`, URL обложки на проде и
-  `openai-terms-of-use-ru-2026-10-18.txt`, копируй в `rights/`; при замене кадра обновляй `rights/source-hashes.json`; служебные JPG
+  `openai-terms-of-use-ru-2026-10-18.txt`, копируй в `rights/`; при замене кадра обновляй `rights/source-hashes.json`; титры Reel — только в поле
+  y 440–1248 (бриф шаг 5, обновлён 18.10.2026: превью режет верх до 1:1), верхний якорь плашки 440; служебные JPG
   (контрольные листы, пробы) — только в `work/`, любой JPG в корне пакета проверка прав
   считает публикуемым. `make-carousel.py` запускай из корня репо: пути в `spec.json`
   относительные к нему.
