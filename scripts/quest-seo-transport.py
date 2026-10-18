@@ -738,6 +738,10 @@ def legacy_operation(action, arguments):
             require(directory.resolve() == directory, 'Chunk directory link refused')
             source, target = directory / new, directory / old_name
             require(source.is_file() and not source.is_symlink() and not target.is_symlink(), 'Chunk file refused')
+            # nginx prefers `<name>.br` (brotli_static); a copy of the old bytes would shadow the new chunk.
+            compressed = directory / (old_name + '.br')
+            require(not compressed.is_symlink(), 'Chunk file refused')
+            compressed.unlink(missing_ok=True)
             shutil.copyfile(source, target)
         else:
             raise ValueError('Unknown legacy action')

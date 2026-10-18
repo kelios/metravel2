@@ -837,6 +837,12 @@ if [[ "$ENV" == "prod" ]]; then
   node scripts/verify-prod-config.js --dist "dist/$ENV"
 fi
 
+# #2484: nginx отдаёт `<file>.br` (brotli_static on) вместо сжатия на лету в q6.
+# Последний писатель свежих чанков уже отработал; overlay прошлых поколений
+# ниже копирует только *.js/*.css и копий не получает — их nginx сожмёт сам.
+stage "предсжатие статики (brotli q11)"
+node scripts/precompress-static-assets.js "dist/$ENV"
+
 if [[ "$QUEST_SEO_MODE" != "legacy" ]]; then
   stage "quest v1: проверка и применение захваченных assets"
   bash scripts/quest-seo-operation.sh apply "dist/$ENV" "$QUEST_SEO_STATE_PATH" "$QUEST_CAPTURE_NONCE"
@@ -852,6 +858,7 @@ fi
 
 if [[ "$DEPLOY" == "1" ]]; then
   stage "выкат (загрузка + публикация)"
+  node scripts/precompress-static-assets.js --verify "dist/$ENV"
   echo "старт деплоя ..."
   deploy_prod "$ENV"
 
