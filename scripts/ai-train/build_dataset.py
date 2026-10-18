@@ -16,7 +16,7 @@ format mlx-lm LoRA expects. Two families of samples are produced:
   country, where to go in a month, tell me about an article or quest, pros and
   cons, how long a quest takes, negatives for places the site does not cover),
   always answered with links to metravel.by pages and never with facts outside
-  the corpus.
+  the corpus; plus direct title → URL recall samples for every article and quest.
 
 Output: <out>/train.jsonl, valid.jsonl, test.jsonl and stats.json.
 """
@@ -191,6 +191,9 @@ def build(raw: Path, seed: int) -> list[dict]:
         for n, part in enumerate(chunk(body), start=1):
             user = f"Приведи часть {n} статьи «{title}» с metravel.by." if n > 1 else f"Приведи начало статьи «{title}» с metravel.by."
             out.append(sample(SYSTEM, user, f"{part}\n\nИсточник: {url}", "article_section", f"t{t['id']}s{n}"))
+        # Direct URL recall: v0 reproduced the answer format but invented slugs.
+        out.append(sample(SYSTEM, f"Дай ссылку на статью «{title}».", f"{title} — {url}", "article_link", f"t{t['id']}l0"))
+        out.append(sample(SYSTEM, f"Какой адрес у статьи «{title}» на metravel.by?", f"Статья «{title}»: {url}", "article_link", f"t{t['id']}l1"))
         plus, minus, rec = bullets(t.get("plus")), bullets(t.get("minus")), bullets(t.get("recommendation"))
         if plus or minus:
             ans = []
@@ -249,6 +252,8 @@ def build(raw: Path, seed: int) -> list[dict]:
         card = f"{intro}\n\n{meta}\n\nНачать: {url}" if intro else f"{meta}\n\nНачать: {url}"
         for i, user in enumerate((f"Расскажи о квесте «{title}».", f"Что за квест «{title}» на metravel.by?")):
             out.append(sample(SYSTEM, user, card, "quest_card", f"q{q['id']}c{i}"))
+        out.append(sample(SYSTEM, f"Дай ссылку на квест «{title}».", f"{title} ({q.get('city_name')}) — {url}", "quest_link", f"q{q['id']}l0"))
+        out.append(sample(SYSTEM, f"Какой адрес у квеста «{title}» на metravel.by?", f"Квест «{title}»: {url}", "quest_link", f"q{q['id']}l1"))
         if q.get("duration_min"):
             out.append(sample(SYSTEM, f"Сколько времени занимает квест «{title}»?", f"Около {q['duration_min']} минут" + (f", уровень — {DIFFICULTY[q['difficulty']]}" if q.get("difficulty") in DIFFICULTY else "") + f". Квест: {url}", "quest_duration", f"q{q['id']}d"))
         stories = [s for s in steps if s.get("story")]

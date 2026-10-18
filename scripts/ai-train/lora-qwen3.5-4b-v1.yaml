@@ -1,0 +1,34 @@
+# metravel-llm v1: continue from the v0 adapter for one more epoch on the dataset
+# with title → URL recall samples (v0 learned the answer format but invented
+# slugs — see #2462). Same memory-bound settings as lora-qwen3.5-4b.yaml.
+#   AI_HOME=~/metravel-ai RUN=v1 CONFIG=scripts/ai-train/lora-qwen3.5-4b-v1.yaml scripts/ai-train/train.sh
+model: models/Qwen3.5-4B-MLX-4bit
+data: data/sft
+train: true
+fine_tune_type: lora
+optimizer: adamw
+mask_prompt: true          # loss only on assistant tokens
+num_layers: 6              # last 6 of 32 decoder layers (4 linear + 2 full attention); 8 → ~20 GB peak
+batch_size: 1              # one 1024-token sample ≈ 15 GB peak; batch 2 ≈ 27 GB
+grad_accumulation_steps: 1 # 2 × 1024-token samples → OOM (graphs of all micro-steps are kept)
+iters: 9000                # ≈ 1 epoch of 9.06k samples (v0 set + 1418 link samples) at batch 1
+resume_adapter_file: adapters/metravel-llm-v0/adapters.safetensors
+learning_rate: 5.0e-5
+max_seq_length: 1024       # dataset built with --chunk-chars 2600 so sections fit
+grad_checkpoint: true
+steps_per_report: 20
+steps_per_eval: 1000
+val_batches: 10
+save_every: 500
+adapter_path: adapters/metravel-llm-v1
+seed: 20261017
+lora_parameters:
+  rank: 16
+  scale: 20.0
+  dropout: 0.05
+  keys: ["self_attn.q_proj", "self_attn.k_proj", "self_attn.v_proj", "self_attn.o_proj", "mlp.gate_proj", "mlp.up_proj", "mlp.down_proj"]
+lr_schedule:
+  name: cosine_decay
+  warmup: 100
+  warmup_init: 1.0e-6
+  arguments: [5.0e-5, 9000, 1.0e-6]
