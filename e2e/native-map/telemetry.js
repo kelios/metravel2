@@ -47,9 +47,10 @@ function observerScript(nonce, seconds) {
 
 class Acceptance {
   constructor({ expectedKeys, settleMs = 600, stageMs = 20000 } = {}) {
-    if (!Array.isArray(expectedKeys) || expectedKeys.length !== 869 ||
-        !expectedKeys.every(key => typeof key === 'string' && key) || new Set(expectedKeys).size !== 869) {
-      throw new Error('Exactly 869 independent fixture keys are required');
+    if (!Array.isArray(expectedKeys) || expectedKeys.length === 0 ||
+        ![...expectedKeys].every(key => typeof key === 'string' && key.trim()) ||
+        new Set(expectedKeys).size !== expectedKeys.length) {
+      throw new Error('Nonempty, valid, unique independent fixture keys are required');
     }
     this.expectedKeys = [...expectedKeys].sort();
     this.settleMs = settleMs;

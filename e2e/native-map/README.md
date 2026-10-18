@@ -8,13 +8,16 @@ separate from an entry-only Maestro exit code. This flow is intentionally not
 advertised as an independently passing suite in `maestro/suites.json`.
 
 Preconditions: reviewed changes in `testing`, one selected target, RU, an
-already signed-in account **104**, unchanged fixture of **869 rendered places**,
+already signed-in account **104**, a fresh independent snapshot of **all current API places**,
 verified installed candidate/backend identity. Credentials come from the
 existing private `.env.e2e` input channel before this test; neither a credential
 nor a login command belongs in the report. The sidecar does not attest an account
 identity from its declared number: independently confirm the authenticated
-account before the run. Missing/wrong fixture fails baseline; never lower 869
-or substitute another map. The app must be running before iOS attach.
+account before the run. Missing/wrong fixture fails baseline; never filter the
+snapshot, change account data or substitute another map. The app must be running before iOS attach.
+The owner approved the complete current dataset for #2471/#2483 on 2026-10-18
+(2655 points at that capture), replacing the historical 869-point prerequisite.
+The snapshot defines the exact expected set; its count is not hardcoded.
 
 Acceptance of #2483 requires the reviewed `UserPointsMap.pointsOnly` wiring and
 native dataset guard in the code actually running on the target. The previously
@@ -48,14 +51,16 @@ WebView, logs or `__metravelMarkerDesired`. Save the following shape in an ignor
 private artifact directory:
 
 ```json
-{"accountId":104,"apiOrigin":"https://metravel.by","capturedAt":"<fresh ISO timestamp>","keys":["<869 canonical keys from the authenticated API points>"]}
+{"accountId":104,"apiOrigin":"https://metravel.by","capturedAt":"<fresh ISO timestamp>","keys":["<all canonical keys from the authenticated API points>"]}
 ```
 
 The projection follows `components/UserPoints/userPointsMapData.ts` →
 `api/mapPlaces.ts:getMapPointIdentityKey`: each finite-coordinate API point maps
 to `travel-${Number(id)}@${Number(latitude)},${Number(longitude)}`, then commas
-are replaced with `-`. Require valid, unique API IDs and exactly 869 unique
-keys; sort them before saving. The runner requires exact key equality, origin,
+are replaced with `-`. Require valid, unique API IDs, complete pagination and a
+nonempty set of valid, unique keys; sort them before saving. Derive the complete
+finite-coordinate projection without sampling or trimming it to an old count.
+The runner requires exact key equality, origin,
 account metadata and a capture age under 24h; the report fingerprints the fixture
 bytes. This prevents a same-size global dataset from satisfying the baseline.
 Account/backend/source provenance still needs the independent QA identity check.
@@ -96,7 +101,7 @@ silently replaced. The runner binds the forwarded port to the selected device's
 current MeTravel PID through `adb forward --list` and verifies installed
 version/build. The QA owner creates and removes only that owned adb forward.
 
-Assertions require exactly the 869 independent API fixture keys, the same desired keys, one unique marker
+Assertions require exactly the complete independent API fixture key set, the same desired keys, one unique marker
 object per key, exact marker-layer membership, unchanged objects/map across all
 gestures, `markerZoomAnimation=true`, empty render queue/no scheduled frame,
 no active map animation, no GridLayer load in progress and zero pending fallback
@@ -120,13 +125,17 @@ the target's stopped/debugger state and resolve that owned stale lease before
 reuse. Preserve the first failing snapshots,
 `entry.xml`, `maestro.log`, `lldb.log`, `progress.json` and `report.json`.
 
-**Uncovered gate:** three real iOS NetInfo offline/online recovery cycles.
-`hooks/useNetworkStatus.ts` consumes native NetInfo events; direct
-`__metravelSetTileNetwork` injection bypasses that boundary. This runner never
-claims offline recovery. It needs a qualified target-local impairment mechanism
-that actually changes `NetInfo.isConnected` without host Wi-Fi changes, or a
-separately selected physical iPhone/isolated test host and its reviewed scenario.
-Blocking HTTP alone while `isConnected` remains true does not satisfy it.
+**Uncovered gate:** three real network-loss/recovery cycles with grey map tiles
+recovering without a gesture. The #2471 Task Contract explicitly permits
+simulator Network Link Conditioner (NLC) or host-network disconnection. Prefer a
+qualified target-local NLC mechanism; changing host Wi-Fi/network state requires
+a separate current owner command. Record the selected target, impairment settings,
+actual request/tile failures during each loss and automatic tile recovery after
+each restoration. Observe and report `NetInfo.isConnected` honestly: NLC need not
+change that value if real network impairment and recovery are independently
+demonstrated. Direct `__metravelSetTileNetwork` injection is not a network-loss
+test. This runner never claims offline recovery; the three cycles require
+separate runtime evidence in `testing`.
 
 Source validation/unit passes do not prove LLDB/CDP access, current fixture or
 any application business outcome. Run actual acceptance in `testing` after
