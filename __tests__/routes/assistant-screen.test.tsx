@@ -17,7 +17,7 @@ const mockChatState = {
   clearInputError: jest.fn(),
 }
 
-jest.mock('@/app/[...missing].tsx', () => {
+jest.mock('@/components/screens/NotFoundContent', () => {
   const { Text } = require('react-native')
   return { NotFoundContent: () => <Text testID="not-found">not-found</Text> }
 })

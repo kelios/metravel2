@@ -30,7 +30,7 @@ jest.mock('@/components/layout/CustomHeader', () => ({ __esModule: true, default
 jest.mock('@/app/(tabs)/quests/[city]/[questId]', () => ({
   __esModule: true, default: (props: unknown) => mockDetail(props),
 }))
-jest.mock('@/app/[...missing].tsx', () => ({ __esModule: true, NotFoundContent: () => mockNotFound() }))
+jest.mock('@/components/screens/NotFoundContent', () => ({ __esModule: true, NotFoundContent: () => mockNotFound() }))
 
 import QuestLocaleRouteScreen from '@/app/[...missing].web'
 

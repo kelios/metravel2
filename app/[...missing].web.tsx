@@ -5,13 +5,10 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native'
 import CustomHeader from '@/components/layout/CustomHeader'
 import FreezeWhenBlurred from '@/components/layout/FreezeWhenBlurred'
 import StandaloneScreen from '@/components/layout/StandaloneScreen'
+import { NotFoundContent } from '@/components/screens/NotFoundContent'
 import { useThemedColors } from '@/hooks/useTheme'
 import { parseQuestLocaleRoute } from '@/utils/questLocaleRouting'
 import { readSyncImport } from '@/utils/syncImport'
-
-// Explicit source extensions prevent platform resolution from re-entering this
-// adapter. Native keeps the original catch-all and its existing error handling.
-const NotFoundContent = require('./[...missing].tsx').NotFoundContent as React.ComponentType
 
 // Lazy on purpose (#2389): a static import made the whole quest screen part of
 // this catch-all's module graph, and the shared-chunk split then shipped it as

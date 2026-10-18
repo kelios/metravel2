@@ -1,12 +1,9 @@
 import React, { Suspense } from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
 
+import { NotFoundContent } from '@/components/screens/NotFoundContent'
 import { useThemedColors } from '@/hooks/useTheme'
 import { isAiAssistantEnabled } from '@/utils/aiAssistantConfig'
-
-// Явное расширение: web-вариант `[...missing].web.tsx` — адаптер без
-// `NotFoundContent`, а экран «не найдено» нужен один на обеих платформах.
-const NotFoundContent = require('../[...missing].tsx').NotFoundContent as React.ComponentType
 
 // #2460: экран грузится отложенным чанком и только под флагом — в сборке с
 // выключенным ассистентом (прод) его код на страницу не попадает.
