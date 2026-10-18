@@ -13,7 +13,7 @@ AI_HOME="${AI_HOME:-$HOME/metravel-ai}"  # обучение переехало �
 MODEL="${MODEL:-models/Qwen3.5-4B-MLX-4bit}"
 ADAPTER="${ADAPTER-adapters/metravel-llm-v0}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SYSTEM="$(python3 -I -c "import sys; sys.path.insert(0, '$HERE'); import build_dataset; print(build_dataset.SYSTEM)")"
+SYSTEM="$(python3 -I -c 'import sys; sys.path.insert(0, sys.argv[1]); import build_dataset; print(build_dataset.SYSTEM)' "$HERE")"
 cd "$AI_HOME"
 args=(--model "$MODEL" --temp 0.3 --max-tokens 400 --system-prompt "$SYSTEM")
 if [[ -n "$ADAPTER" ]]; then

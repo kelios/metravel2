@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Export the public corpus of metravel.by (author 1 travel articles and quests)
-from the production API into JSONL files for model training.
+"""Export the public corpus of metravel.by (published travel articles of all
+authors, guest articles included, and quests) from the production API into
+JSONL files for model training.
 
 Usage:
     python3 -I scripts/ai-train/export_corpus.py --out ~/metravel-ai/data/raw

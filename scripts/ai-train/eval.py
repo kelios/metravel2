@@ -4,7 +4,7 @@ prompt set (eval_prompts.jsonl): generates both answers for every prompt and
 checks them automatically against the exported corpus.
 
 Usage (inside the training folder's venv, model/adapter paths relative to it):
-    AI_HOME=~/metravel-ai $AI_HOME/venv/bin/python scripts/ai-train/eval.py \
+    AI_HOME=~/metravel-ai ~/metravel-ai/venv/bin/python scripts/ai-train/eval.py \
         --adapter adapters/metravel-llm-v0 --out logs/eval-v0
 
 Automatic checks per answer:
@@ -158,17 +158,19 @@ def main() -> int:
     base_file = out / "base.json"
     base_source = args.base_server or args.model  # which engine produced the cached base answers
     cached = json.loads(base_file.read_text(encoding="utf-8")) if args.skip_base and base_file.exists() else None
-    if cached and cached.get("source", args.model) == base_source:
+    texts = [p["prompt"] for p in prompts]
+    if (cached and cached.get("source", args.model) == base_source
+            and len(cached["answers"]) == len(prompts) and cached.get("prompts", texts) == texts):
         base_ans, base_tps = cached["answers"], cached["tps"]
     else:
         if cached:
-            print(f"== base.json is from {cached.get('source', args.model)}, regenerating for {base_source}", file=sys.stderr)
+            print(f"== base.json is from {cached.get('source', args.model)} or another prompt set, regenerating for {base_source}", file=sys.stderr)
         print("== base", base_source, file=sys.stderr)
         if args.base_server:
             base_ans, base_tps = generate_server(args.base_server, prompts, args.max_tokens)
         else:
             base_ans, base_tps = generate_all(str(home / args.model), None, prompts, args.max_tokens)
-        base_file.write_text(json.dumps({"source": base_source, "answers": base_ans, "tps": base_tps}, ensure_ascii=False), encoding="utf-8")
+        base_file.write_text(json.dumps({"source": base_source, "prompts": texts, "answers": base_ans, "tps": base_tps}, ensure_ascii=False), encoding="utf-8")
     print("== adapter", args.server or args.adapter, file=sys.stderr)
     if args.server:
         ad_ans, ad_tps = generate_server(args.server, prompts, args.max_tokens)

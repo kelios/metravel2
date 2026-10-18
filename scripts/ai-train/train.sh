@@ -9,6 +9,8 @@
 set -euo pipefail
 AI_HOME="${AI_HOME:-$HOME/metravel-ai}"
 CONFIG="${CONFIG:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lora-qwen3.5-4b.yaml}"
+# absolute before cd "$AI_HOME", so CONFIG=scripts/ai-train/… works from the repo root
+CONFIG="$(cd "$(dirname "$CONFIG")" && pwd)/$(basename "$CONFIG")"
 RUN="${RUN:-$(date +%Y%m%d-%H%M)}"
 # mlx-lm compiles the train step (mx.compile); for Qwen3.5 the compiled graph
 # defeats gradient checkpointing in the Gated DeltaNet fallback: peak 20.9 GB
