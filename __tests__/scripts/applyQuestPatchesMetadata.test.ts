@@ -1,4 +1,5 @@
-const { validateStep, apiPatch, applyPatch } = require('../../scripts/apply-quest-patches')
+const { validateStep, apiPatch, applyPatch, formatPatchError } = require('../../scripts/apply-quest-patches')
+const { TokenError } = require('../../scripts/lib/metravel-tool-session')
 
 describe('existing quest point metadata patches', () => {
   const patch = (changes: Record<string, unknown>, stepId = '4-rest') => ({
@@ -109,5 +110,32 @@ describe('existing quest point metadata patches', () => {
     const fetchBundle = jest.fn()
     await applyPatch(patch({ task: 'Observe the entrance.' }), 'draft.json', transportFor(), { fetchBundle })
     expect(fetchBundle).not.toHaveBeenCalled()
+  })
+
+  it('prints concrete local validation failures while keeping transport errors sanitized', () => {
+    for (const [changes, reason] of [
+      [{ poi_info: {} }, 'poi_info допускает только null'],
+      [{ answer_pattern: '{not-json' }, 'answer_pattern — некорректный JSON'],
+      [{ answer_pattern: '{"type":"range","value":"not-json"}' }, 'answer_pattern.value — некорректный JSON'],
+    ]) {
+      try {
+        validateStep(patch(changes as Record<string, unknown>), 'draft.json')
+        throw new Error('Expected validation to fail')
+      } catch (error) {
+        expect(formatPatchError(error)).toContain(reason)
+      }
+    }
+    expect(formatPatchError(new Error('Authorization: Token private-value'))).toBe('metravel-auth: request/response')
+    expect(formatPatchError(new TokenError('response', { status: 403 }))).toBe('metravel-auth: request/response (HTTP 403)')
+  })
+
+  it('dry-run still rejects wrong identities, unknown points and changes to a final role without writing', async () => {
+    const transport = { ...transportFor(), dryRun: true }
+    const fetchBundle = jest.fn().mockResolvedValue([{ ...bundleFor({ point_role: 'final' })[0], id: 7 }])
+    await expect(applyPatch(patch({ poi_info: null }, 'wrong-point'), 'draft.json', transport, { fetchBundle })).rejects.toThrow('не совпали')
+    await expect(applyPatch({ ...patch({ task: 'Look.' }), step_db_id: 99 }, 'draft.json', transport, { fetchBundle })).rejects.toThrow('не совпали')
+    await expect(applyPatch(patch({ point_role: 'optional' }), 'draft.json', transport, { fetchBundle })).rejects.toThrow('нельзя менять роль')
+    await expect(applyPatch({ quest_id: 'demo-quest', quest_db_id: 8, changes: { title: 'Title' } }, 'draft.json', transport, { fetchBundle })).rejects.toThrow('quest_db_id')
+    expect(transport.session.request).not.toHaveBeenCalled()
   })
 })

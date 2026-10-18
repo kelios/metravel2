@@ -116,48 +116,80 @@ const INPUT_TYPES = new Set(['text', 'number'])
 // Смена обязательности существующей точки не создаёт новый старт или финал.
 const PATCH_ROLES = new Set(['required', 'optional'])
 
+// Только наши ошибки плана можно печатать подробно. Произвольные исключения
+// транспорта и TokenError по-прежнему проходят через безопасный formatter.
+class PatchValidationError extends Error {}
+
+const formatPatchError = (error) => error instanceof PatchValidationError ? error.message : formatTokenError(error)
+
+// Один transport = один последовательный запуск. Репетиция держит только
+// затронутые квесты, не меняет публичный снимок и не переживает новый запуск.
+const dryRunBundles = new WeakMap()
+
+async function readBundle(transport, questId, fetchBundle) {
+  if (!transport.dryRun) return (await fetchBundle(transport.api, questId))[0]
+  if (typeof questId !== 'string' || !questId.trim()) throw new PatchValidationError('для репетиции нужен quest_id')
+  let bundles = dryRunBundles.get(transport)
+  if (!bundles) { bundles = new Map(); dryRunBundles.set(transport, bundles) }
+  if (!bundles.has(questId)) {
+    const [source] = await fetchBundle(transport.api, questId)
+    if (!source || (source.quest_id && source.quest_id !== questId)) {
+      throw new PatchValidationError(`квест ${questId} не совпал с продом`)
+    }
+    const bundle = JSON.parse(JSON.stringify(source))
+    bundle.steps = parseSteps(bundle)
+    if (typeof bundle.intro === 'string') bundle.intro = JSON.parse(bundle.intro)
+    bundles.set(questId, bundle)
+  }
+  return bundles.get(questId)
+}
+
 
 
 /** Патч уровня квеста: только разрешённые поля и непустой текст. */
 function validateQuest(p, file) {
   const payload = {}
   for (const [k, v] of Object.entries(p.changes || {})) {
-    if (!QUEST_ALLOWED.has(k)) throw new Error(`${file} ${p.quest_id}: запрещённое поле квеста ${k}`)
-    if (typeof v !== 'string' || !v.trim()) throw new Error(`${file} ${p.quest_id}: пустое ${k}`)
+    if (!QUEST_ALLOWED.has(k)) throw new PatchValidationError(`${file} ${p.quest_id}: запрещённое поле квеста ${k}`)
+    if (typeof v !== 'string' || !v.trim()) throw new PatchValidationError(`${file} ${p.quest_id}: пустое ${k}`)
     payload[k] = v
   }
-  if (!Object.keys(payload).length) throw new Error(`${file} ${p.quest_id}: пустые changes`)
+  if (!Object.keys(payload).length) throw new PatchValidationError(`${file} ${p.quest_id}: пустые changes`)
   return payload
 }
 
 function validateStep(p, file) {
   const payload = {}
   for (const [k, v] of Object.entries(p.changes || {})) {
-    if (!ALLOWED.has(k)) throw new Error(`${file} ${p.step_id}: запрещённое поле ${k}`)
+    if (!ALLOWED.has(k)) throw new PatchValidationError(`${file} ${p.step_id}: запрещённое поле ${k}`)
     payload[k] = v
   }
-  if (!Object.keys(payload).length) throw new Error(`${file} ${p.step_id}: пустые changes`)
+  if (!Object.keys(payload).length) throw new PatchValidationError(`${file} ${p.step_id}: пустые changes`)
   if (payload.answer_pattern !== undefined) {
-    const ap = JSON.parse(payload.answer_pattern)
-    if (!TYPES.has(ap.type)) throw new Error(`${file} ${p.step_id}: неизвестный type ${ap.type}`)
-    if (['exact_any', 'range', 'any_text', 'approx'].includes(ap.type)) JSON.parse(ap.value)
+    let ap
+    try { ap = JSON.parse(payload.answer_pattern) } catch { throw new PatchValidationError(`${file} ${p.step_id}: answer_pattern — некорректный JSON`) }
+    if (!ap || typeof ap !== 'object') throw new PatchValidationError(`${file} ${p.step_id}: answer_pattern — нужен объект`)
+    if (!TYPES.has(ap.type)) throw new PatchValidationError(`${file} ${p.step_id}: неизвестный type ${ap.type}`)
+    if (['exact_any', 'range', 'any_text', 'approx'].includes(ap.type)) {
+      try { JSON.parse(ap.value) } catch { throw new PatchValidationError(`${file} ${p.step_id}: answer_pattern.value — некорректный JSON`) }
+    }
   }
   if (payload.input_type !== undefined && !INPUT_TYPES.has(payload.input_type)) {
-    throw new Error(`${file} ${p.step_id}: неизвестный input_type ${payload.input_type}`)
+    throw new PatchValidationError(`${file} ${p.step_id}: неизвестный input_type ${payload.input_type}`)
   }
   if (payload.point_role !== undefined) {
     if (p.step_id === 'intro' || !PATCH_ROLES.has(payload.point_role)) {
-      throw new Error(`${file} ${p.step_id}: допустима только роль required/optional у обычной точки`)
+      throw new PatchValidationError(`${file} ${p.step_id}: допустима только роль required/optional у обычной точки`)
     }
   }
   // При смене объекта можно удалить старые часы/билет. Заполнение новых POI
   // остаётся задачей профильного инструмента, произвольный JSON не принимаем.
   if (Object.hasOwn(payload, 'poi_info') && payload.poi_info !== null) {
-    throw new Error(`${file} ${p.step_id}: poi_info допускает только null для очистки`)
+    throw new PatchValidationError(`${file} ${p.step_id}: poi_info допускает только null для очистки`)
   }
   for (const k of ['lat', 'lng']) {
     if (payload[k] !== undefined && !Number.isFinite(Number(payload[k])))
-      throw new Error(`${file} ${p.step_id}: кривое ${k}=${payload[k]}`)
+      throw new PatchValidationError(`${file} ${p.step_id}: кривое ${k}=${payload[k]}`)
   }
   return payload
 }
@@ -174,15 +206,15 @@ const STEP_ID_RE = /^[a-z0-9][a-z0-9-]*$/
 function validateCreate(p, file) {
   const spec = p.create_step || {}
   const { step_id: stepId, point_role: role = 'required', ...changes } = spec
-  if (!p.quest_db_id) throw new Error(`${file} ${p.quest_id}: новой точке нужен quest_db_id`)
-  if (!p.after_step_id) throw new Error(`${file} ${p.quest_id}: новой точке нужен after_step_id`)
-  if (typeof stepId !== 'string' || !STEP_ID_RE.test(stepId)) throw new Error(`${file} ${p.quest_id}: кривой step_id ${stepId}`)
-  if (!CREATE_ROLES.has(role)) throw new Error(`${file} ${stepId}: роль новой точки только required|optional, не ${role}`)
-  if (changes.order !== undefined) throw new Error(`${file} ${stepId}: order новой точки задаёт after_step_id`)
+  if (!p.quest_db_id) throw new PatchValidationError(`${file} ${p.quest_id}: новой точке нужен quest_db_id`)
+  if (!p.after_step_id) throw new PatchValidationError(`${file} ${p.quest_id}: новой точке нужен after_step_id`)
+  if (typeof stepId !== 'string' || !STEP_ID_RE.test(stepId)) throw new PatchValidationError(`${file} ${p.quest_id}: кривой step_id ${stepId}`)
+  if (!CREATE_ROLES.has(role)) throw new PatchValidationError(`${file} ${stepId}: роль новой точки только required|optional, не ${role}`)
+  if (changes.order !== undefined) throw new PatchValidationError(`${file} ${stepId}: order новой точки задаёт after_step_id`)
   const payload = validateStep({ step_id: stepId, changes }, file)
   for (const k of CREATE_REQUIRED) {
     if (payload[k] === undefined || payload[k] === null || String(payload[k]).trim() === '') {
-      throw new Error(`${file} ${stepId}: у новой точки пустое ${k}`)
+      throw new PatchValidationError(`${file} ${stepId}: у новой точки пустое ${k}`)
     }
   }
   if (!payload.maps_url) payload.maps_url = `https://maps.google.com/?q=${payload.lat},${payload.lng}`
@@ -200,8 +232,8 @@ function validateCreate(p, file) {
  */
 function planInsert(steps, afterStepId) {
   const after = steps.find((s) => !s.is_intro && s.step_id === afterStepId)
-  if (!after) throw new Error(`нет точки ${afterStepId}`)
-  if (after.point_role === 'final') throw new Error(`${afterStepId} — финальная точка, после неё вставлять нельзя`)
+  if (!after) throw new PatchValidationError(`нет точки ${afterStepId}`)
+  if (after.point_role === 'final') throw new PatchValidationError(`${afterStepId} — финальная точка, после неё вставлять нельзя`)
   const order = Number(after.order) + 1
   const shifts = steps
     .filter((s) => !s.is_intro && Number(s.order) >= order)
@@ -217,8 +249,8 @@ function planInsert(steps, afterStepId) {
  */
 async function applyCreate(p, file, transport, { fetchBundle = fetchQuestBundles } = {}) {
   const { payload, label } = validateCreate(p, file)
-  const [bundle] = await fetchBundle(transport.api, p.quest_id)
-  if (!bundle || bundle.id !== p.quest_db_id) throw new Error(`${file} ${p.quest_id}: quest_db_id ${p.quest_db_id} ≠ проду ${bundle && bundle.id}`)
+  const bundle = await readBundle(transport, p.quest_id, fetchBundle)
+  if (!bundle || bundle.id !== p.quest_db_id) throw new PatchValidationError(`${file} ${p.quest_id}: quest_db_id ${p.quest_db_id} ≠ проду ${bundle && bundle.id}`)
   const steps = parseSteps(bundle)
   const intro = bundle.intro ? [{ ...bundle.intro, is_intro: true }] : []
   const existing = steps.find((s) => s.step_id === payload.step_id)
@@ -228,15 +260,20 @@ async function applyCreate(p, file, transport, { fetchBundle = fetchQuestBundles
     const after = steps.find((s) => s.step_id === p.after_step_id)
     const want = after ? Number(after.order) + 1 : NaN
     if (Number(existing.order) !== want) {
-      throw new Error(`${file} ${payload.step_id}: точка уже на проде, но order ${existing.order} ≠ ${want} — прошлый прогон не довёл сдвиг, почини order вручную`)
+      throw new PatchValidationError(`${file} ${payload.step_id}: точка уже на проде, но order ${existing.order} ≠ ${want} — прошлый прогон не довёл сдвиг, почини order вручную`)
     }
     return { label, skipped: true }
   }
   const plan = planInsert([...intro, ...steps], p.after_step_id)
+  const newId = transport.dryRun ? `dry-run:${p.quest_id}:${payload.step_id}` : null
   const created = await apiRequest('POST', '/api/quest-steps/', { ...payload, quest: bundle.id, order: plan.tempOrder }, transport)
   for (const s of plan.shifts) await apiRequest('PATCH', `/api/quest-steps/${s.pk}/`, { order: s.from + 10000 }, transport)
   for (const s of plan.shifts) await apiRequest('PATCH', `/api/quest-steps/${s.pk}/`, { order: s.to }, transport)
-  await apiRequest('PATCH', `/api/quest-steps/${transport.dryRun ? '<new>' : created.id}/`, { order: plan.order }, transport)
+  await apiRequest('PATCH', `/api/quest-steps/${transport.dryRun ? newId : created.id}/`, { order: plan.order }, transport)
+  if (transport.dryRun) {
+    for (const shift of plan.shifts) steps.find((step) => step.id === shift.pk).order = shift.to
+    steps.push({ ...payload, id: newId, quest: bundle.id, order: plan.order })
+  }
   return { label: `${label}, order ${plan.order}, сдвинуто ${plan.shifts.length}`, skipped: false }
 }
 
@@ -256,12 +293,12 @@ function planReorder(steps, reorder) {
   const unknown = reorder.filter((id) => !byId.has(id))
   const missing = points.map((s) => s.step_id).filter((id) => !reorder.includes(id))
   if (unknown.length || missing.length || new Set(reorder).size !== reorder.length) {
-    throw new Error(`состав точек не совпал с продом: лишние ${unknown.join(',') || '—'}, пропущены ${missing.join(',') || '—'}`)
+    throw new PatchValidationError(`состав точек не совпал с продом: лишние ${unknown.join(',') || '—'}, пропущены ${missing.join(',') || '—'}`)
   }
   const final = points.find((s) => s.point_role === 'final')
   if (final) {
     const tail = reorder.slice(reorder.indexOf(final.step_id) + 1).map((id) => byId.get(id))
-    if (tail.some((s) => s.point_role !== 'optional')) throw new Error(`после финала ${final.step_id} осталась обязательная точка`)
+    if (tail.some((s) => s.point_role !== 'optional')) throw new PatchValidationError(`после финала ${final.step_id} осталась обязательная точка`)
   }
   const moves = reorder
     .map((id, i) => ({ pk: byId.get(id).id, step_id: id, from: Number(byId.get(id).order), to: i + 1 }))
@@ -271,15 +308,18 @@ function planReorder(steps, reorder) {
 
 /** Перестановка точек: сдвиг через +10000, затем целевые слоты; повтор по готовому порядку — SKIP. */
 async function applyReorder(p, file, transport, { fetchBundle = fetchQuestBundles } = {}) {
-  if (!p.quest_db_id) throw new Error(`${file} ${p.quest_id}: перестановке нужен quest_db_id`)
-  if (!Array.isArray(p.reorder) || !p.reorder.every((id) => typeof id === 'string')) throw new Error(`${file} ${p.quest_id}: reorder — список step_id`)
-  const [bundle] = await fetchBundle(transport.api, p.quest_id)
-  if (!bundle || bundle.id !== p.quest_db_id) throw new Error(`${file} ${p.quest_id}: quest_db_id ${p.quest_db_id} ≠ проду ${bundle && bundle.id}`)
+  if (!p.quest_db_id) throw new PatchValidationError(`${file} ${p.quest_id}: перестановке нужен quest_db_id`)
+  if (!Array.isArray(p.reorder) || !p.reorder.every((id) => typeof id === 'string')) throw new PatchValidationError(`${file} ${p.quest_id}: reorder — список step_id`)
+  const bundle = await readBundle(transport, p.quest_id, fetchBundle)
+  if (!bundle || bundle.id !== p.quest_db_id) throw new PatchValidationError(`${file} ${p.quest_id}: quest_db_id ${p.quest_db_id} ≠ проду ${bundle && bundle.id}`)
   const { moves } = planReorder(parseSteps(bundle), p.reorder)
   const label = `${p.quest_id} (порядок ${p.reorder.join('→')})`
   if (!moves.length) return { label, skipped: true }
   for (const m of moves.filter((x) => x.from < PARK)) await apiRequest('PATCH', `/api/quest-steps/${m.pk}/`, { order: m.from + PARK }, transport)
   for (const m of moves) await apiRequest('PATCH', `/api/quest-steps/${m.pk}/`, { order: m.to }, transport)
+  if (transport.dryRun) {
+    for (const move of moves) bundle.steps.find((step) => step.id === move.pk).order = move.to
+  }
   return { label: `${label}, переставлено ${moves.length}`, skipped: false }
 }
 
@@ -299,7 +339,7 @@ function validate(p, file) {
       label: `${p.quest_id} (квест ${p.quest_db_id})`,
     }
   }
-  throw new Error(`${file} ${p.quest_id}: нет ни step_db_id, ни quest_db_id`)
+  throw new PatchValidationError(`${file} ${p.quest_id}: нет ни step_db_id, ни quest_db_id`)
 }
 
 async function apiRequest(method, endpoint, payload, { api, session, token, dryRun }) {
@@ -315,21 +355,36 @@ const apiPatch = (endpoint, payload, transport) => apiRequest('PATCH', endpoint,
 async function applyPatch(p, file, transport, { fetchBundle = fetchQuestBundles } = {}) {
   const validated = validate(p, file)
   const changesRole = Object.hasOwn(validated.payload, 'point_role')
+  let dryRunTarget
+  if (transport.dryRun) {
+    const bundle = await readBundle(transport, p.quest_id, fetchBundle)
+    if (p.step_db_id) {
+      dryRunTarget = [...bundle.steps, ...(bundle.intro ? [bundle.intro] : [])]
+        .find((step) => String(step.id) === String(p.step_db_id))
+      if (!dryRunTarget || dryRunTarget.step_id !== p.step_id) {
+        throw new PatchValidationError(`${file}: step_db_id и step_id не совпали с продом`)
+      }
+    } else {
+      if (bundle.id !== p.quest_db_id) throw new PatchValidationError(`${file}: quest_db_id не совпал с продом`)
+      dryRunTarget = bundle
+    }
+  }
   if (changesRole || Object.hasOwn(validated.payload, 'poi_info')) {
     if (typeof p.quest_id !== 'string' || !p.quest_id.trim() || typeof p.step_id !== 'string' || !p.step_id.trim()) {
-      throw new Error(`${file}: метаданным нужны quest_id и step_id`)
+      throw new PatchValidationError(`${file}: метаданным нужны quest_id и step_id`)
     }
-    const [bundle] = await fetchBundle(transport.api, p.quest_id)
-    if (!bundle || bundle.quest_id !== p.quest_id) throw new Error(`${file}: квест не совпал с продом`)
+    const bundle = await readBundle(transport, p.quest_id, fetchBundle)
+    if (!bundle || bundle.quest_id !== p.quest_id) throw new PatchValidationError(`${file}: квест не совпал с продом`)
     const intro = typeof bundle.intro === 'string' ? JSON.parse(bundle.intro) : bundle.intro
     const points = [...parseSteps(bundle), ...(intro ? [{ ...intro, is_intro: true }] : [])]
     const target = points.find((s) => String(s.id) === String(p.step_db_id))
-    if (!target || target.step_id !== p.step_id) throw new Error(`${file}: step_db_id и step_id не совпали с продом`)
+    if (!target || target.step_id !== p.step_id) throw new PatchValidationError(`${file}: step_db_id и step_id не совпали с продом`)
     if (changesRole && (target.is_intro || !PATCH_ROLES.has(target.point_role))) {
-      throw new Error(`${file} ${p.step_id}: нельзя менять роль старта, финала или неподтверждённой точки`)
+      throw new PatchValidationError(`${file} ${p.step_id}: нельзя менять роль старта, финала или неподтверждённой точки`)
     }
   }
   await apiPatch(validated.endpoint, validated.payload, transport)
+  if (dryRunTarget) Object.assign(dryRunTarget, validated.payload)
   return validated
 }
 
@@ -376,7 +431,7 @@ async function main() {
         ok++
       } catch (e) {
         rethrowTerminalAuthError(e);
-        console.error(`  FAIL ${p.quest_id}/${p.step_id ?? p.create_step?.step_id ?? (p.reorder ? 'reorder' : 'quest')}: ${formatTokenError(e)}`)
+        console.error(`  FAIL ${p.quest_id}/${p.step_id ?? p.create_step?.step_id ?? (p.reorder ? 'reorder' : 'quest')}: ${formatPatchError(e)}`)
         failed++
       }
     }
@@ -398,6 +453,7 @@ module.exports = {
   applyPatch,
   applyCreate,
   applyReorder,
+  formatPatchError,
   main,
   parseArgs,
   planInsert,
