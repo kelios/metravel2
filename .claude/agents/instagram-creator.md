@@ -139,8 +139,12 @@ model: opus
 - **Права** (раздел 27): `rights/authorship.txt` — копия
   `.codex-temp/instagram/authorship-2026-10-17.txt` (письменное подтверждение владельца
   17.10.2026 авторства фото архива `4tbJuli/НАШИ ФОТКИ`, галерей её статей и скриншотов
-  нашего сайта) — стандартное evidence для `owned`; ИИ-обложка квеста неизвестного сервиса в
-  пост не берётся; при замене кадра обновляй `rights/source-hashes.json`; служебные JPG
+  нашего сайта) — стандартное evidence для `owned`; птичка подвала (`scripts/instagram/brand-bird.png`)
+  — вырезка из app-иконки, перерисованной в OpenAI ImageGen с нашего знака: evidence —
+  `.codex-temp/instagram/brand-bird-provenance.txt`, `openai-terms-of-use-ru-2026-10-18.txt` и
+  `assets/icons/logo_yellow_512x512.png`, копируй их в `rights/` и привязывай к слайдам (basis
+  `owned`, производное от собственного знака); ИИ-обложки квестов (ChatGPT/gpt-image по C2PA,
+  условия для @metravelby не записаны) в пост не берутся; при замене кадра обновляй `rights/source-hashes.json`; служебные JPG
   (контрольные листы, пробы) — только в `work/`, любой JPG в корне пакета проверка прав
   считает публикуемым. `make-carousel.py` запускай из корня репо: пути в `spec.json`
   относительные к нему.
