@@ -3478,6 +3478,15 @@ describe('SSG-срез маршрута квеста (#1763)', () => {
       expect(findQuestSpoilerLeaks(leaked, bundle, digest).errors).toEqual(['castle: опубликован task']);
     });
 
+    it('ловит задание с кириллической вывеской, размеченной языком (#2472)', () => {
+      const quoted = {
+        steps: [{ ...bundle.steps[0], task: 'Znajdź kawiarnię Ландыш przy ulicy Ленина i policz stoliki.' }],
+      };
+      const digest = buildQuestRouteDigest(quoted);
+      const leaked = '<p>Znajdź kawiarnię <span lang="ru">Ландыш</span> przy ulicy <span lang="ru">Ленина</span> i policz stoliki.</p>';
+      expect(findQuestSpoilerLeaks(leaked, quoted, digest).errors).toEqual(['castle: опубликован task']);
+    });
+
     it('ловит опубликованную подсказку', () => {
       const digest = buildQuestRouteDigest(bundle);
       const leaked = `<p>Не ищи одну деталь — окинь взглядом всю картину целиком.</p>`;

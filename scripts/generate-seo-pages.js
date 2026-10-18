@@ -46,6 +46,7 @@ const {
 const {
   buildQuestCountryLandingGroups,
   questCountryLandingIsLinkable,
+  questIsoCountryCode,
 } = require('../utils/questCountryLanding');
 const {
   questPageFromHtml,
@@ -84,7 +85,13 @@ const {
   writeCandidateFile,
   publishedTranslatedLocales,
 } = require('./lib/questLocalePackage');
-const { TRANSLATED_LOCALES: QUEST_TRANSLATED_LOCALES, canonicalPath: questCanonicalPath, insertQuestLocaleSlots } = require('./lib/questSeoContract');
+const {
+  LATIN_SCRIPT_LOCALES: QUEST_LATIN_SCRIPT_LOCALES,
+  TRANSLATED_LOCALES: QUEST_TRANSLATED_LOCALES,
+  canonicalPath: questCanonicalPath,
+  insertQuestLocaleSlots,
+  markCyrillicLanguage,
+} = require('./lib/questSeoContract');
 const { disableExpoRouterHydration, emptyAppRoot, readQuestLocaleBootChunks, shipBootChunks } = require('./lib/expoStaticShell');
 const { scoreDetailCohort } = require('./lib/questDetailCohort');
 const {
@@ -1998,7 +2005,9 @@ function buildQuestRouteDigest(bundle, ssg = RU_SSG) {
  * само название объекта), и его разбирает редактор.
  */
 function findQuestSpoilerLeaks(html, bundle, digest = []) {
-  const haystack = normalizeQuestText(html);
+  // #2472: inline `<span lang>` around a quoted Cyrillic sign carries no text;
+  // left in, its tag name splits a published task into `span lang ru` tokens.
+  const haystack = normalizeQuestText(String(html || '').replace(/<\/?span\b[^>]*>/gi, ''));
   const errors = [];
   const warnings = [];
   if (!haystack) return { errors, warnings };
@@ -2405,7 +2414,7 @@ function buildQuestDetailPageHtml({
   });
 
   html = injectJsonLd(html, buildQuestJsonLd({ title, description, canonical, image, quest: isRu ? bundle || quest : bundle, ssg }), 'quest');
-  return injectQuestIntroSection(html, {
+  html = injectQuestIntroSection(html, {
     title: name,
     description,
     quest: isRu ? quest : { ...quest, title: name, city_name: cityName },
@@ -2417,6 +2426,10 @@ function buildQuestDetailPageHtml({
     },
     ssg,
   });
+  // #2472: вывески, процитированные в PL/EN переводе кириллицей, — на языке оригинала.
+  return QUEST_LATIN_SCRIPT_LOCALES.includes(ssg.locale)
+    ? markCyrillicLanguage(html, { locale: ssg.locale, countryCode: questIsoCountryCode(quest) })
+    : html;
 }
 
 /** Скрытый, но crawlable список ссылок на все квесты — для обнаружения без sitemap. */

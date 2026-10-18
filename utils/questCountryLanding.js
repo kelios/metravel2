@@ -182,6 +182,7 @@ module.exports = {
   getQuestCountryAlias,
   normalizeIsoCountryCode,
   questCountryLandingIsLinkable,
+  questIsoCountryCode,
   resolveQuestCountryAlias,
   stableTextCompare,
 };

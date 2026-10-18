@@ -20,6 +20,7 @@ export function questCountryLandingIsLinkable(
   country: { cities?: unknown[] } | null | undefined,
 ): boolean;
 export function normalizeIsoCountryCode(value: unknown): string | null;
+export function questIsoCountryCode(quest: unknown): string | null;
 export function getIsoCountryDisplayName(
   countryCode: unknown,
   locale?: string,

@@ -16,6 +16,7 @@
 const crypto = require('crypto')
 const { buildQuestLocalePath } = require('../../utils/questLocaleRouting')
 const { appShellState } = require('./expoStaticShell')
+const { CYRILLIC_LETTER, cyrillicLanguageSegments } = require('../../utils/cyrillicLanguage')
 
 const LOCALES = Object.freeze(['ru', 'be', 'uk', 'pl', 'en'])
 const TRANSLATED_LOCALES = Object.freeze(LOCALES.slice(1))
@@ -454,42 +455,86 @@ function scanHtmlDocument(html) {
 const VOID_ELEMENTS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'])
 const CYRILLIC_WORD = /[^\s]*[\u0400-\u04FF][^\s]*/
 
+const BODY_TOKEN = /<!--[\s\S]*?-->|<(script|style|textarea|title|template)\b[\s\S]*?<\/\1\s*>|<(\/?)([A-Za-z][A-Za-z0-9-]*)((?:"[^"]*"|'[^']*'|[^'">])*)>/gi
+
+/**
+ * Walks the `<body>` of a document and hands every text node to `onText`
+ * with `inside=true` when it sits in a subtree whose `lang` satisfies
+ * `isForeign`. Comments, script, style, textarea, title and template are
+ * passed through as markup. Returns the document with `onText` results.
+ */
+function mapBodyText(html, isForeign, onText) {
+  const source = String(html)
+  const start = source.search(/<body\b/i)
+  const head = start === -1 ? '' : source.slice(0, start)
+  const body = start === -1 ? source : source.slice(start)
+  let out = head
+  let last = 0
+  let foreignName = null
+  let foreignDepth = 0
+  let match
+  BODY_TOKEN.lastIndex = 0
+  while ((match = BODY_TOKEN.exec(body)) !== null) {
+    out += onText(body.slice(last, match.index), Boolean(foreignName)) + match[0]
+    last = BODY_TOKEN.lastIndex
+    if (!match[3]) continue
+    const name = match[3].toLowerCase()
+    const closing = match[2] === '/'
+    const opensSubtree = !closing && !VOID_ELEMENTS.has(name) && !/\/\s*$/.test(match[4])
+    if (foreignName) {
+      if (name === foreignName && (closing || opensSubtree)) foreignDepth += closing ? -1 : 1
+      if (foreignDepth === 0) foreignName = null
+      continue
+    }
+    const lang = parseAttributes(match[4] || '').find(([key]) => key === 'lang')
+    if (opensSubtree && lang && isForeign(String(lang[1]).toLowerCase())) {
+      foreignName = name
+      foreignDepth = 1
+    }
+  }
+  return out + onText(body.slice(last), Boolean(foreignName))
+}
+
+/** Body text outside every subtree whose `lang` satisfies `isForeign`. */
+function textOutsideLangMarkup(html, isForeign) {
+  let text = ''
+  mapBodyText(html, isForeign, (chunk, inside) => {
+    if (!inside) text += ` ${chunk} `
+    return ''
+  })
+  return decodeEntities(text).replace(/\s+/g, ' ').trim()
+}
+
 /**
  * Body text a reader gets in the page language (#2467): comments, script,
  * style and every `lang="ru"` subtree removed. Russian pages linked under D1
  * (#2208) stay Russian inside such subtrees and nowhere else.
  */
 function textOutsideRussianMarkup(html) {
+  return textOutsideLangMarkup(html, (lang) => lang === 'ru')
+}
+
+/**
+ * #2472: a Latin-script member quotes signs verbatim («Kawiarnia «Ландыш»»).
+ * Every Cyrillic run of its body outside an existing `lang` subtree gets the
+ * language of the original (`utils/cyrillicLanguage.js`), so screen readers
+ * and search engines do not read it as Polish or English.
+ */
+function markCyrillicLanguage(html, { locale, countryCode } = {}) {
+  const isForeign = (lang) => lang !== locale
+  const mark = (part) => mapBodyText(part, isForeign, (chunk, inside) => {
+    if (inside || !CYRILLIC_LETTER.test(chunk)) return chunk
+    return cyrillicLanguageSegments(chunk, { countryCode })
+      .map(({ text, lang }) => (lang ? `<span lang="${lang}">${text}</span>` : text))
+      .join('')
+  })
+  // The links block is app-owned (#2467): Cyrillic there is a missing
+  // translation, not a quote, and its guard must keep seeing it.
   const source = String(html)
-  const start = source.search(/<body\b/i)
-  const body = (start === -1 ? source : source.slice(start))
-    .replace(/<!--[\s\S]*?-->/g, ' ')
-    .replace(/<(script|style)\b[\s\S]*?<\/\1\s*>/gi, ' ')
-  const tag = /<(\/?)([A-Za-z][A-Za-z0-9-]*)((?:"[^"]*"|'[^']*'|[^'">])*)>/g
-  let text = ''
-  let last = 0
-  let ruName = null
-  let ruDepth = 0
-  let match
-  while ((match = tag.exec(body)) !== null) {
-    if (!ruName) text += `${body.slice(last, match.index)} `
-    last = tag.lastIndex
-    const name = match[2].toLowerCase()
-    const closing = match[1] === '/'
-    const opensSubtree = !closing && !VOID_ELEMENTS.has(name) && !/\/\s*$/.test(match[3])
-    if (ruName) {
-      if (name === ruName && (closing || opensSubtree)) ruDepth += closing ? -1 : 1
-      if (ruDepth === 0) ruName = null
-      continue
-    }
-    const lang = parseAttributes(match[3] || '').find(([key]) => key === 'lang')
-    if (opensSubtree && lang && String(lang[1]).toLowerCase() === 'ru') {
-      ruName = name
-      ruDepth = 1
-    }
-  }
-  if (!ruName) text += body.slice(last)
-  return decodeEntities(text).replace(/\s+/g, ' ').trim()
+  const block = questLinksBlock(source)
+  if (!block) return mark(source)
+  const at = source.indexOf(block)
+  return mark(source.slice(0, at)) + block + mark(source.slice(at + block.length))
 }
 
 /** The «where next» block of a detail page; it nests no `<div>` of its own. */
@@ -543,6 +588,9 @@ function memberDocumentIssues(html, { locale, canonicalPath: pathname, indexable
     const block = questLinksBlock(html)
     const stray = block && CYRILLIC_WORD.exec(textOutsideRussianMarkup(`<body>${block}`))
     if (stray) issues.push(`Cyrillic text outside lang="ru" in the quest links block: «${stray[0]}»`)
+    // #2472: quoted signs in the translation body carry their own language.
+    const unmarked = CYRILLIC_WORD.exec(textOutsideLangMarkup(html, (lang) => lang !== locale))
+    if (unmarked) issues.push(`Cyrillic text outside a lang subtree in the ${locale} body: «${unmarked[0]}»`)
   }
   if (locale !== 'ru') {
     // #2467: a link to a Russian page says so; translated links are checked
@@ -679,6 +727,7 @@ module.exports = {
   ERROR_DIR,
   FENCE,
   HASH,
+  LATIN_SCRIPT_LOCALES,
   LIMITS,
   LOCALES,
   LOCALE_META,
@@ -700,6 +749,8 @@ module.exports = {
   errorHtmlPath,
   escapeHtml,
   questLinksBlock,
+  markCyrillicLanguage,
+  textOutsideLangMarkup,
   textOutsideRussianMarkup,
   fullEffectiveLocales,
   insertQuestLocaleSlots,

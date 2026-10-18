@@ -523,9 +523,64 @@ describe('translated members mount client-side (#2449)', () => {
       .replace('__EXPO_ROUTER_HYDRATE__=false;', '__EXPO_ROUTER_HYDRATE__=true;')
       .replace('<div id="root"></div>', '<div id="root"><div>Загружаем квест…</div></div>')
     expect(contract.memberDocumentIssues(legacy, options).issues).toEqual([
+      'Cyrillic text outside a lang subtree in the pl body: «Загружаем»',
       'translated member must not request Expo hydration',
       'translated member must ship an empty #root',
     ])
+  })
+})
+
+describe('Cyrillic quotes in the translated body (#2472)', () => {
+  const route = questRouteKey(QUESTS[0])
+  const options = { locale: 'en', canonicalPath: contract.canonicalPath(4, QUESTS[0].quest_id, 'en'), indexable: true }
+  const quoting = (quest: Q) => {
+    const base = bundle(quest, 'en', 7)
+    return {
+      ...base,
+      steps: [{
+        ...base.steps[0],
+        title: 'Café «Ландыш», sanatorium «Лесные озёра»',
+        location: 'Капліца-пахавальня Святополк-Мирских',
+      }],
+    }
+  }
+  const build = (quest: Q) => contract.insertQuestLocaleSlots(gsp.buildQuestDetailPageHtml({
+    baseHtml: BASE_HTML, quest, bundle: quoting(quest), route,
+    detailLinks: detailLinksFor(quest), ssg: createSsgTranslator(CATALOGS, 'en'),
+  }))
+
+  it('marks every quoted Cyrillic run with the language of the original', () => {
+    const html = build({ ...QUESTS[0], country_code: 'by' } as Q)
+    expect(html).toContain('Café «<span lang="ru">Ландыш</span>», sanatorium «<span lang="ru">Лесные озёра</span>»')
+    expect(html).toContain('<span lang="be">Капліца-пахавальня</span> <span lang="ru">Святополк-Мирских</span>')
+    expect(contract.textOutsideLangMarkup(html, (lang: string) => lang !== 'en')).not.toMatch(/[\u0400-\u04FF]/)
+    expect(contract.memberDocumentIssues(html, options).issues).toEqual([])
+  })
+
+  it('leaves the head, scripts and Russian pages alone', () => {
+    const en = build(QUESTS[0])
+    expect(en).not.toMatch(/<title>[^<]*<span/)
+    expect(en).not.toMatch(/<script[^>]*>[^<]*<span lang/)
+    const ru = gsp.buildQuestDetailPageHtml({ baseHtml: BASE_HTML, quest: QUESTS[0], bundle: bundle(QUESTS[0], 'ru', 1), route })
+    expect(ru).not.toContain('<span lang="ru">')
+  })
+
+  it('leaves app-owned Cyrillic in the links block to the #2467 guard', () => {
+    const html = build(QUESTS[0])
+    const block = contract.questLinksBlock(html)!
+    const leaked = block.replace(/<h2([^>]*)>[^<]*<\/h2>/, '<h2$1>Другие квесты</h2>')
+    const marked = contract.markCyrillicLanguage(html.replace(block, leaked), { locale: 'en', countryCode: 'BY' })
+    expect(contract.questLinksBlock(marked)).toBe(leaked)
+    expect(contract.memberDocumentIssues(marked, options).issues).toEqual([
+      'Cyrillic text outside lang="ru" in the quest links block: «Другие»',
+      'Cyrillic text outside a lang subtree in the en body: «Другие»',
+    ])
+  })
+
+  it('rejects a member whose body quotes Cyrillic without a lang subtree', () => {
+    const html = build(QUESTS[0]).replace('<span lang="ru">Ландыш</span>', 'Ландыш')
+    expect(contract.memberDocumentIssues(html, options).issues)
+      .toEqual(['Cyrillic text outside a lang subtree in the en body: ««Ландыш»,»'])
   })
 })
 
@@ -603,7 +658,10 @@ describe('links block on translated members (#2467)', () => {
     const pl = contract.insertQuestLocaleSlots(buildPl('Mińsk'))
     expect(contract.memberDocumentIssues(pl, options).issues).toEqual([])
     expect(contract.memberDocumentIssues(pl.replace('Mińsk</a>', 'Минск</a>'), options).issues)
-      .toEqual(['Cyrillic text outside lang="ru" in the quest links block: «Минск»'])
+      .toEqual([
+        'Cyrillic text outside lang="ru" in the quest links block: «Минск»',
+        'Cyrillic text outside a lang subtree in the pl body: «Минск»',
+      ])
     expect(contract.memberDocumentIssues(pl.replace('<a href="/quests" hreflang="ru">', '<a href="/quests">'), options).issues)
       .toEqual(['link to Russian page /quests lacks hreflang="ru"'])
   })
