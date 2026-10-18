@@ -103,7 +103,7 @@ fi
 node "$(dirname "${BASH_SOURCE[0]}")/assert-deployable-source.js" \
   --check-marker "dist/$ENV/.build-source.json" --allow-dirty "$ALLOW_DIRTY" --cwd "$(pwd)"
 
-chunk_count="$(find "dist/$ENV/_expo/static/js/web/" -maxdepth 1 -type f | wc -l | tr -d ' ')"
+chunk_count="$(find "dist/$ENV/_expo/static/js/web/" -maxdepth 1 -type f -name '*.js' | wc -l | tr -d ' ')"
 echo "Local build ready: $chunk_count web chunks"
 
 # Fail-closed config gate BEFORE upload: refuse to ship an artifact with the
@@ -114,6 +114,9 @@ if [ "$ENV" = "prod" ]; then
   echo "Verifying prod artifact config (fail-closed)..."
   node scripts/verify-prod-config.js --dist "dist/$ENV"
 fi
+# A reused dist may carry build-prod's brotli copies (#2484); nginx serves a
+# `.br` instead of its JS, so a copy that no longer matches must not ship.
+node scripts/precompress-static-assets.js --verify "dist/$ENV"
 
 # Recovery uploads all three trees, then copies the selected artifact and assets
 # into static/dist.new. Reserve BOTH allocations before the first upload byte.
