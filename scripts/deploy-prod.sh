@@ -86,22 +86,6 @@ check_prod_checkout_clean() {
   echo "✅ Прод-чекаут бэкенда чистый"
 }
 
-smoke_prod() {
-  local url code failed=0
-  for url in https://metravel.by/health https://metravel.by/ 'https://metravel.by/api/travels/?perPage=1'; do
-    code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "$url" 2>/dev/null || true)"
-    echo "   ${code:-000}  $url"
-    if [[ "$code" != "200" ]]; then
-      failed=1
-    fi
-  done
-  if [[ "$failed" == "1" ]]; then
-    echo "❌ Смоук прода после выката не прошёл"
-    return 1
-  fi
-  echo "✅ Смоук прода: /health, /, /api/travels/ — 200"
-}
-
 on_exit() {
   local status=$?
   trap - EXIT
@@ -154,16 +138,9 @@ if [[ "$status" != "0" && "${DEPLOY_QUIET:-0}" == "1" ]]; then
 fi
 
 if [[ "$status" == "0" && "$DEPLOY" == "1" ]]; then
-  live_sha="$(curl -fsS --max-time 10 https://metravel.by/.build-source.json \
-    | node -e 'let s="";process.stdin.on("data",(d)=>{s+=d}).on("end",()=>{try{process.stdout.write(String(JSON.parse(s).sha||""))}catch{}})' \
-    || true)"
-  if [[ "$live_sha" == "$SHA" ]]; then
-    echo "✅ Прод отдаёт /.build-source.json с sha $SHORT"
-  else
-    echo "❌ Прод отдаёт sha '${live_sha:-?}', ожидался $SHA"
-    status=1
-  fi
-  smoke_prod || status=1
+  # Ограниченный повтор и раздельный диагноз «не опубликован» / «хост не
+  # ответил» — scripts/verify-live-release.sh (#2448).
+  bash "$SCRIPT_DIR/verify-live-release.sh" "$SHA" || status=1
 fi
 
 exit "$status"

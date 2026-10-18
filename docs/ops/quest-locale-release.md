@@ -26,13 +26,21 @@ is a physical allocation ceiling; the backend build reserve remains 1536 MiB,
 separate from that ceiling. A larger configured deploy reserve still applies.
 Normal publication first invokes a separate, explicit retention operation with
 `keep_releases=2`, preserving active, rollback and pinned readers. A pinned third
-generation refuses staging. Activation performs no cleanup. Initial legacy
+generation refuses staging. When `inspect` lists only the active generation and
+its rollback, that pass could remove nothing and is skipped (#2448): its full
+validation is repeated by the transfer plan's sealed inventory, which also
+enforces the physical budget, so there is no separate `inventory-v2` call
+either. Activation performs no cleanup. Initial legacy
 conversion retains its separately managed whole backup and never shares its
 mutable inodes.
 
 Publisher operations run inside the app container at `nice -n 10` with a
 300-second transport bound: they share the single production CPU with Gunicorn,
-and request serving must win. The shared-cover step keeps normal priority and
+and request serving must win. Every full pass over the retained generations
+costs ~35 s there (two generations, 18.10.2026), so the publisher never runs
+the same pass twice in a row; each operation's wall clock lands in
+`state.timings` and in one `📊 quest v1 публикация по операциям` report line.
+The shared-cover step keeps normal priority and
 its own deadline because it runs inside the 30-second post-switch readiness
 budget. Readers
 never take the operation lock and retention never probes the active/rollback
@@ -140,7 +148,12 @@ unchanged. The full prepared archive/index remain local integrity evidence.
 
 Private state, adjacent `*.package.tar.gz`, `*.files.v2.json` and `*.plan.v2.json`
 persist outside the disposable worktree under `.codex-temp/deploy/`, alongside
-the log. V3 publication writes `*.plan.v3.json`; `state.storage_plan` remains v2
+the log. Local retention (#2448), run after each `ready` publication: the
+archive, index and plan stay for the current run and for the two generations
+the server keeps (new active and its rollback); unfinished states younger than
+seven days keep theirs for abort/recover; terminal (`ready`, `rolled-back`,
+`aborted`) and week-old artifacts are removed. State files and logs are never
+removed; the result lands in `state.local_retention`. V3 publication writes `*.plan.v3.json`; `state.storage_plan` remains v2
 and separate `state.transfer_plan`/stage receipt bind the v3 wrapper hash.
 The private v3 stage receipt records the staging process's actual peak RSS in
 `max_rss_bytes`; this diagnostic does not alter resource admission or limits.
@@ -182,7 +195,10 @@ and `/static/.quest-seo-` state, including normalized equivalents. They cannot
 bypass live eligibility or expose unactivated/retained HTML. Ordinary static
 quest media and Expo assets remain positive controls.
 
-Validate-only is not activation. Check exact receipt keys/schema/result, ID,
+The normal publisher does not call validate-only before activation: activation
+runs the same full validation of the candidate and its rollback inside its lock
+and swaps the pointer only after it passes (#2448). Validate-only is not
+activation. Check exact receipt keys/schema/result, ID,
 SHA, actual manifest digest, prior ID, `static/dist` and relative release root.
 Activation owns its lock: never hold an outer flock around the command.
 After activation, publish the existing shared fallback cover from the active

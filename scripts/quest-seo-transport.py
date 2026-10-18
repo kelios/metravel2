@@ -919,6 +919,17 @@ def describe(package, activation, active, releases):
         prior = activation.retained_rollback(current)
         if prior:
             result['previous'] = activation.sealed_identity(releases / prior)
+    # Names only, no validation: the publisher skips a pre-staging cleanup that
+    # could not remove anything (#2448). Every check that cleanup would run on
+    # these generations is repeated by the transfer plan's sealed inventory.
+    names = []
+    if releases.exists():
+        require(releases.is_dir() and not releases.is_symlink(), 'Physical releases directory required')
+        for release in releases.iterdir():
+            package._match(package.SLUG, release.name)
+            names.append(release.name)
+            require(len(names) <= 100, 'Managed generation count exceeds bound')
+    result['generations'] = sorted(names)
     return result
 
 

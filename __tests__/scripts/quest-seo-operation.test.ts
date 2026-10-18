@@ -4,7 +4,7 @@ import path from 'path'
 import { makeTempDir, removeDir, runCli } from './cli-test-utils'
 
 const { checkReceipt, prepare, publish, recover, quote, overlay, captureOverlay, applyOverlay,
-  readiness, baseline, checkInventory, publishCover, abortStage } = require('@/scripts/quest-seo-operation')
+  readiness, baseline, checkInventory, publishCover, abortStage, inspect, pruneLocalArtifacts } = require('@/scripts/quest-seo-operation')
 const { sha256, canonicalJson } = require('@/scripts/lib/questSeoContract')
 const fixtureManifest = fs.readFileSync(path.resolve('__tests__/fixtures/questSeoV1/quest-seo-manifest.v1.json'), 'utf8')
 const manifest = JSON.parse(fixtureManifest)
@@ -78,7 +78,7 @@ function prepared(root: string, ruOnly = false) {
   return { dist, file }
 }
 
-function remote(options: { failure?: string; gateway?: Record<string, unknown>; gatewayRaw?: string; postRetain?: 'refuse' } = {}) {
+function remote(options: { failure?: string; gateway?: Record<string, unknown>; gatewayRaw?: string; postRetain?: 'refuse'; generations?: string[] } = {}) {
   let current = prior
   const operations: string[] = []
   const t = {
@@ -90,7 +90,8 @@ function remote(options: { failure?: string; gateway?: Record<string, unknown>; 
     }),
     operation: (action: string, args: string[], transportOptions?: any) => {
       operations.push(action)
-      if (action === 'inspect') return JSON.stringify({ schema_version: 1, kind: 'managed', current, previous: current === prior ? null : prior })
+      if (action === 'inspect') return JSON.stringify({ schema_version: 1, kind: 'managed', current, previous: current === prior ? null : prior,
+        ...(options.generations ? { generations: options.generations } : {}) })
       if (action === 'retain-v2') {
         const after = current.release_id === candidate.release_id
         if (after && options.postRetain === 'refuse') throw new Error('Protected generations exceed retention bounds')
@@ -129,12 +130,10 @@ function remote(options: { failure?: string; gateway?: Record<string, unknown>; 
         if (options.failure === 'cover' && current.release_id === candidate.release_id) throw new Error('cover publication failed')
         return JSON.stringify({ schema_version: 1, result: 'published', release_id: args[0], sha256: 'e'.repeat(64) })
       }
-      if (action === 'validate') {
-        if (options.failure === 'validate') throw new Error('source drift')
-        return JSON.stringify(receipt(candidate, 'validated'))
-      }
       if (action === 'activate') {
         if (args[2] !== current.release_id) throw new Error('CAS refused')
+        // Activation validates the candidate in full before it swaps the pointer.
+        if (options.failure === 'activation-validation' && args[0] === candidate.release_id) throw new Error('source drift')
         if (options.failure === 'before-rename') throw new Error('crash before rename')
         const replay = current.release_id === args[0]
         current = args[0] === prior.release_id ? prior : { schema_version: 1, ...candidate, tree_sha256: 'e'.repeat(64) }
@@ -154,20 +153,19 @@ describe('normal managed publication orchestration', () => {
     if (originalBudget === undefined) delete process.env.QUEST_SEO_MANAGED_MAX_BYTES
     else process.env.QUEST_SEO_MANAGED_MAX_BYTES = originalBudget
   })
-  it('retains before planning physical storage, then validates and activates without cleanup inside activation', () => {
+  it('retains before planning physical storage, then activates without a separate validate-only pass or cleanup inside activation', () => {
     const root = makeTempDir('quest-e-publish-')
     try {
       const p = prepared(root), r = remote()
       publish(r.t, p.dist, p.file, jest.fn())
       const state = JSON.parse(fs.readFileSync(p.file, 'utf8'))
       expect(state.phase).toBe('ready')
-      expect(r.operations).toEqual(['inspect', 'gateway', 'retain-v2', 'inventory-v2', 'transfer-plan-v3', 'stage-v3', 'validate', 'activate', 'cover', 'retain-v2'])
+      expect(r.operations).toEqual(['inspect', 'gateway', 'retain-v2', 'transfer-plan-v3', 'stage-v3', 'activate', 'cover', 'retain-v2'])
       expect(r.current().release_id).toBe(candidate.release_id)
       expect(fs.statSync(p.file).mode & 0o777).toBe(0o600)
       expect(fs.statSync(`${p.file}.package.tar.gz`).mode & 0o777).toBe(0o600)
       expect(fs.statSync(`${p.file}.files.v2.json`).mode & 0o777).toBe(0o600)
       expect(fs.existsSync(`${p.file}.stage-v3`)).toBe(false)
-      expect(state.inventory.total_bytes).toBeGreaterThan(Number(process.env.QUEST_SEO_MANAGED_MAX_BYTES))
       expect(state.storage_plan.peak_bytes).toBeLessThan(Number(process.env.QUEST_SEO_MANAGED_MAX_BYTES))
       expect(state.storage_plan.reserve_bytes).toBe(1536 * 1024 ** 2)
       expect(state.staged.max_rss_bytes).toBe(123456)
@@ -184,12 +182,11 @@ describe('normal managed publication orchestration', () => {
         return action === 'stage-v3' ? JSON.stringify({ ...JSON.parse(raw), max_rss_bytes: maxRss }) : raw
       }
       expect(() => publish(r.t, p.dist, p.file, jest.fn())).toThrow('generations retained')
-      expect(r.operations).not.toContain('validate')
       expect(r.operations).not.toContain('activate')
       expect(r.current()).toEqual(prior)
     } finally { removeDir(root) }
   })
-  it.each(['validate', 'before-rename', 'after-rename'])('retains generations and actual-pointer evidence on %s failure', (failure) => {
+  it.each(['activation-validation', 'before-rename', 'after-rename'])('retains generations and actual-pointer evidence on %s failure', (failure) => {
     const root = makeTempDir('quest-e-crash-')
     try {
       const p = prepared(root), r = remote({ failure })
@@ -198,7 +195,7 @@ describe('normal managed publication orchestration', () => {
       expect(state.phase).toBe('inspect-required')
       expect(state.actual.current.release_id).toBe(failure === 'after-rename' ? candidate.release_id : prior.release_id)
       expect(fs.existsSync(`${p.file}.package.tar.gz`)).toBe(true)
-      expect(r.operations.filter((x) => x === 'activate')).toHaveLength(failure === 'validate' ? 0 : 1)
+      expect(r.operations.filter((x) => x === 'activate')).toHaveLength(1)
       if (failure === 'after-rename') {
         recover(r.t, p.file, jest.fn())
         const recovered = JSON.parse(fs.readFileSync(p.file, 'utf8'))
@@ -218,6 +215,43 @@ describe('normal managed publication orchestration', () => {
       expect(state.post_ready_retention.active_release_id).toBe(candidate.release_id)
       expect(state.post_ready_retention.preserved).toEqual([candidate.release_id, prior.release_id])
       expect(log).toHaveBeenCalledWith(expect.stringMatching(/^📊 Поколения quest v1 после выката: 2 \(снято 0\)/))
+    } finally { log.mockRestore(); removeDir(root) }
+  })
+  it('skips the pre-staging cleanup when only the current and its rollback are on disk and reports per-operation time', () => {
+    const root = makeTempDir('quest-e-skip-retain-')
+    const log = jest.spyOn(console, 'log').mockImplementation(() => {})
+    try {
+      const p = prepared(root), r = remote({ generations: [prior.release_id] })
+      publish(r.t, p.dist, p.file, jest.fn())
+      const state = JSON.parse(fs.readFileSync(p.file, 'utf8'))
+      expect(r.operations).toEqual(['inspect', 'gateway', 'transfer-plan-v3', 'stage-v3', 'activate', 'cover', 'retain-v2'])
+      expect(state.retention).toBeUndefined()
+      expect(Object.keys(state.timings)).toEqual(['hash', 'preflight', 'inspect', 'gateway', 'transfer-plan', 'disk-guard',
+        'frame', 'stage', 'activate', 'cover', 'readiness', 'retain-after-ready', 'local-retention'])
+      expect(Object.values(state.timings).every((seconds) => typeof seconds === 'number' && seconds >= 0)).toBe(true)
+      expect(log).toHaveBeenCalledWith(expect.stringMatching(/^📊 quest v1 публикация по операциям: hash \d+ с · preflight \d+ с/))
+    } finally { log.mockRestore(); removeDir(root) }
+  })
+  it('still runs the pre-staging cleanup when a third generation is left on disk', () => {
+    const root = makeTempDir('quest-e-extra-generation-')
+    try {
+      const p = prepared(root), r = remote({ generations: ['leftover', prior.release_id] })
+      publish(r.t, p.dist, p.file, jest.fn())
+      expect(r.operations.slice(0, 4)).toEqual(['inspect', 'gateway', 'retain-v2', 'transfer-plan-v3'])
+    } finally { removeDir(root) }
+  })
+  it('refuses a generation list that omits the active release', () => {
+    const r = remote({ generations: ['other'] })
+    expect(() => inspect(r.t)).toThrow('Invalid managed generation list')
+  })
+  it('reports the timings of a failed publication without hiding the failure', () => {
+    const root = makeTempDir('quest-e-failed-timings-')
+    const log = jest.spyOn(console, 'log').mockImplementation(() => {})
+    try {
+      const p = prepared(root), r = remote({ failure: 'activation-validation' })
+      expect(() => publish(r.t, p.dist, p.file, jest.fn())).toThrow('source drift')
+      expect(JSON.parse(fs.readFileSync(p.file, 'utf8')).timings.activate).toBeGreaterThanOrEqual(0)
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('activate'))
     } finally { log.mockRestore(); removeDir(root) }
   })
   it('keeps a ready publication when post-readiness retention is refused', () => {
@@ -370,7 +404,7 @@ describe('normal managed publication orchestration', () => {
   it('aborts an interrupted candidate only from its saved private plan and never automatically on failure', () => {
     const root = makeTempDir('quest-e-abort-')
     try {
-      const p = prepared(root), r = remote({ failure: 'validate' })
+      const p = prepared(root), r = remote({ failure: 'activation-validation' })
       expect(() => abortStage(r.t, p.file)).toThrow('Saved private staging plan')
       expect(r.operations).toEqual([])
       expect(() => publish(r.t, p.dist, p.file, jest.fn())).toThrow('generations retained')
@@ -482,7 +516,7 @@ exec(compile(code,'<emitted-gateway>','exec'))
       expect(r.operations).toEqual([])
       const ru = prepared(ruRoot, true)
       // Stop at validation: the fake remote's activation receipt is tied to the translated fixture.
-      const ruRemote = remote({ failure: 'validate' })
+      const ruRemote = remote({ failure: 'activation-validation' })
       expect(() => publish(ruRemote.t, ru.dist, ru.file, jest.fn())).toThrow('source drift')
       expect(ruRemote.operations).not.toContain('gateway')
       expect(ruRemote.operations).toContain('stage-v3')
@@ -506,7 +540,6 @@ exec(compile(code,'<emitted-gateway>','exec'))
       }
       process.env.QUEST_SEO_OWNER_MAINTENANCE = '1'
       expect(() => baseline(r.t, p.file, jest.fn())).toThrow('First v1 generation must be RU-only')
-      expect(r.operations).not.toContain('validate')
       expect(r.operations).not.toContain('activate')
     } finally {
       if (original === undefined) delete process.env.QUEST_SEO_OWNER_MAINTENANCE; else process.env.QUEST_SEO_OWNER_MAINTENANCE = original
@@ -897,5 +930,36 @@ describe('early immutable asset capture and late apply', () => {
       return action === 'inspect' ? JSON.stringify({ schema_version: 1, kind: 'legacy', current: null, previous: null }) : operation(action, args, options)
     }
     expect(() => captureOverlay(r.t, dist, file, nonce)).toThrow('changed during capture')
+  })
+})
+
+describe('local retention of private package artifacts', () => {
+  const DAY = 24 * 3600 * 1000
+  function artifacts(directory: string, name: string, state: Record<string, unknown> | null, ageDays = 0) {
+    const stateFile = path.join(directory, name)
+    if (state) fs.writeFileSync(stateFile, JSON.stringify({ schema_version: 1, ...state }))
+    const files = ['.package.tar.gz', '.files.v2.json', '.plan.v3.json'].map((suffix) => `${stateFile}${suffix}`)
+    const time = new Date(Date.now() - ageDays * DAY)
+    for (const file of files) { fs.writeFileSync(file, 'x'.repeat(10)); fs.utimesSync(file, time, time) }
+    return { stateFile, files }
+  }
+  it('keeps the current run, the server generations and young unfinished states, and removes the rest', () => {
+    const root = makeTempDir('quest-local-retention-')
+    try {
+      const current = artifacts(root, 'current.json', { phase: 'ready', identity: { release_id: 'new' } })
+      const rollback = artifacts(root, 'rollback.json', { phase: 'ready', identity: { release_id: 'old' } }, 30)
+      const retired = artifacts(root, 'retired.json', { phase: 'ready', identity: { release_id: 'retired' } })
+      const rolledBack = artifacts(root, 'rolled-back.json', { phase: 'rolled-back', identity: { release_id: 'failed' } })
+      const unfinished = artifacts(root, 'unfinished.json', { phase: 'inspect-required', identity: { release_id: 'stuck' } }, 1)
+      const stale = artifacts(root, 'stale.json', { phase: 'prepared', identity: { release_id: 'abandoned' } }, 8)
+      const orphan = artifacts(root, 'orphan.json', null, 8)
+      const youngOrphan = artifacts(root, 'young-orphan.json', null, 1)
+      const result = pruneLocalArtifacts(current.stateFile, ['new', 'old'])
+      const exists = (set: { files: string[] }) => set.files.map((file) => fs.existsSync(file))
+      for (const kept of [current, rollback, unfinished, youngOrphan]) expect(exists(kept)).toEqual([true, true, true])
+      for (const removed of [retired, rolledBack, stale, orphan]) expect(exists(removed)).toEqual([false, false, false])
+      for (const state of [retired, rolledBack, stale]) expect(fs.existsSync(state.stateFile)).toBe(true)
+      expect(result).toEqual({ kept: 12, removed: 12, removed_bytes: 120 })
+    } finally { removeDir(root) }
   })
 })

@@ -74,8 +74,14 @@ function transport(env = process.env) {
 
 function inspect(t) {
   const state = parseStrictJson(t.operation('inspect'), 'serving state')
-  exactKeys(state, ['schema_version', 'kind', 'current', 'previous'])
+  const keys = ['schema_version', 'kind', 'current', 'previous']
+  exactKeys(state, 'generations' in (state || {}) ? [...keys, 'generations'] : keys)
   require_(state.schema_version === 1 && ['legacy', 'managed', 'absent'].includes(state.kind), 'Unknown serving state')
+  require_(!('generations' in state) || (Array.isArray(state.generations) && state.generations.length <= 100
+    && state.generations.every((id) => typeof id === 'string' && RELEASE_ID.test(id))
+    && new Set(state.generations).size === state.generations.length
+    && [state.current, state.previous].filter(Boolean).every((identity) => state.generations.includes(identity.release_id))),
+  'Invalid managed generation list')
   for (const identity of [state.current, state.previous].filter(Boolean)) {
     exactKeys(identity, ['schema_version', 'release_id', 'frontend_sha', 'manifest_sha256', 'tree_sha256'])
     require_(identity.schema_version === 1 && RELEASE_ID.test(identity.release_id)
@@ -253,9 +259,8 @@ function identity(dist, bytes = fs.readFileSync(path.join(dist, MANIFEST_NAME), 
   return { release_id: manifest.release_id, frontend_sha: manifest.frontend_sha, manifest_sha256: sha256(bytes) }
 }
 
-function activate(t, id, current, result = 'activated', previous = current) {
-  return checkReceipt(t.operation(result === 'validated' ? 'validate' : 'activate',
-    [id.release_id, id.frontend_sha, current || 'none']), id, result, previous)
+function activate(t, id, current, previous = current) {
+  return checkReceipt(t.operation('activate', [id.release_id, id.frontend_sha, current || 'none']), id, 'activated', previous)
 }
 
 function publicationMode(manifest) {
@@ -453,6 +458,21 @@ function publish(t, dist, stateFile, health = readiness) {
   publishPrepared(t, stateFile, health)
 }
 
+// Per-operation wall clock of the publisher (#2448): the deploy table only had
+// one line for upload plus publication, and the state kept a time for the
+// activation alone. Durations land in the state and in one report line.
+function timed(state, name, fn) {
+  const started = Date.now()
+  try { return fn() } finally {
+    state.timings = { ...state.timings, [name]: Math.round((Date.now() - started) / 100) / 10 }
+  }
+}
+
+function reportTimings(state) {
+  const entries = Object.entries(state.timings || {})
+  if (entries.length) console.log(`📊 quest v1 публикация по операциям: ${entries.map(([name, seconds]) => `${name} ${Math.round(seconds)} с`).join(' · ')}`)
+}
+
 function publishPrepared(t, stateFile, health = readiness) {
   const state = parseStrictJson(fs.readFileSync(stateFile, 'utf8'), 'release state')
   require_(state.schema_version === 1 && state.phase === 'prepared', 'Prepared package required')
@@ -462,36 +482,51 @@ function publishPrepared(t, stateFile, health = readiness) {
     && state.payload_bytes > 0 && state.payload_bytes <= 2 * 1024 ** 3, 'Prepared archive bound/path mismatch')
   require_(state.index === `${stateFile}.files.v2.json` && /^[a-f0-9]{64}$/.test(state.index_sha256 || ''),
     'Prepared v2 file index required; prepare this artifact with current tooling')
+  state.timings = {}
+  try {
+    publishTimed(t, stateFile, state, id, health)
+  } finally { reportTimings(state) }
+}
+
+function publishTimed(t, stateFile, state, id, health) {
   preparedIndex(state)
-  require_(run('python3', [TRANSPORT, 'hash', state.archive]).trim() === state.archive_sha256, 'Prepared archive changed')
-  preflight(t)
+  require_(timed(state, 'hash', () => run('python3', [TRANSPORT, 'hash', state.archive]).trim()) === state.archive_sha256, 'Prepared archive changed')
+  timed(state, 'preflight', () => preflight(t))
   require_(state.base.kind !== 'legacy', 'Normal v1 publication refuses legacy conversion; owner maintenance required')
-  const actual = inspect(t)
+  const actual = timed(state, 'inspect', () => inspect(t))
   const expected = state.base.current?.release_id || null
   require_(actual.kind === state.base.kind && actual.current?.release_id === state.base.current?.release_id,
     'Active root changed since overlay; rebuild against the actual pointer')
   require_(actual.kind !== 'absent' || state.ru_only, 'First v1 generation must be a full RU-only baseline')
   require_(typeof state.ru_only === 'boolean', 'Prepared publication mode required')
-  if (!state.ru_only) state.gateway = verifyGateway(t, state.gateway_probe_path)
+  if (!state.ru_only) state.gateway = timed(state, 'gateway', () => verifyGateway(t, state.gateway_probe_path))
   const budget = managedBudget()
-  if (expected) state.retention = retain(t, expected, budget)
-  const { inventory } = checkInventory(t, 0)
-  state.inventory = inventory
-  state.transfer_plan = transferPlan(t, state, budget, expected)
+  // Cleanup never removes the active or rollback generation, so with nothing
+  // else on disk it would only re-validate both (~35 s on prod), which the
+  // transfer plan's sealed inventory repeats anyway. A leftover generation
+  // (refused post-ready trim, interrupted staging) still runs it (#2448).
+  const protectedIds = [actual.current, actual.previous].filter(Boolean).map((identity) => identity.release_id)
+  if (expected && !(Array.isArray(actual.generations) && actual.generations.every((name) => protectedIds.includes(name)))) {
+    state.retention = timed(state, 'retain', () => retain(t, expected, budget))
+  }
+  // No separate inventory-v2 here: the transfer plan pins and fully validates
+  // every sealed generation and refuses a peak (existing allocation included)
+  // above the budget — the same checks, one full pass fewer (#2448).
+  state.transfer_plan = timed(state, 'transfer-plan', () => transferPlan(t, state, budget, expected))
   state.storage_plan = state.transfer_plan.storage_plan
   save(stateFile, state)
   try {
     const guard = `bash -s -- preflight ${quote(t.remote)} ${Math.ceil((state.storage_plan.peak_bytes - state.storage_plan.physical_bytes) / 1024)} ${quote(process.env.DEPLOY_DISK_RESERVE_MB || '720')} 1536`
-    t.ssh(guard, { input: fs.readFileSync(path.join(__dirname, 'deploy-disk-guard.sh')) })
+    timed(state, 'disk-guard', () => t.ssh(guard, { input: fs.readFileSync(path.join(__dirname, 'deploy-disk-guard.sh')) }))
     const planFile = `${stateFile}.plan.v3.json`, frame = `${stateFile}.stage-v3`
     save(planFile, state.transfer_plan)
     let staged
     try {
       const output = fs.openSync(frame, 'wx', 0o600)
-      try { run('python3', [TRANSPORT, 'frame-v3', state.index, planFile, state.archive], { stdio: ['ignore', output, 'pipe'] }) }
+      try { timed(state, 'frame', () => run('python3', [TRANSPORT, 'frame-v3', state.index, planFile, state.archive], { stdio: ['ignore', output, 'pipe'] })) }
       finally { fs.closeSync(output) }
       const input = fs.openSync(frame, 'r')
-      try { staged = parseStrictJson(t.operation('stage-v3', [id.release_id, expected || 'none', budget, String(state.storage_plan.reserve_bytes)], { stdio: [input, 'pipe', 'pipe'] }), 'staging receipt') }
+      try { staged = parseStrictJson(timed(state, 'stage', () => t.operation('stage-v3', [id.release_id, expected || 'none', budget, String(state.storage_plan.reserve_bytes)], { stdio: [input, 'pipe', 'pipe'] })), 'staging receipt') }
       finally { fs.closeSync(input) }
     } finally { fs.rmSync(frame, { force: true }) }
     exactKeys(staged, ['schema_version', 'release_id', 'result', 'index_sha256', 'plan_sha256', 'transfer_plan_sha256', 'allocated_bytes', 'max_rss_bytes'])
@@ -502,11 +537,12 @@ function publishPrepared(t, stateFile, health = readiness) {
       && Number.isSafeInteger(staged.allocated_bytes) && staged.allocated_bytes >= 0
       && staged.allocated_bytes <= Number(budget), 'Staging identity mismatch')
     state.staged = staged
-    state.validated = activate(t, id, expected, 'validated')
-    state.phase = 'validated'
     save(stateFile, state)
+    // No validate-only call first: activation runs the same full validation of
+    // the candidate and of the rollback inside its lock and swaps the pointer
+    // only after it passes, so a refusal leaves the old root live (#2448).
     state.activation_started_at = Date.now()
-    state.activated = activate(t, id, expected)
+    state.activated = timed(state, 'activate', () => activate(t, id, expected))
     // The 30-second readiness budget bounds the live, not-yet-verified pointer.
     // Full-tree validation before the switch (~41 s on prod) is not part of it.
     state.activated_at = Date.now()
@@ -520,8 +556,8 @@ function publishPrepared(t, stateFile, health = readiness) {
     throw new Error(`${error.message}; generations retained; inspect/recover with ${stateFile}`)
   }
   try {
-    publishCover(t, id, state.activated_at + 30000)
-    health(t, id, state.activated_at + 30000)
+    timed(state, 'cover', () => publishCover(t, id, state.activated_at + 30000))
+    timed(state, 'readiness', () => health(t, id, state.activated_at + 30000))
     state.phase = 'ready'
     save(stateFile, state)
   } catch (error) {
@@ -534,7 +570,7 @@ function publishPrepared(t, stateFile, health = readiness) {
     }
     throw error
   }
-  retainAfterReady(t, stateFile, state, id.release_id)
+  finishReady(t, stateFile, state, id.release_id)
 }
 
 // The pre-staging pass protects the old current and its rollback, so every
@@ -546,13 +582,59 @@ function retainAfterReady(t, stateFile, state, current) {
   const mib = (bytes) => Math.round(Number(bytes) / 1024 ** 2)
   try {
     const budget = managedBudget()
-    const result = retain(t, current, budget)
+    const result = timed(state, 'retain-after-ready', () => retain(t, current, budget))
     state.post_ready_retention = result
     save(stateFile, state)
     console.log(`📊 Поколения quest v1 после выката: ${result.preserved.length} (снято ${result.removed.length}), `
       + `занято ${mib(result.remaining_allocated_bytes)} из ${mib(budget)} МиБ`)
   } catch (error) {
     console.log(`⚠️  Ретеншен поколений quest v1 после выката не выполнен: ${error.message}; добьёт следующий выкат`)
+  }
+}
+
+// Local retention policy for the private package artifacts (#2448). Each
+// publication leaves ~260 MB archive, ~1.7 MB file index and its transfer plan
+// next to its state file. Integrity evidence stays for the generations the
+// server keeps (the new current and its rollback); others go once their state
+// is terminal or the artifact is a week old. Unfinished states younger than a
+// week keep theirs for abort/recover. State files and logs are never removed.
+const LOCAL_ARTIFACT_SUFFIXES = ['.package.tar.gz', '.files.v2.json', '.plan.v3.json']
+const LOCAL_ARTIFACT_MAX_AGE_MS = 7 * 24 * 3600 * 1000
+const TERMINAL_PHASES = ['ready', 'rolled-back', 'aborted']
+
+function pruneLocalArtifacts(stateFile, keepReleaseIds, now = Date.now()) {
+  const directory = path.dirname(stateFile)
+  const result = { kept: 0, removed: 0, removed_bytes: 0 }
+  for (const name of fs.readdirSync(directory).sort()) {
+    const suffix = LOCAL_ARTIFACT_SUFFIXES.find((candidate) => name.endsWith(candidate))
+    if (!suffix) continue
+    const file = path.join(directory, name), owner = file.slice(0, -suffix.length)
+    const info = fs.lstatSync(file)
+    if (!info.isFile()) continue
+    let state = null
+    try { state = JSON.parse(fs.readFileSync(owner, 'utf8')) } catch { /* orphan artifact: age decides */ }
+    const releaseId = state?.identity?.release_id
+    const keep = owner === stateFile || keepReleaseIds.includes(releaseId)
+      || (!TERMINAL_PHASES.includes(state?.phase) && now - info.mtimeMs < LOCAL_ARTIFACT_MAX_AGE_MS)
+    if (keep) { result.kept += 1; continue }
+    fs.unlinkSync(file)
+    result.removed += 1
+    result.removed_bytes += info.size
+  }
+  return result
+}
+
+function finishReady(t, stateFile, state, current) {
+  retainAfterReady(t, stateFile, state, current)
+  try {
+    const keep = [current, state.base?.current?.release_id].filter(Boolean)
+    const result = timed(state, 'local-retention', () => pruneLocalArtifacts(stateFile, keep))
+    state.local_retention = result
+    save(stateFile, state)
+    console.log(`📊 Локальные архивы quest v1: оставлено ${result.kept}, удалено ${result.removed} `
+      + `(${Math.round(result.removed_bytes / 1024 ** 2)} МиБ)`)
+  } catch (error) {
+    console.log(`⚠️  Ретенция локальных архивов quest v1 не выполнена: ${error.message}`)
   }
 }
 
@@ -586,7 +668,7 @@ function recover(t, file, health = readiness) {
   const actual = inspect(t)
   require_(state.identity && actual.current?.release_id === state.identity.release_id,
     'Actual pointer is another release; owner must inspect, no stale retry')
-  state.activated = activate(t, state.identity, actual.current.release_id, 'activated', state.base.current?.release_id || null)
+  state.activated = activate(t, state.identity, actual.current.release_id, state.base.current?.release_id || null)
   const deadline = Date.now() + 30000
   state.phase = 'activated'
   save(file, state)
@@ -594,7 +676,7 @@ function recover(t, file, health = readiness) {
   health(t, state.identity, deadline)
   state.phase = 'ready'
   save(file, state)
-  retainAfterReady(t, file, state, state.identity.release_id)
+  finishReady(t, file, state, state.identity.release_id)
 }
 
 function abortStage(t, file) {
@@ -643,4 +725,4 @@ if (require.main === module) {
 }
 module.exports = { checkReceipt, inspect, transport, quote, prepare, publish, recover, rollback, overlay,
   captureOverlay, applyOverlay, superviseCapture, captureWorker,
-  readiness, baseline, checkInventory, publishCover, storagePlan, transferPlan, verifyGateway, abortStage }
+  readiness, baseline, checkInventory, publishCover, storagePlan, transferPlan, verifyGateway, abortStage, pruneLocalArtifacts }
