@@ -60,10 +60,14 @@
 
 Пайплайн (`api/aiAssist/`):
 
-1. `retrieval.ts` → `searchSiteMaterials`: статьи — `fetchTravels(1, 8, q)`
-   (поиск бэкенда `/api/travels/?search=`), квесты — `fetchQuestsCompactCatalog`
-   (общий кэш React Query `queryKeys.questsCompactCatalog`, у `/api/quests/` поиска нет) с подбором по словам вопроса;
-   слияние по баллу, ≤ 8 карточек `AiSource {type, source_id, title, url, path, snippet}`.
+1. `retrieval.ts` → `searchSiteMaterials`: статьи — `fetchTravels(0, 8, значимые
+   слова вопроса)` (поиск бэкенда `/api/travels/?query=`; страницы с нуля,
+   стоп-слова `QUERY_STOPWORDS` убирают «какие/есть/квесты/маршрут…»), квесты —
+   `fetchQuestsCompactCatalog` (общий кэш React Query
+   `queryKeys.questsCompactCatalog`, у `/api/quests/` поиска нет) с подбором по
+   словам вопроса (стем сверяется с началом слова); намерение вопроса
+   (`detectIntent`: «квесты…» / «статья, маршрут…») даёт бонус типу; слияние по
+   баллу, ≤ 8 карточек `AiSource {type, source_id, title, url, path, snippet}`.
    Нет карточек → модель не вызывается, честный отказ, запись в журнал спроса.
 2. `prompt.ts` → `buildAssistantMessages`: системный промпт = `SYSTEM` из
    `scripts/ai-train/build_dataset.py` (тест сверяет) + язык ответа по локали +
@@ -87,6 +91,19 @@
 
 ## Локальный стек для проверки
 
+Проверено 18.10.2026 (desktop 1280 и mobile 390, базовая Qwen3.5-4B Q4_K_M на
+Metal: TTFT 0,4–0,6 с, ≈75 ток/с при промпте 370–920 токенов): стрим, ссылки и
+источники только из карточек, «Исландия зимой» → отказ без запроса к модели,
+остановленный `llama-server` → «недоступен» + «Повторить» без списания лимита,
+«Остановить» → «Ответ остановлен», PL-локаль → подписи и ответ по-польски,
+сборка без флага → «страница не найдена», без пункта меню и кнопки на `/search`.
+На этой машине (MacBook, без docker и `~/Sites`) локального бэкенда нет: API
+читается через `node .claude/prod-server.js 4622 dist https://metravel.by`
+(read-only GET каталога), конфиги «Assistant 2460 Web 8081» / «… FlagOff Web 8082»
+в `.claude/launch.json`. Клики по `Pressable` в панели браузера Claude не
+срабатывают (ни у ассистента, ни у пилюли языка) — для QA кнопки нажимаются
+DOM-`click()` через `javascript_tool`, якоря `<a>` кликаются обычно.
+
 1. `llama-server` (brew) на `http://127.0.0.1:8080` с GGUF модели (экспорт — #2463)
    или базовой `Qwen3.5-4B` Q4_K_M; пока идёт `mlx_lm lora` — только CPU (`-ngl 0`).
 2. Бэкенд `localhost:8000`, фронт `npx expo start --web` с `.env.dev`.
@@ -107,6 +124,13 @@
   text-row-sizing, themed-colors, unimported-modules.
 
 ## Известные боли и TODO
+
+- Подбор для не-RU локали слаб: `/api/travels/?query=` ищет по русскому
+  контенту, а слова вопроса на PL/EN/BE/UK в него не попадают; квесты матчатся по
+  переведённым названиям. «Co zobaczyć w Polsce w trzy dni?» дал один квест по
+  Бресту (по «trzy dni»). Лечится смысловым индексом (#2454/#2456) или
+  переводом ключевых слов на RU перед поиском.
+- Стоп-слова подбора — только русские (`QUERY_STOPWORDS` в `retrieval.ts`).
 
 - Подбор по словам (без эмбеддингов) слаб на синонимах; смысловой индекс — #2454/#2456.
 - Лимит и журнал — на устройстве до появления сервиса (#2456).

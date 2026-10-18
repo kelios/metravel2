@@ -4,6 +4,7 @@ import { getActiveQueryClient } from '@/api/activeQueryClient'
 import { fetchQuestsCompactCatalog } from '@/api/quests'
 import { fetchTravels } from '@/api/travelListQueries'
 import {
+  detectIntent,
   htmlToSnippet,
   mergeSources,
   scoreText,
@@ -34,9 +35,50 @@ describe('aiAssist retrieval (#2460)', () => {
   })
 
   it('токены: от трёх знаков, без пунктуации и повторов; стем ловит окончания', () => {
-    expect(tokenizeQuery('Куда поехать на выходные под Гродно? Гродно!')).toEqual(['куда', 'поехать', 'выходные', 'под', 'гродно'])
+    expect(tokenizeQuery('Куда поехать на выходные под Гродно? Гродно!')).toEqual(['выходные', 'гродно'])
+    // Общие слова («квесты», «есть», «какие») карточку не выбирают.
+    expect(tokenizeQuery('Какие квесты есть в Минске?')).toEqual(['минске'])
     expect(scoreText('Квест по Гродне и выходной', ['гродно', 'выходные', 'минск'])).toBe(2)
     expect(scoreText('что угодно', [])).toBe(0)
+    // Стем сверяется с началом слова: «детьми» → «деть» не ловит «увидеть».
+    expect(scoreText('Хайфа — «Восемь способов увидеть город»', ['детьми'])).toBe(0)
+    // Падежная замена согласной («детьми»/«детей») грубому стему не по силам — считается только «гродно».
+    expect(scoreText('Квест для детей по Гродно', ['детьми', 'гродно'])).toBe(1)
+    expect(scoreText('Детский квест по Минску', ['детский', 'минске'])).toBe(2)
+  })
+
+  it('намерение вопроса: «квесты» поднимают квесты над статьями, «статья/маршрут» — наоборот', async () => {
+    expect(detectIntent('Какие квесты есть в Минске?')).toBe('quest')
+    expect(detectIntent('Jakie questy są w Mińsku?')).toBe('quest')
+    expect(detectIntent('Есть ли статья про Нарочь?')).toBe('travel')
+    expect(detectIntent('Куда поехать на выходные?')).toBeNull()
+    expect(detectIntent('квест или маршрут по Гродно')).toBeNull()
+    // Латинские формы — только целым словом: «question»/«kwestia» — не про квесты.
+    expect(detectIntent('I have a question about Grodno')).toBeNull()
+    expect(detectIntent('Mam kwestię: co zobaczyć w Grodnie?')).toBeNull()
+    expect(detectIntent('Which quests are in Minsk?')).toBe('quest')
+
+    mockedFetchTravels.mockResolvedValue({ data: [travel(1, 'Минск за выходные', 'minsk-weekend')], total: 1 } as never)
+    mockedQuests.mockResolvedValue([
+      quest('kvest-po-minsku', 'Квест по Минску', 'minsk', 'Минск'),
+      quest('kvest-po-brestu', 'Квест по Бресту', 'brest', 'Брест'),
+    ])
+    const sources = await searchSiteMaterials({ query: 'Какие квесты есть в Минске?', locale: 'ru' })
+    // Квест с совпадением по словам выше статьи; квест другого города на одном
+    // бонусе намерения в список не попадает — совпадения есть.
+    expect(sources.map((s) => s.source_id)).toEqual(['kvest-po-minsku', '1'])
+
+    // Вопрос про квесты без топонима: бонус намерения спасает каталог целиком,
+    // статьи не запрашиваются (полная фраза у бэкенда даёт ноль).
+    mockedFetchTravels.mockClear()
+    const catalogOnly = await searchSiteMaterials({ query: 'Какие квесты есть на сайте?', locale: 'ru' })
+    expect(catalogOnly.map((s) => s.source_id)).toEqual(['kvest-po-minsku', 'kvest-po-brestu'])
+    expect(mockedFetchTravels).not.toHaveBeenCalled()
+
+    // Топоним есть, совпадений нет: спасённых квестов не больше трёх.
+    mockedQuests.mockResolvedValue(['a', 'b', 'c', 'd', 'e'].map((id) => quest(`q-${id}`, `Квест ${id}`, 'minsk', 'Минск')))
+    const iceland = await searchSiteMaterials({ query: 'Какие квесты есть в Исландии?', locale: 'ru' })
+    expect(iceland.filter((s) => s.type === 'quest')).toHaveLength(3)
   })
 
   it('HTML описания превращается в короткий абзац', () => {
@@ -54,7 +96,9 @@ describe('aiAssist retrieval (#2460)', () => {
 
     const sources = await searchSiteMaterials({ query: 'Куда поехать на выходные под Гродно', locale: 'ru' })
 
-    expect(mockedFetchTravels).toHaveBeenCalledWith(1, 8, 'Куда поехать на выходные под Гродно', {}, undefined)
+    // Страницы fetchTravels нумеруются с нуля: 0 → `page=1` в запросе.
+    // …и запрос к бэкенду идёт значимыми словами, а не полной фразой.
+    expect(mockedFetchTravels).toHaveBeenCalledWith(0, 8, 'выходные гродно', {}, undefined)
     expect(sources.map((s) => s.source_id)).toEqual(['1', '2', 'kvest-po-grodno'])
     expect(sources[0]).toMatchObject({ type: 'travel', path: '/travels/vyhodnye-pod-grodno', url: expect.stringContaining('/travels/vyhodnye-pod-grodno') })
     expect(sources[0].snippet).toContain('Замки')

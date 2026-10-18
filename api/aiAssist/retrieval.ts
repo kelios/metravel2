@@ -3,7 +3,7 @@
  *
  * Оценка модели v0 (#2462): ответы по форме держит, но ССЫЛКИ И НАЗВАНИЯ
  * ВЫДУМЫВАЕТ (57 несуществующих URL в 40 ответах). Поэтому ссылки даёт только
- * подбор: статьи — поиском бэкенда `/api/travels/?search=`, квесты — по
+ * подбор: статьи — поиском бэкенда `/api/travels/?query=`, квесты — по
  * каталогу (у `/api/quests/` поиска нет, каталог компактный и кэшируется);
  * модель лишь формулирует ответ по подставленным карточкам. Смысловой индекс
  * (#2454/#2456) заменит этот слой тем же контрактом `AiSource[]`.
@@ -25,6 +25,22 @@ export const AI_SOURCES_LIMIT = 8
 const TRAVELS_PAGE_SIZE = 8
 const SNIPPET_MAX_LENGTH = 320
 const MIN_TOKEN_LENGTH = 3
+/** `fetchTravels` считает страницы с нуля (`buildWhereQueryParams` шлёт `page + 1`). */
+const TRAVELS_FIRST_PAGE = 0
+
+/**
+ * Слова вопроса, которые есть почти в каждой карточке и не выбирают её: вопросительные,
+ * «поехать/посмотреть» и сами слова «квест»/«маршрут»/«статья». Без этого «Какие
+ * квесты есть в Минске?» подтягивал квест по Бресту — он тоже «квест».
+ */
+const QUERY_STOPWORDS = new Set([
+  'какие', 'какой', 'какая', 'какое', 'каких', 'что', 'где', 'куда', 'когда', 'как', 'есть', 'ли',
+  'можно', 'нужно', 'хочу', 'хотим', 'поехать', 'съездить', 'посмотреть', 'сходить', 'пройти',
+  'для', 'или', 'под', 'при', 'про', 'это', 'этот', 'эта', 'там', 'тут', 'ещё', 'еще',
+  'квест', 'квесты', 'квеста', 'квестов', 'квесту', 'квестом', 'квестах',
+  'маршрут', 'маршруты', 'маршрута', 'маршрутов', 'маршруту',
+  'статья', 'статьи', 'статью', 'статей', 'материал', 'материалы', 'сайт', 'сайте', 'metravel',
+])
 
 const normalizeText = (value: unknown): string =>
   String(value ?? '')
@@ -34,12 +50,35 @@ const normalizeText = (value: unknown): string =>
     .replace(/\s+/g, ' ')
     .trim()
 
+/**
+ * Явное намерение вопроса: «квесты в Минске» хочет квесты, «статья/маршрут по
+ * Гродно» — статьи. Слово-тип само по себе стоп-слово (оно есть в каждой карточке
+ * типа), поэтому вместо совпадения по тексту оно даёт бонус всему типу: иначе
+ * вопрос про квесты заполняли статьи с базовым баллом поиска.
+ */
+export type AiSourceIntent = AiSource['type'] | null
+// `\b` не знает кириллицы — граница слова через lookbehind по букве.
+// Кириллица — по началу слова (квест/квесты/квестов), латиница — целым словом:
+// иначе «question»/«kwestia» читались как намерение про квесты.
+const QUEST_INTENT_RE = /(?<!\p{L})(?:квест|квэст|(?:quest(?:s|y|ów|u)?|kwest(?:y|ów|u)?)(?!\p{L}))/iu
+const TRAVEL_INTENT_RE = /(?<!\p{L})(?:стать|артыкул|маршрут|путеводител|(?:articles?|artykuły?|trasy?|trasa|routes?)(?!\p{L}))/iu
+const INTENT_BONUS = 2
+
+export const detectIntent = (query: string): AiSourceIntent => {
+  const text = String(query ?? '')
+  const quest = QUEST_INTENT_RE.test(text)
+  const travel = TRAVEL_INTENT_RE.test(text)
+  if (quest && !travel) return 'quest'
+  if (travel && !quest) return 'travel'
+  return null
+}
+
 /** Слова вопроса длиной от трёх знаков, без повторов; порядок сохраняется. */
 export const tokenizeQuery = (query: string): string[] => {
   const seen = new Set<string>()
   const tokens: string[] = []
   for (const token of normalizeText(query).split(' ')) {
-    if (token.length < MIN_TOKEN_LENGTH || seen.has(token)) continue
+    if (token.length < MIN_TOKEN_LENGTH || seen.has(token) || QUERY_STOPWORDS.has(token)) continue
     seen.add(token)
     tokens.push(token)
   }
@@ -53,16 +92,49 @@ export const tokenizeQuery = (query: string): string[] => {
  */
 const stemToken = (token: string): string => (token.length > 5 ? token.slice(0, -2) : token)
 
-/** Сколько слов вопроса встречается в тексте карточки. */
+/**
+ * Сколько слов вопроса встречается в тексте карточки. Стем сверяется с НАЧАЛОМ
+ * слова карточки, а не с подстрокой: «детьми» → «деть» иначе ловил «увидеть»
+ * (квест по Хайфе в ответе про Гродно).
+ */
 export const scoreText = (haystack: string, tokens: readonly string[]): number => {
   if (!tokens.length) return 0
-  const normalized = normalizeText(haystack)
-  if (!normalized) return 0
+  const words = normalizeText(haystack).split(' ').filter(Boolean)
+  if (!words.length) return 0
   let score = 0
   for (const token of tokens) {
-    if (normalized.includes(stemToken(token))) score += 1
+    const stem = stemToken(token)
+    if (words.some((word) => word.startsWith(stem))) score += 1
   }
   return score
+}
+
+/**
+ * Строка поиска для бэкенда: значимые слова вопроса. Полная фраза «Куда поехать
+ * на выходные под Гродно с детьми?» у `/api/travels/?query=` даёт ноль, слова
+ * «выходные Гродно детьми» — статьи по Гродно (проба 18.10.2026).
+ */
+export const buildTravelsSearchQuery = (query: string, tokens: readonly string[]): string =>
+  tokens.length ? tokens.join(' ') : query.trim()
+
+/**
+ * Квесты, прошедшие только на бонусе намерения (без совпадений по словам),
+ * нужны лишь когда совпадений нет вовсе («Какие квесты есть на сайте?»); иначе
+ * они занимали бы свободные слоты из восьми квестами других городов.
+ */
+const RESCUED_QUESTS_WITH_TOKENS_LIMIT = 3
+
+export const dropRescuedQuestsWhenMatched = (
+  quests: readonly AiSource[],
+  intent: AiSourceIntent,
+  hasTokens = false,
+): AiSource[] => {
+  if (intent !== 'quest') return [...quests]
+  const hasMatched = quests.some((source) => source.score > INTENT_BONUS)
+  if (hasMatched) return quests.filter((source) => source.score > INTENT_BONUS)
+  // «Какие квесты есть в Исландии?»: слова есть, совпадений нет — пара квестов
+  // как «ближайшее из того, что есть», а не весь каталог поверх статей.
+  return hasTokens ? quests.slice(0, RESCUED_QUESTS_WITH_TOKENS_LIMIT) : [...quests]
 }
 
 /** HTML описания → один абзац данных для промпта. Без i18n-фолбэка и DOMPurify. */
@@ -88,14 +160,14 @@ export const htmlToSnippet = (html: unknown, maxLength = SNIPPET_MAX_LENGTH): st
 const joinParts = (parts: Array<string | null | undefined>): string =>
   parts.map((part) => String(part ?? '').trim()).filter(Boolean).join('. ')
 
-export const travelToSource = (travel: Travel, tokens: readonly string[]): AiSource | null => {
+export const travelToSource = (travel: Travel, tokens: readonly string[], intent: AiSourceIntent = null): AiSource | null => {
   const path = buildTravelPathFromTravel(travel)
   const title = String(travel?.name ?? '').trim()
   if (!path || !title) return null
   const place = [travel.countryName, travel.cityName].map((v) => String(v ?? '').trim()).filter(Boolean).join(', ')
   const snippet = joinParts([place, htmlToSnippet(travel.description)])
   // Бэкенд уже отобрал статью по вопросу — базовый балл 1, совпадения слов сверху.
-  const score = 1 + scoreText(`${title} ${place} ${snippet}`, tokens)
+  const score = 1 + scoreText(`${title} ${place} ${snippet}`, tokens) + (intent === 'travel' ? INTENT_BONUS : 0)
   return {
     type: 'travel',
     source_id: String(travel.id),
@@ -109,7 +181,7 @@ export const travelToSource = (travel: Travel, tokens: readonly string[]): AiSou
 
 const DIFFICULTY_RU: Record<string, string> = { easy: 'лёгкий', medium: 'средний', hard: 'сложный' }
 
-export const questToSource = (quest: ApiQuestMeta, tokens: readonly string[]): AiSource | null => {
+export const questToSource = (quest: ApiQuestMeta, tokens: readonly string[], intent: AiSourceIntent = null): AiSource | null => {
   const path = buildQuestPath(quest.city_alias || quest.city_id, quest.quest_id)
   const title = String(quest?.title ?? '').trim()
   if (!path || !title) return null
@@ -119,7 +191,10 @@ export const questToSource = (quest: ApiQuestMeta, tokens: readonly string[]): A
     [title, city, quest.city_name, quest.city_name_canonical, country].filter(Boolean).join(' '),
     tokens,
   )
-  if (score <= 0) return null
+  // Бонус намерения — до отсечки: «Какие квесты есть на сайте?» без топонима
+  // иначе не находил ни одного квеста и честно, но ложно отвечал «материалов нет».
+  const boosted = score + (intent === 'quest' ? INTENT_BONUS : 0)
+  if (boosted <= 0) return null
   const points = Number.parseInt(String(quest.points), 10)
   const difficulty = quest.difficulty ? DIFFICULTY_RU[quest.difficulty] : ''
   const snippet = joinParts([
@@ -135,7 +210,7 @@ export const questToSource = (quest: ApiQuestMeta, tokens: readonly string[]): A
     url: buildCanonicalUrl(path),
     path,
     snippet,
-    score,
+    score: boosted,
   }
 }
 
@@ -196,23 +271,31 @@ export async function searchSiteMaterials({
   limit = AI_SOURCES_LIMIT,
 }: SearchSiteMaterialsOptions): Promise<AiSource[]> {
   const tokens = tokenizeQuery(query)
+  const intent = detectIntent(query)
+  // Вопрос из одних стоп-слов про квесты («Какие квесты есть на сайте?») статьи
+  // не ищет: полная фраза у бэкенда даёт ноль, а свежие статьи тут не нужны.
+  const skipTravels = intent === 'quest' && tokens.length === 0
   const [travelsResult, questsResult] = await Promise.allSettled([
-    fetchTravels(1, TRAVELS_PAGE_SIZE, query.trim(), {}, signal ? { signal } : undefined),
+    skipTravels
+      ? Promise.resolve({ data: [] as Travel[], total: 0 })
+      : fetchTravels(TRAVELS_FIRST_PAGE, TRAVELS_PAGE_SIZE, buildTravelsSearchQuery(query, tokens), {}, signal ? { signal } : undefined),
     loadQuestCatalog(locale),
   ])
 
   const candidates: AiSource[] = []
   if (travelsResult.status === 'fulfilled') {
     for (const travel of travelsResult.value?.data ?? []) {
-      const source = travelToSource(travel, tokens)
+      const source = travelToSource(travel, tokens, intent)
       if (source) candidates.push(source)
     }
   }
   if (questsResult.status === 'fulfilled') {
+    const questSources: AiSource[] = []
     for (const quest of questsResult.value ?? []) {
-      const source = questToSource(quest, tokens)
-      if (source) candidates.push(source)
+      const source = questToSource(quest, tokens, intent)
+      if (source) questSources.push(source)
     }
+    candidates.push(...dropRescuedQuestsWhenMatched(questSources, intent, tokens.length > 0))
   }
   return mergeSources(candidates, limit)
 }
