@@ -4423,7 +4423,10 @@ async function main() {
     }
     console.log(`  🧩 Quest pages: ${indexableQuestPaths.size}/${questPagesToWrite.length} indexable`);
     if (QUEST_SEO_CANDIDATE) {
-      const questLocaleBootChunks = readQuestLocaleBootChunks(path.join(DIST_DIR, '_expo', 'static', 'js', 'web'), QUEST_TRANSLATED_LOCALES);
+      const questLocaleBootChunks = readQuestLocaleBootChunks(
+        path.join(DIST_DIR, '_expo', 'static', 'js', 'web'), QUEST_TRANSLATED_LOCALES,
+        fs.readFileSync(path.join(DIST_DIR, '[...missing].html'), 'utf8'),
+      );
       const candidate = await buildQuestLocaleCandidate({
         publicationMode: QUEST_SEO_PUBLICATION_MODE,
         ruPages: questSeoRuPages,

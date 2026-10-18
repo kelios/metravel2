@@ -52,8 +52,13 @@ function emptyAppRoot(html) {
 }
 
 const WEB_CHUNK_PREFIX = '/_expo/static/js/web/'
-const CHUNK_MANIFEST = /^globalThis\.__METRAVEL_CHUNK_DEPS__\?\?=\{\};globalThis\.__METRAVEL_CHUNK_DEPS__\["(?:[^"\\]|\\.)*"\]=(\[[^\]]*\]);/
+const CHUNK_MANIFEST = /^globalThis\.__METRAVEL_CHUNK_DEPS__\?\?=\{\};globalThis\.__METRAVEL_CHUNK_DEPS__\["(?:[^"\\]|\\.)*"\]=(\[(?:[^\]"\\]|"(?:[^"\\]|\\.)*")*\]);/
 const CATCH_ALL_CHUNK = /^\[\.\.\.missing\]-[0-9a-f]+\.js$/
+
+function chunkDependencies(source) {
+  const manifest = CHUNK_MANIFEST.exec(String(source))
+  return manifest ? JSON.parse(manifest[1]).filter((dep) => typeof dep === 'string') : []
+}
 
 function onlyChunk(files, pattern, label) {
   const found = files.filter((file) => pattern.test(file))
@@ -71,12 +76,27 @@ function onlyChunk(files, pattern, label) {
  * modules let expo-router render the route synchronously, as the RU export does
  * with the route chunks it already lists.
  */
-function readQuestLocaleBootChunks(jsDir, locales, fileSystem = fs) {
+function readQuestLocaleBootChunks(jsDir, locales, exportedCatchAllHtml, fileSystem = fs) {
+  if (typeof exportedCatchAllHtml !== 'string' || !exportedCatchAllHtml.trim()) throw new Error('missing authoritative exported catch-all HTML')
+  // #2484: platform roots can share a basename. The export page owns its
+  // route scripts; other matching files in the directory are not candidates.
+  const routes = [...new Set(scriptSrcs(exportedCatchAllHtml).filter((src) => src.startsWith(WEB_CHUNK_PREFIX) && CATCH_ALL_CHUNK.test(src.slice(WEB_CHUNK_PREFIX.length))))]
+  if (!routes.length) throw new Error('exported catch-all HTML has no [...missing] route scripts')
+  const readChunk = (src) => {
+    if (!/^\/_expo\/static\/js\/web\/[^/\\?#]+\.js$/.test(src)) throw new Error(`invalid boot chunk path ${src}`)
+    return fileSystem.readFileSync(`${jsDir}/${src.slice(WEB_CHUNK_PREFIX.length)}`, 'utf8')
+  }
+  const deps = [...new Set(routes.flatMap((route) => chunkDependencies(readChunk(route))))]
+  for (const dep of deps) readChunk(dep)
+  // A selected route may also be a declared dependency. Keep the page's route
+  // order, while registering every non-route dependency before those routes.
+  const boot = [...deps.filter((dep) => !routes.includes(dep)), ...routes]
   const files = fileSystem.readdirSync(jsDir).filter((file) => file.endsWith('.js'))
-  const route = onlyChunk(files, CATCH_ALL_CHUNK, '[...missing]')
-  const manifest = CHUNK_MANIFEST.exec(fileSystem.readFileSync(`${jsDir}/${route.slice(WEB_CHUNK_PREFIX.length)}`, 'utf8'))
-  const deps = manifest ? JSON.parse(manifest[1]).filter((dep) => typeof dep === 'string') : []
-  return new Map(locales.map((locale) => [locale, [...deps, route, onlyChunk(files, new RegExp(`^locale-${locale}-[0-9a-f]+\\.js$`), `locale-${locale}`)]]))
+  return new Map(locales.map((locale) => {
+    const catalog = onlyChunk(files, new RegExp(`^locale-${locale}-[0-9a-f]+\\.js$`), `locale-${locale}`)
+    readChunk(catalog)
+    return [locale, [...boot.filter((src) => src !== catalog), catalog]]
+  }))
 }
 
 function scriptSrcs(html) {
@@ -92,21 +112,28 @@ function missingBootChunks(html, srcs) {
 /**
  * The same contract checked on a stored member. It reads the page, not the
  * chunk directory: a release `dist` also keeps earlier generations' chunks
- * (asset retention), so «the one `[...missing]` chunk» exists only at export.
+ * (asset retention); multiple route chunks are also valid in one export.
  * `readChunk(src)` returns the chunk source for its declared dependencies.
  */
 function bootChunkIssues(html, locale, readChunk) {
   const scripts = scriptSrcs(html).filter((src) => src.startsWith(WEB_CHUNK_PREFIX))
-  const route = scripts.find((src) => CATCH_ALL_CHUNK.test(src.slice(WEB_CHUNK_PREFIX.length)))
-  if (!route) return ['does not ship the [...missing] route chunk']
+  const routes = scripts.filter((src) => CATCH_ALL_CHUNK.test(src.slice(WEB_CHUNK_PREFIX.length)))
+  if (!routes.length) return ['does not ship the [...missing] route chunk']
   const issues = []
   const catalog = new RegExp(`^locale-${locale}-[0-9a-f]+\\.js$`)
-  if (!scripts.some((src) => catalog.test(src.slice(WEB_CHUNK_PREFIX.length)))) issues.push(`does not ship the locale-${locale} chunk`)
-  const manifest = CHUNK_MANIFEST.exec(String(readChunk(route)))
-  const deps = manifest ? JSON.parse(manifest[1]).filter((dep) => typeof dep === 'string') : []
+  const catalogs = scripts.filter((src) => catalog.test(src.slice(WEB_CHUNK_PREFIX.length)))
+  if (!catalogs.length) issues.push(`does not ship the locale-${locale} chunk`)
+  if (new Set(catalogs).size > 1) issues.push(`ships more than one locale-${locale} chunk`)
+  const deps = [...new Set([...new Set(routes)].flatMap((route) => chunkDependencies(readChunk(route))))]
+  for (const src of new Set([...deps, ...catalogs])) readChunk(src)
   issues.push(...missingBootChunks(html, deps).map((dep) => `does not ship boot chunk ${dep}`))
   const entry = scripts.findIndex((src) => /\/entry-[^/]+\.js$/.test(src))
-  if (entry !== -1 && scripts.indexOf(route) > entry) issues.push('loads the [...missing] route chunk after entry')
+  if (entry === -1) issues.push('does not ship an Expo entry script')
+  for (const src of new Set([...deps, ...routes, ...catalogs])) {
+    const positions = scripts.flatMap((script, index) => script === src ? [index] : [])
+    if (positions.length > 1) issues.push(`duplicates boot chunk ${src}`)
+    if (entry !== -1 && positions.some((index) => index > entry)) issues.push(`loads boot chunk ${src} after entry`)
+  }
   return issues
 }
 

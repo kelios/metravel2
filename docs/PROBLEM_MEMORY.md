@@ -6848,3 +6848,30 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   `__tests__/scripts/native-build-stamp.test.ts`,
   `__tests__/config/worklets-babel-transform.test.ts` (плагин worklets доходит до
   android/ios × dev/prod, версия плагина = установленный пакет).
+
+### FE-DEPLOY-QUEST-LOCALE-BOOT-CHUNK-DIRECTORY-001 — boot-чанки выбирались по каталогу
+
+- Canonical task: #2484, related #2465/#2460. Verdict `reuse`: два независимых
+  холодных canonical export (346e2aeb8 и 0a92351a8, 18.10.2026) остановились до
+  активации на `expected one [...missing] web chunk, found 2`; прежний прод
+  1b84ec038 остался доступен. Точное соответствие двух hash конкретным модулям
+  не установлено; размеры файлов не доказывают владение маршрутом.
+- Механизм: `readQuestLocaleBootChunks` требовал ровно один совпавший basename
+  в каталоге, хотя Expo назначает странице один или несколько route chunks
+  через `<script src>` экспортированного `[...missing].html`. Нормализация
+  platform roots может дать одинаковый basename; retained generations тоже
+  не являются кандидатами без ссылки из страницы. Зелёный chunk-closure guard
+  подтверждал замыкание модулей, но не проверял ошибочный выбор маршрута.
+- Инвариант: авторитетная страница обязательна; все перечисленные ею чанки
+  `[...missing]` сохраняются в порядке страницы. Их объявленные зависимости
+  дедуплицируются, выбранные файлы и locale catalog обязаны существовать;
+  зависимости, маршруты и catalog отдаются до `entry`. Чужие файлы в каталоге
+  не добавляются. Проверка готового пакета проверяет каждый route chunk,
+  его зависимости, catalog, дубли и порядок до `entry`.
+- Постоянные контроли: `expoStaticShell.bootChunks.test.ts` — один здоровый
+  маршрут, два файла с выбором одного/обоих, порядок и общие зависимости,
+  отсутствие HTML/чанка/зависимости/catalog, late/duplicate scripts;
+  `questSeoPackage.test.ts` — authoritative shell и пакет с двумя route chunks,
+  в том числе отсутствие зависимости второго. Runtime gate остаётся за #2484:
+  холодный выкат, точный `.build-source.json`, BE/UK/PL/EN desktop/mobile,
+  ноль React #418 и boot-файлы до `entry`; LCP перевода ≤ RU +10 %.
