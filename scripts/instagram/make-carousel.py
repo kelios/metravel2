@@ -3,9 +3,12 @@
 
 Вход — JSON-спецификация: {"out_dir": "...", "slides": [...]}. Типы слайдов:
   cover — {"type": "cover", "image", "kicker", "title", "subtitle", "kicker_plate"?: true — тёмная подложка под надзаголовком}
-  list  — {"type": "list", "image"?, "kicker", "title", "items": [...], "size"?: фиксированный кегль пунктов (единый на всю карусель)}
+  list  — {"type": "list", "image"?, "kicker", "title", "items": [...], "size"?: фиксированный кегль пунктов (единый на всю карусель),
+           "layout"?: "full" (по умолчанию с 18.10.2026, владелец: фото на весь кадр, снизу затемнение, текст белым у низа — как обложка)
+           | "split" (прежняя раскладка: фото сверху photo_h, текст на светлом поле)}
   map   — {"type": "map", "title", "note", "points": [{"name", "lat", "lng"}], "line"?: false — без ломаной между точками, "map_h"?: высота карты (800), "row_h"?: шаг строки легенды (62), "zoom"?, "patches"?: [{"box","from"}], "tile_url"?, "credit"?, "inset_line"?: "auto"|"none", "inset"?: {"from","to","x","y","w","h"} — врезка крупным масштабом для тесного кластера точек (номера from..to, 1-based)}
-  cta   — {"type": "cta", "image", "title", "text", "top"?: y начала текста, по умолчанию 430; для кадра с объектом по центру — небо сверху}
+  cta   — {"type": "cta", "image", "title", "text", "layout"?: "full" (по умолчанию: затемнение снизу, текст у низа) | "center" (прежняя: кадр
+           притемнён целиком, текст по центру, "top"?: y начала текста, по умолчанию 430)}
 
 Фото — локальный путь или URL (только свои фото автора 1). Карта — плитки OpenStreetMap,
 подпись об авторстве ставится на слайд. Тексты — только из статьи.
@@ -76,6 +79,15 @@ def shade(img, top, bottom, strength):
     img.paste(Image.new("RGB", (W, H), (0, 0, 0)), (0, 0), overlay.resize((W, H)))
 
 
+def shade_bottom(img, text_top, ramp=260, strength=215):
+    """Затемнение под текст у низа кадра (все фото-слайды, решение владельца 18.10.2026): плавный
+    подъём от text_top - ramp до text_top, ниже — ровная тёмная полоса до низа кадра."""
+    overlay = Image.new("L", (1, H), 0)
+    for y in range(max(0, text_top - ramp), H):
+        overlay.putpixel((0, y), strength if y >= text_top else int(strength * (y - (text_top - ramp)) / ramp))
+    img.paste(Image.new("RGB", (W, H), (0, 0, 0)), (0, 0), overlay.resize((W, H)))
+
+
 BRAND_BIRD = os.path.join(os.path.dirname(os.path.abspath(__file__)), "brand-bird.png")
 
 
@@ -120,7 +132,34 @@ def slide_cover(spec):
     return img, WHITE
 
 
+def slide_list_full(spec):
+    """Фото на весь кадр, текст белым у низа поверх затемнения; текст начинается не выше y 440."""
+    img = photo(spec["image"], (W, H))
+    draw = ImageDraw.Draw(img)
+    title_font = font("serif", 62)
+    title_h = len(wrap(draw, spec["title"], title_font, W - 2 * PAD)) * int(62 * 1.16) + 30
+    room = H - 130 - 440 - 52 - title_h
+    for size in ([spec["size"]] if spec.get("size") else range(42, 28, -2)):
+        item_font = font("sans", size)
+        heights = [len(wrap(draw, item, item_font, W - 2 * PAD - 46)) * int(size * 1.26) for item in spec["items"]]
+        gap = int(size * 0.7)
+        items_h = sum(heights) + gap * (len(heights) - 1)
+        if items_h <= room:
+            break
+    y = H - 130 - items_h - title_h - 52
+    shade_bottom(img, y - 40)
+    draw = ImageDraw.Draw(img)
+    y = kicker(draw, spec["kicker"], PAD, y)
+    y = block(draw, spec["title"], title_font, PAD, y, W - 2 * PAD, WHITE, gap=1.16) + 30
+    for item in spec["items"]:
+        draw.ellipse([PAD, y + size * 0.42, PAD + 16, y + size * 0.42 + 16], fill=BRAND)
+        y = block(draw, item, item_font, PAD + 46, y, W - 2 * PAD - 46, WHITE, gap=1.26) + gap
+    return img, WHITE
+
+
 def slide_list(spec):
+    if spec.get("image") and spec.get("layout", "full") == "full":
+        return slide_list_full(spec)
     img = Image.new("RGB", (W, H), BG)
     draw = ImageDraw.Draw(img)
     y = PAD + 30
@@ -243,6 +282,17 @@ def slide_map(spec):
 
 def slide_cta(spec):
     img = photo(spec["image"], (W, H))
+    if spec.get("layout", "full") == "full":  # как обложка: затемнение снизу, текст у низа
+        draw = ImageDraw.Draw(img)
+        t_font, x_font = font("serif", 72), font("sans", 42)
+        t_lines = wrap(draw, spec["title"], t_font, W - 2 * PAD)
+        x_lines = wrap(draw, spec["text"], x_font, W - 2 * PAD)
+        y = H - 150 - len(x_lines) * 54 - 30 - len(t_lines) * 86
+        shade_bottom(img, y - 40)
+        draw = ImageDraw.Draw(img)
+        y = block(draw, spec["title"], t_font, PAD, y, W - 2 * PAD, WHITE, gap=1.19) + 30
+        block(draw, spec["text"], x_font, PAD, y, W - 2 * PAD, WHITE, gap=1.29)
+        return img, WHITE
     img = Image.blend(img, Image.new("RGB", (W, H), (0, 0, 0)), 0.45)
     draw = ImageDraw.Draw(img)
     y = spec.get("top", 430)
