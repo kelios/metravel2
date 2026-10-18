@@ -11,23 +11,36 @@ export interface Hit {
   chunk: ChunkRecord
 }
 
-export function topK(query: ArrayLike<number>, artifact: IndexArtifact, k: number): Hit[] {
+/**
+ * Top-k строк по косинусу. `accept(row)` — необязательный фильтр строк (тип, локаль,
+ * исключение источника): сервис #2456 сужает выдачу без копирования цикла.
+ */
+export function topK(query: ArrayLike<number>, artifact: IndexArtifact, k: number, accept?: (row: number) => boolean): Hit[] {
   const { dim, count } = artifact.manifest
   if (query.length !== dim) throw new Error(`query dim ${query.length} ≠ index dim ${dim}`)
   if (k <= 0) return []
   const { vectors } = artifact
+  // `best` отсортирован по убыванию; новый элемент встаёт бинарным поиском после равных, а не
+  // пересортировкой всего списка: сервис сканирует с k до ~1000 и больше (полная сортировка на
+  // каждую вставку — O(k) вызовов компаратора на строку).
   const best: Array<{ index: number; score: number }> = []
   for (let row = 0; row < count; row += 1) {
+    if (accept && !accept(row)) continue
     let dot = 0
     const offset = row * dim
     for (let i = 0; i < dim; i += 1) dot += vectors[offset + i] * query[i]
-    if (best.length < k) {
-      best.push({ index: row, score: dot })
-      best.sort((a, b) => b.score - a.score)
-    } else if (dot > best[best.length - 1].score) {
-      best[best.length - 1] = { index: row, score: dot }
-      best.sort((a, b) => b.score - a.score)
+    if (best.length >= k) {
+      if (dot <= best[best.length - 1].score) continue
+      best.pop()
     }
+    let lo = 0
+    let hi = best.length
+    while (lo < hi) {
+      const mid = (lo + hi) >>> 1
+      if (best[mid].score >= dot) lo = mid + 1
+      else hi = mid
+    }
+    best.splice(lo, 0, { index: row, score: dot })
   }
   return best.map((item) => ({ ...item, chunk: artifact.chunks[item.index] }))
 }
@@ -85,7 +98,7 @@ export interface EvalSummary {
   results: EvalQueryResult[]
 }
 
-function percentile(values: number[], p: number): number {
+export function percentile(values: number[], p: number): number {
   if (!values.length) return 0
   const sorted = [...values].sort((a, b) => a - b)
   const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil((p / 100) * sorted.length) - 1))

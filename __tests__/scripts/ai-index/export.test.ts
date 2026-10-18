@@ -1,5 +1,4 @@
 import fs from 'fs'
-import os from 'os'
 import path from 'path'
 
 import {
@@ -12,6 +11,8 @@ import {
   runExport,
   type Fetcher,
 } from '@/scripts/ai-index/export'
+
+import { makeTempDir } from '../cli-test-utils'
 
 const FIXTURES = path.join(__dirname, '..', '..', 'fixtures', 'ai-index', 'raw')
 const readJson = (file: string) => JSON.parse(fs.readFileSync(file, 'utf8'))
@@ -73,7 +74,7 @@ function fakeApi(): { fetcher: Fetcher; calls: string[] } {
 describe('ai-index export: прогон на фикстурах', () => {
   let rawDir: string
   beforeEach(() => {
-    rawDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-index-export-'))
+    rawDir = makeTempDir('ai-index-export-')
   })
   afterEach(() => {
     fs.rmSync(rawDir, { recursive: true, force: true })

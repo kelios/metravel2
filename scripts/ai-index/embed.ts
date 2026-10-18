@@ -43,6 +43,8 @@ export interface EmbedderOptions {
   threads?: number
   cacheDir?: string
   batchSize?: number
+  /** Только локальный кэш весов, без обращений к huggingface.co (контейнер сервиса #2456). */
+  offline?: boolean
 }
 
 interface OutputTensor {
@@ -61,6 +63,7 @@ export async function createEmbedder(spec: EmbeddingModelSpec, options: Embedder
   const transformers = await import('@huggingface/transformers')
   transformers.env.cacheDir = options.cacheDir ?? defaultModelCacheDir()
   transformers.env.allowLocalModels = false
+  if (options.offline) transformers.env.allowRemoteModels = false
   const threads = options.threads ?? Math.max(1, os.availableParallelism() - 1)
   const session_options = { intraOpNumThreads: threads, interOpNumThreads: 1 }
 

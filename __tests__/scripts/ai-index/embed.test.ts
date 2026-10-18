@@ -1,12 +1,12 @@
 import { createHash } from 'crypto'
 import fs from 'fs'
-import os from 'os'
-import path from 'path'
 
 import { planEmbedding, runEmbed, type Embedder } from '@/scripts/ai-index/embed'
 import { chunkId, readIndex, type ChunkRecord } from '@/scripts/ai-index/format'
 import { EMBEDDING_MODELS, type EmbeddingModelSpec } from '@/scripts/ai-index/models'
 import { evaluate, search, topK, topSources } from '@/scripts/ai-index/query'
+
+import { makeTempDir } from '../cli-test-utils'
 
 const DIM = 8
 
@@ -74,7 +74,7 @@ describe('ai-index models: рецепт вектора — контракт', ()
 describe('ai-index embed: инкремент', () => {
   let distDir: string
   beforeEach(() => {
-    distDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-index-embed-'))
+    distDir = makeTempDir('ai-index-embed-')
   })
   afterEach(() => {
     fs.rmSync(distDir, { recursive: true, force: true })

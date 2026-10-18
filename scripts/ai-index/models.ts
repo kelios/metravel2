@@ -42,6 +42,22 @@ export const EMBEDDING_MODELS: Record<string, EmbeddingModelSpec> = {
     formatDocument: ({ title, text }) => `title: ${title || 'none'} | text: ${text}`,
     formatQuery: (query) => `task: search result | query: ${query}`,
   },
+  /**
+   * Та же модель и тот же рецепт, веса 4-битные (onnx/model_q4.onnx, MatMulNBits). Замер
+   * сервиса #2456 на Mac, один поток: q8 держит 1,6 ГБ RSS (int8-веса деквантуются в fp32 при
+   * первом прогоне) и считает запрос за 70 мс; q4 — 0,54 ГБ и 11 мс. Индекс и запрос обязаны
+   * считаться одним ключом: переход требует `embed --model embeddinggemma-300m-q4 --full`.
+   */
+  'embeddinggemma-300m-q4': {
+    key: 'embeddinggemma-300m-q4',
+    hfId: 'onnx-community/embeddinggemma-300m-ONNX',
+    dim: 768,
+    dtype: 'q4',
+    recipe: 'sentence_embedding',
+    pooling: 'mean',
+    formatDocument: ({ title, text }) => `title: ${title || 'none'} | text: ${text}`,
+    formatQuery: (query) => `task: search result | query: ${query}`,
+  },
   'qwen3-embedding-0.6b': {
     key: 'qwen3-embedding-0.6b',
     hfId: 'onnx-community/Qwen3-Embedding-0.6B-ONNX',
