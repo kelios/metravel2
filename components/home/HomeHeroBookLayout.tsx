@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react'
 import { Animated, Pressable, Text, View } from 'react-native'
+import type { LayoutChangeEvent } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import Button from '@/components/ui/Button'
@@ -69,6 +71,37 @@ type HomeHeroBookLayoutProps = {
   onPrevSlide: () => void
   onNextSlide: () => void
   onMarkSlideLoaded: (slideIndex: number) => void
+}
+
+// Page notes are optional decoration: a fixed height threshold cannot know how
+// many lines the title and subtitle wrap into (viewport, locale), so the notes
+// stay only while the measured page content fits its frame. Once dropped for a
+// layout they stay dropped until the book size or the text changes.
+function usePageNotesFit(enabled: boolean, bookHeight: number, layoutKey: string) {
+  // Vertical page insets follow bookHeight (getHomeBookPageMetrics). A content
+  // resize can arrive first, so never compare it with another book's frame.
+  const [frame, setFrame] = useState({ bookHeight: 0, height: 0 })
+  const frameHeight = frame.bookHeight === bookHeight ? frame.height : 0
+  // A content height measured for another layout is stale: the notes are back
+  // in the page and only a fresh measurement tells whether they fit now.
+  const [content, setContent] = useState({ key: '', height: 0 })
+  const [droppedKey, setDroppedKey] = useState<string | null>(null)
+  const fits = droppedKey !== layoutKey
+  const contentHeight = content.key === layoutKey ? content.height : 0
+
+  useEffect(() => {
+    if (!enabled || !fits || frameHeight <= 0 || contentHeight <= frameHeight + 1) return
+    setDroppedKey(layoutKey)
+  }, [contentHeight, enabled, fits, frameHeight, layoutKey])
+
+  // Keep handlers attached even while disabled: RN Web observes only at mount.
+  return {
+    fits,
+    onFrameLayout: (e: LayoutChangeEvent) =>
+      setFrame({ bookHeight, height: e.nativeEvent.layout.height }),
+    onContentLayout: (e: LayoutChangeEvent) =>
+      setContent({ key: layoutKey, height: e.nativeEvent.layout.height }),
+  }
 }
 
 const SLIDE_WRAPPER_POINTER_NONE = { pointerEvents: 'none' as const }
@@ -506,7 +539,9 @@ export default function HomeHeroBookLayout({
 }: HomeHeroBookLayoutProps) {
   const withBookFrame = isWeb && showSideSlider
   const showChapterHeader = showSideSlider && !isNarrowLayout
-  const showPageNotes = showSideSlider && !isNarrowLayout && bookHeight >= 780
+  const pageNotesEnabled = showSideSlider && !isNarrowLayout && bookHeight >= 780
+  const pageNotesFit = usePageNotesFit(pageNotesEnabled, bookHeight, `${bookHeight}:${width}:${heroSubtitle}`)
+  const showPageNotes = pageNotesEnabled && pageNotesFit.fits
 
   return (
     <View style={styles.heroShell}>
@@ -522,8 +557,15 @@ export default function HomeHeroBookLayout({
           <View testID="home-hero-left-page" style={styles.heroSection}>
             {withBookFrame && <View style={styles.heroPageCurlLeft} />}
 
-            <View testID="home-hero-left-frame" style={styles.leftPageFrame}>
-              <View style={styles.leftPageContent}>
+            <View
+              testID="home-hero-left-frame"
+              style={styles.leftPageFrame}
+              onLayout={pageNotesFit.onFrameLayout}
+            >
+              <View
+                style={styles.leftPageContent}
+                onLayout={pageNotesFit.onContentLayout}
+              >
                 <View>
                   {showChapterHeader && (
                     <View style={styles.chapterHeader}>
