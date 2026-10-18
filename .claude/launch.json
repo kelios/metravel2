@@ -2,6 +2,26 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "Assistant 2460 Web 8081",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "mkdir -p \"$PWD/.codex-temp/metro-tmp-2460\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-2460\" PATH=/opt/homebrew/opt/node@22/bin:$PATH NODE_OPTIONS=--max-old-space-size=12288 EXPO_NO_DOTENV=1 EXPO_PUBLIC_API_URL=https://metravel.by EXPO_PUBLIC_IS_LOCAL_API=false EXPO_PUBLIC_AI_ASSISTANT=1 EXPO_PUBLIC_AI_ASSISTANT_URL=http://127.0.0.1:8080 npx expo start --web --port 8081"
+      ],
+      "port": 8081,
+      "autoPort": false
+    },
+    {
+      "name": "Assistant 2460 FlagOff Web 8082",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "mkdir -p \"$PWD/.codex-temp/metro-tmp-2460off\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-2460off\" PATH=/opt/homebrew/opt/node@22/bin:$PATH NODE_OPTIONS=--max-old-space-size=12288 EXPO_NO_DOTENV=1 EXPO_PUBLIC_API_URL=https://metravel.by EXPO_PUBLIC_IS_LOCAL_API=false npx expo start --web --port 8082"
+      ],
+      "port": 8082,
+      "autoPort": false
+    },
+    {
       "name": "Full Book 2357 Web 8082",
       "runtimeExecutable": "bash",
       "runtimeArgs": [

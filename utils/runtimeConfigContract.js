@@ -13,6 +13,11 @@ const MOCK_FLAG_NAMES = [
   'EXPO_PUBLIC_OSRM_MOCK',
 ]
 
+// #2460: ассистент сайта под фича-флагом. Флаг требует адреса llama-server;
+// локальный адрес модели в production-сборке — ошибка конфигурации.
+const AI_ASSISTANT_FLAG_NAME = 'EXPO_PUBLIC_AI_ASSISTANT'
+const AI_ASSISTANT_URL_NAME = 'EXPO_PUBLIC_AI_ASSISTANT_URL'
+
 const LEGACY_ROUTING_API_KEY_SOURCES = new Set([
   'EXPO_PUBLIC_ROUTE_SERVICE',
   'ORS_API_KEY',
@@ -35,6 +40,41 @@ const isLikelySelfProxyApiUrl = (parsed) => {
     (host === 'localhost' || host === '127.0.0.1' || host === '::1') &&
     (port === '8081' || port === '8082' || port === '8085' || port === '19006')
   )
+}
+
+const isTruthyFlag = (value) => ['1', 'true'].includes(String(value || '').trim().toLowerCase())
+
+const getAiAssistantDiagnosticsCore = (env = process.env, { isProduction = false } = {}) => {
+  if (!isTruthyFlag(env[AI_ASSISTANT_FLAG_NAME])) return []
+  const diagnostics = []
+  const rawUrl = String(env[AI_ASSISTANT_URL_NAME] || '').trim()
+  let parsed = null
+  try {
+    parsed = rawUrl ? new URL(rawUrl) : null
+  } catch {
+    parsed = null
+  }
+  if (!parsed || (parsed.protocol !== 'http:' && parsed.protocol !== 'https:')) {
+    diagnostics.push({
+      code: 'AI_ASSISTANT_URL_INVALID',
+      severity: 'error',
+      message: `${AI_ASSISTANT_FLAG_NAME}=1 requires ${AI_ASSISTANT_URL_NAME} with an absolute http/https URL of the llama-server.`,
+    })
+  } else if (isProduction && isLocalHost(parsed.hostname)) {
+    diagnostics.push({
+      code: 'AI_ASSISTANT_LOCAL_URL_IN_PRODUCTION',
+      severity: 'error',
+      message: `${AI_ASSISTANT_URL_NAME} points to a local host in a production build; the site assistant would call a server that does not exist for visitors.`,
+    })
+  }
+  if (isProduction) {
+    diagnostics.push({
+      code: 'AI_ASSISTANT_ENABLED_IN_PRODUCTION',
+      severity: 'warning',
+      message: `${AI_ASSISTANT_FLAG_NAME}=1 in a production build: the site assistant is enabled (owner decision 18.10.2026 keeps it off until metravel-llm has a server).`,
+    })
+  }
+  return diagnostics
 }
 
 const isLocalApiEnabled = (env = process.env) =>
@@ -150,6 +190,8 @@ const getRuntimeConfigDiagnosticsCore = (env = process.env, options = {}) => {
     })
   }
 
+  diagnostics.push(...getAiAssistantDiagnosticsCore(env, { isProduction }))
+
   const routingDiagnostics = getRoutingConfigDiagnosticsCore(env).map((diagnostic) => ({
     ...diagnostic,
     severity: 'warning',
@@ -159,7 +201,10 @@ const getRuntimeConfigDiagnosticsCore = (env = process.env, options = {}) => {
 }
 
 module.exports = {
+  AI_ASSISTANT_FLAG_NAME,
+  AI_ASSISTANT_URL_NAME,
   MOCK_FLAG_NAMES,
+  getAiAssistantDiagnosticsCore,
   ROUTING_API_KEY_CANDIDATES,
   resolveRoutingApiKeyWithSourceCore,
   getRoutingConfigDiagnosticsCore,

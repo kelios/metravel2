@@ -30,6 +30,9 @@ export type RuntimeConfigDiagnostic = {
     | 'API_URL_SELF_PROXY'
     | 'API_URL_UNSAFE_HTTP'
     | 'DEV_MOCK_FLAG_ENABLED'
+    | 'AI_ASSISTANT_URL_INVALID'
+    | 'AI_ASSISTANT_LOCAL_URL_IN_PRODUCTION'
+    | 'AI_ASSISTANT_ENABLED_IN_PRODUCTION'
     | 'ROUTING_KEY_MISSING'
     | 'ROUTING_KEY_LEGACY_ALIAS'
     | 'ROUTING_KEY_CONFLICT';
@@ -39,6 +42,13 @@ export type RuntimeConfigDiagnostic = {
 
 export const ROUTING_API_KEY_CANDIDATES: RoutingApiKeyCandidate[];
 export const MOCK_FLAG_NAMES: DevMockFlagName[];
+export const AI_ASSISTANT_FLAG_NAME: 'EXPO_PUBLIC_AI_ASSISTANT';
+export const AI_ASSISTANT_URL_NAME: 'EXPO_PUBLIC_AI_ASSISTANT_URL';
+
+export function getAiAssistantDiagnosticsCore(
+  env?: RoutingApiEnv,
+  options?: { isProduction?: boolean }
+): RuntimeConfigDiagnostic[];
 
 export function resolveRoutingApiKeyWithSourceCore(env?: RoutingApiEnv): RoutingApiKeyResolution;
 export function getRoutingConfigDiagnosticsCore(env?: RoutingApiEnv): RoutingConfigDiagnostic[];

@@ -1,5 +1,6 @@
 import type { NavigationIconName } from './navigationIcons';
 import { translate as i18nT } from '@/i18n'
+import { isAiAssistantEnabled } from '@/utils/aiAssistantConfig'
 
 
 export type HeaderNavItemPriority = 'primary' | 'secondary';
@@ -20,6 +21,10 @@ export const HEADER_NAV_ITEMS: HeaderNavItem[] = [
   { path: '/trips', get label() { return i18nT('navigationStatic:constants.headerNavigation.poputchiki_d9961c8c') }, icon: 'users', priority: 'primary' },
   { path: '/roulette', get label() { return i18nT('navigationStatic:constants.headerNavigation.sluchaynyy_marshrut_3f437e35') }, icon: 'dice', priority: 'primary' },
   { path: '/quests', get label() { return i18nT('navigationStatic:constants.headerNavigation.kvesty_ec386501') }, icon: 'quest-route', priority: 'primary' },
+  // #2460: ассистент сайта — только под фича-флагом (локально включён, на проде выключен).
+  ...(isAiAssistantEnabled()
+    ? [{ path: '/assistant', get label() { return i18nT('aiAssistStatic:nav.assistant') }, icon: 'message-circle' as const, priority: 'primary' as const }]
+    : []),
   { path: 'https://metravel.by/travels/akkaunty-v-instagram-o-puteshestviyah-po-belarusi', get label() { return i18nT('navigationStatic:constants.headerNavigation.travel_blogery_belarusi_c7bcdee5') }, icon: 'instagram', priority: 'secondary', external: true },
 ];
 

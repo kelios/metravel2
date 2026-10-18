@@ -4,6 +4,33 @@ import {
 } from '@/utils/runtimeConfigDiagnostics';
 
 describe('getRuntimeConfigDiagnostics', () => {
+  describe('site assistant feature flag (#2460)', () => {
+    const base = { EXPO_PUBLIC_API_URL: 'https://metravel.by', EXPO_PUBLIC_ORS_API_KEY: 'ok' };
+    const codes = (env: Record<string, string | undefined>) =>
+      getRuntimeConfigDiagnostics(env).map((d) => `${d.code}:${d.severity}`);
+
+    it('is silent while the flag is off', () => {
+      expect(codes(base).some((c) => c.startsWith('AI_ASSISTANT'))).toBe(false);
+      expect(codes({ ...base, EXPO_PUBLIC_AI_ASSISTANT: 'false', EXPO_PUBLIC_AI_ASSISTANT_URL: 'nope' }).some((c) => c.startsWith('AI_ASSISTANT'))).toBe(false);
+    });
+
+    it('requires an absolute http(s) llama-server url when the flag is on', () => {
+      expect(codes({ ...base, EXPO_PUBLIC_AI_ASSISTANT: '1' })).toContain('AI_ASSISTANT_URL_INVALID:error');
+      expect(codes({ ...base, EXPO_PUBLIC_AI_ASSISTANT: 'true', EXPO_PUBLIC_AI_ASSISTANT_URL: 'ws://x' })).toContain('AI_ASSISTANT_URL_INVALID:error');
+      const dev = codes({ ...base, EXPO_PUBLIC_AI_ASSISTANT: '1', EXPO_PUBLIC_AI_ASSISTANT_URL: 'http://127.0.0.1:8080/' });
+      expect(dev.some((c) => c.startsWith('AI_ASSISTANT'))).toBe(false);
+    });
+
+    it('flags a local model url and the enabled assistant in a production build', () => {
+      const prod = codes({ ...base, NODE_ENV: 'production', EXPO_PUBLIC_AI_ASSISTANT: '1', EXPO_PUBLIC_AI_ASSISTANT_URL: 'http://127.0.0.1:8080' });
+      expect(prod).toContain('AI_ASSISTANT_LOCAL_URL_IN_PRODUCTION:error');
+      expect(prod).toContain('AI_ASSISTANT_ENABLED_IN_PRODUCTION:warning');
+      const prodRemote = codes({ ...base, EXPO_PUBLIC_ENV: 'production', EXPO_PUBLIC_AI_ASSISTANT: '1', EXPO_PUBLIC_AI_ASSISTANT_URL: 'https://metravel.by/ai' });
+      expect(prodRemote).toEqual(expect.arrayContaining(['AI_ASSISTANT_ENABLED_IN_PRODUCTION:warning']));
+      expect(prodRemote).not.toContain('AI_ASSISTANT_LOCAL_URL_IN_PRODUCTION:error');
+    });
+  });
+
   it('reports missing API URL', () => {
     const diagnostics = getRuntimeConfigDiagnostics({});
     expect(diagnostics).toEqual(

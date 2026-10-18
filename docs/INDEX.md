@@ -45,6 +45,7 @@
 ## Feature maps и load-bearing contracts
 
 - `docs/features/README.md` — правила feature maps;
+- `docs/features/ai-assistant.md` — ассистент сайта под фича-флагом (#2460): пайплайн, флаг, локальный стек;
 - `docs/features/travel.md` — catalog/detail/wizard ownership;
 - `docs/features/map.md` — web/native map engines, bridge и place contract;
 - `docs/features/places.md` — places catalog;

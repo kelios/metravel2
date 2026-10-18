@@ -15,6 +15,9 @@ import ListTravel from '@/components/listTravel/SearchListTravelRoute'
 import { trackContentCreateCtaClicked } from '@/utils/growthFunnelAnalytics'
 import { translate as i18nT } from '@/i18n'
 import { useResponsiveWidth } from '@/hooks/useResponsive'
+import { isAiAssistantEnabled } from '@/utils/aiAssistantConfig'
+import UIButton from '@/components/ui/Button'
+import Feather from '@expo/vector-icons/Feather'
 
 
 function SearchScreen() {
@@ -26,6 +29,11 @@ function SearchScreen() {
   const viewportWidth = useResponsiveWidth()
   const pageHeading = i18nT('seoStatic:search.heading')
   const canRenderList = Platform.OS !== 'web' || viewportWidth > 0
+  // #2460: кнопка «Спросить ассистента» — только под фича-флагом.
+  const assistantEnabled = isAiAssistantEnabled()
+  const handleAskAssistantPress = useCallback(() => {
+    router.push('/assistant')
+  }, [router])
 
   const handleCreateTravelPress = useCallback(() => {
     trackContentCreateCtaClicked({
@@ -63,6 +71,12 @@ function SearchScreen() {
           alignItems: 'center',
           padding: DESIGN_TOKENS.spacing.lg,
         },
+        assistantCta: {
+          flexDirection: 'row',
+          justifyContent: 'flex-end',
+          paddingHorizontal: DESIGN_TOKENS.spacing.md,
+          paddingTop: DESIGN_TOKENS.spacing.xs,
+        },
         srOnly: Platform.select({
           web: {
             position: 'absolute' as const,
@@ -96,6 +110,18 @@ function SearchScreen() {
       )}
       <View style={styles.container} testID="search-container">
         {Platform.OS === 'web' && <h1 style={styles.srOnly as any}>{pageHeading}</h1>}
+        {assistantEnabled ? (
+          <View style={styles.assistantCta}>
+            <UIButton
+              variant="soft"
+              size="sm"
+              label={i18nT('aiAssistStatic:ask.searchCta')}
+              icon={<Feather name="message-circle" size={16} color={colors.primaryDark} />}
+              onPress={handleAskAssistantPress}
+              testID="search-ask-assistant"
+            />
+          </View>
+        ) : null}
         <ErrorBoundary
           fallback={
             <View style={styles.errorContainer}>

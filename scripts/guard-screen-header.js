@@ -23,6 +23,8 @@ const SCREEN_HEADER_OWNERS = [
   'app/(tabs)/favorites.tsx',
   'components/screens/history/HistoryScreen.tsx',
   'components/screens/calendar/CalendarScreen.tsx',
+  // #2460: ассистент сайта под фича-флагом.
+  'components/screens/assistant/AssistantScreen.tsx',
   // #2148: экран прохождения квеста — декларацию зовёт визард
   // (`guard-screen-actions.js` требует вызов в `QuestWizard.tsx`).
   'components/quests/useQuestScreenHeader.ts',

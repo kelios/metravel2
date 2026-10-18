@@ -358,6 +358,8 @@ const COUNTED_NOUN = new RegExp(
 )
 
 const COUNTED_NOUN_ALLOWLIST: Record<string, string> = {
+  'aiAssistStatic:ask.tooLong':
+    'лимит — константа MAX_QUESTION_LENGTH = 500 (#2460): «500 символов», BE «500 знакаў», UK «500 символів», PL «500 znaków», EN «500 characters»',
   'export:services.pdf_export.TravelDataTransformer.slishkom_mnogo_izobrazheniy_v_vybrannyh_pute_cded7c5a':
     'максимум — константа MAX_TOTAL_IMAGES = 200: «200 изображений», PL «200 obrazów»',
   'export:services.pdf_export.TravelDataTransformer.slishkom_mnogo_puteshestviy_vybrano_value1_m_406dc555':

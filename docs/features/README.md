@@ -28,6 +28,7 @@
 - [x] [article](./article.md) — rich-text тело, редактор, санитизация, SSG-подача
 - [x] [export](./export.md) — PDF-книга, печать квеста, выгрузка маршрута
 - [x] [achievements](./achievements.md) — значки, ранги, XP, peer- и редкие награды, прогрессия
+- [x] [ai-assistant](./ai-assistant.md) — ассистент сайта `/assistant` на собственной модели под фича-флагом: подбор карточек, промпт, страж ссылок, лимит
 - [x] [trips](./trips.md) — совместные поездки, заявки, планировщик маршрута
 - [x] [images](./images.md) — пайплайн картинок: загрузка, варианты, `/media-resize`, storage-политика
 - [x] [seasonal-theme](./seasonal-theme.md) — праздничное оформление сайта: реестр тем, окна по календарю, `data-season`, переключатель
