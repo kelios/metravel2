@@ -7,6 +7,7 @@ import FreezeWhenBlurred from '@/components/layout/FreezeWhenBlurred'
 import StandaloneScreen from '@/components/layout/StandaloneScreen'
 import { useThemedColors } from '@/hooks/useTheme'
 import { parseQuestLocaleRoute } from '@/utils/questLocaleRouting'
+import { readSyncImport } from '@/utils/syncImport'
 
 // Explicit source extensions prevent platform resolution from re-entering this
 // adapter. Native keeps the original catch-all and its existing error handling.
@@ -16,16 +17,22 @@ const NotFoundContent = require('./[...missing].tsx').NotFoundContent as React.C
 // this catch-all's module graph, and the shared-chunk split then shipped it as
 // eager JS on unrelated routes (userpoints, messages, cookies, user, trip plan).
 // The quest screen loads only once the path is a locale quest route.
-type QuestScreenComponent = typeof import('@/app/(tabs)/quests/[city]/[questId]').default
+type QuestScreenModule = typeof import('@/app/(tabs)/quests/[city]/[questId]')
 // #2465: once the module is in, render it directly. React.lazy suspends on its
 // first render even for a resolved import, and the reveal of that Suspense
 // retry is throttled 300 ms after the last fallback commit — on a translated
 // member, whose document ships the chunk, that held the quest screen back.
-let loadedQuestScreen: QuestScreenComponent | null = null
-const loadQuestScreen = () => import('@/app/(tabs)/quests/[city]/[questId]').then((module) => {
-  loadedQuestScreen = module.default
-  return module
-})
+// This module is evaluated inside the route's first render: only the module
+// Metro hands over synchronously (`readSyncImport`) is in time for it.
+let loadedQuestScreen: QuestScreenModule['default'] | null = null
+const loadQuestScreen = () => {
+  const pending = import('@/app/(tabs)/quests/[city]/[questId]')
+  loadedQuestScreen = readSyncImport(pending)?.default ?? loadedQuestScreen
+  return pending.then((module) => {
+    loadedQuestScreen = module.default
+    return module
+  })
+}
 const LazyQuestByIdScreen = React.lazy(loadQuestScreen)
 // Start the chunk with this module on a locale quest URL instead of on first
 // render, so it overlaps the catch-all's own render; other catch-all paths skip it.
