@@ -1,7 +1,7 @@
 // __tests__/components/Map.ios.test.tsx
 import React from 'react';
 import { act, render } from '@testing-library/react-native';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { padViewportBBox } from '@/hooks/map/mapViewportCoverage';
 
 const mockInjectJavaScript = jest.fn();
@@ -17,6 +17,9 @@ const mockUseMapClusters = jest.fn(() => ({
 jest.mock('@/hooks/map/useMapClusters', () => ({
   useMapClusters: (...args: unknown[]) => mockUseMapClusters(...args),
 }));
+
+// Follow the native resolution used by UserPointsMap on both mobile platforms.
+jest.mock('@/components/MapPage/Map', () => jest.requireActual('@/components/MapPage/Map.ios'));
 
 jest.mock('@/hooks/useNetworkStatus', () => ({
   useNetworkStatus: () => ({
@@ -876,6 +879,56 @@ describe('Map.ios Component', () => {
     expect(markers).toContain('"add":[]');
     expect(markers).toContain('"usesServerClusters":true');
     expect(markers).not.toContain('"coord":"53.9,27.5"');
+  });
+
+  it.each(['ios', 'android'] as const)(
+    'personal points never enable the public catalogue query on %s',
+    (platform) => {
+      const originalPlatform = Platform.OS;
+      Platform.OS = platform;
+      try {
+        const { UserPointsMap } = require('@/components/UserPoints/UserPointsMap');
+        const rendered = render(<UserPointsMap points={[]} />);
+        act(() => {
+          getWebView(rendered).props.onMessage({
+            nativeEvent: {
+              data: JSON.stringify({
+                type: 'MAP_VIEWPORT',
+                bbox: { south: 53.1, west: 27.1, north: 54.1, east: 28.1 },
+                zoom: 9,
+              }),
+            },
+          });
+        });
+        expect(mockUseMapClusters).toHaveBeenLastCalledWith(
+          expect.objectContaining({ enabled: false }),
+        );
+      } finally {
+        Platform.OS = originalPlatform;
+      }
+    },
+  );
+
+  it('pointsOnly preserves supplied marker identities when public catalogue data is cached', () => {
+    // A disabled React Query observer can still expose cached successful data.
+    mockUseMapClusters.mockReturnValue({
+      data: {
+        clusters: [{
+          id: 'public-cluster', center: { lat: 53.95, lng: 27.6 }, count: 12,
+          bounds: { south: 53.8, west: 27.4, north: 54.1, east: 27.8 },
+          previewItems: [],
+        }],
+        markers: [], totalCount: 12, source: 'server', generatedAt: '2026-10-18T00:00:00Z',
+      },
+      isLoading: false, isFetching: false, isError: false, isDebouncing: false,
+    });
+    const rendered = render(<Map travel={mockTravel} coordinates={mockCoordinates} pointsOnly />);
+    getInjectedPayloadScript(rendered);
+    const markers = channelCalls('__metravelSetMarkers').at(-1) ?? '';
+    expect(markers).toContain('"id":"1"');
+    expect(markers).toContain('"id":"2"');
+    expect(markers).toContain('"usesServerClusters":false');
+    expect(channelCalls('__metravelSetClusters').at(-1)).toContain('"add":[]');
   });
 
   it('#2453: a centre change does not re-serialize markers', () => {

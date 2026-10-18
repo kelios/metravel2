@@ -4732,6 +4732,27 @@ guard, падающий в CI на попытке обойти этот конт
   прошли. Evidence — `.codex-temp/task-1571-finish/`. Этот pure-model check не
   подменяет приёмку backend/renderer/UI для всей семьи `#1567/#1568`.
 
+### NATIVE-USERPOINTS-CATALOGUE-SUBSTITUTION-001 — общий каталог подменяет личные точки
+
+- **Инвариант:** native `UserPointsMap` рисует только переданные личные точки;
+  публичные markers/clusters не дополняют и не заменяют этот набор, даже если
+  успешный ответ каталога уже находится в query cache.
+- **Surface/owner:** `UserPointsMap.tsx` → `Map.ios.tsx`, также реэкспорт
+  `Map.android.tsx`; #2483, related #2471/#1773/#2453.
+- **Подтверждённый механизм (2026-10-18, source + RED units):** producer не
+  передавал существующий `pointsOnly`, поэтому online/radius включал общий
+  `/api/map/clusters/` без пользовательского фильтра. Consumer выбирал server
+  data без проверки `pointsOnly`; одно отключение запроса оставляло подмену
+  через доступный кэш успешного ответа.
+- **Controls:** producer передаёт `pointsOnly`; consumer проверяет его и при
+  включении query, и при выборе dataset. `Map.ios.test.tsx` проверяет реальную
+  связку UserPointsMap/native renderer для iOS/Android после viewport message
+  (`enabled: false`) и сохранение supplied marker IDs при cached catalogue.
+  Обычный catalogue renderer продолжает использовать серверные кластеры.
+- **Done gate:** scoped code review и units; в `testing` личные marker keys
+  сверяются с независимым набором пользовательских точек на native-устройстве.
+  Эти units не являются runtime/device evidence и не доказывают число точек.
+
 ### MAP-IOS-TILE-GRAY-001 — native tileerror не восстанавливается вместе с сетью
 
 - **Инвариант:** после `offline → online` уже открытая native-карта сама

@@ -295,6 +295,7 @@ const Map: React.FC<TravelProps> = ({
   const shouldUseServerClusterData =
     isConnected &&
     mode === 'radius' &&
+    !pointsOnly &&
     !serverClusterQuery.isError &&
     radiusFilteredServerClusterRenderData.hasServerData &&
     !categoryFilterUnresolved;

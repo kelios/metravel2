@@ -1,0 +1,15 @@
+# Entry phase only. The native-map sidecar owns marker/zoom assertions.
+# Requires an already signed-in user 104 and the unchanged 869-point fixture.
+appId: by.metravel.app
+---
+- launchApp
+- openLink: "metravel://userpoints"
+- runFlow: confirm-ios-app-link.yaml
+- extendedWaitUntil:
+    visible:
+      id: userpoints-screen
+    timeout: 30000
+- tapOn:
+    id: segmented-map
+- assertVisible:
+    id: userpoints-screen

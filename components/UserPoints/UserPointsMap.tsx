@@ -503,6 +503,7 @@ const UserPointsMapNative: React.FC<UserPointsMapProps> = ({
     <View style={[styles.container, height ? { height } : null]}>
       <MapPageNativeMap
         travel={{ data: travelData }}
+        pointsOnly
         coordinates={activeCoordinates ?? mapCenter}
         routePoints={routePoints}
         fullRouteCoords={routePoints}
