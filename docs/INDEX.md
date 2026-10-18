@@ -151,7 +151,7 @@ scope.
 Стратегия и append-only operational logs:
 
 - `docs/GROWTH_PLAN.md` — шестимесячный plan с baseline/review dates;
-- `docs/LOCAL_AI_ASSISTANT_PLAN.md` — предложение (17.10.2026): локальный
+- `docs/LOCAL_AI_ASSISTANT_PLAN.md` — предложение (17.10.2026) и реализация §10–12 (#2454/#2456/#2455): локальный
   AI-помощник на данных сайта — RAG-индекс, выбор моделей, два контура
   (редакция на Mac, подбор на сайте), ограничения прода и план по этапам;
 - `docs/AI_TRAIN_DATASETS.md` — план v2 metravel-llm (18.10.2026): архитектура

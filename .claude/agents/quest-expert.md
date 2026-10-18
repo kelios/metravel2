@@ -1,7 +1,7 @@
 ---
 name: quest-expert
 description: "Код и тулинг quests: список, детали, прохождение, ответы, offline, печать, SSG, сканы и миграции. Для незасчитанного ответа, закрытого шага или сломанного quest runtime; контент *-quest-data.js и гео — отдельные агенты."
-tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update
+tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update, mcp__metravel-knowledge__search, mcp__metravel-knowledge__similar, mcp__metravel-knowledge__coverage, mcp__metravel-knowledge__gaps
 model: opus
 ---
 
@@ -149,6 +149,10 @@ Jest/static guards ниже можно запускать до review; browser/e
    `npm run typecheck`.
 4. **Квест-контент** (новый город, точки, легенды, задания) — не твоя зона:
    маршрутизируй по скиллу `metravel-quest` → «Кто что делает».
+5. Новый город/место для квеста или вопрос «есть ли у нас материал про X» —
+   сначала MCP `metravel-knowledge` (#2455): `coverage(<место>)` и `gaps(<страна>)`;
+   квест не дублирует существующий, а статьи с упоминаниями места — ссылки в
+   карточке квеста.
 
 ## Известные крупные файлы (нужен split в будущем)
 

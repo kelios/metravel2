@@ -2,7 +2,7 @@
 name: instagram-researcher
 description: >-
   Research & Article Editor Instagram @metravelby: читает статью автора 1 или квест целиком, выписывает факты с цитатой-источником в sources.md, проверяет внешние факты по авторитетным источникам, предлагает фактические правки статьи без переписывания личной истории. Фото, подпись, слайды не делает. Триггеры: «собери факты для поста», «проверь статью перед постом».
-tools: Read, Grep, Glob, Write, Bash, WebSearch, WebFetch
+tools: Read, Grep, Glob, Write, Bash, WebSearch, WebFetch, mcp__metravel-knowledge__search, mcp__metravel-knowledge__similar, mcp__metravel-knowledge__coverage, mcp__metravel-knowledge__gaps
 model: sonnet
 ---
 
@@ -21,6 +21,9 @@ model: sonnet
 - `brief.md` поста — тема, источники (id статей, quest_id), что показать.
 - `docs/INSTAGRAM_CONTENT_SPEC.md` раздел 0 (контракт `sources.md`), 2 (пост о функции сайта),
   11, 12 и 25 («Источник контента», «Факты», «Беларусь: запрещённые источники»).
+- MCP `metravel-knowledge` (#2455): перед поиском фактов вне сайта — `coverage(<место>)` и
+  `search(<место или факт>)`: наши статьи и квесты про это место — первый источник для
+  `sources.md` (ссылка на статью) и кандидаты на внутреннюю ссылку в `article-edits.md`.
 
 ## Порядок
 

@@ -571,6 +571,101 @@ embeddinggemma-300m-q4 --full`. Качество q4 против q8 на наб�
 проверяется запуск под `USER 1000:1000` и `HEALTHCHECK` без curl (проба через
 `node -e fetch`).
 
+## 12. MCP `metravel-knowledge` для редакции (#2455, 18.10.2026)
+
+Контур редакции из §4.2: stdio-MCP поверх артефакта §10.3, четыре инструмента,
+тот же код ранжирования, что у сервиса §11 (`scripts/ai-assist/search.ts`), чтобы
+«похожие» у владельца и у читателя совпадали.
+
+### 12.1 Файлы и запуск
+
+- `scripts/ai-index/knowledge.ts` — логика инструментов и открытие индекса с
+  проверкой модели; `scripts/ai-index/mcp-server.ts` — регистрация инструментов в
+  `@modelcontextprotocol/sdk` (zod-схемы входа и выхода, `structuredContent` +
+  JSON-текст); `scripts/ai-index/mcp.ts` — точка входа stdio.
+- `.mcp.json` → сервер `metravel-knowledge`: `sh -c` переходит в
+  `$CLAUDE_PROJECT_DIR` (или `$PWD`), берёт `node` ≥ 22, иначе
+  `/opt/homebrew/opt/node@22/bin/node` или `/usr/local/opt/node@22/bin/node`, и
+  запускает `mcp.ts` через `--experimental-strip-types` — `tsx` в проекте нет.
+  Claude Code поднимает сервер сам при старте сессии в корне чекаута; первая
+  сессия спросит разрешение на новый сервер из `.mcp.json`.
+- Переменные: `METRAVEL_AI_INDEX_DIR` (по умолчанию `.codex-temp/ai-index/dist`
+  от корня), `METRAVEL_AI_INDEX_MODEL` (строгий ключ модели), `AI_INDEX_THREADS`,
+  `AI_INDEX_MODEL_CACHE` (§10.1).
+- Старт: индекс читается и проверяется до открытия транспорта. Нет файлов →
+  строка с подсказкой про `npm run ai:index -- build` / `METRAVEL_AI_INDEX_DIR`,
+  код 1. `manifest.model` вне реестра `models.ts` или не равен
+  `METRAVEL_AI_INDEX_MODEL` → «индекс собран моделью X, сервер ожидает Y», код 1.
+  Веса модели грузятся лениво при первом `search` (на Mac с тёплым кэшем ≈ 0,5 с);
+  `similar`, `coverage`, `gaps` модели не требуют.
+
+### 12.2 Инструменты
+
+| инструмент | вход | что считает | выход |
+| --- | --- | --- | --- |
+| `search` | `query`, `limit≤50`, `type travel\|quest`, `country` | эмбеддинг запроса той же моделью → top-k фрагментов → лучший фрагмент на источник (`vectorSources`), фильтр страны по любой локали источника | `items[{score,type,source_id,title,url,snippet,city,country}]` |
+| `similar` | `type`, `source_id`, `limit` | вектор источника = нормализованное среднее его фрагментов (`sourceVector`), сам источник исключён | те же `items`; источника нет в индексе → `isError` |
+| `coverage` | `place` | лексика: основы слов места (`placeStems`: −1…−3 буквы по длине, без регистра/ё/диакритики) ищутся в заголовке, городе и текстах фрагментов ru-локали источника | `travels[]`, `quests[]` с `mentions` и `in_title`, впереди источники с местом в заголовке/городе |
+| `gaps` | `country` | места = города квестов и статей страны; место «закрыто», если есть статья с таким городом, с местом в заголовке или с первой точкой ≤ 10 км от точки квеста | `gaps[{place,quests[],mentioned_in}]`, `covered[{place,travels}]`, `sources` |
+
+Ограничение `gaps`: имена точек маршрута статьи (`coordsMeTravel`) в артефакт
+§10.3 не входят (только `lat/lng` первой точки), поэтому кандидаты берутся из
+полей `city`; у части краковских микроквестов в `city` лежит название точки
+(`Zakrzówek`, `Dąb Jagielloński`) — они попадают в `covered` по радиусу, на список
+пробелов не влияют.
+
+### 12.3 Проверка на реальном индексе (Mac, 18.10.2026, индекс §10.5: 20 513 фрагментов, 709 источников, `embeddinggemma-300m`)
+
+- `search("замки под Краковом на один день")` → 297 «Что посмотреть рядом с
+  Краковом за один день», 435 «Форты Кракова», 575 «Тенчинек и Гливице…»,
+  quest 126 «Велоквест из Кракова…», 636 «18 маршрутов» (810 мс с загрузкой
+  модели). PL `zamki pod Krakowem na jeden dzień` и EN `castles near Krakow for a
+  day trip` — те же краковские статьи (435, 636, 297, 575 среди топ-5; EN
+  добавляет 434 «Замки Малопольши»), 74 и 47 мс.
+- `coverage("Беловежская пуща")` → 4 статьи с упоминаниями (664 Брест, 592 коники
+  у Щецинского залива, 477, 636) и 4 квеста (89 Каменец — 7 фрагментов, 264
+  Минск, 265 Гродно); статьи с пущей в заголовке у автора нет.
+- `gaps("Польша")` → 154 статьи, 73 квеста, 10 пробелов: Белосток (3 квеста),
+  Зелёна-Гура (2 квеста, 8 упоминаний в статьях), Быдгощ, Жешув,
+  Гожув-Велькопольский, Нова-Слупя, Собутка, Сашино, Крушвица, Ленчица — 67 мс
+  (тексты фрагментов нормализуются один раз при открытии индекса: +0,4 с к старту,
+  `coverage` 280 → 7 мс, `gaps` 630 → 67 мс; до этого NFD шёл по всему индексу на
+  каждый вызов).
+- `similar(travel, 761)` → 791, 790, 544, quest 149, 470 за 12 мс;
+  `similar(travel, 999999)` → `isError` с текстом про отсутствие в индексе.
+- Контракт и отказы — `__tests__/scripts/ai-index/mcp.test.ts` (фикстурный индекс
+  из `__tests__/scripts/ai-assist/fixture.ts`, InMemoryTransport SDK).
+
+### 12.4 Агенты
+
+`travel-writer`, `instagram-planner`, `instagram-researcher`, `quest-expert`
+получили инструменты `mcp__metravel-knowledge__*` в `tools:` и строку «перед
+выбором темы/места — `coverage`/`search`» в инструкции. Агентские md не входят в
+зеркало `.agents/skills` (там только `.claude/skills/**`), `npm run
+sync:agent-skills:check` остаётся зелёным без изменений зеркала.
+
+### 12.5 Локальный чат владельца с тем же MCP (Ollama)
+
+Ollama сама MCP-клиентом не является: `/api/chat` умеет tool calling, но сервер
+из `.mcp.json` не запускает. Нужен клиент-мост; проверенный по документации
+вариант — `ollmcp` (`mcp-client-for-ollama`, Python ≥ 3.11), который читает
+Claude-формат `mcpServers`:
+
+```bash
+ollama pull qwen3.5:9b                      # 6,6 ГБ, tools + thinking; /set nothink в чате
+uv tool install --upgrade ollmcp            # или: pip install --upgrade ollmcp
+cd ~/PhpstormProjects/metravel2             # корень чекаута: индекс и .mcp.json относительно него
+CLAUDE_PROJECT_DIR="$PWD" ollmcp --servers-json .mcp.json --model qwen3.5:9b
+```
+
+`ollmcp` поднимет оба сервера из `.mcp.json`; `metravel-task-board` в чате не
+нужен — отключается в его меню серверов (или копией `.mcp.json` с одним
+`metravel-knowledge` и `--servers-json <копия>`). Дальше обычный диалог: «что у
+нас уже есть про Белосток?» → модель вызывает `coverage`, «о каких городах Польши
+нет статьи?» → `gaps`. На Mac владельца Ollama на 18.10.2026 не установлена, поэтому
+рецепт сверен с README клиента и библиотекой Ollama, но не прогнан здесь; первый
+прогон — после установки, замечания в этот раздел.
+
 ## Источники
 
 - модели: [Qwen3.5 small models](https://artificialanalysis.ai/articles/qwen3-5-small-models),

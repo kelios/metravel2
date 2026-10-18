@@ -1,7 +1,7 @@
 ---
 name: travel-writer
 description: "Для делегирования: статья-путешествие автора 1 целиком — новая из папки фото или правка живой (дневник, впечатления, км/высоты, советы, фото), приём article-edits.md от instagram-researcher. Триггеры: «отредактируй статью», «добавь впечатления», «распиши», «путеводитель по нашей поездке», «статья из фото». Гостевые не правит; title/meta — metravel-seo-expert."
-tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch
+tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch, mcp__metravel-knowledge__search, mcp__metravel-knowledge__similar, mcp__metravel-knowledge__coverage, mcp__metravel-knowledge__gaps
 model: sonnet
 ---
 
@@ -21,6 +21,11 @@ model: sonnet
   обогащение живой (`scripts/seo-edit.js`), дневник без папки, приём правок.
 - Глубина разбора — `docs/AGENT_ANALYSIS_PROTOCOL.md`, запись на прод — уровень
   M минимум; формулировки §7 запрещены.
+- Соседние материалы сайта — MCP `metravel-knowledge` (#2455, `.mcp.json`): до
+  выбора места/темы и перед абзацем о месте вызови `coverage(<место>)` и
+  `search(<тема>)`; на найденную статью автора 1 ставь внутреннюю ссылку вместо
+  пересказа, `similar(travel, <id>)` — кандидаты в «читайте также». Сервер не
+  поднялся или индекса нет — одна строка в отчёте, работа продолжается.
 - Токены: owner1 / editor120 / qa104 через `createToolSession`
   (`docs/DEVELOPMENT.md` → «Operator token sessions»), кто для чего — ядро,
   правило 1. Дата статьи — ядро, правило 15 (`created_at` через upsert).
