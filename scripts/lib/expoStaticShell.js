@@ -79,10 +79,35 @@ function readQuestLocaleBootChunks(jsDir, locales, fileSystem = fs) {
   return new Map(locales.map((locale) => [locale, [...deps, route, onlyChunk(files, new RegExp(`^locale-${locale}-[0-9a-f]+\\.js$`), `locale-${locale}`)]]))
 }
 
+function scriptSrcs(html) {
+  return [...String(html).matchAll(/<script\b[^>]*\bsrc="([^"]+)"/gi)].map((match) => match[1])
+}
+
 /** Boot chunks the page does not list as scripts (empty = all shipped). */
 function missingBootChunks(html, srcs) {
-  const present = new Set([...String(html).matchAll(/<script\b[^>]*\bsrc="([^"]+)"/gi)].map((match) => match[1]))
+  const present = new Set(scriptSrcs(html))
   return srcs.filter((src) => !present.has(src))
+}
+
+/**
+ * The same contract checked on a stored member. It reads the page, not the
+ * chunk directory: a release `dist` also keeps earlier generations' chunks
+ * (asset retention), so «the one `[...missing]` chunk» exists only at export.
+ * `readChunk(src)` returns the chunk source for its declared dependencies.
+ */
+function bootChunkIssues(html, locale, readChunk) {
+  const scripts = scriptSrcs(html).filter((src) => src.startsWith(WEB_CHUNK_PREFIX))
+  const route = scripts.find((src) => CATCH_ALL_CHUNK.test(src.slice(WEB_CHUNK_PREFIX.length)))
+  if (!route) return ['does not ship the [...missing] route chunk']
+  const issues = []
+  const catalog = new RegExp(`^locale-${locale}-[0-9a-f]+\\.js$`)
+  if (!scripts.some((src) => catalog.test(src.slice(WEB_CHUNK_PREFIX.length)))) issues.push(`does not ship the locale-${locale} chunk`)
+  const manifest = CHUNK_MANIFEST.exec(String(readChunk(route)))
+  const deps = manifest ? JSON.parse(manifest[1]).filter((dep) => typeof dep === 'string') : []
+  issues.push(...missingBootChunks(html, deps).map((dep) => `does not ship boot chunk ${dep}`))
+  const entry = scripts.findIndex((src) => /\/entry-[^/]+\.js$/.test(src))
+  if (entry !== -1 && scripts.indexOf(route) > entry) issues.push('loads the [...missing] route chunk after entry')
+  return issues
 }
 
 /** Add the missing chunk scripts right before the `entry` script, in order. */
@@ -106,6 +131,7 @@ function appShellState(html) {
 
 module.exports = {
   appShellState,
+  bootChunkIssues,
   disableExpoRouterHydration,
   emptyAppRoot,
   missingBootChunks,

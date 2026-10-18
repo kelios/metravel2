@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const { makeTempDir, removeDir } = require('./cli-test-utils')
-const { missingBootChunks, readQuestLocaleBootChunks, shipBootChunks } = require('@/scripts/lib/expoStaticShell')
+const { bootChunkIssues, missingBootChunks, readQuestLocaleBootChunks, shipBootChunks } = require('@/scripts/lib/expoStaticShell')
 
 const WEB = '/_expo/static/js/web/'
 
@@ -29,6 +29,20 @@ describe('quest locale boot chunks', () => {
     expect(() => readQuestLocaleBootChunks(dir, ['pl'])).toThrow(/expected one \[\.\.\.missing\] web chunk, found 2/)
     fs.unlinkSync(path.join(dir, '[...missing]-def456.js'))
     expect(() => readQuestLocaleBootChunks(dir, ['be'])).toThrow(/expected one locale-be web chunk, found 0/)
+  })
+
+  it('checks a page against the chunks it names, not the directory', () => {
+    const route = fs.readFileSync(path.join(dir, '[...missing]-abc123.js'), 'utf8')
+    const read = (src: string) => (src.endsWith('[...missing]-abc123.js') ? route : '')
+    const tag = (name: string) => `<script src="${WEB}${name}" defer></script>`
+    const page = (names: string[]) => `<head>${names.map(tag).join('')}</head>`
+    expect(bootChunkIssues(page(['__shared-0-aa.js', '__shared-3-bb.js', '[...missing]-abc123.js', 'locale-pl-ff00.js', 'entry-1.js']), 'pl', read)).toEqual([])
+    expect(bootChunkIssues(page(['__shared-0-aa.js', '[...missing]-abc123.js', 'entry-1.js']), 'pl', read)).toEqual([
+      'does not ship the locale-pl chunk', `does not ship boot chunk ${WEB}__shared-3-bb.js`,
+    ])
+    expect(bootChunkIssues(page(['entry-1.js', '__shared-0-aa.js', '__shared-3-bb.js', '[...missing]-abc123.js', 'locale-pl-ff00.js']), 'pl', read))
+      .toEqual(['loads the [...missing] route chunk after entry'])
+    expect(bootChunkIssues(page(['entry-1.js']), 'pl', read)).toEqual(['does not ship the [...missing] route chunk'])
   })
 
   it('inserts only the missing scripts, in order, right before entry', () => {

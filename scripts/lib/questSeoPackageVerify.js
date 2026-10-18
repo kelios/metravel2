@@ -40,7 +40,7 @@ const {
   validateManifest,
 } = require('./questSeoContract')
 const { scoreDetailCohort } = require('./questDetailCohort')
-const { missingBootChunks, readQuestLocaleBootChunks } = require('./expoStaticShell')
+const { bootChunkIssues } = require('./expoStaticShell')
 const { validateQuestServingProjection } = require('../../utils/questLocaleRouting')
 
 /** Read a package file refusing symlinks anywhere on the way and oversize files. */
@@ -175,17 +175,6 @@ function verifyQuestSeoPackage(distDir, options = {}) {
     }
   }
 
-  let bootChunkCache = null
-  const bootChunks = () => {
-    if (!bootChunkCache) {
-      try {
-        bootChunkCache = { byLocale: readQuestLocaleBootChunks(path.join(distDir, '_expo', 'static', 'js', 'web'), TRANSLATED_LOCALES, fileSystem) }
-      } catch (error) {
-        bootChunkCache = { error: error.message }
-      }
-    }
-    return bootChunkCache
-  }
   const memberPaths = new Set(manifest.clusters.flatMap((cluster) => Object.values(cluster.members).map((member) => member.canonical_path)))
   const cohorts = new Map(LOCALES.map((locale) => [locale, []]))
   for (const cluster of manifest.clusters) {
@@ -199,10 +188,12 @@ function verifyQuestSeoPackage(distDir, options = {}) {
       })
       failures.push(...issues.map((issue) => `${label}: ${issue}`))
       if (locale !== 'ru') {
-        const boot = bootChunks()
-        const missing = boot.error ? [] : missingBootChunks(html, boot.byLocale.get(locale) || [])
-        if (boot.error) failures.push(`${label}: boot chunks unreadable — ${boot.error}`)
-        else if (missing.length) failures.push(`${label}: does not ship boot chunk ${missing[0]} (#2465)`)
+        try {
+          const readChunk = (src) => readRegularPackageFile(distDir, src.slice(1), LIMITS.assetBytes, fileSystem).toString('utf8')
+          failures.push(...bootChunkIssues(html, locale, readChunk).map((issue) => `${label}: ${issue} (#2465)`))
+        } catch (error) {
+          failures.push(`${label}: boot chunks unreadable — ${error.message}`)
+        }
       }
       // #2467: a translated sibling link is only as good as the member behind it.
       for (const anchor of doc.anchors) {

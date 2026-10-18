@@ -541,10 +541,20 @@ describe('boot chunks of translated members (#2465)', () => {
     expect(verifyQuestSeoPackage(c.dist).failures).toEqual([])
   })
 
+  it('verifies the chunks a page names, next to earlier generations retained in dist', async () => {
+    const c = await buildCase()
+    // Asset retention keeps previous releases' chunks beside the current export.
+    const dir = path.join(c.dist, '_expo', 'static', 'js', 'web')
+    fs.writeFileSync(path.join(dir, '[...missing]-ffee.js'), '__d(function(){},1,[]);')
+    fs.writeFileSync(path.join(dir, 'locale-pl-ffee.js'), '__d(function(){},3,[]);')
+    finalize(c, c.receiptText)
+    expect(verifyQuestSeoPackage(c.dist).failures).toEqual([])
+  })
+
   it('rejects a translated member that would load its route after entry', async () => {
     const c = await buildCase({ withoutBootChunks: true })
     expect(() => finalize(c, c.receiptText)).toThrow(
-      `${contract.canonicalPath(4, 'quest-alpha', 'pl')}: does not ship boot chunk ${WEB_JS}__shared-3-0c.js (#2465)`,
+      `${contract.canonicalPath(4, 'quest-alpha', 'pl')}: does not ship the [...missing] route chunk (#2465)`,
     )
   })
 })
