@@ -153,3 +153,13 @@ describe('#1487 пропорции медиа-бокса UnifiedTravelCard', () 
     expect(props.height).toBe(270)
   })
 })
+
+
+it.each([false, true])('#2482 keeps string metadata while rendering optional title/location language markup (overlay=%s)', (heroTitleOverlay) => {
+  const tree = renderCard({ title: 'Озёра Лепельщины', metaText: 'Беларусь', heroTitleOverlay,
+    renderText: (text: string) => <span lang="ru">{text}</span> });
+  const parts = tree.root.findAllByType('span').filter((node) => node.props.lang === 'ru');
+  expect(parts.some((node) => node.props.children === 'Озёра Лепельщины')).toBe(true);
+  expect(parts.some((node) => node.props.children === 'Беларусь')).toBe(true);
+  expect(mockImageCardMedia.mock.calls.at(-1)?.[0].alt).toBe('Озёра Лепельщины');
+});

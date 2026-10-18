@@ -1,3 +1,4 @@
+import QuestEditorialText from '@/components/quests/QuestEditorialText';
 import { memo, useCallback, useMemo, useState } from 'react';
 import type {
     CSSProperties,
@@ -371,10 +372,10 @@ function QuestCard({
                 </View>
 
                 <View style={[styles.questCardContent, { pointerEvents: 'none' }]}>
-                    {categoryLabel && <Text style={styles.questCardCategory}>{categoryLabel}</Text>}
-                    <Text style={styles.questCardTitle} numberOfLines={2}>
+                    {categoryLabel && <QuestEditorialText style={styles.questCardCategory}>{categoryLabel}</QuestEditorialText>}
+                    <QuestEditorialText style={styles.questCardTitle} numberOfLines={2}>
                         {quest.title}
-                    </Text>
+                    </QuestEditorialText>
                     {showOverlayMeta && (
                         <View style={styles.questCardMeta}>
                             <View style={styles.questCardMetaItem}>

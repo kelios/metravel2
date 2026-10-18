@@ -41,6 +41,8 @@ export type UnifiedTravelCardBadge = {
 
 type Props = {
   title: string;
+  /** Optional language markup; strings remain authoritative for labels and media. */
+  renderText?: (text: string) => ReactNode;
   imageUrl?: string | null;
   metaText?: string | null;
   rating?: number | null;
@@ -130,6 +132,7 @@ type Props = {
 
 function UnifiedTravelCard({
   title,
+  renderText,
   imageUrl,
   metaText,
   rating: _rating,
@@ -757,7 +760,7 @@ function UnifiedTravelCard({
           <View style={styles.imageTitleOverlay}>
             <View style={styles.imageTitleOverlayBg} />
             <Text style={styles.imageTitleOverlayText} numberOfLines={heroTitleMaxLines}>
-              {title}
+              {renderText ? renderText(title) : title}
             </Text>
           </View>
         </View>
@@ -808,13 +811,13 @@ function UnifiedTravelCard({
     <View key="content-default" style={styles.content}>
       {!heroTitleOverlay && (
         <Text style={styles.title} numberOfLines={isMobileDevice ? 1 : 2} ellipsizeMode="tail">
-          {title}
+          {renderText ? renderText(title) : title}
         </Text>
       )}
       <View style={styles.metaRow}>
         <Feather name="map-pin" size={12} color={colors.textMuted} style={MAP_PIN_ICON_STYLE as any} />
         <Text style={styles.metaText} numberOfLines={1} ellipsizeMode="tail">
-          {displayMetaText}
+          {renderText ? renderText(displayMetaText) : displayMetaText}
         </Text>
       </View>
     </View>

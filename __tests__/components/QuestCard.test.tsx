@@ -1,3 +1,4 @@
+jest.mock('@/hooks/useQuestContentLocale', () => ({ useQuestContentLocale: () => 'pl' }));
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -683,4 +684,19 @@ describe('QuestCard', () => {
             expect(getByTestId('quest-card-reviews-minsk-single')).toBeTruthy();
         });
     });
+});
+
+
+it.each([
+    { cityName: 'Могилёв', countryName: 'Беларусь', category: 'Могилёв' },
+    { cityName: undefined, countryName: 'Беларусь', category: 'Беларусь' },
+])('#2482 marks the catalog title and city/country label ($category) with their original language', ({ category, ...location }) => {
+    const originalOS = Platform.OS;
+    Platform.OS = 'web';
+    try {
+        const tree = renderWithQueryClient(<QuestCard quest={makeQuest(location)} styles={styles} cardWidth={340} cityId="krakow" />);
+        const marked = tree.UNSAFE_root.findAll((node) => node.props.lang === 'ru');
+        expect(marked.some((node) => node.props.children === 'Тайна дракона')).toBe(true);
+        expect(marked.some((node) => node.props.children === category)).toBe(true);
+    } finally { Platform.OS = originalOS; }
 });

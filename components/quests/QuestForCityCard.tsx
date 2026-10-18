@@ -3,6 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
+import QuestEditorialText from './QuestEditorialText'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { useRichMediaVisibility } from '@/components/ui/richMediaViewport'
 import NavigationIcon from '@/components/layout/NavigationIcon'
@@ -208,10 +209,10 @@ export function QuestForCityCard({
       </View>
 
       <View style={styles.body}>
-        <Text style={styles.eyebrow} numberOfLines={1}>
+        <QuestEditorialText style={styles.eyebrow} numberOfLines={1}>
           {eyebrow}
-        </Text>
-        <Text
+        </QuestEditorialText>
+        <QuestEditorialText
           style={styles.title}
           // Лимит строк идёт за шириной колонки, потому что режет именно она.
           // Числа — потолок реальной выдачи, замеренный по всем 165 названиям
@@ -225,7 +226,7 @@ export function QuestForCityCard({
           aria-level={3 as any}
         >
           {quest.title}
-        </Text>
+        </QuestEditorialText>
         {chips.length > 0 && (
           <View style={styles.chipRow} testID="quest-card-meta-row">
             {chips.map((chip, i) => (

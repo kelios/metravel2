@@ -1,3 +1,4 @@
+jest.mock('@/hooks/useQuestContentLocale', () => ({ useQuestContentLocale: () => 'en' }))
 import React from 'react'
 import { fireEvent, render } from '@testing-library/react-native'
 
@@ -320,4 +321,17 @@ describe('QuestForCityCard', () => {
     expect(getByText('Уточнить возраст')).toBeTruthy()
     expect(queryByText('Для детей')).toBeNull()
   })
+})
+
+
+it('#2482 marks the quest card title without changing the accessible navigation label', () => {
+  const { Platform } = require('react-native')
+  const originalOS = Platform.OS
+  Platform.OS = 'web'
+  try {
+    const tree = render(<QuestForCityCard quest={{ id: 'palace', cityId: '3', title: 'Тайны дворца', cityName: 'Гомель', points: 4, lat: 52, lng: 30 }} />)
+    expect(tree.UNSAFE_root.findAll((node) => node.props.lang === 'ru')
+      .some((node) => node.props.children === 'Тайны дворца')).toBe(true)
+    expect(tree.getByLabelText('Пройти квест по городу Гомель: Тайны дворца')).toBeTruthy()
+  } finally { Platform.OS = originalOS }
 })

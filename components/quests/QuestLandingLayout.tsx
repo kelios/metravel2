@@ -15,6 +15,7 @@ import {
   QUESTS_LANDING_PADDING,
 } from '@/constants/questLayout'
 import type { useThemedColors } from '@/hooks/useTheme'
+import QuestEditorialText from './QuestEditorialText'
 import QuestCard from '@/screens/tabs/QuestCard'
 import type { getStyles } from '@/screens/tabs/QuestsScreen.styles'
 import type { QuestMeta } from '@/screens/tabs/questsShared'
@@ -301,16 +302,16 @@ export function QuestLandingHeader({
             {eyebrow}
           </Text>
         </View>
-        <Text
+        <QuestEditorialText
           accessibilityRole="header"
           {...({ 'aria-level': 1 } as Record<string, unknown>)}
           style={{ fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.6 }}
         >
           {title}
-        </Text>
-        <Text style={{ fontSize: 15, lineHeight: 23, color: colors.textMuted }}>
+        </QuestEditorialText>
+        <QuestEditorialText style={{ fontSize: 15, lineHeight: 23, color: colors.textMuted }}>
           {lead}
-        </Text>
+        </QuestEditorialText>
         <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textSubtle }}>
           {meta}
         </Text>
@@ -321,13 +322,13 @@ export function QuestLandingHeader({
 
 export function QuestLandingSectionTitle({ colors, children }: { colors: ThemedColors; children: string }) {
   return (
-    <Text
+    <QuestEditorialText
       accessibilityRole="header"
       {...({ 'aria-level': 2 } as Record<string, unknown>)}
       style={{ fontSize: 20, fontWeight: '800', color: colors.text }}
     >
       {children}
-    </Text>
+    </QuestEditorialText>
   )
 }
 
@@ -465,13 +466,13 @@ export function QuestLandingSection({
     <View style={styles.section} testID={testID}>
       <View style={styles.titleRow}>
         <Feather name={icon} size={18} color={colors.primary} aria-hidden />
-        <Text
+        <QuestEditorialText
           accessibilityRole="header"
           {...({ 'aria-level': 2 } as Record<string, unknown>)}
           style={styles.title}
         >
           {title}
-        </Text>
+        </QuestEditorialText>
       </View>
       {children}
     </View>
@@ -510,7 +511,7 @@ export function QuestLandingCityLinks({
             {({ pressed }) => (
               <View style={[styles.linkRow, pressed && styles.linkRowPressed]}>
                 <View style={styles.linkText}>
-                  <Text style={styles.linkName}>{link.name}</Text>
+                  <QuestEditorialText style={styles.linkName}>{link.name}</QuestEditorialText>
                   <Text style={styles.linkMeta}>{link.meta}</Text>
                 </View>
                 <Feather name="arrow-right" size={17} color={colors.primary} aria-hidden />

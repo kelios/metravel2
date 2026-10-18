@@ -150,7 +150,7 @@ const jsxTagName = (node) => (ts.isJsxElement(node) ? node.openingElement.tagNam
 const hasModifier = (node, kind) => (node.modifiers ?? []).some((modifier) => modifier.kind === kind)
 
 /** Компонент экрана: функция под `export default` (в том числе `export default memo(Name)`). */
-function findDefaultExportedComponent(sourceFile) {
+function findDefaultExportedComponent(sourceFile, allowWrappers = true) {
   const named = new Map()
   let direct = null
   let exportedName = null
@@ -169,13 +169,13 @@ function findDefaultExportedComponent(sourceFile) {
     } else if (ts.isExportAssignment(statement) && !statement.isExportEquals) {
       let expression = statement.expression
       // `memo(Screen)`, `React.memo(Screen)`, `observer(Screen)` — первый аргумент.
-      while (ts.isCallExpression(expression) && expression.arguments.length > 0) expression = expression.arguments[0]
+      while (allowWrappers && ts.isCallExpression(expression) && expression.arguments.length > 0) expression = expression.arguments[0]
       if (ts.isIdentifier(expression)) exportedName = expression.text
       else if (isFunctionLike(expression)) direct = expression
     }
   }
   let component = direct ?? (exportedName ? named.get(exportedName) : null) ?? null
-  while (component && ts.isCallExpression(component) && component.arguments.length > 0) component = component.arguments[0]
+  while (allowWrappers && component && ts.isCallExpression(component) && component.arguments.length > 0) component = component.arguments[0]
   return component && isFunctionLike(component) ? component : null
 }
 
@@ -187,7 +187,7 @@ function collectReturnedExpressions(component) {
   const visit = (node) => {
     if (isFunctionLike(node)) return
     if (ts.isReturnStatement(node)) {
-      if (node.expression) returned.push(node.expression)
+      returned.push(node.expression ?? node)
       return
     }
     ts.forEachChild(node, visit)
@@ -196,7 +196,7 @@ function collectReturnedExpressions(component) {
   return returned
 }
 
-function jsxContainsTopInsetOwner(node) {
+function jsxContainsTopInsetOwner(node, strict = false) {
   let found = false
   const visit = (child) => {
     if (found) return
@@ -204,33 +204,85 @@ function jsxContainsTopInsetOwner(node) {
       found = true
       return
     }
-    ts.forEachChild(child, visit)
+    // Imported proof cannot count an owner in a prop callback or a conditional
+    // child which may never render. Follow unconditional JSX children only.
+    if (strict) {
+      if (ts.isJsxElement(child) || ts.isJsxFragment(child)) child.children.forEach(visit)
+    } else ts.forEachChild(child, visit)
   }
   visit(node)
   return found
 }
 
 /** Ветка разметки доказуемо начинается ниже статус-бара (или ничего не рисует). */
-function provesTopInset(expression) {
+function provesTopInset(expression, provesDelegate = () => false, strict = false) {
   let node = expression
   while (ts.isParenthesizedExpression(node)) node = node.expression
   if (node.kind === ts.SyntaxKind.NullKeyword) return true
-  if (ts.isConditionalExpression(node)) return provesTopInset(node.whenTrue) && provesTopInset(node.whenFalse)
+  if (ts.isConditionalExpression(node)) return provesTopInset(node.whenTrue, provesDelegate, strict) && provesTopInset(node.whenFalse, provesDelegate, strict)
   if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) {
-    return provesTopInset(node.right)
+    return provesTopInset(node.right, provesDelegate, strict)
   }
   if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
     if (NO_CONTENT_TAGS.has(jsxTagName(node))) return true
-    return jsxContainsTopInsetOwner(node)
+    return jsxContainsTopInsetOwner(node, strict) || provesDelegate(node)
   }
-  if (ts.isJsxFragment(node)) return jsxContainsTopInsetOwner(node)
+  if (ts.isJsxFragment(node)) return jsxContainsTopInsetOwner(node, strict)
   return false
 }
 
-function scanStandaloneScreenSource(rel, source) {
+// #2652: импорт — не исключение, а следующий узел структурного доказательства.
+// Без расширения допускается только однозначный локальный исходник: платформенные
+// варианты не угадываем. realpath не позволяет уйти из workspace через symlink.
+function resolveLocalScreen(root, rel, specifier) {
+  if (!specifier.startsWith('./') && !specifier.startsWith('../') && !specifier.startsWith('@/')) return null
+  const base = specifier.startsWith('@/')
+    ? path.resolve(root, specifier.slice(2))
+    : path.resolve(root, path.dirname(rel), specifier)
+  const candidates = /\.tsx?$/.test(base)
+    ? [base]
+    : [...['', '/index'].flatMap((entry) => ['', '.web', '.native', '.ios', '.android'].flatMap((platform) =>
+      ['.tsx', '.ts', '.jsx', '.js', '.mjs', '.cjs', '.json'].map((extension) => base + entry + platform + extension),
+    )), path.join(base, 'package.json')]
+  const files = candidates.filter((file) => fs.existsSync(file) && fs.statSync(file).isFile())
+  if (files.length !== 1 || !/\.tsx?$/.test(files[0]) || files[0].endsWith('.d.ts')) return null
+  const file = fs.realpathSync(files[0])
+  const relative = path.relative(fs.realpathSync(root), file)
+  if (relative.startsWith('..') || path.isAbsolute(relative) || relative.split(path.sep).includes('node_modules')) return null
+  return relative.split(path.sep).join('/')
+}
+
+function importedScreenProof(sourceFile, root, rel, visited) {
+  return (node) => {
+    const tag = ts.isJsxElement(node) ? node.openingElement.tagName : node.tagName
+    if (!ts.isIdentifier(tag)) return false
+    const imported = sourceFile.statements.find((statement) =>
+      ts.isImportDeclaration(statement) && !statement.importClause?.isTypeOnly &&
+      statement.importClause?.name?.text === tag.text && ts.isStringLiteral(statement.moduleSpecifier),
+    )
+    if (!imported) return false
+    // A shadowed binding cannot be proved by following its import.
+    let shadowed = false
+    const checkBinding = (child) => {
+      if ((ts.isVariableDeclaration(child) || ts.isParameter(child) || ts.isBindingElement(child) ||
+        ts.isFunctionDeclaration(child) || ts.isClassDeclaration(child)) && child.name?.getText(sourceFile) === tag.text) shadowed = true
+      ts.forEachChild(child, checkBinding)
+    }
+    checkBinding(sourceFile)
+    if (shadowed) return false
+    const target = resolveLocalScreen(root, rel, imported.moduleSpecifier.text)
+    if (!target || visited.has(target)) return false
+    return scanStandaloneScreenSource(target, fs.readFileSync(path.join(root, target), 'utf8'), root, visited).length === 0
+  }
+}
+
+function scanStandaloneScreenSource(rel, source, root = process.cwd(), ancestors = new Set()) {
   if (STANDALONE_SCREEN_EXCEPTIONS[rel]) return []
   const failures = []
   const sourceFile = ts.createSourceFile(rel, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+  if (sourceFile.parseDiagnostics.length) return [`${rel}: исходник экрана не разобран — верхний отступ не доказан (#2272)`]
+  const visited = new Set([...ancestors, rel])
+  const provesDelegate = importedScreenProof(sourceFile, root, rel, visited)
   const lineOf = (node) => sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1
 
   const visitSafeArea = (node) => {
@@ -243,13 +295,18 @@ function scanStandaloneScreenSource(rel, source) {
   }
   visitSafeArea(sourceFile)
 
-  const component = findDefaultExportedComponent(sourceFile)
+  // A wrapper call can replace the component entirely; imported modules must
+  // export a function we can inspect directly rather than trusting its argument.
+  const strict = ancestors.size > 0
+  const component = findDefaultExportedComponent(sourceFile, !strict)
   if (!component) {
     failures.push(`${rel}: не найден компонент экрана под export default — guard не может доказать верхний отступ (#2272)`)
     return failures
   }
-  for (const expression of collectReturnedExpressions(component)) {
-    if (!provesTopInset(expression)) {
+  const returned = collectReturnedExpressions(component)
+  if (!returned.length) failures.push(`${rel}: нет доказуемой возвращаемой ветки экрана (#2272)`)
+  for (const expression of returned) {
+    if (!provesTopInset(expression, provesDelegate, strict)) {
       failures.push(
         `${rel}:${lineOf(expression)}: ветка экрана вне оболочки шапки без владельца верхнего отступа — оберните её в StandaloneScreen или смонтируйте CustomHeader (#2272)`,
       )
@@ -283,7 +340,7 @@ function scanStandaloneScreens(root) {
     if (!routes.includes(rel)) failures.push(`${rel}: исключение для несуществующего экрана — убери из STANDALONE_SCREEN_EXCEPTIONS`)
   }
   for (const rel of routes) {
-    failures.push(...scanStandaloneScreenSource(rel, fs.readFileSync(path.join(root, rel), 'utf8')))
+    failures.push(...scanStandaloneScreenSource(rel, fs.readFileSync(path.join(root, rel), 'utf8'), root))
   }
   return failures
 }

@@ -38,10 +38,14 @@ export function QuestContentLanguageProvider({
 // RN-web передаёт `lang` в DOM (`react-native-web/dist/exports/Text`), а типы RN его не знают.
 const LangText = Text as unknown as React.ComponentType<TextProps & { lang?: string }>
 
-type Props = Omit<TextProps, 'children'> & { children: string | null | undefined }
+export type QuestContentTextProps = Omit<TextProps, 'children'> & QuestContentLanguage & { children: string | null | undefined }
 
-export default function QuestContentText({ children, ...textProps }: Props) {
-  const language = useContext(QuestContentLanguageContext)
+export default function QuestContentText({ children, contentLocale, countryCode, ...textProps }: QuestContentTextProps) {
+  const inherited = useContext(QuestContentLanguageContext)
+  const language = useMemo(() => ({
+    contentLocale: contentLocale ?? inherited.contentLocale,
+    countryCode: countryCode ?? inherited.countryCode,
+  }), [contentLocale, countryCode, inherited])
   const segments = useMemo(
     () => (Platform.OS === 'web' ? quotedCyrillicSegments(children, language) : null),
     [children, language],
