@@ -154,6 +154,9 @@ scope.
 - `docs/LOCAL_AI_ASSISTANT_PLAN.md` — предложение (17.10.2026): локальный
   AI-помощник на данных сайта — RAG-индекс, выбор моделей, два контура
   (редакция на Mac, подбор на сайте), ограничения прода и план по этапам;
+- `docs/AI_TRAIN_DATASETS.md` — план v2 metravel-llm (18.10.2026): архитектура
+  наборов данных (источники → наборы → смеси → этапы), открытые источники по
+  Беларуси и Польше, оценка по срезам, дешёвый цикл дообучения.
 - `docs/ARTICLE_ATTENTION_LOG.md` — журнал article attention cycles;
 - `docs/QUEST_DEMAND_LOG.md` — журнал quest demand cycles;
 - `docs/QUEST_LEGENDS_BY_PL.md` — сводка досье легенд областных центров Беларуси

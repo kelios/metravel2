@@ -344,6 +344,13 @@ Platform impact: web desktop/mobile — новый блок поиска/пох�
 | #2457 | compose: `metravel-assist` (этап A) и `metravel-llm` (этап B после #2458), nginx `/ai/` | backlog, `area=back`, прод-спринт |
 | #2460 | ассистент `/ai/ask` на собственной модели, `/assistant`, лимиты, журнал спроса | 18.10: клиент под фича-флагом `EXPO_PUBLIC_AI_ASSISTANT` (локально включён, прод выключен) — `docs/features/ai-assistant.md`; серверный `/ai/ask` и прод-приёмка — в прод-спринте |
 
+## 9. v2: наборы данных и дешёвый цикл дообучения
+
+План вынесен в `docs/AI_TRAIN_DATASETS.md`: источники → наборы → смеси →
+этапы S1 «фундамент» (Wikidata-топонимы, переводы квестов, Wikivoyage по
+Беларуси и Польше, OSM-намерения для карты) и S2 «сайт» одним адаптером с
+replay; оценка по срезам; ~16 часов машинного времени на полный цикл, денег 0.
+
 ## Источники
 
 - модели: [Qwen3.5 small models](https://artificialanalysis.ai/articles/qwen3-5-small-models),
