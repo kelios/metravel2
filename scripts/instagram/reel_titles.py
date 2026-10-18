@@ -49,25 +49,25 @@ def wrap(draw, text, fnt, width):
     return lines
 
 
-def _shade(img, y_from, y_to, strength, direction):
-    """Плавное затемнение: direction 'down' — темнее к низу, 'up' — темнее к верху."""
+def _shade(img, y_from, y_to, strength, direction=None, ramp_in=180, ramp_out=170):
+    """Затемнение полосой под текстом (поправка 18.10.2026 по находке редактора: глухая заливка до
+    края кадра гасила главный объект). Плавный вход за ramp_in px до y_from, ровная полоса от y_from
+    до y_to, плавный выход за ramp_out px после y_to; дальше кадр не трогаем."""
     mask = Image.new("L", (1, H), 0)
-    n = max(1, y_to - y_from)
-    for y in range(max(0, y_from), min(H, y_to)):
-        k = (y - y_from) / n
-        mask.putpixel((0, y), int(strength * (k if direction == "down" else 1 - k)))
-    if direction == "down":
-        for y in range(y_to, H):
-            mask.putpixel((0, y), strength)
-    else:
-        for y in range(0, y_from):
-            mask.putpixel((0, y), strength)
+    for y in range(max(0, y_from - ramp_in), min(H, y_to + ramp_out)):
+        if y < y_from:
+            k = (y - (y_from - ramp_in)) / ramp_in
+        elif y <= y_to:
+            k = 1.0
+        else:
+            k = 1 - (y - y_to) / ramp_out
+        mask.putpixel((0, y), int(strength * max(0.0, min(1.0, k)) ** 1.1))
     layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     layer.putalpha(mask.resize((W, H)))
     return layer
 
 
-def overlay(title, kicker=None, subtitle=None, anchor="bottom", size=64, brand=False, strength=190):
+def overlay(title, kicker=None, subtitle=None, anchor="bottom", size=64, brand=False, strength=175):
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     t_font = font("serif", size)
@@ -86,10 +86,10 @@ def overlay(title, kicker=None, subtitle=None, anchor="bottom", size=64, brand=F
     brand_h = 90 if brand else 0
     if anchor == "top":
         y = Y0
-        img.alpha_composite(_shade(img, Y0 - 40, Y0 + block + 60, strength, "up"))
+        img.alpha_composite(_shade(img, Y0 - 30, Y0 + block + 30, strength))
     else:
         y = Y1 - brand_h - block
-        img.alpha_composite(_shade(img, y - 260, y - 20, strength, "down"))
+        img.alpha_composite(_shade(img, y - 30, y + block + brand_h + 20, strength))
     assert y >= Y0 and y + block + brand_h <= Y1, ("блок вне поля", title, y, block)
     draw = ImageDraw.Draw(img)
     if kicker:
