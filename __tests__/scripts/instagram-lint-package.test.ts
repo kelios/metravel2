@@ -189,6 +189,30 @@ describe('instagram lint-package', () => {
     expect(lint(bare).hits).toContainEqual(expect.objectContaining({ rule: 'F2', source: 'reel.mp4' }))
   })
 
+  const hasFfmpeg = runCli('sh', ['-c', 'command -v ffmpeg && command -v ffprobe']).status === 0
+  ;(hasFfmpeg ? it : it.skip)('flags a silent Reel unless the owner-ordered silence is recorded (F11)', () => {
+    const encode = (dir: string, audio: boolean) => runCli('ffmpeg', [
+      '-v', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=black:s=64x64:d=16',
+      ...(audio ? ['-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo', '-shortest', '-c:a', 'aac'] : []),
+      '-c:v', 'mpeg4', path.join(dir, 'reel.mp4'),
+    ])
+    const titles = JSON.stringify({ format: 'reel', segments: [{ text: 'Касина-Велька: круг 11,5 км', dur: 3 }] })
+    const f11 = (dir: string) => lint(dir).hits.filter((h: { rule: string }) => h.rule === 'F11')
+      .map((h: { message: string }) => h.message)
+    const silent = makePackage('reel-silent', { 'caption.txt': CLEAN_CAPTION, 'spec.json': titles })
+    encode(silent, false)
+    expect(f11(silent)).toEqual([expect.stringContaining('Reel без звука')])
+    const ordered = makePackage('reel-silent-ordered', {
+      'caption.txt': CLEAN_CAPTION, 'spec.json': titles,
+      'package.md': `${CHECKLIST}\nlint-allow: F11 тишина — владелец заказала ролик без звука 18.10`,
+    })
+    encode(ordered, false)
+    expect(f11(ordered)).toEqual([])
+    const voiced = makePackage('reel-music', { 'caption.txt': CLEAN_CAPTION, 'spec.json': titles })
+    encode(voiced, true)
+    expect(f11(voiced)).toEqual([])
+  })
+
   it('requires a section 18 checklist line per V/F number in package.md', () => {
     const missing = makePackage('checklist-missing', {
       'caption.txt': CLEAN_CAPTION,

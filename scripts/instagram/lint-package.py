@@ -12,7 +12,9 @@
   F10 — ответы на задания квеста не раскрыты (если в пакете есть quest_id или адрес квеста и
         локальный scripts/*-quest-data.js с answer_pattern — его читает node); совпадение, которое не
         ответ, снимается строкой `lint-allow: F10 <слово> — <причина>` в package.md;
-  F11 — reel.mp4 длится 15–40 с; тишина допустима (если есть ffprobe);
+  F11 — reel.mp4 длится 15–40 с и несёт аудиопоток (если есть ffprobe): тихий Reel — находка,
+        трек Epidemic Sound агент скачивает сам (раздел 27); тишина, заказанная владельцем,
+        снимается строкой `lint-allow: F11 тишина — <чьё решение и когда>` в package.md;
   F2  — титры Reel из spec.json держатся ≥ 1,5 с + 0,3 с на слово и не длиннее ~7 слов;
         слайд карусели (spec.json) — не больше 4 предложений и 50 слов тела (без кикера и
         заголовка): длиннее — текстовая стена, которую с телефона не читают (замер 18.10.2026:
@@ -69,7 +71,7 @@ HASHTAG_RE = re.compile(r'(?<![\w#])#[\w]+', re.U)
 QUEST_ID_RE = re.compile(r'(?:quest_id\s*[=:]\s*[`"\']?|by-quest-id/)([a-z0-9][a-z0-9-]+)', re.I)
 # Адрес квеста по F7 — metravel.by/quests/<city_id>/<quest_id>: квест в пакете находится и без строки quest_id.
 QUEST_URL_RE = re.compile(r'\bquests/\d+/([a-z0-9][a-z0-9-]+)', re.I)
-ALLOW_RE = re.compile(r'^\s*lint-allow:\s*(F10|V3)\s+(.+?)\s+—\s+\S', re.M)
+ALLOW_RE = re.compile(r'^\s*lint-allow:\s*(F10|F11|V3)\s+(.+?)\s+—\s+\S', re.M)
 SLIDE_BODY_KEYS = ('subtitle', 'text', 'note', 'items', 'points')
 SLIDE_WORDS_MAX = 50
 SLIDE_SENTENCES_MAX = 4
@@ -434,6 +436,11 @@ def check_reel(package):
         duration = 0.0
     if not REEL_MIN_S <= duration <= REEL_MAX_S:
         hits.append(finding('reel.mp4', 0, 'F11', 'длина %.1f с, нужно %d–%d' % (duration, REEL_MIN_S, REEL_MAX_S)))
+    has_audio = any(s.get('codec_type') == 'audio' for s in data.get('streams', []))
+    if not has_audio and 'тишина' not in lint_allows(package, 'F11'):
+        hits.append(finding('reel.mp4', 0, 'F11',
+                            'Reel без звука: скачать трек Epidemic Sound самому и вшить (раздел 27); '
+                            'тишина по решению владельца — lint-allow: F11 тишина — <чьё решение и когда>'))
     return hits
 
 
