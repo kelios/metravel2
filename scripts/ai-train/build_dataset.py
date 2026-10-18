@@ -4,7 +4,7 @@ from the exported corpus (see export_corpus.py).
 
 Usage:
     python3 -I scripts/ai-train/build_dataset.py \
-        --raw /Volumes/metravel-ai/data/raw --out /Volumes/metravel-ai/data/sft
+        --raw ~/metravel-ai/data/raw --out ~/metravel-ai/data/sft
 
 Every record is a chat sample {"messages": [system, user, assistant]} in the
 format mlx-lm LoRA expects. Two families of samples are produced:

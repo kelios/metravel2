@@ -94,6 +94,45 @@ def generate_all(model_path: str, adapter: str | None, prompts: list[dict], max_
     return out, (toks / secs if secs else 0.0)
 
 
+def generate_server(url: str, prompts: list[dict], max_tokens: int) -> tuple[list[str], float]:
+    """Same prompts through an OpenAI-compatible llama-server (#2463: GGUF after
+    quantisation). Greedy, thinking off, one request at a time; tokens/s from
+    the server's own `usage` and timings."""
+    import urllib.request
+
+    out, toks, secs = [], 0, 0.0
+    for i, p in enumerate(prompts, 1):
+        body = {
+            "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": p["prompt"]}],
+            "max_tokens": max_tokens,
+            "temperature": 0.0,
+            "top_k": 1,
+            "stream": False,
+            "chat_template_kwargs": {"enable_thinking": False},
+        }
+        req = urllib.request.Request(
+            url.rstrip("/") + "/v1/chat/completions",
+            data=json.dumps(body).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+        )
+        t0 = time.time()
+        with urllib.request.urlopen(req, timeout=600) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        wall = time.time() - t0
+        ans = THINK_RE.sub("", data["choices"][0]["message"]["content"] or "").strip()
+        timings = data.get("timings") or {}
+        if timings.get("predicted_n") and timings.get("predicted_ms"):
+            # generation-only speed, comparable with the MLX column (prompt processing excluded)
+            toks += int(timings["predicted_n"])
+            secs += float(timings["predicted_ms"]) / 1000.0
+        else:
+            toks += int((data.get("usage") or {}).get("completion_tokens") or 0)
+            secs += wall
+        out.append(ans)
+        print(f"  [{i}/{len(prompts)}] {p['id']} {len(ans)} chars", file=sys.stderr)
+    return out, (toks / secs if secs else 0.0)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--ai-home", default=None, help="training folder (default: $AI_HOME)")
@@ -103,6 +142,11 @@ def main() -> int:
     ap.add_argument("--out", default="logs/eval")
     ap.add_argument("--max-tokens", type=int, default=500)
     ap.add_argument("--skip-base", action="store_true", help="reuse base answers from <out>/base.json")
+    ap.add_argument("--server", default=None, metavar="URL",
+                    help="evaluate a llama-server (OpenAI API, e.g. http://127.0.0.1:8081) instead of the MLX adapter; "
+                         "the 'adapter' column is then the GGUF, --adapter is only a label")
+    ap.add_argument("--base-server", default=None, metavar="URL",
+                    help="llama-server with the base GGUF for the 'base' column (default: MLX base, or <out>/base.json with --skip-base)")
     args = ap.parse_args()
     import os
     home = Path(args.ai_home or os.environ.get("AI_HOME") or ".").expanduser()
@@ -112,15 +156,24 @@ def main() -> int:
     known = known_urls(home / "data" / "raw")
 
     base_file = out / "base.json"
-    if args.skip_base and base_file.exists():
-        base = json.loads(base_file.read_text(encoding="utf-8"))
-        base_ans, base_tps = base["answers"], base["tps"]
+    base_source = args.base_server or args.model  # which engine produced the cached base answers
+    cached = json.loads(base_file.read_text(encoding="utf-8")) if args.skip_base and base_file.exists() else None
+    if cached and cached.get("source", args.model) == base_source:
+        base_ans, base_tps = cached["answers"], cached["tps"]
     else:
-        print("== base", file=sys.stderr)
-        base_ans, base_tps = generate_all(str(home / args.model), None, prompts, args.max_tokens)
-        base_file.write_text(json.dumps({"answers": base_ans, "tps": base_tps}, ensure_ascii=False), encoding="utf-8")
-    print("== adapter", args.adapter, file=sys.stderr)
-    ad_ans, ad_tps = generate_all(str(home / args.model), str(home / args.adapter), prompts, args.max_tokens)
+        if cached:
+            print(f"== base.json is from {cached.get('source', args.model)}, regenerating for {base_source}", file=sys.stderr)
+        print("== base", base_source, file=sys.stderr)
+        if args.base_server:
+            base_ans, base_tps = generate_server(args.base_server, prompts, args.max_tokens)
+        else:
+            base_ans, base_tps = generate_all(str(home / args.model), None, prompts, args.max_tokens)
+        base_file.write_text(json.dumps({"source": base_source, "answers": base_ans, "tps": base_tps}, ensure_ascii=False), encoding="utf-8")
+    print("== adapter", args.server or args.adapter, file=sys.stderr)
+    if args.server:
+        ad_ans, ad_tps = generate_server(args.server, prompts, args.max_tokens)
+    else:
+        ad_ans, ad_tps = generate_all(str(home / args.model), str(home / args.adapter), prompts, args.max_tokens)
 
     rows, totals = [], {"base": {}, "v": {}}
     with (out / "results.jsonl").open("w", encoding="utf-8") as fh:

@@ -9,7 +9,7 @@
 # the model (~2.6 GB) competes for memory with the trainer. The system prompt
 # is the one the dataset was built with (build_dataset.SYSTEM).
 set -euo pipefail
-AI_HOME="${AI_HOME:-/Volumes/metravel-ai}"
+AI_HOME="${AI_HOME:-$HOME/metravel-ai}"  # обучение переехало на ноутбук 18.10.2026 (README)
 MODEL="${MODEL:-models/Qwen3.5-4B-MLX-4bit}"
 ADAPTER="${ADAPTER-adapters/metravel-llm-v0}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -3,7 +3,7 @@
 from the production API into JSONL files for model training.
 
 Usage:
-    python3 -I scripts/ai-train/export_corpus.py --out /Volumes/metravel-ai/data/raw
+    python3 -I scripts/ai-train/export_corpus.py --out ~/metravel-ai/data/raw
 
 Only published and moderated content is read, over the public API, with a
 pause between requests so the single prod core is not loaded. Nothing is
