@@ -1,4 +1,4 @@
-import React, { Suspense, useMemo } from 'react'
+import React, { Suspense, useMemo, useState } from 'react'
 import { useLocalSearchParams } from 'expo-router'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
 
@@ -16,8 +16,17 @@ const NotFoundContent = require('./[...missing].tsx').NotFoundContent as React.C
 // this catch-all's module graph, and the shared-chunk split then shipped it as
 // eager JS on unrelated routes (userpoints, messages, cookies, user, trip plan).
 // The quest screen loads only once the path is a locale quest route.
-const loadQuestScreen = () => import('@/app/(tabs)/quests/[city]/[questId]')
-const QuestByIdScreen = React.lazy(loadQuestScreen)
+type QuestScreenComponent = typeof import('@/app/(tabs)/quests/[city]/[questId]').default
+// #2465: once the module is in, render it directly. React.lazy suspends on its
+// first render even for a resolved import, and the reveal of that Suspense
+// retry is throttled 300 ms after the last fallback commit — on a translated
+// member, whose document ships the chunk, that held the quest screen back.
+let loadedQuestScreen: QuestScreenComponent | null = null
+const loadQuestScreen = () => import('@/app/(tabs)/quests/[city]/[questId]').then((module) => {
+  loadedQuestScreen = module.default
+  return module
+})
+const LazyQuestByIdScreen = React.lazy(loadQuestScreen)
 // Start the chunk with this module on a locale quest URL instead of on first
 // render, so it overlaps the catch-all's own render; other catch-all paths skip it.
 if (typeof window !== 'undefined' && parseQuestLocaleRoute(window.location.pathname)) {
@@ -40,6 +49,9 @@ export default function QuestLocaleRouteScreen() {
   const { missing } = useLocalSearchParams<{ missing?: string | string[] }>()
   const ownPath = `/${([] as string[]).concat(missing ?? []).join('/')}`
   const route = useMemo(() => parseQuestLocaleRoute(ownPath), [ownPath])
+  // One component type for the life of this mount: switching lazy → loaded
+  // after a commit would remount the whole quest screen.
+  const [QuestByIdScreen] = useState(() => loadedQuestScreen ?? LazyQuestByIdScreen)
   if (!route) return <StandaloneScreen><NotFoundContent /></StandaloneScreen>
 
   // CustomHeader owns the top inset for this root Stack route, as on contact.

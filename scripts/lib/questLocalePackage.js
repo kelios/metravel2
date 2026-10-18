@@ -46,6 +46,7 @@ const {
   SLOTS,
 } = require('./questSeoContract')
 const { scoreDetailCohort } = require('./questDetailCohort')
+const { questPageFromHtml } = require('./questPageDepth')
 const { readRegularPackageFile, verifyQuestSeoPackage } = require('./questSeoPackageVerify')
 const { selectPluralCategory } = require('../../i18n/pluralRules')
 
@@ -248,14 +249,14 @@ async function buildQuestLocaleCandidate(input) {
       return
     }
     const pathname = canonicalPath(Number(task.page.route.cityId), task.page.route.questId, task.locale)
-    cohorts.get(task.locale).push({ ...task, path: pathname, html })
+    cohorts.get(task.locale).push({ ...task, bundle, translator, path: pathname, html })
   })
 
   const translatedMembers = new Map()
   for (const [locale, entries] of cohorts) {
     if (!entries.length) continue
     const scored = scoreDetailCohort(entries)
-    let accepted = 0
+    const acceptedEntries = []
     for (const entry of entries) {
       const verdict = scored.get(entry.path)
       const anchor = ruQuality.get(entry.page.route.path)
@@ -267,6 +268,29 @@ async function buildQuestLocaleCandidate(input) {
         skipped.push(`${entry.path}: RU anchor ${entry.page.route.path} is not indexable`)
         continue
       }
+      acceptedEntries.push({ entry, verdict })
+    }
+    // #2467: a sibling link may point at a translation only once that translation
+    // is a member, so links are settled after the cohort verdict. The depth rule
+    // drops anchor text (questPageDepth.sectionProseText), so the second render
+    // must measure exactly the same prose — anything else is a code defect.
+    const translatedSiblings = new Map(acceptedEntries.map(({ entry }) => [
+      entry.page.route.path, { path: entry.path, title: String(entry.bundle.title || '').trim() },
+    ]))
+    for (const { entry } of acceptedEntries) {
+      const linked = buildLocalizedPage({
+        quest: entry.page.quest, route: entry.page.route, bundle: entry.bundle, locale, translator: entry.translator, translatedSiblings,
+      })
+      if (questPageFromHtml(linked, entry.path).text !== questPageFromHtml(entry.html, entry.path).text) {
+        throw new Error(`${entry.path}: translated sibling links changed the measured prose`)
+      }
+      if (findSpoilers(linked, entry.bundle).length) {
+        log(`  ⚠️  ${entry.path}: translated sibling titles hit the spoiler check — keeping RU sibling links`)
+      } else {
+        entry.html = linked
+      }
+    }
+    for (const { entry, verdict } of acceptedEntries) {
       const stored = insertQuestLocaleSlots(entry.html)
       if (Buffer.byteLength(stored, 'utf8') > LIMITS.htmlBytes) throw new Error(`${entry.path}: HTML exceeds ${LIMITS.htmlBytes} B`)
       writeDistFile(memberHtmlPath(Number(entry.page.route.cityId), entry.page.route.questId, locale), stored)
@@ -276,9 +300,8 @@ async function buildQuestLocaleCandidate(input) {
         record: entry.record,
         quality: { indexable: true, word_count: verdict.words, own_fivegram_ratio: verdict.ratio },
       }
-      accepted += 1
     }
-    log(`  🌐 ${locale}: ${accepted}/${entries.length} translated detail pages clear the ${locale} cohort floors`)
+    log(`  🌐 ${locale}: ${acceptedEntries.length}/${entries.length} translated detail pages clear the ${locale} cohort floors`)
   }
   if (skipped.length) log(`  ⚠️  ${skipped.length} translations stay without a static page: ${skipped.join(', ')}`)
 

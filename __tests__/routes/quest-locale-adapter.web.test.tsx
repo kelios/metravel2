@@ -62,6 +62,21 @@ describe('quest-only web catch-all', () => {
     expect(mockNotFound).toHaveBeenCalled()
   })
 
+  it('renders an already loaded quest screen in the first commit, without a Suspense fallback (#2465)', async () => {
+    mockPathname = mockCardPath = '/pl/quests/4/minsk-cmok'
+    const first = render(<QuestLocaleRouteScreen />)
+    await waitFor(() => expect(mockDetail).toHaveBeenCalled())
+    first.unmount()
+    mockDetail.mockClear()
+
+    // The translated document ships the chunk (#2465): the module is in before
+    // mount, so the screen must not suspend — its retry would be throttled.
+    render(<QuestLocaleRouteScreen />)
+    expect(mockDetail).toHaveBeenCalledWith(expect.objectContaining({
+      route: expect.objectContaining({ locale: 'pl', questSlug: 'minsk-cmok' }),
+    }))
+  })
+
   it('freezes a hidden card on its own address after a language link pushes another locale (#2464)', async () => {
     // The detail derives availability from focus-gated queries: a blurred
     // render is exactly the stale "version unavailable" heading.

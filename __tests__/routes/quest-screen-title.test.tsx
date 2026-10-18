@@ -665,6 +665,35 @@ describe('Quest screen title sync', () => {
     expect(unrelated.isConnected).toBe(true)
   })
 
+  it('hands the SSG BreadcrumbList over to the graph: one list with the plain name and locale URL (#2466)', async () => {
+    const original = mockUseQuestBundle()
+    mockUseQuestBundle.mockReturnValue({ ...original, bundle: { ...original.bundle, contentLocale: 'pl', city: { ...original.bundle.city, id: 4 } } } as any)
+    mockUseQuestServing.mockReturnValue({ projection, pending: false, offline: false, refetch: jest.fn() } as any)
+    appendBootstrapQuestJsonLd()
+    const ssgCrumbs = document.createElement('script')
+    ssgCrumbs.type = 'application/ld+json'
+    ssgCrumbs.textContent = JSON.stringify({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [] })
+    document.head.appendChild(ssgCrumbs)
+    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
+    const screen = render(<QuestScreen route={plRoute} />)
+    const { html } = readHelmetStructuredData(screen)
+    await act(async () => {
+      document.head.insertAdjacentHTML('beforeend', html)
+      await Promise.resolve()
+    })
+
+    const lists = [...document.head.querySelectorAll('script[type="application/ld+json"]')].flatMap((node) => {
+      const payload = JSON.parse(node.textContent ?? 'null')
+      return [payload, ...(payload?.['@graph'] ?? [])].filter((entry) => entry?.['@type'] === 'BreadcrumbList')
+    })
+    expect(ssgCrumbs.isConnected).toBe(false)
+    expect(lists).toHaveLength(1)
+    expect(lists[0].itemListElement.at(-1)).toEqual(expect.objectContaining({
+      name: 'Тайна Свислочского Цмока: Легенда оживает',
+      item: `https://metravel.by${plRoute.path}`,
+    }))
+  })
+
   it('passes real auth into progress sync after blur (#1973)', () => {
     const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
     const screen = render(<QuestScreen />)

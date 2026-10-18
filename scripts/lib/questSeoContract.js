@@ -28,6 +28,8 @@ const LOCALE_META = Object.freeze({
   en: { languageTag: 'en-US', ogLocale: 'en_US' },
 })
 
+// Latin-script locales: Cyrillic in their app-owned wording is a Russian leak (#2467).
+const LATIN_SCRIPT_LOCALES = Object.freeze(['pl', 'en'])
 const PUBLIC_ORIGIN = 'https://metravel.by'
 const MANIFEST_NAME = 'quest-seo-manifest.v1.json'
 const BUILD_SOURCE_NAME = '.build-source.json'
@@ -449,6 +451,53 @@ function scanHtmlDocument(html) {
   return doc
 }
 
+const VOID_ELEMENTS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'])
+const CYRILLIC_WORD = /[^\s]*[\u0400-\u04FF][^\s]*/
+
+/**
+ * Body text a reader gets in the page language (#2467): comments, script,
+ * style and every `lang="ru"` subtree removed. Russian pages linked under D1
+ * (#2208) stay Russian inside such subtrees and nowhere else.
+ */
+function textOutsideRussianMarkup(html) {
+  const source = String(html)
+  const start = source.search(/<body\b/i)
+  const body = (start === -1 ? source : source.slice(start))
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<(script|style)\b[\s\S]*?<\/\1\s*>/gi, ' ')
+  const tag = /<(\/?)([A-Za-z][A-Za-z0-9-]*)((?:"[^"]*"|'[^']*'|[^'">])*)>/g
+  let text = ''
+  let last = 0
+  let ruName = null
+  let ruDepth = 0
+  let match
+  while ((match = tag.exec(body)) !== null) {
+    if (!ruName) text += `${body.slice(last, match.index)} `
+    last = tag.lastIndex
+    const name = match[2].toLowerCase()
+    const closing = match[1] === '/'
+    const opensSubtree = !closing && !VOID_ELEMENTS.has(name) && !/\/\s*$/.test(match[3])
+    if (ruName) {
+      if (name === ruName && (closing || opensSubtree)) ruDepth += closing ? -1 : 1
+      if (ruDepth === 0) ruName = null
+      continue
+    }
+    const lang = parseAttributes(match[3] || '').find(([key]) => key === 'lang')
+    if (opensSubtree && lang && String(lang[1]).toLowerCase() === 'ru') {
+      ruName = name
+      ruDepth = 1
+    }
+  }
+  if (!ruName) text += body.slice(last)
+  return decodeEntities(text).replace(/\s+/g, ' ').trim()
+}
+
+/** The «where next» block of a detail page; it nests no `<div>` of its own. */
+function questLinksBlock(html) {
+  const match = /<div data-ssg-quest-links="true">[\s\S]*?<\/div>/.exec(String(html))
+  return match ? match[0] : null
+}
+
 function touristTrips(value, found = []) {
   if (Array.isArray(value)) {
     for (const child of value) touristTrips(child, found)
@@ -488,7 +537,19 @@ function memberDocumentIssues(html, { locale, canonicalPath: pathname, indexable
   if (trips.length !== 1 || trips[0].url !== canonical || trips[0].mainEntityOfPage !== canonical || trips[0].inLanguage !== locale) {
     issues.push(`expected one TouristTrip with url/mainEntityOfPage ${canonical} and inLanguage ${locale}`)
   }
+  if (LATIN_SCRIPT_LOCALES.includes(locale)) {
+    // The block's own wording is app-owned; quest prose may quote a Cyrillic
+    // sign verbatim and is translation content, not this contract (#2467).
+    const block = questLinksBlock(html)
+    const stray = block && CYRILLIC_WORD.exec(textOutsideRussianMarkup(`<body>${block}`))
+    if (stray) issues.push(`Cyrillic text outside lang="ru" in the quest links block: «${stray[0]}»`)
+  }
   if (locale !== 'ru') {
+    // #2467: a link to a Russian page says so; translated links are checked
+    // against the manifest members by the package verifier.
+    const unmarked = doc.anchors.find((anchor) => anchor.container === 'body' && typeof anchor.href === 'string'
+      && anchor.href.startsWith('/') && !/^\/(?:be|uk|pl|en)\//.test(anchor.href) && anchor.hreflang !== 'ru')
+    if (unmarked) issues.push(`link to Russian page ${unmarked.href} lacks hreflang="ru"`)
     // #2449: the RU export's `#root` renders another route in Russian; a
     // translated member that hydrates it fails with React #418.
     const shell = appShellState(html)
@@ -638,6 +699,8 @@ module.exports = {
   errorDocumentIssues,
   errorHtmlPath,
   escapeHtml,
+  questLinksBlock,
+  textOutsideRussianMarkup,
   fullEffectiveLocales,
   insertQuestLocaleSlots,
   memberDocumentIssues,

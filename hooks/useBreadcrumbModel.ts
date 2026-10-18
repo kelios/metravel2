@@ -23,6 +23,7 @@ import type { PlannedTrip } from '@/api/plannedTrips';
 import type { PublicTrip } from '@/api/publicTrips';
 import { queryKeys } from '@/api/queryKeys';
 import { normalizeTravelRouteSegment } from '@/utils/travelRouteSegment';
+import { parseQuestLocaleRoute } from '@/utils/questLocaleRouting';
 import { getActiveLocale, translate as i18nT } from '@/i18n'
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { pageTranslations, STANDALONE_NESTED_ROUTE_LABELS } from '@/hooks/breadcrumbRouteLabels';
@@ -60,6 +61,8 @@ export type BreadcrumbModel = {
   pageContextTitle: string;
   backToPath: string | null;
   showBreadcrumbs: boolean;
+  /** The screen publishes this page's `BreadcrumbList` itself (#2466). */
+  structuredDataOwnedByScreen?: boolean;
 };
 
 const MAX_BREADCRUMB_LENGTH = 50;
@@ -129,6 +132,21 @@ function getResolvedPathname(pathname: string | null | undefined) {
     return normalizePathname(window.location.pathname);
   }
   return normalized;
+}
+
+type QuestDetailRoute = { questSlug: string; locale: string | null; path: string };
+
+// #2466: a quest detail lives under two URL contracts — RU `/quests/<city>/<slug>`
+// and `/{be|uk|pl|en}/quests/<city>/<slug>` (#2364). The prefixed one is parsed
+// by the shared route helper, so both reach the same crumb branch instead of
+// the generic segment titleizer («Pl › Questy › 12 › Brest Fortress»).
+function resolveQuestDetailRoute(pathname: string | null | undefined): QuestDetailRoute | null {
+  const localeRoute = parseQuestLocaleRoute(pathname);
+  if (localeRoute) return { questSlug: localeRoute.questSlug, locale: localeRoute.locale, path: localeRoute.path };
+  if (!pathname || !pathname.startsWith('/quests/')) return null;
+  const parts = pathname.split('/').filter(Boolean);
+  if (parts.length < 3 || parts[1] === 'country') return null;
+  return { questSlug: parts[2], locale: null, path: pathname };
 }
 
 function toTitleFromSegment(segment: string) {
@@ -281,15 +299,23 @@ export function useBreadcrumbModel(): BreadcrumbModel {
   const travelData = cachedTravel ?? initialTravelData ?? null;
 
   // Quest title from API (for breadcrumbs on quest detail pages)
-  const questSlugForBreadcrumb = useMemo(() => {
-    const p = resolvedPathname;
-    if (!p || !p.startsWith('/quests/')) return null;
-    const parts = p.split('/').filter(Boolean);
-    return parts.length >= 3 && parts[1] !== 'country' ? parts[2] : null;
-  }, [resolvedPathname]);
-
-  const { data: questApiData } = useQuery(questBundleQueryOptions(questSlugForBreadcrumb));
-  const questApiTitle = questApiData?.title || '';
+  const questDetailRoute = useMemo(() => resolveQuestDetailRoute(resolvedPathname), [resolvedPathname]);
+  const questBundleOptions = questBundleQueryOptions(
+    questDetailRoute?.questSlug ?? null,
+    questDetailRoute?.locale ?? undefined,
+  );
+  // A prefixed detail loads its `?lang=` bundle only after the serving gate
+  // proves the translation (#2364); the crumb reads that same key and never
+  // starts a request of its own, so a translated page costs no extra fetch.
+  const { data: questApiData } = useQuery(
+    questDetailRoute?.locale ? { ...questBundleOptions, enabled: false } : questBundleOptions,
+  );
+  // A prefixed detail names only the translation it shows: the screen rejects a
+  // bundle in another content language (API fallback), and so does the crumb.
+  const questApiTitle = questDetailRoute?.locale
+    && (questApiData?.content_locale || 'ru') !== questDetailRoute.locale
+    ? ''
+    : questApiData?.title || '';
 
   // City landing /quests/<cityId|alias>: the crumb must show the localized city
   // name («Минск»), not the titleized URL segment («Minsk»). Shares the quests
@@ -743,26 +769,26 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       };
     }
 
-    const isQuestDetails = p.startsWith('/quests/') && parts.length >= 3;
-    if (isQuestDetails) {
-      const questSlug = parts[2];
-      let questTitle = questApiTitle || toTitleFromSegment(questSlug);
-      if (questTitle.length > MAX_BREADCRUMB_LENGTH) {
-        questTitle = questTitle.slice(0, MAX_BREADCRUMB_LENGTH).trim() + '...';
-      }
-
+    if (questDetailRoute) {
+      // Only the real title: until the bundle arrives the quest crumb is omitted,
+      // never guessed from the slug («Minsk Cmok»), as on the city landing.
+      const questTitle = truncateLabel(questApiTitle);
+      const questsLabel = i18nT('shared:hooks.useBreadcrumbModel.kvesty_91edef10');
       const items = [
-        { label: i18nT('shared:hooks.useBreadcrumbModel.kvesty_91edef10'), path: '/quests' },
-        { label: questTitle, path: p },
+        { label: questsLabel, path: '/quests' },
+        ...(questTitle ? [{ label: questTitle, path: questDetailRoute.path }] : []),
       ];
 
       return {
         items,
         depth: items.length + 1,
-        currentTitle: questTitle,
-        pageContextTitle: i18nT('shared:hooks.useBreadcrumbModel.kvesty_91edef10'),
+        currentTitle: questTitle || questsLabel,
+        pageContextTitle: questsLabel,
         backToPath: '/quests',
         showBreadcrumbs: true,
+        // The quest screen's graph carries the page's one BreadcrumbList with
+        // its canonical locale URL and replaces the SSG copy on hand-over.
+        structuredDataOwnedByScreen: true,
       };
     }
 
@@ -815,7 +841,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       backToPath,
       showBreadcrumbs: computed.length >= 1,
     };
-  }, [bookJobTitle, exportNavigationTitle, profileNavigationTitle, resolvedPathname, hasFilterQuery, normalizedReturnToParam, travelData, travelSlug, questApiTitle, questCityName, questCountryName, userProfileName, articleTitle, plannedTripData, publicTripData]);
+  }, [bookJobTitle, exportNavigationTitle, profileNavigationTitle, resolvedPathname, hasFilterQuery, normalizedReturnToParam, travelData, travelSlug, questApiTitle, questDetailRoute, questCityName, questCountryName, userProfileName, articleTitle, plannedTripData, publicTripData]);
 }
 
 export default useBreadcrumbModel;

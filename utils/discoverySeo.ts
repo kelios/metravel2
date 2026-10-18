@@ -33,6 +33,8 @@ type QuestEntry = {
 type QuestDetailInput = {
   canonical: string;
   title: string;
+  /** Plain quest name for the last crumb; `title` carries the « | Metravel» suffix. */
+  crumbName?: string;
   description: string;
   questId: string;
   inLanguage?: string;
@@ -237,7 +239,7 @@ export function createQuestDetailStructuredData(input: QuestDetailInput) {
     [
       { name: i18nT('seoStatic:structuredData.home'), item: `${SITE_URL}/` },
       { name: i18nT('seoStatic:structuredData.quests'), item: `${SITE_URL}/quests` },
-      { name: input.title, item: input.canonical },
+      { name: input.crumbName || input.title, item: input.canonical },
     ],
     breadcrumbId
   );

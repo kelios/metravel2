@@ -51,6 +51,9 @@ export default function BreadcrumbsJsonLd({ model: modelProp, pathname: pathname
     // Крошка без подписи ещё ждёт данных (город квестов до каталога, #2167):
     // `ListItem` без `name` невалиден, разметка выходит, когда модель полна.
     if (!model?.showBreadcrumbs || modelItems.length === 0 || modelItems.some((item) => !item.label)) return null;
+    // #2466: a screen that publishes its own BreadcrumbList (quest detail) must
+    // not get a second, header-built copy next to it.
+    if (model.structuredDataOwnedByScreen) return null;
     const items = [{ label: i18nT('seo:components.seo.BreadcrumbsJsonLd.glavnaya_c0447583'), path: '/' }, ...modelItems];
     return items.map((item, index) => ({
       '@type': 'ListItem',
@@ -58,7 +61,7 @@ export default function BreadcrumbsJsonLd({ model: modelProp, pathname: pathname
       name: item.label,
       item: toAbsoluteUrl(item.path),
     }));
-  }, [model?.items, model?.showBreadcrumbs]);
+  }, [model?.items, model?.showBreadcrumbs, model?.structuredDataOwnedByScreen]);
 
   if (!itemListElement) return null;
 

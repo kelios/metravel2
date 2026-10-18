@@ -291,7 +291,13 @@ f.fetchJsonOnce=f.fetchJson=async url=>{
     const online = path.join(root, 'online'), offline = path.join(root, 'offline')
     for (const dist of [online, offline]) {
       fs.mkdirSync(path.join(dist, 'quests/country'), { recursive: true })
-      fs.writeFileSync(path.join(dist, 'index.html'), '<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Fixture</title></head><body><div id="root"></div></body></html>')
+      // An export ships its web chunks; translated members boot with them (#2465).
+      const webJs = path.join(dist, '_expo/static/js/web')
+      fs.mkdirSync(webJs, { recursive: true })
+      for (const chunk of ['entry-0a.js', '[...missing]-0a.js', 'locale-be-0a.js', 'locale-uk-0a.js', 'locale-pl-0a.js', 'locale-en-0a.js']) {
+        fs.writeFileSync(path.join(webJs, chunk), '__d(function(){},0,[]);')
+      }
+      fs.writeFileSync(path.join(dist, 'index.html'), '<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Fixture</title><script src="/_expo/static/js/web/entry-0a.js" defer></script></head><body><div id="root"></div></body></html>')
       fs.copyFileSync(path.join(dist, 'index.html'), path.join(dist, 'quests/country/[country].html'))
     }
     const options = ['--quest-seo-publication-mode', 'translations', '--api', identity.api_origin]
@@ -320,7 +326,7 @@ f.fetchJsonOnce=f.fetchJson=async url=>{
     expect(tree(offline)).toEqual(tree(online))
     expect(fs.readFileSync(path.join(offline, 'travels/fixture.html'), 'utf8')).toContain('тело статьи')
     expect(fs.readFileSync(path.join(offline, 'travels/slug-fallback.html'), 'utf8')).toContain('тело статьи')
-    expect(fs.existsSync(path.join(offline, 'pl/quests/4/minsk-fixture.html'))).toBe(true)
+    expect(fs.readFileSync(path.join(offline, 'pl/quests/4/minsk-fixture.html'), 'utf8')).toContain('<script src="/_expo/static/js/web/[...missing]-0a.js" defer></script>')
     expect(JSON.parse(fs.readFileSync(path.join(root, 'offline-candidate.json'), 'utf8'))).toEqual(JSON.parse(fs.readFileSync(path.join(root, 'online-candidate.json'), 'utf8')))
   })
   it('removes the large-body duplicate under the fixed 128 MiB limit and reports refusal before full serialization', () => {

@@ -21,7 +21,7 @@ const {
   writeCandidateFile,
 } = require('@/scripts/lib/questLocalePackage')
 const { verifyQuestSeoPackage, listPrefixedQuestArtifacts } = require('@/scripts/lib/questSeoPackageVerify')
-const { appShellState } = require('@/scripts/lib/expoStaticShell')
+const { appShellState, readQuestLocaleBootChunks } = require('@/scripts/lib/expoStaticShell')
 const { scoreDetailCohort } = require('@/scripts/lib/questDetailCohort')
 const gsp = require('@/scripts/generate-seo-pages')
 const { verifyQuestSeoPackageState } = require('@/scripts/verify-static-quest-seo')
@@ -36,12 +36,28 @@ const CATALOGS = loadSsgCatalogs(path.resolve(__dirname, '..', '..')).catalogs
 const SHA = 'a'.repeat(40)
 const COVER = 'https://metravel.by/quest-cover/quests/1/main/cover.webp'
 
+const WEB_JS = '/_expo/static/js/web/'
+// The export's chunks a translated member boots with (#2465).
+const BOOT_FILES: Record<string, string> = {
+  'entry-0123abcd.js': '__d(function(){},0,[]);',
+  '[...missing]-0a1b.js': `globalThis.__METRAVEL_CHUNK_DEPS__??={};globalThis.__METRAVEL_CHUNK_DEPS__["${WEB_JS}[...missing]-0a1b.js"]=["${WEB_JS}__shared-3-0c.js"];__d(function(){},1,[]);`,
+  '__shared-3-0c.js': '__d(function(){},2,[]);',
+  ...Object.fromEntries(['be', 'uk', 'pl', 'en'].map((locale) => [`locale-${locale}-0d.js`, '__d(function(){},3,[]);'])),
+}
+function writeBootChunks(dist: string) {
+  const dir = path.join(dist, '_expo', 'static', 'js', 'web')
+  fs.mkdirSync(dir, { recursive: true })
+  for (const [name, body] of Object.entries(BOOT_FILES)) fs.writeFileSync(path.join(dir, name), body)
+  return readQuestLocaleBootChunks(dir, contract.TRANSLATED_LOCALES)
+}
+
 const BASE_HTML = [
   '<!DOCTYPE html><html  lang="ru" dir="ltr"><head><meta charset="utf-8"/>',
   '<title>Квест | Metravel</title><meta property="og:locale" content="ru_RU"/>',
   '<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","name":"MeTravel"}]}</script>',
   // As exported by Expo: the hydration flag and the RU render of the app shell (#2449).
   '<script>globalThis.__EXPO_ROUTER_HYDRATE__=true;</script>',
+  `<script src="${WEB_JS}entry-0123abcd.js" defer></script>`,
   '</head><body><div id="root"><div class="css-view"><a data-skip-link="true">Перейти к основному содержимому</a>',
   '<div><div>Загружаем квест…</div></div></div></div></body></html>',
 ].join('')
@@ -120,14 +136,26 @@ function ruPages(quests: Q[], ruBundles: Record<string, unknown>) {
   return { pages, quality }
 }
 
+// The city-landing model shape the detail block reads (#1756): RU pages under D1.
+function detailLinksFor(quest: Q) {
+  return {
+    cityLabel: 'Минск',
+    landingPath: '/quests/minsk',
+    siblings: QUESTS.filter((other) => other !== quest).map((other) => ({ path: questRouteKey(other).path, title: other.title })),
+    nearbyCities: [{ segment: 'grodno', name: 'Гродно', questCount: 2, distanceKm: 250 }],
+    travelLinks: [{ path: '/travels/minsk-walk', title: 'Прогулка по Минску' }],
+  }
+}
+
 async function buildCase(options: {
   published?: Record<string, string[]>; localized?: (quest: Q, locale: string, i: number) => unknown;
-  fetchError?: Error; ruWords?: Record<string, number>; publicationMode?: string;
+  fetchError?: Error; ruWords?: Record<string, number>; publicationMode?: string; withLinks?: boolean; withoutBootChunks?: boolean;
 } = {}) {
   const root = makeTempDir('quest-seo-package-')
   const dist = path.join(root, 'dist')
   fs.mkdirSync(dist, { recursive: true })
   fs.writeFileSync(path.join(dist, '.build-source.json'), JSON.stringify({ sha: SHA }))
+  const bootChunks = writeBootChunks(dist)
   const ruBundles = Object.fromEntries(QUESTS.map((quest, i) => [quest.quest_id, bundle(quest, 'ru', 100 + i, { words: options.ruWords?.[quest.quest_id] })]))
   const { pages, quality } = ruPages(QUESTS, ruBundles)
   for (const page of pages) {
@@ -153,8 +181,12 @@ async function buildCase(options: {
       const quest = QUESTS[index]
       return options.localized ? options.localized(quest, locale, index) : bundle(quest, locale, 500 + index * 10 + locale.length)
     },
-    buildLocalizedPage: ({ quest, route, bundle: localized, translator }: any) =>
-      gsp.buildQuestDetailPageHtml({ baseHtml: BASE_HTML, quest, bundle: localized, route, ssg: translator }),
+    buildLocalizedPage: ({ quest, route, bundle: localized, translator, translatedSiblings }: any) =>
+      gsp.buildQuestDetailPageHtml({
+        baseHtml: BASE_HTML, quest, bundle: localized, route, ssg: translator, translatedSiblings,
+        bootChunks: options.withoutBootChunks ? null : bootChunks.get(translator.locale),
+        detailLinks: options.withLinks ? detailLinksFor(quest) : null,
+      }),
     findSpoilers: (html: string, localized: unknown) => gsp.findQuestSpoilerLeaks(html, localized, gsp.buildQuestRouteDigest(localized)).errors,
     writeDistFile: (relative: string, html: string) => {
       const file = path.join(dist, relative)
@@ -494,6 +526,111 @@ describe('translated members mount client-side (#2449)', () => {
       'translated member must not request Expo hydration',
       'translated member must ship an empty #root',
     ])
+  })
+})
+
+describe('boot chunks of translated members (#2465)', () => {
+  it('ships the catch-all route, its shared chunks and the locale catalog before entry', async () => {
+    const c = await buildCase()
+    const pl = fs.readFileSync(path.join(c.dist, contract.memberHtmlPath(4, 'quest-alpha', 'pl')), 'utf8')
+    const scripts = [...pl.matchAll(/<script src="([^"]+)" defer><\/script>/g)].map((match) => match[1].replace(WEB_JS, ''))
+    expect(scripts).toEqual(['__shared-3-0c.js', '[...missing]-0a1b.js', 'locale-pl-0d.js', 'entry-0123abcd.js'])
+    const ru = fs.readFileSync(path.join(c.dist, contract.memberHtmlPath(4, 'quest-alpha', 'ru')), 'utf8')
+    expect(ru).not.toContain('[...missing]')
+    finalize(c, c.receiptText)
+    expect(verifyQuestSeoPackage(c.dist).failures).toEqual([])
+  })
+
+  it('rejects a translated member that would load its route after entry', async () => {
+    const c = await buildCase({ withoutBootChunks: true })
+    expect(() => finalize(c, c.receiptText)).toThrow(
+      `${contract.canonicalPath(4, 'quest-alpha', 'pl')}: does not ship boot chunk ${WEB_JS}__shared-3-0c.js (#2465)`,
+    )
+  })
+})
+
+describe('links block on translated members (#2467)', () => {
+  const route = questRouteKey(QUESTS[0])
+  const cyrillic = /[\u0400-\u04FF]/
+  const latinBundle = (quest: Q, locale: string, i: number, cityName?: string) => ({
+    ...bundle(quest, locale, 500 + i * 10 + locale.length),
+    title: `Quest ${quest.quest_id.slice(6)} ${locale}`,
+    city: cityName ? { name: cityName, name_localized: cityName } : { name: 'Минск' },
+  })
+  const buildPl = (cityName?: string) => gsp.buildQuestDetailPageHtml({
+    baseHtml: BASE_HTML, quest: QUESTS[0], bundle: latinBundle(QUESTS[0], 'pl', 0, cityName), route,
+    detailLinks: detailLinksFor(QUESTS[0]), ssg: createSsgTranslator(CATALOGS, 'pl'),
+  })
+  const blockText = (html: string) => contract.textOutsideRussianMarkup(`<body>${contract.questLinksBlock(html)}`)
+
+  it('names the city in the page language and marks every Russian link', () => {
+    const block = contract.questLinksBlock(buildPl('Mińsk'))!
+    expect(blockText(block)).not.toMatch(cyrillic)
+    expect(blockText(block)).toContain('Mińsk')
+    expect(block).toMatch(/<a href="\/quests\/minsk" hreflang="ru">[^<]*Mińsk<\/a>/)
+    expect(block).toContain('<a href="/quests/4/quest-bravo" lang="ru" hreflang="ru">Квест bravo</a>')
+    expect(block).toContain('<a href="/quests" hreflang="ru">')
+  })
+
+  it('keeps the Russian city name inside lang="ru" when the exact bundle has no localized name', () => {
+    const block = contract.questLinksBlock(buildPl())!
+    expect(block).toContain('<span lang="ru">Минск</span>')
+    expect(blockText(block)).not.toMatch(cyrillic)
+  })
+
+  it('treats the API fallback to the Russian city name as untranslated', () => {
+    const html = gsp.buildQuestDetailPageHtml({
+      baseHtml: BASE_HTML, quest: QUESTS[0], route, detailLinks: detailLinksFor(QUESTS[0]), ssg: createSsgTranslator(CATALOGS, 'pl'),
+      bundle: { ...latinBundle(QUESTS[0], 'pl', 0), city: { name: 'Минск', name_canonical: 'Минск', name_localized: 'Минск' } },
+    })
+    const block = contract.questLinksBlock(html)!
+    expect(block).toContain('<span lang="ru">Минск</span>')
+    expect(blockText(block)).not.toMatch(cyrillic)
+  })
+
+  it('rejects a member whose block leaks Cyrillic or links a Russian page without hreflang', () => {
+    const options = { locale: 'pl', canonicalPath: contract.canonicalPath(4, QUESTS[0].quest_id, 'pl'), indexable: true }
+    const pl = contract.insertQuestLocaleSlots(buildPl('Mińsk'))
+    expect(contract.memberDocumentIssues(pl, options).issues).toEqual([])
+    expect(contract.memberDocumentIssues(pl.replace('Mińsk</a>', 'Минск</a>'), options).issues)
+      .toEqual(['Cyrillic text outside lang="ru" in the quest links block: «Минск»'])
+    expect(contract.memberDocumentIssues(pl.replace('<a href="/quests" hreflang="ru">', '<a href="/quests">'), options).issues)
+      .toEqual(['link to Russian page /quests lacks hreflang="ru"'])
+  })
+
+  it('links a sibling translated into the same language, and only a published member', async () => {
+    const c = await buildCase({
+      withLinks: true,
+      localized: (quest: Q, locale: string, i: number) => latinBundle(quest, locale, i, locale === 'pl' ? 'Mińsk' : 'Minsk'),
+    })
+    const pl = fs.readFileSync(path.join(c.dist, contract.memberHtmlPath(4, 'quest-alpha', 'pl')), 'utf8')
+    expect(pl).toContain('<a href="/pl/quests/4/quest-bravo">Quest bravo pl</a>')
+    expect(pl).toContain('<a href="/pl/quests/4/quest-charlie">Quest charlie pl</a>')
+    expect(pl).toContain('<a href="/quests/4/quest-delta" lang="ru" hreflang="ru">Квест delta</a>')
+    // EN has no other member: every sibling stays the marked Russian page.
+    const en = fs.readFileSync(path.join(c.dist, contract.memberHtmlPath(4, 'quest-alpha', 'en')), 'utf8')
+    expect(en).not.toMatch(/href="\/en\/quests\/4\/quest-(bravo|charlie|delta)"/)
+    expect(en).toContain('<a href="/quests/4/quest-bravo" lang="ru" hreflang="ru">Квест bravo</a>')
+
+    finalize(c, c.receiptText)
+    expect(verifyQuestSeoPackage(c.dist).failures).toEqual([])
+  })
+
+  it('fails the package when a translated link points at a non-member', async () => {
+    const c = await buildCase({
+      withLinks: true,
+      localized: (quest: Q, locale: string, i: number) => latinBundle(quest, locale, i, 'Mińsk'),
+    })
+    finalize(c, c.receiptText)
+    const manifest = JSON.parse(fs.readFileSync(path.join(c.dist, contract.MANIFEST_NAME), 'utf8'))
+    const member = manifest.clusters[0].members.pl
+    const file = path.join(c.dist, member.html_path)
+    const tampered = fs.readFileSync(file, 'utf8').replace('href="/pl/quests/4/quest-bravo"', 'href="/pl/quests/4/quest-delta"')
+    fs.writeFileSync(file, tampered)
+    member.html_sha256 = contract.sha256(tampered)
+    expect(verifyQuestSeoPackage(c.dist, { manifest }).failures).toContain(
+      `${member.canonical_path}: links /pl/quests/4/quest-delta, which is not a pl member`,
+    )
   })
 })
 

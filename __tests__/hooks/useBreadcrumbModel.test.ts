@@ -329,6 +329,56 @@ describe('useBreadcrumbModel', () => {
     ]);
   });
 
+  // #2466: the prefixed detail is the same quest crumb, never URL segments.
+  it.each(['be', 'uk', 'pl', 'en'])('builds the quest crumb for the /%s/quests detail from the cached route bundle', async (locale) => {
+    const { fetchQuestByQuestId } = jest.requireMock('@/api/quests') as { fetchQuestByQuestId: jest.Mock };
+    const path = `/${locale}/quests/12/brest-fortress`;
+    usePathname.mockReturnValue(path);
+    useLocalSearchParams.mockReturnValue({});
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    // Before the screen's `?lang=` bundle: no slug guess and no own request.
+    expect(result.current.items).toEqual([{ label: 'Квесты', path: '/quests' }]);
+    expect(result.current.structuredDataOwnedByScreen).toBe(true);
+    expect(fetchQuestByQuestId).not.toHaveBeenCalled();
+
+    act(() => {
+      queryClient.setQueryData(queryKeys.questBundle('brest-fortress', locale), {
+        title: 'Rozkaz nr 1: trzy dni Twierdzy Brzeskiej', content_locale: locale,
+      });
+    });
+    await waitFor(() => {
+      expect(result.current.items).toEqual([
+        { label: 'Квесты', path: '/quests' },
+        { label: 'Rozkaz nr 1: trzy dni Twierdzy Brzeskiej', path },
+      ]);
+    });
+    expect(result.current.currentTitle).toBe('Rozkaz nr 1: trzy dni Twierdzy Brzeskiej');
+    expect(result.current.backToPath).toBe('/quests');
+  });
+
+  it('does not name a prefixed detail after a bundle the screen rejects (RU fallback)', async () => {
+    usePathname.mockReturnValue('/pl/quests/12/brest-fortress');
+    useLocalSearchParams.mockReturnValue({});
+    queryClient.setQueryData(queryKeys.questBundle('brest-fortress', 'pl'), {
+      title: 'Приказ № 1: три дня Брестской крепости', content_locale: 'ru',
+    });
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    await act(async () => { await Promise.resolve(); });
+    expect(result.current.items).toEqual([{ label: 'Квесты', path: '/quests' }]);
+  });
+
+  it('does not titleize the RU quest slug while its bundle is pending', () => {
+    usePathname.mockReturnValue('/quests/4/minsk-cmok');
+    useLocalSearchParams.mockReturnValue({});
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    expect(result.current.items).toEqual([{ label: 'Квесты', path: '/quests' }]);
+    expect(result.current.items.map((item) => item.label)).not.toContain('Minsk Cmok');
+    expect(result.current.structuredDataOwnedByScreen).toBe(true);
+  });
+
   it('labels the /quests/scenario DIY landing instead of titleizing the segment', async () => {
     usePathname.mockReturnValue('/quests/scenario');
     useLocalSearchParams.mockReturnValue({});

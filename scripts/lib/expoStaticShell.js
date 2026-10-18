@@ -11,6 +11,8 @@
  * `memberDocumentIssues` in `questSeoContract.js`).
  */
 
+const fs = require('fs')
+
 const HYDRATE_FLAG_SOURCE = 'globalThis\\.__EXPO_ROUTER_HYDRATE__\\s*=\\s*true\\s*;?'
 const APP_ROOT_OPEN_SOURCE = '<div\\s+id="root"[^>]*>'
 
@@ -49,6 +51,49 @@ function emptyAppRoot(html) {
   return `${source.slice(0, contentStart)}${source.slice(close)}`
 }
 
+const WEB_CHUNK_PREFIX = '/_expo/static/js/web/'
+const CHUNK_MANIFEST = /^globalThis\.__METRAVEL_CHUNK_DEPS__\?\?=\{\};globalThis\.__METRAVEL_CHUNK_DEPS__\["(?:[^"\\]|\\.)*"\]=(\[[^\]]*\]);/
+const CATCH_ALL_CHUNK = /^\[\.\.\.missing\]-[0-9a-f]+\.js$/
+
+function onlyChunk(files, pattern, label) {
+  const found = files.filter((file) => pattern.test(file))
+  if (found.length !== 1) throw new Error(`expected one ${label} web chunk, found ${found.length}`)
+  return WEB_CHUNK_PREFIX + found[0]
+}
+
+/**
+ * #2465: what a translated quest member needs on the page before `entry` runs.
+ * The member mounts client-side through the `[...missing]` catch-all (#2449)
+ * in its URL locale. Loaded on demand, the catch-all route, its shared chunks
+ * and the locale catalog formed a serial chain after `entry`; the route
+ * suspended, and React's reveal throttle (300 ms after the last fallback) then
+ * held the quest screen back another few hundred ms. Registered up front, the
+ * modules let expo-router render the route synchronously, as the RU export does
+ * with the route chunks it already lists.
+ */
+function readQuestLocaleBootChunks(jsDir, locales, fileSystem = fs) {
+  const files = fileSystem.readdirSync(jsDir).filter((file) => file.endsWith('.js'))
+  const route = onlyChunk(files, CATCH_ALL_CHUNK, '[...missing]')
+  const manifest = CHUNK_MANIFEST.exec(fileSystem.readFileSync(`${jsDir}/${route.slice(WEB_CHUNK_PREFIX.length)}`, 'utf8'))
+  const deps = manifest ? JSON.parse(manifest[1]).filter((dep) => typeof dep === 'string') : []
+  return new Map(locales.map((locale) => [locale, [...deps, route, onlyChunk(files, new RegExp(`^locale-${locale}-[0-9a-f]+\\.js$`), `locale-${locale}`)]]))
+}
+
+/** Boot chunks the page does not list as scripts (empty = all shipped). */
+function missingBootChunks(html, srcs) {
+  const present = new Set([...String(html).matchAll(/<script\b[^>]*\bsrc="([^"]+)"/gi)].map((match) => match[1]))
+  return srcs.filter((src) => !present.has(src))
+}
+
+/** Add the missing chunk scripts right before the `entry` script, in order. */
+function shipBootChunks(html, srcs) {
+  const source = String(html)
+  const entry = /<script\b[^>]*\bsrc="\/_expo\/static\/js\/web\/entry-[^"]+"[^>]*><\/script>/i.exec(source)
+  if (!entry) throw new Error('page has no Expo entry script')
+  const tags = missingBootChunks(source, srcs).map((src) => `<script src="${src}" defer></script>`).join('')
+  return `${source.slice(0, entry.index)}${tags}${source.slice(entry.index)}`
+}
+
 function appShellState(html) {
   const source = String(html)
   const roots = appRootOpenings(source)
@@ -63,4 +108,7 @@ module.exports = {
   appShellState,
   disableExpoRouterHydration,
   emptyAppRoot,
+  missingBootChunks,
+  readQuestLocaleBootChunks,
+  shipBootChunks,
 }

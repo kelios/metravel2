@@ -84,8 +84,8 @@ const {
   writeCandidateFile,
   publishedTranslatedLocales,
 } = require('./lib/questLocalePackage');
-const { canonicalPath: questCanonicalPath, insertQuestLocaleSlots } = require('./lib/questSeoContract');
-const { disableExpoRouterHydration, emptyAppRoot } = require('./lib/expoStaticShell');
+const { TRANSLATED_LOCALES: QUEST_TRANSLATED_LOCALES, canonicalPath: questCanonicalPath, insertQuestLocaleSlots } = require('./lib/questSeoContract');
+const { disableExpoRouterHydration, emptyAppRoot, readQuestLocaleBootChunks, shipBootChunks } = require('./lib/expoStaticShell');
 const { scoreDetailCohort } = require('./lib/questDetailCohort');
 const {
   buildQuestCityWalkModel,
@@ -2133,18 +2133,40 @@ function buildQuestRouteDigestHtml(digest, { h2Style, h3Style, pStyle, factStyle
   ].join('');
 }
 
-/** Блок перелинковки для секции детальной страницы квеста. */
-function buildQuestDetailLinksHtml(links, { h2Style, pStyle, ulStyle, backStyle }, ssg = RU_SSG) {
+/**
+ * Блок перелинковки для секции детальной страницы квеста.
+ *
+ * Города, статьи и непереведённые квесты — русские страницы (#2208, D1): на
+ * языковой странице их подписи помечены `lang="ru"`, ссылки — `hreflang="ru"`.
+ * Имя своего города во фразах страницы — на её языке (#2467): из точного
+ * `?lang=` бандла (`city.name_localized`, #2392), а без него — русское имя в
+ * `<span lang="ru">`. Сосед с опубликованным переводом того же языка
+ * (`translatedSiblings`: RU-путь → языковой путь и название) ведёт на перевод.
+ */
+function buildQuestDetailLinksHtml(links, { h2Style, pStyle, ulStyle, backStyle }, ssg = RU_SSG, {
+  cityName = null,
+  translatedSiblings = null,
+} = {}) {
   if (!links) return '';
 
-  // Перелинковка ведёт на русские страницы (города, соседние квесты, статьи):
-  // на языковой странице их названия помечены `lang="ru"` (#2365, D1).
-  const ruLang = ssg.locale === 'ru' ? '' : ' lang="ru"';
+  const isRu = ssg.locale === 'ru';
+  const ruTarget = isRu ? '' : ' hreflang="ru"';
+  const ruLabel = isRu ? '' : ' lang="ru" hreflang="ru"';
   const t = (key, params) => ssg.t(`seoSsg:questDetail.${key}`, params);
-  const item = (href, text, tail = '', lang = ruLang) =>
-    `<li style="margin:0 0 3px"><a href="${escapeAttr(href)}"${lang}>${escapeAttr(text)}</a>${tail}</li>`;
+  const anchor = (href, html, attrs) => `<a href="${escapeAttr(href)}"${attrs}>${html}</a>`;
+  const item = (href, text, tail = '', attrs = ruLabel) =>
+    `<li style="margin:0 0 3px">${anchor(href, escapeAttr(text), attrs)}${tail}</li>`;
+  const CITY_SLOT = '\u0000city\u0000';
+  const cityPhrase = (key) => {
+    if (isRu || cityName) return escapeAttr(t(key, { value1: isRu ? links.cityLabel : cityName }));
+    return escapeAttr(t(key, { value1: CITY_SLOT }))
+      .replace(CITY_SLOT, `<span lang="ru">${escapeAttr(links.cityLabel)}</span>`);
+  };
 
-  const siblings = links.siblings.map((quest) => item(quest.path, quest.title)).join('');
+  const siblings = links.siblings.map((quest) => {
+    const translated = isRu ? null : translatedSiblings?.get(quest.path);
+    return translated ? item(translated.path, translated.title, '', '') : item(quest.path, quest.title);
+  }).join('');
   const nearby = links.nearbyCities
     .map((city) => item(
       `/quests/${city.segment}`,
@@ -2159,21 +2181,21 @@ function buildQuestDetailLinksHtml(links, { h2Style, pStyle, ulStyle, backStyle 
     `<h2 style="${h2Style}">${escapeAttr(t('linksHeading'))}</h2>`,
     `<p style="${pStyle}">${escapeAttr(t('linksLead'))}</p>`,
     `<ul style="${ulStyle}">`,
-    item(links.landingPath, t('cityQuests', { value1: links.cityLabel }), '', ''),
+    `<li style="margin:0 0 3px">${anchor(links.landingPath, cityPhrase('cityQuests'), ruTarget)}</li>`,
     siblings,
     '</ul>',
     nearby
       ? `<h2 style="${h2Style}">${escapeAttr(ssg.t('quests:app.tabs.quests.city.index.nearbyTitle'))}</h2><ul style="${ulStyle}">${nearby}</ul>`
       : '',
     travels
-      ? `<h2 style="${h2Style}">${escapeAttr(t('travelsHeading', { value1: links.cityLabel }))}</h2><p style="${pStyle}">${escapeAttr(t('travelsLead'))}</p><ul style="${ulStyle}">${travels}</ul>`
+      ? `<h2 style="${h2Style}">${cityPhrase('travelsHeading')}</h2><p style="${pStyle}">${escapeAttr(t('travelsLead'))}</p><ul style="${ulStyle}">${travels}</ul>`
       : '',
-    `<p style="${backStyle}"><a href="/quests">${escapeAttr(ssg.t('quests:app.tabs.quests.city.index.back'))}</a></p>`,
+    `<p style="${backStyle}">${anchor('/quests', escapeAttr(ssg.t('quests:app.tabs.quests.city.index.back')), ruTarget)}</p>`,
     '</div>',
   ].join('');
 }
 
-function injectQuestIntroSection(baseHtml, { title, description, quest, bundle, links, ssg = RU_SSG }) {
+function injectQuestIntroSection(baseHtml, { title, description, quest, bundle, links, linkLocalization, ssg = RU_SSG }) {
   const cleanTitle = String(title || quest?.title || ssg.t('seo:utils.questSeo.gorodskoy_kvest_2737d6fc')).replace(/\s+\|\s*Metravel$/i, '').trim();
   const cleanDescription = String(description || buildQuestSeoDescription(quest)).trim();
   const model = buildQuestIntroSectionModel(quest, bundle, ssg);
@@ -2237,7 +2259,7 @@ function injectQuestIntroSection(baseHtml, { title, description, quest, bundle, 
     pStyle: 'margin:0 0 10px;color:var(--color-text,#22332c)',
     ulStyle: 'margin:0;padding:0 0 0 18px;color:var(--color-text,#22332c)',
     backStyle: 'margin:12px 0 0;font-weight:700',
-  }, ssg);
+  }, ssg, linkLocalization);
   const routeHtml = buildQuestRouteDigestHtml(buildQuestRouteDigest(bundle, ssg), {
     h2Style,
     h3Style: `margin:0 0 4px;font:700 17px/1.3 ${QUESTS_SSG_FONT};color:var(--color-text,#22332c)`,
@@ -2323,7 +2345,20 @@ function localizeQuestDocumentShell(baseHtml, ssg) {
  * названием и городом. Обложка и медиа-URL — из каталога в обоих случаях,
  * поэтому геометрия превью у версий одна.
  */
-function buildQuestDetailPageHtml({ baseHtml, quest, bundle, route, detailLinks = null, ssg = RU_SSG }) {
+/**
+ * The city name in the page language, or `null`. The API falls back to the
+ * Russian `city.name` when the city has no translation for `?lang=` (#2392), so
+ * a value equal to the Russian name is not a localized one (#2467).
+ */
+function localizedCityName(city, ruLabel) {
+  const localized = String(city?.name_localized || '').trim();
+  const russian = String(city?.name_canonical || ruLabel || '').trim();
+  return localized && localized !== russian ? localized : null;
+}
+
+function buildQuestDetailPageHtml({
+  baseHtml, quest, bundle, route, detailLinks = null, translatedSiblings = null, bootChunks = null, ssg = RU_SSG,
+}) {
   const isRu = ssg.locale === 'ru';
   const name = String((isRu ? quest.title : bundle?.title) || ssg.t('seo:utils.questSeo.gorodskoy_kvest_2737d6fc')).trim();
   const cityName = isRu
@@ -2356,6 +2391,8 @@ function buildQuestDetailPageHtml({ baseHtml, quest, bundle, route, detailLinks 
   // failed with React #418 and showed Russian chrome until JS replaced it, so a
   // translated member mounts client-side; its crawlable body stays outside.
   if (!isRu) html = emptyAppRoot(disableExpoRouterHydration(localizeQuestDocumentShell(html, ssg)));
+  // #2465: the catch-all route and the locale catalog ship with the document.
+  if (!isRu && bootChunks) html = shipBootChunks(html, bootChunks);
 
   html = injectBreadcrumbJsonLd(html, {
     '@context': 'https://schema.org',
@@ -2374,6 +2411,10 @@ function buildQuestDetailPageHtml({ baseHtml, quest, bundle, route, detailLinks 
     quest: isRu ? quest : { ...quest, title: name, city_name: cityName },
     bundle,
     links: detailLinks,
+    linkLocalization: isRu ? undefined : {
+      cityName: localizedCityName(bundle?.city, detailLinks?.cityLabel),
+      translatedSiblings,
+    },
     ssg,
   });
 }
@@ -4458,6 +4499,7 @@ async function main() {
     }
     console.log(`  🧩 Quest pages: ${indexableQuestPaths.size}/${questPagesToWrite.length} indexable`);
     if (QUEST_SEO_CANDIDATE) {
+      const questLocaleBootChunks = readQuestLocaleBootChunks(path.join(DIST_DIR, '_expo', 'static', 'js', 'web'), QUEST_TRANSLATED_LOCALES);
       const candidate = await buildQuestLocaleCandidate({
         publicationMode: QUEST_SEO_PUBLICATION_MODE,
         ruPages: questSeoRuPages,
@@ -4472,8 +4514,9 @@ async function main() {
           if (!localizedBundles.has(key)) throw new Error(`Missing collected exact-lang bundle: ${key}`);
           return localizedBundles.get(key);
         },
-        buildLocalizedPage: ({ quest, route, bundle, translator }) => buildQuestDetailPageHtml({
-          baseHtml: questBaseHtml, quest, bundle, route, detailLinks: questDetailLinksIndex.get(route.path) || null, ssg: translator,
+        buildLocalizedPage: ({ quest, route, bundle, translator, translatedSiblings }) => buildQuestDetailPageHtml({
+          baseHtml: questBaseHtml, quest, bundle, route, detailLinks: questDetailLinksIndex.get(route.path) || null,
+          translatedSiblings, bootChunks: questLocaleBootChunks.get(translator.locale), ssg: translator,
         }),
         findSpoilers: (html, bundle) => findQuestSpoilerLeaks(html, bundle, buildQuestRouteDigest(bundle)).errors,
         writeDistFile: (relativePath, html) => writeFileSafe(path.join(DIST_DIR, relativePath), html),

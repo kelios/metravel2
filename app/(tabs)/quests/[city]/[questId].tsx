@@ -201,6 +201,16 @@ const patchQuestHead = (seo: QuestSeoModel, canonical: string, image: string, al
   syncQuestAlternates(alternates);
 };
 
+const removeUnownedBreadcrumbLists = () => {
+  document.head.querySelectorAll<HTMLScriptElement>('script[type="application/ld+json"]:not([data-rh])').forEach((node) => {
+    try {
+      if (JSON.parse(node.textContent || 'null')?.['@type'] === 'BreadcrumbList') node.remove();
+    } catch {
+      // Not ours to judge: an unparsable foreign script stays.
+    }
+  });
+};
+
 const useQuestHeadSync = (enabled: boolean, seo: QuestSeoModel, canonical: string, image: string, alternates: ReturnType<typeof questServingAlternates>) => {
   useEffect(() => {
     if (!enabled || Platform.OS !== 'web' || typeof document === 'undefined') return undefined;
@@ -220,6 +230,9 @@ const useQuestHeadSync = (enabled: boolean, seo: QuestSeoModel, canonical: strin
         );
         if (!managedScript?.textContent?.trim()) return;
         document.head.querySelectorAll(bootstrapSelector).forEach((node) => node.remove());
+        // #2466: the managed graph carries the page's BreadcrumbList; the SSG
+        // copy would leave two lists (and a stale one after SPA navigation).
+        removeUnownedBreadcrumbLists();
         bootstrapObserver?.disconnect();
       };
       bootstrapObserver = new MutationObserver(handOverStructuredData);
@@ -620,6 +633,7 @@ export default function QuestByIdScreen({ route }: { route?: QuestLocaleRoute } 
     const structuredData = createQuestDetailStructuredData({
       canonical,
       title: seo.title,
+      crumbName: usableBundle.title,
       description: seo.description,
       questId,
       cityId: canonicalCityId || undefined,
