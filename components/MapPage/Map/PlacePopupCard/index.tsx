@@ -33,6 +33,8 @@ const CAPTION_GRADIENT_LOCATIONS = [0, 0.45, 1] as const;
 
 type Props = {
   title: string;
+  /** Optional editorial language markup supplied by the owning feature. */
+  renderText?: (text: string) => React.ReactNode;
   subtitle?: string | null;
   imageUrl?: string | null;
   categoryLabel?: string | null;
@@ -164,6 +166,7 @@ type Props = {
 
 const PlacePopupCard: React.FC<Props> = ({
   title,
+  renderText,
   subtitle: _subtitle,
   imageUrl,
   categoryLabel,
@@ -431,7 +434,7 @@ const PlacePopupCard: React.FC<Props> = ({
           style={[styles.titleText, showTitleShare && styles.titleTextWithShare]}
           numberOfLines={isBottomCardLayout ? 2 : useCompactLayout ? 2 : bp === 'narrow' ? 2 : 2}
         >
-          {title}
+          {renderText ? renderText(title) : title}
         </Text>
         {showTitleShare && onShareTelegram ? (
           <CardActionPressable
@@ -450,7 +453,7 @@ const PlacePopupCard: React.FC<Props> = ({
 
       {!!displaySubtitle && (
         <Text style={styles.subtitleText} numberOfLines={isBottomCardLayout ? 1 : useCompactLayout ? 2 : 1}>
-          {displaySubtitle}
+          {renderText ? renderText(displaySubtitle) : displaySubtitle}
         </Text>
       )}
 
@@ -501,6 +504,7 @@ const PlacePopupCard: React.FC<Props> = ({
     showTitleShare,
     styles,
     title,
+    renderText,
     useCompactLayout,
   ]);
 
@@ -579,12 +583,12 @@ const PlacePopupCard: React.FC<Props> = ({
           ) : null}
 
           <Text style={styles.heroCaptionTitle} numberOfLines={2}>
-            {title}
+            {renderText ? renderText(title) : title}
           </Text>
 
           {!!displaySubtitle && (
             <Text style={styles.heroCaptionSubtitle} numberOfLines={1}>
-              {displaySubtitle}
+              {renderText ? renderText(displaySubtitle) : displaySubtitle}
             </Text>
           )}
 
@@ -657,6 +661,7 @@ const PlacePopupCard: React.FC<Props> = ({
     hasDrivingInfo,
     drivingText,
     title,
+    renderText,
     displaySubtitle,
     hasCoord,
     displayCoord,

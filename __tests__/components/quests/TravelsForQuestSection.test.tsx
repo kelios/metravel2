@@ -1,3 +1,4 @@
+jest.mock('@/hooks/useQuestContentLocale', () => ({ useQuestContentLocale: () => 'en' }))
 import React from 'react'
 import { StyleSheet } from 'react-native'
 import { render } from '@testing-library/react-native'
@@ -19,8 +20,10 @@ jest.mock('@/hooks/useResponsive', () => {
 })
 
 const mockUnifiedTravelCard = jest.fn((props: any) => {
-  const { View } = require('react-native')
-  return React.createElement(View, { testID: props.testID })
+  const { View, Text } = require('react-native')
+  return React.createElement(View, { testID: props.testID },
+    React.createElement(Text, null, props.renderText ? props.renderText(props.title) : props.title),
+    React.createElement(Text, null, props.renderText ? props.renderText(props.metaText) : props.metaText))
 })
 
 jest.mock('@/components/ui/UnifiedTravelCard', () => ({
@@ -111,5 +114,21 @@ describe('TravelsForQuestSection', () => {
       blurBackground: true,
       allowCriticalWebBlur: true,
     })
+  })
+})
+
+
+describe('#2482 travel editorial language', () => {
+  it('marks the actual card title and location in the page locale without changing strings', () => {
+    const { Platform } = require('react-native')
+    const originalOS = Platform.OS
+    Platform.OS = 'web'
+    try {
+      const tree = render(<TravelsForQuestSection cityName="Ошмяны" countryName="Беларусь" />)
+      const parts = tree.UNSAFE_root.findAll((node) => node.props.lang === 'ru')
+      expect(parts.some((node) => node.props.children === 'Маршрут по Ошмянам')).toBe(true)
+      expect(parts.some((node) => node.props.children === 'Ошмяны')).toBe(true)
+      expect(mockUnifiedTravelCard.mock.calls.at(-1)?.[0].title).toBe('Маршрут по Ошмянам')
+    } finally { Platform.OS = originalOS }
   })
 })

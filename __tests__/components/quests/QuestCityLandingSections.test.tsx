@@ -1,3 +1,4 @@
+jest.mock('@/hooks/useQuestContentLocale', () => ({ useQuestContentLocale: () => 'pl' }))
 /**
  * #1569: то же содержание, что у краулера.
  *
@@ -10,6 +11,7 @@ import React from 'react'
 import { render, screen } from '@testing-library/react-native'
 
 import QuestCityLandingSections from '@/components/quests/QuestCityLandingSections'
+import { QuestLandingSectionTitle } from '@/components/quests/QuestLandingLayout'
 
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children?: React.ReactNode }) => children ?? null,
@@ -111,4 +113,31 @@ describe('QuestCityLandingSections', () => {
     expect(screen.queryByTestId('quest-city-routes')).toBeNull()
     expect(screen.getByTestId('quest-city-overview')).toBeTruthy()
   })
+})
+
+
+it('#2482 marks route titles, city names and original place descriptions on the landing', () => {
+  const { Platform } = require('react-native')
+  const originalOS = Platform.OS
+  Platform.OS = 'web'
+  try {
+    const tree = render(<QuestCityLandingSections city={CITY} nearbyCities={[]} walk={WALK} />)
+    const marked = tree.UNSAFE_root.findAll((node) => node.props.lang === 'ru')
+      .map((node) => String(node.props.children))
+    expect(marked.some((text) => text.includes('Квест по Риму'))).toBe(true)
+    expect(marked.some((text) => text.includes('Рим'))).toBe(true)
+    expect(marked.some((text) => text.includes('Капитолий'))).toBe(true)
+  } finally { Platform.OS = originalOS }
+})
+
+it('#2482 marks the city name interpolated into the catalog section heading', () => {
+  const { Platform } = require('react-native')
+  const originalOS = Platform.OS
+  Platform.OS = 'web'
+  try {
+    const tree = render(<QuestLandingSectionTitle colors={{ text: '#000' } as never}>Choose a quest in Могилёв</QuestLandingSectionTitle>)
+    expect(tree.UNSAFE_root.findAll((node) => node.props.lang === 'ru')
+      .some((node) => node.props.children === 'Могилёв')).toBe(true)
+    expect(tree.getByRole('header')).toHaveTextContent('Choose a quest in Могилёв')
+  } finally { Platform.OS = originalOS }
 })

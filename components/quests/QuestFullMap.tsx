@@ -30,6 +30,7 @@ import {
     getNavigationActionVisual,
     NAVIGATION_ACTION_LABELS,
 } from '@/components/navigation/navigationActionMeta';
+import QuestEditorialText from './QuestEditorialText';
 import { createQuestFullMapStyles } from './questFullMapStyles';
 import { MapCanvas, type MapCanvasEngine } from '@/components/MapPage/Map/MapCanvas';
 import { translate as i18nT } from '@/i18n'
@@ -505,9 +506,9 @@ function QuestFullMap({
                 style={[styles.toolbar, { paddingTop: insets.top + 8 }]}
                 testID={onClose ? 'quest-fullscreen-toolbar' : 'quest-map-toolbar'}
             >
-                <Text style={styles.toolbarTitle} numberOfLines={1}>
+                <QuestEditorialText style={styles.toolbarTitle} numberOfLines={1}>
                     {title}
-                </Text>
+                </QuestEditorialText>
 
                 <View style={styles.toolbarActions}>
                     {allowFullscreen && (
@@ -695,9 +696,9 @@ function QuestFullMap({
                                         <Text style={styles.popupCoords}>
                                             {gp.lat.toFixed(6)}, {gp.lng.toFixed(6)}
                                         </Text>
-                                        <Text style={[styles.popupCoords, { marginTop: 6 }]}>
+                                        <QuestEditorialText style={[styles.popupCoords, { marginTop: 6 }]}>
                                             {gp.titles.join(', ')}
-                                        </Text>
+                                        </QuestEditorialText>
                                         <Text style={styles.popupNavLabel}>{i18nT('quests:components.quests.QuestFullMap.dovesti_menya_cbcbe1c8')}</Text>
                                         <View style={styles.popupNavGrid}>
                                             {QUEST_NAV_PROVIDERS.map(provider => {

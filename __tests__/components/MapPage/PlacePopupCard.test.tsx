@@ -941,3 +941,20 @@ describe('PlacePopupCard', () => {
     expect(tree.root.findByProps({ accessibilityLabel: 'Открыть способы навигации' })).toBeTruthy();
   });
 });
+
+
+it.each([false, true])('#2482 renders title and subtitle markup for popup hero=%s while media keeps string alt', (bottomSheetSplit) => {
+  const originalOS = Platform.OS;
+  Platform.OS = 'web';
+  try {
+    let tree: any;
+    renderer.act(() => {
+      tree = renderer.create(<PlacePopupCard colors={mockColors as any} title="Тайны дворца" subtitle="Гомель, Беларусь" imageUrl="https://example.com/cover.jpg"
+        bottomSheetSplit={bottomSheetSplit} renderText={(text: string) => <span lang="ru">{text}</span>} />);
+    });
+    const parts = tree.root.findAllByType('span').filter((node: any) => node.props.lang === 'ru');
+    expect(parts.some((node: any) => node.props.children === 'Тайны дворца')).toBe(true);
+    expect(parts.some((node: any) => node.props.children === 'Гомель, Беларусь')).toBe(true);
+    expect(mockImageCardMedia.mock.calls.at(-1)?.[0].alt).toBe('Тайны дворца');
+  } finally { Platform.OS = originalOS; }
+});

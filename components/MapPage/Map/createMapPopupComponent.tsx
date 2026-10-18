@@ -1,3 +1,4 @@
+import { renderQuestEditorialText } from '@/components/quests/QuestEditorialText';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { router } from 'expo-router';
@@ -546,6 +547,7 @@ export const createMapPopupComponent = ({
         <PlacePopupCard
           colors={colors}
           title={isQuest ? questMeta!.title : popupTitle.title}
+          renderText={isQuest ? renderQuestEditorialText : undefined}
           subtitle={isQuest ? questSubtitle : popupTitle.subtitle}
           imageUrl={isQuest ? questMeta!.cover : sourceFields.imageUrl || undefined}
           articleHref={isQuest ? null : articleHref}

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 
 import {
   QuestLandingCityLinks,
@@ -11,6 +11,7 @@ import { formatInteger } from '@/i18n/format'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { pluralizePoints, pluralizeQuest } from '@/screens/tabs/questsShared'
 import { formatDistance, formatTravelTime } from '@/utils/distanceCalculator'
+import QuestEditorialText from './QuestEditorialText'
 import type { QuestMeta } from '@/utils/questAdapters'
 import type {
   NearbyQuestCityLandingGroup,
@@ -134,7 +135,7 @@ export default function QuestCityLandingSections({ city, nearbyCities, walk }: P
         icon="map-pin"
         title={t('quests:app.tabs.quests.city.index.overviewTitle', { value1: cityName })}
       >
-        <Text style={styles.body}>{overview}</Text>
+        <QuestEditorialText style={styles.body}>{overview}</QuestEditorialText>
       </QuestLandingSection>
 
       {walkPlaces.length > 0 ? (
@@ -145,35 +146,35 @@ export default function QuestCityLandingSections({ city, nearbyCities, walk }: P
           icon="camera"
           title={t('quests:app.tabs.quests.city.index.walkTitle', { value1: cityName })}
         >
-          <Text style={styles.body}>{t('quests:app.tabs.quests.city.index.walkLead')}</Text>
+          <QuestEditorialText style={styles.body}>{t('quests:app.tabs.quests.city.index.walkLead')}</QuestEditorialText>
           {walkPlaces.map((place) => (
             <View key={`${place.questId}-${place.pointIndex}`} style={placeStyles.place}>
-              <Text
+              <QuestEditorialText
                 accessibilityRole="header"
                 {...({ 'aria-level': 3 } as Record<string, unknown>)}
                 style={placeStyles.placeTitle}
               >
                 {place.location ? `${place.title} — ${place.location}` : place.title}
-              </Text>
-              <Text style={styles.body}>{place.sentences.join(' ')}</Text>
+              </QuestEditorialText>
+              <QuestEditorialText style={styles.body}>{place.sentences.join(' ')}</QuestEditorialText>
               {place.openingHours ? (
-                <Text style={styles.note}>
+                <QuestEditorialText style={styles.note}>
                   {t('quests:app.tabs.quests.city.index.walkOpeningHours', {
                     value1: place.openingHours,
                   })}
-                </Text>
+                </QuestEditorialText>
               ) : null}
               {place.ticketPrice ? (
-                <Text style={styles.note}>
+                <QuestEditorialText style={styles.note}>
                   {t('quests:app.tabs.quests.city.index.walkTicket', { value1: place.ticketPrice })}
-                </Text>
+                </QuestEditorialText>
               ) : null}
             </View>
           ))}
           {otherPlaces.length > 0 ? (
-            <Text style={styles.body}>
+            <QuestEditorialText style={styles.body}>
               {t('quests:app.tabs.quests.city.index.walkMore', { value1: otherPlaces.join(', ') })}
-            </Text>
+            </QuestEditorialText>
           ) : null}
         </QuestLandingSection>
       ) : null}
@@ -187,9 +188,9 @@ export default function QuestCityLandingSections({ city, nearbyCities, walk }: P
           title={t('quests:app.tabs.quests.city.index.routesStructureTitle')}
         >
           {routeParagraphs.map((paragraph) => (
-            <Text key={paragraph.questId} style={styles.body}>
+            <QuestEditorialText key={paragraph.questId} style={styles.body}>
               {paragraph.text}
-            </Text>
+            </QuestEditorialText>
           ))}
         </QuestLandingSection>
       ) : null}
@@ -201,10 +202,10 @@ export default function QuestCityLandingSections({ city, nearbyCities, walk }: P
         icon="sun"
         title={t('quests:app.tabs.quests.city.index.practiceTitle')}
       >
-        <Text style={styles.body}>{practice}</Text>
-        <Text style={styles.note}>
+        <QuestEditorialText style={styles.body}>{practice}</QuestEditorialText>
+        <QuestEditorialText style={styles.note}>
           {t('quests:app.tabs.quests.city.index.practiceNote')}
-        </Text>
+        </QuestEditorialText>
       </QuestLandingSection>
 
       {nearbyCities.length > 0 ? (
@@ -215,9 +216,9 @@ export default function QuestCityLandingSections({ city, nearbyCities, walk }: P
           icon="navigation"
           title={t('quests:app.tabs.quests.city.index.nearbyTitle')}
         >
-          <Text style={styles.body}>
+          <QuestEditorialText style={styles.body}>
             {t('quests:app.tabs.quests.city.index.nearbyLead', { value1: cityName })}
-          </Text>
+          </QuestEditorialText>
           <QuestLandingCityLinks
             styles={styles}
             colors={colors}

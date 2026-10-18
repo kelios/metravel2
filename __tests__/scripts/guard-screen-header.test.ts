@@ -1,3 +1,6 @@
+import fs from 'node:fs'
+import path from 'node:path'
+
 const {
   SCREEN_HEADER_OWNERS,
   HEADER_INSET_OWNER,
@@ -39,6 +42,115 @@ describe('guard-screen-header (#2099)', () => {
 
   it('декларация без заголовка в теле проходит', () => {
     expect(scanOwnerSource('components/quests/useQuestScreenHeader.ts', "useScreenHeader({ title: 'Квест' })")).toEqual([])
+  })
+})
+
+describe('guard-screen-header: локальный импорт экрана (#2652)', () => {
+  let root: string
+  const safe = 'export default function Screen() { return <StandaloneScreen><Content /></StandaloneScreen> }'
+  const route = (specifier = './Screen.tsx') => `import Screen from '${specifier}'; export default () => <Screen />`
+  const write = (rel: string, source: string) => {
+    const file = path.join(root, rel)
+    fs.mkdirSync(path.dirname(file), { recursive: true })
+    fs.writeFileSync(file, source)
+  }
+  const scan = (source = route()) => scanStandaloneScreenSource('app/route.web.tsx', source, root)
+
+  beforeEach(() => {
+    fs.mkdirSync(path.join(process.cwd(), '.codex-temp'), { recursive: true })
+    root = fs.mkdtempSync(path.join(process.cwd(), '.codex-temp/guard-screen-header-'))
+  })
+  afterEach(() => fs.rmSync(root, { recursive: true, force: true }))
+
+  it('подтверждает реальную catch-all делегацию без второго контейнера', () => {
+    const rel = 'app/[...missing].web.tsx'
+    expect(scanStandaloneScreenSource(rel, fs.readFileSync(path.join(process.cwd(), rel), 'utf8'))).toEqual([])
+  })
+
+  it.each(['./Screen.tsx', './Screen', '@/app/Screen.tsx'])('подтверждает локальный импорт %s', (specifier) => {
+    write('app/Screen.tsx', safe)
+    expect(scan(route(specifier))).toEqual([])
+  })
+
+  it('проходит по цепочке и проверяет все возвращаемые ветки', () => {
+    write('app/Screen.tsx', "import Inner from './Inner.tsx'; export default () => <Inner />")
+    write('app/Inner.tsx', 'export default function Inner() { if (!ready) return null; if (guest) return <StandaloneScreen />; return <><CustomHeader /><Content /></> }')
+    expect(scan()).toEqual([])
+  })
+
+  it.each([
+    'export default () => <Content />',
+    'export default function Screen() { if (guest) return <Content />; return <StandaloneScreen /> }',
+    'export default () => guest ? <StandaloneScreen /> : <Content />',
+    'export default function Screen() { return renderBody() }',
+    'export default function Screen() {}',
+    'export default function Screen() { if (guest) return; return <StandaloneScreen /> }',
+    'export default () => <StandaloneScreen><SafeAreaView /></StandaloneScreen>',
+    'export const Screen = () => <StandaloneScreen />',
+    'export default () => <StandaloneScreen',
+    'function Safe() { return <StandaloneScreen /> }; export default replaceWithUnsafe(Safe)',
+    'const Screen = replaceWithUnsafe(() => <StandaloneScreen />); export default Screen',
+    'export default () => <View>{guest && <StandaloneScreen />}<Content /></View>',
+    'export default () => <View renderHeader={() => <StandaloneScreen />}><Content /></View>',
+  ])('отклоняет недоказуемый импортированный экран: %s', (source) => {
+    write('app/Screen.tsx', source)
+    expect(scan()).toEqual([expect.stringContaining('без владельца верхнего отступа')])
+  })
+
+  it('отклоняет цикл импортов', () => {
+    write('app/Screen.tsx', "import Inner from './Inner.tsx'; export default () => <Inner />")
+    write('app/Inner.tsx', "import Screen from './Screen.tsx'; export default () => <Screen />")
+    expect(scan()).toHaveLength(1)
+  })
+
+  it.each(['./Missing.tsx', 'screen-package', '../../outside.tsx'])('отклоняет неразрешимый или нелокальный импорт %s', (specifier) => {
+    expect(scan(route(specifier))).toHaveLength(1)
+  })
+
+  it('не принимает bare specifier с точкой за относительный импорт', () => {
+    write('app/.Screen.tsx', safe)
+    expect(scan(route('.Screen'))).toHaveLength(1)
+  })
+
+  it('не угадывает платформу при неоднозначном импорте без расширения', () => {
+    write('app/Screen.tsx', safe)
+    write('app/Screen.web.tsx', 'export default () => <Content />')
+    expect(scan(route('./Screen'))).toHaveLength(1)
+    expect(scan(route('./Screen.tsx'))).toEqual([])
+  })
+
+  it.each(['Screen.web.ts', 'Screen.js', 'Screen/index.web.tsx'])('учитывает конкурирующий исходник %s', (file) => {
+    write('app/Screen.tsx', safe)
+    write(`app/${file}`, 'export default () => <Content />')
+    expect(scan(route('./Screen'))).toHaveLength(1)
+  })
+
+  it('не подменяет платформенный index общим безопасным index', () => {
+    write('app/Screen/index.tsx', safe)
+    write('app/Screen/index.web.tsx', 'export default () => <Content />')
+    expect(scan(route('./Screen'))).toHaveLength(1)
+  })
+
+  it('не угадывает entry каталога с package.json', () => {
+    write('app/Screen/index.tsx', safe)
+    write('app/Screen/package.json', '{"main":"./unsafe.tsx"}')
+    write('app/Screen/unsafe.tsx', 'export default () => <Content />')
+    expect(scan(route('./Screen'))).toHaveLength(1)
+  })
+
+  it('не принимает type-only, named import или затенённое имя за default-компонент', () => {
+    write('app/Screen.tsx', safe)
+    for (const source of [
+      "import type Screen from './Screen.tsx'; export default () => <Screen />",
+      "import { Screen } from './Screen.tsx'; export default () => <Screen />",
+      "import Screen from './Screen.tsx'; export default function Route({ Screen }) { return <Screen /> }",
+    ]) expect(scan(source)).toHaveLength(1)
+  })
+
+  it('не проходит по symlink за пределы локальных исходников', () => {
+    write('app/anchor.tsx', '')
+    fs.symlinkSync(path.join(process.cwd(), 'app/[...missing].tsx'), path.join(root, 'Screen.tsx'))
+    expect(scan(route('../Screen.tsx'))).toHaveLength(1)
   })
 })
 

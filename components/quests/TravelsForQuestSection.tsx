@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import { Platform, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 
+import QuestEditorialText, { renderQuestEditorialText } from './QuestEditorialText'
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
@@ -54,13 +55,14 @@ export function TravelsForQuestSection({ cityName, countryName, countryCode, coo
       accessibilityLabel={heading}
       accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
     >
-      <Text
+      <QuestEditorialText
+        countryCode={countryCode ?? undefined}
         style={styles.title}
         accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
         aria-level={2 as any}
       >
         {heading}
-      </Text>
+      </QuestEditorialText>
       <Text style={styles.subtitle}>{i18nT('quests:components.quests.TravelsForQuestSection.istorii_i_marshruty_avtorov_po_etim_mestam_8d58fef3')}</Text>
 
       <View style={styles.grid}>
@@ -82,6 +84,7 @@ export function TravelsForQuestSection({ cityName, countryName, countryCode, coo
               <UnifiedTravelCard
                 testID={`quest-travel-card-${travel.id}`}
                 title={travel.name}
+                renderText={renderQuestEditorialText}
                 imageUrl={travel.travel_image_thumb_url}
                 metaText={metaText}
                 onPress={() => router.push(`/travels/${travel.slug || travel.id}`)}

@@ -1,3 +1,4 @@
+jest.mock('@/hooks/useQuestContentLocale', () => ({ useQuestContentLocale: () => 'en' }));
 import React from 'react';
 
 const renderer = require('react-test-renderer');
@@ -295,4 +296,28 @@ describe('createMapPopupComponent open article on native', () => {
       baseUrl: 'https://metravel.by',
     });
   });
+});
+
+
+it('#2482 passes language rendering only to quest popups', () => {
+  mockUseSavedPointToggle.mockReturnValue({ isSaved: false, isReady: true, removeSaved: jest.fn(), createPoint: jest.fn() });
+  const Popup = createMapPopupComponent({ userLocation: null, colors: {}, themeContextValue: {} });
+  let tree: any;
+  renderer.act(() => {
+    tree = renderer.create(<Popup point={{ id: 1, coord: '53,27', address: 'Тайны дворца', questMeta: { id: 'palace', cityId: '3', title: 'Тайны дворца', cityName: 'Гомель', countryName: 'Беларусь' } }} />);
+  });
+  const props = mockPlacePopupCard.mock.calls.at(-1)?.[0];
+  expect(props.title).toBe('Тайны дворца');
+  expect(typeof props.renderText).toBe('function');
+  const { Platform } = require('react-native');
+  const originalOS = Platform.OS;
+  Platform.OS = 'web';
+  try {
+    let label: any;
+    renderer.act(() => { label = renderer.create(props.renderText(props.title)); });
+    expect(label.root.findAll((node: any) => node.props.lang === 'ru')
+      .some((node: any) => node.props.children === 'Тайны дворца')).toBe(true);
+  } finally { Platform.OS = originalOS; }
+  renderer.act(() => { tree.update(<Popup point={{ id: 2, coord: '53,27', address: 'Other place' }} />); });
+  expect(mockPlacePopupCard.mock.calls.at(-1)?.[0].renderText).toBeUndefined();
 });
