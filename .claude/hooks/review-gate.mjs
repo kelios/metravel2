@@ -18,11 +18,13 @@
  *   show --task <id>                   Печатает состояние вердикта (exit 0 = пропустит, 1 = нет).
  *
  * Вердикты живут в `.codex-temp/review-gate/<task_id>.json` (ignored-папка).
- * Отпечаток scope — карта `path → blob-hash` файлов, отличающихся от базиса ревью
- * (sha `origin/main` на момент записи вердикта, он же сохраняется в `base`). Считается по
- * содержимому, а не по тексту diff'а и не по состоянию индекса, поэтому обязательные для
- * перехода в `testing` `git add`/`commit`/`push origin main` вердикт НЕ ломают, а любая
- * новая правка кода после ревью — ломает.
+ * Scope вердикта — карта `path → blob-hash` файлов, отличающихся от базиса ревью (`base` =
+ * merge-base `origin/main` и HEAD на момент записи; в неё входят и изменённые tracked-файлы,
+ * и untracked). Отпечаток `fingerprint` считается по содержимому ровно этих путей, а при
+ * проверке пересчитывается по той же карте, поэтому обязательные для перехода в `testing`
+ * `git add`/`commit`/`push origin main` и `git pull --ff-only` чужих коммитов вердикт НЕ ломают,
+ * а любая правка содержимого проверенных файлов или новый незакоммиченный файл вне scope
+ * после ревью — ломает.
  *
  * Аварийный обход: REVIEW_GATE_BYPASS=1 (пишется в systemMessage, чтобы обход был видимым).
  * Максимальный возраст вердикта: REVIEW_GATE_MAX_AGE_HOURS (по умолчанию 24).
@@ -30,7 +32,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { lstatSync, mkdirSync, readFileSync, readlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 const GATE_DIR_REL = '.codex-temp/review-gate';
@@ -61,70 +63,97 @@ function repoRoot() {
   return top || process.cwd();
 }
 
-function chunk(list, size) {
-  const out = [];
-  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
-  return out;
-}
+/** Верхняя граница scope: больше путей в одном вердикте не бывает (защита от мусорного дерева). */
+const SCOPE_CAP = 2000;
 
-/** Базис ревью: sha `origin/main` (или HEAD) на момент записи вердикта. Пинуется в вердикт,
- *  чтобы push задачи в `main` не сдвигал базис и не «протухал» уже пройденное ревью. */
+/**
+ * Базис ревью: merge-base `origin/main` и HEAD на момент записи вердикта (при HEAD == origin/main
+ * это сам `origin/main`). Пинуется в вердикт, чтобы push задачи в `main` не сдвигал базис и не
+ * «протухал» уже пройденное ревью.
+ *
+ * Почему не просто `origin/main`: если HEAD отстал от него (соседняя сессия запушила раньше),
+ * diff с `origin/main` показывает «обратные» чужие коммиты, которых в дереве ещё нет, и
+ * последующий `git pull --ff-only` менял отпечаток без единой правки задачи (#2456, 18.10.2026).
+ */
 function resolveBase(root) {
   const origin = git(['rev-parse', '--verify', '--quiet', 'origin/main'], root).trim();
-  if (origin) return origin;
-  return git(['rev-parse', '--verify', '--quiet', 'HEAD'], root).trim() || 'empty';
+  const head = git(['rev-parse', '--verify', '--quiet', 'HEAD'], root).trim();
+  if (origin && head) {
+    const common = git(['merge-base', origin, head], root).trim();
+    if (common) return common;
+  }
+  return origin || head || 'empty';
 }
 
-/** blob-hash содержимого файлов рабочего дерева, пачками. */
-function hashPaths(root, paths) {
-  const hashed = new Map();
-  for (const files of chunk(paths, 40)) {
-    const hashes = git(['hash-object', '--', ...files], root).split('\n').filter(Boolean);
-    files.forEach((file, index) => hashed.set(file, hashes[index] || 'unreadable'));
+function zList(output) {
+  return output.split('\0').filter(Boolean);
+}
+
+/** Пути рабочего дерева, отличающиеся от базиса: изменённые и удалённые tracked-файлы плюс
+ *  untracked (не ignored) — ровно тот набор, который видит ревьюер. */
+function diffPaths(root, base) {
+  const tracked = zList(git(['diff', '--no-renames', '--name-only', '-z', base, '--'], root));
+  const untracked = zList(git(['ls-files', '--others', '--exclude-standard', '-z'], root));
+  return [...new Set([...tracked, ...untracked])].sort();
+}
+
+/** Незакоммиченные пути: изменённые/удалённые относительно HEAD (индекс и дерево) плюс untracked. */
+function uncommittedPaths(root) {
+  const tracked = zList(git(['diff', 'HEAD', '--no-renames', '--name-only', '-z', '--'], root));
+  const untracked = zList(git(['ls-files', '--others', '--exclude-standard', '-z'], root));
+  return [...new Set([...tracked, ...untracked])].sort();
+}
+
+/** blob-id содержимого файла рабочего дерева (как `git hash-object` без фильтров): один и тот же
+ *  и до, и после `git add`/`commit`. Симлинк хэшируется по цели, отсутствующий файл — `deleted`,
+ *  каталог и прочее — `unreadable`. */
+function blobHash(root, file) {
+  const abs = path.join(root, file);
+  let stat;
+  try {
+    stat = lstatSync(abs);
+  } catch {
+    return 'deleted';
   }
-  return hashed;
+  let content;
+  try {
+    if (stat.isSymbolicLink()) content = Buffer.from(readlinkSync(abs));
+    else if (stat.isFile()) content = readFileSync(abs);
+    else return 'unreadable';
+  } catch {
+    return 'unreadable';
+  }
+  return createHash('sha1').update(`blob ${content.length}\0`).update(content).digest('hex');
 }
 
 /**
- * Отпечаток scope: карта `path → blob-hash` всех файлов, отличающихся от базиса ревью
- * (изменённые tracked + untracked; удалённые помечаются отдельно).
+ * Отпечаток scope: sha256 над `base` и картой `path → blob-hash` для переданных путей.
  *
- * Считается по содержимому, поэтому `git add`, `commit` и `push origin main` отпечаток не
- * меняют: тот же файл с тем же содержимым даёт тот же blob-hash и до, и после коммита.
- * Меняет отпечаток только новая правка кода после ревью — ровно это гейт и должен ловить.
+ * Считается по содержимому, поэтому `git add`, `commit`, `push origin main` и `pull --ff-only`
+ * чужих коммитов отпечаток не меняют: тот же файл с тем же содержимым даёт тот же blob-hash.
+ * Меняет отпечаток только новая правка проверенных файлов после ревью — ровно это гейт и ловит.
  */
-function scopeFingerprint(root, recordedBase) {
-  const base = recordedBase && git(['rev-parse', '--verify', '--quiet', `${recordedBase}^{commit}`], root).trim()
-    ? recordedBase
-    : resolveBase(root);
-
-  const entries = new Map();
-  const changed = [];
-  const nameStatus = git(['diff', '--no-renames', '--name-status', '-z', base, '--'], root)
-    .split('\0')
-    .filter(Boolean);
-  for (let i = 0; i + 1 < nameStatus.length; i += 2) {
-    const status = nameStatus[i];
-    const file = nameStatus[i + 1];
-    if (status.startsWith('D')) entries.set(file, 'deleted');
-    else changed.push(file);
+function fingerprintScope(root, base, paths) {
+  const entries = {};
+  const lines = [`base:${base}`, `paths:${paths.length}`];
+  for (const file of paths) {
+    entries[file] = blobHash(root, file);
+    lines.push(`${file}\t${entries[file]}`);
   }
+  return {
+    fingerprint: `sha256:${createHash('sha256').update(lines.join('\n')).digest('hex')}`,
+    entries,
+  };
+}
 
-  const untracked = git(['ls-files', '--others', '--exclude-standard', '-z'], root)
-    .split('\0')
-    .filter(Boolean);
+/** Scope задачи на момент записи вердикта: всё, что отличается от базиса. */
+function recordScope(root, base) {
+  return fingerprintScope(root, base, diffPaths(root, base).slice(0, SCOPE_CAP));
+}
 
-  const paths = [...new Set([...changed, ...untracked])].sort();
-  const capped = paths.slice(0, 2000);
-  for (const [file, hash] of hashPaths(root, capped)) entries.set(file, hash);
-
-  const lines = [
-    `base:${base}`,
-    `paths:${capped.length}${paths.length > capped.length ? '+truncated' : ''}`,
-  ];
-  for (const file of [...entries.keys()].sort()) lines.push(`${file}\t${entries.get(file)}`);
-
-  return `sha256:${createHash('sha256').update(lines.join('\n')).digest('hex')}`;
+function listPaths(paths, limit = 5) {
+  const head = paths.slice(0, limit).join(', ');
+  return paths.length > limit ? `${head} … (+${paths.length - limit})` : head;
 }
 
 function verdictPath(root, taskId) {
@@ -173,15 +202,36 @@ function evaluate(root, taskId) {
       verdict,
     };
   }
-  const current = scopeFingerprint(root, verdict.base);
+  const recordedBase = String(verdict.base || '');
+  const base = recordedBase && git(['rev-parse', '--verify', '--quiet', `${recordedBase}^{commit}`], root).trim()
+    ? recordedBase
+    : resolveBase(root);
+  // Вердикты до 18.10.2026 без карты `scope`: scope берётся по текущему diff'у с базисом (старый алгоритм).
+  const legacy = !verdict.scope || typeof verdict.scope !== 'object';
+  const scopePaths = legacy ? diffPaths(root, base).slice(0, SCOPE_CAP) : Object.keys(verdict.scope).sort();
+  const { fingerprint: current, entries } = fingerprintScope(root, base, scopePaths);
   if (verdict.fingerprint !== current) {
+    const changed = legacy ? [] : scopePaths.filter((file) => verdict.scope[file] !== entries[file]);
     return {
       ok: false,
       code: 'stale',
-      detail: 'код изменился после ревью (отпечаток diff\'а не совпадает с проверенным)',
+      detail: `код изменился после ревью (отпечаток diff'а не совпадает с проверенным${changed.length ? `: ${listPaths(changed)}` : ''})`,
       verdict,
       current,
     };
+  }
+  if (!legacy) {
+    const scopeSet = new Set(scopePaths);
+    const extras = uncommittedPaths(root).filter((file) => !scopeSet.has(file));
+    if (extras.length) {
+      return {
+        ok: false,
+        code: 'stale',
+        detail: `после ревью в рабочем дереве появились незакоммиченные изменения вне проверенного scope: ${listPaths(extras)}`,
+        verdict,
+        current,
+      };
+    }
   }
   return { ok: true, code: 'pass', verdict, current };
 }
@@ -367,6 +417,7 @@ function runRecord(argv) {
 
   const root = repoRoot();
   const base = resolveBase(root);
+  const { fingerprint, entries: scope } = recordScope(root, base);
   const payload = {
     task_id: taskId,
     verdict,
@@ -375,13 +426,14 @@ function runRecord(argv) {
     note: args.note ? String(args.note) : '',
     blocking: args.blocking ? String(args.blocking).split(';').map((s) => s.trim()).filter(Boolean) : [],
     base,
-    fingerprint: scopeFingerprint(root, base),
+    scope,
+    fingerprint,
     recorded_at: new Date().toISOString(),
   };
 
   mkdirSync(path.join(root, GATE_DIR_REL), { recursive: true });
   writeFileSync(verdictPath(root, taskId), `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
-  process.stdout.write(`${JSON.stringify({ recorded: verdictPath(root, taskId), verdict: payload.verdict, base: payload.base, fingerprint: payload.fingerprint })}\n`);
+  process.stdout.write(`${JSON.stringify({ recorded: verdictPath(root, taskId), verdict: payload.verdict, base: payload.base, paths: Object.keys(scope).length, fingerprint: payload.fingerprint })}\n`);
 }
 
 function runShow(argv) {
