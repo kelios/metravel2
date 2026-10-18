@@ -12,6 +12,7 @@
  */
 
 const fs = require('fs')
+const { parseDocument, DomUtils } = require('htmlparser2')
 
 const HYDRATE_FLAG_SOURCE = 'globalThis\\.__EXPO_ROUTER_HYDRATE__\\s*=\\s*true\\s*;?'
 const APP_ROOT_OPEN_SOURCE = '<div\\s+id="root"[^>]*>'
@@ -54,6 +55,7 @@ function emptyAppRoot(html) {
 const WEB_CHUNK_PREFIX = '/_expo/static/js/web/'
 const CHUNK_MANIFEST = /^globalThis\.__METRAVEL_CHUNK_DEPS__\?\?=\{\};globalThis\.__METRAVEL_CHUNK_DEPS__\["(?:[^"\\]|\\.)*"\]=(\[(?:[^\]"\\]|"(?:[^"\\]|\\.)*")*\]);/
 const CATCH_ALL_CHUNK = /^\[\.\.\.missing\]-[0-9a-f]+\.js$/
+const WEB_CHUNK_PATH = /^\/_expo\/static\/js\/web\/[^/\\?#"'<>]+\.js$/
 
 function chunkDependencies(source) {
   const manifest = CHUNK_MANIFEST.exec(String(source))
@@ -83,7 +85,7 @@ function readQuestLocaleBootChunks(jsDir, locales, exportedCatchAllHtml, fileSys
   const routes = [...new Set(scriptSrcs(exportedCatchAllHtml).filter((src) => src.startsWith(WEB_CHUNK_PREFIX) && CATCH_ALL_CHUNK.test(src.slice(WEB_CHUNK_PREFIX.length))))]
   if (!routes.length) throw new Error('exported catch-all HTML has no [...missing] route scripts')
   const readChunk = (src) => {
-    if (!/^\/_expo\/static\/js\/web\/[^/\\?#]+\.js$/.test(src)) throw new Error(`invalid boot chunk path ${src}`)
+    if (!WEB_CHUNK_PATH.test(src)) throw new Error(`invalid boot chunk path ${src}`)
     return fileSystem.readFileSync(`${jsDir}/${src.slice(WEB_CHUNK_PREFIX.length)}`, 'utf8')
   }
   const deps = [...new Set(routes.flatMap((route) => chunkDependencies(readChunk(route))))]
@@ -99,8 +101,60 @@ function readQuestLocaleBootChunks(jsDir, locales, exportedCatchAllHtml, fileSys
   }))
 }
 
+// htmlparser2 keeps template/noscript descendants in its ordinary tree. They
+// are inert in the JS-enabled document and must never become active boot tags.
+function activeElements(doc, name) {
+  return DomUtils.getElementsByTagName(name, doc, true).filter((node) => {
+    for (let parent = node.parent; parent; parent = parent.parent) {
+      if (parent.name === 'template' || parent.name === 'noscript') return false
+    }
+    return true
+  })
+}
+
 function scriptSrcs(html) {
-  return [...String(html).matchAll(/<script\b[^>]*\bsrc="([^"]+)"/gi)].map((match) => match[1])
+  return activeElements(parseDocument(String(html)), 'script')
+    .map((node) => node.attribs.src).filter((src) => typeof src === 'string')
+}
+
+// Inspect actual elements, not script-looking strings in inline JS/JSON. Keep
+// source offsets so normalization can move original tags without reserializing
+// their attributes or touching the rest of the document.
+function expoScriptDocument(html) {
+  const source = String(html)
+  const doc = parseDocument(source, { withStartIndices: true, withEndIndices: true })
+  const heads = activeElements(doc, 'head')
+  if (heads.length !== 1) throw new Error('page must have exactly one head')
+  const head = heads[0]
+  const closer = /<\/head\s*>$/i.exec(source.slice(head.startIndex, head.endIndex + 1))
+  if (!closer) throw new Error('page has no explicit closing head')
+  const scripts = activeElements(doc, 'script')
+    .filter((node) => typeof node.attribs.src === 'string' && node.attribs.src.startsWith(WEB_CHUNK_PREFIX))
+  const issues = []
+  const seen = new Set()
+  for (const node of scripts) {
+    const attrs = node.attribs
+    const type = (attrs.type || '').trim().toLowerCase()
+    if (!WEB_CHUNK_PATH.test(attrs.src)) issues.push(`invalid boot chunk path ${attrs.src}`)
+    if (!Object.hasOwn(attrs, 'defer') || Object.hasOwn(attrs, 'async') || Object.hasOwn(attrs, 'nomodule')
+      || (type && !['text/javascript', 'application/javascript'].includes(type))) {
+      issues.push(`Expo script must be classic defer: ${attrs.src}`)
+    }
+    if (seen.has(attrs.src)) issues.push(`duplicates boot chunk ${attrs.src}`)
+    seen.add(attrs.src)
+  }
+  const entries = scripts.filter((node) => /\/entry-[^/]+\.js$/.test(node.attribs.src))
+  if (!entries.length) issues.push('page has no Expo entry script')
+  if (entries.length > 1) issues.push('page has more than one Expo entry script')
+  const entry = entries[0]
+  if (entry) {
+    for (const node of scripts) {
+      if (node.startIndex > entry.startIndex) issues.push(`loads boot chunk ${node.attribs.src} after entry`)
+    }
+  }
+  const runtime = scripts.findIndex((node) => /\/__expo-metro-runtime-[^/]+\.js$/.test(node.attribs.src))
+  if (runtime > 0) issues.push('Expo runtime must precede other chunks')
+  return { source, head, headClose: head.startIndex + closer.index, scripts, entry, issues }
 }
 
 /** Boot chunks the page does not list as scripts (empty = all shipped). */
@@ -116,34 +170,50 @@ function missingBootChunks(html, srcs) {
  * `readChunk(src)` returns the chunk source for its declared dependencies.
  */
 function bootChunkIssues(html, locale, readChunk) {
-  const scripts = scriptSrcs(html).filter((src) => src.startsWith(WEB_CHUNK_PREFIX))
+  let doc
+  try { doc = expoScriptDocument(html) } catch (error) { return [error.message] }
+  const scripts = doc.scripts.map((node) => node.attribs.src)
   const routes = scripts.filter((src) => CATCH_ALL_CHUNK.test(src.slice(WEB_CHUNK_PREFIX.length)))
   if (!routes.length) return ['does not ship the [...missing] route chunk']
-  const issues = []
+  const issues = [...doc.issues]
+  for (const node of doc.scripts) {
+    if (node.parent !== doc.head) issues.push(`loads Expo script outside head: ${node.attribs.src}`)
+  }
   const catalog = new RegExp(`^locale-${locale}-[0-9a-f]+\\.js$`)
   const catalogs = scripts.filter((src) => catalog.test(src.slice(WEB_CHUNK_PREFIX.length)))
   if (!catalogs.length) issues.push(`does not ship the locale-${locale} chunk`)
   if (new Set(catalogs).size > 1) issues.push(`ships more than one locale-${locale} chunk`)
   const deps = [...new Set([...new Set(routes)].flatMap((route) => chunkDependencies(readChunk(route))))]
   for (const src of new Set([...deps, ...catalogs])) readChunk(src)
-  issues.push(...missingBootChunks(html, deps).map((dep) => `does not ship boot chunk ${dep}`))
-  const entry = scripts.findIndex((src) => /\/entry-[^/]+\.js$/.test(src))
-  if (entry === -1) issues.push('does not ship an Expo entry script')
-  for (const src of new Set([...deps, ...routes, ...catalogs])) {
-    const positions = scripts.flatMap((script, index) => script === src ? [index] : [])
-    if (positions.length > 1) issues.push(`duplicates boot chunk ${src}`)
-    if (entry !== -1 && positions.some((index) => index > entry)) issues.push(`loads boot chunk ${src} after entry`)
-  }
+  const present = new Set(scripts)
+  issues.push(...deps.filter((dep) => !present.has(dep)).map((dep) => `does not ship boot chunk ${dep}`))
   return issues
 }
 
-/** Add the missing chunk scripts right before the `entry` script, in order. */
+/** Add missing boot chunks, then move the complete Expo defer set into head. */
 function shipBootChunks(html, srcs) {
-  const source = String(html)
-  const entry = /<script\b[^>]*\bsrc="\/_expo\/static\/js\/web\/entry-[^"]+"[^>]*><\/script>/i.exec(source)
-  if (!entry) throw new Error('page has no Expo entry script')
-  const tags = missingBootChunks(source, srcs).map((src) => `<script src="${src}" defer></script>`).join('')
-  return `${source.slice(0, entry.index)}${tags}${source.slice(entry.index)}`
+  const doc = expoScriptDocument(html)
+  if (doc.issues.length) throw new Error(doc.issues.join('; '))
+  if (new Set(srcs).size !== srcs.length) throw new Error('duplicate selected boot chunks')
+  for (const src of srcs) if (!WEB_CHUNK_PATH.test(src)) throw new Error(`invalid boot chunk path ${src}`)
+  const present = new Set(doc.scripts.map((node) => node.attribs.src))
+  const missing = srcs.filter((src) => !present.has(src)).map((src) => `<script src="${src}" defer></script>`).join('')
+  const tags = []
+  const rest = []
+  let cursor = 0
+  let removedFromHead = 0
+  for (const node of doc.scripts) {
+    rest.push(doc.source.slice(cursor, node.startIndex))
+    const tag = doc.source.slice(node.startIndex, node.endIndex + 1)
+    if (node === doc.entry) tags.push(missing)
+    tags.push(tag)
+    if (node.startIndex < doc.headClose) removedFromHead += tag.length
+    cursor = node.endIndex + 1
+  }
+  rest.push(doc.source.slice(cursor))
+  const stripped = rest.join('')
+  const insertAt = doc.headClose - removedFromHead
+  return `${stripped.slice(0, insertAt)}${tags.join('')}${stripped.slice(insertAt)}`
 }
 
 function appShellState(html) {

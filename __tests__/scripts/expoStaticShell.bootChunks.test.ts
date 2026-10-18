@@ -94,4 +94,79 @@ describe('quest locale boot chunks', () => {
     expect(missingBootChunks(html, srcs)).toEqual(srcs.slice(1))
     expect(() => shipBootChunks('<head></head>', srcs)).toThrow(/no Expo entry script/)
   })
+
+  it('moves the full BODY-export defer set into head, preserving tags, runtime order and inert content', () => {
+    const runtime = `<script nonce="keep" src="${WEB}__expo-metro-runtime-00aa.js" defer data-note="a > b"></script>`
+    const shared = `<script defer="defer" crossorigin="anonymous" src="${WEB}__shared-0-aa.js"></script>`
+    const entry = `<script type="text/javascript" src="${WEB}entry-1.js" integrity="keep" defer></script>`
+    const inline = `<script>globalThis.note='<head><script src="${WEB}${ROUTE}">';</script>`
+    const json = '<script type="application/json" id="quest-serving-v1">{"text":"keep unchanged"}</script>'
+    const ldJson = '<script type="application/ld+json">{"@type":"WebPage"}</script>'
+    const foreign = '<script src="https://example.org/keep.js" async></script>'
+    const source = `<html><head><title>Fixture</title>${ldJson}</head><body><main>Readable body</main>${inline}${runtime}${shared}${json}${foreign}${entry}</body></html>`
+    const srcs = [`${WEB}__shared-0-aa.js`, `${WEB}__shared-3-bb.js`, `${WEB}${ROUTE}`, `${WEB}locale-pl-ff00.js`]
+    const result = shipBootChunks(source, srcs)
+    const parsed = new DOMParser().parseFromString(result, 'text/html')
+    expect([...parsed.head.querySelectorAll('script[src]')].map((node) => node.getAttribute('src'))).toEqual([
+      `${WEB}__expo-metro-runtime-00aa.js`, ...srcs, `${WEB}entry-1.js`,
+    ])
+    expect(parsed.body.querySelectorAll(`script[src^="${WEB}"]`)).toHaveLength(0)
+    for (const unchanged of [runtime, shared, entry, inline, json, ldJson, foreign]) expect(result).toContain(unchanged)
+    expect(result.indexOf(inline)).toBeGreaterThan(result.indexOf('</head>'))
+    expect(result.indexOf(json)).toBeGreaterThan(result.indexOf('</head>'))
+    expect(shipBootChunks(result, srcs)).toBe(result)
+    expect(missingBootChunks(source, srcs)).toContain(`${WEB}${ROUTE}`)
+  })
+
+  it.each(['template', 'noscript'])('keeps inert %s scripts unchanged and never counts them as shipped', (container) => {
+    const inert = `<${container}>${tag(ROUTE)}${tag('entry-2.js')}</${container}>`
+    const source = `<head></head><body>${inert}${tag('entry-1.js')}</body>`
+    const srcs = [`${WEB}__shared-0-aa.js`, `${WEB}__shared-3-bb.js`, `${WEB}${ROUTE}`, `${WEB}locale-pl-ff00.js`]
+    expect(missingBootChunks(source, srcs)).toEqual(srcs)
+    expect(() => readQuestLocaleBootChunks(dir, ['pl'], source)).toThrow(/no \[\.\.\.missing\] route scripts/)
+    const result = shipBootChunks(source, srcs)
+    expect(result).toBe(`<head>${srcs.map((src) => `<script src="${src}" defer></script>`).join('')}${tag('entry-1.js')}</head><body>${inert}</body>`)
+    const read = (src: string) => fs.readFileSync(path.join(dir, src.slice(WEB.length)), 'utf8')
+    expect(bootChunkIssues(source, 'pl', read)).toContain('does not ship the [...missing] route chunk')
+    expect(bootChunkIssues(result, 'pl', read)).toEqual([])
+    expect(shipBootChunks(result, srcs)).toBe(result)
+  })
+
+  it('normalizes a mixed head/body export without changing its execution order', () => {
+    const runtime = tag('__expo-metro-runtime-00aa.js')
+    const shared = tag('__shared-0-aa.js')
+    const source = `<head>${runtime}<meta name="keep" content="yes"></head><body>${shared}${tag('entry-1.js')}</body>`
+    const result = shipBootChunks(source, [`${WEB}__shared-3-bb.js`, `${WEB}${ROUTE}`, `${WEB}locale-pl-ff00.js`])
+    expect(result).toBe(`<head><meta name="keep" content="yes">${runtime}${shared}${tag('__shared-3-bb.js')}${tag(ROUTE)}${tag('locale-pl-ff00.js')}${tag('entry-1.js')}</head><body></body>`)
+  })
+
+  it.each([
+    `<body>${tag('entry-1.js')}</body>`,
+    `<head></head><head></head><body>${tag('entry-1.js')}</body>`,
+    `<head><body>${tag('entry-1.js')}</body>`,
+    '<head></head><body></body>',
+    `<head></head><body>${tag('entry-1.js')}${tag('entry-2.js')}</body>`,
+    `<head>${tag('__shared-0-aa.js')}</head><body>${tag('__shared-0-aa.js')}${tag('entry-1.js')}</body>`,
+    `<head></head><body>${tag('entry-1.js')}${tag('__shared-0-aa.js')}</body>`,
+  ])('fails closed for an ambiguous or unsafe document shell', (source) => {
+    expect(() => shipBootChunks(source, [])).toThrow()
+  })
+
+  it.each(['', 'async defer', 'type="module" defer', 'type="application/json" defer', 'nomodule defer'])('rejects an Expo script with unsafe attributes %s', (attrs) => {
+    const source = `<head></head><body><script ${attrs} src="${WEB}entry-1.js"></script></body>`
+    expect(() => shipBootChunks(source, [])).toThrow(/classic defer/)
+  })
+
+  it('rejects body-only and preload-only boot assets in the stored verifier', () => {
+    const names = ['__shared-0-aa.js', '__shared-3-bb.js', ROUTE, 'locale-pl-ff00.js', 'entry-1.js']
+    const read = (src: string) => fs.readFileSync(path.join(dir, src.slice(WEB.length)), 'utf8')
+    const bodyOnly = `<head></head><body>${names.map(tag).join('')}</body>`
+    expect(bootChunkIssues(bodyOnly, 'pl', read)).toContain(`loads Expo script outside head: ${WEB}${ROUTE}`)
+    expect(bootChunkIssues(bodyOnly, 'pl', read)).toContain(`loads Expo script outside head: ${WEB}entry-1.js`)
+    const preloadOnly = `<head>${names.map((name) => `<link rel="preload" as="script" href="${WEB}${name}">`).join('')}</head><body></body>`
+    expect(bootChunkIssues(preloadOnly, 'pl', read)).toContain('does not ship the [...missing] route chunk')
+    const healthy = shipBootChunks(bodyOnly, [])
+    expect(bootChunkIssues(healthy, 'pl', read)).toEqual([])
+    expect(bootChunkIssues(healthy.replace(' defer', ' async'), 'pl', read).some((issue: string) => issue.includes('classic defer'))).toBe(true)
+  })
 })

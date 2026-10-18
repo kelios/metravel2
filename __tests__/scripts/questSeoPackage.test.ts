@@ -39,6 +39,7 @@ const COVER = 'https://metravel.by/quest-cover/quests/1/main/cover.webp'
 const WEB_JS = '/_expo/static/js/web/'
 // The export's chunks a translated member boots with (#2465).
 const BOOT_FILES: Record<string, string> = {
+  '__expo-metro-runtime-000a.js': 'globalThis.__d=function(){};',
   'entry-0123abcd.js': '__d(function(){},0,[]);',
   '[...missing]-0a1b.js': `globalThis.__METRAVEL_CHUNK_DEPS__??={};globalThis.__METRAVEL_CHUNK_DEPS__["${WEB_JS}[...missing]-0a1b.js"]=["${WEB_JS}__shared-3-0c.js"];__d(function(){},1,[]);`,
   '__shared-3-0c.js': '__d(function(){},2,[]);',
@@ -54,7 +55,7 @@ function writeBootChunks(dist: string, withBothRouteChunks = false) {
     fs.writeFileSync(path.join(dir, routes[1]), `globalThis.__METRAVEL_CHUNK_DEPS__??={};globalThis.__METRAVEL_CHUNK_DEPS__["${WEB_JS}${routes[1]}"]=["${WEB_JS}__shared-8-0f.js"];__d(function(){},4,[]);`)
     fs.writeFileSync(path.join(dir, '__shared-8-0f.js'), '__d(function(){},5,[]);')
   }
-  const catchAllHtml = `<head>${routes.map((name) => `<script src="${WEB_JS}${name}" defer></script>`).join('')}<script src="${WEB_JS}entry-0123abcd.js" defer></script></head>`
+  const catchAllHtml = `<head></head><body><script src="${WEB_JS}__expo-metro-runtime-000a.js" defer></script>${routes.map((name) => `<script src="${WEB_JS}${name}" defer></script>`).join('')}<script src="${WEB_JS}entry-0123abcd.js" defer></script></body>`
   fs.writeFileSync(path.join(dist, '[...missing].html'), catchAllHtml)
   return readQuestLocaleBootChunks(dir, contract.TRANSLATED_LOCALES, catchAllHtml)
 }
@@ -65,9 +66,12 @@ const BASE_HTML = [
   '<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","name":"MeTravel"}]}</script>',
   // As exported by Expo: the hydration flag and the RU render of the app shell (#2449).
   '<script>globalThis.__EXPO_ROUTER_HYDRATE__=true;</script>',
-  `<script src="${WEB_JS}entry-0123abcd.js" defer></script>`,
   '</head><body><div id="root"><div class="css-view"><a data-skip-link="true">Перейти к основному содержимому</a>',
-  '<div><div>Загружаем квест…</div></div></div></div></body></html>',
+  '<div><div>Загружаем квест…</div></div></div></div>',
+  // Expo serializeHtml appends its full defer set before </body>, not in head.
+  `<script src="${WEB_JS}__expo-metro-runtime-000a.js" defer></script>`,
+  `<script src="${WEB_JS}entry-0123abcd.js" defer></script>`,
+  '</body></html>',
 ].join('')
 
 // Deterministic lowercase "words" (no digits/capitals — the depth skeleton drops those).
@@ -597,7 +601,10 @@ describe('boot chunks of translated members (#2465)', () => {
     const c = await buildCase()
     const pl = fs.readFileSync(path.join(c.dist, contract.memberHtmlPath(4, 'quest-alpha', 'pl')), 'utf8')
     const scripts = [...pl.matchAll(/<script src="([^"]+)" defer><\/script>/g)].map((match) => match[1].replace(WEB_JS, ''))
-    expect(scripts).toEqual(['__shared-3-0c.js', '[...missing]-0a1b.js', 'locale-pl-0d.js', 'entry-0123abcd.js'])
+    expect(scripts).toEqual(['__expo-metro-runtime-000a.js', '__shared-3-0c.js', '[...missing]-0a1b.js', 'locale-pl-0d.js', 'entry-0123abcd.js'])
+    const parsed = new DOMParser().parseFromString(pl, 'text/html')
+    expect([...parsed.head.querySelectorAll(`script[src^="${WEB_JS}"]`)].map((node) => node.getAttribute('src')?.replace(WEB_JS, ''))).toEqual(scripts)
+    expect(parsed.body.querySelectorAll(`script[src^="${WEB_JS}"]`)).toHaveLength(0)
     const ru = fs.readFileSync(path.join(c.dist, contract.memberHtmlPath(4, 'quest-alpha', 'ru')), 'utf8')
     expect(ru).not.toContain('[...missing]')
     finalize(c, c.receiptText)
@@ -619,7 +626,7 @@ describe('boot chunks of translated members (#2465)', () => {
     const file = path.join(c.dist, contract.memberHtmlPath(4, 'quest-alpha', 'pl'))
     const html = fs.readFileSync(file, 'utf8')
     const scripts = [...html.matchAll(/<script src="([^"]+)" defer><\/script>/g)].map((match) => match[1].replace(WEB_JS, ''))
-    expect(scripts).toEqual(['__shared-3-0c.js', '__shared-8-0f.js', '[...missing]-0a1b.js', '[...missing]-0e2f.js', 'locale-pl-0d.js', 'entry-0123abcd.js'])
+    expect(scripts).toEqual(['__expo-metro-runtime-000a.js', '__shared-3-0c.js', '__shared-8-0f.js', '[...missing]-0a1b.js', '[...missing]-0e2f.js', 'locale-pl-0d.js', 'entry-0123abcd.js'])
     finalize(c, c.receiptText)
     expect(verifyQuestSeoPackage(c.dist).failures).toEqual([])
     fs.unlinkSync(path.join(c.dist, '_expo', 'static', 'js', 'web', '__shared-8-0f.js'))
@@ -631,6 +638,16 @@ describe('boot chunks of translated members (#2465)', () => {
     expect(() => finalize(c, c.receiptText)).toThrow(
       `${contract.canonicalPath(4, 'quest-alpha', 'pl')}: does not ship the [...missing] route chunk (#2465)`,
     )
+  })
+
+  it('rejects a stored member whose defer scripts are moved back into body', async () => {
+    const c = await buildCase()
+    const file = path.join(c.dist, contract.memberHtmlPath(4, 'quest-alpha', 'pl'))
+    const html = fs.readFileSync(file, 'utf8')
+    const tags = [...html.matchAll(/<script src="\/_expo\/static\/js\/web\/[^"]+" defer><\/script>/g)].map((match) => match[0])
+    const moved = tags.reduce((source, tag) => source.replace(tag, ''), html).replace('</body>', `${tags.join('')}</body>`)
+    fs.writeFileSync(file, moved)
+    expect(() => finalize(c, c.receiptText)).toThrow(/loads Expo script outside head/)
   })
 })
 

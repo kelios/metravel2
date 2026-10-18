@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { makeTempDir } from './cli-test-utils'
 
 const {
   SCREEN_HEADER_OWNERS,
@@ -57,8 +58,7 @@ describe('guard-screen-header: локальный импорт экрана (#26
   const scan = (source = route()) => scanStandaloneScreenSource('app/route.web.tsx', source, root)
 
   beforeEach(() => {
-    fs.mkdirSync(path.join(process.cwd(), '.codex-temp'), { recursive: true })
-    root = fs.mkdtempSync(path.join(process.cwd(), '.codex-temp/guard-screen-header-'))
+    root = makeTempDir('guard-screen-header-', { root: path.join(process.cwd(), '.codex-temp') })
   })
   afterEach(() => fs.rmSync(root, { recursive: true, force: true }))
 
