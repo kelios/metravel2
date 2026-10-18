@@ -735,12 +735,14 @@ child="""
 import importlib.util, os, pathlib, signal, sys
 spec=importlib.util.spec_from_file_location('m',sys.argv[1]); m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 static=pathlib.Path(sys.argv[2])/'static'; original=m.Path; m.Path=lambda p:static if p=='/app/static' else original(p)
-rename=os.rename
+# Patch Path.rename, not os.rename: pathlib on Python 3.9 binds os.rename at
+# import time (_NormalAccessor), so an os-level patch never pauses the writer.
+rename=pathlib.Path.rename
 def pause_after_first(a,b):
  result=rename(a,b)
  if str(b).endswith('dist.old'): print('first rename',flush=True); signal.pause()
  return result
-os.rename=pause_after_first
+pathlib.Path.rename=pause_after_first
 m.legacy_operation('legacy-commit',[m.legacy_identity(static)])
 """
 p=subprocess.Popen([sys.executable,'-B','-c',child,sys.argv[1],str(root)],stdout=subprocess.PIPE,text=True)
