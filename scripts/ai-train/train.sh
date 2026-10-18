@@ -5,7 +5,7 @@
 #   AI_HOME=~/metravel-ai scripts/ai-train/train.sh [extra mlx_lm lora args]
 #
 # Prerequisites (see scripts/ai-train/README.md): $AI_HOME/venv with mlx-lm,
-# base model in $AI_HOME/models, dataset in $AI_HOME/data/sft.
+# base model in $AI_HOME/models, dataset from build_mix.py (config `data:`).
 set -euo pipefail
 AI_HOME="${AI_HOME:-$HOME/metravel-ai}"
 CONFIG="${CONFIG:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lora-qwen3.5-4b.yaml}"
@@ -20,5 +20,13 @@ export MLX_DISABLE_COMPILE="${MLX_DISABLE_COMPILE:-1}"
 cd "$AI_HOME"
 mkdir -p logs adapters
 cp "$CONFIG" "logs/train-$RUN.config.yaml"
+# regression control: what the run was trained on (build_mix.py stats and manifest)
+DATA_DIR="$(awk '$1 == "data:" { print $2; exit }' "$CONFIG")"
+# (a stage of a multi-stage mix, data/sft-<mix>/<stage>, keeps manifest.json one level up)
+for f in stats manifest; do
+  for src in "$DATA_DIR/$f.json" "$DATA_DIR/../$f.json"; do
+    if [[ -n "$DATA_DIR" && -f "$src" ]]; then cp "$src" "logs/train-$RUN.$f.json"; break; fi
+  done
+done
 echo "run=$RUN config=$CONFIG log=$AI_HOME/logs/train-$RUN.log"
 exec venv/bin/python -m mlx_lm lora -c "$CONFIG" "$@" > "logs/train-$RUN.log" 2>&1

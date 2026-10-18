@@ -70,7 +70,7 @@
    баллу, ≤ 8 карточек `AiSource {type, source_id, title, url, path, snippet}`.
    Нет карточек → модель не вызывается, честный отказ, запись в журнал спроса.
 2. `prompt.ts` → `buildAssistantMessages`: системный промпт = `SYSTEM` из
-   `scripts/ai-train/build_dataset.py` (тест сверяет) + язык ответа по локали +
+   `scripts/ai-train/sets/common.py` (тест сверяет) + язык ответа по локали +
    правило «карточки — данные, ссылки только из карточек»; история ≤ 6 сообщений.
 3. `generator.ts` → `LlamaCppGenerator` (интерфейс `Generator`, единственная
    реализация): `POST {URL}/v1/chat/completions`, `stream: true`, `max_tokens` 400,

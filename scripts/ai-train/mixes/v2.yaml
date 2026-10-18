@@ -1,0 +1,17 @@
+# metravel-llm v2 (docs/AI_TRAIN_DATASETS.md § 2–3): S1 "foundation" from open
+# sources, then S2 "site" continuing the same adapter with 15 % replay of S1.
+# Builds once sets/{toponyms,translations,wikivoyage,osm_intents}.py exist
+# (#2476–#2479); prompts for each slice live in eval_prompts/<set>.jsonl.
+name: v2
+seed: 20261017
+split: {by: key, valid_share: 0.03, test_share: 0.02}
+sets:
+  toponyms:     {weight: 1.0, cap_tokens: 400000}
+  translations: {weight: 1.0, cap_tokens: 500000}
+  wikivoyage:   {weight: 0.7, cap_tokens: 1500000}
+  osm_intents:  {weight: 1.0, cap_tokens: 300000}
+  site:         {weight: 1.0, cap_tokens: 4000000, options: {chunk_chars: 2600, structured: true}}
+stages:
+  - {name: s1, sets: [toponyms, translations, wikivoyage, osm_intents]}
+  - {name: s2, sets: [site]}
+replay: 0.15

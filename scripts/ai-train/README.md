@@ -18,8 +18,9 @@ uv venv venv --python 3.12 && uv pip install --python venv/bin/python mlx-lm hug
 venv/bin/hf download mlx-community/Qwen3.5-4B-MLX-4bit --local-dir models/Qwen3.5-4B-MLX-4bit
 ```
 
-Раскладка `~/metravel-ai`: `models/` базы, `data/raw/` экспорт, `data/sft/`
-датасет, `adapters/` результаты LoRA, `logs/` журналы, копии конфигов и отчёты
+Раскладка `~/metravel-ai`: `models/` базы, `data/raw/` экспорт сайта,
+`data/sources/` кэш внешних источников, `data/sets/` наборы, `data/sft-<смесь>/`
+смеси для обучения (`data/sft/` — датасет v0/v1), `adapters/` результаты LoRA, `logs/` журналы, копии конфигов и отчёты
 оценки каждого запуска.
 
 ### Память при обучении (mlx-lm 0.32, замер 18.10.2026)
@@ -41,13 +42,32 @@ venv/bin/hf download mlx-community/Qwen3.5-4B-MLX-4bit --local-dir models/Qwen3.
 1. Экспорт корпуса (только публичный прод-API, чтение, пауза между запросами):
    `python3 -I scripts/ai-train/export_corpus.py --out ~/metravel-ai/data/raw` (≈10 мин)
    (`--quest-locales ru,pl,en` для переводов квестов; v0 — RU).
-2. Датасет: `python3 -I scripts/ai-train/build_dataset.py --raw ~/metravel-ai/data/raw --out ~/metravel-ai/data/sft --chunk-chars 2600`
-   → `train/valid/test.jsonl` в формате `messages` и `stats.json`. Виды
-   примеров: карточки и разделы статей, плюсы/минусы/советы, подборки по
-   стране/месяцу/дням, карточки/точки/финалы квестов, квесты по городу и
-   стране, отказы по направлениям без материалов, «о сайте». Сплит детерминирован
-   (sha1 ключа примера) и воспроизводит датасет, на котором обучены v0/v1;
-   сплит по сущности, без утечки перефраз, — в смеси v2 (#2475).
+2. Датасет — уровни «источники → наборы → смеси» (`docs/AI_TRAIN_DATASETS.md` § 2,
+   #2475). PyYAML ставится вместе с mlx-lm, поэтому сборка идёт из venv:
+   `~/metravel-ai/venv/bin/python -I scripts/ai-train/build_mix.py --ai-home ~/metravel-ai --mix scripts/ai-train/mixes/<смесь>.yaml`
+   → `data/sets/<набор>/{train,valid,test}.jsonl` + `stats.json` (записи
+   `{messages, set, key, id, kind, license}`) и `data/sft-<смесь>/` — то, что
+   читает mlx-lm (`messages`), плюс `stats.json` и `manifest.json` (наборы,
+   лицензии, источники, потолки). У смеси с несколькими этапами — подпапка на
+   этап (`data/sft-v2/s1`, `…/s2`).
+   - `sources/` — загрузчики с кэшем в `data/sources/<имя>/` (+ `LICENSE`,
+     `fetched_at.json`); сеть только при явном запуске загрузчика.
+     `sources/site_filters.py` — справочники сайта (транспорт, ночёвка, месяцы).
+   - `sets/site.py` — набор сайта: карточки и разделы статей, плюсы/минусы/советы,
+     подборки по стране/месяцу/дням, карточки/точки/финалы квестов, квесты по
+     городу и стране, «название → ссылка», отказы по направлениям без
+     материалов, «о сайте»; с `structured: true` ещё «точки маршрута статьи →
+     JSON» и «карточка маршрута по фрагменту» (дни, месяцы, транспорт, ночёвка,
+     км и высоты из текста).
+   - `mixes/v1.yaml` — регресс: бит в бит датасет, на котором обучен v1
+     (сплит по id примера, формулировки v1). После правки `sets/site.py`:
+     `build_mix.py --mix mixes/v1.yaml --out <tmp>` и `cmp` с `data/sft/*.jsonl`.
+   - `mixes/site.yaml` — набор `site` в редакции v2 отдельно: сплит по
+     сущности (`key`: статья, квест, страна, город) — все формулировки одного
+     объекта в одном сплите, в v1 52 из 205 ответов test дословно были в train;
+     нейтральная подводка подборок по месяцу (гостевые статьи — не «мы ездили»).
+   - `mixes/v2.yaml` — S1 «фундамент» → S2 «сайт» с replay 15 %; собирается,
+     когда появятся наборы #2476–#2479.
 3. Обучение: `cd ~/metravel-ai && nohup caffeinate -i env AI_HOME=$HOME/metravel-ai RUN=v0 <репо>/scripts/ai-train/train.sh &`
    (конфиг `lora-qwen3.5-4b.yaml`: QLoRA rank 16 на 4-bit базе, 6 слоёв,
    seq 1024, батч 1 без накопления, loss только по ответу). Долго — часы;
@@ -61,8 +81,10 @@ venv/bin/hf download mlx-community/Qwen3.5-4B-MLX-4bit --local-dir models/Qwen3.
    В браузере модель откроется после экспорта в GGUF (#2463): `llama-server`
    даёт веб-чат на `http://127.0.0.1:8080`.
 5. Оценка: `AI_HOME=~/metravel-ai ~/metravel-ai/venv/bin/python scripts/ai-train/eval.py --adapter adapters/metravel-llm-v0 --out logs/eval-v0`
-   — 40 вопросов из `eval_prompts.jsonl` (18 посетителя по материалам, 10
-   негативов, 2 на польском, 10 редакционных) для базы и адаптера бок о бок;
+   — все срезы из `eval_prompts/<набор>.jsonl` (`--prompts-dir`, по умолчанию
+   эта папка; один файл — `--prompts`), балл по каждому срезу отдельно. Срез
+   `site` — 40 вопросов (18 посетителя по материалам, 10 негативов, 2 на
+   польском, 10 редакционных); база и адаптер бок о бок;
    автопроверка: все ссылки — реальные страницы metravel.by (по `data/raw`),
    без чужих сайтов, честный отказ на негативах; отчёт `logs/eval-v0/report.md`
    с колонкой для ручной оценки. Не запускать во время обучения.

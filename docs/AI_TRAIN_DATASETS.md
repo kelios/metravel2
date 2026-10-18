@@ -37,8 +37,9 @@ scripts/ai-train/
 
 Правила уровня «набор»:
 
-- запись = `{"messages": […], "set": "toponyms", "key": "…", "license": "CC0"}`;
-  в `messages` служебных полей нет, они нужны только статистике и сплиту;
+- запись = `{"messages": […], "set": "toponyms", "key": "…", "id": "…", "kind": "…", "license": "CC0"}`
+  (`sets/common.py`); в `messages` служебных полей нет, они нужны только
+  статистике и сплиту, в смесь для mlx-lm уходит только `messages`;
 - сплит train/valid/test — по хешу `key`, как сейчас; `key` строится от
   сущности (город, статья, объект), чтобы разные формулировки одного объекта
   не расползались между train и test;
@@ -56,19 +57,26 @@ scripts/ai-train/
 
 ```yaml
 name: v2
+split: {by: key, valid_share: 0.03, test_share: 0.02}   # key — сущность; id — пример (только регресс v1)
 sets:
-  site:         {weight: 1.0, cap_tokens: 4_000_000}   # всегда последним по порядку
-  toponyms:     {weight: 1.0, cap_tokens: 400_000}
-  translations: {weight: 1.0, cap_tokens: 500_000}
-  wikivoyage:   {weight: 0.7, cap_tokens: 1_500_000}
-  osm_intents:  {weight: 1.0, cap_tokens: 300_000}
-order: [toponyms, translations, wikivoyage, osm_intents, site]   # учебная программа
+  toponyms:     {weight: 1.0, cap_tokens: 400000}
+  translations: {weight: 1.0, cap_tokens: 500000}
+  wikivoyage:   {weight: 0.7, cap_tokens: 1500000}
+  osm_intents:  {weight: 1.0, cap_tokens: 300000}
+  site:         {weight: 1.0, cap_tokens: 4000000, options: {chunk_chars: 2600, structured: true}}
+stages:                                   # учебная программа, site — последним
+  - {name: s1, sets: [toponyms, translations, wikivoyage, osm_intents]}
+  - {name: s2, sets: [site]}
 replay: 0.15   # доля примеров предыдущих этапов, подмешиваемая в каждый следующий
 ```
 
-`cap_tokens` — потолок набора после случайной подвыборки; `order` — порядок
-этапов; `replay` — защита от забывания: когда учится `site`, в поток
-подмешивается 15 % примеров из уже пройденных наборов.
+`weight` — множитель числа примеров (< 1 — подвыборка, > 1 — повтор train);
+`cap_tokens` — потолок набора (≈ символы / 3) после случайной подвыборки по
+seed; `stages` — этапы (каждый набор ровно в одном), у этапа своя папка
+`data/sft-<смесь>/<этап>/`; `replay` — защита от забывания: когда учится `site`,
+15 % потока — примеры train уже пройденных этапов. Рабочие смеси:
+`mixes/v1.yaml` (регресс: бит в бит датасет v1), `mixes/site.yaml` (набор
+`site` в редакции v2 отдельно), `mixes/v2.yaml` (полный цикл).
 
 ## 3. Этапы обучения: один адаптер, учебная программа, без слияний
 
@@ -136,7 +144,10 @@ replay: 0.15   # доля примеров предыдущих этапов, п
 
 1. #2475 Распил сборщика на `sources/sets/mixes/build_mix.py`, поле `set`/`license`
    в записях, `eval.py --prompts-dir`; смесь `v1` воспроизводит текущий датасет
-   бит в бит (регресс-контроль).
+   бит в бит (регресс-контроль). Сделано 18.10.2026: `build_dataset.py` удалён,
+   `site` в редакции v2 — сплит по сущности (утечка перефраз v1: 52/205 ответов
+   test были в train), 487 примеров «точки маршрута → JSON» и 426 «карточка
+   маршрута по фрагменту».
 2. #2476 Набор `translations` + срез оценки.
 3. #2477 Набор `toponyms` (Wikidata SPARQL, кэш, лицензия CC0) + срез.
 4. #2478 Набор `wikivoyage` (дампы/API, скан источников, без ссылок) + срез.

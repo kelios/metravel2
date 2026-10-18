@@ -1,0 +1,10 @@
+# The v2 `site` set alone: entity split, neutral wording for guest articles,
+# structured kinds. For checking the set and its eval slice before #2480.
+name: site
+seed: 20261017
+split: {by: key, valid_share: 0.03, test_share: 0.02}
+sets:
+  site:
+    weight: 1.0
+    cap_tokens: 4000000
+    options: {chunk_chars: 2600, structured: true}

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Side-by-side evaluation of the base model and a LoRA adapter on the fixed
-prompt set (eval_prompts.jsonl): generates both answers for every prompt and
-checks them automatically against the exported corpus.
+prompt sets, one file per slice (eval_prompts/<set>.jsonl, docs/AI_TRAIN_DATASETS.md
+§ 5): generates both answers for every prompt, checks them automatically against
+the exported corpus and scores every slice separately.
 
 Usage (inside the training folder's venv, model/adapter paths relative to it):
     AI_HOME=~/metravel-ai ~/metravel-ai/venv/bin/python scripts/ai-train/eval.py \
         --adapter adapters/metravel-llm-v0 --out logs/eval-v0
+    # one slice or another prompt folder: --prompts eval_prompts/site.jsonl, --prompts-dir <dir>
 
 Automatic checks per answer:
   * urls_ok      — every metravel.by URL in the answer exists in data/raw
@@ -31,7 +33,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from build_dataset import SITE, SYSTEM  # noqa: E402
+from sets.common import SITE, SYSTEM  # noqa: E402
 
 URL_RE = re.compile(r"https?://[^\s)\]>»\"']+")
 REFUSE_RE = re.compile(r"(пока\s+)?нет\s+(материал|стат|квест|ничего)|не\s+нашл|нет\s+информации|brak\s+materia|nie\s+ma(my)?\s+(materia|artyku)", re.I)
@@ -50,6 +52,23 @@ def known_urls(raw: Path) -> set[str]:
             if q.get("url"):
                 urls.add(q["url"].rstrip("/"))
     return urls
+
+
+def load_prompts(files: list[Path]) -> list[dict]:
+    """Prompts of every slice in file order; the slice is the file name (site.jsonl → site)."""
+    if not files:
+        raise SystemExit("no prompt files")
+    prompts, seen = [], set()
+    for f in files:
+        for line in f.open(encoding="utf-8"):
+            if not line.strip():
+                continue
+            p = {**json.loads(line), "slice": f.stem}
+            if (p["slice"], p["id"]) in seen:
+                raise SystemExit(f"{f}: duplicate prompt id {p['id']}")
+            seen.add((p["slice"], p["id"]))
+            prompts.append(p)
+    return prompts
 
 
 def check(answer: str, known: set[str]) -> dict:
@@ -138,7 +157,8 @@ def main() -> int:
     ap.add_argument("--ai-home", default=None, help="training folder (default: $AI_HOME)")
     ap.add_argument("--model", default="models/Qwen3.5-4B-MLX-4bit")
     ap.add_argument("--adapter", default="adapters/metravel-llm-v0")
-    ap.add_argument("--prompts", default=str(HERE / "eval_prompts.jsonl"))
+    ap.add_argument("--prompts-dir", default=str(HERE / "eval_prompts"), help="one <slice>.jsonl per dataset set")
+    ap.add_argument("--prompts", default=None, help="a single prompt file instead of --prompts-dir")
     ap.add_argument("--out", default="logs/eval")
     ap.add_argument("--max-tokens", type=int, default=500)
     ap.add_argument("--skip-base", action="store_true", help="reuse base answers from <out>/base.json")
@@ -152,7 +172,7 @@ def main() -> int:
     home = Path(args.ai_home or os.environ.get("AI_HOME") or ".").expanduser()
     out = home / args.out
     out.mkdir(parents=True, exist_ok=True)
-    prompts = [json.loads(l) for l in Path(args.prompts).open(encoding="utf-8") if l.strip()]
+    prompts = load_prompts([Path(args.prompts)] if args.prompts else sorted(Path(args.prompts_dir).glob("*.jsonl")))
     known = known_urls(home / "data" / "raw")
 
     base_file = out / "base.json"
@@ -177,7 +197,7 @@ def main() -> int:
     else:
         ad_ans, ad_tps = generate_all(str(home / args.model), str(home / args.adapter), prompts, args.max_tokens)
 
-    rows, totals = [], {"base": {}, "v": {}}
+    rows, totals, slices = [], {"base": {}, "v": {}}, {"base": {}, "v": {}}
     with (out / "results.jsonl").open("w", encoding="utf-8") as fh:
         for p, b, a in zip(prompts, base_ans, ad_ans):
             cb, ca = check(b, known), check(a, known)
@@ -185,9 +205,10 @@ def main() -> int:
             rows.append(row)
             fh.write(json.dumps(row, ensure_ascii=False) + "\n")
             for side, key in (("base", "base"), ("v", "adapter")):
-                g = totals[side].setdefault(p["group"], [0, 0])
-                g[0] += int(row[key]["pass"])
-                g[1] += 1
+                for table, name in ((totals, f"{p['slice']} / {p['group']}"), (slices, p["slice"])):
+                    g = table[side].setdefault(name, [0, 0])
+                    g[0] += int(row[key]["pass"])
+                    g[1] += 1
 
     def cell(r: dict) -> str:
         flags = []
@@ -202,18 +223,19 @@ def main() -> int:
         return ("✅" if r["pass"] else "❌") + " " + (", ".join(flags) or "без ссылок")
 
     md = [f"# Оценка {args.adapter} против базы", "", f"База: {base_tps:.1f} ток/с, адаптер: {ad_tps:.1f} ток/с (генерация, greedy, max {args.max_tokens}).", ""]
-    md.append("| группа | база | адаптер |")
-    md.append("| --- | --- | --- |")
-    for g in totals["v"]:
-        md.append(f"| {g} | {totals['base'][g][0]}/{totals['base'][g][1]} | {totals['v'][g][0]}/{totals['v'][g][1]} |")
-    md += ["", "| id | группа | вопрос | ожидание | база | адаптер | ручная оценка |", "| --- | --- | --- | --- | --- | --- | --- |"]
+    for title, table in (("срез", slices), ("срез / группа", totals)):
+        md += [f"| {title} | база | адаптер |", "| --- | --- | --- |"]
+        for g in table["v"]:
+            md.append(f"| {g} | {table['base'][g][0]}/{table['base'][g][1]} | {table['v'][g][0]}/{table['v'][g][1]} |")
+        md.append("")
+    md += ["| id | срез | группа | вопрос | ожидание | база | адаптер | ручная оценка |", "| --- | --- | --- | --- | --- | --- | --- | --- |"]
     for r in rows:
-        md.append(f"| {r['id']} | {r['group']} | {r['prompt']} | {r['expect']} | {cell(r['base'])} | {cell(r['adapter'])} |  |")
+        md.append(f"| {r['id']} | {r['slice']} | {r['group']} | {r['prompt']} | {r['expect']} | {cell(r['base'])} | {cell(r['adapter'])} |  |")
     md += ["", "## Ответы", ""]
     for r in rows:
         md += [f"### {r['id']} — {r['prompt']}", "", "**База:**", "", r["base"]["answer"] or "_(пусто)_", "", f"**{args.adapter}:**", "", r["adapter"]["answer"] or "_(пусто)_", ""]
     (out / "report.md").write_text("\n".join(md), encoding="utf-8")
-    print(json.dumps({"base_tps": round(base_tps, 1), "adapter_tps": round(ad_tps, 1), "totals": totals}, ensure_ascii=False), file=sys.stderr)
+    print(json.dumps({"base_tps": round(base_tps, 1), "adapter_tps": round(ad_tps, 1), "slices": slices, "totals": totals}, ensure_ascii=False), file=sys.stderr)
     print(out / "report.md")
     return 0
 

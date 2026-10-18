@@ -1,7 +1,7 @@
 /**
  * Сборка промпта ассистента (#2460).
  *
- * Системный промпт — тот же, что `SYSTEM` в `scripts/ai-train/build_dataset.py`:
+ * Системный промпт — тот же, что `SYSTEM` в `scripts/ai-train/sets/common.py`:
  * модель metravel-llm дообучалась с ним, расхождение ломает форму ответов.
  * Карточки подбора идут в сообщении посетителя как блок данных: модель
  * предупреждена, что это не инструкции, а страж ссылок (`linkGuard.ts`)
@@ -10,7 +10,7 @@
 
 import type { AiChatMessage, AiHistoryItem, AiSource } from './types'
 
-/** Копия `SYSTEM` из `scripts/ai-train/build_dataset.py` — менять синхронно. */
+/** Копия `SYSTEM` из `scripts/ai-train/sets/common.py` — менять синхронно. */
 export const ASSISTANT_SYSTEM_PROMPT =
   'Ты — помощник сайта metravel.by. Отвечай кратко, по-дружески и только по материалам сайта: ' +
   'статьям Юли и Сергея о путешествиях и городским квестам. К каждой рекомендации давай ссылку ' +

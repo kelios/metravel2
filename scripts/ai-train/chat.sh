@@ -7,13 +7,13 @@
 #
 # Do not run while training is in progress on the same Mac: a second copy of
 # the model (~2.6 GB) competes for memory with the trainer. The system prompt
-# is the one the dataset was built with (build_dataset.SYSTEM).
+# is the one the dataset was built with (sets/common.py SYSTEM).
 set -euo pipefail
 AI_HOME="${AI_HOME:-$HOME/metravel-ai}"  # обучение переехало на ноутбук 18.10.2026 (README)
 MODEL="${MODEL:-models/Qwen3.5-4B-MLX-4bit}"
 ADAPTER="${ADAPTER-adapters/metravel-llm-v0}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SYSTEM="$(python3 -I -c 'import sys; sys.path.insert(0, sys.argv[1]); import build_dataset; print(build_dataset.SYSTEM)' "$HERE")"
+SYSTEM="$(python3 -I -c 'import sys; sys.path.insert(0, sys.argv[1]); from sets.common import SYSTEM; print(SYSTEM)' "$HERE")"
 cd "$AI_HOME"
 args=(--model "$MODEL" --temp 0.3 --max-tokens 400 --system-prompt "$SYSTEM")
 if [[ -n "$ADAPTER" ]]; then

@@ -23,8 +23,8 @@ const source = (overrides: Partial<AiSource> = {}): AiSource => ({
 })
 
 describe('aiAssist prompt (#2460)', () => {
-  it('системный промпт совпадает с SYSTEM из scripts/ai-train/build_dataset.py', () => {
-    const script = fs.readFileSync(path.resolve(process.cwd(), 'scripts/ai-train/build_dataset.py'), 'utf8')
+  it('системный промпт совпадает с SYSTEM из scripts/ai-train/sets/common.py', () => {
+    const script = fs.readFileSync(path.resolve(process.cwd(), 'scripts/ai-train/sets/common.py'), 'utf8')
     const match = /SYSTEM = \(\s*((?:\s*"[^"]*"\s*)+)\)/.exec(script)
     expect(match).not.toBeNull()
     const fromScript = Array.from(match![1].matchAll(/"([^"]*)"/g), (m) => m[1]).join('')

@@ -1,0 +1,11 @@
+# Regression mix: reproduces the dataset metravel-llm v1 was trained on
+# (~/metravel-ai/data/sft, 18.10.2026) bit for bit — v1 wording, split by the
+# sample id, chunk 2600, no structured kinds. Any change to sets/site.py must
+# keep `cmp` of this mix's train/valid/test with data/sft clean.
+name: v1
+seed: 20261017
+split: {by: id, valid_share: 0.03, test_share: 0.02}
+sets:
+  site:
+    weight: 1.0
+    options: {chunk_chars: 2600, legacy_texts: true, structured: false}
