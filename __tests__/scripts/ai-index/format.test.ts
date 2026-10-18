@@ -1,5 +1,4 @@
 import fs from 'fs'
-import os from 'os'
 import path from 'path'
 
 import {
@@ -17,6 +16,8 @@ import {
   writeIndex,
   type ChunkRecord,
 } from '@/scripts/ai-index/format'
+
+import { makeTempDir } from '../cli-test-utils'
 
 const makeChunk = (i: number, text = `фрагмент ${i}`): ChunkRecord => ({
   id: chunkId('travel', 100 + i, 'ru', text),
@@ -70,7 +71,7 @@ describe('ai-index format: float16', () => {
 describe('ai-index format: артефакт', () => {
   let dir: string
   beforeEach(() => {
-    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-index-format-'))
+    dir = makeTempDir('ai-index-format-')
   })
   afterEach(() => {
     fs.rmSync(dir, { recursive: true, force: true })

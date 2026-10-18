@@ -3,13 +3,12 @@
  * (как в embed.test.ts), три статьи и два квеста (один — на двух локалях).
  */
 import { createHash } from 'crypto'
-import fs from 'fs'
-import os from 'os'
-import path from 'path'
 
 import { chunkId, type ChunkRecord, writeIndex } from '@/scripts/ai-index/format'
 import { indexMaps, type LoadedIndex } from '@/scripts/ai-assist/index'
 import { readIndex } from '@/scripts/ai-index/format'
+
+import { makeTempDir } from '../cli-test-utils'
 
 export const DIM = 8
 export const MODEL = 'fake-model'
@@ -65,7 +64,7 @@ export function fixtureChunks(): ChunkRecord[] {
 }
 
 export function writeFixtureIndex(model = MODEL): string {
-  const distDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-assist-'))
+  const distDir = makeTempDir('ai-assist-')
   const chunks = fixtureChunks()
   writeIndex(distDir, { model, dim: DIM, chunks, vectors: chunks.map((chunk) => fakeVector(chunk.text)), builtAt: '2026-10-18T16:48:48.951Z' })
   return distDir

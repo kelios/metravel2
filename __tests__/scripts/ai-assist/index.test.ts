@@ -4,6 +4,7 @@ import path from 'path'
 import { IndexModelMismatch, loadIndex } from '@/scripts/ai-assist/index'
 import { MANIFEST_FILE } from '@/scripts/ai-index/format'
 
+import { makeTempDir } from '../cli-test-utils'
 import { MODEL, writeFixtureIndex } from './fixture'
 
 describe('metravel-assist: загрузка индекса', () => {
@@ -37,7 +38,7 @@ describe('metravel-assist: загрузка индекса', () => {
   })
 
   it('пустая директория — понятная ошибка', async () => {
-    const distDir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'ai-assist-empty-'))
+    const distDir = makeTempDir('ai-assist-empty-')
     await expect(loadIndex(distDir, { expectedModel: MODEL, attempts: 1 })).rejects.toThrow(/нет артефакта/)
   })
 })
