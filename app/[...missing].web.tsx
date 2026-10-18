@@ -1,8 +1,9 @@
 import React, { Suspense, useMemo } from 'react'
-import { usePathname } from 'expo-router'
+import { useLocalSearchParams } from 'expo-router'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
 
 import CustomHeader from '@/components/layout/CustomHeader'
+import FreezeWhenBlurred from '@/components/layout/FreezeWhenBlurred'
 import StandaloneScreen from '@/components/layout/StandaloneScreen'
 import { useThemedColors } from '@/hooks/useTheme'
 import { parseQuestLocaleRoute } from '@/utils/questLocaleRouting'
@@ -33,18 +34,24 @@ function QuestScreenFallback() {
 }
 
 export default function QuestLocaleRouteScreen() {
-  const pathname = usePathname()
-  const route = useMemo(() => parseQuestLocaleRoute(pathname), [pathname])
+  // The card's own segments, not the global pathname: a hidden stack card must
+  // keep its address when a language link pushes the same quest in another
+  // locale (#2464).
+  const { missing } = useLocalSearchParams<{ missing?: string | string[] }>()
+  const ownPath = `/${([] as string[]).concat(missing ?? []).join('/')}`
+  const route = useMemo(() => parseQuestLocaleRoute(ownPath), [ownPath])
   if (!route) return <StandaloneScreen><NotFoundContent /></StandaloneScreen>
 
   // CustomHeader owns the top inset for this root Stack route, as on contact.
   return (
-    <View style={styles.root}>
-      <CustomHeader />
-      <Suspense fallback={<QuestScreenFallback />}>
-        <QuestByIdScreen key={route.path} route={route} />
-      </Suspense>
-    </View>
+    <FreezeWhenBlurred>
+      <View style={styles.root}>
+        <CustomHeader />
+        <Suspense fallback={<QuestScreenFallback />}>
+          <QuestByIdScreen key={route.path} route={route} />
+        </Suspense>
+      </View>
+    </FreezeWhenBlurred>
   )
 }
 
