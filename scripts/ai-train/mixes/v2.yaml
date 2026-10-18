@@ -7,7 +7,7 @@ seed: 20261017
 split: {by: key, valid_share: 0.03, test_share: 0.02}
 sets:
   toponyms:     {weight: 1.0, cap_tokens: 400000}
-  translations: {weight: 1.0, cap_tokens: 500000}
+  translations: {weight: 1.0, cap_tokens: 500000, options: {kind_share: {quest_card_from_ru: 0.7, quest_card_l: 0.5, ui_strings: 0.12, quest_translate: 0.03}}}
   wikivoyage:   {weight: 0.7, cap_tokens: 1500000}
   osm_intents:  {weight: 1.0, cap_tokens: 300000}
   site:         {weight: 1.0, cap_tokens: 4000000, options: {chunk_chars: 2600, structured: true}}

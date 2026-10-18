@@ -1,0 +1,16 @@
+# The v2 `translations` set alone (#2476): quests and UI strings RU → BE/UK/PL/EN.
+# kind_share fills the 0.5 M token budget by behaviour (answering in the
+# visitor's language from a Russian card first), not by the kinds' raw size:
+# the whole set is ~6.2 M tokens, 5 M of them translated step stories.
+# For checking the set and its eval slice before #2480.
+name: translations
+seed: 20261017
+split: {by: key, valid_share: 0.03, test_share: 0.02}
+sets:
+  translations:
+    weight: 1.0
+    cap_tokens: 500000
+    options:
+      locales: [be, uk, pl, en]
+      ui_batch: 25
+      kind_share: {quest_card_from_ru: 0.7, quest_card_l: 0.5, ui_strings: 0.12, quest_translate: 0.03}

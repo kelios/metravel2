@@ -89,6 +89,37 @@ def export_travels(out: Path, pause: float, limit: int | None) -> int:
     return count
 
 
+def quest_row(detail: dict, meta: dict) -> dict:
+    """One quest locale as written to quests.jsonl: the detail payload trimmed, list fields from `meta`."""
+    qid = meta["id"]
+    return {
+        "id": qid,
+        "quest_id": detail.get("quest_id"),
+        "title": detail.get("title"),
+        "content_locale": detail.get("content_locale"),
+        "source_locale": detail.get("source_locale"),
+        "available_locales": detail.get("available_locales"),
+        "city": detail.get("city"),
+        "city_alias": detail.get("city_alias") or meta.get("city_alias"),
+        "city_name": meta.get("city_name"),
+        "country_code": meta.get("country_code"),
+        "country_name": meta.get("country_name"),
+        "lat": meta.get("lat"),
+        "lng": meta.get("lng"),
+        "difficulty": meta.get("difficulty"),
+        "duration_min": meta.get("duration_min"),
+        "tags": meta.get("tags"),
+        "pet_friendly": meta.get("pet_friendly"),
+        "intro": trim(detail.get("intro") or {}, ("title", "location", "story", "task")),
+        "steps": [
+            trim(s, ("step_id", "title", "location", "story", "task", "hint", "lat", "lng", "order", "poi_info"))
+            for s in (detail.get("steps") or [])
+        ],
+        "finale_text": (detail.get("finale") or {}).get("text"),
+        "url": f"https://metravel.by/quests/{detail.get('quest_id') or qid}",
+    }
+
+
 def export_quests(out: Path, pause: float, limit: int | None, locales) -> int:
     path = out / "quests.jsonl"
     done = set()
@@ -108,32 +139,7 @@ def export_quests(out: Path, pause: float, limit: int | None, locales) -> int:
                 if locale not in available or (qid, locale) in done:
                     continue
                 detail = get(f"{API}/quests/{qid}/?lang={locale}", pause)
-                row = {
-                    "id": qid,
-                    "quest_id": detail.get("quest_id"),
-                    "title": detail.get("title"),
-                    "content_locale": detail.get("content_locale"),
-                    "source_locale": detail.get("source_locale"),
-                    "available_locales": detail.get("available_locales"),
-                    "city": detail.get("city"),
-                    "city_alias": detail.get("city_alias") or meta.get("city_alias"),
-                    "city_name": meta.get("city_name"),
-                    "country_code": meta.get("country_code"),
-                    "country_name": meta.get("country_name"),
-                    "lat": meta.get("lat"),
-                    "lng": meta.get("lng"),
-                    "difficulty": meta.get("difficulty"),
-                    "duration_min": meta.get("duration_min"),
-                    "tags": meta.get("tags"),
-                    "pet_friendly": meta.get("pet_friendly"),
-                    "intro": trim(detail.get("intro") or {}, ("title", "location", "story", "task")),
-                    "steps": [
-                        trim(s, ("step_id", "title", "location", "story", "task", "hint", "lat", "lng", "order", "poi_info"))
-                        for s in (detail.get("steps") or [])
-                    ],
-                    "finale_text": (detail.get("finale") or {}).get("text"),
-                    "url": f"https://metravel.by/quests/{detail.get('quest_id') or qid}",
-                }
+                row = quest_row(detail, meta)
                 fh.write(json.dumps(row, ensure_ascii=False) + "\n")
                 fh.flush()
                 print(f"quest {count}: {qid}/{locale} {row['title']}", file=sys.stderr)

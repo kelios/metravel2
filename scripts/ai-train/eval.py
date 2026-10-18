@@ -15,10 +15,17 @@ Automatic checks per answer:
   * urls_unknown — links to metravel.by pages that do not exist (made up);
   * external     — links to other sites (forbidden by the system prompt);
   * refused      — the answer says the site has no material on the topic.
+  * lang         — the answer's language by its letters (ru, be, uk, pl, en),
+                   URLs left out;
+  * degenerate   — a letter repeated 6+ times in a row (a weak language
+                   falling into a loop, "шасццццц…").
 A prompt with expect=answer passes when there is at least one known URL,
 no unknown and no external link; expect=refuse passes when the model refuses
-and invents no URL. Language, factual accuracy and tone are still read by a
-human — the report leaves a column for that.
+and invents no URL; expect=lang (the translations slice) is expect=answer in
+the prompt's `lang`: the language matches, at least one known URL, no unknown
+or external link and no degenerate loop. Factual accuracy, tone and the
+quality of a translation (Russian words inside a Belarusian answer pass the
+letter check) are still read by a human — the report leaves a column for that.
 
 Output: <out>/results.jsonl (both answers + checks) and <out>/report.md.
 """
@@ -38,6 +45,14 @@ from sets.common import SITE, SYSTEM  # noqa: E402
 URL_RE = re.compile(r"https?://[^\s)\]>»\"']+")
 REFUSE_RE = re.compile(r"(пока\s+)?нет\s+(материал|стат|квест|ничего)|не\s+нашл|нет\s+информации|brak\s+materia|nie\s+ma(my)?\s+(materia|artyku)", re.I)
 THINK_RE = re.compile(r"<think>.*?</think>\s*", re.S)
+LETTER_RE = re.compile(r"[^\W\d_]")
+DEGENERATE_RE = re.compile(r"([^\W\d_])\1{5,}")
+PLACEHOLDER_RE = re.compile(r"\{\{[^}]*\}\}")
+POLISH = set("ąćęłńśźżó")
+CYRILLIC_NEVER = {"ru": "іўїєґ", "be": "ищъїєґ", "uk": "ыэёъў"}  # dict order breaks ties
+LATIN_WORD_RE = re.compile(r"[a-ząćęłńśźżó]+")
+PL_RE = re.compile(r"sz|cz|rz|dz|ie|ow|ych|\b(?:i|w|z|na|nie|jest|się|do)\b")
+EN_RE = re.compile(r"th|wh|sh|ea|ou|ing\b|\b(?:a|an|the|and|of|to|is|in|for)\b")
 
 
 def known_urls(raw: Path) -> set[str]:
@@ -71,6 +86,29 @@ def load_prompts(files: list[Path]) -> list[dict]:
     return prompts
 
 
+def detect_lang(text: str) -> str | None:
+    """ru / be / uk / pl / en by letter statistics, or None without letters.
+
+    Cyrillic: each language is scored by the letters it never uses (Russian:
+    і ў ї є ґ; Belarusian: и щ ъ ї є ґ; Ukrainian: ы э ё ъ ў), the fewest wins,
+    ties go to Russian, then Belarusian. Latin: Polish diacritics and digraphs
+    against English ones. Placeholders and URLs are left out.
+    """
+    text = PLACEHOLDER_RE.sub(" ", URL_RE.sub(" ", text)).lower()
+    letters = LETTER_RE.findall(text)
+    cyr = "".join(ch for ch in letters if "а" <= ch <= "я" or ch in "ёіўїєґ")
+    lat = "".join(ch for ch in letters if "a" <= ch <= "z" or ch in POLISH)
+    if not cyr and not lat:
+        return None
+    if len(lat) > len(cyr):
+        words = " ".join(LATIN_WORD_RE.findall(text))
+        pl = 3 * sum(ch in POLISH for ch in lat) + len(PL_RE.findall(words))
+        en = len(EN_RE.findall(words))
+        return "pl" if pl > en else "en"
+    bad = {lang: sum(cyr.count(ch) for ch in never) for lang, never in CYRILLIC_NEVER.items()}
+    return min(bad, key=lambda lang: bad[lang])
+
+
 def check(answer: str, known: set[str]) -> dict:
     found = [u.rstrip(".,;:/") for u in URL_RE.findall(answer)]
     ours = [u for u in found if u.startswith(SITE)]
@@ -82,12 +120,16 @@ def check(answer: str, known: set[str]) -> dict:
         "urls_unknown": unknown,
         "external": external,
         "refused": bool(REFUSE_RE.search(answer)),
+        "lang": detect_lang(answer),
+        "degenerate": bool(DEGENERATE_RE.search(URL_RE.sub(" ", answer))),
     }
 
 
-def verdict(expect: str, c: dict) -> bool:
+def verdict(expect: str, c: dict, lang: str | None = None) -> bool:
     if c["external"] or c["urls_unknown"]:
         return False
+    if expect == "lang":
+        return c["lang"] == lang and c["urls_ok"] > 0 and not c["degenerate"]
     if expect == "refuse":
         return c["refused"]
     return c["urls_ok"] > 0
@@ -201,7 +243,8 @@ def main() -> int:
     with (out / "results.jsonl").open("w", encoding="utf-8") as fh:
         for p, b, a in zip(prompts, base_ans, ad_ans):
             cb, ca = check(b, known), check(a, known)
-            row = {**p, "base": {"answer": b, **cb, "pass": verdict(p["expect"], cb)}, "adapter": {"answer": a, **ca, "pass": verdict(p["expect"], ca)}}
+            row = {**p, "base": {"answer": b, **cb, "pass": verdict(p["expect"], cb, p.get("lang"))},
+                   "adapter": {"answer": a, **ca, "pass": verdict(p["expect"], ca, p.get("lang"))}}
             rows.append(row)
             fh.write(json.dumps(row, ensure_ascii=False) + "\n")
             for side, key in (("base", "base"), ("v", "adapter")):
@@ -220,7 +263,10 @@ def main() -> int:
             flags.append(f"{len(r['external'])} чужих")
         if r["refused"]:
             flags.append("отказ")
-        return ("✅" if r["pass"] else "❌") + " " + (", ".join(flags) or "без ссылок")
+        if r.get("degenerate"):
+            flags.append("зацикливание")
+        lang = f", язык {r['lang']}" if r.get("lang") else ""
+        return ("✅" if r["pass"] else "❌") + " " + (", ".join(flags) or "без ссылок") + lang
 
     md = [f"# Оценка {args.adapter} против базы", "", f"База: {base_tps:.1f} ток/с, адаптер: {ad_tps:.1f} ток/с (генерация, greedy, max {args.max_tokens}).", ""]
     for title, table in (("срез", slices), ("срез / группа", totals)):
