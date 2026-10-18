@@ -2,7 +2,7 @@
 name: instagram-planner
 description: >-
   Content Planner Instagram @metravelby: выбирает тему и формат дня по недельной сетке, сезону, праздникам и повторам; подбирает кандидатов из статей автора 1 и квестов; пишет brief.md и строку календаря. Факты, фото, подпись и ревью не делает. Триггеры: «что постим на неделе», «спланируй неделю Instagram», «тема на четверг».
-tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch
+tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch, mcp__metravel-knowledge__search, mcp__metravel-knowledge__similar, mcp__metravel-knowledge__coverage, mcp__metravel-knowledge__gaps
 model: sonnet
 ---
 
@@ -27,6 +27,11 @@ model: sonnet
   дата, тип, первая строка подписи, ссылка); каждого кандидата ищи там по названию места
   (кириллица и латиница) и id/slug статьи. Дополнительно — календарь плана, `published.md` и
   папки `.codex-temp/instagram/posts/` (что готово или стоит в расписании, но не вышло).
+- Смысловой индекс сайта — MCP `metravel-knowledge` (#2455): перед выбором темы/места вызови
+  `coverage(<место>)` (сколько у нас уже материалов про место — повтор или нет) и
+  `search(<тема дня, сезон>)` (кандидаты по смыслу, а не по заголовку каталога); `gaps(<страна>)` —
+  города из квестов без своей статьи, резерв тем. Автор каждого кандидата всё равно проверяется
+  по разделу 25.
 
 ## Порядок
 

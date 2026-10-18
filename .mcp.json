@@ -6,6 +6,13 @@
         "-c",
         "for d in \"$CLAUDE_PROJECT_DIR\" \"$PWD\" \"$HOME/Sites/metravel2/metravel2\" \"$HOME/PhpstormProjects/metravel2\"; do if [ -n \"$d\" ] && [ -f \"$d/.secrets/metravel-task-board.env\" ]; then P=\"$d\"; break; fi; done; if [ -z \"$P\" ]; then echo 'metravel-task-board: .secrets/metravel-task-board.env not found (checked $CLAUDE_PROJECT_DIR, $PWD, ~/Sites/metravel2/metravel2, ~/PhpstormProjects/metravel2)' >&2; exit 1; fi; for b in \"$P/../metravel-backend\" \"$HOME/Sites/metravel2/metravel-backend\" \"$HOME/PhpstormProjects/metravel-backend\"; do if [ -d \"$b/tools/mcp_server\" ]; then B=\"$b\"; break; fi; done; if [ -z \"$B\" ]; then echo 'metravel-task-board: backend checkout with tools/mcp_server not found (checked <project>/../metravel-backend, ~/Sites/metravel2/metravel-backend, ~/PhpstormProjects/metravel-backend)' >&2; exit 1; fi; set -a; . \"$P/.secrets/metravel-task-board.env\"; set +a; export PYTHONPATH=\"$B\"; exec python3 -m tools.mcp_server"
       ]
+    },
+    "metravel-knowledge": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "P=\"${CLAUDE_PROJECT_DIR:-$PWD}\"; cd \"$P\" || exit 1; ok() { \"$1\" -e 'process.exit(Number(process.versions.node.split(\".\")[0])>=22?0:1)' 2>/dev/null; }; N=; for c in node /opt/homebrew/opt/node@22/bin/node /usr/local/opt/node@22/bin/node; do if command -v \"$c\" >/dev/null 2>&1 && ok \"$c\"; then N=\"$c\"; break; fi; done; if [ -z \"$N\" ]; then echo 'metravel-knowledge: нужен Node >= 22 (node в PATH или brew node@22)' >&2; exit 1; fi; exec \"$N\" --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-index/mcp.ts"
+      ]
     }
   }
 }
