@@ -153,7 +153,7 @@ async function main() {
   const nonce = randomUUID();
   const report = { status: 'failed', definitionSha256, platform: options.platform,
     candidate: { version: options.version, build: options.build, source: options.source, provenanceVerified: false },
-    apiOrigin: api.origin, accountId: 104, locale: 'ru', expectedMarkers: 869,
+    apiOrigin: api.origin, accountId: 104, locale: 'ru', expectedMarkers: expectedKeys.length,
     fixture: { sha256: createHash('sha256').update(fixtureBytes).digest('hex'), capturedAt: fixture.capturedAt, count: expectedKeys.length },
     entryAssertions: 0, checkpoints: [], offlineRecovery: 'not-covered', runtimeExecuted: true };
   let lldbChild, cdp, release, offset = 0, buffer = '', probeLog, lldbExited = false;
@@ -223,7 +223,7 @@ async function main() {
       if (await cdp.evaluate(observerScript(nonce, 150)) !== true) throw new Error('Selected CDP target has no native map');
     }
     const acceptance = new Acceptance({ expectedKeys });
-    write('progress.json', { stage: 0, action: 'Wait for 869 settled markers; do not zoom yet' });
+    write('progress.json', { stage: 0, action: `Wait for all ${expectedKeys.length} independent API fixture markers to settle; do not zoom yet` });
     const deadline = Date.now() + 90000;
     while (Date.now() < deadline) {
       if (abort.signal.aborted) throw new Error('Interrupted');

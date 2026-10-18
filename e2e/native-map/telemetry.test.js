@@ -99,6 +99,41 @@ test('same-count wrong fixture cannot establish baseline', () => {
   assert.throws(() => new Acceptance({ expectedKeys: [...keys.slice(1), keys[1]] }), /independent fixture keys/);
 });
 
+test('the full current 2655-point API fixture passes every settled zoom stage', () => {
+  const currentKeys = Array.from({ length: 2655 }, (_, index) => `record:${String(index).padStart(4, '0')}`);
+  const currentIds = currentKeys.map((_, index) => index + 1);
+  const acceptance = new Acceptance({ expectedKeys: currentKeys });
+  acceptance.started = 0; acceptance.stageStarted = 0;
+  const currentSnapshot = zoom => snapshot(zoom, {
+    keys: currentKeys, desired: currentKeys, markerIds: currentIds, layerIds: currentIds,
+  });
+  for (const [index, zoom] of [8, 9, 10, 9].entries()) {
+    const at = index * 1000;
+    assert.equal(consume(acceptance, currentSnapshot(zoom), at), false);
+    assert.equal(consume(acceptance, currentSnapshot(zoom), at + 600), index === 3);
+  }
+  assert.deepEqual(acceptance.checkpoints.map(checkpoint => checkpoint.count), [2655, 2655, 2655, 2655]);
+});
+
+test('a current fixture of the same size with different keys cannot pass baseline', () => {
+  const currentKeys = Array.from({ length: 2655 }, (_, index) => `record:${index}`);
+  const wrongKeys = currentKeys.map(key => `wrong:${key}`).sort();
+  const currentIds = currentKeys.map((_, index) => index + 1);
+  const acceptance = new Acceptance({ expectedKeys: currentKeys });
+  acceptance.started = 0; acceptance.stageStarted = 0;
+  for (const at of [0, 600, 1200]) consume(acceptance, snapshot(8, {
+    keys: wrongKeys, desired: wrongKeys, markerIds: currentIds, layerIds: currentIds,
+  }), at);
+  assert.equal(acceptance.stage, 0);
+  assert.throws(() => acceptance.assertWithinBudget(20001), /stage 0/);
+});
+
+test('empty, duplicate and malformed independent keys fail before runtime', () => {
+  for (const expectedKeys of [[], Array(1), ['', 'valid'], [' ', 'valid'], [null], [123], ['duplicate', 'duplicate']]) {
+    assert.throws(() => new Acceptance({ expectedKeys }), /independent fixture keys/);
+  }
+});
+
 test('baseline requires the same map and marker objects throughout settle window', () => {
   const acceptance = createAcceptance();
   consume(acceptance, snapshot(), 0);
@@ -126,10 +161,11 @@ test('fixture origin, account, timestamp and keys are independently constrained'
   const fixture = { accountId: 104, apiOrigin: 'https://metravel.by', capturedAt: new Date(0).toISOString(), keys };
   assert.deepEqual(validateFixture(fixture, fixture.apiOrigin, 600), keys);
   for (const changes of [{ accountId: 1 }, { apiOrigin: 'http://other' }, { capturedAt: 'invalid' },
-    { capturedAt: new Date(2000).toISOString() }, { keys: keys.slice(1) }]) {
+    { capturedAt: new Date(2000).toISOString() }, { keys: [] }, { keys: [...keys, keys[0]] }]) {
     assert.throws(() => validateFixture({ ...fixture, ...changes }, fixture.apiOrigin, 600));
   }
   assert.throws(() => validateFixture(fixture, fixture.apiOrigin, 86400001), /24h/);
+  assert.deepEqual(validateFixture({ ...fixture, keys: keys.slice(1) }, fixture.apiOrigin, 600), keys.slice(1));
 });
 
 test('target binding refuses a CDP forward or LLDB PID from another device/application', () => {
