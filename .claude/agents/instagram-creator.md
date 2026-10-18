@@ -143,8 +143,10 @@ model: opus
   — вырезка из app-иконки, перерисованной в OpenAI ImageGen с нашего знака: evidence —
   `.codex-temp/instagram/brand-bird-provenance.txt`, `openai-terms-of-use-ru-2026-10-18.txt` и
   `assets/icons/logo_yellow_512x512.png`, копируй их в `rights/` и привязывай к слайдам (basis
-  `owned`, производное от собственного знака); ИИ-обложки квестов (ChatGPT/gpt-image по C2PA,
-  условия для @metravelby не записаны) в пост не берутся; при замене кадра обновляй `rights/source-hashes.json`; служебные JPG
+  `owned`, производное от собственного знака); обложки квестов с сайта (ИИ, ChatGPT/gpt-image по
+  C2PA) брать можно и нужно — решение владельца 18.10.2026: basis `ai-generated`, evidence —
+  `.codex-temp/instagram/quest-covers-ai-decision-2026-10-18.txt`, URL обложки на проде и
+  `openai-terms-of-use-ru-2026-10-18.txt`, копируй в `rights/`; при замене кадра обновляй `rights/source-hashes.json`; служебные JPG
   (контрольные листы, пробы) — только в `work/`, любой JPG в корне пакета проверка прав
   считает публикуемым. `make-carousel.py` запускай из корня репо: пути в `spec.json`
   относительные к нему.
