@@ -13,6 +13,7 @@
     "target": "esnext",
     "module": "esnext",
     "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
 
     "moduleSuffixes": [
       ".web",

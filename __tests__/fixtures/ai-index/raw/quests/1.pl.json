@@ -1,0 +1,66 @@
+{
+ "id": 1,
+ "quest_id": "krakow-dragon",
+ "title": "Quest po Krakowie: Smok Wawelski",
+ "content_locale": "pl",
+ "city": {
+  "id": 1,
+  "name": "Kraków",
+  "lat": 50.0614,
+  "lng": 19.9366,
+  "country_code": "pl",
+  "name_canonical": "Краков",
+  "legacy_ids": [],
+  "name_localized": "Kraków"
+ },
+ "city_name": "Краков",
+ "country_name": "Польша",
+ "lat": 50.0617,
+ "lng": 19.9371,
+ "tags": {
+  "legend": true,
+  "history": true,
+  "citywalk": true
+ },
+ "intro": {
+  "title": "Jak przejść quest?",
+  "story": "Mówią, że pod Wzgórzem Wawelskim kiedyś spał smok o imieniu Smok — pożerał bydło i dziewczęta, siał grozę w całym mieście nad Wisłą. Smoka dawno nie ma, ale jego ślad pozostał: łuski legendy rozsypane są po całym Krakowie — na fasadach, w herbach, na mostach i wieżach.\n\nDziś tym śladem pójdziesz ty. Ja jestem twoim przewodnikiem, a ty — tropicielem. W każdym punkcie opowiem, co działo się tu naprawdę i co mówi legenda, a ty znajdziesz trop i ruszysz dalej. Wszystkie tropy prowadzą w jedno miejsce — do samego legowiska.\n\nIdziemy tak: czytasz historię, rozglądasz się, wykonujesz zadanie od razu na miejscu, wpisujesz odpowiedź — i otwiera się kolejny krok. Podpowiedź tylko pokieruje twoim wzrokiem, odpowiedzi w niej nie ma. Idziemy?",
+  "task": "Naciśnij „Rozpocznij zadanie” — ślad smoka zaczyna się przy Bramie Floriańskiej, gdzie dawniej zaczynała się Droga Królewska."
+ },
+ "steps": [
+  {
+   "step_id": "4-barbakan",
+   "title": "Brama Floriańska — strażnik na rubieży",
+   "location": "Brama Floriańska",
+   "story": "Brama Floriańska (około 1300 roku) to jedyna zachowana z ośmiu bram średniowiecznego Krakowa. Stąd zaczynała się Droga Królewska: tędy królowie uroczyście wjeżdżali do miasta na koronację w katedrze wawelskiej — tam właśnie w końcu zaprowadzi nas też nasz ślad.\n\nPrzed tobą, za bramą, stoi Barbakan — potężna okrągła warownia z przełomu XV i XVI wieku, połączona z bramą krytym przejściem, czyli „szyją”. Takich barbakanów w Europie zostało niewiele. A sąsiedni odcinek muru w 1817 roku uratował profesor Feliks Radwański: poważnie myślano o rozbiórce fortyfikacji, ale przekonał senat, że bez muru na krakowianki spadną przeciągi i przeziębienia — i mur zostawiono.\n\nWyjdź za bramę, w stronę Barbakanu i Plant, i spójrz na jej zewnętrzną stronę. Wysoko nad przejazdem w kamieniu wykuto płaskorzeźbę: w 1882 roku wykonał ją Zygmunt Langman według rysunku samego Jana Matejki. Przyjrzyj się, kto na niej jest.",
+   "task": "Stań po zewnętrznej stronie bramy (twarzą do Barbakanu) i unieś wzrok wysoko nad łuk przejazdu. Jaki ptak jest wykuty w kamieniu na płaskorzeźbie według rysunku Matejki? Nazwij go jednym słowem.",
+   "hint": "Płaskorzeźba jest bardzo wysoko, prawie pod samym dachem bramy, a od strony miasta jej nie widać — trzeba wyjść za bramę, na Planty.",
+   "lat": 50.064856,
+   "lng": 19.941353,
+   "order": 1
+  },
+  {
+   "step_id": "2-mariacki",
+   "title": "Kościół Mariacki — urwana melodia",
+   "location": "Bazylika Mariacka",
+   "story": "Nad rynkiem wznoszą się dwie nierówne wieże kościoła Mariackiego: północna ma 82 metry, południowa — 69. Według podania budowali je dwaj bracia kamieniarze. Młodszy zazdrościł starszemu, którego wieża rosła wyżej, zabił go, a potem, nie mogąc znieść winy, rzucił się w dół. Narzędzie tej zbrodni, jeśli wierzyć legendzie, do dziś wisi na łańcuchu o dwa kroki stąd — ale o tym na następnym punkcie.\n\nWysoką wieżę nazywają Hejnalicą. Co godzinę trębacz gra z niej hejnał — na cztery strony świata — i za każdym razem melodia urywa się w pół nuty: na pamiątkę trębacza, którego według podania tatarska strzała trafiła w gardło, gdy trąbił na alarm.\n\nW 1478 roku mistrz Maciej Heringk przykrył Hejnalicę gotyckim hełmem: ośmioboczną, ostrą iglicą w wieńcu ośmiu mniejszych wieżyczek. A najwyżej, na samym czubku, od 1666 roku lśni złocony znak (w 2023 roku odnowiono go od nowa). Unieś wzrok i przyjrzyj się, co to jest.",
+   "task": "Odejdź na rynek i spójrz na sam szczyt wysokiej (północnej) wieży — wyżej niż iglica i wieniec ośmiu wieżyczek. Co się tam złoci? Nazwij to jednym słowem.",
+   "hint": "Trzeba odejść dalej i zadrzeć głowę: przedmiot jest na samym czubku, nad wieżyczkami. Jest niewielki, ale w słoneczny dzień jego złoto widać z rynku.",
+   "lat": 50.061721,
+   "lng": 19.939094,
+   "order": 2
+  },
+  {
+   "step_id": "3-sukiennice",
+   "title": "Sukiennice — trop pod sklepieniem",
+   "location": "Sukiennice",
+   "story": "Sukiennice — średniowieczne „centrum handlowe” Krakowa: przez wieki handlowano tu suknem, przyprawami, ołowiem i solą z pobliskiej Wieliczki. Po wielkim pożarze w 1555 roku Sukiennice przebudowano w duchu renesansu — włoscy mistrzowie wznieśli nad nimi attykę, a groteskowe kamienne maszkarony (łączy się je z nazwiskiem Santi Gucci) miały odstraszać zło. Arkadowe krużganki po bokach są znacznie późniejsze, z XIX wieku.\n\nWewnątrz do dziś handluje się bursztynem i pamiątkami. Ale nas interesuje nie lada, tylko przejście poprzeczne przez środek Sukiennic — to, które wychodzi na kościół Mariacki. Tam, tuż pod sklepieniem, na łańcuchu wisi żelazny trop z legendy o dwóch braciach kamieniarzach. Obecny to replika: oryginał albo wywieźli Niemcy podczas wojny, albo po kawałku rozebrali turyści.\n\nZnajdź go — a ślad wyprowadzi cię spod sklepień na przestrzeń rynku, ku Wieży Ratuszowej i ogromnej brązowej rzeźbie, która leży wprost na kamieniach.",
+   "task": "Wejdź w poprzeczne przejście Sukiennic (od strony kościoła Mariackiego) i unieś wzrok ku sklepieniu. Jaki żelazny przedmiot wisi tam na łańcuchu? Nazwij go jednym słowem.",
+   "hint": "Przejście biegnie na wylot, krótszą osią budynku. Przedmiot wisi wysoko pod sklepieniem — zadrzyj wzrok zaraz za wejściem od strony kościoła.",
+   "lat": 50.061667,
+   "lng": 19.937373,
+   "order": 3
+  }
+ ],
+ "finale_text": "Przeszedłeś cały ślad — od Bramy Floriańskiej, przez którą do miasta wkraczali królowie, aż do ognistego smoka nad Wisłą. Smoka dawno nie ma, ale jego duch nie zniknął: żyje w herbie na tarczy, w blankach synagogi, w wieżach kościoła Mariackiego i w szumie rzeki, z której kiedyś pił aż do własnej zguby. Dopóki ktoś idzie tym śladem i opowiada historię na nowo, smok budzi się znowu. Teraz jego legendę niesiesz dalej ty."
+}

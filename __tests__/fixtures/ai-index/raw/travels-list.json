@@ -1,0 +1,34 @@
+[
+ {
+  "id": 816,
+  "title": "Рождественские ярмарки Польши 2026: Краков, Вроцлав, Катовице, Гданьск, Познань, Варшава — даты, адреса и советы",
+  "publish": true,
+  "moderation": true,
+  "publication_status": "published",
+  "updated_at": "2026-10-11T13:18:05.974045Z"
+ },
+ {
+  "id": 791,
+  "title": "Люксембург за один день: квест, казематы Бок и легенда о Мелюзине",
+  "publish": true,
+  "moderation": true,
+  "publication_status": "published",
+  "updated_at": "2026-10-07T06:44:18.691479Z"
+ },
+ {
+  "id": 761,
+  "title": "Mullerthal Trail: 112 км по Люксембургу за 6 дней",
+  "publish": true,
+  "moderation": true,
+  "publication_status": "published",
+  "updated_at": "2026-10-09T21:14:50.441595Z"
+ },
+ {
+  "id": 999,
+  "title": "Черновик без модерации",
+  "publish": true,
+  "moderation": false,
+  "publication_status": "pending",
+  "updated_at": "2026-10-01T00:00:00Z"
+ }
+]
