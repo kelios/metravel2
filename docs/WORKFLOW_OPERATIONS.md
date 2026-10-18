@@ -342,6 +342,17 @@ frontend-тикета в `testing`. Implementation и `review` передают 
   USB-кабелю: сначала проверь `adb devices -l`. Общий файл или common responsive
   UI сам по себе Android device gate не создаёт.
 - Если `adb` показывает устройство со статусом `device`, сначала собери Android локально и установи сборку на телефон (`cd android && ./gradlew :app:installDebug` или `:app:assembleDebug` + `adb install -r ...`), затем самостоятельно тестируй нужный Android-сценарий по `docs/MANUAL_TEST_CASES.md` `AND-USB-*`.
+- Перед любой native-пробой (эмулятор, USB, dev-client с Metro) — `npm run
+  native:stamp:check` (#2469). Локальная сборка (`npm run android:build:dev`,
+  `android:build:prod`) пишет рядом с артефактом `*.native-stamp.json`: версии
+  всех пакетов с нативным кодом, нативные секции `app.json`, патчи и sha256
+  бинарника. Проверка краснеет, если (а) набор нативных зависимостей чекаута
+  разошёлся со штампом — пересобрать, список дрейфа в выводе; (б) на устройстве
+  стоит не тот APK, что собран, — установить свой. Без этого устаревший бинарник
+  падает в нативном коде без читаемой ошибки (worklets 0.10.0 против JS 0.10.1 —
+  SIGABRT через секунду после `Running "main"`), а «свежая сборка тоже падает»
+  оказывается непроверенным: на эмуляторе остаётся старый APK. Сборку вне
+  скрипта штампуют вручную: `npm run native:stamp -- <apk|aab|.app>`.
 - Не заменяй Android device validation mobile-web viewport, Expo web export, EAS preview/development/production build или dev-client/export flow без явного разрешения пользователя.
 - `unauthorized`, отсутствие устройства или поломка локальной сборки/установки фиксируй конкретно: команда, результат и следующий безопасный шаг.
 
@@ -358,6 +369,11 @@ code-review pass. Release operations сохраняют отдельные autho
   `xcodebuild -version` и eligible destinations через `xcodebuild
   -showdestinations`/`xcrun simctl list devices available`. Отсутствующий runtime
   — конкретный environment blocker, а не повод считать QA пройденной.
+- Симуляторная сборка (`xcodebuild … -sdk iphonesimulator`) штампуется так же:
+  `npm run native:stamp -- <путь>/metravel.app`, перед QA —
+  `node scripts/native-build-stamp.js check --ios --artifact <путь>/metravel.app
+  --device` (сравнивает исполняемый файл в контейнере симулятора со штампом и
+  нативный набор с чекаутом; #2469, см. 3.2).
 - Simulator используется для compilation, startup, basic navigation/UI, locales,
   safe areas, keyboard, iPad window geometry и deterministic error states. Physical iPhone обязателен
   для camera/photo/HEIC, Keychain/biometrics, APNs, Universal Links, sharing,

@@ -152,6 +152,8 @@
     "android:build:prod": "node scripts/android-release-agent.js production",
     "android:release:doctor": "node scripts/android-release-agent.js doctor",
     "android:release:export-secrets": "node scripts/android-release-agent.js export-secrets",
+    "native:stamp": "node scripts/native-build-stamp.js stamp",
+    "native:stamp:check": "node scripts/native-build-stamp.js check --device",
     "android:submit:latest": "./scripts/android-submit.sh",
     "android:submit:production": "./scripts/android-submit.sh --commit",
     "android:submit:testing:latest": "./scripts/android-submit-testing.sh",

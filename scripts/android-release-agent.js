@@ -12,6 +12,7 @@ const {
   resolveServiceAccountPath,
 } = require('./android-release-secrets')
 const { resolveGoogleServicesFile } = require('./android-firebase-config')
+const { writeStamp } = require('./native-build-stamp')
 
 const ROOT_DIR = path.resolve(__dirname, '..')
 const ANDROID_DIR = path.join(ROOT_DIR, 'android')
@@ -378,7 +379,11 @@ function verifyArtifact(mode, environment) {
     if (result.status !== 0)
       fail('The generated AAB signature could not be verified')
   }
+  // Record which native dependency set this binary was compiled from (#2469):
+  // `npm run native:stamp:check` refuses QA on a drifted or wrong binary.
+  const { stampPath } = writeStamp(ROOT_DIR, artifact, 'android')
   process.stdout.write(`[android-agent] Artifact verified: ${artifact}\n`)
+  process.stdout.write(`[android-agent] Native stamp written: ${stampPath}\n`)
 }
 
 function build(mode) {

@@ -6799,3 +6799,31 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
 - Correction: Expo 57.0.30 supported family / RN 0.86.3 / transitive Hermes 250829098.0.17, rebased web/native safety patches, synchronized build 14. SDK guard rejects dependency/native lock/architecture drift, with negative fixtures.
 - Verification boundary: source checks do not prove memory or native UI. Require exact build 14 iPhone/iPad launch/navigation/animation memory, article/media/auth acceptance; web lazy chunks and Android blur/system bars controls after patch rebase. Keep render-html maintenance warning visible; do not replace/suppress to clear Doctor.
 - Rollback: owned source/lock/patch paths only; affected build 13 remains held from upload. OpenSpec: align-sdk57-hermes-release14.
+
+### NATIVE-DEVCLIENT-WORKLETS-JSI-STARTUP-CRASH-001 — dev-client падает в libworklets через секунду после старта
+
+- Canonical task: #2469. Historical matches: #679 (устаревший бинарник dev-client,
+  решение «пересобрать»), #742, #779, #2446 (сдвиг версий SDK 57, d561a5923).
+- 18.10.2026, create-new → причина confirmed: бинарник dev-client (APK 15.10 и
+  симуляторная сборка 29.08) скомпилирован с react-native-worklets 0.10.0, Metro
+  отдаёт JS 0.10.1. Внутри патч-релиза изменилась сигнатура JSI-метода
+  `createSerializableNonWorkletFunction` (0.10.0: `(fun, functionId, name)`,
+  `JSIWorkletsModuleProxy.cpp:338`; 0.10.1: `(fun, name)`, `:338`), а проверка
+  `checkCppVersion` → `matchVersion` сравнивает только major.minor — вместо
+  читаемой ошибки `jsi::Value::getString` роняет процесс SIGABRT (`mqt_v_js`).
+  Воркетизация бандла при этом исправна: в dev-бандле 704 `__workletHash`,
+  `__pluginVersion="0.10.1"`.
+- Почему прежний Done gate не удержал: #679 закрылся ручной пересборкой без
+  механизма; 18.10 «свежая сборка тоже падает» было ложным — свежий APK (103,8
+  МБ) на эмулятор не ставился, там остался побайтно старый (103,0 МБ, установлен
+  23:54, `pm path` + `sha256sum`).
+- Постоянный инвариант: native-QA идёт только на бинарнике, чей нативный набор
+  зависимостей равен текущему чекауту и который реально установлен на устройстве.
+- Новый контроль: `scripts/native-build-stamp.js` — `android-release-agent.js`
+  штампует каждый артефакт (`*.native-stamp.json`: версии пакетов с нативным
+  кодом, нативные секции `app.json`, патчи, sha256); `npm run native:stamp:check`
+  краснеет на дрейфе набора и на чужом APK на устройстве (adb `pm path` +
+  `sha256sum`; iOS — `simctl get_app_container`). Тесты:
+  `__tests__/scripts/native-build-stamp.test.ts`,
+  `__tests__/config/worklets-babel-transform.test.ts` (плагин worklets доходит до
+  android/ios × dev/prod, версия плагина = установленный пакет).
