@@ -9,6 +9,7 @@ import { formatInteger } from '@/i18n/format'
 
 import type { QuestRouteModel, QuestRouteRow } from './questRouteModel'
 import { QUEST_NAV_FINALE_TEST_ID, QuestStepMarker } from './questWizardNavigation'
+import QuestContentText from './QuestContentText'
 
 /** Высота строки полосы и строки листа — минимальная цель касания (§11 макета). */
 export const QUEST_ROUTE_ROW_MIN_HEIGHT = 44
@@ -148,12 +149,12 @@ export default function QuestRouteStrip({ model, onGoToStep, onShowFinale, conte
             >
               <QuestStepMarker visual={row.visual} text={row.numberLabel} />
               <View style={styles.rowText}>
-                <Text
+                <QuestContentText
                   style={[styles.rowTitle, row.disabled && { color: colors.textMuted }]}
                   numberOfLines={1}
                 >
                   {row.title}
-                </Text>
+                </QuestContentText>
                 <Text style={styles.rowDetail} numberOfLines={1}>
                   {row.detail}
                 </Text>

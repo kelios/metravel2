@@ -56,6 +56,7 @@ export function useQuestPrintLanding({ enabled, bundle, questUrl }: Options): vo
         questUrl,
         finaleText: bundle.finale?.text,
         closeLoop: isLoopQuest(bundle.tags),
+        countryCode: bundle.city?.countryCode,
       },
       { inPlace: true, signal: controller.signal },
     )

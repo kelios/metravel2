@@ -16,7 +16,7 @@
 const crypto = require('crypto')
 const { buildQuestLocalePath } = require('../../utils/questLocaleRouting')
 const { appShellState } = require('./expoStaticShell')
-const { CYRILLIC_LETTER, cyrillicLanguageSegments } = require('../../utils/cyrillicLanguage')
+const { CYRILLIC_LETTER, LATIN_SCRIPT_LOCALES, cyrillicLanguageSegments } = require('../../utils/cyrillicLanguage')
 
 const LOCALES = Object.freeze(['ru', 'be', 'uk', 'pl', 'en'])
 const TRANSLATED_LOCALES = Object.freeze(LOCALES.slice(1))
@@ -29,8 +29,7 @@ const LOCALE_META = Object.freeze({
   en: { languageTag: 'en-US', ogLocale: 'en_US' },
 })
 
-// Latin-script locales: Cyrillic in their app-owned wording is a Russian leak (#2467).
-const LATIN_SCRIPT_LOCALES = Object.freeze(['pl', 'en'])
+// Latin-script locales (`utils/cyrillicLanguage.js`): Cyrillic in their app-owned wording is a Russian leak (#2467).
 const PUBLIC_ORIGIN = 'https://metravel.by'
 const MANIFEST_NAME = 'quest-seo-manifest.v1.json'
 const BUILD_SOURCE_NAME = '.build-source.json'

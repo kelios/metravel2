@@ -21,6 +21,7 @@
  */
 
 const crypto = require('crypto')
+const { findQuestBundleSpoilerLeaks } = require('../questSpoilerGuard')
 
 const EXACT_ANSWER_TYPES = new Set(['exact', 'exact_any'])
 const STEP_TEXT_FIELDS = ['title', 'location', 'story', 'task', 'hint']
@@ -234,6 +235,60 @@ function checkKeptStep(label, existingStep, step) {
 }
 
 /**
+ * Ответ шага в бандле `?lang=` пары: варианты перевода впереди русских, как их
+ * склеивает сервер (`content_localization.localized_step`); у остальных типов
+ * правило источника не меняется.
+ */
+function localizedAnswerPattern(sourceStep, step) {
+  if (EXACT_ANSWER_TYPES.has(sourceStep.answer_type)) {
+    const translated = step && Array.isArray(step.answer_variants) ? step.answer_variants : []
+    return { type: 'exact_any', value: [...new Set([...translated, ...sourceStep.answer_variants])] }
+  }
+  const rule = sourceStep.answer_rule_parameters
+  if (rule && rule.type === 'range' && rule.min !== null && rule.max !== null) {
+    return { type: 'range', value: { min: rule.min, max: rule.max } }
+  }
+  return { type: sourceStep.answer_type, value: '' }
+}
+
+/** Бандл пары в той форме, которую SSG-сборка читает из `GET …/by-quest-id/{id}/?lang=` (#2474). */
+function localizedQuestBundle({ task, translation }) {
+  const translatedById = new Map(translation.steps.map((step) => [step.step_id, step]))
+  const toBundleStep = (sourceStep) => {
+    const text = translatedById.get(sourceStep.step_id) || sourceStep
+    return {
+      id: sourceStep.step_id,
+      step_id: sourceStep.slug,
+      is_intro: sourceStep.is_intro,
+      ...Object.fromEntries(STEP_TEXT_FIELDS.map((field) => [field, asText(text[field])])),
+      answer_pattern: localizedAnswerPattern(sourceStep, translatedById.get(sourceStep.step_id)),
+    }
+  }
+  const intro = task.source.steps.find((step) => step.is_intro)
+  return {
+    title: asText(translation.title),
+    intro: intro ? toBundleStep(intro) : null,
+    steps: task.source.steps.filter((step) => !step.is_intro).map(toBundleStep),
+  }
+}
+
+/**
+ * Guard утечки ответа SSG-сборки по бандлу пары: пара, которую сборка оставит
+ * без статической страницы, не публикуется (#2474). Текст отказа — дословно
+ * тот, что сборка пишет в лог выката.
+ */
+function checkSpoilerGuard(task, translation) {
+  // Сборка зовёт вступление `intro` независимо от его slug (`findQuestSpoilerLeaks`).
+  const stepIdByPoint = new Map(task.source.steps.map((step) => [step.is_intro ? 'intro' : step.slug, step.step_id]))
+  return findQuestBundleSpoilerLeaks(localizedQuestBundle({ task, translation })).errors.map((error) => ({
+    step_id: stepIdByPoint.get(error.slice(0, error.indexOf(':'))) ?? null,
+    check: 'spoiler_guard',
+    ok: false,
+    detail: error,
+  }))
+}
+
+/**
  * Все структурные проверки одного перевода.
  * @param {{ task: object, translation: object }} input задание `prepare` и файл перевода
  * @returns {{ step_id: number|null, check: string, ok: boolean, detail: string }[]}
@@ -310,6 +365,8 @@ function runStructuralChecks({ task, translation }) {
       add(id, 'origin', `${label}: переведённый шаг должен иметь origin: machine`)
     }
   }
+  const spoilers = checkSpoilerGuard(task, translation)
+  checks.push(...(spoilers.length ? spoilers : [{ step_id: null, check: 'spoiler_guard', ok: true, detail: '' }]))
   return checks
 }
 
@@ -371,6 +428,7 @@ module.exports = {
   STEP_FIELDS,
   digitTokens,
   fold,
+  localizedQuestBundle,
   mergeReview,
   missingNumbers,
   runStructuralChecks,

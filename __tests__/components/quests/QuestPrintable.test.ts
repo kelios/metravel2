@@ -31,6 +31,33 @@ describe('QuestPrintable', () => {
     (global as typeof globalThis & { window?: Record<string, unknown> }).window = { open: jest.fn() };
   });
 
+  it('#2473: кириллическая вывеска PL-перевода печатается с lang языка оригинала', async () => {
+    await generatePrintableQuest({
+      title: 'Duchy Barkowszczyzny',
+      countryCode: 'BY',
+      steps: [
+        {
+          id: 'step-1',
+          title: 'Kawiarnia «Ландыш»',
+          location: 'Plac',
+          story: 'Szyld «Ландыш» wisi nad wejściem.',
+          task: 'Policz litery.',
+          answer: () => true,
+          answerDisplay: 'Konwalia / Ландыш',
+          contentLocale: 'pl',
+          lat: 55.1,
+          lng: 28.6,
+          mapsUrl: 'https://maps.google.com/maps?q=55.1,28.6',
+        },
+      ],
+    });
+
+    const html = mockOpenBookPreviewWindow.mock.calls[0][0];
+    expect(html).toContain('<h3 class="step-title">Kawiarnia «<span lang="ru">Ландыш</span>»</h3>');
+    expect(html).toContain('<p class="story">Szyld «<span lang="ru">Ландыш</span>» wisi nad wejściem.</p>');
+    expect(html).toContain('<td class="leader-answer">Konwalia / <span lang="ru">Ландыш</span></td>');
+  });
+
   it('includes quest cover image in printable cover when coverUrl is provided', async () => {
     await generatePrintableQuest({
       title: 'Ереван: Город на вулкане',

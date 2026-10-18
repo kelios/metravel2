@@ -63,6 +63,7 @@ import { buildQuestCountModel, type QuestCountModel } from '@/utils/questCountMo
 // ===================== ТИПЫ =====================
 export type { QuestStep, QuestCity, QuestFinale } from './types';
 import type { QuestStep, QuestCity, QuestFinale } from './types';
+import { QuestContentLanguageProvider, questContentLocale } from './QuestContentText';
 import { translate as i18nT } from '@/i18n'
 
 export type QuestWizardProps = {
@@ -563,12 +564,12 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
         const questUrl = typeof window !== 'undefined'
             ? window.location.href.replace(/^http:\/\/localhost:\d+/, 'https://metravel.by')
             : undefined;
-        generatePrintableQuest({ title, steps, intro, coverUrl, questUrl, finaleText: finale?.text, closeLoop: closeLoopRoute })
+        generatePrintableQuest({ title, steps, intro, coverUrl, questUrl, finaleText: finale?.text, closeLoop: closeLoopRoute, countryCode: city?.countryCode })
             .then((result) => {
                 if (result === 'unavailable') notifyQuest(i18nT('common:print.unavailable'));
             })
             .catch(() => notifyQuest(i18nT('common:print.unavailable')));
-    }, [coverUrl, intro, steps, title, finale?.text, closeLoopRoute]);
+    }, [coverUrl, intro, steps, title, finale?.text, closeLoopRoute, city?.countryCode]);
 
     const offlineMapPointsCount = useMemo(() => getQuestOfflineMapPoints(steps).length, [steps]);
 
@@ -867,94 +868,99 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
         />
     );
 
+    // #2473: язык текста квеста для разметки цитат-вывесок — тот же, что у печатной версии.
+    const contentLanguageLocale = questContentLocale(intro, steps);
+
     return (
-        <GestureHandlerRootView style={{ flex: 1 }}>
-            <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
-                <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                    {compactDesktopLayout ? (
-                        <View style={styles.compactShell}>
-                            <QuestCompactSidebar
-                                colors={colors}
-                                styles={styles}
-                                title={title}
-                                progress={progress}
-                                completedCount={completedSteps.length}
-                                stepsCount={requiredCount}
-                                countModel={resolvedCountModel}
-                                allSteps={allSteps}
-                                answers={answers}
-                                postponedStepIds={postponedStepIds}
-                                currentIndex={currentIndex}
-                                unlockedIndex={unlockedIndex}
-                                questFinished={questFinished}
-                                showFinaleOnly={showFinaleOnly}
-                                goToStep={goToStep}
-                                onShowFinale={showFinale}
-                                city={city}
-                                onReset={resetQuest}
-                                onPrintDownload={handlePrintDownload}
-                                onOfflineMapDownload={handleOfflineMapDownload}
-                                onOfflineMapOpenInApp={handleOfflineMapOpenInApp}
-                                offlineMapPointsCount={offlineMapPointsCount}
-                                onOfflineQuestDownload={handleOfflineQuestDownload}
-                                offlineQuestState={offlineQuestState}
-                                ratingSlot={ratingSlot}
-                                completionSlot={completionSlot}
-                                questId={questId}
-                                showExcursions={false}
-                            />
+        <QuestContentLanguageProvider contentLocale={contentLanguageLocale} countryCode={city?.countryCode}>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+                <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+                    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                        {compactDesktopLayout ? (
+                            <View style={styles.compactShell}>
+                                <QuestCompactSidebar
+                                    colors={colors}
+                                    styles={styles}
+                                    title={title}
+                                    progress={progress}
+                                    completedCount={completedSteps.length}
+                                    stepsCount={requiredCount}
+                                    countModel={resolvedCountModel}
+                                    allSteps={allSteps}
+                                    answers={answers}
+                                    postponedStepIds={postponedStepIds}
+                                    currentIndex={currentIndex}
+                                    unlockedIndex={unlockedIndex}
+                                    questFinished={questFinished}
+                                    showFinaleOnly={showFinaleOnly}
+                                    goToStep={goToStep}
+                                    onShowFinale={showFinale}
+                                    city={city}
+                                    onReset={resetQuest}
+                                    onPrintDownload={handlePrintDownload}
+                                    onOfflineMapDownload={handleOfflineMapDownload}
+                                    onOfflineMapOpenInApp={handleOfflineMapOpenInApp}
+                                    offlineMapPointsCount={offlineMapPointsCount}
+                                    onOfflineQuestDownload={handleOfflineQuestDownload}
+                                    offlineQuestState={offlineQuestState}
+                                    ratingSlot={ratingSlot}
+                                    completionSlot={completionSlot}
+                                    questId={questId}
+                                    showExcursions={false}
+                                />
 
-                            <ScrollView
-                                ref={contentScrollRef}
-                                style={[styles.content, styles.compactMainContent]}
-                                showsVerticalScrollIndicator={false}
-                                keyboardShouldPersistTaps="handled"
-                                onTouchStart={headerPlacement.onTouchBegin}
-                                onTouchEnd={headerPlacement.onTouchEnd}
-                                onTouchCancel={headerPlacement.onTouchEnd}
-                                onScrollBeginDrag={beginReadingScroll}
-                                onScrollEndDrag={headerPlacement.onScrollEnd}
-                                onMomentumScrollBegin={headerPlacement.onScrollBegin}
-                                onMomentumScrollEnd={headerPlacement.onScrollEnd}
-                                onScroll={handleReadingScroll}
-                                scrollEventThrottle={16}
-                                contentContainerStyle={{ paddingBottom: SPACING.xl + 96 + keyboardInset }}
-                            >
-                                {mainContent}
-                                <View style={{ height: SPACING.xl }} />
-                            </ScrollView>
-                        </View>
-                    ) : (
-                        <>
-                            {!headerPlacement.headerInContentFlow ? questHeader : null}
+                                <ScrollView
+                                    ref={contentScrollRef}
+                                    style={[styles.content, styles.compactMainContent]}
+                                    showsVerticalScrollIndicator={false}
+                                    keyboardShouldPersistTaps="handled"
+                                    onTouchStart={headerPlacement.onTouchBegin}
+                                    onTouchEnd={headerPlacement.onTouchEnd}
+                                    onTouchCancel={headerPlacement.onTouchEnd}
+                                    onScrollBeginDrag={beginReadingScroll}
+                                    onScrollEndDrag={headerPlacement.onScrollEnd}
+                                    onMomentumScrollBegin={headerPlacement.onScrollBegin}
+                                    onMomentumScrollEnd={headerPlacement.onScrollEnd}
+                                    onScroll={handleReadingScroll}
+                                    scrollEventThrottle={16}
+                                    contentContainerStyle={{ paddingBottom: SPACING.xl + 96 + keyboardInset }}
+                                >
+                                    {mainContent}
+                                    <View style={{ height: SPACING.xl }} />
+                                </ScrollView>
+                            </View>
+                        ) : (
+                            <>
+                                {!headerPlacement.headerInContentFlow ? questHeader : null}
 
-                            {/* Контент */}
-                            <ScrollView
-                                ref={contentScrollRef}
-                                style={[styles.content, headerPlacement.headerInContentFlow && styles.contentWithFlowHeader]}
-                                showsVerticalScrollIndicator={false}
-                                keyboardShouldPersistTaps="handled"
-                                onTouchStart={headerPlacement.onTouchBegin}
-                                onTouchEnd={headerPlacement.onTouchEnd}
-                                onTouchCancel={headerPlacement.onTouchEnd}
-                                onScrollBeginDrag={beginReadingScroll}
-                                onScrollEndDrag={headerPlacement.onScrollEnd}
-                                onMomentumScrollBegin={headerPlacement.onScrollBegin}
-                                onMomentumScrollEnd={headerPlacement.onScrollEnd}
-                                onScroll={handleReadingScroll}
-                                scrollEventThrottle={16}
-                                contentContainerStyle={[{ paddingBottom: SPACING.xl + 96 + keyboardInset }, useWideExcursionsSidebar && styles.contentInner]}
-                            >
-                                {headerPlacement.headerInContentFlow ? questHeader : null}
-                                {mainContent}
-                                <View style={{ height: SPACING.xl }} />
-                            </ScrollView>
-                        </>
-                    )}
-                </KeyboardAvoidingView>
-            </SafeAreaView>
-            <QuestFontScaleSheet visible={fontScaleSheetOpen} onClose={closeFontScaleSheet} />
-        </GestureHandlerRootView>
+                                {/* Контент */}
+                                <ScrollView
+                                    ref={contentScrollRef}
+                                    style={[styles.content, headerPlacement.headerInContentFlow && styles.contentWithFlowHeader]}
+                                    showsVerticalScrollIndicator={false}
+                                    keyboardShouldPersistTaps="handled"
+                                    onTouchStart={headerPlacement.onTouchBegin}
+                                    onTouchEnd={headerPlacement.onTouchEnd}
+                                    onTouchCancel={headerPlacement.onTouchEnd}
+                                    onScrollBeginDrag={beginReadingScroll}
+                                    onScrollEndDrag={headerPlacement.onScrollEnd}
+                                    onMomentumScrollBegin={headerPlacement.onScrollBegin}
+                                    onMomentumScrollEnd={headerPlacement.onScrollEnd}
+                                    onScroll={handleReadingScroll}
+                                    scrollEventThrottle={16}
+                                    contentContainerStyle={[{ paddingBottom: SPACING.xl + 96 + keyboardInset }, useWideExcursionsSidebar && styles.contentInner]}
+                                >
+                                    {headerPlacement.headerInContentFlow ? questHeader : null}
+                                    {mainContent}
+                                    <View style={{ height: SPACING.xl }} />
+                                </ScrollView>
+                            </>
+                        )}
+                    </KeyboardAvoidingView>
+                </SafeAreaView>
+                <QuestFontScaleSheet visible={fontScaleSheetOpen} onClose={closeFontScaleSheet} />
+            </GestureHandlerRootView>
+        </QuestContentLanguageProvider>
     );
 }
 

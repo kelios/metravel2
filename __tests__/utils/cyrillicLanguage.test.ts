@@ -1,4 +1,4 @@
-import { cyrillicLanguageSegments, cyrillicRunLanguages } from '@/utils/cyrillicLanguage'
+import { cyrillicLanguageSegments, cyrillicRunLanguages, quotedCyrillicSegments } from '@/utils/cyrillicLanguage'
 
 // Real quotes from the PL/EN quest translations on prod, 18.10.2026 (#2472).
 const marked = (run: string, countryCode?: string) =>
@@ -52,5 +52,22 @@ describe('cyrillicLanguageSegments', () => {
   it('returns plain text untouched', () => {
     expect(cyrillicLanguageSegments('Old Town')).toEqual([{ text: 'Old Town', lang: null }])
     expect(cyrillicLanguageSegments('')).toEqual([])
+  })
+})
+
+describe('quotedCyrillicSegments (#2473)', () => {
+  it('marks quotes only in Latin-script content locales', () => {
+    expect(quotedCyrillicSegments('Kawiarnia «Ландыш»', { contentLocale: 'pl', countryCode: 'by' })).toEqual([
+      { text: 'Kawiarnia «', lang: null },
+      { text: 'Ландыш', lang: 'ru' },
+      { text: '»', lang: null },
+    ])
+    expect(quotedCyrillicSegments('Кавярня «Ландыш»', { contentLocale: 'be', countryCode: 'by' })).toBeNull()
+    expect(quotedCyrillicSegments('Кафе «Ландыш»', { contentLocale: undefined, countryCode: 'by' })).toBeNull()
+  })
+
+  it('leaves text without Cyrillic alone', () => {
+    expect(quotedCyrillicSegments('Brama Floriańska', { contentLocale: 'en' })).toBeNull()
+    expect(quotedCyrillicSegments(undefined, { contentLocale: 'en' })).toBeNull()
   })
 })

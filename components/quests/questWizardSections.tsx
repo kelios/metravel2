@@ -1,6 +1,7 @@
 import React, { Suspense } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
+import QuestContentText from './QuestContentText'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import ShareQuestResultSheet, {
@@ -672,7 +673,7 @@ export function QuestFinalePanel({
             </View>
           )}
 
-          <Text style={[styles.completionText, styles.finaleStoryText]}>{finale.text}</Text>
+          <QuestContentText style={[styles.completionText, styles.finaleStoryText]}>{finale.text}</QuestContentText>
 
           {/* «Прошли N человек, включая вас» — тоже про засчитанное прохождение:
               при частичном игрока в этот счётчик бэкенд не берёт. */}

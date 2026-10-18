@@ -5,6 +5,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { QuestFinalePill, QuestStepPill } from './questWizardNavigation'
 import QuestRouteStrip from './QuestRouteStrip'
+import QuestContentText from './QuestContentText'
 import { buildQuestRouteModel } from './questRouteModel'
 import { resolveQuestStepNavFlags } from './questStepVisualState'
 import { QuestCompactExcursions } from './questWizardSections'
@@ -371,14 +372,14 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
             превращает role=heading + aria-level в настоящий тег <h1>, поэтому
             отдельный видимый блок над визардом не нужен: он дублировал этот
             заголовок и лежал во всю ширину страницы мимо контейнера. */}
-        <Text
+        <QuestContentText
           style={styles.compactSidebarTitle}
           numberOfLines={2}
           accessibilityRole="header"
           {...({ 'aria-level': 1 } as Record<string, unknown>)}
         >
           {title}
-        </Text>
+        </QuestContentText>
         {ratingSlot ?? null}
         {completionSlot ?? null}
         <View style={styles.compactSidebarActions}>
@@ -691,14 +692,14 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
       {!headerInScreenRow ? <React.Fragment key="quest-header-identity">
         <View style={styles.headerRow}>
           <View style={styles.headerIdentity}>
-            <Text
+            <QuestContentText
               style={styles.title}
               numberOfLines={1}
               accessibilityRole="header"
               {...({ 'aria-level': 1 } as Record<string, unknown>)}
             >
               {title}
-            </Text>
+            </QuestContentText>
             {ratingSlot ?? null}
             {completionSlot ?? null}
           </View>

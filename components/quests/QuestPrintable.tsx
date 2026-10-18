@@ -1,4 +1,6 @@
 import type { QuestStep } from './types';
+import { questContentLocale } from './QuestContentText';
+import { quotedCyrillicSegments } from '@/utils/cyrillicLanguage';
 import { beginPrint, type BeginPrintOptions, type PrintResult } from '@/utils/printHtml';
 import {
     QR_NAV,
@@ -36,8 +38,7 @@ import {
  * без него — язык источника.
  */
 function resolvePrintableLocale(intro: QuestStep | undefined, steps: QuestStep[]) {
-    const raw = intro?.contentLocale ?? steps.find((step) => step.contentLocale)?.contentLocale;
-    return getLocaleDefinition(resolveSupportedLocale([raw]));
+    return getLocaleDefinition(resolveSupportedLocale([questContentLocale(intro, steps)]));
 }
 
 
@@ -49,6 +50,7 @@ type PrintableProps = {
     questUrl?: string; // полный URL квеста на сайте
     finaleText?: string; // текст финала — печатается на странице с дипломом
     closeLoop?: boolean; // кольцевой квест: линия маршрута на карте замыкается к старту
+    countryCode?: string; // страна квеста: язык кириллических цитат-вывесок перевода (#2473)
 };
 
 /**
@@ -74,7 +76,7 @@ export async function generatePrintableQuest(
     return printSession.print(html, { title: props.title });
 }
 
-async function buildPrintableQuestHtml({ title, steps, intro, coverUrl, questUrl, finaleText, closeLoop }: PrintableProps): Promise<string> {
+async function buildPrintableQuestHtml({ title, steps, intro, coverUrl, questUrl, finaleText, closeLoop, countryCode }: PrintableProps): Promise<string> {
     const validSteps = steps.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng) && (s.lat !== 0 || s.lng !== 0));
     const mapPoints = buildPrintableMapPoints(validSteps);
     const coverImageUri = resolveStepImageUri(coverUrl);
@@ -84,6 +86,12 @@ async function buildPrintableQuestHtml({ title, steps, intro, coverUrl, questUrl
     const mapStaticUrl = mapCanvasDataUrl || await buildPrintableLeafletMapDataUrl(mapPoints, closeLoop);
     const mapSvg = buildPrintableMapSvg(mapPoints, closeLoop);
     const locale = resolvePrintableLocale(intro, steps);
+    // #2473: текст квеста — с языком цитат-вывесок, как на экране (`QuestContentText`) и в SSG.
+    const escContent = (text: string | undefined) => {
+        const segments = quotedCyrillicSegments(text, { contentLocale: locale.htmlLang, countryCode });
+        if (!segments) return escHtml(text ?? '');
+        return segments.map((part) => (part.lang ? `<span lang="${part.lang}">${escHtml(part.text)}</span>` : escHtml(part.text))).join('');
+    };
 
     const mapHtml = mapStaticUrl ? `
         <div class="map-card">
@@ -111,7 +119,7 @@ async function buildPrintableQuestHtml({ title, steps, intro, coverUrl, questUrl
             <div class="step-eyebrow">
                 <span class="step-num-badge">${i + 1}</span>
                 <span class="step-eyebrow-divider"></span>
-                <span class="step-location-label">${escHtml(step.location)}</span>
+                <span class="step-location-label">${escContent(step.location)}</span>
                 ${hasCoords ? `<span class="step-coords-label">${step.lat.toFixed(4)}, ${step.lng.toFixed(4)}</span>` : ''}
                 <span class="step-progress">${i + 1} / ${steps.length}</span>
             </div>
@@ -122,18 +130,18 @@ async function buildPrintableQuestHtml({ title, steps, intro, coverUrl, questUrl
                 </div>
                 ` : ''}
                 <div class="step-content">
-                    <h3 class="step-title">${escHtml(step.title)}</h3>
-                    <p class="story">${escHtml(step.story)}</p>
+                    <h3 class="step-title">${escContent(step.title)}</h3>
+                    <p class="story">${escContent(step.story)}</p>
                     <div class="task-box">
                         <div class="task-label-row">
                             <span class="task-label-icon">?</span>
                             <span class="task-label-text">${escHtml(i18nT('quests:components.quests.QuestPrintable.task'))}</span>
                         </div>
-                        <p class="task">${escHtml(step.task)}</p>
+                        <p class="task">${escContent(step.task)}</p>
                         ${step.hint ? `
                         <div class="hint-row">
                             <span class="hint-icon">i</span>
-                            <p class="hint">${escHtml(step.hint)}</p>
+                            <p class="hint">${escContent(step.hint)}</p>
                         </div>` : ''}
                     </div>
                     ${hasCoords ? `
@@ -186,7 +194,7 @@ async function buildPrintableQuestHtml({ title, steps, intro, coverUrl, questUrl
 </head>
 <body>
     <div class="toolbar no-print">
-        <span class="toolbar-title">${escHtml(title)}</span>
+        <span class="toolbar-title">${escContent(title)}</span>
         <button class="toolbar-btn" data-print-action>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             ${escHtml(i18nT('quests:components.quests.QuestPrintable.savePdf'))}
@@ -205,8 +213,8 @@ async function buildPrintableQuestHtml({ title, steps, intro, coverUrl, questUrl
                         <span class="cover-badge">&#10022; ${escHtml(i18nT('quests:components.quests.QuestPrintable.giftQuest'))}</span>
                         <span class="cover-brand-top">metravel.by</span>
                     </div>
-                    <h1>${escHtml(title)}</h1>
-                    ${coverLead ? `<p class="cover-lead">${escHtml(coverLead)}</p>` : ''}
+                    <h1>${escContent(title)}</h1>
+                    ${coverLead ? `<p class="cover-lead">${escContent(coverLead)}</p>` : ''}
                     <div class="cover-meta">
                         <span class="cover-meta-chip">&#9673; ${escHtml(translatePlural('quests:components.quests.QuestPrintable.stepsCount', steps.length))}</span>
                         <span class="cover-meta-chip">&#9654; ${escHtml(i18nT('quests:components.quests.QuestPrintable.cityAdventure'))}</span>
@@ -240,7 +248,7 @@ async function buildPrintableQuestHtml({ title, steps, intro, coverUrl, questUrl
         <div class="intro-bar"></div>
         <div class="intro-content">
             <h2>${escHtml(i18nT('quests:components.quests.QuestPrintable.howToComplete'))}</h2>
-            <p>${escHtml(intro.story)}</p>
+            <p>${escContent(intro.story)}</p>
             <p class="intro-note">${escHtml(i18nT('quests:components.quests.QuestPrintable.introNote'))}</p>
         </div>
     </div>
@@ -267,7 +275,7 @@ async function buildPrintableQuestHtml({ title, steps, intro, coverUrl, questUrl
                 ${validSteps.map((s, i) => `
                 <tr>
                     <td class="num-cell">${i + 1}</td>
-                    <td>${escHtml(s.location)}</td>
+                    <td>${escContent(s.location)}</td>
                     <td class="mono">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</td>
                 </tr>`).join('')}
             </tbody>
@@ -291,7 +299,7 @@ async function buildPrintableQuestHtml({ title, steps, intro, coverUrl, questUrl
                 <span class="section-label-text">${escHtml(i18nT('quests:components.quests.QuestPrintable.finaleTitle'))}</span>
                 <span class="section-label-line"></span>
             </div>
-            <p class="finale-text">${escHtml(finaleText)}</p>
+            <p class="finale-text">${escContent(finaleText)}</p>
             <p class="finale-spoiler-note">${escHtml(i18nT('quests:components.quests.QuestPrintable.finaleSpoilerNote'))}</p>
         </div>
         ` : ''}
@@ -301,7 +309,7 @@ async function buildPrintableQuestHtml({ title, steps, intro, coverUrl, questUrl
                 <div class="diploma-brand">metravel.by</div>
                 <h2 class="diploma-title">${escHtml(i18nT('quests:components.quests.QuestPrintable.diplomaTitle'))}</h2>
                 <p class="diploma-subtitle">${escHtml(i18nT('quests:components.quests.QuestPrintable.diplomaSubtitle'))}</p>
-                <p class="diploma-quest-name">&#171;${escHtml(title)}&#187;</p>
+                <p class="diploma-quest-name">&#171;${escContent(title)}&#187;</p>
                 <div class="diploma-field">
                     <span class="diploma-field-label">${escHtml(i18nT('quests:components.quests.QuestPrintable.diplomaName'))}</span>
                     <span class="diploma-field-line"></span>
@@ -341,8 +349,8 @@ async function buildPrintableQuestHtml({ title, steps, intro, coverUrl, questUrl
                     ${steps.map((s, i) => `
                     <tr>
                         <td class="num-cell">${i + 1}</td>
-                        <td>${escHtml(s.title)}</td>
-                        <td class="leader-answer">${s.answerDisplay ? escHtml(s.answerDisplay) : `<span class="leader-free">${escHtml(i18nT('quests:components.quests.QuestPrintable.leaderAnswerFree'))}</span>`}</td>
+                        <td>${escContent(s.title)}</td>
+                        <td class="leader-answer">${s.answerDisplay ? escContent(s.answerDisplay) : `<span class="leader-free">${escHtml(i18nT('quests:components.quests.QuestPrintable.leaderAnswerFree'))}</span>`}</td>
                     </tr>`).join('')}
                 </tbody>
             </table>
@@ -354,7 +362,7 @@ async function buildPrintableQuestHtml({ title, steps, intro, coverUrl, questUrl
         <div class="doc-footer-row">
             <span class="doc-footer-brand">metravel.by</span>
             <span class="doc-footer-dot"></span>
-            <span>${escHtml(title)}</span>
+            <span>${escContent(title)}</span>
             <span class="doc-footer-dot"></span>
             <span>${today}</span>
         </div>

@@ -1,6 +1,7 @@
 import type { Ref } from 'react'
 import { Pressable, type StyleProp, Text, type TextStyle, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
+import QuestContentText from './QuestContentText'
 import { translate as i18nT } from '@/i18n'
 import type { QuestPointRole } from '@/utils/questCountModel'
 
@@ -125,12 +126,12 @@ export function QuestStepPill(props: StepPillProps) {
       <View style={styles.stepPillGlyph}>
         <StepGlyph visual={visual} text={indexLabel} size={12} textStyle={styles.stepPillIndex} />
       </View>
-      <Text
+      <QuestContentText
         style={[styles.stepPillTitle, titleColor ? { color: titleColor } : null]}
         numberOfLines={numberOfLines}
       >
         {label}
-      </Text>
+      </QuestContentText>
     </Pressable>
   )
 }

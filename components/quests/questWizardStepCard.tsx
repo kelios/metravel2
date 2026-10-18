@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native'
 import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler'
+import QuestContentText from './QuestContentText'
 import Feather from '@expo/vector-icons/Feather'
 
 import Button from '@/components/ui/Button'
@@ -510,7 +511,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
           </View>
         )}
         <View style={styles.headerContent}>
-          <Text style={styles.stepTitle}>{step.title}</Text>
+          <QuestContentText style={styles.stepTitle}>{step.title}</QuestContentText>
           {step.pointRole ? (
             <Text style={styles.pointRoleLabel}>
               {getQuestPointRoleLabel(step.pointRole)}
@@ -527,7 +528,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
             hitSlop={6}
           >
             <Feather name="map-pin" size={13} color={colors.brandText} />
-            <Text style={[styles.location, { flexShrink: 1 }]} numberOfLines={2}>{step.location}</Text>
+            <QuestContentText style={[styles.location, { flexShrink: 1 }]} numberOfLines={2}>{step.location}</QuestContentText>
             <Feather name="external-link" size={12} color={colors.brandText} />
           </Pressable>
           {showPointNavigator && (
@@ -589,7 +590,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
       )}
 
       <View style={styles.section} testID={step.id === 'intro' ? 'quest-intro-story' : undefined}>
-        <Text style={styles.storyText}>{step.story}</Text>
+        <QuestContentText style={styles.storyText}>{step.story}</QuestContentText>
       </View>
 
       {showVisitorInfo && (
@@ -620,7 +621,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
       )}
 
       <View style={styles.section} testID={step.id === 'intro' ? 'quest-intro-task' : undefined}>
-        <Text style={styles.taskText}>{step.task}</Text>
+        <QuestContentText style={styles.taskText}>{step.task}</QuestContentText>
 
         {step.id !== 'intro' && !isPassed && (
           isAutoPassStep
@@ -727,7 +728,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
         {!hintVisible && <View ref={feedbackEndRef} collapsable={false} />}
         {step.hint && (
           <View style={[styles.hintContainer, !hintVisible && Platform.select({ web: { visibility: 'hidden' } as any, default: { display: 'none' } })]}>
-            <Text style={styles.hintText}>{i18nT('quests:components.quests.questWizardStepCard.podskazka_5453c538', { value1: step.hint })}</Text>
+            <QuestContentText style={styles.hintText}>{i18nT('quests:components.quests.questWizardStepCard.podskazka_5453c538', { value1: step.hint })}</QuestContentText>
           </View>
         )}
         {hintVisible && <View ref={feedbackEndRef} collapsable={false} />}

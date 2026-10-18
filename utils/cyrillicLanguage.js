@@ -18,6 +18,8 @@
  */
 
 const CYRILLIC_LETTER = /[\u0400-\u04FF]/;
+// Latin-script content locales: Cyrillic in their text is a verbatim quote of a sign.
+const LATIN_SCRIPT_LOCALES = Object.freeze(['pl', 'en']);
 // A run: Cyrillic words joined by spaces or dots («ул. Ленина», «Лесные озёра»).
 // The stress mark U+0301 stays out of the class: it combines with a letter.
 const CYRILLIC_RUN = /[\u0400-\u04FF](?:[\u0400-\u04FF'’ʼ-]|\u0301|[\s.]+(?=[\u0400-\u04FF]))*/g;
@@ -110,8 +112,22 @@ function cyrillicLanguageSegments(text, options = {}) {
   return segments;
 }
 
+/**
+ * Segments of a quest text in a Latin-script content locale (#2473): the
+ * client screen marks quoted signs exactly like the SSG body (#2472). `null`
+ * when nothing needs a `lang` — Cyrillic content locales, or no Cyrillic.
+ */
+function quotedCyrillicSegments(text, { contentLocale, countryCode } = {}) {
+  const locale = String(contentLocale || '').trim().toLowerCase().split(/[-_]/)[0];
+  const source = String(text ?? '');
+  if (!LATIN_SCRIPT_LOCALES.includes(locale) || !CYRILLIC_LETTER.test(source)) return null;
+  return cyrillicLanguageSegments(source, { countryCode });
+}
+
 module.exports = {
   CYRILLIC_LETTER,
+  LATIN_SCRIPT_LOCALES,
   cyrillicLanguageSegments,
+  quotedCyrillicSegments,
   cyrillicRunLanguages,
 };
