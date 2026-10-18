@@ -8,8 +8,8 @@ import {
 import i18n from './instance'
 import { selectPluralCategory } from './pluralRules'
 import type { TranslationKey, TranslationParams } from './resources'
-
-type CompiledPluralForms = Partial<Record<Intl.LDMLPluralRule, string>>
+import type { CompiledPluralForms, LoadedTranslation } from './catalogCompiler'
+export { compileLocaleCatalog, hashTranslationKey } from './catalogCompiler'
 
 type CompiledTranslation =
   | string
@@ -19,9 +19,6 @@ type CompiledTranslation =
       p?: CompiledPluralForms
     }
 
-type LocaleResources = Record<string, Record<string, string>>
-type LoadedTranslation = { value: string; plurals?: CompiledPluralForms }
-
 const MISSING_TRANSLATIONS: Record<SupportedLocale, string> = {
   ru: 'Перевод недоступен',
   be: 'Пераклад недаступны',
@@ -30,53 +27,8 @@ const MISSING_TRANSLATIONS: Record<SupportedLocale, string> = {
   en: 'Translation not available',
 }
 const TRANSLATION_KEY_PATTERN = /^[a-z][a-zA-Z]*:[\w.-]+$/
-const PLURAL_SUFFIX_PATTERN = /_(zero|one|two|few|many|other)$/
 const loadedCatalogs = new Map<SupportedLocale, Map<number, LoadedTranslation>>()
 const localeLoadPromises = new Map<SupportedLocale, Promise<void>>()
-
-export const hashTranslationKey = (key: string): number => {
-  let hash = 0x811c9dc5
-  for (let index = 0; index < key.length; index += 1) {
-    hash ^= key.charCodeAt(index)
-    hash = Math.imul(hash, 0x01000193)
-  }
-  return hash >>> 0
-}
-
-export const compileLocaleCatalog = (resources: LocaleResources): Map<number, LoadedTranslation> => {
-  const catalog = new Map<number, LoadedTranslation>()
-
-  for (const [namespace, entries] of Object.entries(resources)) {
-    for (const [key, value] of Object.entries(entries)) {
-      // Every literal key must remain addressable, including explicit plural forms.
-      // Babel hashes the complete key; folding suffixes into only the base key
-      // made translate("..._one") silently fall back to the Russian inline value.
-      catalog.set(hashTranslationKey(`${namespace}:${key}`), { value })
-    }
-    for (const [key, value] of Object.entries(entries)) {
-      const suffixMatch = key.match(PLURAL_SUFFIX_PATTERN)
-      const baseKey = suffixMatch ? key.slice(0, -suffixMatch[0].length) : key
-      const hasBase = Object.prototype.hasOwnProperty.call(entries, baseKey)
-      const translationKey = `${namespace}:${hasBase ? baseKey : key}`
-      const hash = hashTranslationKey(translationKey)
-      const current = catalog.get(hash) ?? {
-        value: hasBase ? entries[baseKey] : value,
-      }
-
-      if (suffixMatch && hasBase) {
-        current.plurals = {
-          ...current.plurals,
-          [suffixMatch[1]]: value,
-        }
-      } else {
-        current.value = value
-      }
-      catalog.set(hash, current)
-    }
-  }
-
-  return catalog
-}
 
 export const loadWebLocale = async (locale: SupportedLocale): Promise<void> => {
   if (locale === FALLBACK_LOCALE || loadedCatalogs.has(locale)) return
@@ -84,21 +36,21 @@ export const loadWebLocale = async (locale: SupportedLocale): Promise<void> => {
   if (existing) return existing
 
   const promise = (async () => {
-    let resources: LocaleResources
+    let catalog: Map<number, LoadedTranslation>
     switch (locale) {
       case 'be':
-        resources = (await import('./deferred/locale-be')).beResources
+        catalog = (await import('./deferred/locale-be')).beCatalog
         break
       case 'uk':
-        resources = (await import('./deferred/locale-uk')).ukResources
+        catalog = (await import('./deferred/locale-uk')).ukCatalog
         break
       case 'en':
-        resources = (await import('./deferred/locale-en')).enResources
+        catalog = (await import('./deferred/locale-en')).enCatalog
         break
       default:
-        resources = (await import('./deferred/locale-pl')).plResources
+        catalog = (await import('./deferred/locale-pl')).plCatalog
     }
-    loadedCatalogs.set(locale, compileLocaleCatalog(resources))
+    loadedCatalogs.set(locale, catalog)
   })()
   localeLoadPromises.set(locale, promise)
 

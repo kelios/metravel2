@@ -30,6 +30,13 @@ const exclusionList = require(path.join(
 
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname)
+// A production locale root is synthesized from external TS/JSON resources.
+// Babel's config-files key alone cannot invalidate a warm Metro transform hit
+// when only those inputs change. Preserve Expo's existing cache-version prefix.
+if (process.env.NODE_ENV === 'production') {
+  const { getCatalogRevision } = require('./i18n/babel-inline-plugin')
+  config.cacheVersion = `${config.cacheVersion || ''}:locale-catalog:${getCatalogRevision(__dirname)}`
+}
 const previousEnhanceMiddleware = config.server && config.server.enhanceMiddleware
 // Фолбэк CORS-прокси, когда EXPO_PUBLIC_API_URL не задан: локальный бэкенд.
 // Дев-стенд (http://192.168.50.36) подключается только явным EXPO_PUBLIC_API_URL.

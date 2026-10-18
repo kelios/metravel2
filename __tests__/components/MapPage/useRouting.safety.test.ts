@@ -724,3 +724,87 @@ describe('useRouting - Safety Tests', () => {
     });
   });
 });
+
+describe('useRouting - shared bounded Valhalla fallback', () => {
+  const first: [number, number] = [19.9383, 50.0614];
+  const second: [number, number] = [19.9091, 50.0751];
+  const forward = 'odon~Aw~|_e@gwY~_x@';
+  const backward = 'w|io~Aw}c~d@fwY_`x@';
+  const makePoints = (count: number): [number, number][] =>
+    Array.from({ length: count }, (_, index) => index % 2 ? [...second] : [...first]);
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    clearResolvedRouteKeys();
+    routeCache.clear();
+    jest.mocked(global.fetch).mockReset();
+  });
+
+  it.each(['foot', 'bike'] as const)('routes and caches all twelve %s waypoints through the shared provider primitive', async (mode) => {
+    const points = makePoints(12);
+    const requests: Array<{ locations: Array<{ lon: number; lat: number }>; costing: string }> = [];
+    jest.mocked(global.fetch).mockImplementation(async (url) => {
+      if (String(url).includes('valhalla1.openstreetmap.de')) {
+        const body = JSON.parse(new URL(String(url)).searchParams.get('json')!);
+        requests.push(body);
+        return {
+          ok: true,
+          json: async () => ({ trip: {
+            legs: body.locations.slice(1).map((_point: unknown, index: number) => ({
+              shape: body.locations[index].lon === first[0] ? forward : backward,
+            })),
+            summary: { length: (body.locations.length - 1) * 0.123, time: (body.locations.length - 1) * 17 },
+          } }),
+        } as Response;
+      }
+      return { ok: false, status: 503, text: async () => 'unavailable' } as Response;
+    });
+
+    const { result, unmount } = renderHook(() => useRouting(points, mode, undefined));
+    await waitFor(() => {
+      expect(result.current.coords).toEqual(points);
+      expect(result.current.loading).toBe(false);
+      expect(result.current.isOptimal).toBe(true);
+    });
+
+    expect(requests.map(({ locations }) => locations.length)).toEqual([10, 3]);
+    expect(requests.map(({ costing }) => costing)).toEqual([mode === 'bike' ? 'bicycle' : 'pedestrian', mode === 'bike' ? 'bicycle' : 'pedestrian']);
+    expect(result.current.distance).toBeCloseTo(1353);
+    expect(result.current.duration).toBe(187);
+    expect(result.current.error).toBe(false);
+    expect(routeCache.get(points, mode)?.coords).toEqual(points);
+    expect(global.fetch).toHaveBeenCalledTimes(3); // server + both complete provider chunks
+    unmount();
+  });
+
+  it('never caches a partial route when a later Valhalla chunk fails', async () => {
+    const points = makePoints(20);
+    let valhallaRequests = 0;
+    jest.mocked(global.fetch).mockImplementation(async (url) => {
+      if (String(url).includes('valhalla1.openstreetmap.de')) {
+        valhallaRequests += 1;
+        if (valhallaRequests === 1) {
+          return {
+            ok: true,
+            json: async () => ({ trip: {
+              legs: Array.from({ length: 9 }, (_, index) => ({ shape: index % 2 ? backward : forward })),
+              summary: { length: 1.107, time: 153 },
+            } }),
+          } as Response;
+        }
+      }
+      return { ok: false, status: 503, text: async () => 'unavailable' } as Response;
+    });
+
+    const { result, unmount } = renderHook(() => useRouting(points, 'foot', undefined));
+    await waitFor(() => {
+      expect(result.current.error).toBeTruthy();
+      expect(result.current.loading).toBe(false);
+    });
+    expect(valhallaRequests).toBe(2); // the third chunk was never requested
+    expect(result.current.coords).toEqual(points);
+    expect(result.current.isOptimal).toBe(false);
+    expect(routeCache.get(points, 'foot')).toBeNull();
+    unmount();
+  });
+});

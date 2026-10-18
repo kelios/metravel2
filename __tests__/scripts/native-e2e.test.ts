@@ -36,7 +36,11 @@ describe('native e2e source and result contract', () => {
       }
       Object.values(command).forEach(collect);
     };
-    for (const file of loadManifest().files) {
+    // Standalone entry flows used by assertion sidecars are not manifest suites.
+    // They must obey the same real OS-link policy as the registered suites.
+    const files = fs.readdirSync(FLOW_ROOT).filter((file) => file.endsWith('.yaml'));
+    expect(files).toContain('userpoints-map-entry.yaml');
+    for (const file of files) {
       YAML.parseAllDocuments(fs.readFileSync(path.join(FLOW_ROOT, file), 'utf8'))
         .forEach((doc) => collect(doc.toJSON()));
     }
@@ -44,6 +48,23 @@ describe('native e2e source and result contract', () => {
     // Auth uses internal UI navigation; OS /login and /registration links are
     // intentionally rejected by the app's existing incoming-link policy.
     expect(appLinks.filter((link) => mapIncomingAppLinkToHref(link) === null)).toEqual([]);
+  });
+
+  it('preserves the already attached app process during native-map entry', () => {
+    const documents = YAML.parseAllDocuments(fs.readFileSync(path.join(FLOW_ROOT, 'userpoints-map-entry.yaml'), 'utf8'));
+    expect(documents).toHaveLength(2);
+    const commands = documents[1].toJSON();
+    expect(Array.isArray(commands)).toBe(true);
+    expect(commands.length).toBeGreaterThan(0);
+    // The sidecar binds the running PID before entry. Restart, clear, links,
+    // subflows or scripts cannot replace ordinary in-app navigation here.
+    for (const command of commands) {
+      expect(command).not.toBeNull();
+      expect(typeof command).toBe('object');
+      const keys = Object.keys(command);
+      expect(keys).toHaveLength(1);
+      expect(['extendedWaitUntil', 'tapOn', 'assertVisible']).toContain(keys[0]);
+    }
   });
 
   it.each([

@@ -2,19 +2,17 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { routeCache } from '@/utils/routeCache'
 import { orsDirections } from '@/api/external/ors'
 import { osrmRoute } from '@/api/external/osrm'
-import { valhallaRoute } from '@/api/external/valhalla'
+import { fetchValhallaRouteGeometry, type ValhallaRoutingResult } from '@/api/external/valhallaRouting'
 import { serverRoute } from '@/api/external/serverRouting'
 import {
     type RouteResult,
     getORSProfile,
     getOSRMProfile,
-    getValhallaCosting,
     haversineMeters,
     estimateDurationSeconds,
     validateRoutePoints,
     filterValidCoords,
     ensureAnchoredGeometry,
-    decodePolyline6,
     fetchWithRetry,
     parseOrsError,
     extractFailingIndex,
@@ -367,18 +365,9 @@ export const useRouting = (
     ): Promise<RouteResult> => {
         validateRoutePoints(points)
 
-        const costingMode = getValhallaCosting(mode)
-        const locations = points.map(([lng, lat]) => ({ lon: lng, lat }));
-
-        const requestBody = {
-            locations,
-            costing: costingMode,
-            directions_options: { units: 'kilometers' }
-        };
-
-        let res: Response;
+        let result: ValhallaRoutingResult;
         try {
-            res = await valhallaRoute(requestBody, { signal });
+            result = await fetchValhallaRouteGeometry(points, mode, { signal });
         } catch (e: any) {
             if (e?.name === 'AbortError') throw e
             throw createRoutingError(
@@ -387,35 +376,15 @@ export const useRouting = (
             );
         }
 
-        if (!res.ok) {
-            await throwForRoutingStatus(res, 'Valhalla')
+        if (!result.ok) {
+            if (result.response) await throwForRoutingStatus(result.response, 'Valhalla')
+            throw new Error(i18nT('map:components.MapPage.useRouting.pustoy_marshrut_ot_valhalla_25b5523c'));
         }
-
-        const data = await res.json();
-        const trip = data.trip;
-
-        if (!trip?.legs?.length) throw new Error(i18nT('map:components.MapPage.useRouting.pustoy_marshrut_ot_valhalla_25b5523c'));
-
-        // Собираем координаты из всех legs
-        const allCoords: [number, number][] = [];
-        for (const leg of trip.legs) {
-            if (leg.shape) {
-                const decoded = decodePolyline6(leg.shape);
-                allCoords.push(...filterValidCoords(decoded));
-            }
-        }
-
-        if (allCoords.length === 0) throw new Error(i18nT('map:components.MapPage.useRouting.pustoy_marshrut_ot_valhalla_25b5523c'));
-
-        // distance в kilometers, конвертируем в метры
-        const distanceKm = trip.summary?.length || 0;
-        // time in seconds (Valhalla)
-        const duration = Number(trip.summary?.time) || 0;
 
         return {
-            coords: allCoords,
-            distance: distanceKm * 1000,
-            duration,
+            coords: result.coords,
+            distance: result.distanceM,
+            duration: result.durationS,
             isOptimal: true,
         };
     }, []);

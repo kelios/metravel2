@@ -1,7 +1,6 @@
-import { valhallaRoute } from '@/api/external/valhalla';
+import { fetchValhallaRouteGeometry } from '@/api/external/valhallaRouting';
 import { serverRoute, type ServerRoutingResponseBody } from '@/api/external/serverRouting';
 import {
-  decodePolyline6,
   ensureAnchoredGeometry,
   estimateDurationSeconds,
   filterValidCoords,
@@ -172,28 +171,14 @@ const buildValhallaRoute = async (
   const waypoints = points.map((point) => [point.lng, point.lat] as LngLat);
   validateRoutePoints(waypoints);
 
-  const res = await valhallaRoute(
-    {
-      locations: points.map((point) => ({ lat: point.lat, lon: point.lng })),
-      costing: routeMode === 'bike' ? 'bicycle' : 'pedestrian',
-      directions_options: { units: 'kilometers' },
-    },
-    { signal },
-  );
-  if (!res.ok) await throwForRouteStatus(res, 'Valhalla');
-
-  const data = await res.json();
-  const legs = Array.isArray(data?.trip?.legs) ? data.trip.legs : [];
-  const decodedTrack = legs.flatMap((leg: any) =>
-    typeof leg?.shape === 'string' ? decodePolyline6(leg.shape) : [],
-  );
-  const track = ensureAnchoredGeometry(waypoints, filterValidCoords(decodedTrack));
+  const result = await fetchValhallaRouteGeometry(waypoints, routeMode, { signal });
+  if (!result.ok) {
+    if (result.response) await throwForRouteStatus(result.response, 'Valhalla');
+    throw new Error(i18nT('quests:components.quests.questRouteGeometry.pustoy_peshiy_marshrut_ot_valhalla_9e4a0a35'));
+  }
+  const track = ensureAnchoredGeometry(waypoints, result.coords);
   if (track.length < 2) throw new Error(i18nT('quests:components.quests.questRouteGeometry.pustoy_peshiy_marshrut_ot_valhalla_9e4a0a35'));
-
-  const distanceM = Number(data?.trip?.summary?.length) > 0
-    ? Number(data.trip.summary.length) * 1000
-    : calculateQuestTrackDistanceM(track);
-  const durationS = Number(data?.trip?.summary?.time) || estimateDurationSeconds(distanceM, routeMode);
+  const { distanceM, durationS } = result;
 
   return {
     track,

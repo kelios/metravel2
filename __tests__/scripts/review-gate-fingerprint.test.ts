@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
-import { makeTempDir, removeDir, runNodeCli } from './cli-test-utils';
+import { makeTempDir, removeDir, runCli, runNodeCli } from './cli-test-utils';
 
 /**
  * Отпечаток гейта `review → testing` (`.claude/hooks/review-gate.mjs`).
@@ -23,19 +22,20 @@ let sandbox: string;
 let work: string;
 let peer: string;
 
-const git = (cwd: string, ...args: string[]): string =>
-  execFileSync('git', args, {
+const git = (cwd: string, ...args: string[]): string => {
+  const result = runCli('git', args, {
     cwd,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
+    timeoutMs: 10000,
     env: {
-      ...process.env,
       GIT_AUTHOR_NAME: 'gate-test',
       GIT_AUTHOR_EMAIL: 'gate@test.local',
       GIT_COMMITTER_NAME: 'gate-test',
       GIT_COMMITTER_EMAIL: 'gate@test.local',
     },
   });
+  if (result.status !== 0) throw new Error(`Fixture git ${args[0]} failed (${result.status}): ${result.stderr}`);
+  return result.stdout;
+};
 
 const write = (root: string, rel: string, content: string) => {
   const file = path.join(root, rel);
@@ -91,7 +91,8 @@ beforeEach(() => {
   work = path.join(sandbox, 'work');
   peer = path.join(sandbox, 'peer');
 
-  git(sandbox, 'init', '-q', '--bare', origin);
+  // The cloned peer must follow main regardless of the machine's init.defaultBranch.
+  git(sandbox, 'init', '-q', '--bare', '-b', 'main', origin);
   git(sandbox, 'init', '-q', '-b', 'main', work);
   write(work, '.gitignore', '.codex-temp*\n');
   write(work, 'package.json', '{ "name": "fixture" }\n');

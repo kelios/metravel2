@@ -7,10 +7,22 @@ module.exports = function (api) {
     const reactiveLocaleVersion = () => require('crypto').createHash('sha256')
         .update(require('fs').readFileSync(require.resolve('./i18n/babel-reactive-locale-plugin.js')))
         .digest('hex');
-    api.cache(() => `${env}:${platform}:${reactiveLocaleVersion()}`);
+    const catalogCompilerVersion = () => {
+        const hash = require('crypto').createHash('sha256');
+        for (const file of [require.resolve('./i18n/babel-inline-plugin.js'), require.resolve('./i18n/catalogCompiler.js')]) {
+            hash.update(require('fs').readFileSync(file));
+        }
+        return hash.digest('hex');
+    };
+    api.cache(() => `${env}:${platform}:${reactiveLocaleVersion()}:${catalogCompilerVersion()}`);
     const isProduction = env === 'production';
     const isTest = env === 'test';
     const isWeb = platform === 'web';
+    // External resource inputs are immutable during one production export. The
+    // complete digest is computed once here, never for every transformed file.
+    const catalogRevision = isProduction && isWeb
+        ? require('./i18n/babel-inline-plugin').getCatalogRevision(__dirname)
+        : undefined;
 
     return {
         presets: [
@@ -23,6 +35,9 @@ module.exports = function (api) {
             ['./i18n/babel-reactive-locale-plugin.js', { projectRoot: __dirname, platform, sourceRevision: reactiveLocaleVersion() }],
             isWeb && ['./i18n/babel-inline-plugin.js', {
                 projectRoot: __dirname,
+                precompileDeferredCatalogs: isProduction,
+                catalogRevision,
+                sourceRevision: catalogCompilerVersion(),
             }],
             // react-native-web переписывает импорты RN на web-реализацию — ТОЛЬКО для web,
             // в native-бандле это убивает рантайм (TurboModuleRegistry/EventEmitter = undefined)

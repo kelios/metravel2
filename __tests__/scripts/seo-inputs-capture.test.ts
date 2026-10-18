@@ -298,6 +298,10 @@ f.fetchJsonOnce=f.fetchJson=async url=>{
         fs.writeFileSync(path.join(webJs, chunk), '__d(function(){},0,[]);')
       }
       fs.writeFileSync(path.join(dist, 'index.html'), '<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Fixture</title><script src="/_expo/static/js/web/entry-0a.js" defer></script></head><body><div id="root"></div></body></html>')
+      // The exported catch-all selects actual route assets; a directory listing is not membership.
+      const entryTag = '<script src="/_expo/static/js/web/entry-0a.js" defer></script>'
+      fs.writeFileSync(path.join(dist, '[...missing].html'), fs.readFileSync(path.join(dist, 'index.html'), 'utf8')
+        .replace(entryTag, '<script src="/_expo/static/js/web/[...missing]-0a.js" defer></script>' + entryTag))
       fs.copyFileSync(path.join(dist, 'index.html'), path.join(dist, 'quests/country/[country].html'))
     }
     const options = ['--quest-seo-publication-mode', 'translations', '--api', identity.api_origin]

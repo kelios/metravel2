@@ -1,10 +1,18 @@
 # Entry phase only. The native-map sidecar owns marker/zoom assertions.
-# Requires an already signed-in user 104 and the unchanged 869-point fixture.
+# Requires the already foreground, signed-in user 104 app and the independent
+# current API fixture. The sidecar has bound/attached its PID before this flow.
 appId: by.metravel.app
 ---
-- launchApp
-- openLink: "metravel://userpoints"
-- runFlow: confirm-ios-app-link.yaml
+- extendedWaitUntil:
+    visible:
+      id: mobile-menu-open
+    timeout: 30000
+- tapOn:
+    id: mobile-menu-open
+- extendedWaitUntil:
+    visible: "Мои точки"
+    timeout: 10000
+- tapOn: "Мои точки"
 - extendedWaitUntil:
     visible:
       id: userpoints-screen
