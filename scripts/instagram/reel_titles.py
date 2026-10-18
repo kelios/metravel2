@@ -32,15 +32,21 @@ def font(kind, size):
 
 
 def wrap(draw, text, fnt, width):
-    lines, line = [], ""
-    for word in text.split():
-        probe = f"{line} {word}".strip()
-        if draw.textlength(probe, font=fnt) <= width or not line:
-            line = probe
-        else:
+    """Явный перенос `\\n` из slides.txt сохраняется (иначе «Лестница к скале с / образом…» — висячий
+    предлог); внутри абзаца — жадный перенос по ширине поля."""
+    lines = []
+    for para in text.split("\n"):
+        line = ""
+        for word in para.split():
+            probe = f"{line} {word}".strip()
+            if draw.textlength(probe, font=fnt) <= width or not line:
+                line = probe
+            else:
+                lines.append(line)
+                line = word
+        if line:
             lines.append(line)
-            line = word
-    return lines + [line] if line else lines
+    return lines
 
 
 def _shade(img, y_from, y_to, strength, direction):
@@ -72,7 +78,11 @@ def overlay(title, kicker=None, subtitle=None, anchor="bottom", size=64, brand=F
     s_lines = wrap(draw, subtitle, s_font, width) if subtitle else []
     assert all(draw.textlength(l, font=t_font) <= width for l in t_lines), ("титр шире поля", title)
     t_step, s_step = int(size * 1.14), int(s_font.size * 1.3)
-    block = (52 if kicker else 0) + len(t_lines) * t_step + ((18 + len(s_lines) * s_step) if s_lines else 0)
+    # последняя строка блока — по реальному выносу (у/р/ф), иначе нижний титр уходит за y 1248
+    t_tail, s_tail = max(t_step, t_font.getbbox("Ау")[3]), max(s_step, s_font.getbbox("Ау")[3])
+    block = (52 if kicker else 0) + (len(t_lines) - 1) * t_step + t_tail
+    if s_lines:
+        block += (t_step - t_tail) + 18 + (len(s_lines) - 1) * s_step + s_tail
     brand_h = 90 if brand else 0
     if anchor == "top":
         y = Y0
@@ -86,12 +96,12 @@ def overlay(title, kicker=None, subtitle=None, anchor="bottom", size=64, brand=F
         draw.text((X0, y), kicker.upper(), font=k_font, fill=BRAND)
         y += 52
     for line in t_lines:
-        draw.text((X0, y), line, font=t_font, fill=WHITE)
+        draw.text((X0 - min(0, t_font.getbbox(line)[0]), y), line, font=t_font, fill=WHITE)  # левый вынос «Л» не за x 160
         y += t_step
     if s_lines:
         y += 18
         for line in s_lines:
-            draw.text((X0, y), line, font=s_font, fill=WHITE)
+            draw.text((X0 - min(0, s_font.getbbox(line)[0]), y), line, font=s_font, fill=WHITE)
             y += s_step
     if brand:
         bird = Image.open(BIRD).convert("RGBA")
