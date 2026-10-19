@@ -70,7 +70,7 @@ describe('web boot catalogue subset', () => {
     expect(scope.__loadBundleAsync).toBe(original)
   })
 
-  it('a failed complete load keeps the subset and releases lazy chunks', async () => {
+  it('a failed complete load keeps the subset, releases lazy chunks and is retried', async () => {
     const mod = freshTranslate()
     jest.doMock('@/i18n/deferred/locale-uk', () => {
       throw new Error('network')
@@ -81,10 +81,17 @@ describe('web boot catalogue subset', () => {
       const original: Loader = jest.fn(() => Promise.resolve())
       scope.__loadBundleAsync = original
 
+      const outside = compiled(mod, 'common:language.en', 'Английский')
       await mod.loadWebLocale('uk')
       await (scope.__loadBundleAsync as Loader)('/_expo/static/js/web/Footer-1.js')
       expect(mod.getFixedTranslator('uk')(key)).toBe('Російська')
+      expect(mod.getFixedTranslator('uk')(outside)).toBe('Английский')
       expect(scope.__loadBundleAsync).toBe(original)
+
+      // The next request for the locale tries the complete catalogue again.
+      jest.dontMock('@/i18n/deferred/locale-uk')
+      await mod.loadWebLocale('uk')
+      expect(mod.getFixedTranslator('uk')(outside)).toBe('English')
     } finally {
       jest.dontMock('@/i18n/deferred/locale-uk')
     }

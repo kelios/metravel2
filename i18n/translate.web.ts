@@ -29,6 +29,8 @@ const MISSING_TRANSLATIONS: Record<SupportedLocale, string> = {
 const TRANSLATION_KEY_PATTERN = /^[a-z][a-zA-Z]*:[\w.-]+$/
 const loadedCatalogs = new Map<SupportedLocale, Map<number, LoadedTranslation>>()
 const localeLoadPromises = new Map<SupportedLocale, Promise<void>>()
+// Locales whose loaded catalogue is still the boot subset of a document.
+const partialCatalogs = new Set<SupportedLocale>()
 
 type BootCatalogEntry = [number, LoadedTranslation]
 type BundleLoader = (bundlePath: unknown) => Promise<void>
@@ -77,31 +79,32 @@ const holdLazyChunksUntil = (ready: Promise<void>) => {
 }
 
 export const loadWebLocale = async (locale: SupportedLocale): Promise<void> => {
-  if (locale === FALLBACK_LOCALE || loadedCatalogs.has(locale)) return
+  if (locale === FALLBACK_LOCALE) return
+  if (loadedCatalogs.has(locale) && !partialCatalogs.has(locale)) return
   const existing = localeLoadPromises.get(locale)
   if (existing) return existing
 
-  const boot = takeBootCatalog(locale)
+  const boot = loadedCatalogs.has(locale) ? null : takeBootCatalog(locale)
   const promise = importFullCatalog(locale).then((catalog) => {
     loadedCatalogs.set(locale, catalog)
+    partialCatalogs.delete(locale)
+  })
+  localeLoadPromises.set(locale, promise)
+  const settled = promise.catch(() => undefined).finally(() => {
+    if (localeLoadPromises.get(locale) === promise) localeLoadPromises.delete(locale)
   })
   if (boot) {
     // #2484: a translated quest document ships the keys of its own chunks
     // instead of the whole catalogue (~115 KB brotli on the critical path).
-    // The complete one follows; until it lands, lazy chunks wait for it, and a
-    // failed load keeps the subset (missing keys show their Russian source).
+    // The complete one follows; until it lands, lazy chunks wait for it. A
+    // failed load keeps the subset (missing keys show their Russian source)
+    // and the next loadWebLocale tries the complete catalogue again.
     loadedCatalogs.set(locale, boot)
-    const settled = promise.catch(() => undefined)
+    partialCatalogs.add(locale)
     holdLazyChunksUntil(settled)
     return
   }
-  localeLoadPromises.set(locale, promise)
-
-  try {
-    await promise
-  } finally {
-    localeLoadPromises.delete(locale)
-  }
+  await promise
 }
 
 /** Каталог локали уже в памяти — её можно применить синхронно. */
