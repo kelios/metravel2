@@ -31,11 +31,12 @@ function dateRange(days) {
   return { startDate: fmt(start), endDate: fmt(end) }
 }
 
-async function query(token, site, body) {
+async function query(token, site, body, options = {}) {
   const url = `https://searchconsole.googleapis.com/webmasters/v3/sites/${encodeURIComponent(
     site
   )}/searchAnalytics/query`
   const res = await fetch(url, {
+    signal: options.signal,
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -160,7 +161,11 @@ async function main() {
   console.log('')
 }
 
-main().catch((err) => {
-  console.error('Ошибка:', err.message)
-  process.exit(1)
-})
+if (require.main === module) {
+  main().catch((err) => {
+    console.error('Ошибка:', err.message)
+    process.exitCode = 1
+  })
+}
+
+module.exports = { query }

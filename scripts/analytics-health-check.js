@@ -12,9 +12,8 @@
 //   .secrets/yandex-metrika-token
 //   .secrets/yandex-metrika-token.txt
 
-const fs = require('fs')
-const path = require('path')
 const { getAccessToken } = require('./lib/google-token')
+const { readOptionalSecretToken } = require('./lib/yandex-token')
 
 const GA_SCOPE = 'https://www.googleapis.com/auth/analytics.readonly'
 const GSC_SCOPE = 'https://www.googleapis.com/auth/webmasters.readonly'
@@ -55,10 +54,6 @@ function parseArgs(argv) {
   return args
 }
 
-function repoRoot() {
-  return path.resolve(__dirname, '..')
-}
-
 function ymd(date) {
   return date.toISOString().slice(0, 10)
 }
@@ -75,22 +70,6 @@ function dateRange(days) {
 
 function compactDate(yyyymmdd) {
   return String(yyyymmdd).replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3')
-}
-
-function readOptionalSecretToken() {
-  if (process.env.YANDEX_METRIKA_TOKEN) return process.env.YANDEX_METRIKA_TOKEN.trim()
-  for (const rel of ['.secrets/yandex-metrika-token', '.secrets/yandex-metrika-token.txt']) {
-    const p = path.join(repoRoot(), rel)
-    try {
-      if (fs.existsSync(p)) {
-        const token = fs.readFileSync(p, 'utf8').trim()
-        if (token) return token
-      }
-    } catch {
-      // ignore
-    }
-  }
-  return ''
 }
 
 async function fetchJson(url, options = {}) {

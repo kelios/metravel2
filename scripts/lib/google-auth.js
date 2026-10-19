@@ -31,7 +31,7 @@ function base64url(input) {
 }
 
 // Exchange a service-account key for an OAuth2 access token with given scopes.
-async function getAccessToken(scopes, keyPath) {
+async function getAccessToken(scopes, keyPath, options = {}) {
   const sa = loadServiceAccount(keyPath)
   const now = Math.floor(Date.now() / 1000)
   const header = base64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))
@@ -56,6 +56,7 @@ async function getAccessToken(scopes, keyPath) {
   const assertion = `${signingInput}.${signature}`
 
   const res = await fetch(sa.token_uri, {
+    signal: options.signal,
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({

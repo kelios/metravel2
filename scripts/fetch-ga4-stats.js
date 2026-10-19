@@ -61,9 +61,10 @@ function parseArgs(argv) {
   return args
 }
 
-async function runReport(token, propertyId, body) {
+async function runReport(token, propertyId, body, options = {}) {
   const url = `https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`
   const res = await fetch(url, {
+    signal: options.signal,
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -270,4 +271,4 @@ if (require.main === module) {
   })
 }
 
-module.exports = { parseArgs, allRows, resolvedPeriod, collectStats, formatBreakdown }
+module.exports = { parseArgs, allRows, resolvedPeriod, collectStats, formatBreakdown, runReport }

@@ -3,11 +3,11 @@
 const oauth = require('./google-oauth')
 const sa = require('./google-auth')
 
-async function getAccessToken(scopes, keyPath) {
+async function getAccessToken(scopes, keyPath, options = {}) {
   if (oauth.hasToken()) {
-    return oauth.getAccessToken(scopes)
+    return oauth.getAccessToken(options)
   }
-  return sa.getAccessToken(scopes, keyPath)
+  return sa.getAccessToken(scopes, keyPath, options)
 }
 
 function authMode() {

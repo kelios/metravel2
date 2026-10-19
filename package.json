@@ -100,6 +100,7 @@
     "stats:gsc:json": "node scripts/fetch-gsc-stats.js --json",
     "stats:ga4": "node scripts/fetch-ga4-stats.js",
     "stats:ga4:json": "node scripts/fetch-ga4-stats.js --json",
+    "stats:summary": "node scripts/summarize-metrics.js",
     "stats:health": "node scripts/analytics-health-check.js",
     "stats:health:json": "node scripts/analytics-health-check.js --json",
     "seo:audit": "node scripts/seo-audit.js --user-id 1",

@@ -31,13 +31,14 @@ function loadClient() {
 }
 
 // Refresh an access token from the stored refresh token. Scope is fixed at login time.
-async function getAccessToken() {
+async function getAccessToken(options = {}) {
   const { clientId, clientSecret } = loadClient()
   const tok = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf8'))
   if (!tok.refresh_token) {
     throw new Error('Stored token has no refresh_token. Re-run: npm run stats:login')
   }
   const res = await fetch('https://oauth2.googleapis.com/token', {
+    signal: options.signal,
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
