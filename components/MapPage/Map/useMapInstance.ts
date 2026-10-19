@@ -15,6 +15,7 @@ import { attachOsmPoiOverlay } from '@/utils/mapWebOverlays/osmPoiOverlay';
 import { attachOsmRoutesOverlay } from '@/utils/mapWebOverlays/osmRoutesOverlay';
 import { attachOsmFeaturesOverlay } from '@/utils/mapWebOverlays/osmFeaturesOverlay';
 import { attachWeatherTempLabelsOverlay } from '@/utils/mapWebOverlays/weatherTempLabelsOverlay';
+import { readMapWeatherLabelInsets } from './mapWeatherLabelInsets';
 import { useMapOverlaysStore } from '@/stores/mapOverlaysStore';
 import type { LeafletControlRef, LeafletOverlayController } from './leafletBridgeTypes';
 
@@ -323,15 +324,13 @@ export function useMapInstance({
           }
         });
 
-      // Setup weather temperature labels overlay (OWM /data/2.5/weather grid, numeric °C)
+      // Setup weather temperature labels overlay (#2661: ячейки/кэш/патчи — utils/mapWeatherLabels.ts)
       const tempLabelsDef = overlayDefs.find((d) => d.kind === 'weather-temp-labels');
       if (tempLabelsDef) {
         try {
           const tempLabelsController = attachWeatherTempLabelsOverlay(L, map, {
-            debounceMs: 600,
-            maxLabels: 12,
-            gridCols: 4,
-            gridRows: 3,
+            minZoom: tempLabelsDef.minZoom,
+            getInsets: () => readMapWeatherLabelInsets(0),
             attribution: tempLabelsDef.attribution,
           });
           leafletOverlayLayersRef.current.set(tempLabelsDef.id, tempLabelsController.layer);

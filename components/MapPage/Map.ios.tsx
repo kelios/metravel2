@@ -29,6 +29,7 @@ import { useNativeMapChannels, type NativeMapRoutePayload } from './Map/nativeMa
 import { normalizeRoutePointsWithMarkers, type NativeRoutePointMarkersPayload } from './Map/nativeRoutePointMarkersScript';
 import { buildNativeMapHtml } from './Map/nativeMapHtml';
 import { openNativeMapLink } from './Map/openNativeMapLink';
+import { useNativeWeatherLabels } from './Map/useNativeWeatherLabels';
 import {
   buildNativeMapUiApi,
   buildNativeSetOverlayCommand,
@@ -415,12 +416,15 @@ const Map: React.FC<TravelProps> = ({
   // reload WebView (handleReady) — иначе при пересборке HTML слой пропал бы.
   const enabledOverlaysRef = useRef<Record<string, boolean>>({});
 
+  const weatherLabels = useNativeWeatherLabels({ injectMapCommand, containerSizeRef: lastLayoutSizeRef });
+
   const setOverlayEnabled = useCallback(
     (id: string, enabled: boolean) => {
       enabledOverlaysRef.current[id] = enabled;
       injectMapCommand(buildNativeSetOverlayCommand(id, enabled));
+      weatherLabels.onOverlayToggle(id, enabled);
     },
-    [injectMapCommand],
+    [injectMapCommand, weatherLabels],
   );
 
   // #2218: «Показать всё на карте» и подгонка после «Сбросить всё» — по текущим
@@ -614,7 +618,8 @@ const Map: React.FC<TravelProps> = ({
         buildNativeSetOverlayCommand(id, true),
       );
     });
-  }, [autoCenterOnTrustedUserIfNeeded, handleTileReady, injectMapCommand, pushMapChannels]);
+    weatherLabels.onRendererReady();
+  }, [autoCenterOnTrustedUserIfNeeded, handleTileReady, injectMapCommand, pushMapChannels, weatherLabels]);
 
   // Статичный HTML-каркас: карта + функция window.__metravelRenderPoints.
   // Мемоизирован по теме — стабилен между обновлениями данных, поэтому WebView
@@ -726,6 +731,7 @@ const Map: React.FC<TravelProps> = ({
               // F-49 — новый центр карты после панорамирования/зума.
               if (message.move) onMapMoveRef.current?.(message.move);
               if (!message.viewport) return;
+              weatherLabels.onViewport(message.viewport);
               // #2450/#2453 — общий контракт покрытия с web: state (и запрос
               // кластеров) меняется только при выходе за опубликованную область
               // или смене округлённого зума.

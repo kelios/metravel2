@@ -634,7 +634,7 @@ ${buildNativeWeatherTempLabelsScript()}
             controller = makeBboxController(group, function(b) { return wfsUrl(def, b); },
               function(g, d) { renderWfsGeoJson(g, d); }, 700, { minZoom: def.minZoom, logId: def.id });
           } else if (def.kind === 'weather-temp-labels') {
-            controller = makeWeatherTempLabelsController(group, def);
+            controller = makeWeatherTempLabelsController(group);
           }
           return { layer: group, controller: controller };
         }

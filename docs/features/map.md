@@ -80,7 +80,7 @@ generic web fallback; platform resolution выбирает `.web`, `.ios` или
 | Движок | Leaflet + React Leaflet | Leaflet внутри `react-native-webview` |
 | Runtime loading | `useLeafletLoader`, web CSS/runtime loaders | inline Leaflet assets из `utils/leafletInlineAsset.ts` |
 | Markers/clusters | React components/layers | сериализованный payload, injected JS, server cluster data |
-| Overlays | `config/mapWebLayers.ts`, `utils/mapWebOverlays/*` | тот же сериализуемый набор layers; числовые weather labels поддерживаются и в Leaflet WebView через `nativeMapHtml.ts` |
+| Overlays | `config/mapWebLayers.ts`, `utils/mapWebOverlays/*` | тот же сериализуемый набор layers; числовые weather labels — один контроллер `utils/mapWeatherLabels.ts` (ячейки = тайлы фиксированной сетки `k/x/y`, кэш температуры 20 мин, патч `{add, removeKeys}`, ≤16 подписей вне зон кнопок и шторки, панель под маркерами; #2661): web применяет патч в `weatherTempLabelsOverlay.ts`, native считает и запрашивает OWM на стороне RN (`useNativeWeatherLabels`), WebView только рисует `__metravelSetWeatherLabels` |
 | View commands | Leaflet refs/API | `injectJavaScript` через `MapUiApi` |
 | Map events | React Leaflet handlers | `WebView.onMessage` |
 | Offline map data | point-index package only; no tile bulk download | transparent seven-day cache of tiles actually viewed; lawful PMTiles option is documented in ADR 0004 but remains `wont_do` until the owner approves its license and budget |

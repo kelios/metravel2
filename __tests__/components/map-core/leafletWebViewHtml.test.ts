@@ -40,10 +40,6 @@ const themeColorsStub = {
   accent: '#ff6a00',
 } as any;
 
-const flushPromiseQueue = async () => {
-  for (let index = 0; index < 8; index += 1) await Promise.resolve();
-};
-
 const createNativeUserLocationHarness = (html: string) => {
   const userLocationStart = html.indexOf(
     "const USER_LOCATION_PANE = 'metravel-user-location'",
@@ -126,46 +122,6 @@ const createNativeUserLocationHarness = (html: string) => {
     markerOptions: typeof markerOptions;
     state: typeof state;
     userLocationPane: typeof userLocationPane;
-  };
-};
-
-const createWeatherControllerFactory = ({
-  L,
-  map,
-  overlayBBox,
-  bboxKey,
-  fetchImpl,
-  AbortControllerImpl,
-}: {
-  L: unknown;
-  map: unknown;
-  overlayBBox: () => unknown;
-  bboxKey: (bounds: unknown) => string;
-  fetchImpl: typeof fetch;
-  AbortControllerImpl?: typeof AbortController;
-}) => {
-  const compile = new Function(
-    'L',
-    'map',
-    'overlayBBox',
-    'bboxKey',
-    'fetch',
-    'AbortController',
-    `${buildNativeWeatherTempLabelsScript()}
-     OWM_API_KEY = 'test-key';
-     return makeWeatherTempLabelsController;`,
-  );
-
-  return compile(
-    L,
-    map,
-    overlayBBox,
-    bboxKey,
-    fetchImpl,
-    AbortControllerImpl,
-  ) as (layerGroup: unknown, definition: { minZoom: number }) => {
-    start: () => void;
-    stop: () => void;
   };
 };
 
@@ -395,7 +351,10 @@ describe('buildNativeMapHtml — engine regression invariants', () => {
     );
     expect(html).toContain("def.kind === 'weather-temp-labels'");
     expect(html).toContain("className: 'metravel-temp-label'");
-    expect(html).toContain('api.openweathermap.org/data/2.5/weather');
+    // #2661 — WebView только рисует патч; ячейки и запросы к OWM живут в RN
+    // (utils/mapWeatherLabels.ts), рядом с тайлами WebView в OWM не ходит.
+    expect(html).toContain('window.__metravelSetWeatherLabels = function(patch)');
+    expect(html).not.toContain('api.openweathermap.org/data/2.5/weather');
     expect(() => new Function(buildNativeWeatherTempLabelsScript())).not.toThrow();
   });
 
@@ -411,132 +370,6 @@ describe('buildNativeMapHtml — engine regression invariants', () => {
     expect(serializedDefinitions).toContain('alt=\\"OpenWeather logo\\"');
     expect(html).toContain('map.attributionControl.addAttribution(def.attribution)');
     expect(html).toContain('map.attributionControl.removeAttribution(def.attribution)');
-  });
-
-  it('discards an obsolete OWM response when the viewport moves during loading', async () => {
-    jest.useFakeTimers();
-    try {
-      type PendingResponse = {
-        resolve: (response: unknown) => void;
-      };
-      const pending: PendingResponse[] = [];
-      const fetchImpl = jest.fn(
-        () =>
-          new Promise((resolve) => {
-            pending.push({ resolve });
-          }),
-      ) as unknown as typeof fetch;
-      let moveEnd: (() => void) | undefined;
-      let boundsKey = 'first';
-      const map = {
-        getZoom: jest.fn(() => 8),
-        on: jest.fn((event: string, handler: () => void) => {
-          if (event === 'moveend') moveEnd = handler;
-        }),
-        off: jest.fn(),
-      };
-      const L = {
-        divIcon: jest.fn((options) => options),
-        marker: jest.fn(() => ({
-          setZIndexOffset: jest.fn(),
-          addTo: jest.fn(),
-        })),
-      };
-      const layerGroup = { clearLayers: jest.fn() };
-      const makeController = createWeatherControllerFactory({
-        L,
-        map,
-        overlayBBox: () => ({ south: 0, west: 0, north: 1, east: 1 }),
-        bboxKey: () => boundsKey,
-        fetchImpl,
-        // Exercise the cleanup fallback used by WebViews without AbortController.
-        AbortControllerImpl: undefined,
-      });
-      const controller = makeController(layerGroup, { minZoom: 6 });
-
-      controller.start();
-      jest.advanceTimersByTime(600);
-      expect(pending).toHaveLength(12);
-
-      boundsKey = 'second';
-      moveEnd?.();
-      jest.advanceTimersByTime(600);
-      expect(pending).toHaveLength(24);
-
-      pending.slice(0, 12).forEach(({ resolve }, index) => {
-        resolve({
-          ok: true,
-          json: async () => ({
-            coord: { lat: 10 + index, lon: 20 + index },
-            main: { temp: index },
-            name: `old-${index}`,
-          }),
-        });
-      });
-      await flushPromiseQueue();
-      expect(L.marker).not.toHaveBeenCalled();
-
-      pending.slice(12).forEach(({ resolve }, index) => {
-        resolve({
-          ok: true,
-          json: async () => ({
-            coord: { lat: 30 + index, lon: 40 + index },
-            main: { temp: index },
-            name: `current-${index}`,
-          }),
-        });
-      });
-      await flushPromiseQueue();
-      expect(L.marker).toHaveBeenCalledTimes(12);
-
-      controller.stop();
-      expect(map.off).toHaveBeenCalledWith('moveend', expect.any(Function));
-    } finally {
-      jest.useRealTimers();
-    }
-  });
-
-  it('retries OWM rate limits only after the controller backoff', async () => {
-    jest.useFakeTimers();
-    try {
-      const fetchImpl = jest.fn(async () => ({
-        ok: false,
-        status: 429,
-        json: async () => ({}),
-      })) as unknown as typeof fetch;
-      const map = {
-        getZoom: jest.fn(() => 8),
-        on: jest.fn(),
-        off: jest.fn(),
-      };
-      const L = {
-        divIcon: jest.fn(),
-        marker: jest.fn(),
-      };
-      const makeController = createWeatherControllerFactory({
-        L,
-        map,
-        overlayBBox: () => ({ south: 0, west: 0, north: 1, east: 1 }),
-        bboxKey: () => 'stable',
-        fetchImpl,
-        AbortControllerImpl: undefined,
-      });
-      const controller = makeController({ clearLayers: jest.fn() }, { minZoom: 6 });
-
-      controller.start();
-      jest.advanceTimersByTime(600);
-      await flushPromiseQueue();
-      expect(fetchImpl).toHaveBeenCalledTimes(12);
-
-      jest.advanceTimersByTime(1999);
-      expect(fetchImpl).toHaveBeenCalledTimes(12);
-      jest.advanceTimersByTime(1);
-      expect(fetchImpl).toHaveBeenCalledTimes(24);
-
-      controller.stop();
-    } finally {
-      jest.useRealTimers();
-    }
   });
 });
 
