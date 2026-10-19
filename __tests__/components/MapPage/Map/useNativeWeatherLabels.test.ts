@@ -5,12 +5,13 @@
 import { act, renderHook } from '@testing-library/react-native';
 
 import { useNativeWeatherLabels } from '@/components/MapPage/Map/useNativeWeatherLabels';
-import { WEATHER_LABELS_CONFIG, WEATHER_LABELS_LAYER_ID } from '@/utils/mapWeatherLabels';
+import { WEATHER_LABELS_CONFIG } from '@/utils/mapWeatherLabels';
 
 jest.mock('@/hooks/useSafeAreaInsetsSafe', () => ({ useSafeAreaInsetsSafe: () => ({ top: 47 }) }));
 jest.mock('@/config/mapWebLayers', () => ({
   getOwmApiKey: () => 'test-key',
   getActiveOverlayLayers: () => [{ id: 'weather-temp-labels', kind: 'weather-temp-labels', minZoom: 6 }],
+  WEATHER_TEMP_LABELS_LAYER_ID: 'weather-temp-labels',
 }));
 
 const VIEWPORT = { bbox: { south: 53.75, west: 27.35, north: 54.05, east: 27.8 }, zoom: 11 };
@@ -51,7 +52,7 @@ describe('useNativeWeatherLabels', () => {
   it('injects only a label patch and does not refetch for the same viewport', async () => {
     const { hook, patchCommands } = setup();
     hook.result.current.onViewport(VIEWPORT);
-    hook.result.current.onOverlayToggle(WEATHER_LABELS_LAYER_ID, true);
+    hook.result.current.onOverlayToggle('weather-temp-labels', true);
     await flush();
     await flush();
     const calls = fetchMock.mock.calls.length;
@@ -68,7 +69,7 @@ describe('useNativeWeatherLabels', () => {
 
   it('re-sends cached labels to a reloaded WebView without new requests', async () => {
     const { hook, patchCommands } = setup();
-    hook.result.current.onOverlayToggle(WEATHER_LABELS_LAYER_ID, true);
+    hook.result.current.onOverlayToggle('weather-temp-labels', true);
     hook.result.current.onViewport(VIEWPORT);
     await flush();
     await flush();
@@ -81,8 +82,8 @@ describe('useNativeWeatherLabels', () => {
 
   it('stops requesting after the overlay is turned off', async () => {
     const { hook } = setup();
-    hook.result.current.onOverlayToggle(WEATHER_LABELS_LAYER_ID, true);
-    hook.result.current.onOverlayToggle(WEATHER_LABELS_LAYER_ID, false);
+    hook.result.current.onOverlayToggle('weather-temp-labels', true);
+    hook.result.current.onOverlayToggle('weather-temp-labels', false);
     const calls = fetchMock.mock.calls.length;
     hook.result.current.onViewport({ ...VIEWPORT, bbox: { south: 52, west: 23, north: 52.4, east: 23.5 } });
     await flush();

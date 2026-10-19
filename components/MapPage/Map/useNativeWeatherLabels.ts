@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, type MutableRefObject } from 'react';
 
-import { getActiveOverlayLayers, getOwmApiKey } from '@/config/mapWebLayers';
+import { getActiveOverlayLayers, getOwmApiKey, WEATHER_TEMP_LABELS_LAYER_ID } from '@/config/mapWebLayers';
 import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe';
 import {
   createWeatherLabelsController,
-  WEATHER_LABELS_LAYER_ID,
   type WeatherLabelsController,
   type WeatherLabelsPatch,
 } from '@/utils/mapWeatherLabels';
@@ -49,7 +48,7 @@ export const useNativeWeatherLabels = ({
   const api = useMemo<NativeWeatherLabelsApi>(() => {
     const getController = () => {
       if (!controllerRef.current) {
-        const def = getActiveOverlayLayers().find((layer) => layer.id === WEATHER_LABELS_LAYER_ID);
+        const def = getActiveOverlayLayers().find((layer) => layer.id === WEATHER_TEMP_LABELS_LAYER_ID);
         controllerRef.current = createWeatherLabelsController({
           getApiKey: getOwmApiKey,
           minZoom: def?.minZoom ?? 0,
@@ -74,7 +73,7 @@ export const useNativeWeatherLabels = ({
 
     return {
       onOverlayToggle: (id, enabled) => {
-        if (id !== WEATHER_LABELS_LAYER_ID || enabledRef.current === enabled) return;
+        if (id !== WEATHER_TEMP_LABELS_LAYER_ID || enabledRef.current === enabled) return;
         enabledRef.current = enabled;
         if (enabled) pushView();
         else controllerRef.current?.stop();

@@ -52,7 +52,6 @@ export interface WeatherLabelsPatch {
 /** Отдельная панель Leaflet под маркерами (markerPane = 600) и над оверлеями (400). */
 export const WEATHER_LABELS_PANE = 'metravelWeatherLabels';
 export const WEATHER_LABELS_PANE_Z_INDEX = 450;
-export const WEATHER_LABELS_LAYER_ID = 'weather-temp-labels';
 
 export const WEATHER_LABELS_CONFIG = {
   /** Потолок подписей на экране: столько же запросов на холодную область. */
