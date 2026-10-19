@@ -2961,7 +2961,15 @@
         "https://metravel.by/travels/morskoe-oko-v-mae-ozero-v-tatrakh-polsha",
         "https://metravel.by/travels/energylandia-polskiy-disneylend"
       ],
-      "note": "сезонная сверка фактов 19.10.2026 (#2672 Ельня 203, #2673 Каспровы 479, Морское Око 362, Energylandia 386): подавать после прод-выката 19.10; пачку day 12 (816) подать тем же заходом — с 11.10 не подана (#2674)"
+      "note": "сезонная сверка фактов 19.10.2026 (#2672 Ельня 203, #2673 Каспровы 479, Морское Око 362, Energylandia 386): гейт seo:queue --batch 13 → 4/4 = 200 (19.10.2026). IndexNow подан 19.10.2026. GSC НЕ подан: Claude in Chrome подключён, но search.google.com/search-console не открывается (вкладка сразу сбрасывается на chrome://newtab, проверка безопасности расширения «navigated to a different domain» — вероятно редирект на вход Google, сессия не подтверждена; пароль не вводился). URL Inspection до подачи и gscRequests не получены — подать вручную 4 URL, один клик «Запросить индексирование» на URL (контент обновлён, перекраул нужен даже если страница уже в индексе)",
+      "indexnowVia": "seo-index-queue-check.js --batch 13 --out .codex-temp/batch13.txt → indexnow-submit.js --urls-file",
+      "indexnowSubmittedAt": "2026-10-19",
+      "indexnowCodes": {
+        "api.indexnow.org": 200,
+        "yandex.com": 200
+      },
+      "gscRequestedAt": null,
+      "gscRequests": []
     }
   ],
   "details": [
