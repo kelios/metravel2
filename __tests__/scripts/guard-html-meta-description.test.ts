@@ -116,6 +116,32 @@ describe('guard-html-meta-description', () => {
     expect(runCli(process.execPath, [scriptPath, '--dist', distDir]).status).toBe(0)
   })
 
+  // Prod build 500bbac26: 531 files with zero descriptions — redirect stubs of
+  // old travel slugs and quest-seo-errors/* — all noindex by contract.
+  it('allows a noindex page without a description but never a duplicate on it', () => {
+    writeTextFile(
+      path.join(distDir, 'travels', 'old-slug.html'),
+      '<html><head><meta charset="utf-8"/><meta name="robots" content="noindex, follow"/><meta http-equiv="refresh" content="0; url=/travels/new"/></head><body></body></html>',
+    )
+    writeTextFile(
+      path.join(distDir, 'quest-seo-errors', 'ru', 'unavailable.html'),
+      `<html><head><meta content='NOINDEX' name='robots'/></head><body></body></html>`,
+    )
+    writeTextFile(
+      path.join(distDir, 'travels', 'missing.html'),
+      `<html><head><meta data-rh="true" name="robots" content="noindex, follow"/>${PAGE_DESCRIPTION}${SHELL_DESCRIPTION}</head><body></body></html>`,
+    )
+    writeTextFile(
+      path.join(distDir, 'indexable.html'),
+      '<html><head><meta name="robots" content="index, follow"/></head><body></body></html>',
+    )
+
+    expect(checkDist(distDir).violations).toEqual([
+      { file: 'indexable.html', count: 0 },
+      { file: 'travels/missing.html', count: 2 },
+    ])
+  })
+
   it('fails on a dist without HTML instead of passing vacuously', () => {
     expect(() => checkDist(distDir)).toThrow(/no HTML files/)
   })

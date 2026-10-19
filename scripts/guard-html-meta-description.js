@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-// #2689: every exported page must carry exactly one <meta name="description">.
+// #2689: every exported page must carry exactly one <meta name="description">
+// (a noindex page — redirect stub, quest error page — may carry none, never two).
 // app/+html.tsx adds a site-wide default next to the page's own Helmet tag;
 // scripts/lib/htmlMetaDescription.js strips the extra one in the last full
 // pass over dist (scripts/add-cache-bust-meta.js). This guard is the
@@ -12,7 +13,7 @@
 const fs = require('fs')
 const path = require('path')
 const { listHtmlFiles } = require('./lib/listHtmlFiles')
-const { countMetaDescriptions } = require('./lib/htmlMetaDescription')
+const { countMetaDescriptions, isNoindex } = require('./lib/htmlMetaDescription')
 
 function checkDist(distDir) {
   if (!fs.existsSync(distDir)) {
@@ -20,15 +21,21 @@ function checkDist(distDir) {
   }
   const files = listHtmlFiles(distDir, 'check for meta description count')
   // SSG writes flat and directory-index routes as hardlinks: read each inode once.
-  const counts = new Map()
+  const verdicts = new Map()
   const violations = files
     .map((absPath) => {
       const stats = fs.statSync(absPath, { bigint: true })
       const inode = `${stats.dev}:${stats.ino}`
-      if (!counts.has(inode)) counts.set(inode, countMetaDescriptions(fs.readFileSync(absPath, 'utf8')))
-      return { file: path.relative(distDir, absPath).split(path.sep).join('/'), count: counts.get(inode) }
+      if (!verdicts.has(inode)) {
+        const html = fs.readFileSync(absPath, 'utf8')
+        const count = countMetaDescriptions(html)
+        verdicts.set(inode, { count, ok: count === 1 || (count === 0 && isNoindex(html)) })
+      }
+      const { count, ok } = verdicts.get(inode)
+      return { file: path.relative(distDir, absPath).split(path.sep).join('/'), count, ok }
     })
-    .filter(({ count }) => count !== 1)
+    .filter(({ ok }) => !ok)
+    .map(({ file, count }) => ({ file, count }))
   return { ok: violations.length === 0, total: files.length, violations }
 }
 
@@ -43,7 +50,7 @@ function main() {
   const result = checkDist(distDir)
   if (!result.ok) {
     console.error(
-      `❌ guard-html-meta-description: ${result.violations.length} из ${result.total} HTML-файлов содержат не ровно один <meta name="description">:`
+      `❌ guard-html-meta-description: ${result.violations.length} из ${result.total} HTML-файлов содержат не ровно один <meta name="description"> (без него можно только noindex-странице):`
     )
     result.violations.forEach(({ file, count }) => console.error(`   - ${file}: ${count}`))
     console.error(
