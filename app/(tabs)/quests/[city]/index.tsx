@@ -41,8 +41,19 @@ const CITY_FOOTER_STYLE = { gap: 16, marginTop: 24 } as const
 // The catalog screen is reached from two routes. A static import from both made
 // Metro hoist it into a route-similarity shared chunk that /profile also loads
 // eagerly (+10 KB brotli, measured on the prod build); a single dynamic import
-// root keeps it a standalone chunk that only quest pages fetch.
-const QuestsScreen = React.lazy(() => import('@/screens/tabs/QuestsScreenRoute'))
+// root keeps it a standalone chunk that only quest pages fetch. The fetch starts
+// when this route module evaluates, in parallel with the quest list, instead of
+// after it (data -> chunk was a sequential waterfall on a cold visit).
+let questsScreenModule: ReturnType<typeof loadQuestsScreen> | null = null
+function loadQuestsScreen() {
+  return import('@/screens/tabs/QuestsScreenRoute')
+}
+function preloadQuestsScreen() {
+  questsScreenModule ??= loadQuestsScreen()
+  return questsScreenModule
+}
+if (Platform.OS === 'web' && typeof window !== 'undefined') void preloadQuestsScreen()
+const QuestsScreen = React.lazy(preloadQuestsScreen)
 
 /**
  * `/quests/<city>` — каталог с городом из URL (#2654): тот же сайдбар, заголовок
