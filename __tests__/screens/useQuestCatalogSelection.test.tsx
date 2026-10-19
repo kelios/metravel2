@@ -156,3 +156,25 @@ it('an identical warm native link is a new action after Reset, while ordinary re
     unmount();
     (Platform as { OS: string }).OS = oldPlatform;
 });
+
+// #2654: `/quests/<city>` — каталог, чей срез принадлежит URL.
+it('route mode shows the URL slice from the first render and never touches saved or handed-off selection', async () => {
+    await AsyncStorage.setItem(STORAGE_SELECTED_CITY, 'minsk');
+    await AsyncStorage.setItem(STORAGE_PENDING_CATALOG_SELECTION, '__kids__');
+    jest.clearAllMocks();
+    const onLeave = jest.fn();
+    const { result } = renderHook(() => useQuestCatalogSelection(true, jest.fn(), { selectionId: '121', onLeave }));
+    expect(result.current.selectedCityId).toBe('121');
+    expect(result.current.selectionRestored).toBe(true);
+    expect(result.current.canApplyHandoff()).toBe(false);
+
+    await act(async () => { await result.current.select('121'); });
+    expect(onLeave).not.toHaveBeenCalled();
+    await act(async () => { await result.current.select('140'); });
+    expect(onLeave).toHaveBeenCalledWith('140');
+
+    expect(result.current.selectedCityId).toBe('121');
+    expect(AsyncStorage.getItem).not.toHaveBeenCalledWith(STORAGE_SELECTED_CITY);
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+    expect(await AsyncStorage.getItem(STORAGE_PENDING_CATALOG_SELECTION)).toBe('__kids__');
+});

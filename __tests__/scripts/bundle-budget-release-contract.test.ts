@@ -1046,6 +1046,53 @@ describe('bundle budget release contract', () => {
       }
     })
 
+    // #2654: экран каталога открывают два маршрута, и Metro уносит его в
+    // `__shared-N` с номером, который меняется от сборки к сборке.
+    it('finds a __shared owner by marker whatever the shared chunk number, ignoring unclaimed shared chunks', () => {
+      const tmpDir = makeTempDir('metravel-bundle-budget-shared-owner-')
+      const SHARED_MARKER = 'quests.catalog.content'
+      try {
+        const budget = {
+          tolerancePct: 0,
+          chunks: { ...ownerRows, '__shared:quests-catalog': { marker: SHARED_MARKER, maxRawKB: 2 } },
+        }
+        const { jsDir, testBudgetPath } = writeFixture(
+          tmpDir,
+          {
+            'index-1a2b3c4d.js': chunkSource(HOME_MARKER, 100),
+            'index-5e6f7a8b.js': chunkSource(QUESTS_MARKER, 100),
+            '__shared-51-0a0b0c0d.js': chunkSource(SHARED_MARKER, 1000),
+            '__shared-7-1f2e3d4c.js': 'x'.repeat(4096),
+          },
+          budget,
+        )
+
+        const green = runGuard(jsDir, testBudgetPath)
+        expect(green.status).toBe(0)
+        const greenReport = JSON.parse(green.stdout)
+        expect(greenReport.breaches).toEqual([])
+        expect(greenReport.ownerChunks['__shared:quests-catalog'].files).toEqual(['__shared-51-0a0b0c0d.js'])
+
+        // Перенумерованный и подросший чанк — тот же владелец, красный по размеру.
+        fs.rmSync(path.join(jsDir, '__shared-51-0a0b0c0d.js'))
+        fs.writeFileSync(path.join(jsDir, '__shared-12-9f8e7d6c.js'), chunkSource(SHARED_MARKER, 3000))
+        const red = runGuard(jsDir, testBudgetPath)
+        expect(red.status).toBe(1)
+        const redReport = JSON.parse(red.stdout)
+        expect(redReport.ownerChunks['__shared:quests-catalog'].files).toEqual(['__shared-12-9f8e7d6c.js'])
+        expect(redReport.breaches.map((b: { label: string }) => b.label)).toEqual(['__shared:quests-catalog (raw)'])
+
+        // Маркер в двух общих чанках — неоднозначность, а не сумма.
+        fs.writeFileSync(path.join(jsDir, '__shared-13-5a5b5c5d.js'), chunkSource(SHARED_MARKER, 10))
+        const ambiguous = JSON.parse(runGuard(jsDir, testBudgetPath).stdout)
+        expect(ambiguous.breaches.map((b: { label: string }) => b.label)).toEqual(
+          expect.arrayContaining([expect.stringContaining('Owner marker matches 2 __shared chunks: __shared:quests-catalog')]),
+        )
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true })
+      }
+    })
+
     it('fails closed on an index chunk that no owner claims', () => {
       const tmpDir = makeTempDir('metravel-bundle-budget-index-unattributed-')
       try {

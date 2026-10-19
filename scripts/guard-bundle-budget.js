@@ -265,6 +265,16 @@ function logicalName(file) {
   return file.replace(/\.js$/, '').replace(/-[0-9a-f]{6,}$/i, '')
 }
 
+// #2654: Metro renumbers `__shared-N` between builds, so a module reachable from
+// two async roots (the /quests catalog screen, opened by /quests and by the city
+// page) cannot be pinned by name. `__shared:<owner>` rows find their one file by
+// marker across every shared chunk; shared chunks nobody claims stay covered by
+// the release total and the eager route budgets, as before.
+const SHARED_GROUP = '__shared'
+function ownerGroupName(name) {
+  return /^__shared-\d+$/.test(name) ? SHARED_GROUP : name
+}
+
 const KB = 1024
 const toKB = (bytes) => Math.round((bytes / KB) * 10) / 10
 
@@ -353,12 +363,15 @@ for (const file of files) {
           params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 11 },
         }).length
   let budgetKey = name
-  const owners = ownerSplits.get(name)
+  const group = ownerGroupName(name)
+  const owners = ownerSplits.get(group)
   if (owners) {
     // The generated deps prefix lists other chunks' file names, so the marker
     // is looked up in the chunk's own code only.
     const matched = owners.filter((owner) => budgetSource.includes(owner.marker)).map((owner) => owner.key)
-    ownerCandidates.push({ file, logical: name, owners: matched, raw: budgetRaw, gzip: budgetGzip, brotli: budgetBrotli })
+    if (group !== SHARED_GROUP || matched.length > 0) {
+      ownerCandidates.push({ file, logical: group, owners: matched, raw: budgetRaw, gzip: budgetGzip, brotli: budgetBrotli })
+    }
     if (matched.length === 1) budgetKey = matched[0]
   }
   const prev = chunks.get(budgetKey) || { raw: 0, gzip: 0, brotli: 0, files: 0 }

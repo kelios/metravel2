@@ -3,11 +3,18 @@
  */
 
 import React from 'react'
-import { Platform, Text } from 'react-native'
-import { render } from '@testing-library/react-native'
+import { Platform } from 'react-native'
+import { act, render } from '@testing-library/react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+
+import type { QuestsCatalogRoute } from '@/screens/tabs/QuestsScreen'
 
 const mockUseIsFocused = jest.fn(() => true)
 const mockReplace = jest.fn()
+const mockPush = jest.fn()
+// #2654: страница города — экран каталога с городом из URL. Сам каталог здесь
+// заглушка: проверяется то, что роут ему передаёт (срез, SEO, текст под сеткой).
+let mockCatalogRoute: QuestsCatalogRoute | null = null
 let mockCityParam = 'rome'
 let mockLegacyCityId: number | undefined
 
@@ -33,7 +40,7 @@ jest.mock('expo-router', () => ({
   useIsFocused: () => mockUseIsFocused(),
   useLocalSearchParams: () => ({ city: mockCityParam }),
   useNavigation: () => ({ setOptions: jest.fn() }),
-  useRouter: () => ({ replace: mockReplace }),
+  useRouter: () => ({ replace: mockReplace, push: mockPush }),
 }))
 
 jest.mock('@expo/vector-icons/Feather', () => () => null)
@@ -53,9 +60,12 @@ jest.mock('@/components/quests/TravelsForQuestSection', () => ({
   default: () => null,
 }))
 
-jest.mock('@/screens/tabs/QuestCard', () => ({
+jest.mock('@/screens/tabs/QuestsScreen', () => ({
   __esModule: true,
-  default: () => null,
+  default: ({ route }: { route: QuestsCatalogRoute }) => {
+    mockCatalogRoute = route
+    return <>{route.seo}{route.footer}</>
+  },
 }))
 
 jest.mock('@/screens/tabs/questsShared', () => ({
@@ -76,11 +86,19 @@ jest.mock('@/hooks/useQuestsApi', () => {
       lat: 41.89,
       lng: 12.49,
     },
+    {
+      id: 'naples-port',
+      cityId: '140',
+      cityName: 'Неаполь',
+      title: 'Квест по Неаполю: Порт',
+      lat: 40.85,
+      lng: 14.27,
+    },
   ]
 
   return {
     useQuestsList: () => ({ loading: false, quests: quests.map((quest) => ({
-      ...quest, cityLegacyIds: mockLegacyCityId === undefined ? [] : [mockLegacyCityId],
+      ...quest, cityLegacyIds: mockLegacyCityId === undefined || quest.cityId !== '121' ? [] : [mockLegacyCityId],
     })) }),
   }
 })
@@ -167,6 +185,8 @@ describe('quest city SEO focus lifecycle', () => {
     mockCityParam = 'rome'
     mockLegacyCityId = undefined
     mockReplace.mockClear()
+    mockPush.mockClear()
+    mockCatalogRoute = null
     mockUseQuestCityWalk.mockReturnValue(WALK_MODEL)
     document.body.innerHTML = ''
     document.head.innerHTML = [
@@ -273,7 +293,7 @@ describe('quest city SEO focus lifecycle', () => {
     expect(document.querySelector('section[data-ssg-quest-city="true"]')).not.toBeNull()
   })
 
-  it('keeps one visible runtime H1 and removes only the stale shared SSG heading', () => {
+  it('removes only the stale shared SSG section once the runtime notes are loaded', () => {
     document.body.innerHTML = [
       '<section data-ssg-quest-city="true"><h1>Static city heading</h1></section>',
       '<h1 data-unrelated-heading="true">Unrelated heading</h1>',
@@ -283,15 +303,34 @@ describe('quest city SEO focus lifecycle', () => {
       '<style data-ssg-quest-city-style="true">[data-ssg-quest-city]{display:none}</style>',
     )
 
-    const { UNSAFE_root } = render(<QuestsByCityScreen />)
+    render(<QuestsByCityScreen />)
 
     expect(document.querySelector('section[data-ssg-quest-city="true"]')).toBeNull()
     expect(document.querySelector('style[data-ssg-quest-city-style="true"]')).toBeNull()
     expect(document.querySelector('h1[data-unrelated-heading="true"]')?.textContent).toBe('Unrelated heading')
-    expect(
-      UNSAFE_root.findAll((node) =>
-        node.type === Text && node.props.accessibilityRole === 'header' && node.props['aria-level'] === 1,
-      ),
-    ).toHaveLength(1)
+  })
+
+  it('renders the catalog with the URL city as its fixed slice, own SEO and copy below the grid', () => {
+    render(<QuestsByCityScreen />)
+
+    expect(mockCatalogRoute?.selectionId).toBe('121')
+    expect(mockCatalogRoute?.seo).toBeTruthy()
+    expect(mockCatalogRoute?.footer).toBeTruthy()
+  })
+
+  it('leaves to another city page, or hands any other slice to /quests', async () => {
+    render(<QuestsByCityScreen />)
+
+    act(() => mockCatalogRoute?.onLeave('140'))
+    expect(mockPush).toHaveBeenCalledWith('/quests/naples')
+
+    mockPush.mockClear()
+    await act(async () => {
+      mockCatalogRoute?.onLeave('__all__')
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    expect(await AsyncStorage.getItem('quests_pending_selection_v1')).toBe('__all__')
+    expect(mockPush).toHaveBeenCalledWith('/quests')
   })
 })

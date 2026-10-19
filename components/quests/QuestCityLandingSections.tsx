@@ -33,12 +33,13 @@ const DIFFICULTY_KEYS: Record<string, string> = {
 }
 
 /**
- * Content owned by the city landing, not by an individual quest card.
+ * Copy owned by the city page below the catalog grid (#2654).
  *
- * The static generator mirrors these sections for crawlers. Keeping the
- * runtime hierarchy here makes a one-quest city useful after hydration too:
- * practical planning facts and links to other quest cities remain even when
- * the catalog grid contains a single item.
+ * Only what the cards do not already say: place notes from the quests (#1569),
+ * how each route is laid out, and links to nearby quest cities. The static
+ * generator mirrors exactly these sections, so the crawler reads what a person
+ * sees after hydration; template filler («самостоятельная прогулка», «как
+ * спланировать») is gone from both.
  */
 export default function QuestCityLandingSections({ city, nearbyCities, walk }: Props) {
   const colors = useThemedColors()
@@ -46,31 +47,6 @@ export default function QuestCityLandingSections({ city, nearbyCities, walk }: P
   const styles = useQuestLandingSectionStyles(colors)
   const placeStyles = useMemo(() => createPlaceStyles(colors), [colors])
   const cityName = city.cityName || city.segment
-  const questCount = city.quests.length
-  const pointCount = city.quests.reduce((sum, quest) => sum + (Number(quest.points) || 0), 0)
-  const durations = city.quests
-    .map((quest) => Number(quest.durationMin) || 0)
-    .filter((duration) => duration > 0)
-  const totalDuration = durations.reduce((sum, duration) => sum + duration, 0)
-
-  const overview = city.countryName
-    ? t('quests:app.tabs.quests.city.index.overviewWithCountry', {
-        value1: cityName,
-        value2: city.countryName,
-        value3: pluralizeQuest(questCount),
-      })
-    : t('quests:app.tabs.quests.city.index.overview', {
-        value1: cityName,
-        value2: pluralizeQuest(questCount),
-      })
-
-  const practice = pointCount > 0 && totalDuration > 0
-    ? t('quests:app.tabs.quests.city.index.practiceWithFacts', {
-        value1: cityName,
-        value2: pluralizePoints(pointCount),
-        value3: formatTravelTime(totalDuration),
-      })
-    : t('quests:app.tabs.quests.city.index.practice', { value1: cityName })
 
   // Тот же состав фраз, что печатает SSG (`buildQuestCityRoutesHtml`):
   // страница до гидратации и после обязана читаться одинаково.
@@ -124,20 +100,9 @@ export default function QuestCityLandingSections({ city, nearbyCities, walk }: P
   }, [walk, t])
 
   const walkPlaces = walk?.places ?? []
-  const otherPlaces = walk?.otherPlaces ?? []
 
   return (
     <>
-      <QuestLandingSection
-        styles={styles}
-        colors={colors}
-        testID="quest-city-overview"
-        icon="map-pin"
-        title={t('quests:app.tabs.quests.city.index.overviewTitle', { value1: cityName })}
-      >
-        <QuestEditorialText style={styles.body}>{overview}</QuestEditorialText>
-      </QuestLandingSection>
-
       {walkPlaces.length > 0 ? (
         <QuestLandingSection
           styles={styles}
@@ -171,11 +136,6 @@ export default function QuestCityLandingSections({ city, nearbyCities, walk }: P
               ) : null}
             </View>
           ))}
-          {otherPlaces.length > 0 ? (
-            <QuestEditorialText style={styles.body}>
-              {t('quests:app.tabs.quests.city.index.walkMore', { value1: otherPlaces.join(', ') })}
-            </QuestEditorialText>
-          ) : null}
         </QuestLandingSection>
       ) : null}
 
@@ -194,19 +154,6 @@ export default function QuestCityLandingSections({ city, nearbyCities, walk }: P
           ))}
         </QuestLandingSection>
       ) : null}
-
-      <QuestLandingSection
-        styles={styles}
-        colors={colors}
-        testID="quest-city-practical"
-        icon="sun"
-        title={t('quests:app.tabs.quests.city.index.practiceTitle')}
-      >
-        <QuestEditorialText style={styles.body}>{practice}</QuestEditorialText>
-        <QuestEditorialText style={styles.note}>
-          {t('quests:app.tabs.quests.city.index.practiceNote')}
-        </QuestEditorialText>
-      </QuestLandingSection>
 
       {nearbyCities.length > 0 ? (
         <QuestLandingSection

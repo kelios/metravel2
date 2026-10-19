@@ -237,9 +237,8 @@ describe('verifyQuestCityHtml', () => {
     `<link rel="canonical" href="${canonical}" />`,
     '</head><body>',
     '<section data-ssg-quest-city="true">',
-    '<div data-ssg-quest-city-overview="true"><h2>Прогулка по Риму</h2><p>Самостоятельный городской маршрут.</p></div>',
     '<div data-ssg-quest-city-walk="true"><h2>Что увидите по дороге: Рим</h2><p>Капитолий — площадь Микеланджело.</p></div>',
-    '<div data-ssg-quest-city-practical="true"><h2>Как спланировать прогулку</h2><p>Проверьте погоду.</p></div>',
+    '<div data-ssg-quest-city-routes="true"><h2>Как устроены маршруты</h2><p>Старт — площадь Венеции.</p></div>',
     '</section>',
     '</body></html>',
   ].join('')
@@ -259,7 +258,7 @@ describe('verifyQuestCityHtml', () => {
 
     expect(hasQuestCityStandaloneContent(withoutWalk)).toBe(false)
     expect(verifyQuestCityHtml(withoutWalk, canonical, buildQuestPageHtml())).toEqual(
-      expect.arrayContaining(['missing independent city overview/walk/practical content']),
+      expect.arrayContaining(['missing independent city routes/walk content']),
     )
   })
 
@@ -279,11 +278,11 @@ describe('verifyQuestCityHtml', () => {
     expect(verifyQuestCityHtml(noindex, canonical, buildQuestPageHtml())).toEqual([])
     expect(
       verifyQuestCityHtml(
-        noindex.replace(/<div data-ssg-quest-city-practical="true">[\s\S]*?<\/div>/, ''),
+        noindex.replace(/<div data-ssg-quest-city-routes="true">[\s\S]*?<\/div>/, ''),
         canonical,
         buildQuestPageHtml(),
       ),
-    ).toEqual(expect.arrayContaining(['missing independent city overview/practical content']))
+    ).toEqual(expect.arrayContaining(['missing independent city routes content']))
   })
 
   it('rejects a noindex landing whose robots tag is Helmet-owned', () => {
@@ -305,7 +304,7 @@ describe('verifyQuestCityHtml', () => {
     const issues = verifyQuestCityHtml(thin, canonical, buildQuestPageHtml())
 
     expect(issues).toEqual(expect.arrayContaining([
-      'missing independent city overview/walk/practical content',
+      'missing independent city routes/walk content',
       'title duplicates the only quest page',
       'description duplicates the only quest page',
     ]))

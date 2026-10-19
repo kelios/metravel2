@@ -7,8 +7,25 @@ import {
     resolveQuestThemeQuery, resolveStoredQuestCatalogSelection, getQuestThemeQueryFromNavigationUrl,
 } from '@/utils/questCatalogSelection';
 
+/**
+ * A catalog slice owned by the route itself (#2654): `/quests/<city>` is the
+ * catalog with its city fixed by the URL. `selectionId` is `null` until the
+ * city resolves; leaving the slice is navigation, never an in-place filter.
+ */
+export type QuestCatalogRouteSelection = {
+    selectionId: string | null;
+    onLeave: (selectionId: string) => void;
+};
+
 /** One selection owner for URL entry, saved restore, manual controls and profile handoff. */
-export function useQuestCatalogSelection(isFocused: boolean, onNavigation: () => void) {
+export function useQuestCatalogSelection(
+    isFocused: boolean,
+    onNavigation: () => void,
+    route: QuestCatalogRouteSelection | null = null,
+) {
+    const routeMode = route !== null;
+    const routeRef = useRef(route);
+    routeRef.current = route;
     const { theme } = useLocalSearchParams<{ theme?: string | string[] }>();
     const queryKey = JSON.stringify(theme) ?? 'absent';
     const initial = useRef(resolveQuestThemeQuery(theme));
@@ -29,6 +46,13 @@ export function useQuestCatalogSelection(isFocused: boolean, onNavigation: () =>
     navigationCallback.current = onNavigation;
 
     const select = useCallback(async (id: string, persistedId = id) => {
+        const routeSelection = routeRef.current;
+        if (routeSelection) {
+            // The URL owns this slice: nothing is persisted, and any other
+            // slice belongs to its own page.
+            if (id !== routeSelection.selectionId) routeSelection.onLeave(id);
+            return;
+        }
         generation.current++;
         setSelectedCityId(id);
         setSelectionRestored(true);
@@ -41,6 +65,7 @@ export function useQuestCatalogSelection(isFocused: boolean, onNavigation: () =>
     }, []);
 
     useEffect(() => {
+        if (routeMode) return undefined;
         let cancelled = false;
         const epoch = generation.current;
         if (initial.current !== null) {
@@ -61,9 +86,10 @@ export function useQuestCatalogSelection(isFocused: boolean, onNavigation: () =>
             }
         })();
         return () => { cancelled = true; };
-    }, [select]);
+    }, [routeMode, select]);
 
     useEffect(() => {
+        if (routeMode) return;
         if (!isFocused) { wasFocused.current = false; return; }
         if (pendingLinkQuery.current !== null) {
             if (pendingLinkQuery.current !== queryKey) return;
@@ -81,10 +107,10 @@ export function useQuestCatalogSelection(isFocused: boolean, onNavigation: () =>
         if (selection === null) return;
         navigationCallback.current();
         void select(selection);
-    }, [isFocused, queryKey, select, theme]);
+    }, [isFocused, queryKey, routeMode, select, theme]);
 
     useEffect(() => {
-        if (Platform.OS === 'web') return undefined;
+        if (Platform.OS === 'web' || routeMode) return undefined;
         const subscription = Linking.addEventListener('url', ({ url }) => {
             const linkedTheme = getQuestThemeQueryFromNavigationUrl(url);
             const selection = resolveQuestThemeQuery(linkedTheme);
@@ -98,9 +124,21 @@ export function useQuestCatalogSelection(isFocused: boolean, onNavigation: () =>
             void select(selection);
         });
         return () => subscription.remove();
-    }, [isFocused, select]);
+    }, [isFocused, routeMode, select]);
 
     const getGeneration = useCallback(() => generation.current, []);
-    const canApplyHandoff = useCallback(() => !blockHandoff.current, []);
+    const canApplyHandoff = useCallback(() => !routeRef.current && !blockHandoff.current, []);
+    // Derived, not stored: the first render after the city resolves already
+    // shows its slice instead of committing one frame of the whole catalog.
+    if (route) {
+        return {
+            selectedCityId: route.selectionId ?? ALL_QUESTS_ID,
+            setSelectedCityId,
+            select,
+            selectionRestored: true,
+            getGeneration,
+            canApplyHandoff,
+        };
+    }
     return { selectedCityId, setSelectedCityId, select, selectionRestored, getGeneration, canApplyHandoff };
 }

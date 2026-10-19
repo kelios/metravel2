@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo } from 'react'
-import { Dimensions, Platform } from 'react-native'
-import { useLocalSearchParams, useNavigation } from 'expo-router'
+import React, { Suspense, useCallback, useEffect, useMemo } from 'react'
+import { Dimensions, Platform, View } from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router'
 import { useIsFocused } from 'expo-router'
 
 import { useDockReservePx } from '@/components/layout/bottomChromeInset'
@@ -9,28 +10,24 @@ import QuestCityLandingSections from '@/components/quests/QuestCityLandingSectio
 import {
   getQuestLandingRouteParam,
   QUEST_LANDING_DESCRIPTION_META_TARGETS,
-  QuestLandingGrid,
-  QuestLandingHeader,
   QuestLandingLoading,
-  QuestLandingScroll,
-  QuestLandingSectionTitle,
   renderQuestLandingStructuredData,
   useQuestLandingHeadMeta,
   useQuestLandingNotFoundRedirect,
   useQuestLandingSsgFallbackCleanup,
 } from '@/components/quests/QuestLandingLayout'
 import TravelsForQuestSection from '@/components/quests/TravelsForQuestSection'
+import type { QuestsCatalogRoute } from '@/screens/tabs/QuestsScreen'
 import { pluralizeQuest } from '@/screens/tabs/questsShared'
 import { getStyles } from '@/screens/tabs/QuestsScreen.styles'
-import { QUESTS_GRID_WEB_GAP, QUESTS_LANDING_CONTENT_WIDTH } from '@/constants/questLayout'
 import { useQuestsList } from '@/hooks/useQuestsApi'
 import { useQuestCityWalk } from '@/hooks/useQuestCityWalk'
-import { useQuestReturnVisit } from '@/hooks/useQuestReturnVisit'
-import { useQuestCatalogResponsiveModel } from '@/hooks/useQuestCatalogResponsiveModel'
 import { useBreakpoints } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import { buildCanonicalUrl, buildOgImageUrl, QUESTS_OG_IMAGE_PATH } from '@/utils/seo'
 import { buildBrandedSeoTitle } from '@/utils/questSeo'
+import { STORAGE_PENDING_CATALOG_SELECTION } from '@/utils/questCatalogSelection'
+import { buildCanonicalQuestCityIndex } from '@/utils/questCityCanonical'
 import {
   buildQuestCityLandingGroups,
   findNearbyQuestCityGroups,
@@ -39,16 +36,24 @@ import {
 
 import { useTranslation } from '@/i18n/LocaleProvider'
 
-const CITY_HEADER_BLOCK_STYLE = { gap: 8, maxWidth: 760 } as const
+const CITY_FOOTER_STYLE = { gap: 16, marginTop: 24 } as const
 
+// The catalog screen is reached from two routes. A static import from both made
+// Metro hoist it into a route-similarity shared chunk that /profile also loads
+// eagerly (+10 KB brotli, measured on the prod build); a single dynamic import
+// root keeps it a standalone chunk that only quest pages fetch.
+const QuestsScreen = React.lazy(() => import('@/screens/tabs/QuestsScreenRoute'))
+
+/**
+ * `/quests/<city>` — каталог с городом из URL (#2654): тот же сайдбар, заголовок
+ * и сетка, что у `/quests`, плюс SEO города и его заметки под сеткой. Возврат
+ * (#1484) считает сам экран каталога.
+ */
 export default function QuestsByCityScreen() {
-  // #1484: возвратное напоминание ведёт именно на лендинг города, поэтому
-  // возврат считается и здесь, а не только в общем каталоге.
-  useQuestReturnVisit()
-
   const params = useLocalSearchParams<{ city?: string | string[] }>()
   const cityParam = getQuestLandingRouteParam(params.city)
   const navigation = useNavigation()
+  const router = useRouter()
   const isFocused = useIsFocused()
   const colors = useThemedColors()
   const { t } = useTranslation()
@@ -67,6 +72,11 @@ export default function QuestsByCityScreen() {
     [cityGroups, resolved],
   )
   const cityQuests = useMemo(() => cityGroup?.quests ?? [], [cityGroup])
+  // Срез каталога — канонический id города в индексе сайдбара, иначе экран
+  // нормализовал бы выбор и счёл бы это уходом со страницы.
+  const canonicalCityIdById = useMemo(() => buildCanonicalQuestCityIndex(quests).canonicalCityIdById, [quests])
+  const toCatalogCityId = useCallback((cityId: string) => canonicalCityIdById[cityId] ?? cityId, [canonicalCityIdById])
+  const selectionId = cityGroup ? toCatalogCityId(cityGroup.cityIds[0]) : null
   const nearbyCities = useMemo(
     () => (cityGroup ? findNearbyQuestCityGroups(cityGroup, cityGroups, { limit: 4 }) : []),
     [cityGroup, cityGroups],
@@ -110,11 +120,10 @@ export default function QuestsByCityScreen() {
   // она переписана.
   useQuestLandingSsgFallbackCleanup(Boolean(cityGroup) && isFocused && Platform.OS === 'web' && Boolean(walk), 'city')
 
-  const { width: bpWidth, isMobile } = useBreakpoints()
+  const { width: bpWidth } = useBreakpoints()
   const height = Platform.OS === 'web' ? 0 : Dimensions.get('window').height
   const dockPx = useDockReservePx()
   const s = useMemo(() => getStyles(colors, bpWidth, height, dockPx), [colors, bpWidth, height, dockPx])
-  const catalogModel = useQuestCatalogResponsiveModel(cityQuests.length, { hasSidebar: false, contentMaxWidth: QUESTS_LANDING_CONTENT_WIDTH, columnGap: QUESTS_GRID_WEB_GAP })
 
   const seoTitle = useMemo(
     () => buildBrandedSeoTitle(t('quests:app.tabs.quests.city.index.seoTitle', { value1: cityName || cityParam })),
@@ -145,61 +154,55 @@ export default function QuestsByCityScreen() {
     })
   }, [cityGroup, cityQuests, cityName, cityParam, canonical, t])
 
+  // Другой город — его собственная страница; любой другой срез живёт в
+  // `/quests` и передаётся туда одноразовым ключом каталога (#1794).
+  const handleLeave = useCallback((id: string) => {
+    const target = cityGroups.find((group) => group.cityIds.some((cityId) => toCatalogCityId(cityId) === id))
+    if (target) {
+      router.push(`/quests/${target.segment}`)
+      return
+    }
+    void AsyncStorage.setItem(STORAGE_PENDING_CATALOG_SELECTION, id)
+      .catch(() => undefined)
+      .then(() => router.push('/quests'))
+  }, [cityGroups, router, toCatalogCityId])
+
+  const seo = useMemo(() => (
+    <InstantSEO
+      headKey={`quests-city-${canonicalSegment}`}
+      title={seoTitle}
+      description={seoDescription}
+      canonical={canonical}
+      ogType="website"
+      image={buildOgImageUrl(QUESTS_OG_IMAGE_PATH)}
+      additionalTags={structuredData}
+    />
+  ), [canonical, canonicalSegment, seoDescription, seoTitle, structuredData])
+
+  const footer = useMemo(() => (cityGroup && Platform.OS === 'web' ? (
+    <View style={CITY_FOOTER_STYLE}>
+      <QuestCityLandingSections city={cityGroup} nearbyCities={nearbyCities} walk={walk} />
+      <TravelsForQuestSection
+        cityName={cityGroup.cityName}
+        countryName={cityGroup.countryName}
+        countryCode={cityGroup.countryCode}
+        coords={cityCoords}
+      />
+    </View>
+  ) : null), [cityCoords, cityGroup, nearbyCities, walk])
+
+  const route = useMemo<QuestsCatalogRoute>(
+    () => ({ selectionId, onLeave: handleLeave, seo, footer }),
+    [footer, handleLeave, selectionId, seo],
+  )
+
   if (loading || !cityGroup) {
     return <QuestLandingLoading styles={s} colors={colors} />
   }
 
-  const heading = t('quests:app.tabs.quests.city.index.title', { value1: cityName || cityParam })
-
   return (
-    <QuestLandingScroll styles={s} isMobile={isMobile}>
-      {isFocused ? (
-        <InstantSEO
-          headKey={`quests-city-${canonicalSegment}`}
-          title={seoTitle}
-          description={seoDescription}
-          canonical={canonical}
-          ogType="website"
-          image={buildOgImageUrl(QUESTS_OG_IMAGE_PATH)}
-          additionalTags={structuredData}
-        />
-      ) : null}
-
-      <QuestLandingHeader
-        colors={colors}
-        backLabel={t('quests:app.tabs.quests.city.index.back')}
-        eyebrowIcon="compass"
-        eyebrow={t('quests:app.tabs.quests.city.index.eyebrow')}
-        title={heading}
-        lead={t('quests:app.tabs.quests.city.index.lead', { value1: cityName || cityParam })}
-        meta={pluralizeQuest(cityQuests.length)}
-        blockStyle={CITY_HEADER_BLOCK_STYLE}
-      />
-
-      {Platform.OS === 'web' ? (
-        <>
-          <QuestCityLandingSections city={cityGroup} nearbyCities={nearbyCities} walk={walk} />
-          <QuestLandingSectionTitle colors={colors}>
-            {t('quests:app.tabs.quests.city.index.routesTitle', { value1: cityName || cityParam })}
-          </QuestLandingSectionTitle>
-        </>
-      ) : null}
-
-      <QuestLandingGrid
-        styles={s}
-        quests={cityQuests}
-        cardColumns={catalogModel.cardColumns}
-        cardWidth={catalogModel.cardWidth}
-      />
-
-      {Platform.OS === 'web' ? (
-        <TravelsForQuestSection
-          cityName={cityGroup.cityName}
-          countryName={cityGroup.countryName}
-          countryCode={cityGroup.countryCode}
-          coords={cityCoords}
-        />
-      ) : null}
-    </QuestLandingScroll>
+    <Suspense fallback={<QuestLandingLoading styles={s} colors={colors} />}>
+      <QuestsScreen route={route} />
+    </Suspense>
   )
 }

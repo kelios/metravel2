@@ -2181,8 +2181,11 @@ describe('one-quest city landing value', () => {
       /<meta[^>]*name="description"[^>]*content="([^"]*)"/i,
     )?.[1]
     expect(html).toContain('data-ssg-quest-city="true"')
-    expect(html).toContain('data-ssg-quest-city-overview="true"')
-    expect(html).toContain('data-ssg-quest-city-practical="true"')
+    // #2654: шаблонных «обзора» и «практики» больше нет — ни на экране, ни здесь.
+    expect(html).not.toContain('data-ssg-quest-city-overview="true"')
+    expect(html).not.toContain('data-ssg-quest-city-practical="true"')
+    expect(html).not.toContain('Самостоятельная прогулка')
+    expect(html).not.toContain('Как спланировать прогулку')
     expect(html).toContain('data-ssg-quest-city-nearby="true"')
     expect(html).toContain('data-ssg-quest-city-travels="true"')
     expect(html).toContain('href="/quests/naples"')
@@ -2193,8 +2196,7 @@ describe('one-quest city landing value', () => {
     expect(html).toContain('<title data-rh="true">Городские квесты: Рим — прогулки с заданиями | Metravel</title>')
     expect(cityDescription).toContain('Рим: что посмотреть на прогулке')
     expect(cityDescription).not.toBe(buildQuestSeoDescription(quests[0]))
-    expect(html).toContain('Страна маршрута — Италия')
-    expect(html).not.toContain('в Италия')
+    expect(html).not.toContain('Страна маршрута')
   })
 })
 
@@ -2355,7 +2357,7 @@ describe('заметки о местах на посадочной города 
    * страницы (#1763) забирает их целиком, и хвоста для заметок нет. Это дефект
    * контента, а не транспорта: релиз не падает, а посадочная уходит под
    * build-owned `noindex, follow`, как страна без собственного текста (#1929), и
-   * остаётся в навигации — ссылки на квест и практика на месте.
+   * остаётся в навигации — ссылки на квест и структура маршрута на месте.
    */
   it('не роняет сборку на городе без заметок и пишет ему build-owned noindex по вердикту уровня', () => {
     const { city, html } = buildRome(new Map([['rome-forum', shortStoriesBundle()]]), { indexable: false })
@@ -2367,7 +2369,7 @@ describe('заметки о местах на посадочной города 
     expect(html).toContain('<meta name="robots" content="noindex, follow"/>')
     // Тег без метки Helmet: с `data-rh` его сняла бы гидрация (#1929).
     expect(html).not.toMatch(/<meta[^>]*data-rh=[^>]*name="robots"/)
-    expect(html).toContain('data-ssg-quest-city-practical="true"')
+    expect(html).toContain('data-ssg-quest-city-routes="true"')
     expect(html).toContain(`href="${city.quests[0].path}"`)
   })
 

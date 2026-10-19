@@ -74,6 +74,8 @@ type QuestsContentPanelProps = {
     onSetRadius?: (km: number) => void;
     /** Мягкое уведомление над списком (сейчас — просьба об отзыве, #1795). */
     noticeSlot?: React.ReactNode;
+    /** Copy owned by the route below the grid (city page, #2654); hidden while searching. */
+    footerSlot?: React.ReactNode;
 };
 
 type QuestListItem = QuestMeta & { _distanceKm?: number };
@@ -120,6 +122,7 @@ function QuestsContentPanel({
     onOpenFilterDrawer,
     onToggleViewMode,
     noticeSlot = null,
+    footerSlot = null,
 }: QuestsContentPanelProps) {
     // #1826: на web сетка каталога не виртуализирована — 177 карточек уходили в
     // первый кадр одним `map`. `FlatList` здесь не годится: он списочный, а
@@ -521,6 +524,8 @@ function QuestsContentPanel({
                         )}
 
                         {seoFaqSlot}
+
+                        {searchActive ? null : footerSlot}
                     </>
                 )}
             </View>
@@ -602,7 +607,7 @@ function QuestsContentPanel({
                             {seoIntroSlot}
                         </>
                     }
-                    ListFooterComponent={seoFaqSlot}
+                    ListFooterComponent={<>{seoFaqSlot}{searchActive ? null : footerSlot}</>}
                     ListEmptyComponent={listEmptyContent}
                     keyboardShouldPersistTaps="handled"
                     initialNumToRender={4}

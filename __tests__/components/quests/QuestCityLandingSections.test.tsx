@@ -92,7 +92,10 @@ describe('QuestCityLandingSections', () => {
     ).toBeTruthy()
     expect(screen.getByText('Часы работы: вт–вс 09:30–19:30')).toBeTruthy()
     expect(screen.getByText('Билет: 16 евро')).toBeTruthy()
-    expect(screen.getByText('Ещё по дороге: Римский форум.')).toBeTruthy()
+    // #2654: перечень «Ещё по дороге» и шаблонные секции сняты.
+    expect(screen.queryByText('Ещё по дороге: Римский форум.')).toBeNull()
+    expect(screen.queryByTestId('quest-city-overview')).toBeNull()
+    expect(screen.queryByTestId('quest-city-practical')).toBeNull()
 
     expect(screen.getByTestId('quest-city-routes')).toBeTruthy()
     expect(
@@ -111,7 +114,7 @@ describe('QuestCityLandingSections', () => {
 
     expect(screen.queryByTestId('quest-city-walk')).toBeNull()
     expect(screen.queryByTestId('quest-city-routes')).toBeNull()
-    expect(screen.getByTestId('quest-city-overview')).toBeTruthy()
+    expect(screen.queryByTestId('quest-city-overview')).toBeNull()
   })
 })
 

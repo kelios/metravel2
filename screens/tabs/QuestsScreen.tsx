@@ -57,7 +57,7 @@ import { filterQuestsByTheme, getActiveQuestThemes, getQuestThemeById } from '@/
 import { canRankQuestsByRating, sortQuestsByRating } from '@/utils/questRatingOrder';
 import type { QuestSortOrder } from './questsShared';
 import { useQuestCatalogHandoff } from './useQuestCatalogHandoff';
-import { useQuestCatalogSelection } from './useQuestCatalogSelection';
+import { useQuestCatalogSelection, type QuestCatalogRouteSelection } from './useQuestCatalogSelection';
 import { useQuestCountrySelection } from './useQuestCountrySelection';
 import { translate as i18nT } from '@/i18n'
 
@@ -86,7 +86,10 @@ const QuestReviewPromptBanner = safeLazy(
   'QuestReviewPromptBanner',
 );
 
-export default function QuestsScreen() {
+/** `/quests/<city>` (#2654): the catalog with the URL's slice, its own SEO and copy below the grid. */
+export type QuestsCatalogRoute = QuestCatalogRouteSelection & { seo: React.ReactNode; footer?: React.ReactNode };
+
+export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRoute | null } = {}) {
     // #1484: заход в каталог после ранее завершённого квеста — это и есть
     // возврат, который меряет петля. Событие уходит один раз на прохождение.
     useQuestReturnVisit();
@@ -103,7 +106,7 @@ export default function QuestsScreen() {
             setPendingMapAreaCenter(null);
             setActiveMapAreaCenter(null);
             setFilterDrawerOpen(false);
-        });
+        }, route);
     const selectionGeneration = getGeneration();
     // Свободный текстовый поиск по всему каталогу (название/город/страна/теги).
     // Пока строка непустая — перекрывает выбор города и «Рядом», ищем по ВСЕМ квестам.
@@ -204,7 +207,7 @@ export default function QuestsScreen() {
     }, [geoRequesting, isMobile, select]);
 
     // Срез, переданный из профиля (#1794): применяем как обычный выбор.
-    useQuestCatalogHandoff({ enabled: isFocused, onApply: handleSelectCity, getGeneration, canApply: canApplyHandoff });
+    useQuestCatalogHandoff({ enabled: isFocused && !route, onApply: handleSelectCity, getGeneration, canApply: canApplyHandoff });
 
     const handleShowKidsQuests = useCallback(() => {
         void handleSelectCity(KIDS_FILTER_ID);
@@ -538,12 +541,12 @@ export default function QuestsScreen() {
             centerOnQuests={centerMapOnQuests}
             userLoc={userLoc}
             activeMapAreaCenter={activeMapAreaCenter}
-            showMapAreaSearch={Boolean(pendingMapAreaCenter)}
+            showMapAreaSearch={!route && Boolean(pendingMapAreaCenter)}
             onSearchMapArea={handleSearchMapArea}
             onUserLocationChange={handleMapUserLocationChange}
             onMapMove={handleMapMove}
         />
-    ) : null), [viewMode, s, colors, dataLoaded, questsAll, CITIES, selectedCityId, searchTerm, centerMapOnQuests, userLoc, activeMapAreaCenter, pendingMapAreaCenter, handleSearchMapArea, handleMapUserLocationChange, handleMapMove]);
+    ) : null), [viewMode, s, colors, dataLoaded, questsAll, CITIES, selectedCityId, searchTerm, centerMapOnQuests, userLoc, activeMapAreaCenter, pendingMapAreaCenter, route, handleSearchMapArea, handleMapUserLocationChange, handleMapMove]);
 
     // Фильтр «сужает» каталог: выбран конкретный город, явный «Рядом» с радиусом
     // или область карты. В этих случаях показываем быстрый сброс к «Все квесты».
@@ -698,7 +701,8 @@ export default function QuestsScreen() {
 
     return (
         <View style={s.root as ViewStyle} testID="quests-root">
-            {isFocused && (
+            {isFocused && route ? route.seo : null}
+            {isFocused && !route && (
                 <InstantSEO
                     headKey="quests-index"
                     title={titleText}
@@ -776,6 +780,7 @@ export default function QuestsScreen() {
                 onShowNearby={requestNearbyQuests}
                 onOpenFilterDrawer={handleOpenFilterDrawer}
                 onToggleViewMode={handleToggleViewMode}
+                footerSlot={route?.footer}
             />
         </View>
     );

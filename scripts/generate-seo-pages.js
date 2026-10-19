@@ -2906,17 +2906,11 @@ function buildQuestCityWalkHtml(walk, cityLabel, { h2Style, h3Style, pStyle, fac
     })
     .join('');
 
-  const otherPlaces = Array.isArray(walk?.otherPlaces) ? walk.otherPlaces : [];
-  const more = otherPlaces.length
-    ? `<p style="${pStyle}">${escapeAttr(`Ещё по дороге: ${otherPlaces.join(', ')}.`)}</p>`
-    : '';
-
   return [
     '<div data-ssg-quest-city-walk="true">',
     `<h2 style="${h2Style}">Что увидите по дороге: ${escapeAttr(cityLabel)}</h2>`,
     `<p style="${pStyle}">${QUEST_CITY_WALK_LEAD_RU}</p>`,
     items,
-    more,
     '</div>',
   ].join('');
 }
@@ -2984,17 +2978,9 @@ function injectQuestCityLandingSection(baseHtml, city, cityLabel, lead, countryL
   const ulStyle = 'margin:0;padding:0 0 0 18px;color:var(--color-text,#22332c)';
   const backStyle = 'margin:12px 0 0;font-weight:700';
 
-  const questCount = city.quests.length;
-  const pointCount = city.quests.reduce((sum, quest) => sum + (Number(quest.points) || 0), 0);
-  const durationMin = city.quests.reduce((sum, quest) => sum + (Number(quest.durationMin) || 0), 0);
-  const overview = city.countryName
-    ? `${cityLabel} — город для самостоятельной прогулки. Страна маршрута — ${city.countryName}. На этой странице — ${questCount} ${pluralizeRu(questCount, 'квест', 'квеста', 'квестов')}: можно сравнить маршруты, спланировать выход и поделиться одной ссылкой на квесты города.`
-    : `${cityLabel}: на этой странице — ${questCount} ${pluralizeRu(questCount, 'квест', 'квеста', 'квестов')}. Можно сравнить маршруты, спланировать выход и поделиться одной ссылкой на квесты города.`;
-  const practice = pointCount > 0 && durationMin > 0
-    ? `${cityLabel}: все маршруты вместе — это ${pointCount} ${pluralizeRu(pointCount, 'точка', 'точки', 'точек')} и примерно ${durationMin} минут прогулки. Для первого знакомства выберите один квест и оставьте время на остановки у интересных мест.`
-    : `${cityLabel}: маршруты проходят по реальным улицам и открываются на смартфоне. Выберите квест заранее и оставьте запас времени на остановки у интересных мест.`;
-  const practiceNote = 'Перед выходом зарядите телефон, проверьте погоду и наденьте удобную обувь. Бронировать или покупать билет на сам квест не нужно.';
-
+  // #2654: только то, что видит человек под сеткой каталога — заметки о
+  // местах, структура маршрутов, соседние города. Шаблонные «самостоятельная
+  // прогулка» и «как спланировать» сняты и здесь, и на экране.
   const links = city.quests
     .map((q) => `<li style="margin:0 0 3px"><a href="${escapeAttr(q.path)}">${escapeAttr(q.title)}</a></li>`)
     .join('');
@@ -3020,7 +3006,6 @@ function injectQuestCityLandingSection(baseHtml, city, cityLabel, lead, countryL
     `<section data-ssg-quest-city="true" aria-label="Городские квесты: ${escapeAttr(cityLabel)}" style="${sectionStyle}">`,
     `<h1 style="${h1Style}">Городские квесты: ${escapeAttr(cityLabel)}</h1>`,
     `<p style="${leadStyle}">${escapeAttr(lead)}</p>`,
-    `<div data-ssg-quest-city-overview="true"><h2 style="${h2Style}">Самостоятельная прогулка: ${escapeAttr(cityLabel)}</h2><p style="${pStyle}">${escapeAttr(overview)}</p></div>`,
     buildQuestCityWalkHtml(city.walk, cityLabel, {
       h2Style,
       h3Style: `margin:16px 0 4px;font:700 17px/1.3 ${QUESTS_SSG_FONT};color:var(--color-text,#22332c)`,
@@ -3028,7 +3013,6 @@ function injectQuestCityLandingSection(baseHtml, city, cityLabel, lead, countryL
       factStyle: 'margin:0 0 10px;font-size:14px;color:var(--color-text-muted,#5f756c)',
     }),
     buildQuestCityRoutesHtml(city.walk, { h2Style, pStyle }),
-    `<div data-ssg-quest-city-practical="true"><h2 style="${h2Style}">Как спланировать прогулку</h2><p style="${pStyle}">${escapeAttr(practice)}</p><p style="${pStyle}">${escapeAttr(practiceNote)}</p></div>`,
     `<h2 style="${h2Style}">Квесты города: ${escapeAttr(cityLabel)}</h2>`,
     `<ul style="${ulStyle}">${links}</ul>`,
     nearbyLinks

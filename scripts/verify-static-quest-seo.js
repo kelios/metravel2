@@ -165,17 +165,14 @@ function hasQuestCityLandingSection(html) {
 }
 
 /**
- * #1569: к обзору и практике добавлен блок заметок о местах города — это
- * единственная часть страницы, которой нет в шаблоне и которая отличает один
- * город от другого. Проверка присутствия здесь не заменяет замер объёма
+ * #2654: шаблонные «обзор» и «практика» сняты — город несёт только своё:
+ * структуру маршрутов (старт, финиш, музеи, необязательные точки) и заметки о
+ * местах (#1569). Проверка присутствия здесь не заменяет замер объёма
  * (`verifyQuestPageContentDepth`): она называет пропавший блок по имени, а не
  * оставляет разбираться со счётом слов.
  */
 function hasQuestCityPlanningContent(html) {
-  return (
-    /data-ssg-quest-city-overview="true"/i.test(html) &&
-    /data-ssg-quest-city-practical="true"/i.test(html)
-  )
+  return /data-ssg-quest-city-routes="true"/i.test(html)
 }
 
 function hasQuestCityWalkContent(html) {
@@ -228,13 +225,13 @@ function verifyQuestCityHtml(html, expectedCanonical, childHtml = '') {
   // сборкой. Тег с меткой Helmet Helmet же снимет при гидрации (#1929).
   if (questPageIsNoindex(html)) {
     if (!hasQuestCityPlanningContent(html)) {
-      issues.push('missing independent city overview/practical content')
+      issues.push('missing independent city routes content')
     }
     if (robotsMetaIsHelmetOwned(html)) {
       issues.push('city landing noindex is Helmet-owned (data-rh) and is dropped on hydration')
     }
   } else if (!hasQuestCityStandaloneContent(html)) {
-    issues.push('missing independent city overview/walk/practical content')
+    issues.push('missing independent city routes/walk content')
   }
 
   if (childHtml) {
