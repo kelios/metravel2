@@ -2954,22 +2954,47 @@
     },
     {
       "day": 13,
-      "submittedAt": null,
+      "submittedAt": "2026-10-19",
       "urls": [
         "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
         "https://metravel.by/travels/kasprovy-verkh-vysota-1987-m-podem-i-kak-dobratsia",
         "https://metravel.by/travels/morskoe-oko-v-mae-ozero-v-tatrakh-polsha",
         "https://metravel.by/travels/energylandia-polskiy-disneylend"
       ],
-      "note": "сезонная сверка фактов 19.10.2026 (#2672 Ельня 203, #2673 Каспровы 479, Морское Око 362, Energylandia 386): гейт seo:queue --batch 13 → 4/4 = 200 (19.10.2026). IndexNow подан 19.10.2026. GSC НЕ подан: Claude in Chrome подключён, но search.google.com/search-console не открывается (вкладка сразу сбрасывается на chrome://newtab, проверка безопасности расширения «navigated to a different domain» — вероятно редирект на вход Google, сессия не подтверждена; пароль не вводился). URL Inspection до подачи и gscRequests не получены — подать вручную 4 URL, один клик «Запросить индексирование» на URL (контент обновлён, перекраул нужен даже если страница уже в индексе)",
+      "note": "сезонная сверка фактов 19.10.2026 (#2672 Ельня 203, #2673 Каспровы 479, Морское Око 362, Energylandia 386): гейт seo:queue --batch 13 → 4/4 = 200 (19.10.2026). IndexNow подан 19.10.2026. GSC подан 19.10.2026 повторной попыткой: 4/4 «Отправлен запрос на индексирование» (первая попытка упиралась в сброс вкладки на chrome://newtab, во второй Search Console открылась с активной сессией Google)",
       "indexnowVia": "seo-index-queue-check.js --batch 13 --out .codex-temp/batch13.txt → indexnow-submit.js --urls-file",
       "indexnowSubmittedAt": "2026-10-19",
       "indexnowCodes": {
         "api.indexnow.org": 200,
         "yandex.com": 200
       },
-      "gscRequestedAt": null,
-      "gscRequests": []
+      "gscRequestedAt": "2026-10-19",
+      "gscRequests": [
+        {
+          "url": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
+          "result": "accepted",
+          "at": "2026-10-19",
+          "note": "URL Inspection до подачи: «URL есть в индексе Google» (контент обновлён 19.10.2026, запрошен перекраул). Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования"
+        },
+        {
+          "url": "https://metravel.by/travels/kasprovy-verkh-vysota-1987-m-podem-i-kak-dobratsia",
+          "result": "accepted",
+          "at": "2026-10-19",
+          "note": "URL Inspection до подачи: «URL есть в индексе Google» (контент обновлён 19.10.2026, запрошен перекраул). Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования"
+        },
+        {
+          "url": "https://metravel.by/travels/morskoe-oko-v-mae-ozero-v-tatrakh-polsha",
+          "result": "accepted",
+          "at": "2026-10-19",
+          "note": "URL Inspection до подачи: «URL есть в индексе Google» (контент обновлён 19.10.2026, запрошен перекраул). Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования"
+        },
+        {
+          "url": "https://metravel.by/travels/energylandia-polskiy-disneylend",
+          "result": "accepted",
+          "at": "2026-10-19",
+          "note": "URL Inspection до подачи: «URL есть в индексе Google» (контент обновлён 19.10.2026, запрошен перекраул). Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования"
+        }
+      ]
     }
   ],
   "details": [
