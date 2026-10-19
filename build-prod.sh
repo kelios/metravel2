@@ -856,6 +856,8 @@ node scripts/add-cache-bust-meta.js "dist/$ENV"
 # #2088: add-cache-bust-meta.js carries the charset-position fix
 # (scripts/lib/htmlCharset.js); guard it right after.
 node scripts/guard-html-charset.js --dist "dist/$ENV"
+# #2689: the same pass strips the shell default description (scripts/lib/htmlMetaDescription.js).
+node scripts/guard-html-meta-description.js --dist "dist/$ENV"
 
 node scripts/assert-deployable-source.js --copy-marker "dist/$ENV/.build-source.json"
 

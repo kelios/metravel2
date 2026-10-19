@@ -17,6 +17,7 @@
 const fs = require('fs');
 const path = require('path');
 const { normalizeHeadCharset } = require('./lib/htmlCharset');
+const { normalizeMetaDescription } = require('./lib/htmlMetaDescription');
 
 const DEFAULT_BUILD_DIR = path.join(__dirname, '..', 'dist', 'prod');
 const buildDirArg = process.argv[2] ? String(process.argv[2]).trim() : '';
@@ -32,6 +33,9 @@ function processHtmlFile(filePath) {
     // build swaps into place — move <meta charset> to be the first child of
     // <head> so the browser's 1024-byte encoding prescan always finds it.
     content = normalizeHeadCharset(content);
+    // #2689: same pass, every route — drop the app/+html.tsx default
+    // description next to the page's own Helmet one.
+    content = normalizeMetaDescription(content);
 
     const cacheMetaTags = `
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
