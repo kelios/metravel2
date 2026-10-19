@@ -3052,7 +3052,7 @@ function buildQuestCityLandingHtml(cityBaseHtml, city, countryLanding = null, op
   const title = buildBrandedSeoTitle(`Городские квесты: ${cityLabel} — прогулки с заданиями`);
   const lead = `${cityLabel}: бесплатные пешеходные квесты-прогулки с заданиями и легендами по реальным местам, прямо со смартфона — как самостоятельная экскурсия без гида. Любой маршрут можно распечатать как подарочный квест-бук с картой и дипломом. Выберите маршрут и отправляйтесь гулять пешком.`;
   const description = clampMetaDescription(
-    `${cityLabel}: что посмотреть на прогулке — ${count} ${pluralizeRu(count, 'квест', 'квеста', 'квестов')} с заданиями по реальным местам. Практика, квесты рядом и маршруты путешественников.`,
+    `${cityLabel}: что посмотреть на прогулке — ${count} ${pluralizeRu(count, 'квест', 'квеста', 'квестов')} с заданиями по реальным местам. Квесты рядом и маршруты путешественников.`,
   );
   const image = city.cover ? toAbsoluteUrl(city.cover) : OG_IMAGE;
 

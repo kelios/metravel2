@@ -114,7 +114,7 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsScreen.country.AU": "Австралія",
   "app.tabs.quests.city.index.title": "Міські квести: {{value1}}",
   "app.tabs.quests.city.index.seoTitle": "Міські квести: {{value1}} — прогулянки із завданнями",
-  "app.tabs.quests.city.index.metaDescription": "{{value1}}: що подивитися на прогулянці — {{value2}} із завданнями в реальних місцях. Практика, квести поруч і маршрути мандрівників.",
+  "app.tabs.quests.city.index.metaDescription": "{{value1}}: що подивитися на прогулянці — {{value2}} із завданнями в реальних місцях. Квести поруч і маршрути мандрівників.",
   "app.tabs.quests.city.index.walkTitle": "Що побачите дорогою: {{value1}}",
   "app.tabs.quests.city.index.walkLead": "Точки маршрутів — справжні місця міста. Нижче — нотатки про них із самих квестів: що це за місця і чим вони цікаві. Завдань і відповідей тут немає.",
   "app.tabs.quests.city.index.walkOpeningHours": "Години роботи: {{value1}}",

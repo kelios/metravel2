@@ -114,7 +114,7 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsScreen.country.AU": "Australii",
   "app.tabs.quests.city.index.title": "Miejskie questy: {{value1}}",
   "app.tabs.quests.city.index.seoTitle": "Miejskie questy: {{value1}} — spacery z zadaniami",
-  "app.tabs.quests.city.index.metaDescription": "{{value1}}: co zobaczyć na spacerze — {{value2}} z zadaniami w prawdziwych miejscach. Plan, questy w pobliżu i trasy podróżników.",
+  "app.tabs.quests.city.index.metaDescription": "{{value1}}: co zobaczyć na spacerze — {{value2}} z zadaniami w prawdziwych miejscach. Questy w pobliżu i trasy podróżników.",
   "app.tabs.quests.city.index.walkTitle": "Co zobaczysz po drodze: {{value1}}",
   "app.tabs.quests.city.index.walkLead": "Punkty tras to prawdziwe miejsca w mieście. Poniżej notatki o nich z samych questów: co to za miejsca i czym są ciekawe. Zadań ani odpowiedzi tu nie ma.",
   "app.tabs.quests.city.index.walkOpeningHours": "Godziny otwarcia: {{value1}}",

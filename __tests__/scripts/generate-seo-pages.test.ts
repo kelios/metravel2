@@ -2195,6 +2195,9 @@ describe('one-quest city landing value', () => {
     )
     expect(html).toContain('<title data-rh="true">Городские квесты: Рим — прогулки с заданиями | Metravel</title>')
     expect(cityDescription).toContain('Рим: что посмотреть на прогулке')
+    // #2654: раздела «Как спланировать» больше нет — описание его не обещает.
+    expect(cityDescription).toContain('Квесты рядом и маршруты путешественников.')
+    expect(cityDescription).not.toContain('Практика')
     expect(cityDescription).not.toBe(buildQuestSeoDescription(quests[0]))
     expect(html).not.toContain('Страна маршрута')
   })

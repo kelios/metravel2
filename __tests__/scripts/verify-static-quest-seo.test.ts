@@ -233,7 +233,7 @@ describe('verifyQuestCityHtml', () => {
   const cityHtml = [
     '<html><head>',
     '<title>Городские квесты: Рим — прогулки с заданиями | Metravel</title>',
-    '<meta name="description" content="Рим: что посмотреть на прогулке — городской квест, практика и соседние города." />',
+    '<meta name="description" content="Рим: что посмотреть на прогулке — городской квест и соседние города." />',
     `<link rel="canonical" href="${canonical}" />`,
     '</head><body>',
     '<section data-ssg-quest-city="true">',
