@@ -1,7 +1,6 @@
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
-import { spawnSync } from 'child_process';
+import { makeTempDir, removeDir, runCli } from './cli-test-utils';
 
 // #2475: build_mix.py — наборы → смеси. Фикстура корпуса вместо прод-выгрузки,
 // смеси в .json (PyYAML есть только в venv обучения).
@@ -55,7 +54,7 @@ describe('ai-train build_mix (#2475)', () => {
   let home: string;
 
   beforeAll(() => {
-    home = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-train-mix-'));
+    home = makeTempDir('ai-train-mix-');
     const raw = path.join(home, 'data', 'raw');
     fs.mkdirSync(raw, { recursive: true });
     writeJsonl(path.join(raw, 'travels.jsonl'), Array.from({ length: 12 }, (_, i) => travel(i + 1)));
@@ -68,12 +67,12 @@ describe('ai-train build_mix (#2475)', () => {
       complexity: [], companions: [], month: [],
     }));
   });
-  afterAll(() => fs.rmSync(home, { recursive: true, force: true }));
+  afterAll(() => removeDir(home));
 
   const run = (mix: Record<string, unknown>, out: string, aiHome = home) => {
     const mixFile = path.join(aiHome, `${String(mix.name)}.json`);
     fs.writeFileSync(mixFile, JSON.stringify(mix));
-    return spawnSync('python3', ['-I', SCRIPT, '--ai-home', aiHome, '--mix', mixFile, '--out', out], { encoding: 'utf8' });
+    return runCli('python3', ['-I', SCRIPT, '--ai-home', aiHome, '--mix', mixFile, '--out', out]);
   };
 
   it('site: сплит по сущности, служебные поля в наборе, в смеси только messages, структурные виды', () => {
@@ -149,14 +148,14 @@ s1, s2 = build_stages(mix, built, 1)
 print(len(s1["parts"]["train"]), s1["replayed"], len(s2["parts"]["train"]), s2["replayed"],
       sum(r["set"] != "site" for r in s2["parts"]["train"]), sum(r["set"] != "site" for r in s2["parts"]["valid"]))
 `;
-    const res = spawnSync('python3', ['-I', '-c', code, DIR], { encoding: 'utf8' });
+    const res = runCli('python3', ['-I', '-c', code, DIR]);
     expect(res.stderr).toBe('');
     // s2: 170 своих + 30 replay = 15 % потока; valid/test без replay
     expect(res.stdout.trim()).toBe('150 0 200 30 30 0');
   });
 
   it('ошибки конфигурации: набор вне этапов, нереализованный набор, structured без справочников', () => {
-    const bare = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-train-bare-'));
+    const bare = makeTempDir('ai-train-bare-');
     try {
       fs.mkdirSync(path.join(bare, 'data'), { recursive: true });
       fs.symlinkSync(path.join(home, 'data', 'raw'), path.join(bare, 'data', 'raw'));
@@ -170,7 +169,7 @@ print(len(s1["parts"]["train"]), s1["replayed"], len(s2["parts"]["train"]), s2["
       expect(noFilters.status).not.toBe(0);
       expect(noFilters.stderr).toContain('sources/site_filters.py');
     } finally {
-      fs.rmSync(bare, { recursive: true, force: true });
+      removeDir(bare);
     }
   });
 });

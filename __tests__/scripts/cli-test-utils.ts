@@ -1,7 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { execFileSync, spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 
 export type CliRunResult = {
   status: number;
@@ -60,28 +60,21 @@ export const runCli = (
   if (command === process.execPath && !args.includes('--require') && options.env?.METRAVEL_API && /^http:\/\/(?:127\.0\.0\.1|localhost):\d+/.test(options.env.METRAVEL_API)) {
     return runNodeCli(args, options.env, { cwd: options.cwd, input: options.input, timeoutMs: options.timeoutMs });
   }
-  try {
-    const stdout = execFileSync(command, args, {
-      encoding: 'utf8',
-      cwd: options.cwd,
-      env: { ...process.env, ...(options.env ?? {}) },
-      stdio: 'pipe',
-      input: options.input,
-      timeout: options.timeoutMs,
-    });
-    return {
-      status: 0,
-      stdout: String(stdout),
-      stderr: '',
-    };
-  } catch (error) {
-    const failed = error as { status?: number; stdout?: string; stderr?: string };
-    return {
-      status: failed.status ?? 1,
-      stdout: String(failed.stdout ?? ''),
-      stderr: String(failed.stderr ?? ''),
-    };
-  }
+  // spawnSync, not execFileSync: a successful run keeps its real stderr, so
+  // tests can assert on progress/summary lines a CLI prints there.
+  const result = spawnSync(command, args, {
+    encoding: 'utf8',
+    cwd: options.cwd,
+    env: { ...process.env, ...(options.env ?? {}) },
+    stdio: 'pipe',
+    input: options.input,
+    timeout: options.timeoutMs,
+  });
+  return {
+    status: result.status ?? 1,
+    stdout: String(result.stdout ?? ''),
+    stderr: String(result.stderr ?? ''),
+  };
 };
 
 export const writeJsonFile = (filePath: string, payload: unknown) => {
@@ -114,7 +107,7 @@ export type StubServer = {
  * в stdout.
  *
  * Отдельный процесс здесь обязателен: CLI в этих тестах запускается через
- * `execFileSync` и блокирует event loop, поэтому сервер внутри Jest не успел бы
+ * `spawnSync` и блокирует event loop, поэтому сервер внутри Jest не успел бы
  * ответить ни на один запрос.
  *
  * stderr стаба копится и попадает в текст ошибки: без него падение самого

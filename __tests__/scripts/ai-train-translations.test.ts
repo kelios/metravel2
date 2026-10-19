@@ -1,7 +1,6 @@
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
-import { spawnSync } from 'child_process';
+import { makeTempDir, removeDir, runCli } from './cli-test-utils';
 
 // #2476: набор translations (квесты и строки интерфейса RU → BE/UK/PL/EN) и
 // проверка языка ответа в eval.py. Фикстура кэша sources/site_translations.
@@ -43,7 +42,7 @@ describe('ai-train translations (#2476)', () => {
   let home: string;
 
   beforeAll(() => {
-    home = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-train-tr-'));
+    home = makeTempDir('ai-train-tr-');
     const cache = path.join(home, 'data', 'sources', 'site_translations');
     fs.mkdirSync(cache, { recursive: true });
     const quests = [1, 2, 3, 4].flatMap((id) => [quest(id, 'ru', (s) => s), quest(id, 'be', be), ...(id % 2 ? [quest(id, 'pl', pl)] : [])]);
@@ -57,12 +56,12 @@ describe('ai-train translations (#2476)', () => {
     }));
     writeJsonl(path.join(cache, 'i18n.jsonl'), [...strings, { ns: 'common', key: 'brand', ru: 'METRAVEL', be: 'METRAVEL.BY' }]);
   });
-  afterAll(() => fs.rmSync(home, { recursive: true, force: true }));
+  afterAll(() => removeDir(home));
 
   const run = (mix: Record<string, unknown>, out: string, aiHome = home) => {
     const mixFile = path.join(aiHome, `${String(mix.name)}.json`);
     fs.writeFileSync(mixFile, JSON.stringify(mix));
-    return spawnSync('python3', ['-I', SCRIPT, '--ai-home', aiHome, '--mix', mixFile, '--out', out], { encoding: 'utf8' });
+    return runCli('python3', ['-I', SCRIPT, '--ai-home', aiHome, '--mix', mixFile, '--out', out]);
   };
 
   it('набор: виды, выравнивание шагов по step_id, сплит по сущности, без чужих URL', () => {
@@ -131,7 +130,7 @@ describe('ai-train translations (#2476)', () => {
     const rows = ['train', 'valid', 'test'].flatMap((p) => readJsonl(path.join(home, 'data', 'sets', 'translations', `${p}.jsonl`)));
     expect(new Set(rows.map((r) => r.id.slice(0, 4)))).toEqual(new Set(['uipl']));
 
-    const bare = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-train-tr-bare-'));
+    const bare = makeTempDir('ai-train-tr-bare-');
     try {
       const missing = run({ name: 'm', sets: { translations: {} } }, path.join(bare, 'm'), bare);
       expect(missing.status).not.toBe(0);
@@ -140,7 +139,7 @@ describe('ai-train translations (#2476)', () => {
       expect(badLocale.status).not.toBe(0);
       expect(badLocale.stderr).toContain('unknown locales');
     } finally {
-      fs.rmSync(bare, { recursive: true, force: true });
+      removeDir(bare);
     }
   });
 
@@ -163,7 +162,7 @@ sys.path.insert(0, sys.argv[1])
 import site_translations as st
 print(json.dumps(st.read_strings(Path(sys.argv[2])), ensure_ascii=False))
 `;
-    const res = spawnSync('python3', ['-I', '-c', code, DIR, file], { encoding: 'utf8' });
+    const res = runCli('python3', ['-I', '-c', code, DIR, file]);
     expect(res.stderr).toBe('');
     expect(JSON.parse(res.stdout)).toEqual({
       'a.b': "Перевод 'в кавычках'", c: 'Строка\nвторая', title: 'Офлайн', summary: '{{count}} {{objects}}',
@@ -193,7 +192,7 @@ out["loop"] = verdict("lang", check(texts["be"] + " Яму ўжо шасцццц
 out["answer_untouched"] = verdict("answer", check(texts["ru"], known))
 print(json.dumps(out))
 `;
-    const res = spawnSync('python3', ['-I', '-c', code, DIR], { encoding: 'utf8' });
+    const res = runCli('python3', ['-I', '-c', code, DIR]);
     expect(res.stderr).toBe('');
     expect(JSON.parse(res.stdout)).toEqual({
       ru: 'ru', be: 'be', uk: 'uk', pl: 'pl', en: 'en', none: null,
