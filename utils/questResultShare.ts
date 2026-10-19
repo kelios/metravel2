@@ -1,7 +1,7 @@
 // utils/questResultShare.ts
 // FE-атрибуция шаринга РЕЗУЛЬТАТА квеста ([INV2-02], тикет борда #1472). Замыкает
 // вирусную петлю: каждая исходящая ссылка на результат несёт UTM
-// `utm_source=share&utm_medium=quest_result`, чтобы визиты по расшаренному диплому
+// `utm_source=share&utm_medium=referral`, чтобы визиты по расшаренному диплому
 // были видны в аналитике абсолютными числами. Конвенция и механизм переиспользуют
 // подход шаринга достижений (utils/achievementShare.ts, #458), но у квеста своя
 // фиксированная пара source/medium из постановки задачи. PII в метки не попадает:
@@ -9,11 +9,12 @@
 
 import { buildCanonicalUrl } from '@/utils/seo';
 import { appendQueryParam, hasQueryParam } from '@/utils/urlParams';
+import { UTM_MEDIUMS } from '@/utils/utm';
 
 /** Единый источник для всех расшаренных результатов квеста (постановка #1472). */
 export const QUEST_RESULT_UTM_SOURCE = 'share';
-/** Канал петли «результат квеста» — по нему аналитика отделяет визиты от диплома. */
-export const QUEST_RESULT_UTM_MEDIUM = 'quest_result';
+/** Канал неизвестен при native/copy sharing; детализация квеста — в campaign. */
+export const QUEST_RESULT_UTM_MEDIUM = UTM_MEDIUMS.referral;
 
 /** Кампания на квест — даёт per-quest гранулярность в отчётах. */
 const campaignFor = (slug: string): string => `quest_${slug || 'unknown'}`;

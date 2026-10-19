@@ -262,6 +262,74 @@ describe('analytics inline script', () => {
     jest.useRealTimers()
   })
 
+  it('reports the landing page before flushing product events, independently of late Metrika', () => {
+    jest.useFakeTimers()
+    try {
+      const { windowMock, documentMock, createdScripts, ymSpy } = setupDomEnv()
+      documentMock.referrer = 'https://www.google.com/'
+      windowMock.location.href = 'https://metravel.by/quests?utm_source=mail&utm_medium=email'
+      windowMock.dispatchEvent = jest.fn((event: Event) => {
+        if (event.type === 'metravel:analytics-ready') windowMock.gtag('event', 'quest_view', { ui_source: 'quest_detail' })
+      })
+      runAnalyticsSnippet(windowMock, documentMock)
+      // Hydration's history replacement must not consume a view before GA exists.
+      windowMock.history.replaceState({}, '', windowMock.location.href)
+      windowMock.metravelLoadAnalytics()
+      const commands = windowMock.dataLayer.map((entry: IArguments) => Array.from(entry))
+      expect(commands[1]).toEqual(['set', {
+        page_location: windowMock.location.href, page_referrer: 'https://www.google.com/',
+      }])
+      expect(commands[2][0]).toBe('config')
+      const events = () => windowMock.dataLayer.map((entry: IArguments) => Array.from(entry)).filter((entry: unknown[]) => entry[0] === 'event')
+      expect(events()[0]).toEqual(['event', 'page_view', expect.objectContaining({
+        page_location: windowMock.location.href, page_referrer: 'https://www.google.com/',
+      })])
+      expect(events()[1][1]).toBe('quest_view')
+      jest.runOnlyPendingTimers()
+      createdScripts.find((entry) => entry.src === 'https://mc.yandex.ru/metrika/tag.js')?.onload?.()
+      expect(events().filter((entry: unknown[]) => entry[1] === 'page_view')).toHaveLength(1)
+      expect(ymSpy.mock.calls.filter((entry) => entry[1] === 'hit')).toHaveLength(1)
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('preserves external landing attribution across SPA changes before opt-in', () => {
+    const { windowMock, documentMock } = setupDomEnv({ consent: null })
+    documentMock.referrer = 'https://www.google.com/'
+    windowMock.location.href = 'https://metravel.by/?utm_source=newsletter&utm_medium=email'
+    runAnalyticsSnippet(windowMock, documentMock)
+    windowMock.location.href = 'https://metravel.by/quests'
+    windowMock.history.pushState({}, '', '/quests')
+    expect(windowMock.dataLayer).toHaveLength(0)
+    windowMock.localStorage.getItem = () => JSON.stringify({ necessary: true, analytics: true })
+    windowMock.metravelLoadAnalytics()
+    const views = windowMock.dataLayer.filter((entry: IArguments) => entry[0] === 'event' && entry[1] === 'page_view')
+    expect(views).toHaveLength(2)
+    expect(views[0][2]).toMatchObject({
+      page_location: 'https://metravel.by/?utm_source=newsletter&utm_medium=email',
+      page_referrer: 'https://www.google.com/',
+    })
+    expect(views[1][2]).toMatchObject({
+      page_location: 'https://metravel.by/quests',
+      page_referrer: 'https://metravel.by/?utm_source=newsletter&utm_medium=email',
+    })
+  })
+
+  it('does not consume a GA page view while the provider opt-out flag is set', () => {
+    const { windowMock, documentMock } = setupDomEnv()
+    runAnalyticsSnippet(windowMock, documentMock)
+    windowMock.metravelLoadAnalytics()
+    const views = () => windowMock.dataLayer.filter((entry: IArguments) => entry[0] === 'event' && entry[1] === 'page_view')
+    windowMock[`ga-disable-${TEST_GA_ID}`] = true
+    windowMock.location.href = 'https://metravel.by/quests'
+    windowMock.history.pushState({}, '', '/quests')
+    expect(views()).toHaveLength(1)
+    windowMock[`ga-disable-${TEST_GA_ID}`] = false
+    windowMock.history.replaceState({}, '', '/quests')
+    expect(views()).toHaveLength(2)
+  })
+
   // #2121: Metrika (watch, clickmap) and GA4 (enhanced measurement) read
   // document.location by themselves, so the tags must not load at all while the
   // address bar carries an e-mail-link secret.

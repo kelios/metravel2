@@ -19,6 +19,19 @@ type WebAnalyticsProvider = 'ga' | 'metrika';
 
 const WEB_ANALYTICS_PROVIDERS: readonly WebAnalyticsProvider[] = ['ga', 'metrika'];
 
+// Product surface and our own pseudonymous IDs must never override GA's
+// acquisition/session fields. Keep the original contract for Metrika and intent
+// observers; translate only at the GA provider boundary (#2659).
+const toGaEventParams = (params: Record<string, unknown>): Record<string, unknown> => {
+    const { source, client_id, session_id, ...rest } = params;
+    return {
+        ...(source !== undefined ? { ui_source: source } : {}),
+        ...(client_id !== undefined ? { metravel_client_id: client_id } : {}),
+        ...(session_id !== undefined ? { metravel_session_id: session_id } : {}),
+        ...rest,
+    };
+};
+
 type WebAnalyticsEvent = {
     eventName: string;
     eventParams: Record<string, unknown>;
@@ -97,7 +110,7 @@ const deliverWebAnalyticsEvent = async (w: any, event: WebAnalyticsEvent) => {
         if (provider === 'ga') {
             if (typeof gtag === 'function') {
                 try {
-                    gtag('event', eventName, eventParams);
+                    gtag('event', eventName, toGaEventParams(eventParams));
                     sentAnyEvent = true;
                 } catch (error) {
                     console.error('GA4 gtag Error:', error);

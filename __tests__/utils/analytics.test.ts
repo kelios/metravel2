@@ -60,7 +60,7 @@ describe('utils/analytics', () => {
 
     await sendAnalyticsEvent('AuthSuccess', { source: 'google', intent: 'build-pdf' })
 
-    expect(gtag).toHaveBeenCalledWith('event', 'AuthSuccess', { source: 'google', intent: 'build-pdf' })
+    expect(gtag).toHaveBeenCalledWith('event', 'AuthSuccess', { ui_source: 'google', intent: 'build-pdf' })
     expect(ym).toHaveBeenCalledWith(62803912, 'reachGoal', 'AuthSuccess', {
       source: 'google',
       intent: 'build-pdf',
@@ -90,6 +90,28 @@ describe('utils/analytics', () => {
 
     expect(gtag).not.toHaveBeenCalled()
     expect(ym).not.toHaveBeenCalled()
+  })
+
+  it('isolates GA acquisition and identity fields while preserving Metrika and local intent', async () => {
+    jest.doMock('react-native', () => ({ Platform: { OS: 'web' } }))
+    const gtag = jest.fn()
+    const ym = jest.fn()
+    const dispatchEvent = jest.fn()
+    ;(global as any).window = {
+      gtag, ym, dispatchEvent,
+      localStorage: { getItem: () => JSON.stringify({ necessary: true, analytics: true }) },
+      __metravelMetrikaId: 62803912,
+      __metravelMetrikaReady: true,
+    }
+    const params = Object.freeze({
+      source: 'quest_detail', client_id: 'our-browser', session_id: 'our-visit', quest_id: 'q1',
+    })
+    await require('@/utils/analytics').sendAnalyticsEvent('quest_view', params)
+    expect(gtag).toHaveBeenCalledWith('event', 'quest_view', {
+      ui_source: 'quest_detail', metravel_client_id: 'our-browser', metravel_session_id: 'our-visit', quest_id: 'q1',
+    })
+    expect(ym).toHaveBeenCalledWith(62803912, 'reachGoal', 'quest_view', params)
+    expect(dispatchEvent.mock.calls[0][0].detail.params).toEqual(params)
   })
 
   it('normalizes Yandex goal names on web when event names contain unsupported characters', async () => {
@@ -246,7 +268,7 @@ describe('utils/analytics', () => {
 
     await Promise.resolve()
 
-    expect(gtag).toHaveBeenCalledWith('event', 'HomeClick_OpenSearch', { source: 'hero' })
+    expect(gtag).toHaveBeenCalledWith('event', 'HomeClick_OpenSearch', { ui_source: 'hero' })
     expect(ym).toHaveBeenCalledWith(62803912, 'reachGoal', 'HomeClick_OpenSearch', {
       source: 'hero',
     })

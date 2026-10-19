@@ -133,7 +133,7 @@ beforeEach(() => {
 })
 
 describe('QuestFinaleShareAction ([INV2-02] #1472)', () => {
-  it('shows the share button on a credited completion and copies a quest_result-tagged link', async () => {
+  it('shows the share button on a credited completion and copies a referral-tagged link', async () => {
     mockCreateCard.mockRejectedValue(new Error('no backend yet'))
     const { getByTestId } = renderCompletedFinale()
 
@@ -148,7 +148,7 @@ describe('QuestFinaleShareAction ([INV2-02] #1472)', () => {
 
     await waitFor(() => expect(mockСlipboardSet).toHaveBeenCalledTimes(1))
     const copiedLink = mockСlipboardSet.mock.calls[0][0]
-    expect(copiedLink).toContain('utm_medium=quest_result')
+    expect(copiedLink).toContain('utm_medium=referral')
     expect(copiedLink).toContain('/quests/4/minsk-cipher')
     expect(mockTrack).toHaveBeenCalledWith({ questId: 'minsk-cipher', channel: 'copy' })
   })
@@ -210,7 +210,7 @@ describe('QuestFinaleShareAction ([INV2-02] #1472)', () => {
     await waitFor(() => expect(mockСlipboardSet).toHaveBeenCalled())
     const copiedLink = mockСlipboardSet.mock.calls[0][0]
     expect(copiedLink).toContain('/quests/result/42')
-    expect(copiedLink).toContain('utm_medium=quest_result')
+    expect(copiedLink).toContain('utm_medium=referral')
   })
 
   it('keeps the newest hero-name card when requests resolve out of order', async () => {

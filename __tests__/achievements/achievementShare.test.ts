@@ -46,7 +46,7 @@ describe('buildShareLink', () => {
       slug: 'first-wave',
     })
     expect(out).toContain('utm_source=telegram')
-    expect(out).toContain('utm_medium=badge_share')
+    expect(out).toContain('utm_medium=social')
     expect(out).toContain('utm_campaign=badge_first-wave')
     expect(out.startsWith('https://metravel.by/achievements/901?')).toBe(true)
   })
@@ -87,7 +87,7 @@ describe('buildShareUtm', () => {
   it('builds the UTM object for the create-share-card body', () => {
     expect(buildShareUtm('whatsapp', 'ambassador')).toEqual({
       source: 'whatsapp',
-      medium: 'badge_share',
+      medium: 'social',
       campaign: 'badge_ambassador',
     })
   })
@@ -151,11 +151,11 @@ describe('createShareCard', () => {
     })
     await createShareCard({
       achievementId: 5,
-      utm: { source: 'copy', medium: 'badge_share', campaign: 'badge_x' },
+      utm: { source: 'copy', medium: 'social', campaign: 'badge_x' },
     })
     expect(mockPost).toHaveBeenCalledWith('/achievements/share-cards/', {
       achievement_id: 5,
-      utm: { source: 'copy', medium: 'badge_share', campaign: 'badge_x' },
+      utm: { source: 'copy', medium: 'social', campaign: 'badge_x' },
     })
   })
 })

@@ -6,6 +6,7 @@
 // slug/id достижения и канал. События трекинга — в utils/gamificationAnalytics.ts.
 
 import { appendQueryParam, hasQueryParam } from '@/utils/urlParams';
+import { getShareUtmMedium } from '@/utils/utm';
 
 export type ShareChannel =
   | 'telegram'
@@ -14,9 +15,6 @@ export type ShareChannel =
   | 'native'
   | 'copy'
   | 'download';
-
-/** Каналы, открывающие внешний URL (для них строим UTM-ссылку). */
-const UTM_MEDIUM = 'badge_share';
 
 /** Префикс кампании на достижение — даёт per-badge гранулярность KPI. */
 const campaignFor = (slug: string): string => `badge_${slug || 'unknown'}`;
@@ -36,7 +34,7 @@ export const buildShareLink = (
     out = appendQueryParam(out, 'utm_source', params.channel);
   }
   if (!hasQueryParam(out, 'utm_medium')) {
-    out = appendQueryParam(out, 'utm_medium', UTM_MEDIUM);
+    out = appendQueryParam(out, 'utm_medium', getShareUtmMedium(params.channel));
   }
   if (!hasQueryParam(out, 'utm_campaign')) {
     out = appendQueryParam(out, 'utm_campaign', campaignFor(params.slug));
@@ -50,6 +48,6 @@ export const buildShareUtm = (
   slug: string,
 ): { source: string; medium: string; campaign: string } => ({
   source: channel,
-  medium: UTM_MEDIUM,
+  medium: getShareUtmMedium(channel),
   campaign: campaignFor(slug),
 });

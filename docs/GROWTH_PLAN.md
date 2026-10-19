@@ -46,6 +46,10 @@ board по `docs/TASK_BOARD_MCP.md`.
 
 - GSC: clicks, impressions, CTR, average position, indexed/excluded URLs;
 - GA4/Yandex: users, sessions, engagement и landing pages;
+- GA4 attribution: `npm run stats:ga4 -- --channel-breakdown --days 30`;
+  доля Unassigned <10% сессий, каждый остаточный источник объяснён. Долю брать
+  из `channelBreakdown.sharePct`, не из суммы подробных строк; при пустых данных,
+  неполном ответе, thresholding/sampling/data loss результат не считать pass;
 - product funnels: registration, auth completion, travel/article/quest create
   start → success;
 - content: новые и обновлённые pages, search demand, attention cycle outcomes;
@@ -136,6 +140,71 @@ board по `docs/TASK_BOARD_MCP.md`.
 
 Текущий подтверждённый baseline: affiliate orders/commission не доказаны. До
 свежего измерения revenue нельзя представлять как положительный результат.
+
+## Атрибуция GA4 — 2026-10-19, #2659
+
+Живой GA4 Data API, property `362328641`, Europe/Minsk, **19.09–18.10.2026**:
+329 активных пользователей, 516 сессий; Unassigned **169 (32,75%)**.
+Контрольный канал Organic Search — 287 сессий. Команда:
+`npm run stats:ga4 -- --property 362328641 --channel-breakdown --start-date 2026-09-19 --end-date 2026-10-18 --json`.
+Режим `--days N` теперь берёт ровно N полных дней до вчера включительно;
+прежний диапазон NdaysAgo→today захватывал ещё неполный сегодняшний день.
+
+Отдельная агрегация source/medium для Unassigned:
+
+| sessionSource | sessionMedium | Сессии | Объяснение |
+| --- | --- | ---: | --- |
+| `(not set)` | `(not set)` | 58 | Источник не сохранён; конкретная причина не доказана. |
+| `travel_detail` | `(not set)` | 36 | Поверхность статьи попала в источник трафика. |
+| `quest_detail` | `(not set)` | 33 | Поверхность квеста попала в источник трафика. |
+| `home_quests` | `(not set)` | 17 | Промоблок квестов на главной. |
+| `article_editor_web` | `(not set)` | 8 | Редактор статьи. |
+| `menu` | `(not set)` | 6 | Меню. |
+| `travel_article` | `(not set)` | 5 | Поверхность статьи. |
+| `comment` | `(not set)` | 3 | Комментарий. |
+| `profile` | `(not set)` | 3 | Профиль. |
+| `home-hero` | `(not set)` | 1 | Главный блок главной. |
+| `travel_detail` | `(none)` | 1 | Та же коллизия поверхности статьи. |
+
+Все строки — platform `web`, stream `metravel - GA4`; устройства desktop/mobile.
+Подробный разрез содержит 87 строк: сумма сессий 171, канальный итог 169.
+Сессия может попасть в несколько строк: подробные строки и activeUsers
+неаддитивны. GA4 не сообщил thresholding/sampling/data loss; отчёт сохраняет
+метаданные и полноту каждой страницы ответа. Полная таблица — в карточке #2659.
+
+Механизм: `utils/analytics.ts` отправлял продуктовый `source` в gtag без
+преобразования; значения совпадают с sessionSource живого отчёта. Контекст
+квеста также передавал собственные `client_id`/`session_id` в зарезервированные
+поля GA. Исправление на границе GA4 переименовывает их в `ui_source`,
+`metravel_client_id`, `metravel_session_id`; Метрика и внутренние события
+сохраняют прежний контракт. В GA-отчётах UI-разрез теперь требует параметр
+`ui_source` (при необходимости — отдельное custom dimension), а не acquisition
+source. Старая история GA4 этим не переписывается.
+
+Первый GA page_view ставится после config и до очереди продуктовых событий;
+дедупликация отдельна для GA/Метрики, поэтому поздняя Метрика не повторяет GA
+просмотр, а SPA replaceState до загрузки GA не гасит первый просмотр. Исходные
+очищенные landing URL/referrer сохраняются в памяти до согласия. Остаточные
+`(not set)` могут быть связаны с этими коллизиями/порядком, но это гипотеза:
+120 событий session_start уже есть внутри Unassigned, отсутствие старта не
+объясняет всю группу. Боты, блокировки и согласие не объявляются причиной без
+доказательств; native-аналитика отключена, consent opt-in сохранён.
+
+Словарь новых исходящих UTM — `utils/utm.ts`: `social` для известной соцсети,
+`referral` для generic/native/copy share, `email` для писем. Тип поверхности
+остаётся в campaign (`badge_*`, `quest_*`). Прежние `badge_share`/`quest_result`
+не соответствовали стандартным правилам каналов; в baseline таких medium нет,
+поэтому их исправление предотвращает риск, но не объясняет эти 169 сессий.
+Существующие метки входного URL сохраняются; внутренние переходы не получают
+новых UTM. Письма бэкенда вне scope этого репозитория.
+
+Повторный замер: семь **полных** дней после фактического выката + 48 часов
+на обработку GA4. При выкате 19.10 — окно **20–26.10**, earliest recheck
+**29.10.2026 00:00 Europe/Minsk**:
+`npm run stats:ga4 -- --property 362328641 --channel-breakdown --start-date 2026-10-20 --end-date 2026-10-26 --json`.
+Требования: total sessions >0, Unassigned <10%, отсутствие мешающих ограничений
+качества, остаточные источники объяснены. До замера #2659 остаётся в `testing`
+с точным временным gate; снижение доли пока не подтверждено.
 
 ## Baseline воронки — 2026-08-18 (спринт 25)
 

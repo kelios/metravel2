@@ -1095,6 +1095,11 @@ mounted regression short/tall/width/interaction и исходные14cases/56row
   (`google`/`yandex`/`search`/`social`/`referral`/`campaign`/`internal`/`direct`),
   `platform`, плюс квестовые `quest_id`, `city_id`, `run_id`, `passed_count`,
   `steps_count`, `progress_pct`, `duration_sec`.
+  На границе отправки в GA4 (`utils/analytics.ts`, #2659) продуктовые
+  `source`/`client_id`/`session_id` преобразуются в `ui_source`/
+  `metravel_client_id`/`metravel_session_id`, чтобы не перезаписывать acquisition
+  и собственные идентификаторы GA. Контекст внутри приложения, intent-события
+  и Метрика сохраняют исходные имена. Для UI-разреза GA используется `ui_source`.
   - **Страна клиентом не считается.** И GA4, и Метрика проставляют гео по IP
     сами на каждое событие (в GA4 измерение `Country`, в Метрике срез
     «География»), точнее и без сетевого запроса из браузера. Отдельного
@@ -1156,7 +1161,7 @@ mounted regression short/tall/width/interaction и исходные14cases/56row
   `city_id` и метрика `duration_sec` (секунды, GA4 даёт и среднее)
   зарегистрированы пользовательскими определениями 23.09.2026: разрезы по ним
   есть только у событий с этой даты, задним числом GA4 их не восстанавливает.
-  `run_id`/`client_id`/`session_id` не регистрируются — у каждого прохождения,
+  `run_id`/`metravel_client_id`/`metravel_session_id` не регистрируются — у каждого прохождения,
   браузера и визита своё значение, в отчётах они ушли бы в «(other)».
   Метрика (счётчик `62803912`): каждое событие приходит как `reachGoal` с тем
   же именем, на все семь имён есть JS-цели (условие «совпадает»; `quest_start`

@@ -76,6 +76,9 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
       window.dataLayer.push(arguments);
     };
     window.gtag('js', new Date());
+    // Seed acquisition before config, without pinning per-stream page fields
+    // above later SPA set updates used by automatic engagement events.
+    window.gtag('set', { page_location: entryUrl, page_referrer: entryReferrer });
     // We send page_view manually in trackPage() for SPA navigation,
     // so disable GA automatic page_view to avoid duplicates.
     // (transport_type:'beacon' is the GA4 default; do not pass it explicitly.)
@@ -86,6 +89,11 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
       allow_google_signals: false,
       allow_ad_personalization_signals: false
     });
+    window['ga-disable-' + GA_ID] = false;
+    // Establish acquisition from the landing page before queued product events
+    // can flush. SPA history may already have changed while consent was pending.
+    trackGaPage(entryUrl);
+    trackPage();
     try { window.dispatchEvent(new CustomEvent('metravel:analytics-ready')); } catch(_e) {}
 
     var ga = document.createElement('script');
@@ -147,9 +155,8 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
     metrikaScript.onload = function(){
       window.__metravelMetrikaLoading = false;
       initMetrika();
-      // Re-emit a hit for the current URL: Metrika may have been initialised
-      // after the first trackPage() call and missed the queued hit.
-      window.__metravelLastTrackedUrl = null;
+      // Each provider has its own delivery state: a late Metrika load must not
+      // duplicate the initial GA page_view.
       trackPage();
     };
 
@@ -190,6 +197,25 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
     return s.slice(0, queryIndex) + (kept.length ? '?' + kept.join('&') : '') + fragment;
   }
 
+  // In-memory and sanitized only; no analytics storage or request before opt-in.
+  var entryUrl = stripSecretParams(window.location.href);
+  var entryReferrer = stripSecretParams(document.referrer);
+
+  function trackGaPage(url){
+    if (!HAS_GA || !GA_ID || !window.gtag || !isAnalyticsAllowed() || window['ga-disable-' + GA_ID]) return;
+    if (window.__metravelGaLastTrackedUrl === url) return;
+    var prev = window.__metravelGaLastTrackedUrl || entryReferrer;
+    var parsed = new URL(url);
+    window.gtag('set', { page_location: url, page_referrer: prev });
+    window.gtag('event', 'page_view', {
+      page_title: document.title,
+      page_location: url,
+      page_path: parsed.pathname + parsed.search,
+      page_referrer: prev
+    });
+    window.__metravelGaLastTrackedUrl = url;
+  }
+
   // Third-party tags read document.location on their own (Metrika watch and
   // clickmap, GA4 enhanced measurement such as scroll), so stripping our own hits
   // is not enough (#2121 prod acceptance). While the address bar carries an
@@ -205,35 +231,24 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
 
   function trackPage(){
     try {
+      if (!isAnalyticsAllowed() || IS_WEB_AUTOMATION) return;
       if (window.__metravelAnalyticsHeldBySecret) {
         if (!hasSecretParams(window.location.href)) loadAnalytics();
         return;
       }
       var url = stripSecretParams(window.location.href);
-      if (window.__metravelLastTrackedUrl === url) return;
       // For SPA navigations report the previous in-app URL as referer,
       // so Metrika/GA4 reports show the real funnel between pages.
       // For the very first hit fall back to document.referrer (external entry).
-      var prev = window.__metravelLastTrackedUrl || stripSecretParams(document.referrer);
-      window.__metravelLastTrackedUrl = url;
-      if (HAS_METRIKA && window.__metravelMetrikaReady && window.ym) {
+      var prev = window.__metravelMetrikaLastTrackedUrl || entryReferrer;
+      if (HAS_METRIKA && window.__metravelMetrikaReady && window.ym && window.__metravelMetrikaLastTrackedUrl !== url) {
         window.ym(${metrikaId || 0}, 'hit', url, {
           title: document.title,
           referer: prev
         });
+        window.__metravelMetrikaLastTrackedUrl = url;
       }
-      if (HAS_GA && GA_ID && window.gtag && isAnalyticsAllowed() && !window['ga-disable-' + GA_ID]) {
-        var loc = window.location;
-        // Every later GA4 event on this page (custom events, user_engagement)
-        // reads page_location from here instead of the raw document.location.
-        window.gtag('set', { page_location: url, page_referrer: prev });
-        window.gtag('event', 'page_view', {
-          page_title: document.title,
-          page_location: url,
-          page_path: stripSecretParams((loc && loc.pathname ? loc.pathname : '') + (loc && loc.search ? loc.search : '')),
-          page_referrer: prev
-        });
-      }
+      trackGaPage(url);
     } catch(_){}
   }
 

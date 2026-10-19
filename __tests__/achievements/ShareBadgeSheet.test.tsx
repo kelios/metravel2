@@ -134,7 +134,7 @@ describe('ShareBadgeSheet', () => {
     const link = mockSetString.mock.calls[0][0] as string
     expect(link).toContain('https://metravel.by/achievements/901')
     expect(link).toContain('utm_source=copy')
-    expect(link).toContain('utm_medium=badge_share')
+    expect(link).toContain('utm_medium=referral')
     expect(mockTrackShared).toHaveBeenCalledWith(
       expect.objectContaining({ channel: 'copy', achievementId: 901 }),
     )

@@ -13,7 +13,7 @@ describe('getAnalyticsInlineScript', () => {
   it('respects explicit analytics opt-out via ga-disable flag', () => {
     const script = getAnalyticsInlineScript(0, 'G-TEST123456')
     expect(script).toContain("window['ga-disable-' + GA_ID]")
-    expect(script).toContain("!window['ga-disable-' + GA_ID]")
+    expect(script).toContain("|| window['ga-disable-' + GA_ID]) return;")
   })
 
   it('schedules analytics bootstrap shortly after page load', () => {

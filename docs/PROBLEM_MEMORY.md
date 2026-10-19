@@ -6906,3 +6906,25 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
 - Новое нарушение того же пути — reopen #2482; новая поверхность с иной
   причиной — create-linked к этой цепочке. Эвристическая классификация
   белорусских слов без характерных букв остаётся ограничением #2472.
+
+## GA4: UI-поля в acquisition и собственные session IDs (#2659)
+
+- **Problem key:** `ga4-sessions-unassigned-channel`.
+- **Canonical:** #2659; related #458/#1472/#2062/#2192/#1031.
+- **Observed:** 19.10.2026 Data API property 362328641, окно 19.09–18.10:
+  169/516 сессий Unassigned (32,75%); `sessionSource` содержит `quest_detail`,
+  `travel_detail`, `home_quests` и другие UI-поверхности. Organic Search=287 —
+  здоровый контроль. `(not set)`=58 сессий в отдельном source-разрезе; причина
+  этой группы не доказана. Полная таблица и ограничения — #2659/GROWTH_PLAN.
+- **Mechanism:** `utils/analytics.ts` передавал `source` без преобразования в GA;
+  `utils/analyticsContext.ts` подмешивал свои `client_id`/`session_id`, совпадающие
+  с полями GA. Общая дедупликация в `utils/analyticsInlineScript.ts` могла
+  отметить URL до готовности GA, а поздняя Метрика повторяла GA page_view.
+- **Permanent control:** GA-only namespacing `ui_source`/`metravel_client_id`/
+  `metravel_session_id`, независимая дедупликация провайдеров и первый GA
+  page_view до очереди. `utils/utm.ts` + тест всех генерируемых share outputs:
+  стандартный medium, тип поверхности в campaign. Data API диагностика
+  учитывает полные дни, пагинацию и неаддитивность; monthly threshold <10%.
+- **Evidence status:** исправления требуют production-проверки транспорта;
+  метрика <10% требует семи полных дней после выката +48h обработки. История
+  GA не исправляется задним числом. Consent/native scope не расширяется.
