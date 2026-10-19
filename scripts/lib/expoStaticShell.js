@@ -11,7 +11,9 @@
  * `memberDocumentIssues` in `questSeoContract.js`).
  */
 
+const crypto = require('crypto')
 const fs = require('fs')
+const vm = require('vm')
 const { parseDocument, DomUtils } = require('htmlparser2')
 
 const HYDRATE_FLAG_SOURCE = 'globalThis\\.__EXPO_ROUTER_HYDRATE__\\s*=\\s*true\\s*;?'
@@ -101,6 +103,82 @@ function readQuestLocaleBootChunks(jsDir, locales, exportedCatchAllHtml, fileSys
   }))
 }
 
+// #2484: the full catalogue (~115 KB brotli) shared the head's bandwidth with
+// `entry`, and the boot waits for both. A translated member ships only the
+// keys its head chunks can render; `i18n/translate.web.ts` loads the complete
+// catalogue right after and holds every other chunk until it lands.
+// `i18n/babel-inline-plugin.js` compiles each call to `{h:<hash>,v:"<ru>"}`;
+// the minifier may print the hash in exponent form (`3174359e3`).
+const TRANSLATION_CALL = /(?<![\w$])h:([^,}]{1,24}),v:/g
+const HASH_LITERAL = /^\d+(?:e\d+)?$/
+const BOOT_CATALOG_GLOBAL = '__METRAVEL_BOOT_CATALOGS__'
+const bootCatalogPattern = (locale) => new RegExp(`^locale-${locale}-boot-[0-9a-f]+\\.js$`)
+const fullCatalogPattern = (locale) => new RegExp(`^locale-${locale}-[0-9a-f]+\\.js$`)
+
+function translationHashes(source, label) {
+  const hashes = new Set()
+  for (const [, literal] of String(source).matchAll(TRANSLATION_CALL)) {
+    if (!HASH_LITERAL.test(literal)) throw new Error(`${label}: unrecognized translation hash ${literal}`)
+    hashes.add(Number(literal))
+  }
+  return hashes
+}
+
+const isMap = (value) => Object.prototype.toString.call(value) === '[object Map]'
+
+/** Entries of a production `locale-<lang>` chunk (`__d(factory)` exporting `<lang>Catalog`). */
+function evaluateCatalogChunk(source, locale) {
+  const exported = []
+  const sandbox = {
+    __d(factory) {
+      const exports = {}
+      factory(sandbox, null, null, null, { exports }, exports, null)
+      exported.push(exports)
+    },
+  }
+  vm.runInNewContext(String(source), sandbox, { timeout: 10000 })
+  const catalog = exported.length === 1 ? exported[0][`${locale}Catalog`] : null
+  if (!isMap(catalog)) throw new Error(`locale-${locale} chunk does not export ${locale}Catalog`)
+  return [...catalog]
+}
+
+function evaluateBootCatalog(source, locale) {
+  const sandbox = {}
+  vm.runInNewContext(String(source), sandbox, { timeout: 10000 })
+  const entries = sandbox[BOOT_CATALOG_GLOBAL]?.[locale]
+  if (!Array.isArray(entries)) throw new Error(`locale-${locale} boot catalog defines no entries`)
+  return entries
+}
+
+/**
+ * Write `locale-<lang>-boot-<md5>.js` next to the export and put it in place of
+ * the full catalogue in each locale's boot list. Its keys cover every chunk the
+ * translated member lists: the base page's scripts plus the boot chunks.
+ */
+function writeQuestLocaleBootCatalogs(jsDir, bootChunks, pageHtml, fileSystem = fs) {
+  const readChunk = (src) => {
+    if (!WEB_CHUNK_PATH.test(src)) throw new Error(`invalid boot chunk path ${src}`)
+    return fileSystem.readFileSync(`${jsDir}/${src.slice(WEB_CHUNK_PREFIX.length)}`, 'utf8')
+  }
+  const pageScripts = scriptSrcs(pageHtml).filter((src) => src.startsWith(WEB_CHUNK_PREFIX))
+  const result = new Map()
+  for (const [locale, srcs] of bootChunks) {
+    const catalogSrc = srcs.find((src) => fullCatalogPattern(locale).test(src.slice(WEB_CHUNK_PREFIX.length)))
+    if (!catalogSrc) throw new Error(`boot chunks of ${locale} have no locale-${locale} catalogue`)
+    const shipped = [...new Set([...pageScripts, ...srcs])].filter((src) => src !== catalogSrc)
+    const hashes = new Set(shipped.flatMap((src) => [...translationHashes(readChunk(src), src)]))
+    const entries = evaluateCatalogChunk(readChunk(catalogSrc), locale)
+    const known = new Set(entries.map(([hash]) => hash))
+    const unknown = [...hashes].filter((hash) => !known.has(hash))
+    if (unknown.length) throw new Error(`locale-${locale} catalogue lacks ${unknown.length} shipped keys (e.g. ${unknown[0]})`)
+    const content = `(globalThis.${BOOT_CATALOG_GLOBAL}??={}).${locale}=${JSON.stringify(entries.filter(([hash]) => hashes.has(hash)))};\n`
+    const name = `locale-${locale}-boot-${crypto.createHash('md5').update(content).digest('hex')}.js`
+    fileSystem.writeFileSync(`${jsDir}/${name}`, content)
+    result.set(locale, srcs.map((src) => (src === catalogSrc ? WEB_CHUNK_PREFIX + name : src)))
+  }
+  return result
+}
+
 // htmlparser2 keeps template/noscript descendants in its ordinary tree. They
 // are inert in the JS-enabled document and must never become active boot tags.
 function activeElements(doc, name) {
@@ -179,14 +257,21 @@ function bootChunkIssues(html, locale, readChunk) {
   for (const node of doc.scripts) {
     if (node.parent !== doc.head) issues.push(`loads Expo script outside head: ${node.attribs.src}`)
   }
-  const catalog = new RegExp(`^locale-${locale}-[0-9a-f]+\\.js$`)
-  const catalogs = scripts.filter((src) => catalog.test(src.slice(WEB_CHUNK_PREFIX.length)))
-  if (!catalogs.length) issues.push(`does not ship the locale-${locale} chunk`)
-  if (new Set(catalogs).size > 1) issues.push(`ships more than one locale-${locale} chunk`)
+  const named = (pattern) => scripts.filter((src) => pattern.test(src.slice(WEB_CHUNK_PREFIX.length)))
+  const catalogs = named(bootCatalogPattern(locale))
+  if (!catalogs.length) issues.push(`does not ship the locale-${locale} boot catalog`)
+  if (new Set(catalogs).size > 1) issues.push(`ships more than one locale-${locale} boot catalog`)
+  // #2484: the complete catalogue loads after boot, off the critical path.
+  issues.push(...named(fullCatalogPattern(locale)).map((src) => `ships the full catalogue ${src} before entry`))
   const deps = [...new Set([...new Set(routes)].flatMap((route) => chunkDependencies(readChunk(route))))]
-  for (const src of new Set([...deps, ...catalogs])) readChunk(src)
   const present = new Set(scripts)
   issues.push(...deps.filter((dep) => !present.has(dep)).map((dep) => `does not ship boot chunk ${dep}`))
+  if (catalogs.length === 1) {
+    const keys = new Set(evaluateBootCatalog(readChunk(catalogs[0]), locale).map(([hash]) => hash))
+    const missing = new Set(scripts.filter((src) => src !== catalogs[0])
+      .flatMap((src) => [...translationHashes(readChunk(src), src)]).filter((hash) => !keys.has(hash)))
+    if (missing.size) issues.push(`boot catalog ${catalogs[0]} misses ${missing.size} keys of the shipped chunks`)
+  }
   return issues
 }
 
@@ -234,4 +319,6 @@ module.exports = {
   missingBootChunks,
   readQuestLocaleBootChunks,
   shipBootChunks,
+  translationHashes,
+  writeQuestLocaleBootCatalogs,
 }

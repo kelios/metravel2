@@ -295,7 +295,11 @@ f.fetchJsonOnce=f.fetchJson=async url=>{
       const webJs = path.join(dist, '_expo/static/js/web')
       fs.mkdirSync(webJs, { recursive: true })
       for (const chunk of ['entry-0a.js', '[...missing]-0a.js', 'locale-be-0a.js', 'locale-uk-0a.js', 'locale-pl-0a.js', 'locale-en-0a.js']) {
-        fs.writeFileSync(path.join(webJs, chunk), '__d(function(){},0,[]);')
+        // #2484: a locale chunk exports its catalogue; the build writes a boot subset from it.
+        const locale = /^locale-(\w+)-/.exec(chunk)?.[1]
+        fs.writeFileSync(path.join(webJs, chunk), locale
+          ? `__d(function(g,r,i,a,m,e,d){e.${locale}Catalog=new Map([])},0,[]);`
+          : '__d(function(){},0,[]);')
       }
       fs.writeFileSync(path.join(dist, 'index.html'), '<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Fixture</title><script src="/_expo/static/js/web/entry-0a.js" defer></script></head><body><div id="root"></div></body></html>')
       // The exported catch-all selects actual route assets; a directory listing is not membership.

@@ -90,7 +90,7 @@ const {
   insertQuestLocaleSlots,
   markCyrillicLanguage,
 } = require('./lib/questSeoContract');
-const { disableExpoRouterHydration, emptyAppRoot, readQuestLocaleBootChunks, shipBootChunks } = require('./lib/expoStaticShell');
+const { disableExpoRouterHydration, emptyAppRoot, readQuestLocaleBootChunks, shipBootChunks, writeQuestLocaleBootCatalogs } = require('./lib/expoStaticShell');
 const { scoreDetailCohort } = require('./lib/questDetailCohort');
 const {
   buildQuestCityWalkModel,
@@ -4423,10 +4423,12 @@ async function main() {
     }
     console.log(`  🧩 Quest pages: ${indexableQuestPaths.size}/${questPagesToWrite.length} indexable`);
     if (QUEST_SEO_CANDIDATE) {
-      const questLocaleBootChunks = readQuestLocaleBootChunks(
-        path.join(DIST_DIR, '_expo', 'static', 'js', 'web'), QUEST_TRANSLATED_LOCALES,
+      const questJsDir = path.join(DIST_DIR, '_expo', 'static', 'js', 'web');
+      // #2484: each locale's head carries a boot subset of its catalogue.
+      const questLocaleBootChunks = writeQuestLocaleBootCatalogs(questJsDir, readQuestLocaleBootChunks(
+        questJsDir, QUEST_TRANSLATED_LOCALES,
         fs.readFileSync(path.join(DIST_DIR, '[...missing].html'), 'utf8'),
-      );
+      ), questBaseHtml);
       const candidate = await buildQuestLocaleCandidate({
         publicationMode: QUEST_SEO_PUBLICATION_MODE,
         ruPages: questSeoRuPages,

@@ -52,15 +52,40 @@ import type { FrontendQuestBundle } from '@/utils/questAdapters';
 import { getFormatLocale, translate as i18nT, translatePlural } from '@/i18n'
 import { formatRatingValue } from '@/utils/ratingHelpers';
 import { hasPublicQuestRating } from '@/api/questRating';
+import { readSyncImport } from '@/utils/syncImport';
 
 
-const QuestWizard = React.lazy<React.ComponentType<QuestWizardProps>>(() =>
-  Promise.resolve(import('@/components/quests/QuestWizard')).then((module: any) => ({ default: module.QuestWizard || module.default })),
-);
+// #2484: same handover as the quest screen in `app/[...missing].web.tsx` (#2465).
+// Requested on first render, the wizard chunk suspended its boundary, and React
+// held the reveal 300 ms after that fallback even when the quest data had long
+// arrived. Started with this module, the chunk loads alongside the quest
+// requests, and a wizard mounted after it is in renders without suspending.
+type QuestWizardComponentType = React.ComponentType<QuestWizardProps>;
+let loadedQuestWizard: QuestWizardComponentType | null = null;
+const pickQuestWizard = (module: any): QuestWizardComponentType => module.QuestWizard || module.default;
+const loadQuestWizard = () => {
+  const pending = import('@/components/quests/QuestWizard');
+  const ready = readSyncImport(pending);
+  if (ready) loadedQuestWizard = pickQuestWizard(ready);
+  return pending.then((module) => {
+    loadedQuestWizard = pickQuestWizard(module);
+    return { default: loadedQuestWizard };
+  });
+};
+const QuestWizard = React.lazy<QuestWizardComponentType>(loadQuestWizard);
+if (Platform.OS === 'web' && typeof window !== 'undefined') {
+  loadQuestWizard().catch(() => undefined);
+}
+// One component type for the life of a mount: switching lazy → loaded after a
+// commit would remount the wizard and drop its state.
+function QuestWizardWeb(props: QuestWizardProps) {
+  const [Wizard] = useState<QuestWizardComponentType>(() => loadedQuestWizard ?? QuestWizard);
+  return <Wizard {...props} />;
+}
 const FeatherIconLazy = React.lazy<React.ComponentType<{ name: IconName; size: number; color: string }>>(() =>
   Promise.resolve(import('@expo/vector-icons/Feather')).then((module: any) => ({ default: module.Feather || module.default })),
 );
-const QuestWizardComponent = Platform.OS === 'web' ? QuestWizard : QuestWizardDirect;
+const QuestWizardComponent = Platform.OS === 'web' ? QuestWizardWeb : QuestWizardDirect;
 const FeatherIcon = Platform.OS === 'web' ? FeatherIconLazy : Feather;
 
 type Colors = ReturnType<typeof useThemedColors>;

@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const { makeTempDir, removeDir } = require('./cli-test-utils')
-const { bootChunkIssues, missingBootChunks, readQuestLocaleBootChunks, shipBootChunks } = require('@/scripts/lib/expoStaticShell')
+const { bootChunkIssues, missingBootChunks, readQuestLocaleBootChunks, shipBootChunks, translationHashes, writeQuestLocaleBootCatalogs } = require('@/scripts/lib/expoStaticShell')
 
 const WEB = '/_expo/static/js/web/'
 const tag = (name: string) => `<script src="${WEB}${name}" defer></script>`
@@ -9,6 +9,9 @@ const page = (names: string[]) => `<head>${names.map(tag).join('')}</head>`
 const ROUTE = '[...missing]-abc123.js'
 const OTHER_ROUTE = '[...missing]-def456.js'
 const SHELL = page([ROUTE, 'entry-1.js'])
+// #2484: the head ships a boot subset of the catalogue, never the full one.
+const BOOT = 'locale-pl-boot-ee11.js'
+const bootCatalog = (entries: unknown[]) => `(globalThis.__METRAVEL_BOOT_CATALOGS__??={}).pl=${JSON.stringify(entries)};`
 
 // #2465: a translated quest member ships its catch-all route and locale catalog.
 describe('quest locale boot chunks', () => {
@@ -21,6 +24,7 @@ describe('quest locale boot chunks', () => {
     for (const name of ['__shared-0-aa.js', '__shared-3-bb.js', 'entry-1.js']) write(name)
     for (const locale of ['pl', 'en']) write(`locale-${locale}-ff00.js`)
     write('locale-plx-ff00.js')
+    write(BOOT, bootCatalog([]))
   })
   afterEach(() => removeDir(dir))
 
@@ -58,13 +62,13 @@ describe('quest locale boot chunks', () => {
 
   it('checks a page against the chunks it names, not the directory', () => {
     const route = fs.readFileSync(path.join(dir, '[...missing]-abc123.js'), 'utf8')
-    const read = (src: string) => (src.endsWith('[...missing]-abc123.js') ? route : '')
-    expect(bootChunkIssues(page(['__shared-0-aa.js', '__shared-3-bb.js', '[...missing]-abc123.js', 'locale-pl-ff00.js', 'entry-1.js']), 'pl', read)).toEqual([])
+    const read = (src: string) => (src.endsWith('[...missing]-abc123.js') ? route : src.endsWith(BOOT) ? bootCatalog([]) : '')
+    expect(bootChunkIssues(page(['__shared-0-aa.js', '__shared-3-bb.js', '[...missing]-abc123.js', BOOT, 'entry-1.js']), 'pl', read)).toEqual([])
     expect(bootChunkIssues(page(['__shared-0-aa.js', '[...missing]-abc123.js', 'entry-1.js']), 'pl', read)).toEqual([
-      'does not ship the locale-pl chunk', `does not ship boot chunk ${WEB}__shared-3-bb.js`,
+      'does not ship the locale-pl boot catalog', `does not ship boot chunk ${WEB}__shared-3-bb.js`,
     ])
-    expect(bootChunkIssues(page(['entry-1.js', '__shared-0-aa.js', '__shared-3-bb.js', '[...missing]-abc123.js', 'locale-pl-ff00.js']), 'pl', read))
-      .toEqual(['__shared-0-aa.js', '__shared-3-bb.js', ROUTE, 'locale-pl-ff00.js'].map((name) => `loads boot chunk ${WEB}${name} after entry`))
+    expect(bootChunkIssues(page(['entry-1.js', '__shared-0-aa.js', '__shared-3-bb.js', '[...missing]-abc123.js', BOOT]), 'pl', read))
+      .toEqual(['__shared-0-aa.js', '__shared-3-bb.js', ROUTE, BOOT].map((name) => `loads boot chunk ${WEB}${name} after entry`))
     expect(bootChunkIssues(page(['entry-1.js']), 'pl', read)).toEqual(['does not ship the [...missing] route chunk'])
   })
 
@@ -72,13 +76,13 @@ describe('quest locale boot chunks', () => {
     write(OTHER_ROUTE, `globalThis.__METRAVEL_CHUNK_DEPS__??={};globalThis.__METRAVEL_CHUNK_DEPS__["${WEB}${OTHER_ROUTE}"]=["${WEB}__shared-4-cc.js"];__d(function(){},3,[]);`)
     write('__shared-4-cc.js')
     const read = (src: string) => fs.readFileSync(path.join(dir, src.slice(WEB.length)), 'utf8')
-    const healthy = ['__shared-0-aa.js', '__shared-3-bb.js', '__shared-4-cc.js', ROUTE, OTHER_ROUTE, 'locale-pl-ff00.js', 'entry-1.js']
+    const healthy = ['__shared-0-aa.js', '__shared-3-bb.js', '__shared-4-cc.js', ROUTE, OTHER_ROUTE, BOOT, 'entry-1.js']
     expect(bootChunkIssues(page(healthy), 'pl', read)).toEqual([])
     expect(bootChunkIssues(page(healthy.filter((name) => name !== '__shared-4-cc.js')), 'pl', read)).toContain(`does not ship boot chunk ${WEB}__shared-4-cc.js`)
     expect(bootChunkIssues(page([...healthy, OTHER_ROUTE]), 'pl', read)).toContain(`duplicates boot chunk ${WEB}${OTHER_ROUTE}`)
     expect(bootChunkIssues(page([...healthy.filter((name) => name !== OTHER_ROUTE), OTHER_ROUTE]), 'pl', read)).toContain(`loads boot chunk ${WEB}${OTHER_ROUTE} after entry`)
     expect(bootChunkIssues(page([...healthy.filter((name) => name !== '__shared-4-cc.js'), '__shared-4-cc.js']), 'pl', read)).toContain(`loads boot chunk ${WEB}__shared-4-cc.js after entry`)
-    expect(bootChunkIssues(page([...healthy.filter((name) => name !== 'locale-pl-ff00.js'), 'locale-pl-ff00.js']), 'pl', read)).toContain(`loads boot chunk ${WEB}locale-pl-ff00.js after entry`)
+    expect(bootChunkIssues(page([...healthy.filter((name) => name !== BOOT), BOOT]), 'pl', read)).toContain(`loads boot chunk ${WEB}${BOOT} after entry`)
     fs.unlinkSync(path.join(dir, OTHER_ROUTE))
     expect(() => bootChunkIssues(page(healthy), 'pl', read)).toThrow()
   })
@@ -121,7 +125,7 @@ describe('quest locale boot chunks', () => {
   it.each(['template', 'noscript'])('keeps inert %s scripts unchanged and never counts them as shipped', (container) => {
     const inert = `<${container}>${tag(ROUTE)}${tag('entry-2.js')}</${container}>`
     const source = `<head></head><body>${inert}${tag('entry-1.js')}</body>`
-    const srcs = [`${WEB}__shared-0-aa.js`, `${WEB}__shared-3-bb.js`, `${WEB}${ROUTE}`, `${WEB}locale-pl-ff00.js`]
+    const srcs = [`${WEB}__shared-0-aa.js`, `${WEB}__shared-3-bb.js`, `${WEB}${ROUTE}`, `${WEB}${BOOT}`]
     expect(missingBootChunks(source, srcs)).toEqual(srcs)
     expect(() => readQuestLocaleBootChunks(dir, ['pl'], source)).toThrow(/no \[\.\.\.missing\] route scripts/)
     const result = shipBootChunks(source, srcs)
@@ -158,7 +162,7 @@ describe('quest locale boot chunks', () => {
   })
 
   it('rejects body-only and preload-only boot assets in the stored verifier', () => {
-    const names = ['__shared-0-aa.js', '__shared-3-bb.js', ROUTE, 'locale-pl-ff00.js', 'entry-1.js']
+    const names = ['__shared-0-aa.js', '__shared-3-bb.js', ROUTE, BOOT, 'entry-1.js']
     const read = (src: string) => fs.readFileSync(path.join(dir, src.slice(WEB.length)), 'utf8')
     const bodyOnly = `<head></head><body>${names.map(tag).join('')}</body>`
     expect(bootChunkIssues(bodyOnly, 'pl', read)).toContain(`loads Expo script outside head: ${WEB}${ROUTE}`)
@@ -168,5 +172,36 @@ describe('quest locale boot chunks', () => {
     const healthy = shipBootChunks(bodyOnly, [])
     expect(bootChunkIssues(healthy, 'pl', read)).toEqual([])
     expect(bootChunkIssues(healthy.replace(' defer', ' async'), 'pl', read).some((issue: string) => issue.includes('classic defer'))).toBe(true)
+  })
+
+  it('writes a boot subset with exactly the keys of the shipped chunks, in place of the full catalogue', () => {
+    write('__shared-0-aa.js', '__d(function(){var x={h:11,v:"a"},y={h:3174359e3,v:"b",p:{one:"b1"}}},1,[]);')
+    write('entry-1.js', '__d(function(){t({h:11,v:"a"})},9,[]);')
+    write('locale-pl-ff00.js', '__d(function(g,r,i,a,m,e,d){Object.defineProperty(e,"__esModule",{value:!0}),e.plCatalog=void 0;'
+      + 'e.plCatalog=new Map([[11,{value:"A"}],[3174359000,{value:"B",plurals:{one:"B1"}}],[99,{value:"unused"}]])},5,[]);')
+    const chunks = readQuestLocaleBootChunks(dir, ['pl'], SHELL)
+    const result = writeQuestLocaleBootCatalogs(dir, chunks, page(['__shared-0-aa.js', ROUTE, 'entry-1.js']))
+    const srcs = result.get('pl')
+    const boot = srcs[srcs.length - 1].slice(WEB.length)
+    expect(srcs.slice(0, -1)).toEqual(chunks.get('pl').slice(0, -1))
+    expect(boot).toMatch(/^locale-pl-boot-[0-9a-f]{32}\.js$/)
+    const sandbox: Record<string, any> = {}
+    require('vm').runInNewContext(fs.readFileSync(path.join(dir, boot), 'utf8'), sandbox)
+    expect(sandbox.__METRAVEL_BOOT_CATALOGS__.pl).toEqual([[11, { value: 'A' }], [3174359000, { value: 'B', plurals: { one: 'B1' } }]])
+    const read = (src: string) => fs.readFileSync(path.join(dir, src.slice(WEB.length)), 'utf8')
+    const shipped = shipBootChunks(page(['__shared-0-aa.js', ROUTE, 'entry-1.js']), srcs)
+    expect(bootChunkIssues(shipped, 'pl', read)).toEqual([])
+    write('__shared-0-aa.js', '__d(function(){var x={h:11,v:"a"},z={h:12,v:"c"}},1,[]);')
+    expect(bootChunkIssues(shipped, 'pl', read)).toEqual([`boot catalog ${WEB}${boot} misses 1 keys of the shipped chunks`])
+    expect(bootChunkIssues(shipBootChunks(shipped, [`${WEB}locale-pl-ff00.js`]), 'pl', read))
+      .toContain(`ships the full catalogue ${WEB}locale-pl-ff00.js before entry`)
+  })
+
+  it('fails closed on a key the catalogue lacks or a hash literal it cannot read', () => {
+    write('locale-pl-ff00.js', '__d(function(g,r,i,a,m,e,d){e.plCatalog=new Map([[11,{value:"A"}]])},5,[]);')
+    write('entry-1.js', '__d(function(){t({h:12,v:"c"})},9,[]);')
+    expect(() => writeQuestLocaleBootCatalogs(dir, readQuestLocaleBootChunks(dir, ['pl'], SHELL), SHELL)).toThrow(/lacks 1 shipped keys/)
+    expect(() => translationHashes('t({h:0x1f,v:"c"})', 'x.js')).toThrow(/unrecognized translation hash 0x1f/)
+    expect([...translationHashes('a={h:5,v:"x"},b={sh:6,v:"y"},c={h:7e2,v:"z"}', 'x.js')]).toEqual([5, 700])
   })
 })

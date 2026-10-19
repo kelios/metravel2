@@ -21,7 +21,7 @@ const {
   writeCandidateFile,
 } = require('@/scripts/lib/questLocalePackage')
 const { verifyQuestSeoPackage, listPrefixedQuestArtifacts } = require('@/scripts/lib/questSeoPackageVerify')
-const { appShellState, readQuestLocaleBootChunks } = require('@/scripts/lib/expoStaticShell')
+const { appShellState, readQuestLocaleBootChunks, writeQuestLocaleBootCatalogs } = require('@/scripts/lib/expoStaticShell')
 const { scoreDetailCohort } = require('@/scripts/lib/questDetailCohort')
 const gsp = require('@/scripts/generate-seo-pages')
 const { verifyQuestSeoPackageState } = require('@/scripts/verify-static-quest-seo')
@@ -42,9 +42,12 @@ const BOOT_FILES: Record<string, string> = {
   '__expo-metro-runtime-000a.js': 'globalThis.__d=function(){};',
   'entry-0123abcd.js': '__d(function(){},0,[]);',
   '[...missing]-0a1b.js': `globalThis.__METRAVEL_CHUNK_DEPS__??={};globalThis.__METRAVEL_CHUNK_DEPS__["${WEB_JS}[...missing]-0a1b.js"]=["${WEB_JS}__shared-3-0c.js"];__d(function(){},1,[]);`,
-  '__shared-3-0c.js': '__d(function(){},2,[]);',
-  ...Object.fromEntries(['be', 'uk', 'pl', 'en'].map((locale) => [`locale-${locale}-0d.js`, '__d(function(){},3,[]);'])),
+  '__shared-3-0c.js': '__d(function(){t({h:1,v:"ru"})},2,[]);',
+  ...Object.fromEntries(['be', 'uk', 'pl', 'en'].map((locale) => [`locale-${locale}-0d.js`,
+    `__d(function(g,r,i,a,m,e,d){e.${locale}Catalog=new Map([[1,{value:"${locale}"}],[2,{value:"lazy"}]])},3,[]);`])),
 }
+// #2484: the head ships a boot subset of the catalogue in place of locale-<lang>.
+const BOOT_CATALOG = expect.stringMatching(/^locale-pl-boot-[0-9a-f]{32}\.js$/)
 function writeBootChunks(dist: string, withBothRouteChunks = false) {
   const dir = path.join(dist, '_expo', 'static', 'js', 'web')
   fs.mkdirSync(dir, { recursive: true })
@@ -57,7 +60,7 @@ function writeBootChunks(dist: string, withBothRouteChunks = false) {
   }
   const catchAllHtml = `<head></head><body><script src="${WEB_JS}__expo-metro-runtime-000a.js" defer></script>${routes.map((name) => `<script src="${WEB_JS}${name}" defer></script>`).join('')}<script src="${WEB_JS}entry-0123abcd.js" defer></script></body>`
   fs.writeFileSync(path.join(dist, '[...missing].html'), catchAllHtml)
-  return readQuestLocaleBootChunks(dir, contract.TRANSLATED_LOCALES, catchAllHtml)
+  return writeQuestLocaleBootCatalogs(dir, readQuestLocaleBootChunks(dir, contract.TRANSLATED_LOCALES, catchAllHtml), catchAllHtml)
 }
 
 const BASE_HTML = [
@@ -601,7 +604,7 @@ describe('boot chunks of translated members (#2465)', () => {
     const c = await buildCase()
     const pl = fs.readFileSync(path.join(c.dist, contract.memberHtmlPath(4, 'quest-alpha', 'pl')), 'utf8')
     const scripts = [...pl.matchAll(/<script src="([^"]+)" defer><\/script>/g)].map((match) => match[1].replace(WEB_JS, ''))
-    expect(scripts).toEqual(['__expo-metro-runtime-000a.js', '__shared-3-0c.js', '[...missing]-0a1b.js', 'locale-pl-0d.js', 'entry-0123abcd.js'])
+    expect(scripts).toEqual(['__expo-metro-runtime-000a.js', '__shared-3-0c.js', '[...missing]-0a1b.js', BOOT_CATALOG, 'entry-0123abcd.js'])
     const parsed = new DOMParser().parseFromString(pl, 'text/html')
     expect([...parsed.head.querySelectorAll(`script[src^="${WEB_JS}"]`)].map((node) => node.getAttribute('src')?.replace(WEB_JS, ''))).toEqual(scripts)
     expect(parsed.body.querySelectorAll(`script[src^="${WEB_JS}"]`)).toHaveLength(0)
@@ -626,7 +629,7 @@ describe('boot chunks of translated members (#2465)', () => {
     const file = path.join(c.dist, contract.memberHtmlPath(4, 'quest-alpha', 'pl'))
     const html = fs.readFileSync(file, 'utf8')
     const scripts = [...html.matchAll(/<script src="([^"]+)" defer><\/script>/g)].map((match) => match[1].replace(WEB_JS, ''))
-    expect(scripts).toEqual(['__expo-metro-runtime-000a.js', '__shared-3-0c.js', '__shared-8-0f.js', '[...missing]-0a1b.js', '[...missing]-0e2f.js', 'locale-pl-0d.js', 'entry-0123abcd.js'])
+    expect(scripts).toEqual(['__expo-metro-runtime-000a.js', '__shared-3-0c.js', '__shared-8-0f.js', '[...missing]-0a1b.js', '[...missing]-0e2f.js', BOOT_CATALOG, 'entry-0123abcd.js'])
     finalize(c, c.receiptText)
     expect(verifyQuestSeoPackage(c.dist).failures).toEqual([])
     fs.unlinkSync(path.join(c.dist, '_expo', 'static', 'js', 'web', '__shared-8-0f.js'))
