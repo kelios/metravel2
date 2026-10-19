@@ -65,10 +65,14 @@ const takeBootCatalog = (locale: SupportedLocale): Map<number, LoadedTranslation
 // Expo's chunk loader (`expo/src/async-require`) is read from this global on
 // every `import()`. Chunks the document did not ship wait for the complete
 // catalogue: only the keys of the shipped chunks are in the boot subset.
-const holdLazyChunksUntil = (ready: Promise<void>) => {
+const bundleLoaderScope = () => {
   const scope = globalThis as unknown as Record<string, BundleLoader | string | undefined>
   const prefix = typeof scope.__METRO_GLOBAL_PREFIX__ === 'string' ? scope.__METRO_GLOBAL_PREFIX__ : ''
-  const key = `${prefix}__loadBundleAsync`
+  return { scope, key: `${prefix}__loadBundleAsync` }
+}
+
+const holdLazyChunksUntil = (ready: Promise<void>) => {
+  const { scope, key } = bundleLoaderScope()
   const load = scope[key]
   if (typeof load !== 'function') return
   const held: BundleLoader = (bundlePath) => Promise.all([load(bundlePath), ready]).then(() => undefined)
@@ -76,6 +80,21 @@ const holdLazyChunksUntil = (ready: Promise<void>) => {
   void ready.then(() => {
     if (scope[key] === held) scope[key] = load
   })
+}
+
+// After a failed load the next lazy chunk (a new screen, a menu) asks for the
+// complete catalogue again and waits for that attempt; callers that gate on
+// isWebLocaleLoaded() would never retry, since the subset counts as loaded.
+const retryFullCatalogOnNextChunk = (locale: SupportedLocale) => {
+  const { scope, key } = bundleLoaderScope()
+  const load = scope[key]
+  if (typeof load !== 'function') return
+  const retrying: BundleLoader = (bundlePath) => {
+    if (scope[key] === retrying) scope[key] = load
+    const retry = loadWebLocale(locale).catch(() => undefined)
+    return Promise.all([load(bundlePath), retry]).then(() => undefined)
+  }
+  scope[key] = retrying
 }
 
 export const loadWebLocale = async (locale: SupportedLocale): Promise<void> => {
@@ -102,6 +121,9 @@ export const loadWebLocale = async (locale: SupportedLocale): Promise<void> => {
     loadedCatalogs.set(locale, boot)
     partialCatalogs.add(locale)
     holdLazyChunksUntil(settled)
+    void settled.then(() => {
+      if (partialCatalogs.has(locale)) retryFullCatalogOnNextChunk(locale)
+    })
     return
   }
   await promise

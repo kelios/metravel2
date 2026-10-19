@@ -86,12 +86,15 @@ describe('web boot catalogue subset', () => {
       await (scope.__loadBundleAsync as Loader)('/_expo/static/js/web/Footer-1.js')
       expect(mod.getFixedTranslator('uk')(key)).toBe('Російська')
       expect(mod.getFixedTranslator('uk')(outside)).toBe('Английский')
-      expect(scope.__loadBundleAsync).toBe(original)
 
-      // The next request for the locale tries the complete catalogue again.
+      // The next lazy chunk asks for the complete catalogue again and waits for it.
       jest.dontMock('@/i18n/deferred/locale-uk')
-      await mod.loadWebLocale('uk')
+      const retrying = scope.__loadBundleAsync as Loader
+      expect(retrying).not.toBe(original)
+      await retrying('/_expo/static/js/web/Menu-1.js')
+      expect(original).toHaveBeenCalledWith('/_expo/static/js/web/Menu-1.js')
       expect(mod.getFixedTranslator('uk')(outside)).toBe('English')
+      expect(scope.__loadBundleAsync).toBe(original)
     } finally {
       jest.dontMock('@/i18n/deferred/locale-uk')
     }
