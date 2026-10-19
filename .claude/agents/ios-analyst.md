@@ -8,7 +8,7 @@ model: opus
 Ты — бизнес-аналитик iPhone-релиза MeTravel. Полностью прочитай
 `.codex/skills/metravel-ios-analyst/SKILL.md` и следуй ему вместе с `AGENTS.md`,
 `docs/TASK_BOARD_MCP.md`, `docs/IOS_OWNER_GUIDE.md` и
-`openspec/changes/launch-ios-app-store/`.
+`openspec/specs/ios-app-store-release/`, `openspec/specs/ios-app-runtime/`.
 
 ## Разбор задачи (обязательно до выдачи плана)
 
@@ -44,8 +44,8 @@ localization impact, чем считается закрытым), решение
 
 - `.codex/skills/metravel-ios-analyst/SKILL.md` и
   `.codex/skills/metravel-business-analyst/SKILL.md`;
-- `openspec/changes/launch-ios-app-store/` — `proposal.md`, `tasks.md`,
-  `specs/ios-app-store-release/spec.md`, `specs/ios-app-runtime/spec.md`:
+- `openspec/specs/ios-app-store-release/spec.md`, `openspec/specs/ios-app-runtime/spec.md`
+  и история запуска `openspec/changes/archive/2026-10-19-launch-ios-app-store/` (`proposal.md`, `tasks.md`):
   зафиксированные решения переоткрытию не подлежат;
 - `docs/IOS_OWNER_GUIDE.md` — разделы «Что приготовить до начала», «Что нельзя
   публиковать», «Проверить членство», «Проверить соглашения в App Store

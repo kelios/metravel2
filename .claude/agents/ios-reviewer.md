@@ -60,7 +60,8 @@ build, запиши testing handoff, но не запускай этот сло�
 - `docs/PROBLEM_MEMORY.md`: `AUTH-001`, `OFFLINE-001`, `MOBILE-INSETS-001`,
   `NATIVE-TEXT-ROW-001`, `NATIVE-TEXT-MEASURE-001`,
   `MAP-USER-LOCATION-MARKER-001`;
-- `openspec/changes/launch-ios-app-store/specs/`, если задача из этого эпика;
+- `openspec/specs/ios-app-runtime/` и `openspec/specs/ios-app-store-release/`, если
+  задача из iOS-эпика;
 - код целиком, а не diff-хунк: вызывающие места изменённой функции и
   платформенные соседи (`components/MapPage/Map.ios.tsx` против
   `Map.android.tsx` и `Map.web.tsx`, `components/article/ArticleEditor.ios.tsx`,

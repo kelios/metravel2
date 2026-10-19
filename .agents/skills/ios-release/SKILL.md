@@ -8,7 +8,9 @@ description: "Регламент релиза iPhone: bump → гейт → sign
 Регламент выпуска версии iPhone-приложения MeTravel (`by.metravel.app`). Первый
 релиз 1.0.5 (14) вышел в App Store 19.10.2026 (Apple ID 6801264369, #1940);
 статус и ссылка — `docs/IOS_STORE_LISTING.md`, история подготовки —
-`docs/IOS_OWNER_GUIDE.md` и OpenSpec `openspec/changes/launch-ios-app-store/`.
+`docs/IOS_OWNER_GUIDE.md` и архив OpenSpec
+`openspec/changes/archive/2026-10-19-launch-ios-app-store/`; действующие требования —
+`openspec/specs/ios-app-runtime/` и `openspec/specs/ios-app-store-release/`.
 
 ## База пайплайна
 
@@ -111,8 +113,9 @@ Read-only проверки (`ios:environment:check`, `ios:release:guard`, инс
      лежит в трекаемом `ios/metravel/metravel.entitlements`, есть
      `components/auth/AppleSignInButton.native.tsx`, `api/appleAuth.ts`,
      `expo-apple-authentication` и `usesAppleSignIn: true`; `ios:release:guard`
-     это стережёт. Отстали ДОКУМЕНТЫ: `openspec/changes/launch-ios-app-store/`
-     держит задачу 3.1 как `[ ]`, а `design.md:11` описывает состояние до правки.
+     это стережёт. Отставали ДОКУМЕНТЫ: OpenSpec-изменение запуска держало
+     задачу 3.1 как `[ ]`, а его `design.md:11` описывал состояние до правки
+     (изменение закрыто и архивировано 19.10.2026).
    - Статус комплаенса проверять **по коду и entitlements**, а не по чек-боксам
      в OpenSpec: у проекта bare-проект `ios/`, и config-плагины туда не доезжают,
      поэтому `app.json` тоже не источник истины.

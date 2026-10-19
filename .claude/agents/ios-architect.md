@@ -48,9 +48,9 @@ OpenSpec по `docs/spec-driven-development.md`), решение оформля�
 
 - `.codex/skills/metravel-ios-architect/SKILL.md` и
   `.codex/skills/metravel-system-architect/SKILL.md`;
-- `openspec/changes/launch-ios-app-store/` — `proposal.md`, `design.md`,
-  `tasks.md` и `specs/ios-app-runtime/spec.md`,
-  `specs/ios-app-store-release/spec.md`: там уже зафиксированы решения, которые
+- `openspec/specs/ios-app-runtime/spec.md`, `openspec/specs/ios-app-store-release/spec.md`
+  и история запуска `openspec/changes/archive/2026-10-19-launch-ios-app-store/`
+  (`proposal.md`, `design.md`, `tasks.md`): там уже зафиксированы решения, которые
   не переоткрываются;
 - `docs/ARCHITECTURE.md` и `docs/RULES.md` — слои, зависимости и существующие
   контракты, которые надо переиспользовать вместо параллельного механизма;
