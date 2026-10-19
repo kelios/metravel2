@@ -206,6 +206,31 @@ restore_env_file() {
   rm -f "$backup"
 }
 
+# Окно плановой нагрузки прода (#2663): выкат объявляет монитору хоста, что
+# 10–12 минут 100 % CPU единственного ядра — его плановая работа, а не авария.
+# Открывается только настоящим выкатом на прод, снимается в on_exit при любом
+# исходе; сбой не роняет выкат — монитор тогда просто пришлёт письмо, как раньше.
+PLANNED_LOAD_OPEN=0
+PLANNED_LOAD_TTL_SECONDS="${PLANNED_LOAD_TTL_SECONDS:-1200}"
+
+open_planned_load_window() {
+  [[ "$DEPLOY" == "1" && "$ENV" == "prod" ]] || return 0
+  if bash scripts/prod-planned-load.sh open frontend-deploy "$PLANNED_LOAD_TTL_SECONDS" \
+    "frontend-deploy:${BUILD_SOURCE_SHA:0:12}" </dev/null; then
+    PLANNED_LOAD_OPEN=1
+    echo "🛠  Окно плановой нагрузки на проде: $((PLANNED_LOAD_TTL_SECONDS / 60)) мин"
+  else
+    echo "⚠️ Окно плановой нагрузки на проде не открыто — монитор хоста может прислать письмо о CPU"
+  fi
+}
+
+close_planned_load_window() {
+  [[ "$PLANNED_LOAD_OPEN" == "1" ]] || return 0
+  PLANNED_LOAD_OPEN=0
+  bash scripts/prod-planned-load.sh close frontend-deploy </dev/null ||
+    echo "⚠️ Окно плановой нагрузки на проде не снято — истечёт само"
+}
+
 on_exit() {
   local status=$?
 
@@ -221,6 +246,7 @@ on_exit() {
   if [[ -n "$SEO_INPUT_CONTROL" ]]; then rm -rf "$SEO_INPUT_CONTROL"; fi
   print_stage_report || true
   stop_prod_media_checks
+  close_planned_load_window || true
   if [[ -n "${MEDIA_CHECKS_LOG:-}" ]]; then
     rm -f "$MEDIA_CHECKS_LOG"
   fi
@@ -719,6 +745,7 @@ if [[ "$QUEST_SEO_MODE" != "legacy" ]]; then
 fi
 
 assert_deployable_source "$ENV" "$ALLOW_DIRTY" "$DEPLOY"
+open_planned_load_window
 
 echo "🔁 Старт сборки..."
 stage "зависимости"
