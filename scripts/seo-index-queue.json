@@ -2934,11 +2934,23 @@
     },
     {
       "day": 12,
-      "submittedAt": null,
+      "submittedAt": "2026-10-19",
       "urls": [
         "https://metravel.by/travels/rozhdestvenskie-iarmarki-polshi-2026-krakov-vrotslav-katovitse-gdansk-poznan-varshava-daty-adresa-i-sovety"
       ],
-      "note": "новая статья 816 (11.10.2026), публикация до прод-выката: 404 до выката, подавать после"
+      "note": "новая статья 816 (11.10.2026), публикация до прод-выката: 404 до выката, подавать после. Подана 19.10.2026 (#2674): гейт seo:queue --batch 12 → 200; URL Inspection ДО подачи: «URL нет в индексе Google», «Страница не проиндексирована: URL неизвестен Google», Файлы Sitemap «Нет ссылающихся файлов Sitemap», последнее сканирование отсутствует",
+      "indexnowVia": "seo-index-queue-check.js --batch 12 --out .codex-temp/batch12.txt → indexnow-submit.js --urls-file",
+      "indexnowSubmittedAt": "2026-10-19",
+      "indexnowCodes": {"api.indexnow.org": 200, "yandex.com": 200},
+      "gscRequestedAt": "2026-10-19",
+      "gscRequests": [
+        {
+          "url": "https://metravel.by/travels/rozhdestvenskie-iarmarki-polshi-2026-krakov-vrotslav-katovitse-gdansk-poznan-varshava-daty-adresa-i-sovety",
+          "result": "accepted",
+          "at": "2026-10-19",
+          "note": "URL Inspection до подачи: «URL нет в индексе Google» (URL неизвестен Google, нет ссылающихся файлов Sitemap). Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования"
+        }
+      ]
     },
     {
       "day": 13,
