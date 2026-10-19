@@ -79,6 +79,7 @@ describe('AboutScreen', () => {
   });
 
   it('renders hero and feature sections', () => {
+    (Platform as { OS: string }).OS = 'web';
     const { getByText, getByTestId, queryByText } = render(<AboutScreen />);
 
     expect(getByText('MeTravel.by')).toBeTruthy();
@@ -125,9 +126,12 @@ describe('AboutScreen', () => {
     (os) => {
       (Platform as { OS: string }).OS = os;
 
-      const { queryByTestId } = render(<AboutScreen />);
+      const { queryByTestId, queryByText } = render(<AboutScreen />);
 
       expect(queryByTestId('about-store-buttons')).toBeNull();
+      expect(
+        queryByText('Приложение MeTravel для iPhone, iPad и Android — в App Store и Google Play'),
+      ).toBeNull();
     },
   );
 

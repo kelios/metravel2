@@ -14,7 +14,9 @@ type Props = {
 };
 
 const getCurrentFeatures = () => [
-  i18nT('homeStatic:about.features.current.apps'),
+  // Пункт о витринах — только на web: внутри native-приложения он лишний, а в
+  // iOS-приложении упоминание другой мобильной платформы нарушает App Review 2.3.10.
+  ...(Platform.OS === 'web' ? [i18nT('homeStatic:about.features.current.apps')] : []),
   i18nT('homeStatic:about.features.current.offline'),
   i18nT('homeStatic:about.features.current.publish'),
   i18nT('homeStatic:about.features.current.map'),
