@@ -1,17 +1,22 @@
 # App Store — карточка MeTravel (`by.metravel.app`)
 
-Черновик пакета для [#1424](https://metravel.by/board#task-1424). Не submit.
-Владелец сверяет поля в App Store Connect с этим файлом и с accepted
-TestFlight build из #1423. Секреты, Team ID, demo-пароль и UDID сюда не
-кладутся.
+**Статус: опубликовано.** 1.0.5 (14) одобрена App Review 17–19.10.2026 и
+выпущена 19.10.2026 вручную («Осуществить релиз») в 175 странах и регионах,
+общедоступное распространение; Apple ID приложения `6801264369`, публичная
+ссылка `https://apps.apple.com/app/id6801264369` (без кода витрины —
+App Store сам откроет страну пользователя). На сайте ссылка живёт только в
+`constants/appStore.ts` (#2655). Журнал выпуска — #1940.
 
-Подготовленный source-кандидат: `app.json` → `expo.version` 1.0.5,
+Пакет карточки готовился для [#1424](https://metravel.by/board#task-1424).
+Владелец сверяет поля в App Store Connect с этим файлом. Секреты, Team ID,
+demo-пароль и UDID сюда не кладутся.
+
+Выпущенный source-кандидат: `app.json` → `expo.version` 1.0.5,
 `expo.ios.buildNumber` 14, source `d561a59233a0a30b3bcda5b7a1ce5c9679b3cd59`.
 Signed IPA14 прошёл canonical audit и загружен в Apple 15.10.2026,23:26:59UTC
 (EAS `518e7243-af3f-4985-ac35-af288d28bdfd`, submission
-`6d18333d-4e20-4729-bed9-876e368d88d9` FINISHED). Processing и доступность
-TestFlight ещё не подтверждены; это не установленный или принятый кандидат
-и не App Review submit. Исторические записи 13.10.2026
+`6d18333d-4e20-4729-bed9-876e368d88d9` FINISHED), подан на App Review
+17.10.2026, одобрен и выпущен 19.10.2026. Исторические записи 13.10.2026
 сняты на 1.0.5 (12), source `4b7166e61`. Перед заполнением ASC сверить
 фактический processed build и source revision. Build 13 остаётся историческим
 артефактом: не отправлять из-за затронутой Hermes memory regression; кандидат 14

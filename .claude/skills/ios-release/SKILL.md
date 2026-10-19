@@ -6,8 +6,9 @@ description: "Регламент релиза iPhone: bump → гейт → sign
 # ios-release
 
 Регламент выпуска версии iPhone-приложения MeTravel (`by.metravel.app`). Первый
-релиз ещё не выпущен — активный OpenSpec `openspec/changes/launch-ios-app-store/`,
-подготовка Apple-аккаунта владельцем — `docs/IOS_OWNER_GUIDE.md`.
+релиз 1.0.5 (14) вышел в App Store 19.10.2026 (Apple ID 6801264369, #1940);
+статус и ссылка — `docs/IOS_STORE_LISTING.md`, история подготовки —
+`docs/IOS_OWNER_GUIDE.md` и OpenSpec `openspec/changes/launch-ios-app-store/`.
 
 ## База пайплайна
 

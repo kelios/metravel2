@@ -17,16 +17,18 @@ const OFFLINE_SCOPE_MARKERS: Record<SupportedLocale, RegExp> = {
   en: /selected.*route.*article.*quest.*map area/i,
 };
 
-describe('/about Android and offline status copy (#1611)', () => {
-  it.each(SUPPORTED_LOCALES)('%s keeps Android and offline current while iOS stays in the roadmap', (locale) => {
+describe('/about app and offline status copy (#1611, #2655)', () => {
+  it.each(SUPPORTED_LOCALES)('%s lists the iPhone and Android apps as current, not in the roadmap', (locale) => {
     const copy = resources[locale].homeStatic;
 
-    expect(copy['about.features.current.android']).toMatch(/Android/);
-    expect(copy['about.features.current.android']).toMatch(/Google Play/);
+    expect(copy['about.features.current.apps']).toMatch(/iPhone/);
+    expect(copy['about.features.current.apps']).toMatch(/Android/);
+    expect(copy['about.features.current.apps']).toMatch(/App Store/);
+    expect(copy['about.features.current.apps']).toMatch(/Google Play/);
     expect(copy['about.features.current.offline']).toMatch(OFFLINE_MARKERS[locale]);
     expect(copy['about.features.current.offline']).toMatch(OFFLINE_SCOPE_MARKERS[locale]);
-    expect(copy['about.features.roadmap.ios']).toMatch(/iOS/);
-    expect(copy['about.features.roadmap.ios']).not.toMatch(/Android/);
+    expect('about.features.current.android' in copy).toBe(false);
+    expect('about.features.roadmap.ios' in copy).toBe(false);
     expect('about.features.roadmap.mobile' in copy).toBe(false);
     expect('about.features.roadmap.offline' in copy).toBe(false);
   });

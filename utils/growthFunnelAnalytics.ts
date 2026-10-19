@@ -1,4 +1,5 @@
 import { queueAnalyticsEvent, sendAnalyticsEvent } from '@/utils/analytics';
+import type { AppStorePlatform } from '@/constants/appStore';
 
 export const GROWTH_FUNNEL_EVENTS = {
   registerCtaClick: 'cta_register_click',
@@ -174,26 +175,31 @@ export const trackRegisterCtaImpression = ({ source, intent, authState }: Regist
 
 /**
  * Единая цель «скачали приложение» `app_download_click`: любой клик по кнопке
- * установки в любом месте web-UI (промо на главной, нижний бар на Android,
- * лендинги `/app` и `/about`). Поверхностные события (`HomeClick_InstallApp`,
- * `AppInstallBar_Click`) остаются как детализация — тем же приёмом, что и у
- * `cta_register_click`.
+ * установки в любом месте web-UI (промо на главной, нижний бар на iPhone и
+ * Android, лендинги `/app` и `/about`), витрина — параметр `platform`.
+ * Поверхностные события (`HomeClick_InstallApp`, `AppInstallBar_Click`)
+ * остаются как детализация — тем же приёмом, что и у `cta_register_click`.
  *
  * Отправляется через `sendAnalyticsEvent`, а не через отложенную очередь
- * `queueAnalyticsEvent`: клик уводит пользователя в Google Play (новая вкладка,
- * на Android — приложение Play поверх браузера), вкладка-источник уходит в фон,
+ * `queueAnalyticsEvent`: клик уводит пользователя в App Store или Google Play
+ * (новая вкладка или приложение витрины поверх браузера), вкладка-источник уходит в фон,
  * и `requestIdleCallback` там тормозится до возврата пользователя. Для
  * конверсионной цели это потеря, поэтому событие уходит синхронно с кликом.
  *
  * Установку как таковую web-счётчик Метрики не видит: реальные установки живут
- * только в Google Play Console. Здесь считается намерение — клик по установке.
+ * только в App Store Connect и Google Play Console. Здесь считается намерение — клик по установке.
  */
-export const trackAppDownloadClicked = ({ source }: { source: AppDownloadSource }) => {
-  // Пока в сторах есть только Android-приложение; когда появится iOS-сборка,
-  // сюда добавится параметр стора, а не второе событие — цель остаётся одна.
+export const trackAppDownloadClicked = ({
+  source,
+  platform,
+}: {
+  source: AppDownloadSource;
+  platform: AppStorePlatform;
+}) => {
+  // Одна цель на обе витрины: стор различается параметром, а не вторым событием.
   void sendAnalyticsEvent(GROWTH_FUNNEL_EVENTS.appDownloadClick, {
     source,
-    platform: 'android',
+    platform,
   });
 };
 

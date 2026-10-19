@@ -48,7 +48,7 @@ describe('AppDownloadScreen single H1 (#1617)', () => {
     expect(new Set(level4)).toEqual(
       new Set([
         'Карта мест', 'Городские квесты', 'Путеводители', 'Своё избранное', // feature grid
-        'Нажмите «Установить»', 'Откройте Google Play', 'Откройте приложение', // install steps
+        'Откройте App Store или Google Play', 'Установите приложение', 'Откройте приложение', // install steps
       ]),
     )
   })

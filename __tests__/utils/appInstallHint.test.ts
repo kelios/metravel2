@@ -1,6 +1,8 @@
 import {
   DISMISS_COOLDOWN_MS,
   MAX_DISMISSALS,
+  detectStorePlatform,
+  getPhoneStorePlatform,
   isAndroidPhoneUserAgent,
   shouldOfferAppInstall,
   type AppInstallHintContext,
@@ -12,6 +14,10 @@ const ANDROID_TABLET_UA =
   'Mozilla/5.0 (Linux; Android 13; SM-X200) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
 const IPHONE_UA =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+const IPAD_UA =
+  'Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+const MAC_SAFARI_UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15'
 const DESKTOP_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
 
@@ -40,13 +46,47 @@ describe('isAndroidPhoneUserAgent', () => {
   })
 })
 
+describe('getPhoneStorePlatform', () => {
+  it('ведёт iPhone в App Store, Android-телефон — в Google Play', () => {
+    expect(getPhoneStorePlatform(IPHONE_UA)).toBe('ios')
+    expect(getPhoneStorePlatform(ANDROID_PHONE_UA)).toBe('android')
+  })
+
+  it('не адресует подсказку планшету и десктопу', () => {
+    expect(getPhoneStorePlatform(ANDROID_TABLET_UA)).toBeNull()
+    expect(getPhoneStorePlatform(IPAD_UA)).toBeNull()
+    expect(getPhoneStorePlatform(DESKTOP_UA)).toBeNull()
+  })
+})
+
+describe('detectStorePlatform', () => {
+  it('отдаёт App Store для iPhone, iPad и iPadOS с десктопным UA', () => {
+    expect(detectStorePlatform({ userAgent: IPHONE_UA })).toBe('ios')
+    expect(detectStorePlatform({ userAgent: IPAD_UA })).toBe('ios')
+    expect(detectStorePlatform({ userAgent: MAC_SAFARI_UA, maxTouchPoints: 5 })).toBe('ios')
+  })
+
+  it('отдаёт Google Play для Android, включая планшет', () => {
+    expect(detectStorePlatform({ userAgent: ANDROID_PHONE_UA })).toBe('android')
+    expect(detectStorePlatform({ userAgent: ANDROID_TABLET_UA })).toBe('android')
+  })
+
+  it('не выбирает витрину для десктопа и пустого navigator', () => {
+    expect(detectStorePlatform({ userAgent: MAC_SAFARI_UA, maxTouchPoints: 0 })).toBeNull()
+    expect(detectStorePlatform({ userAgent: DESKTOP_UA })).toBeNull()
+    expect(detectStorePlatform(null)).toBeNull()
+  })
+})
+
 describe('shouldOfferAppInstall', () => {
-  it('предлагает установку новому посетителю с Android-телефона', () => {
+  it('предлагает установку новому посетителю с Android-телефона и iPhone', () => {
     expect(shouldOfferAppInstall(context())).toBe(true)
+    expect(shouldOfferAppInstall(context({ userAgent: IPHONE_UA }))).toBe(true)
   })
 
   it('молчит на неподходящих поверхностях', () => {
-    expect(shouldOfferAppInstall(context({ userAgent: IPHONE_UA }))).toBe(false)
+    expect(shouldOfferAppInstall(context({ userAgent: ANDROID_TABLET_UA }))).toBe(false)
+    expect(shouldOfferAppInstall(context({ userAgent: DESKTOP_UA }))).toBe(false)
     expect(shouldOfferAppInstall(context({ isMobileViewport: false }))).toBe(false)
     expect(shouldOfferAppInstall(context({ isStandalone: true }))).toBe(false)
   })

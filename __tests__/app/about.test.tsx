@@ -7,7 +7,7 @@ import { useRouter } from 'expo-router';
 import { useIsFocused } from 'expo-router';
 import { sendFeedback } from '@/api/misc';
 import { openExternalUrl } from '@/utils/externalLinks';
-import { GOOGLE_PLAY_APP_URL } from '@/constants/appStore';
+import { APP_STORE_APP_URL, GOOGLE_PLAY_APP_URL } from '@/constants/appStore';
 import { trackAppDownloadClicked } from '@/utils/growthFunnelAnalytics';
 import { showToast } from '@/utils/toast';
 
@@ -88,44 +88,46 @@ describe('AboutScreen', () => {
     expect(getByText('В разработке')).toBeTruthy();
     const currentFeatures = getByTestId('about-current-features');
     const roadmapFeatures = getByTestId('about-roadmap-features');
-    const androidCopy = 'Приложение MeTravel для Android доступно в Google Play';
+    const appsCopy = 'Приложение MeTravel для iPhone, iPad и Android — в App Store и Google Play';
     const offlineCopy =
       'Выбранные маршруты, статьи, квесты и области карты можно сохранить для работы офлайн в приложении';
-    const iosCopy = 'Версия приложения для iOS';
 
-    expect(within(currentFeatures).getByText(androidCopy)).toBeTruthy();
+    expect(within(currentFeatures).getByText(appsCopy)).toBeTruthy();
     expect(within(currentFeatures).getByText(offlineCopy)).toBeTruthy();
-    expect(within(currentFeatures).queryByText(iosCopy)).toBeNull();
-    expect(within(roadmapFeatures).getByText(iosCopy)).toBeTruthy();
-    expect(within(roadmapFeatures).queryByText(androidCopy)).toBeNull();
+    // iOS вышел 19.10.2026 (#2655): в roadmap его больше нет.
+    expect(within(roadmapFeatures).queryByText('Версия приложения для iOS')).toBeNull();
+    expect(within(roadmapFeatures).queryByText(appsCopy)).toBeNull();
     expect(within(roadmapFeatures).queryByText(offlineCopy)).toBeNull();
     expect(queryByText('Мобильное приложение для iOS и Android')).toBeNull();
     expect(queryByText('Офлайн-режим для просмотра сохраненных маршрутов')).toBeNull();
   });
 
-  it('opens the public Android listing from the web feature card', async () => {
+  it.each([
+    ['ios', APP_STORE_APP_URL],
+    ['android', GOOGLE_PLAY_APP_URL],
+  ] as const)('opens the public %s listing from the web feature card', async (platform, url) => {
     (Platform as { OS: string }).OS = 'web';
 
     const { getByTestId } = render(<AboutScreen />);
-    fireEvent.press(getByTestId('about-google-play-cta'));
+    fireEvent.press(getByTestId(`about-store-buttons-${platform}`));
 
-    expect(mockTrackAppDownloadClicked).toHaveBeenCalledWith({ source: 'about_page' });
+    expect(mockTrackAppDownloadClicked).toHaveBeenCalledWith({ source: 'about_page', platform });
     await waitFor(() => {
       expect(mockOpenExternalUrl).toHaveBeenCalledWith(
-        GOOGLE_PLAY_APP_URL,
+        url,
         expect.objectContaining({ onError: expect.any(Function) }),
       );
     });
   });
 
   it.each(['android', 'ios'] as const)(
-    'does not render a Google Play CTA inside the %s about screen',
+    'does not render store CTAs inside the %s about screen',
     (os) => {
       (Platform as { OS: string }).OS = os;
 
       const { queryByTestId } = render(<AboutScreen />);
 
-      expect(queryByTestId('about-google-play-cta')).toBeNull();
+      expect(queryByTestId('about-store-buttons')).toBeNull();
     },
   );
 

@@ -1,12 +1,9 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { Platform, View, Text } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import Button from '@/components/ui/Button';
-import { GOOGLE_PLAY_APP_URL } from '@/constants/appStore';
+import AppStoreButtons from '@/components/appDownload/AppStoreButtons';
 import { useAboutStyles } from './aboutStyles';
 import { useThemedColors } from '@/hooks/useTheme';
-import { trackAppDownloadClicked } from '@/utils/growthFunnelAnalytics';
-import { openExternalUrl } from '@/utils/externalLinks';
 import { translate as i18nT } from '@/i18n'
 import { breakpointLayoutProps, breakpointStyle } from '@/utils/breakpointLayout'
 import { ABOUT_LAYOUT } from './aboutLayout'
@@ -17,7 +14,7 @@ type Props = {
 };
 
 const getCurrentFeatures = () => [
-  i18nT('homeStatic:about.features.current.android'),
+  i18nT('homeStatic:about.features.current.apps'),
   i18nT('homeStatic:about.features.current.offline'),
   i18nT('homeStatic:about.features.current.publish'),
   i18nT('homeStatic:about.features.current.map'),
@@ -32,7 +29,6 @@ const getCurrentFeatures = () => [
 ];
 
 const getRoadmapFeatures = () => [
-  i18nT('homeStatic:about.features.roadmap.ios'),
   i18nT('homeStatic:about.features.roadmap.reviews'),
   i18nT('homeStatic:about.features.roadmap.communities'),
   i18nT('homeStatic:about.features.roadmap.planner'),
@@ -46,14 +42,6 @@ export const FeaturesSection: React.FC<Props> = ({ isWide }) => {
   const colors = useThemedColors();
   const currentFeatures = getCurrentFeatures();
   const roadmapFeatures = getRoadmapFeatures();
-  const handleOpenGooglePlay = useCallback(() => {
-    trackAppDownloadClicked({ source: 'about_page' });
-    void openExternalUrl(GOOGLE_PLAY_APP_URL, {
-      onError: (error) => {
-        if (__DEV__) console.warn('[about] Ошибка открытия Google Play:', error);
-      },
-    });
-  }, []);
 
   return (
     <View style={styles.featuresSection}>
@@ -86,14 +74,11 @@ export const FeaturesSection: React.FC<Props> = ({ isWide }) => {
             ))}
           </View>
           {Platform.OS === 'web' && (
-            <Button
-              testID="about-google-play-cta"
-              label={i18nT('shared:app.app.otkryt_v_google_play_9d0a47cd')}
-              accessibilityLabel={i18nT('shared:app.app.otkryt_prilozhenie_metravel_v_google_play_8566ec38')}
-              onPress={handleOpenGooglePlay}
-              variant="soft"
+            <AppStoreButtons
+              source="about_page"
+              size="md"
               fullWidth
-              icon={<Feather name="external-link" size={18} color={colors.primaryText} />}
+              testID="about-store-buttons"
               style={styles.featureCta}
             />
           )}

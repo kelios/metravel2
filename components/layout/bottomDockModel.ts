@@ -52,7 +52,7 @@ export const BOTTOM_DOCK_MORE_MENU_SECTIONS: BottomDockMoreMenuSection[] = [
     items: [
       // «Скачать приложение» — только на web (внутри native-приложения пункт бессмысленен).
       ...(Platform.OS === 'web'
-        ? [{ key: 'app', get label() { return i18nT('navigationStatic:components.layout.bottomDockModel.prilozhenie_7069c639') }, get accessibilityLabel() { return i18nT('navigationStatic:components.layout.bottomDockModel.skachat_prilozhenie_metravel_dlya_android_fd918863') }, route: '/app' as Href, iconName: 'smartphone' as BottomDockIconName }]
+        ? [{ key: 'app', get label() { return i18nT('navigationStatic:components.layout.bottomDockModel.prilozhenie_7069c639') }, get accessibilityLabel() { return i18nT('navigationStatic:bottomDock.appDownload.a11y') }, route: '/app' as Href, iconName: 'smartphone' as BottomDockIconName }]
         : []),
       { key: 'search', get label() { return i18nT('navigationStatic:components.layout.bottomDockModel.belarus_8e52cdc9') }, get accessibilityLabel() { return i18nT('navigationStatic:components.layout.bottomDockModel.belarus_8e52cdc9') }, route: '/travelsby', iconName: 'belarus-outline' },
       { key: 'places', get label() { return i18nT('navigationStatic:components.layout.bottomDockModel.mesta_9ad589a8') }, get accessibilityLabel() { return i18nT('navigationStatic:components.layout.bottomDockModel.mesta_9ad589a8') }, route: '/places', iconName: 'map-pin' },

@@ -1,20 +1,17 @@
-import { memo, useCallback, useMemo, type ComponentProps } from 'react'
+import { memo, useMemo, type ComponentProps } from 'react'
 import { Image, ScrollView, StatusBar, StyleSheet, View, type ViewStyle } from 'react-native'
 import { useIsFocused } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import CustomHeader from '@/components/layout/CustomHeader'
-import Button from '@/components/ui/Button'
+import AppStoreButtons from '@/components/appDownload/AppStoreButtons'
 import { Heading, Body, Caption, Eyebrow } from '@/components/ui/Typography'
 import { useResponsive } from '@/hooks/useResponsive'
 import { APP_DOWNLOAD_LAYOUT, APP_DOWNLOAD_WIDE_MIN_WIDTH } from '@/components/appDownload/appDownloadLayout'
 import { breakpointLayoutProps, breakpointStyle } from '@/utils/breakpointLayout'
 import { useTheme, useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { GOOGLE_PLAY_APP_URL } from '@/constants/appStore'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
-import { openExternalUrl } from '@/utils/externalLinks'
-import { trackAppDownloadClicked } from '@/utils/growthFunnelAnalytics'
 import { webTouchScrollStyle } from '@/utils'
 import { translate as i18nT } from '@/i18n'
 
@@ -32,8 +29,8 @@ const FEATURES: { icon: FeatherName; title: string; text: string }[] = [
 ]
 
 const STEPS: { title: string; text: string }[] = [
-  { get title() { return i18nT('sharedStatic:app.app.nazhmite_skachat_1073ac19') }, get text() { return i18nT('sharedStatic:app.app.knopka_otkroet_stranitsu_zakrytogo_alpha_tes_08367c82') } },
-  { get title() { return i18nT('sharedStatic:app.app.prisoedinites_k_testu_147930be') }, get text() { return i18nT('sharedStatic:app.app.esli_vash_akkaunt_dobavlen_v_spisok_testirov_c484118b') } },
+  { get title() { return i18nT('sharedStatic:appDownload.page.step1Title') }, get text() { return i18nT('sharedStatic:appDownload.page.step1Text') } },
+  { get title() { return i18nT('sharedStatic:appDownload.page.step2Title') }, get text() { return i18nT('sharedStatic:appDownload.page.step2Text') } },
   { get title() { return i18nT('sharedStatic:app.app.ustanovite_prilozhenie_468f0c89') }, get text() { return i18nT('sharedStatic:app.app.posle_prisoedineniya_poyavitsya_knopka_ustan_0c176249') } },
 ]
 
@@ -45,19 +42,10 @@ function AppDownloadScreen() {
   const isWide = width >= APP_DOWNLOAD_WIDE_MIN_WIDTH
   const styles = useMemo(() => createStyles(colors), [colors])
 
-  const title = i18nT('shared:app.app.prilozhenie_metravel_dlya_android_skachat_f1964a43')
+  const title = i18nT('sharedStatic:appDownload.page.seoTitle')
   const description =
-    i18nT('shared:app.app.skachayte_mobilnoe_prilozhenie_metravel_dlya_37f1b2df')
+    i18nT('sharedStatic:appDownload.page.seoDescription')
   const canonical = buildCanonicalUrl('/app')
-
-  const handleDownload = useCallback(() => {
-    trackAppDownloadClicked({ source: 'app_page' })
-    void openExternalUrl(GOOGLE_PLAY_APP_URL, {
-      onError: (error) => {
-        if (__DEV__) console.warn('[app] Ошибка открытия Google Play:', error)
-      },
-    })
-  }, [])
 
   return (
     <>
@@ -87,24 +75,17 @@ function AppDownloadScreen() {
           <Heading level={1} align="center" color={colors.text}>
             {i18nT('shared:app.app.metravel_puteshestviya_v_karmane_7ec352c1')}</Heading>
           <Body align="center" color={colors.textMuted} style={styles.heroSubtitle}>
-            {i18nT('shared:app.app.karta_mest_gorodskie_kvesty_i_putevoditeli_o_0c74fdbb')}</Body>
+            {i18nT('sharedStatic:appDownload.page.heroSubtitle')}</Body>
 
           <View style={styles.ctaWrap}>
-            <Button
-              label={i18nT('shared:app.app.skachat_iz_google_play_ede112c1')}
-              onPress={handleDownload}
-              variant="primary"
-              size="lg"
-              icon={<Feather name="download" size={18} color={colors.textOnPrimary} />}
-              accessibilityLabel={i18nT('shared:app.app.skachat_prilozhenie_metravel_iz_google_play_833df22c')}
-            />
+            <AppStoreButtons source="app_page" testID="app-page-store-buttons" />
             <Caption align="center" color={colors.textMuted} style={styles.platformNote}>
-              {i18nT('shared:app.app.android_8_0_besplatno_versiya_dlya_ios_gotov_5102537e')}</Caption>
+              {i18nT('sharedStatic:appDownload.page.platformNote')}</Caption>
           </View>
 
           <View style={styles.badge}>
             <Feather name="award" size={14} color={colors.primaryText} />
-            <Caption color={colors.primaryText}>{i18nT('shared:app.app.zakrytyy_alpha_test_vy_odni_iz_pervyh_90569b3d')}</Caption>
+            <Caption color={colors.primaryText}>{i18nT('sharedStatic:appDownload.page.availability')}</Caption>
           </View>
         </View>
 
@@ -154,13 +135,7 @@ function AppDownloadScreen() {
           </View>
 
           <View style={styles.ctaWrap}>
-            <Button
-              label={i18nT('shared:app.app.otkryt_v_google_play_9d0a47cd')}
-              onPress={handleDownload}
-              variant="primary"
-              size="lg"
-              accessibilityLabel={i18nT('shared:app.app.otkryt_prilozhenie_metravel_v_google_play_8566ec38')}
-            />
+            <AppStoreButtons source="app_page" testID="app-page-store-buttons-bottom" />
           </View>
         </View>
       </ScrollView>
@@ -207,6 +182,7 @@ const createStyles = (colors: ThemedColors) => {
       marginTop: spacing.xs,
     },
     ctaWrap: {
+      alignSelf: 'stretch' as const,
       alignItems: 'center' as const,
       gap: spacing.sm,
       marginTop: spacing.md,

@@ -5,10 +5,10 @@ import Feather from '@expo/vector-icons/Feather'
 import { ResponsiveContainer } from '@/components/layout'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
-import { GOOGLE_PLAY_APP_URL } from '@/constants/appStore'
+import { useRouter } from 'expo-router'
+import { useDeviceStorePlatform } from '@/hooks/useDeviceStorePlatform'
 import { sendAnalyticsEvent } from '@/utils/analytics'
-import { trackAppDownloadClicked } from '@/utils/growthFunnelAnalytics'
-import { openExternalUrl } from '@/utils/externalLinks'
+import { openAppStoreListing } from '@/utils/openAppStoreListing'
 import { translate as i18nT } from '@/i18n'
 import { isPhoneLayout } from '@/utils/phoneLayout'
 
@@ -26,24 +26,26 @@ const HIGHLIGHTS: { icon: 'map-pin' | 'flag' | 'download'; text: string }[] = [
   { icon: 'download', get text() { return i18nT('homeStatic:components.home.HomeAppPromoSection.oflayn_dostup_ef721dee') } },
 ]
 
-// Промо установки Android-приложения — только на web (в самом приложении не показываем).
+// Промо установки приложения — только на web (в самом приложении не показываем).
+// С телефона ведёт сразу в витрину устройства, с десктопа — на /app с обеими витринами.
 function HomeAppPromoSection() {
   const colors = useThemedColors()
   const { width, isPhone, isLargePhone } = useResponsive()
   const isMobile = isPhoneLayout({ width, isPhone, isLargePhone })
   const [hovered, setHovered] = useState(false)
+  const storePlatform = useDeviceStorePlatform()
+  const router = useRouter()
 
   const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile])
 
   const handleInstall = useCallback(() => {
-    sendAnalyticsEvent('HomeClick_InstallApp', { platform: 'android' })
-    trackAppDownloadClicked({ source: 'home_promo' })
-    void openExternalUrl(GOOGLE_PLAY_APP_URL, {
-      onError: (error) => {
-        if (__DEV__) console.warn('[home] Ошибка открытия Google Play:', error)
-      },
-    })
-  }, [])
+    sendAnalyticsEvent('HomeClick_InstallApp', { platform: storePlatform ?? 'landing' })
+    if (storePlatform) {
+      void openAppStoreListing({ platform: storePlatform, source: 'home_promo' })
+      return
+    }
+    router.push('/app')
+  }, [router, storePlatform])
 
   if (!IS_WEB) return null
 
@@ -53,7 +55,7 @@ function HomeAppPromoSection() {
         <Pressable
           onPress={handleInstall}
           accessibilityRole={'link' as any}
-          accessibilityLabel={i18nT('home:components.home.HomeAppPromoSection.skachat_prilozhenie_metravel_dlya_android_25ce3837')}
+          accessibilityLabel={i18nT('homeStatic:homePromo.app.a11y')}
           style={[styles.card, isMobile && styles.cardMobile, hovered && styles.cardHover]}
           {...({
             onMouseEnter: () => setHovered(true),
@@ -70,7 +72,7 @@ function HomeAppPromoSection() {
           <View style={styles.body}>
             <View style={styles.badge}>
               <Feather name="smartphone" size={12} color={colors.primary} />
-              <Text style={styles.badgeText}>{i18nT('home:components.home.HomeAppPromoSection.uzhe_na_android_0f096743')}</Text>
+              <Text style={styles.badgeText}>{i18nT('homeStatic:homePromo.app.badge')}</Text>
             </View>
             <Text
               style={styles.title}
@@ -79,7 +81,7 @@ function HomeAppPromoSection() {
             >
               {i18nT('home:components.home.HomeAppPromoSection.prilozhenie_metravel_v_karmane_f8221845')}</Text>
             <Text style={styles.subtitle}>
-              {i18nT('home:components.home.HomeAppPromoSection.karta_kvesty_i_putevoditeli_oflayn_s_sohrane_a9ae3b9e')}</Text>
+              {i18nT('homeStatic:homePromo.app.subtitle')}</Text>
 
             {!isMobile && (
               <View style={styles.highlights}>

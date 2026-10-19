@@ -1,5 +1,9 @@
 # Первый релиз MeTravel на iPhone и iPad: подготовка Apple-аккаунта
 
+Историческая инструкция подготовки: первый релиз 1.0.5 (14) вышел в App Store
+19.10.2026 (#1940, ссылка — `docs/IOS_STORE_LISTING.md`). Текущий регламент
+следующих версий — skill `ios-release`.
+
 Актуализировано: 2026-08-25. Инструкция относится к человеческой задаче
 [#1410](https://metravel.by/board?sprint_status=open&sprint=24&area=front&group_by=status&kind=&epic=&story=#task-1410).
 

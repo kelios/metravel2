@@ -116,11 +116,11 @@
 
 ## Native/store operations
 
-- `docs/IOS_OWNER_GUIDE.md` — пошаговая owner-инструкция для подготовки Apple
-  Developer и App Store Connect по человеческой задаче #1410; создание App
-  Store record, TestFlight и submission в этот этап не входят;
+- `docs/IOS_OWNER_GUIDE.md` — историческая owner-инструкция подготовки Apple
+  Developer и App Store Connect по задаче #1410 (первый релиз вышел 19.10.2026);
 - `docs/ANDROID_OWNER_GUIDE.md` — owner-only Android build/Play flow;
-- `docs/IOS_STORE_LISTING.md` — пакет карточки App Store (#1424): тексты
+- `docs/IOS_STORE_LISTING.md` — карточка App Store (#1424; 1.0.5 опубликована
+  19.10.2026, Apple ID 6801264369): статус выпуска, тексты
   локалей ASC, скриншот-требования, App Review notes и privacy-сверка;
   автопроверка — `npm run ios:store:guard`;
 - `docs/IOS_APP_REVIEW_RESPONSE_20260910.md` — рабочий ответ на запрос Apple

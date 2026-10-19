@@ -64,7 +64,6 @@ export const navigationStaticResources = {
   "components.layout.bottomDockModel.pravila_uchastiya_v_poezdkah_09160929": "Travel rules",
   "components.layout.bottomDockModel.prilozhenie_7069c639": "Application",
   "components.layout.bottomDockModel.profil_1f899ea9": "Profile",
-  "components.layout.bottomDockModel.skachat_prilozhenie_metravel_dlya_android_fd918863": "Download MeTravel app for Android",
   "components.layout.bottomDockModel.sluchaynyy_marshrut_d57f325e": "Random route",
   "components.layout.bottomDockModel.sozdat_marshrut_a61a17b8": "Create route",
   "components.layout.bottomDockModel.stati_ad8e46b8": "Articles",
@@ -103,4 +102,5 @@ export const navigationStaticResources = {
   "seasonalTheme.status.none": "Regular look outside festive periods",
   "seasonalTheme.option.christmas": "Christmas & New Year",
   "seasonalTheme.option.christmas.description": "Evergreen, fairy lights and winter glow",
+  "bottomDock.appDownload.a11y": "Download the MeTravel app",
 } as const

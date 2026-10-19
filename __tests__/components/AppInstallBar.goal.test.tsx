@@ -3,8 +3,8 @@ import { Platform } from 'react-native'
 import { render, fireEvent, act } from '@testing-library/react-native'
 import { sendAnalyticsEvent } from '@/utils/analytics'
 import { openExternalUrl } from '@/utils/externalLinks'
-import { markAppInstallHintConverted } from '@/utils/appInstallHint'
-import { GOOGLE_PLAY_APP_URL } from '@/constants/appStore'
+import { markAppInstallHintConverted, markAppInstallHintDismissed } from '@/utils/appInstallHint'
+import { APP_STORE_APP_URL, GOOGLE_PLAY_APP_URL } from '@/constants/appStore'
 
 jest.mock('expo-router', () => ({
   usePathname: () => '/',
@@ -22,7 +22,10 @@ jest.mock('@/hooks/useFooterOverlayOpen', () => ({
   useFooterOverlayOpen: () => false,
 }))
 
+let mockPhoneStorePlatform: 'ios' | 'android' = 'android'
+
 jest.mock('@/utils/appInstallHint', () => ({
+  getPhoneStorePlatform: () => mockPhoneStorePlatform,
   isStandaloneDisplayMode: () => false,
   markAppInstallHintConverted: jest.fn(),
   markAppInstallHintDismissed: jest.fn(),
@@ -57,6 +60,9 @@ const mockedOpenExternalUrl = openExternalUrl as jest.MockedFunction<typeof open
 const mockedMarkConverted = markAppInstallHintConverted as jest.MockedFunction<
   typeof markAppInstallHintConverted
 >
+const mockedMarkDismissed = markAppInstallHintDismissed as jest.MockedFunction<
+  typeof markAppInstallHintDismissed
+>
 
 describe('AppInstallBar', () => {
   const originalPlatform = Platform.OS
@@ -81,7 +87,11 @@ describe('AppInstallBar', () => {
 
   // Третья поверхность установки: mobile web, показывается только узкому
   // вьюпорту, поэтому в тестах остальных поверхностей не видна.
-  it('reports the app_download_click goal from the mobile install bar', () => {
+  it.each([
+    ['ios', APP_STORE_APP_URL],
+    ['android', GOOGLE_PLAY_APP_URL],
+  ] as const)('reports the app_download_click goal from the %s install bar', (platform, url) => {
+    mockPhoneStorePlatform = platform
     const AppInstallBar = require('@/components/layout/AppInstallBar').default
     const { getByTestId } = render(<AppInstallBar />)
 
@@ -93,13 +103,30 @@ describe('AppInstallBar', () => {
     fireEvent.press(getByTestId('app-install-bar-cta'))
 
     expect(mockedMarkConverted).toHaveBeenCalled()
-    expect(mockedSendAnalyticsEvent).toHaveBeenCalledWith('AppInstallBar_Click', {
-      platform: 'android',
-    })
+    expect(mockedSendAnalyticsEvent).toHaveBeenCalledWith('AppInstallBar_Click', { platform })
     expect(mockedSendAnalyticsEvent).toHaveBeenCalledWith('app_download_click', {
       source: 'install_bar',
-      platform: 'android',
+      platform,
     })
-    expect(mockedOpenExternalUrl).toHaveBeenCalledWith(GOOGLE_PLAY_APP_URL, expect.anything())
+    expect(mockedOpenExternalUrl).toHaveBeenCalledWith(url, expect.anything())
+  })
+
+  it('reports the shown store and its dismissal without opening a listing', () => {
+    mockPhoneStorePlatform = 'ios'
+    const AppInstallBar = require('@/components/layout/AppInstallBar').default
+    const { getByTestId, queryByTestId } = render(<AppInstallBar />)
+
+    expect(queryByTestId('app-install-bar')).toBeNull()
+    act(() => {
+      jest.advanceTimersByTime(12000)
+    })
+    expect(mockedSendAnalyticsEvent).toHaveBeenCalledWith('AppInstallBar_Shown', { platform: 'ios' })
+
+    fireEvent.press(getByTestId('app-install-bar-dismiss'))
+
+    expect(mockedMarkDismissed).toHaveBeenCalled()
+    expect(mockedSendAnalyticsEvent).toHaveBeenCalledWith('AppInstallBar_Dismiss', { platform: 'ios' })
+    expect(mockedOpenExternalUrl).not.toHaveBeenCalled()
+    expect(queryByTestId('app-install-bar')).toBeNull()
   })
 })

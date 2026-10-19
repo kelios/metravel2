@@ -4,7 +4,7 @@ import { usePathname } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import Button from '@/components/ui/Button'
-import { GOOGLE_PLAY_APP_URL } from '@/constants/appStore'
+import type { AppStorePlatform } from '@/constants/appStore'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { asBottomDimension, useDockReservePx, webDockReserve } from '@/components/layout/bottomChromeInset'
 import { useFooterOverlayOpen } from '@/hooks/useFooterOverlayOpen'
@@ -13,6 +13,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
 import { sendAnalyticsEvent } from '@/utils/analytics'
 import {
+  getPhoneStorePlatform,
   isStandaloneDisplayMode,
   markAppInstallHintConverted,
   markAppInstallHintDismissed,
@@ -21,8 +22,7 @@ import {
 } from '@/utils/appInstallHint'
 import { releaseBottomChromeReserve, setBottomChromeReserve } from '@/utils/bottomChromeReserve'
 import { readConsent } from '@/utils/consent'
-import { openExternalUrl } from '@/utils/externalLinks'
-import { trackAppDownloadClicked } from '@/utils/growthFunnelAnalytics'
+import { openAppStoreListing } from '@/utils/openAppStoreListing'
 import { webViewStyle } from '@/utils/webProps'
 
 const IS_WEB = Platform.OS === 'web'
@@ -40,9 +40,10 @@ const BAR_HEIGHT = 68
 const APP_ICON = require('@/assets/images/app-icon.webp')
 
 /**
- * Ненавязчивое предложение установить Android-приложение для посетителей
- * mobile web. Узкая плашка над нижним доком: контент не перекрывает, закрывается
- * крестиком и после закрытия молчит месяц (`utils/appInstallHint`).
+ * Ненавязчивое предложение установить приложение для посетителей mobile web
+ * с iPhone (App Store) или Android-телефона (Google Play). Узкая плашка над
+ * нижним доком: контент не перекрывает, закрывается крестиком и после закрытия
+ * молчит месяц (`utils/appInstallHint`).
  *
  * Модалок и интерстишиалов здесь сознательно нет: перекрытие контента на
  * мобильном — это и плохой UX, и риск по Google mobile interstitial penalty.
@@ -56,7 +57,9 @@ function AppInstallBar() {
   const showIcon = width >= 390
   const footerOverlayOpen = useFooterOverlayOpen()
 
-  const [visible, setVisible] = useState(false)
+  // Витрина, в которую ведёт показанная плашка; `null` — плашка ещё не показана.
+  const [storePlatform, setStorePlatform] = useState<AppStorePlatform | null>(null)
+  const visible = storePlatform !== null
   const [closed, setClosed] = useState(false)
   const appear = useRef(new Animated.Value(0)).current
 
@@ -73,8 +76,9 @@ function AppInstallBar() {
     if (!IS_WEB || typeof window === 'undefined') return
     if (closed || visible || isAppLandingRoute || !isMobile) return
 
+    const userAgent = String(window.navigator?.userAgent || '')
     const eligible = shouldOfferAppInstall({
-      userAgent: String(window.navigator?.userAgent || ''),
+      userAgent,
       isMobileViewport: isMobile,
       referrer: typeof document !== 'undefined' ? document.referrer : '',
       isStandalone: isStandaloneDisplayMode(),
@@ -96,7 +100,7 @@ function AppInstallBar() {
       }
       done = true
       cleanupTriggers()
-      setVisible(true)
+      setStorePlatform(getPhoneStorePlatform(userAgent))
     }
 
     // Страницы приложения скроллятся внутри RN Web ScrollView, а не окном,
@@ -150,27 +154,24 @@ function AppInstallBar() {
   }, [bottomOffset, shown])
 
   useEffect(() => {
-    if (!visible) return
-    void sendAnalyticsEvent('AppInstallBar_Shown', { platform: 'android' })
-  }, [visible])
+    if (!storePlatform) return
+    void sendAnalyticsEvent('AppInstallBar_Shown', { platform: storePlatform })
+  }, [storePlatform])
 
   const handleInstall = useCallback(() => {
+    if (!storePlatform) return
     markAppInstallHintConverted()
-    void sendAnalyticsEvent('AppInstallBar_Click', { platform: 'android' })
-    trackAppDownloadClicked({ source: 'install_bar' })
+    void sendAnalyticsEvent('AppInstallBar_Click', { platform: storePlatform })
     setClosed(true)
-    void openExternalUrl(GOOGLE_PLAY_APP_URL, {
-      onError: (error) => {
-        if (__DEV__) console.warn('[app-install-bar] Ошибка открытия Google Play:', error)
-      },
-    })
-  }, [])
+    void openAppStoreListing({ platform: storePlatform, source: 'install_bar' })
+  }, [storePlatform])
 
   const handleDismiss = useCallback(() => {
+    if (!storePlatform) return
     markAppInstallHintDismissed()
-    void sendAnalyticsEvent('AppInstallBar_Dismiss', { platform: 'android' })
+    void sendAnalyticsEvent('AppInstallBar_Dismiss', { platform: storePlatform })
     setClosed(true)
-  }, [])
+  }, [storePlatform])
 
   if (!IS_WEB || !shown) return null
 
@@ -209,9 +210,11 @@ function AppInstallBar() {
           onPress={handleInstall}
           variant="primary"
           size="sm"
-          accessibilityLabel={i18nT(
-            'navigation:components.layout.AppInstallBar.ustanovit_prilozhenie_metravel_dlya_android_e22de6ce'
-          )}
+          accessibilityLabel={
+            storePlatform === 'ios'
+              ? i18nT('sharedStatic:appDownload.appStore.a11y')
+              : i18nT('sharedStatic:appDownload.googlePlay.a11y')
+          }
           style={styles.cta}
           labelStyle={styles.ctaLabel}
           testID="app-install-bar-cta"

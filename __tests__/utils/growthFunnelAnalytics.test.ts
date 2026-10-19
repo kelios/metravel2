@@ -77,20 +77,20 @@ describe('growthFunnelAnalytics', () => {
     ]);
   });
 
-  it('sends the unified app download goal id from every install surface', () => {
-    trackAppDownloadClicked({ source: 'home_promo' });
-    trackAppDownloadClicked({ source: 'install_bar' });
-    trackAppDownloadClicked({ source: 'app_page' });
-    trackAppDownloadClicked({ source: 'about_page' });
+  it('sends the unified app download goal id from every install surface and store', () => {
+    trackAppDownloadClicked({ source: 'home_promo', platform: 'android' });
+    trackAppDownloadClicked({ source: 'install_bar', platform: 'ios' });
+    trackAppDownloadClicked({ source: 'app_page', platform: 'ios' });
+    trackAppDownloadClicked({ source: 'about_page', platform: 'android' });
 
     expect(GROWTH_FUNNEL_EVENTS.appDownloadClick).toBe('app_download_click');
     expect(mockedSendAnalyticsEvent.mock.calls).toEqual([
       ['app_download_click', { source: 'home_promo', platform: 'android' }],
-      ['app_download_click', { source: 'install_bar', platform: 'android' }],
-      ['app_download_click', { source: 'app_page', platform: 'android' }],
+      ['app_download_click', { source: 'install_bar', platform: 'ios' }],
+      ['app_download_click', { source: 'app_page', platform: 'ios' }],
       ['app_download_click', { source: 'about_page', platform: 'android' }],
     ]);
-    // Конверсионный клик уводит в Play — очередь requestIdleCallback его теряет.
+    // Конверсионный клик уводит в витрину — очередь requestIdleCallback его теряет.
     expect(mockedQueueAnalyticsEvent).not.toHaveBeenCalled();
   });
 

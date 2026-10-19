@@ -1,9 +1,10 @@
 import React from 'react'
+import { Platform } from 'react-native'
 import { render, fireEvent } from '@testing-library/react-native'
 import AppDownloadScreen from '@/app/app'
 import { sendAnalyticsEvent } from '@/utils/analytics'
 import { openExternalUrl } from '@/utils/externalLinks'
-import { GOOGLE_PLAY_APP_URL } from '@/constants/appStore'
+import { APP_STORE_APP_URL, GOOGLE_PLAY_APP_URL } from '@/constants/appStore'
 
 jest.mock('expo-router', () => ({
   useIsFocused: () => true,
@@ -33,6 +34,17 @@ const mockedSendAnalyticsEvent = sendAnalyticsEvent as jest.MockedFunction<typeo
 const mockedOpenExternalUrl = openExternalUrl as jest.MockedFunction<typeof openExternalUrl>
 
 describe('AppDownloadScreen', () => {
+  const originalOS = Platform.OS
+
+  beforeAll(() => {
+    // Лендинг проверяется как web-страница: на native кнопка только одна, своя.
+    ;(Platform as { OS: string }).OS = 'web'
+  })
+
+  afterAll(() => {
+    ;(Platform as { OS: string }).OS = originalOS
+  })
+
   beforeEach(() => {
     jest.clearAllMocks()
   })
@@ -40,15 +52,18 @@ describe('AppDownloadScreen', () => {
   // Лендинг `/app` — единственная поверхность установки, которая раньше не
   // отправляла ни одного события, поэтому цель Метрики «Скачали приложение»
   // (ID 599654242, идентификатор `app_download_click`) её не видела.
-  it('reports the app_download_click goal before opening Google Play', () => {
-    const { getByLabelText } = render(<AppDownloadScreen />)
+  it.each([
+    ['ios', APP_STORE_APP_URL],
+    ['android', GOOGLE_PLAY_APP_URL],
+  ] as const)('reports the app_download_click goal before opening the %s listing', (platform, url) => {
+    const { getByTestId } = render(<AppDownloadScreen />)
 
-    fireEvent.press(getByLabelText(/skachat_prilozhenie_metravel_iz_google_play/))
+    fireEvent.press(getByTestId(`app-page-store-buttons-${platform}`))
 
     expect(mockedSendAnalyticsEvent).toHaveBeenCalledWith('app_download_click', {
       source: 'app_page',
-      platform: 'android',
+      platform,
     })
-    expect(mockedOpenExternalUrl).toHaveBeenCalledWith(GOOGLE_PLAY_APP_URL, expect.anything())
+    expect(mockedOpenExternalUrl).toHaveBeenCalledWith(url, expect.anything())
   })
 })

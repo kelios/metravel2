@@ -1,5 +1,7 @@
 import { Platform } from 'react-native'
 
+import type { AppStorePlatform } from '@/constants/appStore'
+
 /**
  * Правила показа ненавязчивой подсказки «поставьте приложение» на mobile web.
  *
@@ -21,13 +23,13 @@ export type AppInstallHintState = {
   dismissedAt?: number
   /** Сколько раз пользователь закрывал подсказку. */
   dismissCount?: number
-  /** Время перехода в Google Play — после него подсказку не показываем никогда. */
+  /** Время перехода в витрину приложения — после него подсказку не показываем никогда. */
   installClickedAt?: number
 }
 
 export type AppInstallHintContext = {
   userAgent: string
-  /** Узкий вьюпорт: подсказка адресована телефону, а не десктопу с Android UA. */
+  /** Узкий вьюпорт: подсказка адресована телефону, а не десктопу с мобильным UA. */
   isMobileViewport: boolean
   /** `document.referrer`: переход из установленного приложения — повод молчать. */
   referrer?: string
@@ -46,8 +48,37 @@ export const isAndroidPhoneUserAgent = (userAgent: string): boolean => {
   return /mobile/i.test(normalized)
 }
 
+/** iPhone/iPod. iPad сюда не входит: плашка адресована телефону. */
+export const isIPhoneUserAgent = (userAgent: string): boolean =>
+  /iPhone|iPod/i.test(String(userAgent || ''))
+
+/**
+ * Витрина, в которую ведёт подсказка на телефоне: App Store для iPhone,
+ * Google Play для Android-телефона, `null` — подсказка не адресована.
+ */
+export const getPhoneStorePlatform = (userAgent: string): AppStorePlatform | null => {
+  if (isIPhoneUserAgent(userAgent)) return 'ios'
+  if (isAndroidPhoneUserAgent(userAgent)) return 'android'
+  return null
+}
+
+type StoreDetectionNavigator = { userAgent?: string; maxTouchPoints?: number }
+
+/**
+ * Витрина устройства для кнопок скачивания: iPhone и iPad (в том числе iPadOS,
+ * который представляется десктопным Safari, но с сенсорным экраном) — App Store,
+ * Android — Google Play, остальное (десктоп) — `null`, показываем обе витрины.
+ */
+export const detectStorePlatform = (nav: StoreDetectionNavigator | null | undefined): AppStorePlatform | null => {
+  const userAgent = String(nav?.userAgent || '')
+  if (/iPhone|iPod|iPad/i.test(userAgent)) return 'ios'
+  if (/Macintosh/i.test(userAgent) && Number(nav?.maxTouchPoints ?? 0) > 1) return 'ios'
+  if (/android/i.test(userAgent)) return 'android'
+  return null
+}
+
 export const shouldOfferAppInstall = (context: AppInstallHintContext): boolean => {
-  if (!isAndroidPhoneUserAgent(context.userAgent)) return false
+  if (!getPhoneStorePlatform(context.userAgent)) return false
   if (!context.isMobileViewport) return false
   if (context.isStandalone) return false
   if (String(context.referrer || '').startsWith('android-app://')) return false

@@ -248,7 +248,8 @@ Android release contract:
 
 ### iOS / App Store (active universal iPhone/iPad scope)
 
-Первый релиз — universal iPhone/iPad. iPad full-screen/windowed
+Первый релиз 1.0.5 (14) — universal iPhone/iPad, выпущен в App Store
+19.10.2026 (#1940). Следующие версии идут тем же контуром. iPad full-screen/windowed
 portrait/landscape, adaptive layout и обязательные tablet screenshots входят в
 acceptance.
 EAS CLI и build image закреплены release-конфигурацией. Build и upload остаются

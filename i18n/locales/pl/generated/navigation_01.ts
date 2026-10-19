@@ -23,7 +23,6 @@ export const navigationGenerated1 = {
   "components.layout.AppInstallBar.metravel_v_prilozhenii_4b1dff87": "MeTravel w aplikacji",
   "components.layout.AppInstallBar.skryt_predlozhenie_ustanovit_prilozhenie_e15e4a3f": "Ukryj propozycję instalacji aplikacji",
   "components.layout.AppInstallBar.ustanovit_824265b0": "Zainstaluj",
-  "components.layout.AppInstallBar.ustanovit_prilozhenie_metravel_dlya_android_e22de6ce": "Zainstaluj aplikację MeTravel na Androida",
   "components.layout.BiometricGate.metravel_zablokirovan_8dcb0074": "MeTravel jest zablokowany",
   "components.layout.BiometricGate.podtverdite_vhod_s_pomoschyu_biometrii_chtob_3fa03608": "Aby kontynuować, potwierdź swój login za pomocą danych biometrycznych.",
   "components.layout.BiometricGate.razblokirovat_f1634eec": "Odblokuj",
