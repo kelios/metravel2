@@ -42,6 +42,14 @@ jest.mock('@/components/layout/WebServiceWorkerCleanup', () => ({
   },
 }))
 
+jest.mock('@/components/layout/AppInstallBar', () => ({
+  __esModule: true,
+  default: () => {
+    const { Text } = require('react-native')
+    return <Text testID="app-install-bar-chunk">app-install-bar</Text>
+  },
+}))
+
 jest.mock('@/utils/consent', () => ({
   __esModule: true,
   readConsent: jest.fn(() => null),
@@ -103,4 +111,38 @@ describe('RootWebDeferredChrome', () => {
     })
   })
 
+  // #2655: плашка установки адресована и iPhone — гейт монтирования чанка
+  // обязан пропускать тот же набор телефонов, что и сама плашка.
+  it.each([
+    ['iPhone', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1', true],
+    ['Android phone', 'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36', true],
+    ['desktop', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36', false],
+  ])('mounts the app install bar chunk for %s: %s', async (_name, userAgent, expected) => {
+    const uaSpy = jest.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue(userAgent)
+    try {
+      const { getByTestId, queryByTestId } = render(
+        <RootWebDeferredChrome
+          isMobile
+          pathname="/travels/test-route"
+          showFooter
+          isTravelPerformanceRoute
+          setDockHeight={jest.fn()}
+        />
+      )
+
+      // Плашка относится к idle-слою (1 с): ждём его маркер — чистку SW.
+      await waitFor(() => {
+        expect(getByTestId('sw-cleanup')).toBeTruthy()
+      }, { timeout: 3000 })
+      if (expected) {
+        await waitFor(() => {
+          expect(getByTestId('app-install-bar-chunk')).toBeTruthy()
+        })
+      } else {
+        expect(queryByTestId('app-install-bar-chunk')).toBeNull()
+      }
+    } finally {
+      uaSpy.mockRestore()
+    }
+  })
 })

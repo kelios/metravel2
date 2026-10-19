@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 
 import { safeLazy } from '@/components/layout/safeLazy'
-import { isAndroidPhoneUserAgent } from '@/utils/appInstallHint'
+import { getPhoneStorePlatform } from '@/utils/appInstallHint'
 
 const NetworkStatusLazy = safeLazy(
   () =>
@@ -138,13 +138,14 @@ export default function RootWebDeferredChrome({
   }, [isTravelPerformanceRoute])
 
   // Чанк подсказки про приложение подтягиваем только там, где она в принципе
-  // может показаться: Android-телефон в мобильном вьюпорте и уже после idle.
+  // может показаться: iPhone или Android-телефон в мобильном вьюпорте и уже
+  // после idle — тот же детект, что у самой плашки (`getPhoneStorePlatform`).
   // Остальные посетители его вообще не скачивают.
   const showAppInstallBar =
     isMobile &&
     showIdleChrome &&
     typeof navigator !== 'undefined' &&
-    isAndroidPhoneUserAgent(navigator.userAgent)
+    getPhoneStorePlatform(navigator.userAgent) !== null
 
   return (
     <>
