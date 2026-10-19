@@ -1,5 +1,6 @@
 const {
   checkCreatedAt,
+  checkGenreHeadings,
   checkPointNames,
   checkQuestLinks,
   dhashFromGray,
@@ -103,6 +104,37 @@ describe('article-acceptance-check: правила по отдельности',
     ]);
   });
 
+  it('жанр 2d: <h1>, эмодзи и разделы путеводителя — дефект, места и вопросы FAQ — норма', () => {
+    expect(checkGenreHeadings([
+      '<h1>Общий план маршрута</h1>',
+      '<h2>Практическая информация</h2>',
+      '<h2>Как добраться из Кракова</h2>',
+      '<h2>🏔 Вершина Каспрового</h2>',
+      '<h3>3) Итог:</h3>',
+      '<h2>Если соберётесь</h2><h2>Если соберетесь</h2>',
+      '<h3>1️⃣ Легенды и факты</h3>',
+      '<h3>🚌 Как добраться до Закопане?</h3>',
+    ].join(''))).toEqual([
+      '<h1> в теле: 1',
+      'раздел путеводителя «Практическая информация»',
+      'раздел путеводителя «Как добраться из Кракова»',
+      'эмодзи в заголовке «🏔 Вершина Каспрового»',
+      'раздел путеводителя «3) Итог:»',
+      'эмодзи в заголовке «1️⃣ Легенды и факты»',
+      'раздел путеводителя «1️⃣ Легенды и факты»',
+      'эмодзи в заголовке «🚌 Как добраться до Закопане?»',
+      '«Если соберётесь» заголовком: 2',
+    ]);
+    expect(checkGenreHeadings([
+      '<h2>Болото Ельня</h2>',
+      '<h2>Подъём на Каспровый Верх</h2>',
+      '<h3>Как добраться до Морского Ока зимой?</h3>',
+      '<h2>Если соберётесь</h2>',
+      '<h2>История Вавеля в двух легендах</h2>',
+      '<h2>Что рядом</h2><h2>Квесты по городам рядом</h2>',
+    ].join(''))).toEqual([]);
+  });
+
   it('ссылки квестов сверяются с парой (city_id, quest_id) из API', () => {
     const quests = [{ quest_id: 'krakow-dragon', city_id: '1', city_alias: 'krakow', city_legacy_ids: [] }];
     const links = questLinks('<a href="/quests/1/krakow-dragon">a</a><a href="https://metravel.by/quests/krakow/krakow-dragon">b</a><a href="/quests/1/no-such">c</a><a href="/quests">все</a>');
@@ -175,13 +207,13 @@ describe('article-acceptance-check: прогон по статье', () => {
   it('ловит дубль кадра, address-image, людей в alt, пропавший комментарий редакции и sid=', async () => {
     const detail = {
       ...baseDetail,
-      description: `${baseDetail.description}<p><img src="${ORIGIN}/address-image/1/conversions/p.webp" alt="Мы на вершине" /></p><p><a href="https://booking.com/h?sid=1">жильё</a></p>`,
+      description: `${baseDetail.description}<h2>Практическая информация</h2><p><img src="${ORIGIN}/address-image/1/conversions/p.webp" alt="Мы на вершине" /></p><p><a href="https://booking.com/h?sid=1">жильё</a></p>`,
     };
     const routesWithPoint = {
       ...routes(detail, { a: Buffer.from('SAME'), b: Buffer.from('SAME'), g: Buffer.from('G') }, [{ id: 5, user: 104 }]),
       [`${ORIGIN}/address-image/1/conversions/p.webp`]: { status: 404 },
     };
     const report = await runChecks({ id: 42, fetchImpl: stubFetch(routesWithPoint), grayThumbnail: () => null });
-    expect(fail(report)).toEqual(['img-family', 'captions-place', 'img-status', 'img-duplicates', 'editorial-comment', 'private-data']);
+    expect(fail(report)).toEqual(['img-family', 'captions-place', 'img-status', 'img-duplicates', 'genre-2d', 'editorial-comment', 'private-data']);
   });
 });

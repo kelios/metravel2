@@ -117,6 +117,37 @@ function headingTexts(html) {
   return out;
 }
 
+// Жанр 2d (`metravel-travel-article` → правило 3): заголовки — места и эпизоды
+// дня, вся практика — один «Если соберётесь». Разделы путеводителя, маркеры
+// генерации, `<h1>` в теле и эмодзи в заголовке — дефект. Вопросы FAQ (с «?»)
+// на разделы не проверяются: «Как добраться до …?» — нормальный вопрос; эмодзи
+// дефект и в них.
+const GUIDE_HEADINGS = ['вступление', 'что увидели', 'как прошло', 'итог', 'итоги', 'точки', 'описание',
+  'наши впечатления', 'сложность маршрута', 'история', 'легенды и факты', 'маршрут в цифрах'];
+const GUIDE_HEADING_PREFIXES = ['практическая информация', 'как добраться', 'что взять', 'что посмотреть'];
+// Keycap-эмодзи («1️⃣») — цифра + U+20E3, в Extended_Pictographic не входит.
+const PICTOGRAPH_RE = /[\p{Extended_Pictographic}\u20E3]/u;
+
+function checkGenreHeadings(html) {
+  const body = String(html || '');
+  const problems = [];
+  const h1 = (body.match(/<h1\b/gi) || []).length;
+  if (h1) problems.push(`<h1> в теле: ${h1}`);
+  let practice = 0;
+  for (const text of headingTexts(body)) {
+    if (PICTOGRAPH_RE.test(text)) problems.push(`эмодзи в заголовке «${text}»`);
+    if (text.endsWith('?')) continue;
+    const norm = text.replace(/[\p{Extended_Pictographic}\uFE0F\u20E3\u200D]/gu, '').replace(/^[\d.)\s]+/u, '')
+      .replace(/[:.!…\s]+$/u, '').toLowerCase().replace(/ё/g, 'е');
+    if (GUIDE_HEADINGS.includes(norm) || GUIDE_HEADING_PREFIXES.some((p) => norm.startsWith(p))) {
+      problems.push(`раздел путеводителя «${text}»`);
+    }
+    if (norm.startsWith('если соберетесь')) practice += 1;
+  }
+  if (practice > 1) problems.push(`«Если соберётесь» заголовком: ${practice}`);
+  return problems;
+}
+
 function findPeopleInCaption(text) {
   const m = String(text || '').match(PEOPLE_IN_CAPTION_RE);
   return m ? m[1] : null;
@@ -367,6 +398,7 @@ async function runChecks({ id, origin = 'https://metravel.by', fetchImpl = fetch
   const headings = headingTexts(fields.description);
   const nearby = headings.filter((h) => /что рядом/iu.test(h)).length;
   results.push(check('nearby', '«Что рядом» ровно один', nearby === 1 ? [] : [`найдено ${nearby}`]));
+  results.push(check('genre-2d', 'заголовки по жанру 2d: без <h1>, эмодзи и разделов путеводителя', checkGenreHeadings(fields.description)));
   const questBlocks = headings.filter((h) => /^квесты по городам рядом$/iu.test(h)).length;
   const questCheck = checkQuestLinks(questLinks(fields.description), quests);
   results.push(check('quests', '«Квесты по городам рядом» ровно один, ссылки из /api/quests/',
@@ -443,6 +475,7 @@ if (require.main === module) main().then((code) => process.exit(code));
 module.exports = {
   PEOPLE_IN_CAPTION_RE,
   checkCreatedAt,
+  checkGenreHeadings,
   checkPointNames,
   checkQuestLinks,
   dhashFromGray,
