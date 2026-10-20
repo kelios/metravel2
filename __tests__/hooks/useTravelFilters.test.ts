@@ -18,7 +18,9 @@ import {
   normalizeCategoryTravelAddress,
 } from '@/hooks/useTravelFilters';
 import { captureFiltersRefreshBoundary, fetchAllCountriesOptimized, fetchFiltersOptimized } from '@/api/miscOptimized';
+import { fetchAllCountries } from '@/api/misc';
 import { POINT_CATEGORY_DICTIONARY_REFRESH_EVENT } from '@/utils/pointCategoryDictionaryQuery';
+import { parseTravelArticleCreateIntent, resolveInitialPrefill } from '@/utils/travelArticleCreateIntent';
 
 // Справочники берутся через дедуплицирующий слой miscOptimized: раньше прямые
 // вызовы api/misc из разных путей давали по два одинаковых запроса на страницу.
@@ -128,6 +130,42 @@ describe('useTravelFilters', () => {
       title_ru: 'Беларусь',
     });
     expect(mockFetchAllCountries).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    { countries: [{ country_id: 616, title_ru: 'Польша', country_code: ' pl ' }], selected: ['616'] },
+    { countries: [{ country_id: 616, title_ru: 'Польша', iso2: 'PL' }], selected: ['616'] },
+    { countries: [{ country_id: 616, title_ru: 'Польша' }], selected: [] },
+    { countries: [{ country_id: 616, title_ru: 'Польша', country_code: 'PL,DE' }], selected: [] },
+    { countries: [{ country_id: 616, title_ru: 'Польша', country_code: 'PL', iso2: 'DE' }], selected: [] },
+    { countries: [
+      { country_id: 616, title_ru: 'Польша', country_code: 'PL' },
+      { country_id: 777, title_ru: 'Другая страна', country_code: 'PL' },
+    ], selected: [] },
+  ])('resolves article ISO2 prefill through the real countries API and hook: %j', async ({ countries, selected }) => {
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify(countries),
+    } as Response);
+    mockFetchFilters.mockResolvedValue({ categories: [] });
+    mockFetchAllCountries.mockImplementationOnce(() => fetchAllCountries({ throwOnError: true }));
+
+    try {
+      const { result } = renderHook(() => useTravelFilters());
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      expect(result.current.error).toBeNull();
+      expect(result.current.filters.countries).toHaveLength(countries.length);
+      const intent = parseTravelArticleCreateIntent('/travel/new?source_travel_id=42&country=PL&place=Краков');
+      expect(intent).not.toBeNull();
+      expect(resolveInitialPrefill(intent!, result.current.filters.countries)).toEqual({
+        name: 'Краков', countries: selected,
+      });
+      expect(resolveInitialPrefill({ sourceTravelId: '42', country: '616' }, result.current.filters.countries).countries)
+        .toEqual(['616']);
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 
   it('uses the dedicated countries endpoint instead of legacy inline countries', async () => {

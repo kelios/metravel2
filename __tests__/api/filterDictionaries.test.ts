@@ -48,6 +48,36 @@ describe('filter dictionary runtime contract', () => {
       'country_id',
     );
   });
+
+  it.each(['country_code', 'code', 'iso2', 'iso', 'alpha2', 'alpha_2', 'ISO3166_1_alpha2'])(
+    'preserves a valid optional %s as the canonical country code', (key) => {
+      expect(normalizeFilterCountries([
+        { country_id: 616, title_ru: ' Польша ', [key]: ' pl ' },
+      ])).toEqual([{ country_id: 616, title_ru: 'Польша', country_code: 'PL' }]);
+    },
+  );
+
+  it('accepts consistent country code aliases', () => {
+    expect(normalizeFilterCountries([
+      { country_id: 616, title_ru: 'Польша', country_code: 'pl', iso2: ' PL ' },
+    ])).toEqual([{ country_id: 616, title_ru: 'Польша', country_code: 'PL' }]);
+  });
+
+  it.each([
+    { country_code: undefined },
+    { country_code: null },
+    { country_code: '' },
+    { country_code: 'POL' },
+    { country_code: 'PL,DE' },
+    { country_code: 616 },
+    { country_code: ['PL'] },
+    { country_code: 'PL', iso2: 'DE' },
+    { country_code: 'PL', iso2: 616 },
+  ])('keeps the required country identity when optional codes are unusable: %j', (codes) => {
+    expect(normalizeFilterCountries([
+      { country_id: 616, title_ru: 'Польша', ...codes },
+    ])).toEqual([{ country_id: 616, title_ru: 'Польша' }]);
+  });
 });
 
 describe('upsert wizard filter dictionaries normalizer', () => {

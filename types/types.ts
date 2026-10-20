@@ -297,6 +297,7 @@ export type FilterSortingOption = {
 export type FilterCountryOption = {
     country_id: number
     title_ru: string
+    country_code?: string
 }
 
 /** Runtime contract of GET /api/getFiltersTravel/. */

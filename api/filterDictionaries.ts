@@ -85,9 +85,22 @@ export const normalizeFilterCountries = (payload: unknown): FilterCountryOption[
     if (typeof item.country_id !== 'number' || !Number.isInteger(item.country_id)) {
       throw new Error(`Invalid ${label}.country_id: expected an integer`);
     }
+    const codes = [
+      item.country_code, item.code, item.iso2, item.iso, item.alpha2, item.alpha_2,
+      item.ISO3166_1_alpha2,
+    ]
+      .filter((code) => code !== undefined && code !== null)
+      .map((code) => typeof code === 'string' && /^[a-z]{2}$/i.test(code.trim())
+        ? code.trim().toUpperCase()
+        : undefined);
+    // Optional identity must be unambiguous; invalid aliases cannot select a country.
+    const countryCode = codes.length > 0 && codes.every((code) => code === codes[0])
+      ? codes[0]
+      : undefined;
     return {
       country_id: item.country_id,
       title_ru: asNonEmptyString(item.title_ru, `${label}.title_ru`),
+      ...(countryCode ? { country_code: countryCode } : {}),
     };
   });
 
