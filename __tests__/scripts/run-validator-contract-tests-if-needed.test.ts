@@ -11,6 +11,7 @@ const {
   expectTargetedTestsListUnique,
   expectTargetedTestsListResolvable,
 } = require('./targeted-test-list-contract-utils')
+const { runNodeCli } = require('./cli-test-utils')
 
 describe('run-validator-contract-tests-if-needed', () => {
   it('parses args with defaults and overrides', () => {
@@ -63,6 +64,25 @@ describe('run-validator-contract-tests-if-needed', () => {
       'scripts/validator-output.js',
       '__tests__/scripts/validator-json-contract.test.ts',
     ])
+  })
+
+  it.each([
+    'scripts/lib/htmlRobots.js',
+    'scripts/lib/htmlMetaDescription.js',
+    'scripts/lib/questPageDepth.js',
+    '__tests__/scripts/htmlRobots.test.ts',
+    'scripts/run-validator-contract-tests-if-needed.js',
+    '__tests__/scripts/run-validator-contract-tests-if-needed.test.ts',
+  ])('runs the shared noindex regression in CI when %s changes', (file) => {
+    const result = runNodeCli(
+      ['scripts/run-validator-contract-tests-if-needed.js', '--dry-run', '--json'],
+      { CHANGED_FILES: file },
+    )
+
+    expect(result.status).toBe(0)
+    expect(JSON.parse(result.stdout)).toMatchObject({ decision: 'run', reason: 'match' })
+    expect(VALIDATOR_CONTRACT_TESTS).toContain('__tests__/scripts/htmlRobots.test.ts')
+    expect(VALIDATOR_CONTRACT_TESTS).toContain('__tests__/scripts/run-validator-contract-tests-if-needed.test.ts')
   })
 
   it('builds run/skip summary markdown', () => {
@@ -137,6 +157,8 @@ describe('run-validator-contract-tests-if-needed', () => {
       '__tests__/scripts/validate-ci-incident-payload.test.ts',
       '__tests__/scripts/summarize-ci-incident-payload-validation.test.ts',
       '__tests__/scripts/validate-smoke-suite-baseline-recommendation.test.ts',
+      '__tests__/scripts/htmlRobots.test.ts',
+      '__tests__/scripts/run-validator-contract-tests-if-needed.test.ts',
       '__tests__/scripts/guard-validator-contract-json.test.ts',
       '__tests__/scripts/guard-validator-contract-change.test.ts',
     ])

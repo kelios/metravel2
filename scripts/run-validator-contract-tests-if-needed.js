@@ -44,12 +44,16 @@ const VALIDATOR_CONTRACT_TESTS = [
   '__tests__/scripts/validate-ci-incident-payload.test.ts',
   '__tests__/scripts/summarize-ci-incident-payload-validation.test.ts',
   '__tests__/scripts/validate-smoke-suite-baseline-recommendation.test.ts',
+  '__tests__/scripts/htmlRobots.test.ts',
+  '__tests__/scripts/run-validator-contract-tests-if-needed.test.ts',
   '__tests__/scripts/guard-validator-contract-json.test.ts',
   '__tests__/scripts/guard-validator-contract-change.test.ts',
 ]
 
 const RELEVANT_CATEGORIES = [
   { name: 'validator', pattern: /^scripts\/validator-/ },
+  { name: 'validator', pattern: /^scripts\/run-validator-contract-tests-if-needed\.js$/ },
+  { name: 'html-robots', pattern: /^scripts\/lib\/(htmlRobots|htmlMetaDescription|questPageDepth)\.js$/ },
   { name: 'validators', pattern: /^scripts\/validate-.*\.js$/ },
   { name: 'summaries', pattern: /^scripts\/summarize-.*\.js$/ },
   { name: 'summaries', pattern: /^scripts\/render-validator-guard-comment\.js$/ },
@@ -57,6 +61,7 @@ const RELEVANT_CATEGORIES = [
   { name: 'shared', pattern: /^scripts\/validation-rules\.js$/ },
   { name: 'shared', pattern: /^scripts\/update-validator-error-codes-doc-table\.js$/ },
   { name: 'tests', pattern: /^__tests__\/scripts\/validator-.*\.test\.ts$/ },
+  { name: 'tests', pattern: /^__tests__\/scripts\/(htmlRobots|run-validator-contract-tests-if-needed)\.test\.ts$/ },
   { name: 'tests', pattern: /^__tests__\/scripts\/validate-.*\.test\.ts$/ },
   { name: 'tests', pattern: /^__tests__\/scripts\/summarize-.*\.test\.ts$/ },
   { name: 'tests', pattern: /^__tests__\/scripts\/render-validator-guard-comment\.test\.ts$/ },
