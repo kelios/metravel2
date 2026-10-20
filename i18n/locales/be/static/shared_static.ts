@@ -1,4 +1,10 @@
 export const sharedStaticResources = {
+  "appHandoff.title": "MeTravel у дадатку",
+  "appHandoff.description": "Маршруты і квэсты пад рукой",
+  "appHandoff.open": "Адкрыць",
+  "appHandoff.openA11y": "Адкрыць дадатак MeTravel",
+  "appHandoff.install": "Усталяваць",
+  "appHandoff.dismiss": "Схаваць прапанову дадатку",
   "userSafety.reason.spam": "Спам",
   "userSafety.reason.harassment": "Абразы/харасмэнт",
   "userSafety.reason.scam": "Махлярства",

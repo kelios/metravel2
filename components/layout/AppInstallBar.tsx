@@ -1,168 +1,104 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Animated, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
-import { usePathname } from 'expo-router'
+import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { Image, Platform, StyleSheet, Text, View } from 'react-native'
+import { useGlobalSearchParams, usePathname } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import Button from '@/components/ui/Button'
+import IconButton from '@/components/ui/IconButton'
 import type { AppStorePlatform } from '@/constants/appStore'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { asBottomDimension, useDockReservePx, webDockReserve } from '@/components/layout/bottomChromeInset'
 import { useFooterOverlayOpen } from '@/hooks/useFooterOverlayOpen'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
-import { translate as i18nT } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider'
 import { sendAnalyticsEvent } from '@/utils/analytics'
 import {
   getPhoneStorePlatform,
   isStandaloneDisplayMode,
-  markAppInstallHintConverted,
   markAppInstallHintDismissed,
   readAppInstallHintState,
   shouldOfferAppInstall,
 } from '@/utils/appInstallHint'
-import { releaseBottomChromeReserve, setBottomChromeReserve } from '@/utils/bottomChromeReserve'
-import { readConsent } from '@/utils/consent'
+import {
+  getBottomChromeReserve,
+  releaseBottomChromeReserve,
+  setBottomChromeReserve,
+  subscribeBottomChromeReserve,
+} from '@/utils/bottomChromeReserve'
+import { openExternalUrl } from '@/utils/externalLinks'
+import { getMobileAppOpenUrl, getSmartAppBannerContent } from '@/utils/mobileAppHandoff'
 import { openAppStoreListing } from '@/utils/openAppStoreListing'
 import { webViewStyle } from '@/utils/webProps'
 
 const IS_WEB = Platform.OS === 'web'
 const RESERVE_OWNER = 'app-install-bar'
-
-// Появляемся не сразу: сначала человек должен увидеть контент, за которым пришёл.
-const REVEAL_DELAY_MS = 12000
-// ...либо раньше, если он уже пролистал больше полутора экранов — это интерес.
-const REVEAL_SCROLL_RATIO = 1.5
-// Пока не решён вопрос про cookies, второй плашки внизу не показываем.
-const CONSENT_RECHECK_MS = 4000
-
-const BAR_HEIGHT = 68
-// 320×320 WebP (3,6 КБ). Мастер иконки 1024×1024 PNG здесь не нужен: рисуем 40 px.
 const APP_ICON = require('@/assets/images/app-icon.webp')
+const getOtherReserve = () => getBottomChromeReserve(RESERVE_OWNER)
+const getServerReserve = () => 0
 
-/**
- * Ненавязчивое предложение установить приложение для посетителей mobile web
- * с iPhone (App Store) или Android-телефона (Google Play). Узкая плашка над
- * нижним доком: контент не перекрывает, закрывается крестиком и после закрытия
- * молчит месяц (`utils/appInstallHint`).
- *
- * Модалок и интерстишиалов здесь сознательно нет: перекрытие контента на
- * мобильном — это и плохой UX, и риск по Google mobile interstitial penalty.
- */
+/** One phone-only offer; the OS handles app availability after an explicit tap. */
 function AppInstallBar() {
   const colors = useThemedColors()
+  const { t } = useTranslation()
   const pathname = usePathname()
+  const searchParams = useGlobalSearchParams()
   const { isMobile, width } = useResponsive()
-  // На узких экранах (360 px и меньше) иконка съедает столько ширины, что
-  // заголовок уходит в многоточие — там она уступает место тексту.
-  const showIcon = width >= 390
   const footerOverlayOpen = useFooterOverlayOpen()
-
-  // Витрина, в которую ведёт показанная плашка; `null` — плашка ещё не показана.
   const [storePlatform, setStorePlatform] = useState<AppStorePlatform | null>(null)
-  const visible = storePlatform !== null
   const [closed, setClosed] = useState(false)
-  const appear = useRef(new Animated.Value(0)).current
-
-  // На самой странице /app предложение дублировало бы содержимое страницы.
-  const isAppLandingRoute = pathname === '/app'
-
+  const shownRecorded = useRef(false)
+  const [barHeight, setBarHeight] = useState(112)
   const styles = useMemo(() => createStyles(colors), [colors])
-
   const dockReservePx = useDockReservePx()
-  const bottomOffset = dockReservePx + 8
-  const bottomPosition = IS_WEB ? webDockReserve(8) : bottomOffset
+  const otherReserve = useSyncExternalStore(subscribeBottomChromeReserve, getOtherReserve, getServerReserve)
+  const bottomOffset = Math.max(dockReservePx, otherReserve) + DESIGN_TOKENS.spacing.xs
+  const bottomPosition = webDockReserve(DESIGN_TOKENS.spacing.xs, otherReserve)
+  const shown = IS_WEB && isMobile && storePlatform !== null && !closed && !footerOverlayOpen && pathname !== '/app'
 
   useEffect(() => {
     if (!IS_WEB || typeof window === 'undefined') return
-    if (closed || visible || isAppLandingRoute || !isMobile) return
-
     const userAgent = String(window.navigator?.userAgent || '')
-    const eligible = shouldOfferAppInstall({
+    if (!shouldOfferAppInstall({
       userAgent,
       isMobileViewport: isMobile,
-      referrer: typeof document !== 'undefined' ? document.referrer : '',
+      referrer: document.referrer,
       isStandalone: isStandaloneDisplayMode(),
       state: readAppInstallHintState(),
       now: Date.now(),
-    })
-    if (!eligible) return
-
-    let revealTimer: ReturnType<typeof setTimeout> | null = null
-    let consentTimer: ReturnType<typeof setTimeout> | null = null
-    let done = false
-
-    const reveal = () => {
-      if (done) return
-      // Cookie-баннер занимает то же место внизу — ждём, пока с ним разберутся.
-      if (!readConsent()) {
-        consentTimer = setTimeout(reveal, CONSENT_RECHECK_MS)
-        return
-      }
-      done = true
-      cleanupTriggers()
-      setStorePlatform(getPhoneStorePlatform(userAgent))
-    }
-
-    // Страницы приложения скроллятся внутри RN Web ScrollView, а не окном,
-    // поэтому слушаем в фазе захвата и берём смещение у самого скроллера.
-    const onScroll = (event: Event) => {
-      const target = event.target
-      const element =
-        typeof HTMLElement !== 'undefined' && target instanceof HTMLElement ? target : null
-      const scrolled = Math.max(window.scrollY || 0, element?.scrollTop ?? 0)
-      const viewport = element?.clientHeight || window.innerHeight || 0
-      if (viewport > 0 && scrolled > viewport * REVEAL_SCROLL_RATIO) reveal()
-    }
-
-    const cleanupTriggers = () => {
-      if (revealTimer) {
-        clearTimeout(revealTimer)
-        revealTimer = null
-      }
-      window.removeEventListener('scroll', onScroll, true)
-    }
-
-    revealTimer = setTimeout(reveal, REVEAL_DELAY_MS)
-    window.addEventListener('scroll', onScroll, { passive: true, capture: true })
-
-    return () => {
-      done = true
-      cleanupTriggers()
-      if (consentTimer) clearTimeout(consentTimer)
-    }
-  }, [closed, isAppLandingRoute, isMobile, visible])
-
-  const shown = visible && !closed && !footerOverlayOpen && !isAppLandingRoute
+    })) return
+    setStorePlatform(getPhoneStorePlatform(userAgent))
+  }, [isMobile])
 
   useEffect(() => {
-    if (!IS_WEB || !shown) return
-    Animated.timing(appear, {
-      toValue: 1,
-      duration: 220,
-      useNativeDriver: true,
-    }).start()
-  }, [appear, shown])
+    if (!IS_WEB || typeof document === 'undefined') return
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="apple-itunes-app"]')
+    if (meta) meta.content = getSmartAppBannerContent(window.location.href)
+  }, [pathname, searchParams])
 
   useEffect(() => {
-    if (!IS_WEB) return
-    if (!shown) {
-      releaseBottomChromeReserve(RESERVE_OWNER)
-      return
-    }
-    setBottomChromeReserve(RESERVE_OWNER, bottomOffset + BAR_HEIGHT + 8)
+    if (!shown) return
+    setBottomChromeReserve(RESERVE_OWNER, bottomOffset + barHeight + DESIGN_TOKENS.spacing.xs)
     return () => releaseBottomChromeReserve(RESERVE_OWNER)
-  }, [bottomOffset, shown])
+  }, [barHeight, bottomOffset, shown])
 
   useEffect(() => {
-    if (!storePlatform) return
+    if (!shown || shownRecorded.current) return
+    shownRecorded.current = true
     void sendAnalyticsEvent('AppInstallBar_Shown', { platform: storePlatform })
+  }, [shown, storePlatform])
+
+  const handleOpen = useCallback(() => {
+    if (!storePlatform) return
+    void sendAnalyticsEvent('AppInstallBar_Open', { platform: storePlatform })
+    void openExternalUrl(getMobileAppOpenUrl(storePlatform, window.location.href), {
+      allowedProtocols: ['metravel:', 'intent:'],
+    })
   }, [storePlatform])
 
   const handleInstall = useCallback(() => {
     if (!storePlatform) return
-    markAppInstallHintConverted()
     void sendAnalyticsEvent('AppInstallBar_Click', { platform: storePlatform })
-    setClosed(true)
     void openAppStoreListing({ platform: storePlatform, source: 'install_bar' })
   }, [storePlatform])
 
@@ -173,67 +109,49 @@ function AppInstallBar() {
     setClosed(true)
   }, [storePlatform])
 
-  if (!IS_WEB || !shown) return null
+  if (!shown) return null
 
   return (
-    <Animated.View
+    <View
       testID="app-install-bar"
-      style={[
-        styles.wrapper,
-        { bottom: asBottomDimension(bottomPosition) },
-        {
-          opacity: appear,
-          transform: [
-            {
-              translateY: appear.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }),
-            },
-          ],
-        },
-      ]}
+      onLayout={(event) => setBarHeight(event.nativeEvent.layout.height)}
+      style={[styles.wrapper, { bottom: asBottomDimension(bottomPosition) }]}
     >
-      <View style={styles.bar}>
-        {showIcon && (
-          <Image source={APP_ICON} style={styles.icon} resizeMode="contain" accessible={false} />
-        )}
-
+      <View style={styles.heading}>
+        {width >= 360 && <Image source={APP_ICON} style={styles.icon} resizeMode="contain" accessible={false} />}
         <View style={styles.texts}>
-          <Text numberOfLines={1} style={styles.title}>
-            {i18nT('navigation:components.layout.AppInstallBar.metravel_v_prilozhenii_4b1dff87')}
-          </Text>
-          <Text numberOfLines={1} style={styles.subtitle}>
-            {i18nT('navigation:components.layout.AppInstallBar.karta_i_kvesty_oflayn_8d65d13f')}
-          </Text>
+          <Text style={styles.title}>{t('sharedStatic:appHandoff.title')}</Text>
+          <Text style={styles.subtitle}>{t('sharedStatic:appHandoff.description')}</Text>
         </View>
-
-        <Button
-          label={i18nT('navigation:components.layout.AppInstallBar.ustanovit_824265b0')}
-          onPress={handleInstall}
-          variant="primary"
+        <IconButton
+          icon={<Feather name="x" size={18} color={colors.textMuted} />}
+          label={t('sharedStatic:appHandoff.dismiss')}
+          onPress={handleDismiss}
           size="sm"
-          accessibilityLabel={
-            storePlatform === 'ios'
-              ? i18nT('sharedStatic:appDownload.appStore.a11y')
-              : i18nT('sharedStatic:appDownload.googlePlay.a11y')
-          }
+          showTooltip={false}
+          testID="app-install-bar-dismiss"
+        />
+      </View>
+      <View style={styles.actions}>
+        <Button
+          label={t('sharedStatic:appHandoff.open')}
+          accessibilityLabel={t('sharedStatic:appHandoff.openA11y')}
+          onPress={handleOpen}
           style={styles.cta}
-          labelStyle={styles.ctaLabel}
+          testID="app-install-bar-open"
+        />
+        <Button
+          label={t('sharedStatic:appHandoff.install')}
+          accessibilityLabel={storePlatform === 'ios'
+            ? t('sharedStatic:appDownload.appStore.a11y')
+            : t('sharedStatic:appDownload.googlePlay.a11y')}
+          onPress={handleInstall}
+          variant="outline"
+          style={styles.cta}
           testID="app-install-bar-cta"
         />
-
-        <Pressable
-          onPress={handleDismiss}
-          accessibilityRole="button"
-          accessibilityLabel={i18nT(
-            'navigation:components.layout.AppInstallBar.skryt_predlozhenie_ustanovit_prilozhenie_e15e4a3f'
-          )}
-          testID="app-install-bar-dismiss"
-          hitSlop={10}
-          style={styles.dismiss}
-        >
-          <Feather name="x" size={18} color={colors.textMuted} />
-        </Pressable>
       </View>
-    </Animated.View>
+    </View>
   )
 }
 
@@ -244,57 +162,21 @@ function createStyles(colors: ThemedColors) {
       left: DESIGN_TOKENS.spacing.sm,
       right: DESIGN_TOKENS.spacing.sm,
       zIndex: 900,
-    },
-    bar: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      // На 360–412 px ширины плашке нужно уместить иконку, две строки, CTA и
-      // крестик: зазоры тут узкие сознательно, иначе текст уходит в многоточие.
+      padding: DESIGN_TOKENS.spacing.xs,
       gap: DESIGN_TOKENS.spacing.xs,
-      minHeight: BAR_HEIGHT,
-      paddingVertical: DESIGN_TOKENS.spacing.xs,
-      paddingLeft: DESIGN_TOKENS.spacing.xs,
-      paddingRight: 4,
       borderRadius: DESIGN_TOKENS.radii.lg,
       borderWidth: 1,
       borderColor: colors.borderLight,
       backgroundColor: colors.surface,
-      ...(IS_WEB
-        ? webViewStyle({ boxShadow: '0 8px 24px rgba(0, 0, 0, 0.16)' })
-        : null),
+      ...webViewStyle({ boxShadow: DESIGN_TOKENS.shadows.medium }),
     },
-    icon: {
-      width: 36,
-      height: 36,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-    },
-    texts: {
-      flex: 1,
-      minWidth: 0,
-      gap: 1,
-    },
-    title: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: colors.text,
-    },
-    subtitle: {
-      fontSize: 11,
-      color: colors.textMuted,
-    },
-    cta: {
-      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-    },
-    ctaLabel: {
-      fontSize: 13,
-    },
-    dismiss: {
-      width: 44,
-      height: 44,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: 999,
-    },
+    heading: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.xs },
+    icon: { width: 36, height: 36, borderRadius: DESIGN_TOKENS.radii.sm },
+    texts: { flex: 1, minWidth: 0, gap: 1 },
+    title: { fontSize: 13, fontWeight: '700', color: colors.text },
+    subtitle: { fontSize: 11, color: colors.textMuted },
+    actions: { flexDirection: 'row', flexWrap: 'wrap', gap: DESIGN_TOKENS.spacing.xs },
+    cta: { flexGrow: 1, flexBasis: 100, minHeight: 44 },
   })
 }
 

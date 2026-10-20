@@ -1,4 +1,10 @@
 export const sharedStaticResources = {
+  "appHandoff.title": "MeTravel в приложении",
+  "appHandoff.description": "Маршруты и квесты под рукой",
+  "appHandoff.open": "Открыть",
+  "appHandoff.openA11y": "Открыть приложение MeTravel",
+  "appHandoff.install": "Установить",
+  "appHandoff.dismiss": "Скрыть предложение приложения",
   "userSafety.reason.spam": "Спам",
   "userSafety.reason.harassment": "Оскорбления / харассмент",
   "userSafety.reason.scam": "Мошенничество",

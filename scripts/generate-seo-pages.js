@@ -17,6 +17,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { getSmartAppBannerContent } = require('../utils/mobileAppHandoff');
 const { loadSsgCatalogs } = require('../i18n/babel-inline-plugin');
 const { fetchJson, fetchJsonOnce, withRetries } = require('./lib/fetchJson');
 const { readSeoInputs, writeSeoInputs, validateIdentity, materializeTravelDetails } = require('./lib/seoInputsCapture');
@@ -1087,6 +1088,13 @@ function injectMeta(baseHtml, { title, description, canonical, image, ogType = '
     html,
     /<link[^>]*rel="canonical"[^>]*\/?>/i,
     `<link data-rh="true" rel="canonical" href="${escapeAttr(canonical)}"/>`
+  );
+
+  // Safari receives a page-specific app destination before JavaScript loads.
+  html = replaceOrInsert(
+    html,
+    /<meta\b(?=[^>]*\bname\s*=\s*["']apple-itunes-app["'])[^>]*\/?>/i,
+    `<meta name="apple-itunes-app" content="${escapeAttr(getSmartAppBannerContent(canonical))}"/>`
   );
 
   // --- og:type ---

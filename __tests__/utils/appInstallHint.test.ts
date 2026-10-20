@@ -1,6 +1,5 @@
 import {
   DISMISS_COOLDOWN_MS,
-  MAX_DISMISSALS,
   detectStorePlatform,
   getPhoneStorePlatform,
   isAndroidPhoneUserAgent,
@@ -95,14 +94,15 @@ describe('shouldOfferAppInstall', () => {
     expect(
       shouldOfferAppInstall(context({ referrer: 'android-app://by.metravel.app/' }))
     ).toBe(false)
+    expect(shouldOfferAppInstall(context({ referrer: 'android-app://com.google.android.googlequicksearchbox/' }))).toBe(true)
   })
 
-  it('никогда не возвращается после перехода в Google Play', () => {
+  it('не считает прежний переход в магазин доказательством установки', () => {
     expect(
       shouldOfferAppInstall(
         context({ state: { installClickedAt: NOW - 5 * DISMISS_COOLDOWN_MS }, now: NOW })
       )
-    ).toBe(false)
+    ).toBe(true)
   })
 
   it('держит паузу после закрытия и возвращается по её истечении', () => {
@@ -113,10 +113,16 @@ describe('shouldOfferAppInstall', () => {
     expect(shouldOfferAppInstall(context({ state, now: NOW + DISMISS_COOLDOWN_MS + 1 }))).toBe(true)
   })
 
-  it('перестаёт показываться после лимита закрытий', () => {
-    const state = { dismissedAt: NOW, dismissCount: MAX_DISMISSALS }
+  it('возвращается после паузы даже после нескольких закрытий', () => {
+    const state = { dismissedAt: NOW, dismissCount: 10 }
     expect(shouldOfferAppInstall(context({ state, now: NOW + 10 * DISMISS_COOLDOWN_MS }))).toBe(
-      false
+      true
     )
+  })
+
+  it('не скрывается навсегда из-за будущей или повреждённой даты', () => {
+    for (const dismissedAt of [NOW + 1, NaN, Infinity, -1]) {
+      expect(shouldOfferAppInstall(context({ state: { dismissedAt } }))).toBe(true)
+    }
   })
 })

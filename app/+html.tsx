@@ -33,6 +33,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { ICON_FONT_FAMILY, buildFontDisplayPolicyScript, buildIconFontLoaderScript } from '@/utils/iconFontShell'
 import { HEADER_LOGO_WEB_SRC } from '@/components/layout/headerLayoutContract'
 import { getLocaleBootCss, getLocaleBootScript } from '@/i18n/localeBootShell'
+import { getSmartAppBannerContent } from '@/utils/mobileAppHandoff';
 
 export { getAnalyticsInlineScript };
 
@@ -480,6 +481,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
 	      <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=5" />
 	      <meta id="app-theme-color" name="theme-color" content={DESIGN_COLORS.themeColorLight} />
       <meta name="color-scheme" content="light dark" />
+      <meta name="apple-itunes-app" content={getSmartAppBannerContent()} />
       {/* No static <title> here: React Helmet bakes a per-page title (data-rh="true")
           into the exported HTML, and the inline critical script below sets document.title
           for SPA-only routes. A static <title> would NOT be deduped by Expo export and

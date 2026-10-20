@@ -4,12 +4,17 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import { render } from '@testing-library/react-native'
+import { act, fireEvent, render } from '@testing-library/react-native'
 import type { ComponentType } from 'react'
 import { Platform, Text } from 'react-native'
 
 import { resources } from '@/i18n/resources'
 import { writeConsent } from '@/utils/consent'
+import {
+  getBottomChromeReserve,
+  resetBottomChromeReserve,
+  setBottomChromeReserve,
+} from '@/utils/bottomChromeReserve'
 
 // #2135: на мобильном web текст баннера ограничен `numberOfLines={2}` (решение
 // дизайна: баннер компактный). На ширине 320 бокс текста — 262 px (320 − 2×16
@@ -144,5 +149,54 @@ describe('ConsentBanner choice buttons are addressable by testID (#2162)', () =>
     screen.UNSAFE_getByProps({ testID }).props.onPress()
 
     expect(writeConsent).toHaveBeenCalledWith(expect.objectContaining({ necessary: true, analytics }))
+  })
+})
+
+describe('ConsentBanner measured bottom reserve', () => {
+  const originalPlatform = Platform.OS
+
+  beforeEach(() => {
+    Platform.OS = 'web'
+    resetBottomChromeReserve()
+  })
+
+  afterEach(() => {
+    Platform.OS = originalPlatform
+    resetBottomChromeReserve()
+  })
+
+  it('replaces the estimate with the rendered height so another panel can stack above consent', () => {
+    const ConsentBanner: ComponentType = require('@/components/layout/ConsentBanner').default
+    const screen = render(<ConsentBanner />)
+    expect(getBottomChromeReserve()).toBe(120)
+
+    fireEvent(screen.getByTestId('consent-banner'), 'layout', {
+      nativeEvent: { layout: { height: 156, width: 288, x: 0, y: 0 } },
+    })
+    expect(getBottomChromeReserve()).toBe(172)
+
+    fireEvent(screen.getByTestId('consent-banner'), 'layout', {
+      nativeEvent: { layout: { height: 128, width: 400, x: 0, y: 0 } },
+    })
+    expect(getBottomChromeReserve()).toBe(144)
+
+    setBottomChromeReserve('app-install-bar', 240)
+    expect(getBottomChromeReserve('app-install-bar')).toBe(144)
+    act(() => screen.UNSAFE_getByProps({ testID: 'consent-decline' }).props.onPress())
+    expect(getBottomChromeReserve('app-install-bar')).toBe(0)
+    expect(getBottomChromeReserve()).toBe(240)
+  })
+
+  it('keeps its estimate until a valid layout is available and releases it on unmount', () => {
+    const ConsentBanner: ComponentType = require('@/components/layout/ConsentBanner').default
+    const screen = render(<ConsentBanner />)
+
+    fireEvent(screen.getByTestId('consent-banner'), 'layout', {
+      nativeEvent: { layout: { height: 0, width: 0, x: 0, y: 0 } },
+    })
+    expect(getBottomChromeReserve()).toBe(120)
+
+    screen.unmount()
+    expect(getBottomChromeReserve()).toBe(0)
   })
 })

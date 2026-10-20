@@ -42,7 +42,8 @@ export function useNativeBottomChromeOcclusion(): NativeBottomChrome {
 }
 
 /** The dock itself must not include the banners' own --mt-consent-h reserve. */
-export function webDockReserve(extra = 0): string {
+export function webDockReserve(extra = 0, minimum = 0): string {
+  if (minimum > 0) return `calc(max(var(--mt-dock-h, 0px), ${minimum}px) + ${extra}px)`
   return `calc(var(--mt-dock-h, 0px) + ${extra}px)`
 }
 

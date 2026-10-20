@@ -1,14 +1,6 @@
-export const GOOGLE_PLAY_APP_URL =
-  'https://play.google.com/store/apps/details?id=by.metravel.app'
+import { APP_STORE_APP_URL, GOOGLE_PLAY_APP_URL } from './appIdentity'
 
-/** Apple ID приложения в App Store Connect (не bundle id). */
-export const APP_STORE_APP_ID = '6801264369'
-
-/**
- * Ссылка без кода страны: App Store сам откроет витрину пользователя
- * (приложение доступно в 175 странах и регионах).
- */
-export const APP_STORE_APP_URL = `https://apps.apple.com/app/id${APP_STORE_APP_ID}`
+export { APP_STORE_APP_ID, APP_STORE_APP_URL, GOOGLE_PLAY_APP_URL } from './appIdentity'
 
 export type AppStorePlatform = 'ios' | 'android'
 

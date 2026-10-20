@@ -14,16 +14,30 @@
 const CSS_VARIABLE = '--mt-consent-h'
 
 const reserves = new Map<string, number>()
+const listeners = new Set<() => void>()
+
+/** Numeric snapshot for React subscribers; safe to read without a DOM. */
+export const getBottomChromeReserve = (excludedOwner?: string): number => {
+  let max = 0
+  reserves.forEach((value, owner) => {
+    if (owner !== excludedOwner && value > max) max = value
+  })
+  return max
+}
+
+export const subscribeBottomChromeReserve = (listener: () => void): (() => void) => {
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+  }
+}
 
 const applyReserve = (): void => {
   if (typeof document === 'undefined') return
   const root = document.documentElement
   if (!root) return
 
-  let max = 0
-  reserves.forEach((value) => {
-    if (value > max) max = value
-  })
+  const max = getBottomChromeReserve()
 
   if (max > 0) {
     root.style.setProperty(CSS_VARIABLE, `${max}px`)
@@ -32,22 +46,29 @@ const applyReserve = (): void => {
   }
 }
 
+const notifyReserveChange = (): void => {
+  applyReserve()
+  listeners.forEach((listener) => listener())
+}
+
 export const setBottomChromeReserve = (owner: string, heightPx: number): void => {
   if (!Number.isFinite(heightPx) || heightPx <= 0) {
     releaseBottomChromeReserve(owner)
     return
   }
+  if (reserves.get(owner) === heightPx) return
   reserves.set(owner, heightPx)
-  applyReserve()
+  notifyReserveChange()
 }
 
 export const releaseBottomChromeReserve = (owner: string): void => {
   if (!reserves.delete(owner)) return
-  applyReserve()
+  notifyReserveChange()
 }
 
 /** Только для тестов: сбрасывает накопленных владельцев. */
 export const resetBottomChromeReserve = (): void => {
+  if (reserves.size === 0) return
   reserves.clear()
-  applyReserve()
+  notifyReserveChange()
 }

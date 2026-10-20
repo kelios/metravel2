@@ -80,6 +80,33 @@ describe('externalLinks', () => {
     expect(onError).toHaveBeenCalledWith(openError);
   });
 
+  it.each(['metravel://map', 'intent://metravel.by/map#Intent;scheme=https;package=by.metravel.app;end'])(
+    'dispatches an explicitly allowed app handoff synchronously in the current web tab: %s',
+    async (url) => {
+      const originalPlatform = Platform.OS;
+      const clicked: HTMLAnchorElement[] = [];
+      const click = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+        expect(document.body.contains(this)).toBe(true);
+        clicked.push(this);
+      });
+      const open = jest.spyOn(Linking, 'openURL').mockClear();
+      try {
+        (Platform.OS as any) = 'web';
+        const result = openExternalUrl(url, { allowedProtocols: ['metravel:', 'intent:'] });
+        expect(clicked).toHaveLength(1);
+        expect(clicked[0].href).toBe(url);
+        expect(clicked[0].target).toBe('_self');
+        expect(document.body.contains(clicked[0])).toBe(false);
+        expect(open).not.toHaveBeenCalled();
+        await expect(result).resolves.toBe(true);
+      } finally {
+        click.mockRestore();
+        open.mockRestore();
+        (Platform.OS as any) = originalPlatform;
+      }
+    },
+  );
+
   it('opens a safe url in new web tab with noopener by default', async () => {
     const originalPlatform = Platform.OS;
     const originalOpen = window.open;

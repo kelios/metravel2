@@ -20,6 +20,7 @@ function ConsentBanner() {
   const colors = useThemedColors();
   const pathname = usePathname();
   const [visible, setVisible] = useState(false);
+  const [measuredHeight, setMeasuredHeight] = useState<number | null>(null);
   const suspendForOverlay = useFooterOverlayOpen();
   const { isMobile, width } = useResponsive();
   const isNarrowMobile = isMobile && width > 0 && width < 360;
@@ -61,16 +62,14 @@ function ConsentBanner() {
       releaseBottomChromeReserve('consent-banner');
       return;
     }
-    // Reserve enough vertical space so scroll containers (RightColumn etc.) don't hide
-    // the last row of cards behind the floating cookie banner. bottomOffset already
-    // accounts for the bottom dock + safe-area; the banner itself is ~96px on mobile,
-    // ~64px on desktop. The +8 keeps an additional breathing gap below the last card.
-    const bannerH = isMobile ? 104 : 64;
+    // Keep an estimate until onLayout measures the current wrapping/font size.
+    // Other bottom chrome can stack above this reserve without covering consent.
+    const bannerH = measuredHeight ?? (isMobile ? 104 : 64);
     setBottomChromeReserve('consent-banner', bottomOffset + bannerH + 8);
     return () => {
       releaseBottomChromeReserve('consent-banner');
     };
-  }, [bottomOffset, isConsentSettingsRoute, isMobile, suspendForOverlay, visible]);
+  }, [bottomOffset, isConsentSettingsRoute, isMobile, measuredHeight, suspendForOverlay, visible]);
 
   const handleAcceptAll = () => {
     const consent: ConsentState = {
@@ -138,6 +137,10 @@ function ConsentBanner() {
     >
       <View
         testID="consent-banner"
+        onLayout={({ nativeEvent }) => {
+          const height = nativeEvent.layout.height;
+          if (Number.isFinite(height) && height > 0) setMeasuredHeight(height);
+        }}
         style={[
           styles.container,
           styles.pointerEventsAuto,

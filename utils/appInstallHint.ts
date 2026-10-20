@@ -6,24 +6,21 @@ import type { AppStorePlatform } from '@/constants/appStore'
  * Правила показа ненавязчивой подсказки «поставьте приложение» на mobile web.
  *
  * Логика вынесена из компонента отдельно, потому что она чистая и проверяется
- * юнит-тестами: UA-детект, частотный кап и cooldown после закрытия — это то,
+ * юнит-тестами: UA-детект и cooldown после закрытия — это то,
  * что легко сломать при следующей правке баннера.
  */
 
 const STORAGE_KEY = 'metravel_app_install_hint_v1'
 
 /** Сколько молчим после того, как пользователь закрыл подсказку. */
-export const DISMISS_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000
-
-/** Сколько раз всего допустимо показать подсказку тому, кто её закрывает. */
-export const MAX_DISMISSALS = 2
+export const DISMISS_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000
 
 export type AppInstallHintState = {
   /** Время последнего закрытия крестиком, ms. */
   dismissedAt?: number
   /** Сколько раз пользователь закрывал подсказку. */
   dismissCount?: number
-  /** Время перехода в витрину приложения — после него подсказку не показываем никогда. */
+  /** Legacy store click; it is not evidence of installation. */
   installClickedAt?: number
 }
 
@@ -81,19 +78,21 @@ export const shouldOfferAppInstall = (context: AppInstallHintContext): boolean =
   if (!getPhoneStorePlatform(context.userAgent)) return false
   if (!context.isMobileViewport) return false
   if (context.isStandalone) return false
-  if (String(context.referrer || '').startsWith('android-app://')) return false
+  if (/^android-app:\/\/by\.metravel\.app(?:\/|$)/i.test(String(context.referrer || ''))) return false
 
   const state = context.state
   if (!state) return true
-  if (state.installClickedAt) return false
-  if ((state.dismissCount ?? 0) >= MAX_DISMISSALS) return false
-  if (state.dismissedAt && context.now - state.dismissedAt < DISMISS_COOLDOWN_MS) return false
+  if (
+    Number.isFinite(state.dismissedAt) &&
+    Number(state.dismissedAt) > 0 &&
+    context.now >= Number(state.dismissedAt) &&
+    context.now - Number(state.dismissedAt) < DISMISS_COOLDOWN_MS
+  ) return false
 
   return true
 }
 
-const canUseStorage = (): boolean =>
-  Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
+const canUseStorage = (): boolean => Platform.OS === 'web' && typeof window !== 'undefined'
 
 export const readAppInstallHintState = (): AppInstallHintState | null => {
   if (!canUseStorage()) return null
@@ -105,8 +104,12 @@ export const readAppInstallHintState = (): AppInstallHintState | null => {
 
     const candidate = parsed as Record<string, unknown>
     const state: AppInstallHintState = {}
-    if (typeof candidate.dismissedAt === 'number') state.dismissedAt = candidate.dismissedAt
-    if (typeof candidate.dismissCount === 'number') state.dismissCount = candidate.dismissCount
+    if (typeof candidate.dismissedAt === 'number' && Number.isFinite(candidate.dismissedAt)) {
+      state.dismissedAt = candidate.dismissedAt
+    }
+    if (typeof candidate.dismissCount === 'number' && Number.isFinite(candidate.dismissCount)) {
+      state.dismissCount = Math.max(0, candidate.dismissCount)
+    }
     if (typeof candidate.installClickedAt === 'number') {
       state.installClickedAt = candidate.installClickedAt
     }
@@ -132,13 +135,6 @@ export const markAppInstallHintDismissed = (now: number = Date.now()): AppInstal
     dismissedAt: now,
     dismissCount: (previous.dismissCount ?? 0) + 1,
   }
-  writeAppInstallHintState(next)
-  return next
-}
-
-export const markAppInstallHintConverted = (now: number = Date.now()): AppInstallHintState => {
-  const previous = readAppInstallHintState() ?? {}
-  const next: AppInstallHintState = { ...previous, installClickedAt: now }
   writeAppInstallHintState(next)
   return next
 }

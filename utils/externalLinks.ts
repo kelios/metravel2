@@ -175,6 +175,29 @@ export function normalizeHttpOrInternalUrl(rawUrl: string): string {
 export async function openExternalUrl(rawUrl: string, options: OpenExternalUrlOptions = {}): Promise<boolean> {
   const normalized = resolveNormalizedUrl(rawUrl, options);
   if (!normalized) return false;
+  // RN Web's Linking.openURL uses a new window. App handoff must retain the
+  // original tap in the current tab so Chrome can dispatch an intent/fallback.
+  // These schemes remain opt-in through allowedProtocols at the caller.
+  if (Platform.OS === 'web' && /^(?:metravel|intent):/i.test(normalized)) {
+    if (typeof document === 'undefined') return false;
+    try {
+      const anchor = document.createElement('a');
+      anchor.href = normalized;
+      anchor.target = '_self';
+      anchor.rel = 'noopener';
+      anchor.style.display = 'none';
+      document.body.appendChild(anchor);
+      try {
+        anchor.click();
+      } finally {
+        anchor.remove();
+      }
+      return true;
+    } catch (error) {
+      options.onError?.(error);
+      return false;
+    }
+  }
   if (openSiteRouteInApp(normalized)) return true;
   return openWithYandexFallback(normalized, options.onError);
 }
