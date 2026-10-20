@@ -1,3 +1,13 @@
+> Приёмка владельцем 20.10.2026: «считай задачу выполненой и передвди и дан».
+> #2695 закрыта в `done` по этой прямой команде. Production SHA
+> `9133daa6ae18894bc0b9067110eaedb43e4b12b0`; cold owner-preview и guest privacy
+> прошли на 390/1440: React #418 и anonymous private GET 1→0, owner cookie GET200.
+> Собственные черновики832–835 удалены204→404. Локальная live-cookie E2E и остаток
+> public/unknown controls не запущены по приёмке владельца; это не PASS этих проверок.
+> Unknown390 показывает правильное not-found, но harness ошибочно отверг скрытый
+> input сохранённого Expo экрана; повторный прогон отменён владельцем. Evidence:
+> `.codex-temp/2695/acceptance-baseline/` и `acceptance-production/`.
+
 ## 1. Confirm and freeze the contract
 
 - [x] 1.1 Confirm #2695's recorded source/network chain, map public preload producers/consumers, and preserve owner200/guest404; record the chosen lifecycle, exact-route guard, auth readiness, rejected alternatives, and no-redesign evidence in this change.
@@ -14,11 +24,11 @@
 ## 3. Code-level review and validation
 
 - [x] 3.1 Run scoped bootstrap/route/preloader Jest plus relevant existing detail API/hook/breadcrumb/SSG consumer checks, scoped lint/typecheck/guards, and the full static/unit commands required by final diff size.
-- [ ] 3.2 Complete independent review-auditor review-and-fix across the entire task diff, rerun affected checks, and obtain the separate code-review-gate pass before testing.
+- [x] 3.2 Complete independent review-auditor review-and-fix across the entire task diff, rerun affected checks, and obtain the separate code-review-gate pass before testing.
 
 ## 4. Testing and production acceptance
 
-- [ ] 4.1 Follow the authorized standard reviewed explicit-path commit/push → testing → frontend deployment pipeline through its operation gate; verify `.build-source.json` matches the task SHA.
-- [ ] 4.2 At 390 and 1440, exercise an owned saved private travel's real editor preview action in a cold new tab; preserve source before/after screenshots, console/pageerrors, document route evidence, network cookies-presence without values, and initiators. Require title/body, zero #418/#419, and zero anonymous private preload.
-- [ ] 4.3 Verify ordinary create/edit, public ID/slug, unknown preview ID, and guest private404 controls; remove only owned temporary data and retain evidence in ignored task storage.
-- [ ] 4.4 Record the final task verdict and exact deployed SHA/evidence; run strict change validation and `openspec validate --all` before any archive. Archive only after all required implementation and acceptance tasks are complete.
+- [x] 4.1 Follow the authorized standard reviewed explicit-path commit/push → testing → frontend deployment pipeline through its operation gate; verify `.build-source.json` matches the task SHA.
+- [x] 4.2 At 390 and 1440, exercise an owned saved private travel's real editor preview action in a cold new tab; preserve source before/after screenshots, console/pageerrors, document route evidence, network cookies-presence without values, and initiators. Require title/body, zero #418/#419, and zero anonymous private preload.
+- [x] 4.3 **Закрыто по приёмке владельца, не полный QA PASS:** Verify ordinary create/edit, public ID/slug, unknown preview ID, and guest private404 controls; remove only owned temporary data and retain evidence in ignored task storage.
+- [x] 4.4 **Owner accepted; archive не выполняется:** Record the final task verdict and exact deployed SHA/evidence; run strict change validation and `openspec validate --all` before any archive. Archive only after all required implementation and acceptance tasks are complete.
