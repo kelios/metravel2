@@ -158,7 +158,7 @@ export const travelGenerated3 = {
   "components.travel.PublishModerationAdminPanel.otklonit_09b10036": "Odrzuć",
   "components.travel.PublishModerationAdminPanel.otklonit_moderatsiyu_bbccc89e": "Odrzuć moderację",
   "components.travel.PublishModerationAdminPanel.panel_moderatora_7edb00cf": "Panel moderatora",
-  "components.travel.PublishModerationAdminPanel.ukazhite_prichinu_otkloneniya_c5c0761c": "Proszę o podanie przyczyny odstępstwa...",
+  "components.travel.PublishModerationAdminPanel.ukazhite_prichinu_otkloneniya_c5c0761c": "Podaj powód odrzucenia",
   "components.travel.PublishStatusSummaryPanel.chernovik_viden_tolko_vam_ego_mozhno_dopolny_9ac19698": "Wersja robocza jest widoczna tylko dla Ciebie. Można ją później uzupełnić i przesłać do moderacji.",
   "components.travel.PublishStatusSummaryPanel.eto_status_kotoryy_uzhe_sohranen_nizhe_vy_mo_eff24d3d": "To jest status, który został już zapisany. Poniżej możesz wybrać nowy (wersja robocza lub moderacja).",
   "components.travel.PublishStatusSummaryPanel.kachestvo_zapolneniya_c17c9a41": "Jakość wypełnienia",

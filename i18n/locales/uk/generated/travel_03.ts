@@ -158,7 +158,7 @@ export const travelGenerated3 = {
   "components.travel.PublishModerationAdminPanel.otklonit_09b10036": "Відхилити",
   "components.travel.PublishModerationAdminPanel.otklonit_moderatsiyu_bbccc89e": "Відхилити модерацію",
   "components.travel.PublishModerationAdminPanel.panel_moderatora_7edb00cf": "Панель модератора",
-  "components.travel.PublishModerationAdminPanel.ukazhite_prichinu_otkloneniya_c5c0761c": "Вкажіть причину відхилення...",
+  "components.travel.PublishModerationAdminPanel.ukazhite_prichinu_otkloneniya_c5c0761c": "Вкажіть причину відхилення",
   "components.travel.PublishStatusSummaryPanel.chernovik_viden_tolko_vam_ego_mozhno_dopolny_9ac19698": "Чернетка видно тільки вам. Його можна доповнювати та відправити на модерацію пізніше.",
   "components.travel.PublishStatusSummaryPanel.eto_status_kotoryy_uzhe_sohranen_nizhe_vy_mo_eff24d3d": "Це статус, який вже збережено. Нижче ви можете вибрати новий (чернетка або модерація).",
   "components.travel.PublishStatusSummaryPanel.kachestvo_zapolneniya_c17c9a41": "Якість заповнення",

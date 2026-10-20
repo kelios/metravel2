@@ -1,6 +1,7 @@
 import type React from 'react';
 
 import type { TravelFormData } from '@/types/types';
+import type { SaveFormDataOptions } from '@/api/misc';
 import type { ModerationIssue } from '@/utils/formValidation';
 
 export interface TravelWizardStepPublishProps {
@@ -14,11 +15,11 @@ export interface TravelWizardStepPublishProps {
         title?: string;
         name?: string;
     }>;
-    setFormData: React.Dispatch<React.SetStateAction<TravelFormData>> | ((data: TravelFormData) => void);
+    setFormData: React.Dispatch<React.SetStateAction<TravelFormData>>;
     isSuperAdmin: boolean;
     onManualSave: (
         data?: TravelFormData,
-        options?: { intent?: 'save' | 'publish' },
+        options?: SaveFormDataOptions,
     ) => Promise<TravelFormData | void>;
     onGoBack: () => void;
     onFinish: () => void;

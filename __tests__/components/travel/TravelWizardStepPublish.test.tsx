@@ -1,13 +1,18 @@
-import { render, fireEvent, act } from '@testing-library/react-native';
+import { render, renderHook, fireEvent, act, waitFor } from '@testing-library/react-native';
+import type React from 'react';
 import { Platform } from 'react-native';
 
 import TravelWizardStepPublish from '@/components/travel/TravelWizardStepPublish';
+import { useTravelPublishModeration } from '@/components/travel/useTravelPublishModeration';
 import { TravelFormData } from '@/types/types';
 
+const mockRouterReplace = jest.fn();
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
+  useRouter: () => ({ push: jest.fn(), replace: mockRouterReplace, back: jest.fn() }),
   useFocusEffect: require('react').useEffect,
 }));
+
+jest.mock('@/api/messages', () => ({ sendMessage: jest.fn().mockResolvedValue({}) }));
 
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: any) => children,
@@ -57,6 +62,7 @@ jest.mock('@/api/facebookPublish', () => ({
 }));
 
 import { showToast } from '@/utils/toast';
+import { sendMessage } from '@/api/messages';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { publishTravelToInstagram, fetchInstagramOAuthStartUrl } from '@/api/instagramPublish';
 import {
@@ -1178,8 +1184,32 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     expect(queryByTestId('publish-save-error-banner')).toBeNull();
   });
 
-  it('reject click is guarded to one call when already pending', async () => {
-    const onManualSave = jest.fn().mockResolvedValue(undefined);
+  it.each(['', '  \n  '])('blocks rejecting with an empty reason (%p)', async (comment) => {
+    const onManualSave = jest.fn();
+    const screen = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={{ ...baseFormData, publish: true, moderation: false }}
+        setFormData={jest.fn()}
+        isSuperAdmin={true}
+        onManualSave={onManualSave}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    fireEvent.changeText(screen.getByLabelText('Комментарий при отклонении'), comment);
+    const reject = screen.getByLabelText('Отклонить модерацию');
+    expect(reject.props.accessibilityState).toEqual(expect.objectContaining({ disabled: true }));
+    expect(screen.getByText('Укажите причину отклонения')).toBeTruthy();
+    fireEvent.press(reject);
+    expect(onManualSave).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText('Отклонить')).toBeNull();
+  });
+
+  it('reject click sends its trimmed reason once without putting the signal in form state', async () => {
+    const onManualSave = jest.fn().mockResolvedValue({ ...baseFormData, publish: false, moderation: false });
     const onFinish = jest.fn();
     const setFormData = jest.fn();
 
@@ -1202,6 +1232,8 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       />
     );
 
+    fireEvent.changeText(getByLabelText('Комментарий при отклонении'), '  нет фото  ');
+    expect(getByLabelText('Комментарий при отклонении').props.maxLength).toBe(2000);
     await act(async () => {
       fireEvent.press(getByLabelText('Отклонить модерацию'));
     });
@@ -1216,10 +1248,79 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       expect.objectContaining({
         publish: false,
         moderation: false,
-      })
+      }),
+      { intent: 'save', moderationDecisionReason: 'нет фото' }
     );
 
+    expect(setFormData.mock.calls[0][0]).not.toHaveProperty('moderation_decision_reason');
+    expect(setFormData.mock.calls[0][0]).not.toHaveProperty('moderationDecisionReason');
+
     expect(onFinish).not.toHaveBeenCalled();
+  });
+
+  it('keeps the rejection reason and restores pending status when saving rejection fails', async () => {
+    const adminData = { ...baseFormData, publish: true, moderation: false };
+    const setFormData = jest.fn();
+    const screen = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={adminData}
+        setFormData={setFormData}
+        isSuperAdmin={true}
+        onManualSave={jest.fn().mockRejectedValue(new Error('Network error'))}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+    fireEvent.changeText(screen.getByLabelText('Комментарий при отклонении'), 'нет фото');
+    fireEvent.press(screen.getByLabelText('Отклонить модерацию'));
+    await act(async () => fireEvent.press(screen.getByLabelText('Отклонить')));
+
+    const rollback = setFormData.mock.calls.at(-1)?.[0];
+    expect(typeof rollback).toBe('function');
+    expect(rollback({ ...adminData, publish: false })).toEqual(adminData);
+    await waitFor(() => {
+      expect(screen.getByLabelText('Комментарий при отклонении').props.value).toBe('нет фото');
+    });
+    expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }));
+  });
+
+  it.each(['cancelled', 'failed'] as const)('preserves live content and reason when rejection is %s', async (outcome) => {
+    const adminData = { ...baseFormData, publish: true, moderation: false, userId: 42 };
+    let live: TravelFormData = adminData;
+    const setFormData = jest.fn((update: React.SetStateAction<TravelFormData>) => {
+      live = typeof update === 'function' ? update(live) : update;
+    });
+    const onManualSave = jest.fn(async () => {
+      // A save already in flight completes while rejection waits for its turn.
+      live = { ...live, categories: ['1', '2'], description: 'Newer content' };
+      if (outcome === 'failed') throw new Error('Save failed');
+    });
+    const { result } = renderHook(() => useTravelPublishModeration({
+      formData: adminData,
+      setFormData,
+      onManualSave,
+      currentStep: 6,
+      isSuperAdmin: true,
+      routePoints: adminData.coordsMeTravel,
+      galleryItems: adminData.gallery ?? [],
+      checklist: [],
+    }));
+    act(() => result.current.setRejectionComment('Add photos'));
+
+    await act(async () => { await result.current.handleRejectModeration(); });
+
+    expect(live).toEqual(expect.objectContaining({
+      publish: true,
+      moderation: false,
+      categories: ['1', '2'],
+      description: 'Newer content',
+    }));
+    expect(result.current.rejectionComment).toBe('Add photos');
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(mockRouterReplace).not.toHaveBeenCalled();
+    expect(showToast).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'info' }));
   });
 
   it('restores previous status and shows error when moderation save fails', async () => {

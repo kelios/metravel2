@@ -158,7 +158,7 @@ export const travelGenerated3 = {
   "components.travel.PublishModerationAdminPanel.otklonit_09b10036": "Отклонить",
   "components.travel.PublishModerationAdminPanel.otklonit_moderatsiyu_bbccc89e": "Отклонить модерацию",
   "components.travel.PublishModerationAdminPanel.panel_moderatora_7edb00cf": "Панель модератора",
-  "components.travel.PublishModerationAdminPanel.ukazhite_prichinu_otkloneniya_c5c0761c": "Укажите причину отклонения...",
+  "components.travel.PublishModerationAdminPanel.ukazhite_prichinu_otkloneniya_c5c0761c": "Укажите причину отклонения",
   "components.travel.PublishStatusSummaryPanel.chernovik_viden_tolko_vam_ego_mozhno_dopolny_9ac19698": "Черновик виден только вам. Его можно дополнять и отправить на модерацию позже.",
   "components.travel.PublishStatusSummaryPanel.eto_status_kotoryy_uzhe_sohranen_nizhe_vy_mo_eff24d3d": "Это статус, который уже сохранён. Ниже вы можете выбрать новый (черновик или модерация).",
   "components.travel.PublishStatusSummaryPanel.kachestvo_zapolneniya_c17c9a41": "Качество заполнения",

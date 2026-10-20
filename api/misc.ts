@@ -160,17 +160,26 @@ const sanitizeTravelBodyForWrite = async (html: string, maxLength?: number): Pro
 };
 
 export type SaveFormDataIntent = 'autosave' | 'save' | 'publish';
+export type SaveFormDataOptions = {
+  autosave?: boolean;
+  intent?: SaveFormDataIntent;
+  moderationDecisionReason?: string;
+};
 
 export const saveFormData = async (
   data: TravelFormData,
   signal?: AbortSignal,
-  options?: { autosave?: boolean; intent?: SaveFormDataIntent }
+  options?: SaveFormDataOptions
 ): Promise<TravelFormData> => {
   try {
     await requireAuthCredential();
 
     const intent: SaveFormDataIntent =
       options?.intent ?? (options?.autosave === true ? 'autosave' : 'save');
+    const moderationDecisionReason = intent === 'save' ? options?.moderationDecisionReason?.trim() : undefined;
+    if (moderationDecisionReason === '') {
+      throw new Error(i18nT('travel:components.travel.PublishModerationAdminPanel.ukazhite_prichinu_otkloneniya_c5c0761c'));
+    }
     const isDraft = !data?.publish && !data?.moderation;
     const isAutosaveDraft = intent === 'autosave' && isDraft;
 
@@ -245,6 +254,8 @@ export const saveFormData = async (
 
     // Генерируем уникальный slug для новых путешествий, чтобы избежать конфликтов unique constraint
     const payload: TravelFormData = sanitizeForJson({ ...sanitizedData }) as TravelFormData;
+    // API responses contain the last decision; only an explicit save option may request a new one.
+    delete (payload as TravelFormData & { moderation_decision_reason?: unknown }).moderation_decision_reason;
     if (!payload.id) {
       const existing = (payload.slug || '').trim();
       payload.slug = existing || makeUniqueSlug(payload.name || 'travel');
@@ -256,7 +267,11 @@ export const saveFormData = async (
     // инкрементальный автосейв точки падает с 400. Флаг сообщает бэку «это submit
     // на модерацию», а не «сохрани контент». Поле инертно, пока бэк его не читает
     // (DRF игнорирует неизвестные ключи) — см. тикет на пер-точечную валидацию.
-    const body = { ...payload, enforce_moderation_validation: intent === 'publish' };
+    const body = {
+      ...payload,
+      enforce_moderation_validation: intent === 'publish',
+      ...(moderationDecisionReason !== undefined ? { moderation_decision_reason: moderationDecisionReason } : {}),
+    };
 
     return await apiClient.request<TravelFormData>(
       '/travels/upsert/',

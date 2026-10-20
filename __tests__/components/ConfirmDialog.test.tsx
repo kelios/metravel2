@@ -71,6 +71,21 @@ describe('ConfirmDialog', () => {
     expect(queryByText('Подтверждение')).toBeNull()
   })
 
+  it.each(['web', 'ios'] as const)('disables confirmation while preserving cancellation on %s', (platform) => {
+    Object.defineProperty(Platform, 'OS', { value: platform })
+    const onConfirm = jest.fn()
+    const onClose = jest.fn()
+    const screen = render(
+      <ConfirmDialog {...defaultProps} onConfirm={onConfirm} onClose={onClose} confirmDisabled />
+    )
+    const confirm = screen.getByLabelText('Удалить')
+    expect(confirm.props.accessibilityState).toEqual(expect.objectContaining({ disabled: true }))
+    fireEvent.press(confirm)
+    expect(onConfirm).not.toHaveBeenCalled()
+    fireEvent.press(screen.getByLabelText('Отмена'))
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
   it('renders in the connected web host and exposes a stable dialog test id', () => {
     Object.defineProperty(Platform, 'OS', { value: 'web' })
 

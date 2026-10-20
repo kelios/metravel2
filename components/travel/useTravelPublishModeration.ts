@@ -10,6 +10,7 @@ import {
 import { useRouter } from 'expo-router';
 
 import type { TravelFormData } from '@/types/types';
+import type { SaveFormDataOptions } from '@/api/misc';
 import { sendMessage } from '@/api/messages';
 import { devError } from '@/utils/logger';
 import { hapticNotification } from '@/utils/haptics';
@@ -39,10 +40,10 @@ const resolveSavedId = (
 
 type UseTravelPublishModerationArgs = {
     formData: TravelFormData;
-    setFormData: React.Dispatch<React.SetStateAction<TravelFormData>> | ((data: TravelFormData) => void);
+    setFormData: React.Dispatch<React.SetStateAction<TravelFormData>>;
     onManualSave: (
         data?: TravelFormData,
-        options?: { intent?: 'save' | 'publish' },
+        options?: SaveFormDataOptions,
     ) => Promise<TravelFormData | void>;
     currentStep: number;
     isSuperAdmin: boolean;
@@ -434,8 +435,15 @@ export function useTravelPublishModeration({
     };
 
     const handleRejectModeration = async () => {
+        const commentText = rejectionComment.trim();
+        if (!isSuperAdmin || !commentText || commentText.length > 2000) return;
         if (!startAction()) return;
         const previousForm = formData;
+        const restorePreviousStatus = () => setFormData(current => ({
+            ...current,
+            publish: previousForm.publish,
+            moderation: previousForm.moderation,
+        }));
         const nextForm = {
             ...formData,
             moderation: false,
@@ -444,11 +452,16 @@ export function useTravelPublishModeration({
         setFormData(nextForm);
 
         try {
-            const saved = await onManualSave(nextForm);
+            const saved = await onManualSave(nextForm, { intent: 'save', moderationDecisionReason: commentText });
+            // A cancelled text-loss confirmation returns void without writing.
+            if (!saved) {
+                restorePreviousStatus();
+                return;
+            }
             const resolvedId = resolveSavedId(saved, nextForm);
             if (!resolvedId) {
                 // Откатываем оптимистичный moderation/publish=false при неуспешном сохранении.
-                setFormData(previousForm);
+                restorePreviousStatus();
                 void showToastMessage({
                     type: 'error',
                     text1: i18nT('travel:components.travel.TravelWizardStepPublish.ne_udalos_sohranit_4605a31e'),
@@ -468,7 +481,6 @@ export function useTravelPublishModeration({
                 authorRecord.userId ??
                 authorRecord.user_id ??
                 null;
-            const commentText = rejectionComment.trim();
             if (authorId && commentText) {
                 try {
                     const travelName = formData.name || i18nT('travel:common.untitled');
@@ -498,7 +510,7 @@ export function useTravelPublishModeration({
             setRejectionComment('');
             router.replace('/metravel');
         } catch (error) {
-            setFormData(previousForm);
+            restorePreviousStatus();
             hapticNotification('error');
             if (!hasToastBeenShown(error)) {
                 void showToastMessage({

@@ -7,7 +7,8 @@
  * сохранением, а ответ узкого пути НЕ применяется как полная статья — иначе
  * подтверждение из пяти текстовых полей выглядело бы как «сервер всё удалил».
  */
-import { renderHook } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
+import type { TravelFormData } from '@/types/types';
 
 jest.mock('@/api/misc', () => ({
   saveFormData: jest.fn(),
@@ -111,10 +112,10 @@ function setupPersistence(
     ...paramOverrides,
   };
 
-  renderHook(() => useTravelFormPersistence(params));
+  const { result } = renderHook(() => useTravelFormPersistence(params));
 
   const autosaveOptions = mockUseImprovedAutoSave.mock.calls.at(-1)?.[2] as any;
-  return { params, formState, autosaveOptions };
+  return { result, params, formState, autosaveOptions };
 }
 
 beforeEach(() => {
@@ -270,5 +271,158 @@ describe('#2040 — дата статьи не уходит в полный upse
     const payload = mockSaveFormData.mock.calls[0][0];
     expect(payload).not.toHaveProperty('created_at');
     expect(payload.id ?? null).toBeNull();
+  });
+});
+
+const deferredSave = () => {
+  let resolve!: (value: TravelFormData) => void;
+  let reject!: (error: Error) => void;
+  const promise = new Promise<TravelFormData>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+};
+
+describe('#2685 — transient rejection options', () => {
+  it('forwards the explicit reason without adding it to form state or subsequent saves', async () => {
+    const baseline = travelSnapshot({ moderation_decision_reason: 'Historical API reason' });
+    const { result, params, autosaveOptions } = setupPersistence(baseline);
+    mockSaveFormData.mockImplementation(async (data) => ({ ...data, moderation_decision_reason: 'API reason' }));
+
+    await act(async () => {
+      await result.current.handleManualSave(baseline as unknown as TravelFormData, {
+        intent: 'save',
+        moderationDecisionReason: 'Explicit rejection',
+      });
+    });
+    expect(mockSaveFormData.mock.calls[0][2]).toEqual({ intent: 'save', moderationDecisionReason: 'Explicit rejection' });
+    expect(mockSaveFormData.mock.calls[0][0]).not.toHaveProperty('moderation_decision_reason');
+    expect(params.formDataRef.current).not.toHaveProperty('moderationDecisionReason');
+
+    await act(async () => { await result.current.handleManualSave(); });
+    expect(mockSaveFormData.mock.calls[1][2]).toEqual({ intent: 'save' });
+    expect(mockSaveFormData.mock.calls[1][0]).not.toHaveProperty('moderation_decision_reason');
+
+    await autosaveOptions.onSave(travelSnapshot({ categories: [1, 2, 3] }), undefined, baseline);
+    expect(mockSaveFormData.mock.calls[2][2]).toEqual({ autosave: true });
+    expect(mockSaveFormData.mock.calls[2][0]).not.toHaveProperty('moderation_decision_reason');
+  });
+
+  it.each(['success', 'failure'])('waits for its own rejection %s after the previous save and ordinary tail', async (outcome) => {
+    const baseline = travelSnapshot();
+    const tailSnapshot = travelSnapshot({ categories: [1, 2, 3] });
+    const { result } = setupPersistence(baseline);
+    const first = deferredSave();
+    const tail = deferredSave();
+    const rejection = deferredSave();
+    mockSaveFormData.mockReturnValueOnce(first.promise).mockReturnValueOnce(tail.promise).mockReturnValueOnce(rejection.promise);
+    const fulfilled = jest.fn();
+    const rejected = jest.fn();
+    let firstSave!: Promise<TravelFormData | void>;
+    let queuedSave!: Promise<TravelFormData | void>;
+    let rejectionSave!: Promise<TravelFormData | void>;
+
+    act(() => {
+      firstSave = result.current.handleManualSave();
+      queuedSave = result.current.handleManualSave(tailSnapshot as unknown as TravelFormData);
+      rejectionSave = result.current.handleManualSave(baseline as unknown as TravelFormData, {
+        intent: 'save', moderationDecisionReason: 'Add route photos',
+      });
+      void rejectionSave.then(fulfilled, rejected);
+    });
+    await waitFor(() => expect(mockSaveFormData).toHaveBeenCalledTimes(1));
+
+    await act(async () => {
+      first.resolve(baseline as unknown as TravelFormData);
+      await Promise.all([firstSave, queuedSave]);
+    });
+    await waitFor(() => expect(mockSaveFormData).toHaveBeenCalledTimes(2));
+    expect(fulfilled).not.toHaveBeenCalled();
+    expect(rejected).not.toHaveBeenCalled();
+
+    await act(async () => { tail.resolve(tailSnapshot as unknown as TravelFormData); });
+    await waitFor(() => expect(mockSaveFormData).toHaveBeenCalledTimes(3));
+    expect(mockSaveFormData.mock.calls[2][0]).toEqual(expect.objectContaining({
+      categories: [1, 2, 3],
+      publish: false,
+      moderation: false,
+    }));
+    expect(mockSaveFormData.mock.calls[2][2]).toEqual({ intent: 'save', moderationDecisionReason: 'Add route photos' });
+    expect(fulfilled).not.toHaveBeenCalled();
+    expect(rejected).not.toHaveBeenCalled();
+
+    if (outcome === 'failure') {
+      const error = new Error('Rejection write failed');
+      const log = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      await act(async () => {
+        rejection.reject(error);
+        await expect(rejectionSave).rejects.toBe(error);
+      });
+      expect(fulfilled).not.toHaveBeenCalled();
+      expect(rejected).toHaveBeenCalledWith(error);
+      log.mockRestore();
+    } else {
+      const saved = { ...baseline, moderation_decision_reason: 'Add route photos' } as unknown as TravelFormData;
+      await act(async () => {
+        rejection.resolve(saved);
+        await expect(rejectionSave).resolves.toBe(saved);
+      });
+      expect(fulfilled).toHaveBeenCalledWith(saved);
+      expect(rejected).not.toHaveBeenCalled();
+    }
+  });
+
+  it('continues with its own rejection when the preceding ordinary tail fails', async () => {
+    const baseline = travelSnapshot();
+    const tailSnapshot = travelSnapshot({ categories: [1, 2, 3] });
+    const { result } = setupPersistence(baseline);
+    const first = deferredSave();
+    const tail = deferredSave();
+    const saved = { ...tailSnapshot, publish: false, moderation: false } as unknown as TravelFormData;
+    mockSaveFormData.mockReturnValueOnce(first.promise).mockReturnValueOnce(tail.promise).mockResolvedValueOnce(saved);
+    const firstSave = result.current.handleManualSave();
+    const queuedSave = result.current.handleManualSave(tailSnapshot as unknown as TravelFormData);
+    const rejectionSave = result.current.handleManualSave(baseline as unknown as TravelFormData, {
+      intent: 'save', moderationDecisionReason: 'Add photos',
+    });
+    await waitFor(() => expect(mockSaveFormData).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      first.resolve(baseline as unknown as TravelFormData);
+      await Promise.all([firstSave, queuedSave]);
+    });
+    await waitFor(() => expect(mockSaveFormData).toHaveBeenCalledTimes(2));
+    const log = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      await act(async () => {
+        tail.reject(new Error('Ordinary tail failed'));
+        await expect(rejectionSave).resolves.toBe(saved);
+      });
+      expect(mockSaveFormData.mock.calls[2][0]).toEqual(expect.objectContaining({ categories: [1, 2, 3] }));
+      expect(mockSaveFormData.mock.calls[2][2]).toEqual({ intent: 'save', moderationDecisionReason: 'Add photos' });
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it('does not report success when unmounted while waiting for the previous save', async () => {
+    const baseline = travelSnapshot();
+    const { result, params } = setupPersistence(baseline);
+    const first = deferredSave();
+    mockSaveFormData.mockReturnValueOnce(first.promise);
+    const firstSave = result.current.handleManualSave();
+    const rejectionSave = result.current.handleManualSave(baseline as unknown as TravelFormData, {
+      intent: 'save', moderationDecisionReason: 'Add photos',
+    });
+    const error = expect(rejectionSave).rejects.toThrow('Component unmounted');
+    await waitFor(() => expect(mockSaveFormData).toHaveBeenCalledTimes(1));
+
+    await act(async () => {
+      params.mountedRef.current = false;
+      first.resolve(baseline as unknown as TravelFormData);
+      await firstSave;
+      await error;
+    });
+    expect(mockSaveFormData).toHaveBeenCalledTimes(1);
   });
 });

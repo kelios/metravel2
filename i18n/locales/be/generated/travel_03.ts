@@ -158,7 +158,7 @@ export const travelGenerated3 = {
   "components.travel.PublishModerationAdminPanel.otklonit_09b10036": "Адхіліць",
   "components.travel.PublishModerationAdminPanel.otklonit_moderatsiyu_bbccc89e": "Адхіліць мадэрацыю",
   "components.travel.PublishModerationAdminPanel.panel_moderatora_7edb00cf": "Панэль мадэратара",
-  "components.travel.PublishModerationAdminPanel.ukazhite_prichinu_otkloneniya_c5c0761c": "Пазначце прычыну адхілення...",
+  "components.travel.PublishModerationAdminPanel.ukazhite_prichinu_otkloneniya_c5c0761c": "Пазначце прычыну адхілення",
   "components.travel.PublishStatusSummaryPanel.chernovik_viden_tolko_vam_ego_mozhno_dopolny_9ac19698": "Чарнавік бачны толькі вам. Яго можна дапаўняць і адправіць на мадэрацыю пазней.",
   "components.travel.PublishStatusSummaryPanel.eto_status_kotoryy_uzhe_sohranen_nizhe_vy_mo_eff24d3d": "Гэта статус, які ўжо захаваны. Ніжэй вы можаце выбраць новы (чарнавік або мадэрацыя).",
   "components.travel.PublishStatusSummaryPanel.kachestvo_zapolneniya_c17c9a41": "Якасць запаўнення",

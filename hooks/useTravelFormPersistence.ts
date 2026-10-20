@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, type MutableRefObject } from 'react';
 import isEqual from 'fast-deep-equal';
 import { type QueryClient } from '@tanstack/react-query';
-import { saveFormData, saveTravelContent, type TravelContentSaveResponse } from '@/api/misc';
+import { saveFormData, saveTravelContent, type SaveFormDataOptions, type TravelContentSaveResponse } from '@/api/misc';
 import { ApiError } from '@/api/client';
 import { TravelFormData, MarkerData } from '@/types/types';
 import { useFormState } from '@/hooks/useFormState';
@@ -361,14 +361,9 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
   // (автосейв выключен) — без этого override B молча терялся.
   const queuedManualSaveRef = useRef<{
     dataOverride?: TravelFormData;
-    options?: { intent?: 'save' | 'publish' };
+    options?: SaveFormDataOptions;
   } | null>(null);
-  const handleManualSaveRef = useRef<
-    ((
-      dataOverride?: TravelFormData,
-      options?: { intent?: 'save' | 'publish' },
-    ) => Promise<TravelFormData | void>) | null
-  >(null);
+  const handleManualSaveRef = useRef<((dataOverride?: TravelFormData, options?: SaveFormDataOptions) => Promise<TravelFormData | void>) | null>(null);
 
   const captureTextBaseline = useCallback((data: TravelFormData) => {
     serverTextBaselineRef.current = {
@@ -381,7 +376,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
 
   const cleanAndSave = useCallback(async (
     data: TravelFormData,
-    options?: { autosave?: boolean; intent?: 'autosave' | 'save' | 'publish' },
+    options?: SaveFormDataOptions,
     externalSignal?: AbortSignal,
   ) => {
     return runWithSaveAbortController(saveAbortControllerRef, externalSignal, async (saveSignal) => {
@@ -847,8 +842,12 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
 
   const handleManualSave = useCallback(async (
     dataOverride?: TravelFormData,
-    options?: { intent?: 'save' | 'publish' },
+    options?: SaveFormDataOptions,
   ) => {
+    if (options?.moderationDecisionReason !== undefined) {
+      while (manualSavePromiseRef.current) await manualSavePromiseRef.current.catch(() => undefined);
+      if (!mountedRef.current) throw new Error('Component unmounted');
+    }
     if (manualSavePromiseRef.current) {
       // Сейв уже идёт: дедуплицируем, но не теряем override второго вызова —
       // ставим его в хвост (последний побеждает), он прогонится после текущего.
@@ -882,7 +881,15 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
           saveAbortControllerRef.current.abort();
         }
 
-        const toSave = dataOverride
+        // Rejection may have waited for older saves and their tail. Apply only
+        // its status change to the live content, never replay its older snapshot.
+        const toSave = options?.moderationDecisionReason !== undefined
+          ? {
+              ...formDataRef.current,
+              publish: false,
+              moderation: false,
+            }
+          : dataOverride
           ? mergeOverridePreservingUserInput(
               (formDataRef.current as TravelFormData) ?? ({} as TravelFormData),
               dataOverride,
@@ -943,7 +950,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         // состояние без блокирующей проверки полноты.
         const intent: 'save' | 'publish' = isPublishIntent ? 'publish' : 'save';
         // Если пришли извне готовые данные — сохраняем напрямую, минуя отложенный стейт.
-        const savedData = await cleanAndSave(toSave, { intent });
+        const savedData = await cleanAndSave(toSave, { ...options, intent });
         const normalizedSavedData = normalizeDraftPlaceholders(savedData);
         applySavedData(normalizedSavedData, toSave as TravelFormData, {
           preserveEditingState: true,
@@ -1006,7 +1013,9 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         if (queued) {
           queuedManualSaveRef.current = null;
           if (mountedRef.current) {
-            void handleManualSaveRef.current?.(queued.dataOverride, queued.options);
+            // The save already reports its error; this detached queue task has
+            // no caller to consume the rejected promise.
+            void handleManualSaveRef.current?.(queued.dataOverride, queued.options).catch(() => undefined);
           }
         }
       }

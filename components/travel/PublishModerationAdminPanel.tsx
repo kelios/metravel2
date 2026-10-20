@@ -3,7 +3,7 @@ import Feather from '@expo/vector-icons/Feather';
 
 import Button from '@/components/ui/Button';
 import type { ThemedColors } from '@/hooks/useTheme';
-import { translate as i18nT } from '@/i18n'
+import { translate as i18nT } from '@/i18n';
 
 
 type PublishModerationAdminPanelProps = {
@@ -23,6 +23,8 @@ export default function PublishModerationAdminPanel({
     onApprove,
     onReject,
 }: PublishModerationAdminPanelProps) {
+    const isReasonMissing = !rejectionComment.trim();
+
     return (
         <View style={[styles.card, styles.adminCard]}>
             <Text style={styles.cardTitle}>{i18nT('travel:components.travel.PublishModerationAdminPanel.panel_moderatora_7edb00cf')}</Text>
@@ -45,9 +47,14 @@ export default function PublishModerationAdminPanel({
                     placeholder={i18nT('travel:components.travel.PublishModerationAdminPanel.ukazhite_prichinu_otkloneniya_c5c0761c')}
                     placeholderTextColor={colors.textMuted}
                     multiline
-                    maxLength={1000}
+                    maxLength={2000}
                     accessibilityLabel={i18nT('travel:components.travel.PublishModerationAdminPanel.kommentariy_pri_otklonenii_cbbe2068')}
                 />
+                {isReasonMissing && (
+                    <Text style={styles.adminHint}>
+                        {i18nT('travel:components.travel.PublishModerationAdminPanel.ukazhite_prichinu_otkloneniya_c5c0761c')}
+                    </Text>
+                )}
             </View>
             <View style={styles.adminButtons}>
                 <Button
@@ -62,7 +69,8 @@ export default function PublishModerationAdminPanel({
                 />
                 <Button
                     label={i18nT('travel:components.travel.PublishModerationAdminPanel.otklonit_09b10036')}
-                    onPress={onReject}
+                    onPress={isReasonMissing ? undefined : onReject}
+                    disabled={isReasonMissing}
                     icon={<Feather name="x-circle" size={20} color={colors.textOnPrimary} />}
                     variant="danger"
                     size="md"

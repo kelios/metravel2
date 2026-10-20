@@ -19,6 +19,7 @@ type ConfirmDialogProps = {
     title?: string;
     message?: string;
     confirmText?: string;
+    confirmDisabled?: boolean;
     cancelText?: string;
     confirmTestID?: string;
     cancelTestID?: string;
@@ -34,6 +35,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                                           title = i18nT('shared:components.ui.ConfirmDialog.podtverzhdenie_a57088b1'),
                                           message = i18nT('shared:components.ui.ConfirmDialog.vy_uvereny_chto_hotite_prodolzhit_b54d78d2'),
                                           confirmText = i18nT('common:action.delete'),
+                                          confirmDisabled = false,
                                           cancelText = i18nT('common:action.cancel'),
                                           confirmTestID,
                                           cancelTestID,
@@ -193,7 +195,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                             <Button
                                 variant="danger"
                                 label={confirmText}
-                                onPress={onConfirm}
+                                onPress={confirmDisabled ? undefined : onConfirm}
+                                disabled={confirmDisabled}
                                 fullWidth={isMobile}
                                 testID={confirmTestID}
                                 accessibilityLabel={confirmText}
@@ -264,7 +267,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                     <Button
                         variant="danger"
                         label={confirmText}
-                        onPress={onConfirm}
+                        onPress={confirmDisabled ? undefined : onConfirm}
+                        disabled={confirmDisabled}
                         fullWidth={isMobile}
                         testID={confirmTestID}
                         accessibilityLabel={confirmText}
