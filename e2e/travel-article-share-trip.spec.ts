@@ -1,7 +1,7 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Locator, type Page } from '@playwright/test';
 import { DRAFT_PLACEHOLDER_PREFIX } from '../utils/travelFormNormalization';
 
-import { acceptAuthTerms, mockFakeAuthApis, WEB_AUTH_COOKIE_NAME } from './helpers/auth';
+import { mockFakeAuthApis, WEB_AUTH_COOKIE_NAME } from './helpers/auth';
 import { installAnalyticsIntentRecorder, readAnalyticsIntents } from './helpers/analytics';
 import {
   FALLBACK_TRAVEL_ID,
@@ -133,10 +133,20 @@ async function expectAuthContext(page: Page, pathname: '/registration' | '/login
   expectCreateContext(authUrl.searchParams.get('redirect') ?? '', authUrl.origin);
 }
 
-async function fillAuthForm(page: Page): Promise<void> {
-  await page.locator('input[type="email"]').fill(READER_EMAIL);
-  await page.locator('input[type="password"]').fill(READER_PASSWORD);
-  await acceptAuthTerms(page);
+function activeAuthForm(page: Page, route: '/registration' | '/login'): Locator {
+  // Expo retains earlier screens in the DOM. Their inputs and terms gates
+  // must not compete with the currently accessible screen's form card.
+  const title = route === '/registration' ? 'Создайте аккаунт MeTravel' : 'С возвращением';
+  return page.getByRole('heading', { level: 1, name: title, exact: true }).locator('..');
+}
+
+async function fillAuthForm(form: Locator): Promise<void> {
+  await expect(form).toBeVisible();
+  await form.locator('input[type="email"]').fill(READER_EMAIL);
+  await form.locator('input[type="password"]').fill(READER_PASSWORD);
+  const terms = form.getByTestId('auth-terms-gate-checkbox');
+  if (await terms.getAttribute('aria-checked') !== 'true') await terms.click();
+  await expect(terms).toBeChecked();
 }
 
 for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
@@ -160,18 +170,25 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       await page.screenshot({ path: testInfo.outputPath('article-invitation.png') });
       await invite.click();
       await expectAuthContext(page, '/registration');
+      // Growth events are dispatched by requestIdleCallback (up to 2s), so
+      // arriving at the auth route does not imply that the click was observed.
+      await expect.poll(async () => (await readAnalyticsIntents(page, 'content_create_cta_click'))
+        .filter((event) => event.params.source === 'travel_article').length,
+      { timeout: 10_000 }).toBe(1);
       const clicks = (await readAnalyticsIntents(page, 'content_create_cta_click'))
         .filter((event) => event.params.source === 'travel_article');
       expect(clicks).toHaveLength(1);
       expect(clicks[0].params.source_travel_id).toBe(String(FALLBACK_TRAVEL_ID));
 
       // Both auth forms must preserve the nested query before any account exists.
-      await page.getByRole('button', { name: 'Войти в аккаунт', exact: true }).click();
+      await activeAuthForm(page, '/registration')
+        .getByRole('button', { name: 'Войти в аккаунт', exact: true }).click();
       await expectAuthContext(page, '/login');
-      await page.getByText('Зарегистрируйтесь', { exact: true }).click();
+      await activeAuthForm(page, '/login').getByText('Зарегистрируйтесь', { exact: true }).click();
       await expectAuthContext(page, '/registration');
-      await fillAuthForm(page);
-      await page.getByRole('button', { name: 'Зарегистрироваться', exact: true }).click();
+      const registrationForm = activeAuthForm(page, '/registration');
+      await fillAuthForm(registrationForm);
+      await registrationForm.getByRole('button', { name: 'Зарегистрироваться', exact: true }).click();
 
       const authGate = page.getByTestId('travel-upsert.auth-required');
       await expect(authGate).toBeVisible();
@@ -180,8 +197,9 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       expect((await page.context().cookies()).some((cookie) => cookie.name === WEB_AUTH_COOKIE_NAME)).toBe(false);
       await authGate.getByRole('button', { name: /^Войти.*вернуться/ }).click();
       await expectAuthContext(page, '/login');
-      await fillAuthForm(page);
-      await page.getByRole('button', { name: 'Войти', exact: true }).click();
+      const loginForm = activeAuthForm(page, '/login');
+      await fillAuthForm(loginForm);
+      await loginForm.getByRole('button', { name: 'Войти', exact: true }).click();
 
       const name = page.locator('#field-name input');
       const countries = page.getByTestId('travel-wizard.step-basic.countries');
