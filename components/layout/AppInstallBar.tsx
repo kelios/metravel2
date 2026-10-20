@@ -158,7 +158,6 @@ function AppInstallBar() {
 function createStyles(colors: ThemedColors) {
   return StyleSheet.create({
     wrapper: {
-      position: 'absolute',
       left: DESIGN_TOKENS.spacing.sm,
       right: DESIGN_TOKENS.spacing.sm,
       zIndex: 900,
@@ -168,7 +167,7 @@ function createStyles(colors: ThemedColors) {
       borderWidth: 1,
       borderColor: colors.borderLight,
       backgroundColor: colors.surface,
-      ...webViewStyle({ boxShadow: DESIGN_TOKENS.shadows.medium }),
+      ...webViewStyle({ position: 'fixed', boxShadow: DESIGN_TOKENS.shadows.medium }),
     },
     heading: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.xs },
     icon: { width: 36, height: 36, borderRadius: DESIGN_TOKENS.radii.sm },
@@ -176,7 +175,7 @@ function createStyles(colors: ThemedColors) {
     title: { fontSize: 13, fontWeight: '700', color: colors.text },
     subtitle: { fontSize: 11, color: colors.textMuted },
     actions: { flexDirection: 'row', flexWrap: 'wrap', gap: DESIGN_TOKENS.spacing.xs },
-    cta: { flexGrow: 1, flexBasis: 100, minHeight: 44 },
+    cta: { flexGrow: 1, minHeight: 44 },
   })
 }
 
