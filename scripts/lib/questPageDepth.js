@@ -17,6 +17,7 @@
  */
 
 const { htmlToPlainText } = require('../../utils/seoText')
+const { isNoindex: questPageIsNoindex } = require('./htmlRobots')
 
 /**
  * #1930: сколько текста несёт catalog-derived страница квестов и какая его доля
@@ -97,14 +98,6 @@ function extractQuestSsgSections(html) {
     sections.push({ kind: match[1].toLowerCase(), text: sectionProseText(body) })
   }
   return sections
-}
-
-/** Заявляет ли страница `noindex` — то есть не претендует на место в выдаче. */
-function questPageIsNoindex(html) {
-  const match = String(html || '').match(
-    /<meta[^>]*name="robots"[^>]*content="([^"]*)"[^>]*\/?>/i,
-  )
-  return match ? /\bnoindex\b/i.test(match[1]) : false
 }
 
 /**

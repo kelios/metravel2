@@ -13,23 +13,13 @@
 // (scripts/add-cache-bust-meta.js); scripts/guard-html-meta-description.js is
 // the regression control.
 
+const { isNoindex } = require('./htmlRobots')
+
 const META_DESCRIPTION_RE = /<meta\b[^>]*\bname\s*=\s*(?:"description"|'description')[^>]*>/gi
 const PAGE_OWNED_RE = /\bdata-rh\s*=/i
-const META_ROBOTS_RE = /<meta\b[^>]*\bname\s*=\s*(?:"robots"|'robots')[^>]*>/gi
-const CONTENT_RE = /\bcontent\s*=\s*(?:"([^"]*)"|'([^']*)')/i
 
 function countMetaDescriptions(html) {
   return (String(html).match(META_DESCRIPTION_RE) || []).length
-}
-
-// A page that opts out of the index (redirect stubs of old travel slugs,
-// quest-seo-errors/*) needs no snippet, so it may legitimately carry none.
-function isNoindex(html) {
-  return (String(html).match(META_ROBOTS_RE) || []).some((tag) => {
-    const match = CONTENT_RE.exec(tag)
-    const content = match ? match[1] ?? match[2] : ''
-    return content.toLowerCase().split(/[\s,]+/).includes('noindex')
-  })
 }
 
 function normalizeMetaDescription(html) {
