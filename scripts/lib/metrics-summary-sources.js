@@ -5,6 +5,7 @@ const { query } = require('../fetch-gsc-stats')
 const { runReport, allRows } = require('../fetch-ga4-stats')
 const { readOptionalSecretToken } = require('./yandex-token')
 const { EVENTS } = require('./metrics-summary')
+const { sourceReportRequests } = require('./ga4-source-breakdown')
 
 const ORIGIN = 'https://metravel.by'
 const DEADLINE_MS = 30000
@@ -172,17 +173,21 @@ async function collectGa4(window, property, source, provenance) {
   const reports = provenance.ga4.reports = {}
   const report = (name, dimensions, metrics, extra) => source(`ga4.${name}`,
     (signal) => collect(signal, dimensions, metrics, extra), reports[name] = {}, Math.max(1, deadline - Date.now()))
-  const [totals, channels, events] = await Promise.all([
+  const sourceRequests = sourceReportRequests(true)
+  const sourceReport = (name, request) => report(name, request.dimensions.map((d) => d.name), request.metrics.map((m) => m.name), request.dimensionFilter ? { dimensionFilter: request.dimensionFilter } : {})
+  const [totals, channels, events, sourceSessions, sourceEvents] = await Promise.all([
     report('totals', ['yearMonth'], ['activeUsers', 'sessions', 'bounceRate']),
     report('channels', ['yearMonth', 'sessionDefaultChannelGroup'], ['activeUsers', 'sessions']),
     report('events', ['yearMonth', 'eventName'], ['eventCount'], {
       dimensionFilter: { filter: { fieldName: 'eventName', inListFilter: { values: EVENTS, caseSensitive: true } } },
     }),
+    sourceReport('sourceSessions', sourceRequests.sessions),
+    sourceReport('sourceEvents', sourceRequests.events),
   ])
-  const available = [totals, channels, events].filter(Boolean)
-  provenance.ga4.status = available.length === 3 ? 'collected' : available.length ? 'partial' : 'unavailable'
+  const available = [totals, channels, events, sourceSessions, sourceEvents].filter(Boolean)
+  provenance.ga4.status = available.length === 5 ? 'collected' : available.length ? 'partial' : 'unavailable'
   provenance.ga4.timeZone = available.flatMap((result) => result.metadata).find((metadata) => metadata.timeZone)?.timeZone ?? null
-  return { totals, channels, events }
+  return { totals, channels, events, sourceSessions, sourceEvents }
 }
 
 async function collectSources({ window, now = new Date(), property = '362328641', site = 'sc-domain:metravel.by' }) {

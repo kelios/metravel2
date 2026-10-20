@@ -12,6 +12,7 @@
 // Management → add as Viewer). Enable "Google Analytics Data API" in the GCP project.
 // Note: GA4 undercounts metravel traffic (consent banner + adblockers) — treat as secondary.
 const { getAccessToken } = require('./lib/google-token')
+const { SOURCE_EVENTS, sourceReportRequests, buildSourceBreakdown, sourceMetricCell } = require('./lib/ga4-source-breakdown')
 
 const SCOPE = 'https://www.googleapis.com/auth/analytics.readonly'
 
@@ -171,7 +172,7 @@ async function collectStats(args, report) {
     }
   }
 
-  let channelBreakdown
+  let channelBreakdown, sourceBreakdown
   if (args.channelBreakdown) {
     const common = {
       dateRanges,
@@ -191,6 +192,33 @@ async function collectStats(args, report) {
       nonAdditive: true,
       quality: { sources: { ...sources, rows: undefined }, detail: { ...detail, rows: undefined } },
     }
+
+    const requests = sourceReportRequests()
+    const controller = new AbortController()
+    let timer
+    // Bound only the new diagnostics; the existing totals and Unassigned
+    // measurement keep their established request lifecycle.
+    const deadline = new Promise((_, reject) => {
+      timer = setTimeout(() => {
+        controller.abort()
+        reject(Object.assign(new Error('TIMEOUT'), { name: 'TimeoutError' }))
+      }, 30000)
+    })
+    const collectSource = async (body) => {
+      try {
+        return await Promise.race([allRows((request) => report(request, { signal: controller.signal }), { dateRanges, ...body }), deadline])
+      } catch (error) {
+        // Additional diagnostics must neither discard the existing KPI nor leak
+        // an upstream response body (which can contain credentials).
+        const status = /failed \((\d{3})\)/.exec(String(error?.message || ''))
+        const reason = ['AbortError', 'TimeoutError'].includes(error?.name) ? 'TIMEOUT' : status ? `HTTP ${status[1]}` : 'UNAVAILABLE'
+        return { unavailable: true, reason }
+      }
+    }
+    try {
+      const [sessions, sourceEvents] = await Promise.all([collectSource(requests.sessions), collectSource(requests.events)])
+      sourceBreakdown = buildSourceBreakdown({ sessions, events: sourceEvents })
+    } finally { clearTimeout(timer) }
   }
 
   return {
@@ -208,6 +236,7 @@ async function collectStats(args, report) {
     quality: { totals: totals.metadata || {}, channels: { ...byChannel, rows: undefined } },
     ...(events ? { events, eventsTruncated } : {}),
     ...(channelBreakdown ? { channelBreakdown } : {}),
+    ...(sourceBreakdown ? { sourceBreakdown } : {}),
   }
 }
 
@@ -225,6 +254,20 @@ function formatBreakdown(breakdown) {
   return lines.join('\n')
 }
 
+function formatSourceBreakdown(breakdown) {
+  const lines = ['\n   Источники GA4 / Instagram (sessionSource / sessionMedium):',
+    '   Сессии получены отдельным запросом; строки источников/medium не складываются.',
+    '   События — eventCount, не уникальные пользователи и не conversion rate.',
+    `   source | medium | группа | sessions | ${SOURCE_EVENTS.join(' | ')}`]
+  for (const row of breakdown.rows) {
+    lines.push(`   ${[row.sessionSource, row.sessionMedium ?? 'не зафиксировано', row.channel,
+      sourceMetricCell(row.sessions, row.status.sessions),
+      ...SOURCE_EVENTS.map((event) => sourceMetricCell(row.events[event], row.status.events[event]))].join(' | ')}`)
+  }
+  lines.push(`   Качество источников: ${JSON.stringify(breakdown.quality)}`)
+  return lines.join('\n')
+}
+
 async function main() {
   const args = parseArgs(process.argv)
   const { accessToken } = await getAccessToken(SCOPE)
@@ -233,7 +276,7 @@ async function main() {
     if (!args.property) throw new Error('GA4 property id not found. Pass --property <id> or set GA4_PROPERTY_ID.')
     if (!args.json) console.log(`(авто-определён GA4 property: ${args.property})`)
   }
-  const result = await collectStats(args, (body) => runReport(accessToken, args.property, body))
+  const result = await collectStats(args, (body, options) => runReport(accessToken, args.property, body, options))
 
   if (args.json) {
     process.stdout.write(JSON.stringify(result, null, 2) + '\n')
@@ -260,6 +303,7 @@ async function main() {
     if (!events.length) console.log('     (ни одного события за окно — проверить инициализацию GA4)')
   }
   if (result.channelBreakdown) console.log(formatBreakdown(result.channelBreakdown))
+  if (result.sourceBreakdown) console.log(formatSourceBreakdown(result.sourceBreakdown))
   console.log(`\n   Качество отчёта: ${JSON.stringify(result.quality)}`)
   console.log('\n   ⚠️  GA4 недосчитывает реальный трафик (consent + адблоки). GSC — точнее по organic.\n')
 }
@@ -271,4 +315,4 @@ if (require.main === module) {
   })
 }
 
-module.exports = { parseArgs, allRows, resolvedPeriod, collectStats, formatBreakdown, runReport }
+module.exports = { parseArgs, allRows, resolvedPeriod, collectStats, formatBreakdown, formatSourceBreakdown, runReport }

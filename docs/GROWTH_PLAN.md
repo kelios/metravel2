@@ -67,6 +67,14 @@ board по `docs/TASK_BOARD_MCP.md`.
   доля Unassigned <10% сессий, каждый остаточный источник объяснён. Долю брать
   из `channelBreakdown.sharePct`, не из суммы подробных строк; при пустых данных,
   неполном ответе, thresholding/sampling/data loss результат не считать pass;
+- Источники и вклад авторов (#2694): та же команда дополнительно показывает
+  sessionSource/sessionMedium, сессии и `registration_complete`,
+  `route_create_started`, `travel_publish`, включая отдельные строки Instagram;
+  `npm run stats:summary` — этот разрез по месяцам. Отсутствующие строки и
+  ограничения качества не заменяются нулями; события — срабатывания, не
+  уникальные авторы и не коэффициент конверсии. Правила ссылок:
+  `docs/INSTAGRAM_OPERATIONS.md` → 5.1. Классификатор и реальные ссылки #2680
+  остаются отложенными до `done` #2659 по решению владельца 20.10.2026.
 - product funnels: registration, auth completion, travel/article/quest create
   start → success;
 - content: новые и обновлённые pages, search demand, attention cycle outcomes;

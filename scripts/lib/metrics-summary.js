@@ -1,5 +1,7 @@
 'use strict'
 
+const { SOURCE_EVENTS, reportQuality, buildSourceBreakdown, sourceMetricCell } = require('./ga4-source-breakdown')
+
 const EVENTS = ['quest_start', 'quest_finish', 'registration_view', 'registration_complete', 'Affiliate_Impression', 'Affiliate_Click', 'app_download_click']
 const monthAt = (year, month) => new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 7)
 const shiftMonth = (month, offset) => monthAt(Number(month.slice(0, 4)), Number(month.slice(5)) - 1 + offset)
@@ -92,8 +94,7 @@ function aggregateGsc(source, months, gaps) {
 
 function qualifiedRows(report, label, gaps) {
   if (!report) return []
-  const quality = report.metadata || []
-  if (!report.complete || quality.some((m) => m.subjectToThresholding || m.dataLossFromOtherRow || m.samplingMetadatas?.length)) {
+  if (reportQuality(report).status !== 'collected') {
     gaps.push(`GA4 ${label}: неполная выгрузка, thresholding, sampling или data loss; значения не используются`)
     return []
   }
@@ -123,11 +124,14 @@ function aggregateGa4(source, months, gaps) {
       const matches = eventRows.filter((r) => r.dimensionValues[1]?.value === event)
       return [event, matches.length === 1 ? values(matches[0])[0] ?? null : null]
     }))
-    monthly[month] = { ga4, funnels }
+    const sourceBreakdown = buildSourceBreakdown({ sessions: source?.sourceSessions, events: source?.sourceEvents }, month)
+    monthly[month] = { ga4, funnels, sourceBreakdown }
   }
   if (months.some((m) => monthly[m].ga4?.activeUsers == null)) gaps.push('GA4: часть месяцев не имеет подтверждённых месячных итогов; недостающие данные не заменяются нулями')
   if (months.some((m) => EVENTS.some((e) => monthly[m].funnels[e] === null))) gaps.push('GA4: отсутствующая строка события означает «не зафиксировано за месяц», причина (нет действий, измерения или истории) неизвестна; это не число регистраций/уникальных прохождений')
   if (months.some((m) => monthly[m].ga4 && !monthly[m].ga4.channels.length)) gaps.push('GA4: для части месяцев нет достоверного разреза по каналам')
+  if (months.some((m) => monthly[m].sourceBreakdown.status !== 'collected')) gaps.push('GA4 источники: часть запросов недоступна, неполна или ограничена thresholding/sampling/data loss; качество сохранено, неподтверждённые значения не используются')
+  if (months.some((m) => monthly[m].sourceBreakdown.rows.some((r) => r.sessions === null || SOURCE_EVENTS.some((e) => r.events[e] === null)))) gaps.push('GA4 источники: отсутствующая строка означает «не зафиксировано», а не ноль; события — eventCount, не уникальные пользователи и не conversion rate. Instagram aliases и medium не суммируются')
   return monthly
 }
 
@@ -189,6 +193,10 @@ function renderMarkdown(report) {
     '## Помесячные показатели', '', table(['Месяц', 'GSC клики', 'Показы', 'CTR', 'Позиция', 'GA4 пользователи', 'Сессии', 'Bounce', 'Метрика пользователи', 'Визиты'], report.months.map((r) => [r.month, fmt(r.gsc?.clicks), fmt(r.gsc?.impressions), fmt(r.gsc?.ctr, true), fmt(r.gsc?.position), fmt(r.ga4?.activeUsers), fmt(r.ga4?.sessions), fmt(r.ga4?.bounceRate, true), fmt(r.metrika?.users), fmt(r.metrika?.visits)])), '',
     '## События GA4', '', table(['Месяц', ...EVENTS], report.months.map((r) => [r.month, ...EVENTS.map((e) => fmt(r.funnels[e]))])), '',
     '## Каналы GA4', '', table(['Месяц', 'Канал', 'Пользователи', 'Сессии'], report.months.flatMap((r) => r.ga4?.channels?.length ? r.ga4.channels.map((c) => [r.month, c.channel, fmt(c.activeUsers), fmt(c.sessions)]) : [[r.month, 'нет данных', 'нет данных', 'нет данных']])), '',
+    '## Источники GA4 / Instagram', '',
+    'Нативные sessionSource / sessionMedium. Instagram: instagram, instagram.com, l.instagram.com, www.instagram.com; остальные источники показаны отдельно. Исходные source/medium сохранены, aliases и строки не складываются. Сессии запрошены отдельно от eventName; события — eventCount, не уникальные пользователи и не conversion rate. «Не зафиксировано» означает отсутствие строки при доступном качественном отчёте; недоступность или ограничения качества отмечены отдельно.', '',
+    table(['Месяц', 'Источник', 'Medium', 'Группа', 'Сессии', ...SOURCE_EVENTS], report.months.flatMap((r) => r.sourceBreakdown.rows.map((s) => [r.month, s.sessionSource, s.sessionMedium ?? 'не зафиксировано', s.channel, sourceMetricCell(s.sessions, s.status.sessions), ...SOURCE_EVENTS.map((e) => sourceMetricCell(s.events[e], s.status.events[e]))]))), '',
+    table(['Месяц', 'Качество сессий', 'Качество событий', 'Metadata'], report.months.map((r) => [r.month, r.sourceBreakdown.quality.sessions.status, r.sourceBreakdown.quality.events.status, JSON.stringify(r.sourceBreakdown.quality)])), '',
     '## Контент и сообщество', '',
     `Текущий снимок: статей ${fmt(report.content.articles)}, доля статей с автором 1 ${fmt(report.content.author1Share, true)}, авторов ${fmt(report.content.authors)}, квестов ${fmt(report.content.quests)}, сумма completions_count ${fmt(report.content.completions)}.`,
     'Месячные значения ниже — первые наблюдения среди ныне опубликованных статей. created_at: **по дате поездки, не по дате публикации**. Публикации не автора 1 — статьи, в списке авторов которых нет ID 1. Идентификаторы авторов не выводятся.', '',

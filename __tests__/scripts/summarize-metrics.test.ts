@@ -19,6 +19,7 @@ const { getAccessToken } = require('@/scripts/lib/google-token')
 const { query } = require('@/scripts/fetch-gsc-stats')
 const { runReport, allRows } = require('@/scripts/fetch-ga4-stats')
 const { readOptionalSecretToken } = require('@/scripts/lib/yandex-token')
+const { SOURCE_EVENTS } = require('@/scripts/lib/ga4-source-breakdown')
 
 const NOW = new Date('2026-10-19T12:00:00Z')
 const WINDOW = {
@@ -189,6 +190,54 @@ describe('monthly metrics: source arithmetic and qualification', () => {
     expect(Object.keys(result.funnels)).toEqual(EVENTS)
     expect(Object.values(result.funnels)).toEqual(EVENTS.map(() => null))
     expect(gaps.join(' ')).toContain('не число регистраций')
+  })
+
+  it('keeps monthly source sessions separate from event counts and preserves aliases and event-only rows', () => {
+    const report = buildSummary({ ...emptySources(), ga4: {
+      totals: qualified([gaRow(['202510'], [100, 150, 0.2])]),
+      channels: qualified([gaRow(['202510', 'Organic Social'], [70, 80])]),
+      events: qualified([gaRow(['202510', 'registration_complete'], [10])]),
+      sourceSessions: qualified([
+        gaRow(['202510', 'instagram', 'social'], [12]), gaRow(['202510', 'instagram.com', 'referral'], [5]),
+        gaRow(['202510', 'facebook', 'social'], [20]), gaRow(['202511', 'instagram', 'social'], [8]),
+      ]),
+      sourceEvents: qualified([
+        gaRow(['202510', 'instagram', 'social', 'registration_complete'], [2]),
+        gaRow(['202510', 'instagram', 'social', 'travel_publish'], [0]),
+        gaRow(['202510', 'l.instagram.com', 'referral', 'route_create_started'], [1]),
+        gaRow(['202511', 'instagram', 'social', 'travel_publish'], [3]),
+      ]),
+    } }, { now: NOW })
+    const october = report.months[0]
+    expect(october.ga4.sessions).toBe(150)
+    expect(october.funnels.registration_complete).toBe(10)
+    expect(october.sourceBreakdown.rows.find((r: any) => r.sessionSource === 'instagram')).toMatchObject({
+      sessions: 12, events: { registration_complete: 2, route_create_started: null, travel_publish: 0 },
+    })
+    expect(october.sourceBreakdown.rows.find((r: any) => r.sessionSource === 'instagram.com')).toMatchObject({ sessions: 5, channel: 'instagram' })
+    expect(october.sourceBreakdown.rows.find((r: any) => r.sessionSource === 'l.instagram.com')).toMatchObject({ sessions: null, channel: 'instagram', events: { route_create_started: 1 } })
+    expect(october.sourceBreakdown.rows.find((r: any) => r.sessionSource === 'facebook').channel).toBe('other')
+    expect(report.months[1].sourceBreakdown.rows[0]).toMatchObject({ sessions: 8, events: { registration_complete: null, travel_publish: 3 } })
+    expect(report.months[2].sourceBreakdown.rows[0]).toMatchObject({ placeholder: true, sessions: null, status: { sessions: 'not_observed' } })
+    const markdown = renderMarkdown(report)
+    expect(markdown).toContain('## Источники GA4 / Instagram')
+    expect(markdown).toContain('| 2025-10 | instagram | social | instagram | 12 | 2 | не зафиксировано | 0 |')
+    expect(markdown).toContain('| 2025-10 | l.instagram.com | referral | instagram | не зафиксировано | не зафиксировано | 1 | не зафиксировано |')
+    expect(markdown).toContain('eventCount, не уникальные пользователи и не conversion rate')
+  })
+
+  it('distinguishes unavailable and thresholded source queries from unobserved months in Markdown', () => {
+    const report = buildSummary({ ...emptySources(), ga4: {
+      sourceSessions: null,
+      sourceEvents: qualified([gaRow(['202510', 'instagram', 'social', 'travel_publish'], [4])], { metadata: [{ subjectToThresholding: true }] }),
+    } }, { now: NOW })
+    expect(report.months[0].sourceBreakdown.rows[0]).toMatchObject({ sessions: null, events: { travel_publish: null },
+      status: { sessions: 'unavailable', events: { travel_publish: 'thresholded' } } })
+    const markdown = renderMarkdown(report)
+    expect(markdown).toContain('нет данных (unavailable)')
+    expect(markdown).toContain('нет данных (thresholded)')
+    expect(markdown).toContain('subjectToThresholding')
+    expect(report.gaps.join(' ')).toContain('GA4 источники')
   })
 })
 
@@ -481,7 +530,16 @@ describe('monthly metrics: bounded complete public catalogues', () => {
     ]))
     expect(allRows.mock.calls.map((call: [unknown, { dimensions: { name: string }[] }]) => call[1].dimensions.map((d) => d.name))).toEqual(expect.arrayContaining([
       ['yearMonth'], ['yearMonth', 'sessionDefaultChannelGroup'], ['yearMonth', 'eventName'],
+      ['yearMonth', 'sessionSource', 'sessionMedium'], ['yearMonth', 'sessionSource', 'sessionMedium', 'eventName'],
     ]))
+    const sourceRequests = allRows.mock.calls.map((call: [unknown, any]) => call[1]).filter((body: any) => body.dimensions[1]?.name === 'sessionSource')
+    expect(sourceRequests.find((body: any) => body.dimensions.length === 3)).toMatchObject({
+      dateRanges: [{ startDate: WINDOW.comparisonFrom, endDate: WINDOW.to }], metrics: [{ name: 'sessions' }],
+    })
+    expect(sourceRequests.find((body: any) => body.dimensions.length === 3).dimensionFilter).toBeUndefined()
+    expect(sourceRequests.find((body: any) => body.dimensions.length === 4)).toMatchObject({ metrics: [{ name: 'eventCount' }],
+      dimensionFilter: { filter: { fieldName: 'eventName', inListFilter: { values: SOURCE_EVENTS, caseSensitive: true } } },
+    })
   })
 
   it('aborts a stalled Google token exchange at the source deadline and retains other sources', async () => {
@@ -543,7 +601,36 @@ describe('monthly metrics: bounded complete public catalogues', () => {
     expect(JSON.stringify(sources)).not.toMatch(/private-canary|unit-test-token/)
   })
 
-  it('cancels a stalled GA4 report without losing completed totals and events', async () => {
+  it.each(['sourceSessions', 'sourceEvents'])('keeps the three original aggregates when %s fails independently', async (failedReport) => {
+    getAccessToken.mockResolvedValue({ accessToken: 'unit-test-token' })
+    query.mockResolvedValue({ rows: [] })
+    readOptionalSecretToken.mockReturnValue(null)
+    allRows.mockImplementation(jest.requireActual('@/scripts/fetch-ga4-stats').allRows)
+    runReport.mockImplementation(async (_token: string, _property: string, body: { dimensions: { name: string }[] }) => {
+      const dimensions = body.dimensions.map((d) => d.name)
+      const name = dimensions[1] === 'sessionSource' ? dimensions.includes('eventName') ? 'sourceEvents' : 'sourceSessions'
+        : dimensions[1] === 'eventName' ? 'events' : dimensions[1] ? 'channels' : 'totals'
+      if (name === failedReport) throw new Error('GA4 runReport failed (403): token=private-canary')
+      const row = name === 'sourceSessions' ? gaRow(['202510', 'instagram', 'social'], [12])
+        : name === 'sourceEvents' ? gaRow(['202510', 'instagram', 'social', 'travel_publish'], [2])
+          : name === 'events' ? gaRow(['202510', 'quest_start'], [7])
+            : name === 'channels' ? gaRow(['202510', 'Direct'], [100, 150]) : gaRow(['202510'], [100, 150, 0.2])
+      return { rows: [row], rowCount: 1, metadata: { timeZone: 'Europe/Warsaw' } }
+    })
+    fetchMock.mockResolvedValue(page({ results: [], count: 0, next: null }))
+    const sources = await collectSources({ window: WINDOW, now: NOW })
+    const report = buildSummary(sources, { now: NOW })
+    expect(sources.ga4[failedReport]).toBeNull()
+    expect(sources.provenance.ga4.reports[failedReport]).toEqual({ status: 'unavailable', reason: 'HTTP 403' })
+    expect(report.months[0].ga4).toMatchObject({ activeUsers: 100, sessions: 150, channels: [{ channel: 'Direct' }] })
+    expect(report.months[0].funnels.quest_start).toBe(7)
+    const source = report.months[0].sourceBreakdown.rows[0]
+    if (failedReport === 'sourceSessions') expect(source).toMatchObject({ sessions: null, events: { travel_publish: 2 }, status: { sessions: 'unavailable' } })
+    else expect(source).toMatchObject({ sessions: 12, events: { travel_publish: null }, status: { events: { travel_publish: 'unavailable' } } })
+    expect(JSON.stringify(sources)).not.toMatch(/private-canary|unit-test-token/)
+  })
+
+  it.each(['channels', 'sourceSessions', 'sourceEvents'])('cancels stalled %s within the same GA4 deadline without losing completed reports', async (stalledReport) => {
     jest.useFakeTimers()
     getAccessToken.mockResolvedValue({ accessToken: 'unit-test-token' })
     query.mockResolvedValue({ rows: [] })
@@ -552,7 +639,9 @@ describe('monthly metrics: bounded complete public catalogues', () => {
     const signals: AbortSignal[] = []
     runReport.mockImplementation(async (_token: string, _property: string, body: { dimensions: { name: string }[] }, options: { signal: AbortSignal }) => {
       const dimension = body.dimensions[1]?.name
-      if (dimension === 'sessionDefaultChannelGroup') return new Promise((_resolve, reject) => {
+      const name = dimension === 'sessionSource' ? body.dimensions.some((d) => d.name === 'eventName') ? 'sourceEvents' : 'sourceSessions'
+        : dimension === 'sessionDefaultChannelGroup' ? 'channels' : dimension === 'eventName' ? 'events' : 'totals'
+      if (name === stalledReport) return new Promise((_resolve, reject) => {
         signals.push(options.signal)
         options.signal.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), { name: 'AbortError' })), { once: true })
       })
@@ -566,11 +655,11 @@ describe('monthly metrics: bounded complete public catalogues', () => {
       const sources = await pending
       expect(signals).toHaveLength(1)
       expect(signals[0].aborted).toBe(true)
-      expect(sources.ga4.channels).toBeNull()
+      expect(sources.ga4[stalledReport]).toBeNull()
       expect(sources.ga4.totals.complete).toBe(true)
       expect(sources.ga4.events.complete).toBe(true)
       expect(sources.provenance.ga4.status).toBe('partial')
-      expect(sources.provenance.ga4.reports.channels.reason).toBe('TIMEOUT')
+      expect(sources.provenance.ga4.reports[stalledReport].reason).toBe('TIMEOUT')
     } finally { jest.useRealTimers() }
   })
 
