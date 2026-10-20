@@ -1,7 +1,8 @@
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { act, render, fireEvent, waitFor } from '@testing-library/react-native';
 import TravelWizardStepBasic from '@/components/travel/TravelWizardStepBasic';
 import Toast from 'react-native-toast-message';
 import { useRouter } from 'expo-router';
+import { i18n } from '@/i18n';
 
 // Mock dependencies
 jest.mock('expo-router', () => ({
@@ -225,6 +226,87 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
             isMobile: false,
         };
         (useRouter as jest.Mock).mockReturnValue(mockRouter);
+    });
+
+    describe('Создание из статьи', () => {
+        const shareTripCountryField = {
+            countries: [
+                { country_id: '3', title_ru: 'Беларусь' },
+                { country_id: '5', title_ru: 'Польша' },
+            ],
+            isLoading: false,
+        };
+
+        it('keeps the ordinary first step without the contextual country selector', () => {
+            const screen = render(<TravelWizardStepBasic {...defaultProps} />);
+            expect(screen.queryByTestId('travel-wizard.step-basic.countries')).toBeNull();
+        });
+
+        it('shows the prefilled place and country, then edits both through the existing form', () => {
+            const formData = { ...baseFormData, name: 'Гродно', countries: ['3'] };
+            const screen = render(
+                <TravelWizardStepBasic {...defaultProps} formData={formData} shareTripCountryField={shareTripCountryField} />,
+            );
+
+            expect(screen.getByDisplayValue('Гродно')).toBeTruthy();
+            expect(screen.getByText('Беларусь')).toBeTruthy();
+            expect(defaultProps.setFormData).not.toHaveBeenCalled();
+            expect(defaultProps.onManualSave).not.toHaveBeenCalled();
+
+            fireEvent.changeText(screen.getByDisplayValue('Гродно'), 'Моя поездка в Гродно');
+            const nameUpdate = defaultProps.setFormData.mock.calls[0][0];
+            expect(nameUpdate(formData)).toEqual({ ...formData, name: 'Моя поездка в Гродно' });
+
+            fireEvent.press(screen.getByLabelText('Открыть выбор'));
+            fireEvent.press(screen.getByTestId('simple-multiselect.item.5'));
+            const countryUpdate = defaultProps.setFormData.mock.calls[1][0];
+            expect(countryUpdate(formData)).toEqual({ ...formData, countries: ['3', '5'] });
+            expect(defaultProps.onManualSave).not.toHaveBeenCalled();
+        });
+
+        it('allows clearing the transferred country without changing the place name', () => {
+            const formData = { ...baseFormData, name: 'Гродно', countries: ['3'] };
+            const screen = render(
+                <TravelWizardStepBasic {...defaultProps} formData={formData} shareTripCountryField={shareTripCountryField} />,
+            );
+
+            fireEvent.press(screen.getByLabelText('Удалить Беларусь из выбранных'));
+
+            const update = defaultProps.setFormData.mock.calls[0][0];
+            expect(update(formData)).toEqual({ ...formData, countries: [] });
+        });
+
+        it('retains the country selection while a retry refreshes the catalog', () => {
+            const formData = { ...baseFormData, name: 'Гродно', countries: ['3'] };
+            const screen = render(
+                <TravelWizardStepBasic
+                    {...defaultProps}
+                    formData={formData}
+                    shareTripCountryField={{ ...shareTripCountryField, isLoading: true }}
+                />,
+            );
+
+            expect(screen.getByDisplayValue('Гродно')).toBeTruthy();
+            expect(screen.getByText('Беларусь')).toBeTruthy();
+            fireEvent.press(screen.getByLabelText('Открыть выбор'));
+            expect(screen.queryByTestId('simple-multiselect.item.5')).toBeNull();
+            expect(defaultProps.setFormData).not.toHaveBeenCalled();
+        });
+
+        it('reacts to locale changes for the new country label', async () => {
+            const screen = render(
+                <TravelWizardStepBasic {...defaultProps} shareTripCountryField={shareTripCountryField} />,
+            );
+
+            try {
+                for (const locale of ['be', 'uk', 'pl', 'en', 'ru']) {
+                    await act(async () => { await i18n.changeLanguage(locale); });
+                    expect(screen.getByText(i18n.t('travel:articleShareTrip.countryLabel'))).toBeTruthy();
+                }
+            } finally {
+                await act(async () => { await i18n.changeLanguage('ru'); });
+            }
+        });
     });
 
     describe('✅ Отображение компонентов', () => {

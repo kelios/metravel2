@@ -18,7 +18,7 @@ import WizardStepRouter, {
 } from '@/components/travel/upsert/WizardStepRouter';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useTravelPreview } from '@/hooks/useTravelPreview';
-import { buildLoginHref } from '@/utils/authNavigation';
+import { buildLoginHref, buildRegistrationHref } from '@/utils/authNavigation';
 import { openWebWindow } from '@/utils/externalLinks';
 import {
   trackContentCreateAuthGateViewed,
@@ -335,36 +335,42 @@ const AccessDeniedState = ({ colors, styles, router }: WizardStateProps) => {
   );
 };
 
-const AuthRequiredState = ({ colors, styles, router }: WizardStateProps) => {
+const AuthRequiredState = ({ colors, styles, router, createHref, shareTripContext }: WizardStateProps & {
+  createHref: string;
+  shareTripContext: UpsertTravelController['shareTripContext'];
+}) => {
+  const intent = shareTripContext ? 'share-trip' : 'create-travel';
   useEffect(() => {
     trackContentCreateAuthGateViewed({
       contentType: 'route',
       source: 'travel_new_auth_gate',
-      intent: 'create-travel',
+      intent,
     });
-  }, []);
+  }, [intent]);
 
   const handleLogin = useCallback(() => {
     trackContentCreateCtaClicked({
       contentType: 'route',
       source: 'travel_new_auth_gate',
       authState: 'guest',
-      intent: 'create-travel',
+      intent,
       action: 'login',
+      sourceTravelId: shareTripContext?.sourceTravelId,
     });
-    router.push(buildLoginHref({ redirect: '/travel/new', intent: 'create-travel' }) as any);
-  }, [router]);
+    router.push(buildLoginHref({ redirect: createHref, intent }) as any);
+  }, [createHref, intent, router, shareTripContext?.sourceTravelId]);
 
   const handleRegister = useCallback(() => {
     trackContentCreateCtaClicked({
       contentType: 'route',
       source: 'travel_new_auth_gate',
       authState: 'guest',
-      intent: 'create-travel',
+      intent,
       action: 'register',
+      sourceTravelId: shareTripContext?.sourceTravelId,
     });
-    router.push('/registration?redirect=%2Ftravel%2Fnew&intent=create-travel' as any);
-  }, [router]);
+    router.push(buildRegistrationHref({ redirect: createHref, intent }) as any);
+  }, [createHref, intent, router, shareTripContext?.sourceTravelId]);
 
   const actions = useMemo<EmptyStateAction[]>(
     () => [
@@ -413,7 +419,8 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
 
     hasTrackedRouteCreateStartedRef.current = true;
     trackRouteCreateStarted({
-      source: 'travel_new',
+      source: controller.shareTripContext ? 'travel_article_cta' : 'travel_new',
+      sourceTravelId: controller.shareTripContext?.sourceTravelId,
       travelId: controller.formData?.id,
       step: wizard.currentStep,
     });
@@ -422,6 +429,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
     controller.isAuthenticated,
     controller.isInitialLoading,
     controller.isNew,
+    controller.shareTripContext,
     wizard.currentStep,
   ]);
 
@@ -486,9 +494,11 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
     const draftSaved = await controller.draftRecovery.flushDraft();
     if (!draftSaved) return;
     const id = controller.formData?.id;
-    const redirect = id ? `/travel/${encodeURIComponent(String(id))}` : '/travel/new';
-    router.push(buildLoginHref({ redirect, intent: 'edit-travel' }) as any);
-  }, [controller.draftRecovery, controller.formData?.id, router]);
+    const redirect = id ? `/travel/${encodeURIComponent(String(id))}` : controller.createHref;
+    const intent = !id && controller.shareTripContext ? 'share-trip' : 'edit-travel';
+    router.push(buildLoginHref({ redirect, intent }) as any);
+  }, [controller.createHref, controller.draftRecovery, controller.formData?.id,
+    controller.shareTripContext, router]);
 
   const isSessionExpired = getErrorStatus(controller.autosave.error) === 401;
 
@@ -546,7 +556,8 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
   }
 
   if (!controller.isAuthenticated && controller.isNew) {
-    return <AuthRequiredState colors={colors} styles={styles} router={router} />;
+    return <AuthRequiredState colors={colors} styles={styles} router={router}
+      createHref={controller.createHref} shareTripContext={controller.shareTripContext} />;
   }
 
   return (

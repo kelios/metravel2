@@ -19,6 +19,7 @@ import { useTravelFormPersistence } from '@/hooks/useTravelFormPersistence';
 import { type RichTextSnapshot } from '@/utils/travelTextLossGuard';
 import { translate as i18nT } from '@/i18n'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import type { TravelArticleInitialPrefill } from '@/utils/travelArticleCreateIntent';
 
 
 interface UseTravelFormDataOptions {
@@ -29,10 +30,13 @@ interface UseTravelFormDataOptions {
   isAuthenticated: boolean;
   authReady: boolean;
   onAuthRequired?: (context: { redirect: string }) => void | Promise<void>;
+  initialPrefill?: TravelArticleInitialPrefill | null;
+  prefillPending?: boolean;
 }
 
 export function useTravelFormData(options: UseTravelFormDataOptions) {
-  const { travelId, isNew, userId, isSuperAdmin, isAuthenticated, authReady, onAuthRequired } = options;
+  const { travelId, isNew, userId, isSuperAdmin, isAuthenticated, authReady, onAuthRequired,
+    initialPrefill, prefillPending = false } = options;
   const router = useRouter();
   const networkStatus = useNetworkStatus();
   const isOnline = networkStatus.isConnected && networkStatus.isInternetReachable !== false;
@@ -57,7 +61,9 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   // Форма наполнена данными этой поездки: у новой — сразу, у существующей — только
   // после успешного formState.reset(finalData) из loadTravelData. Пока false, автосейв
   // запрещён (иначе пустая форма затёрла бы статью — инцидент 2026-07-21, travel 641).
-  const [isFormHydrated, setIsFormHydrated] = useState(isNew);
+  const requestedPrefillRef = useRef(isNew && Boolean(initialPrefill || prefillPending));
+  const [isPrefillInitialized, setIsPrefillInitialized] = useState(!requestedPrefillRef.current);
+  const [isFormHydrated, setIsFormHydrated] = useState(isNew && !requestedPrefillRef.current);
   const [loadError, setLoadError] = useState<{ status: number; message: string } | null>(null);
   const [isManualSaveInFlight, setIsManualSaveInFlight] = useState(false);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
@@ -83,6 +89,25 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     validateOnChange: true,
     validationDebounce: 300,
   });
+
+  useEffect(() => {
+    if (!isNew || isPrefillInitialized || !authReady || prefillPending) return;
+    // A mounted native editor may receive another URL while retaining edits.
+    // URL context is initialization, never a mutation of an active form.
+    if (!hasUserInteracted && normalizeTravelId(formDataRef.current.id) == null) {
+      const seeded = {
+        ...initialFormData,
+        name: initialPrefill?.name ?? '',
+        countries: [...(initialPrefill?.countries ?? [])],
+      };
+      formDataRef.current = seeded;
+      pendingBaselineRef.current = seeded;
+      formState.reset(seeded);
+    }
+    setIsFormHydrated(true);
+    setIsPrefillInitialized(true);
+  }, [authReady, formState, hasUserInteracted, initialFormData, initialPrefill,
+    isNew, isPrefillInitialized, prefillPending]);
 
   useEffect(() => {
     formDataRef.current = formState.data;
@@ -390,7 +415,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     markers,
     setMarkers: handleMarkersUpdate,
     travelDataOld,
-    isInitialLoading,
+    isInitialLoading: isInitialLoading || (isNew && !isPrefillInitialized),
     hasAccess,
     loadError,
     autosave,
@@ -409,6 +434,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     handleMarkersUpdate,
     travelDataOld,
     isInitialLoading,
+    isNew,
+    isPrefillInitialized,
     hasAccess,
     loadError,
     autosave,

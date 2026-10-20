@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { Snackbar } from '@/ui/paper';
 
 import ContentUpsertSection from '@/components/travel/ContentUpsertSection';
+import MultiSelectField from '@/components/forms/MultiSelectField';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { ValidatedTextInput } from '@/components/travel/ValidatedTextInput';
 import { CollapsibleValidationSummary, ValidationSummary } from '@/components/travel/ValidationFeedback';
@@ -12,6 +13,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useStepTransition } from '@/hooks/useStepTransition';
 import { useThemedColors } from '@/hooks/useTheme';
+import type { TravelFilters } from '@/hooks/useTravelFilters';
+import { useTranslation } from '@/i18n/LocaleProvider';
 import type { TravelFormData } from '@/types/types';
 import { getContextualTips } from '@/utils/contextualTips';
 import { hasToastBeenShown } from '@/utils/errorHelpers';
@@ -55,6 +58,10 @@ interface TravelWizardStepBasicProps {
   onPreview?: () => void;
   onOpenPublic?: () => void;
   onExit?: () => void;
+  shareTripCountryField?: {
+    countries: TravelFilters['countries'];
+    isLoading: boolean;
+  };
 }
 
 const EMPTY_ERRORS: string[] = [];
@@ -110,7 +117,9 @@ function TravelWizardStepBasic({
   onPreview,
   onOpenPublic,
   onExit,
+  shareTripCountryField,
 }: TravelWizardStepBasicProps) {
+  const { t } = useTranslation();
   const colors = useThemedColors();
   const router = useRouter();
   const { isHydrated, isMobile } = useResponsive();
@@ -157,6 +166,11 @@ function TravelWizardStepBasic({
     },
     [setEditedFormData],
   );
+
+  const handleCountriesChange = useCallback((value: string | number | (string | number)[]) => {
+    const countries = (Array.isArray(value) ? value : [value]).map(String).filter(Boolean);
+    setEditedFormData((previousFormData) => ({ ...previousFormData, countries }));
+  }, [setEditedFormData]);
 
   const handleQuickDraft = useCallback(async () => {
     const name = String(formData.name ?? '').trim();
@@ -265,6 +279,22 @@ function TravelWizardStepBasic({
                 hint={i18nT('travel:components.travel.TravelWizardStepBasic.kratkoe_i_ponyatnoe_nazvanie_kotoroe_otrazha_1987dd88')}
                 nativeID="field-name"
               />
+
+              {shareTripCountryField && (
+                <View accessibilityState={{ busy: shareTripCountryField.isLoading }}>
+                  <MultiSelectField
+                    label={t('travel:articleShareTrip.countryLabel')}
+                    accessibilityLabel={t('travel:articleShareTrip.countryLabel')}
+                    items={shareTripCountryField.countries}
+                    value={formData.countries}
+                    onChange={handleCountriesChange}
+                    labelField="title_ru"
+                    valueField="country_id"
+                    disabled={shareTripCountryField.isLoading}
+                    testID="travel-wizard.step-basic.countries"
+                  />
+                </View>
+              )}
 
               <ContentUpsertSection
                 formData={formData}

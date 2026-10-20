@@ -51,6 +51,13 @@ jest.mock('@/components/travel/details/sections/TravelRegisterCtaSection', () =>
   }
 })
 
+jest.mock('@/components/travel/details/sections/TravelArticleShareTripCta', () => {
+  const { Text } = require('react-native')
+  return function MockTravelArticleShareTripCta() {
+    return <Text testID="travel-article-share-trip">Поделиться поездкой</Text>
+  }
+})
+
 jest.mock('@/components/travel/details/sections/LazyYouTubeSection', () => ({
   LazyYouTube: ({ url }: { url: string }) => {
     const { Text } = require('react-native')
@@ -117,6 +124,39 @@ const withQueryClient = () => {
 describe('TravelDetailsContentSection', () => {
   beforeEach(() => {
     mockProgressiveShouldLoad = true
+  })
+
+  it('places one share invitation after the existing save CTA and before the article body', () => {
+    const view = render(
+      <TravelDetailsContentSection
+        travel={createTravel()}
+        isMobile
+        forceOpenKey={null}
+        anchors={createAnchors()}
+      />,
+      { wrapper: withQueryClient() },
+    )
+
+    expect(screen.getAllByTestId('travel-article-share-trip')).toHaveLength(1)
+    const content = JSON.stringify(view.toJSON())
+    expect(content.indexOf('travel-register-cta')).toBeLessThan(content.indexOf('travel-article-share-trip'))
+    expect(content.indexOf('travel-article-share-trip')).toBeLessThan(content.indexOf('travel-description-Тестовый маршрут'))
+  })
+
+  it('retains the share invitation when the published article has no description section', () => {
+    render(
+      <TravelDetailsContentSection
+        travel={createTravel({ description: '', publish: true, moderation: true })}
+        isMobile={false}
+        forceOpenKey={null}
+        anchors={createAnchors()}
+      />,
+      { wrapper: withQueryClient() },
+    )
+
+    expect(screen.queryByTestId('travel-details-description')).toBeNull()
+    expect(screen.queryByTestId('travel-register-cta')).toBeNull()
+    expect(screen.getAllByTestId('travel-article-share-trip')).toHaveLength(1)
   })
 
   it('renders description section for draft travel even when description is empty', () => {

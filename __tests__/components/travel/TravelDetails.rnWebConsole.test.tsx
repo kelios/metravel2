@@ -50,6 +50,11 @@ jest.mock('@/components/travel/details/sections/TravelRegisterCtaSection', () =>
   }
 })
 
+jest.mock('@/components/travel/details/sections/TravelArticleShareTripCta', () => ({
+  __esModule: true,
+  default: () => null,
+}))
+
 jest.mock('@/components/travel/details/sections/DeferredQuestForCitySection', () => ({
   __esModule: true,
   default: () => null,

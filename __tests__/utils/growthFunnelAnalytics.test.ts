@@ -5,6 +5,7 @@ import {
   trackFavoriteIntentGuest,
   trackArticleEditorAutosaveSucceeded,
   trackContentCreateCtaClicked,
+  trackContentCreateCtaImpression,
   trackContentScrollDepth,
   trackContextualNextStepClicked,
   trackQuestCardClicked,
@@ -14,6 +15,7 @@ import {
   trackRegistrationSucceeded,
   trackRegistrationViewed,
   trackRouteCreateDraftSaved,
+  trackRouteCreateStarted,
   trackRouteCreatePublishBlocked,
   trackRouteCreatePublishSucceeded,
 } from '@/utils/growthFunnelAnalytics';
@@ -34,6 +36,29 @@ describe('growthFunnelAnalytics', () => {
   beforeEach(() => {
     mockedQueueAnalyticsEvent.mockClear();
     mockedSendAnalyticsEvent.mockClear();
+  });
+
+  it('keeps the source article id distinct from the newly created travel across the funnel', () => {
+    trackContentCreateCtaImpression({
+      contentType: 'route', source: 'travel_article', sourceTravelId: 42,
+      authState: 'guest', intent: 'share-trip',
+    });
+    trackContentCreateCtaClicked({
+      contentType: 'route', source: 'travel_article', sourceTravelId: 42,
+      authState: 'guest', intent: 'share-trip', action: 'register',
+    });
+    trackRouteCreateStarted({ source: 'travel_article_cta', sourceTravelId: 42, travelId: 999, step: 1 });
+    expect(mockedQueueAnalyticsEvent).toHaveBeenNthCalledWith(1, 'content_create_cta_impression', {
+      content_type: 'route', source: 'travel_article', source_travel_id: '42',
+      auth_state: 'guest', intent: 'share-trip',
+    });
+    expect(mockedQueueAnalyticsEvent).toHaveBeenNthCalledWith(2, 'content_create_cta_click', {
+      content_type: 'route', source: 'travel_article', source_travel_id: '42',
+      auth_state: 'guest', intent: 'share-trip', action: 'register',
+    });
+    expect(mockedQueueAnalyticsEvent).toHaveBeenNthCalledWith(3, 'route_create_started', {
+      content_type: 'route', source: 'travel_article_cta', source_travel_id: '42', travel_id: '999', step: 1,
+    });
   });
 
   it('tracks registration views with safe funnel dimensions', () => {

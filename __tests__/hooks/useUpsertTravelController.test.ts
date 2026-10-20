@@ -161,6 +161,55 @@ describe('useUpsertTravelController', () => {
     expect(result.current.isNew).toBe(false);
   });
 
+  it('waits for the first country result and preserves article context without restoring a stale new-wizard step', () => {
+    mockUseLocalSearchParams.mockReturnValue({ source_travel_id: '42', country: 'PL', place: 'Краков' });
+    mockUseTravelFilters.mockReturnValue({ filters: baseFilters, isLoading: true });
+    const { result, rerender } = renderHook(() => useUpsertTravelController());
+    expect(mockUseTravelFormData).toHaveBeenLastCalledWith(expect.objectContaining({ prefillPending: true }));
+    expect(mockUseTravelWizard).toHaveBeenLastCalledWith(expect.objectContaining({ stepStorageKey: undefined }));
+
+    mockUseTravelFilters.mockReturnValue({
+      filters: { ...baseFilters, countries: [{ country_id: '616', title_ru: 'Польша', country_code: 'PL' }] },
+      isLoading: false,
+    });
+    rerender({});
+    expect(mockUseTravelFormData).toHaveBeenLastCalledWith(expect.objectContaining({
+      prefillPending: false, initialPrefill: { name: 'Краков', countries: ['616'] },
+    }));
+    expect(result.current.createHref).toBe('/travel/new?source_travel_id=42&country=PL&place=%D0%9A%D1%80%D0%B0%D0%BA%D0%BE%D0%B2');
+
+    mockUseLocalSearchParams.mockReturnValue({ source_travel_id: '99', country: 'BY', place: 'Другое место' });
+    mockUseTravelFilters.mockReturnValue({ filters: baseFilters, isLoading: false });
+    rerender({});
+    expect(mockUseTravelFormData).toHaveBeenLastCalledWith(expect.objectContaining({
+      initialPrefill: { name: 'Краков', countries: ['616'] },
+    }));
+    expect(result.current.shareTripContext?.sourceTravelId).toBe('42');
+  });
+
+  it('settles failed dictionaries and does not seed an existing edit or a late source over ordinary creation', () => {
+    mockUseLocalSearchParams.mockReturnValue({ source_travel_id: '42', country: 'PL', place: 'Краков' });
+    mockUseTravelFilters.mockReturnValue({ filters: baseFilters, isLoading: false, error: new Error('offline') });
+    const view = renderHook(() => useUpsertTravelController());
+    expect(mockUseTravelFormData).toHaveBeenLastCalledWith(expect.objectContaining({
+      prefillPending: false, initialPrefill: { name: 'Краков', countries: [] },
+    }));
+    view.unmount();
+
+    mockUseLocalSearchParams.mockReturnValue({ id: '321', source_travel_id: '42' });
+    const existing = renderHook(() => useUpsertTravelController());
+    expect(existing.result.current.shareTripContext).toBeNull();
+    existing.unmount();
+    mockUseLocalSearchParams.mockReturnValue({});
+    const ordinary = renderHook(() => useUpsertTravelController());
+    mockUseLocalSearchParams.mockReturnValue({ source_travel_id: '42', place: 'Позднее место' });
+    ordinary.rerender({});
+    expect(ordinary.result.current.shareTripContext).toBeNull();
+    expect(mockUseTravelFormData).toHaveBeenLastCalledWith(expect.objectContaining({
+      prefillPending: false, initialPrefill: null,
+    }));
+  });
+
   it('computes autosaveBadge from autosave status', () => {
     mockUseTravelFormData.mockReturnValue({
       ...baseForm,

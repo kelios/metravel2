@@ -124,6 +124,7 @@ const WizardStepRouter = React.memo(function WizardStepRouter({
           <TravelWizardStepBasic
             {...commonStepProps}
             setFormData={controller.setFormData}
+            shareTripCountryField={controller.shareTripCountryField}
             onGoNext={wizard.handleNext}
             snackbarVisible={controller.autosave.status === 'error'}
             snackbarMessage={controller.autosave.error?.message || ''}

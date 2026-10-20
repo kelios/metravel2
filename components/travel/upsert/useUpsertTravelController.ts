@@ -9,6 +9,13 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useDraftRecovery } from '@/hooks/useDraftRecovery';
 import { normalizeTravelId } from '@/utils/travelFormUtils';
 import { formatRelativeTime, translate as i18nT } from '@/i18n'
+import {
+  buildTravelArticleCreateIntentHref,
+  parseTravelArticleCreateIntent,
+  resolveInitialPrefill,
+  type TravelArticleCreateIntent,
+  type TravelArticleInitialPrefill,
+} from '@/utils/travelArticleCreateIntent';
 
 type ManualSave = ReturnType<typeof useTravelFormData>['handleManualSave'];
 
@@ -20,6 +27,12 @@ export interface UpsertTravelController {
   retryLoad: () => Promise<void>;
   isAuthenticated: boolean;
   isSuperAdmin: boolean;
+  shareTripContext: TravelArticleCreateIntent | null;
+  createHref: string;
+  shareTripCountryField?: {
+    countries: ReturnType<typeof useTravelFilters>['filters']['countries'];
+    isLoading: boolean;
+  };
 
   colors: ReturnType<typeof useThemedColors>;
 
@@ -115,16 +128,26 @@ export const getAutosaveBadge = (
 };
 
 export function useUpsertTravelController(): UpsertTravelController {
-  const { id } = useLocalSearchParams();
+  const searchParams = useLocalSearchParams();
+  const { id } = searchParams;
   const router = useRouter();
   const { userId, isAuthenticated, isSuperuser, authReady, logout } = useAuth();
   const colors = useThemedColors();
 
   const travelId = (id as string | null) ?? null;
   const isNew = !id;
+  const shareTripContext = useRef(isNew ? parseTravelArticleCreateIntent(searchParams) : null).current;
+  const createHref = useMemo(
+    () => buildTravelArticleCreateIntentHref(shareTripContext), [shareTripContext],
+  );
+  const [articlePrefill, setArticlePrefill] = useState<{
+    pending: boolean;
+    value: TravelArticleInitialPrefill | null;
+  }>(() => ({ pending: Boolean(shareTripContext), value: null }));
   const stepStorageKey = useMemo(
-    () => `metravel_travel_wizard_step_${isNew ? 'new' : String(id)}`,
-    [id, isNew]
+    () => isNew && shareTripContext
+      ? undefined : `metravel_travel_wizard_step_${isNew ? 'new' : String(id)}`,
+    [id, isNew, shareTripContext]
   );
 
   const form = useTravelFormData({
@@ -134,6 +157,8 @@ export function useUpsertTravelController(): UpsertTravelController {
     isSuperAdmin: isSuperuser,
     isAuthenticated,
     authReady,
+    initialPrefill: articlePrefill.value,
+    prefillPending: articlePrefill.pending,
     onAuthRequired: async () => {
       // Clear app auth state so header/menu doesn't keep showing a stale user.
       await logout();
@@ -213,6 +238,17 @@ export function useUpsertTravelController(): UpsertTravelController {
     loadOnMount: true,
     currentStep: wizard.currentStep,
   });
+
+  useEffect(() => {
+    if (!isNew || !shareTripContext || !articlePrefill.pending || isFiltersLoading) return;
+    // Only the first catalog result participates in initialization. A retry or
+    // locale refresh must not overwrite a choice, a recovered draft, or typing.
+    setArticlePrefill({ pending: false, value: resolveInitialPrefill(shareTripContext, filters.countries) });
+  }, [articlePrefill.pending, filters.countries, isFiltersLoading, isNew, shareTripContext]);
+
+  const shareTripCountryField = useMemo(() => shareTripContext
+    ? { countries: filters.countries, isLoading: isFiltersLoading } : undefined,
+  [filters.countries, isFiltersLoading, shareTripContext]);
 
   // Persist a draft while the user has edits the server has not confirmed.
   // The gate is `hasUnsavedChanges`, not the request status: a save that is in
@@ -318,6 +354,9 @@ export function useUpsertTravelController(): UpsertTravelController {
       retryLoad: form.retryLoad,
       isAuthenticated,
       isSuperAdmin: isSuperuser,
+      shareTripContext,
+      createHref,
+      shareTripCountryField,
 
       colors,
 
@@ -348,6 +387,9 @@ export function useUpsertTravelController(): UpsertTravelController {
     }),
     [
       isNew,
+      shareTripContext,
+      createHref,
+      shareTripCountryField,
       form.isInitialLoading,
       form.hasAccess,
       form.loadError,

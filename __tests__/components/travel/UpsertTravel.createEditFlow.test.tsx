@@ -4,6 +4,8 @@ import { i18n } from '@/i18n';
 import UpsertTravel from '@/components/travel/UpsertTravel';
 
 const mockSeo = jest.fn(() => null);
+const mockPush = jest.fn();
+const mockRouteCreateStarted = jest.fn();
 let mockFiltersError: Error | null = null;
 const mockRetryFilters = jest.fn(async () => {});
 
@@ -56,7 +58,7 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockLocalParams,
   usePathname: () => mockPathname,
   useRouter: () => ({
-    push: jest.fn(),
+    push: mockPush,
     replace: jest.fn(),
     back: jest.fn(),
     setParams: jest.fn(),
@@ -85,6 +87,11 @@ jest.mock('@/hooks/useTravelFilters', () => ({
     error: mockFiltersError,
     loadFilters: mockRetryFilters,
   }),
+}));
+
+jest.mock('@/utils/growthFunnelAnalytics', () => ({
+  ...jest.requireActual('@/utils/growthFunnelAnalytics'),
+  trackRouteCreateStarted: (...args: unknown[]) => mockRouteCreateStarted(...args),
 }));
 
 jest.mock('@/components/seo/LazyInstantSEO', () => ({
@@ -177,6 +184,32 @@ describe('UpsertTravel create/edit flow', () => {
 
     expect(getByText('Войдите в аккаунт')).toBeTruthy();
     expect(capturedFormArgs?.isNew).toBe(true);
+  });
+
+  it('preserves the bounded article context when registration returns without a session and the reader chooses login', () => {
+    mockLocalParams = { source_travel_id: '42', country: 'PL', place: 'Краков', token: 'ignored', mode: 'note' };
+    mockAuthState = { ...mockAuthState, isAuthenticated: false, userId: '' };
+    const view = render(<UpsertTravel />);
+    fireEvent.press(view.getByRole('button', { name: 'Войти и вернуться к созданию путешествия' }));
+    const login = new URL(mockPush.mock.calls[0][0], 'https://metravel.by');
+    expect(login.pathname).toBe('/login');
+    expect(login.searchParams.get('intent')).toBe('share-trip');
+    expect(login.searchParams.get('redirect')).toBe('/travel/new?source_travel_id=42&country=PL&place=%D0%9A%D1%80%D0%B0%D0%BA%D0%BE%D0%B2');
+    expect(login.searchParams.get('redirect')).not.toMatch(/token|mode/);
+    fireEvent.press(view.getByRole('button', { name: 'Зарегистрироваться и вернуться к созданию путешествия' }));
+    const registration = new URL(mockPush.mock.calls[1][0], 'https://metravel.by');
+    expect(registration.searchParams.get('redirect')).toBe(login.searchParams.get('redirect'));
+    expect(registration.searchParams.get('intent')).toBe('share-trip');
+    expect(mockRouteCreateStarted).not.toHaveBeenCalled();
+
+    mockAuthState = { ...mockAuthState, isAuthenticated: true, userId: '42' };
+    view.rerender(<UpsertTravel />);
+    expect(mockRouteCreateStarted).toHaveBeenCalledTimes(1);
+    expect(mockRouteCreateStarted).toHaveBeenCalledWith(expect.objectContaining({
+      source: 'travel_article_cta', sourceTravelId: '42', step: 1,
+    }));
+    view.rerender(<UpsertTravel />);
+    expect(mockRouteCreateStarted).toHaveBeenCalledTimes(1);
   });
 
   it('shows access error when editing without access', () => {

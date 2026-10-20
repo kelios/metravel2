@@ -9,6 +9,7 @@ export const GROWTH_FUNNEL_EVENTS = {
   registrationSuccess: 'registration_complete',
   registrationError: 'registration_error',
   contentCreateCtaClick: 'content_create_cta_click',
+  contentCreateCtaImpression: 'content_create_cta_impression',
   contentCreateAuthGateView: 'content_create_auth_gate_view',
   routeCreateStarted: 'route_create_started',
   routeCreateDraftSaved: 'route_create_draft_saved',
@@ -55,11 +56,13 @@ type ContentCreateParams = {
   authState?: GrowthAuthState;
   intent?: unknown;
   action?: unknown;
+  sourceTravelId?: unknown;
 };
 
 type RouteCreateParams = {
   source?: unknown;
   travelId?: unknown;
+  sourceTravelId?: unknown;
   step?: unknown;
   isNew?: boolean;
   fieldsCompletedCount?: number;
@@ -287,6 +290,7 @@ export const trackContentCreateCtaClicked = ({
   authState,
   intent,
   action,
+  sourceTravelId,
 }: ContentCreateParams) => {
   emitGrowthFunnelEvent(GROWTH_FUNNEL_EVENTS.contentCreateCtaClick, {
     content_type: contentType,
@@ -294,6 +298,19 @@ export const trackContentCreateCtaClicked = ({
     auth_state: authState,
     intent: safeString(intent),
     action: safeString(action),
+    source_travel_id: safeString(sourceTravelId),
+  });
+};
+
+export const trackContentCreateCtaImpression = ({
+  contentType, source, authState, intent, sourceTravelId,
+}: ContentCreateParams) => {
+  emitGrowthFunnelEvent(GROWTH_FUNNEL_EVENTS.contentCreateCtaImpression, {
+    content_type: contentType,
+    source: safeString(source),
+    auth_state: authState,
+    intent: safeString(intent),
+    source_travel_id: safeString(sourceTravelId),
   });
 };
 
@@ -310,10 +327,11 @@ export const trackContentCreateAuthGateViewed = ({
   });
 };
 
-const routeBaseParams = ({ source, travelId, step }: RouteCreateParams) => ({
+const routeBaseParams = ({ source, travelId, sourceTravelId, step }: RouteCreateParams) => ({
   content_type: 'route',
   source: safeString(source),
   travel_id: safeString(travelId),
+  source_travel_id: safeString(sourceTravelId),
   step: safeNumber(step),
 });
 

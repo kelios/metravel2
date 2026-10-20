@@ -16,6 +16,7 @@ import YouTubeSectionSlot from './YouTubeSectionSlot'
 import DeferredQuestForCitySection from './DeferredQuestForCitySection'
 import { TravelDetailsDeferredTransition } from '@/components/travel/details/TravelDetailsDeferredTransition'
 import TravelRegisterCtaSection from './TravelRegisterCtaSection'
+import TravelArticleShareTripCta from './TravelArticleShareTripCta'
 import { translate as i18nT } from '@/i18n'
 import { getTabA11yProps, getTabListA11yProps } from '@/utils/a11yTabRoles'
 
@@ -146,6 +147,7 @@ export const TravelDetailsContentSection: React.FC<{
                 title={travel.name}
                 imageUrl={travel.travel_image_thumb_url || travel.travel_image_thumb_small_url}
               />
+              <TravelArticleShareTripCta travel={travel} isMobile={isMobile} />
               {Platform.OS === 'web' && <h2 style={WEB_SR_ONLY_HEADING_STYLE as any}>{i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.soderzhanie_marshruta_4fdeae71')}</h2>}
 
               <TravelDescription title={travel.name} htmlContent={descriptionContent.html} serverSanitized={descriptionContent.serverSanitized} articleBodyMedia={articleBodyMedia} noBox />
@@ -154,6 +156,10 @@ export const TravelDetailsContentSection: React.FC<{
             </View>
           </CollapsibleSection>
         </View>
+      )}
+
+      {!shouldRenderDescriptionSection && (
+        <TravelArticleShareTripCta travel={travel} isMobile={isMobile} />
       )}
 
       {Boolean(travel.youtube_link && safeGetYoutubeId(travel.youtube_link)) && (

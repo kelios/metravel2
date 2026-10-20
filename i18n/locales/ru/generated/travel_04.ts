@@ -527,4 +527,6 @@ export const travelGenerated4 = {
   "components.travel.ValidationFeedback.recommendationCount_many": "{{count}} рекомендаций",
   "components.travel.ValidationFeedback.recommendationCount_other": "{{count}} рекомендаций",
   "components.travel.TravelWizardHeader.stepProgressLabel": "Шаг {{value1}} из {{value2}} · {{value3}}",
+  "articleShareTrip.action": "Были здесь? Расскажите о своей поездке",
+  "articleShareTrip.countryLabel": "Страны путешествия",
 } as const
