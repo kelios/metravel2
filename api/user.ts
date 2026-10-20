@@ -3,6 +3,7 @@ import { apiClient } from '@/api/client';
 import { unwrapList as unwrapEnvelopeList } from '@/api/clientResponse';
 import { mapRank, type RankSummaryDto, type UserRank } from '@/api/achievements';
 import { normalizeAvatarUrl } from '@/utils/mediaUrl';
+import type { SupportedLocale } from '@/i18n/config';
 
 export { normalizeProfileName, resolveProfileFullName } from '@/utils/profileName';
 
@@ -41,6 +42,7 @@ export type UserProfileDto = {
     vk: string;
     email_notify_comments: boolean;
     email_notify_messages: boolean;
+    language?: SupportedLocale | null;
     avatar: string | null;
     // Фото-обложка профиля (баннер). BE-тикет: поле + загрузка ещё не реализованы —
     // пока поле не приходит, шапка показывает фолбэк-текстуру (graceful degradation).
@@ -96,6 +98,7 @@ export type UpdateUserProfilePayload = Partial<
         | 'vk'
         | 'email_notify_comments'
         | 'email_notify_messages'
+        | 'language'
     >
 >;
 

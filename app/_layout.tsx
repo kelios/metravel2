@@ -7,6 +7,7 @@ import LaunchCover from "@/components/layout/LaunchCover";
 import { useLaunchSplash } from "@/hooks/useLaunchSplash";
 import QuestProgressQueueRuntime from "@/components/quests/QuestProgressQueueRuntime";
 import BlockedAuthorsRuntime from "@/components/profile/BlockedAuthorsRuntime";
+import ProfileLanguageSyncRuntime from "@/components/profile/ProfileLanguageSyncRuntime";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import ConfirmDialogHost from "@/components/ui/ConfirmDialogHost";
 import TermsReacceptGate from "@/components/auth/TermsReacceptGate";
@@ -445,6 +446,7 @@ function ThemedContent({
                           <QuestProgressQueueRuntime />
                           {/* Скрытие контента заблокированных авторов во всех лентах (#2134) */}
                           <BlockedAuthorsRuntime />
+                          <ProfileLanguageSyncRuntime />
                           {/* AND-08: Global StatusBar — syncs barStyle with current theme (native only) */}
                           {Platform.OS !== 'web' && (
                             <RNStatusBar

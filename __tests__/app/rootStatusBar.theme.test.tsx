@@ -29,6 +29,7 @@ jest.mock('@/components/layout/NativeAppRuntime', () => ({ __esModule: true, def
 jest.mock('@/components/layout/LaunchCover', () => ({ __esModule: true, default: () => require('react').createElement('div', { 'data-testid': 'launch-cover' }) }))
 jest.mock('@/components/quests/QuestProgressQueueRuntime', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/profile/BlockedAuthorsRuntime', () => ({ __esModule: true, default: () => null }))
+jest.mock('@/components/profile/ProfileLanguageSyncRuntime', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/ui/ErrorBoundary', () => ({ __esModule: true, default: ({ children }: any) => children }))
 jest.mock('@/components/ui/ConfirmDialogHost', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/auth/TermsReacceptGate', () => ({ __esModule: true, default: () => null }))

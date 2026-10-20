@@ -83,7 +83,7 @@ export default function SettingsScreen() {
         uploadAvatar,
         handleWebFileSelected,
         webFileInputRef,
-    } = useAvatarUpload({ onSuccess: (updated) => setProfile(updated) });
+    } = useAvatarUpload({ onSuccess: (updated) => setProfile(updated, ['avatar']) });
 
     // AND-17: Biometric auth toggle (native only)
     const biometric = useBiometricAuth();

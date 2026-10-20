@@ -51,6 +51,23 @@ describe('i18n config', () => {
     })
   })
 
+  it.each(['constructor', '__proto__', 'toString', 'hasOwnProperty'])(
+    'rejects inherited registry property %s as a supported language', (candidate) => {
+      jest.isolateModules(() => {
+        const { isSupportedLocale, resolveSupportedLocale } = require('@/i18n/config')
+        expect(isSupportedLocale(candidate)).toBe(false)
+        expect(resolveSupportedLocale([candidate, 'en-US'])).toBe('en')
+      })
+    },
+  )
+
+  it('resolves a supported system language after an invalid device candidate', () => {
+    jest.doMock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'constructor', languageCode: 'en' }] }))
+    jest.isolateModules(() => {
+      expect(require('@/i18n/config').getSystemLocale()).toBe('en')
+    })
+  })
+
   it('uses the server-rendered document locale for the first web render', () => {
     document.documentElement.lang = 'ru-RU'
     const getLocales = jest.fn(() => [{ languageTag: 'pl-PL' }])

@@ -1,6 +1,6 @@
 # User/profile feature map
 
-Актуализировано: 2026-10-05.
+Актуализировано: 2026-10-20.
 
 Документ описывает личный и публичный профиль, settings, collections,
 subscriptions, travel-status calendar, author engagement и profile integrations.
@@ -44,6 +44,23 @@ fields (cover, premium, contact access, verification/safety, participant rating,
 
 `rank_summary` использует общий achievements mapper для первого paint; если поле
 не пришло, UI сохраняет fallback на achievements query.
+
+### Account language for emails (#2691)
+
+The optional profile `language` accepts `ru|be|uk|pl|en|null`. Owner updates use
+`PUT /api/user/{id}/profile/update/`; omission preserves the value and `null`
+resets email fallback to RU. The interface sync sends a concrete language only.
+
+`ProfileLanguageSyncRuntime` uses valid persisted preferences after locale/auth
+hydration and successful deliberate preference writes. System mode resolves the
+supported device language. Guests, absent/invalid storage, RU startup and quest
+URL locale never independently write the profile. A serial latest-choice queue
+invalidates stale sessions/responses and reports current errors through the
+translated toast, keeping the local selection for an explicit retry.
+
+Accepted saves cancel older owner-profile GETs and patch only `language` in
+existing owner cache entries. Settings and avatar mutations commit only their
+updated fields, preserving a newer language and unrelated profile state.
 
 ### Collections and subscriptions
 

@@ -3,6 +3,7 @@ import { Platform, Pressable, Text, View } from 'react-native'
 
 import { translate as i18nT } from '@/i18n'
 import { useLocale } from '@/i18n/LocaleProvider'
+import { showLocaleSelectionError } from '@/i18n/languageSelectionFeedback'
 import { getLocaleDisplayCode, getLocaleDisplayName } from '@/i18n/localeLabels'
 import type { useThemedColors } from '@/hooks/useTheme'
 import type { createSettingsStyles } from '@/components/screens/settings/settings.styles'
@@ -91,7 +92,7 @@ export default function LanguageSection({ colors, styles }: LanguageSectionProps
           label: i18nT('common:language.system'),
           description: i18nT('common:language.systemDescription'),
           selected: preference.mode === 'system',
-          onPress: () => void setSystemLocale(),
+          onPress: () => void setSystemLocale().catch(showLocaleSelectionError),
         })}
         {supportedLocales.map((supportedLocale) =>
           renderOption({
@@ -101,7 +102,7 @@ export default function LanguageSection({ colors, styles }: LanguageSectionProps
             code: getLocaleDisplayCode(supportedLocale),
             selected:
               preference.mode === 'explicit' && locale === supportedLocale,
-            onPress: () => void setLocale(supportedLocale),
+            onPress: () => void setLocale(supportedLocale).catch(showLocaleSelectionError),
           }),
         )}
       </View>

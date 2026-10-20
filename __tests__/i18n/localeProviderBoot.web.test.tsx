@@ -553,6 +553,122 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
     expect(recoverableErrors).toEqual([])
   })
 
+  const setupSelection = async () => {
+    const fixture = setup(null)
+    let controls!: ReturnType<typeof useLocale>
+    const SelectionScreen = () => {
+      controls = useLocale()
+      return <p>{controls.locale}</p>
+    }
+    container.innerHTML = renderToString(<LocaleProvider><SelectionScreen /></LocaleProvider>)
+    await fixture.hydrate(<LocaleProvider><SelectionScreen /></LocaleProvider>)
+    return { get controls() { return controls } }
+  }
+
+  it('ignores an older catalogue completion after a newer explicit selection', async () => {
+    const selection = await setupSelection()
+    const olderCatalogue = createDeferred()
+    isWebLocaleLoaded.mockImplementation((locale: string) => locale !== 'pl')
+    loadWebLocale.mockReturnValue(olderCatalogue.promise)
+    let older!: Promise<void>
+    await act(async () => { older = selection.controls.setLocale('pl') })
+    await act(async () => { await selection.controls.setLocale('en') })
+    expect(i18n.resolvedLanguage).toBe('en')
+    await act(async () => { olderCatalogue.resolve(); await older })
+    expect(selection.controls.preference).toEqual({ version: 1, mode: 'explicit', locale: 'en' })
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY)!)).toEqual(selection.controls.preference)
+    expect(i18n.resolvedLanguage).toBe('en')
+    expect(recoverableErrors).toEqual([])
+  })
+
+  it('suppresses a rejected obsolete catalogue without undoing the newer preference', async () => {
+    const selection = await setupSelection()
+    const olderCatalogue = createDeferred()
+    isWebLocaleLoaded.mockImplementation((locale: string) => locale !== 'pl')
+    loadWebLocale.mockReturnValue(olderCatalogue.promise)
+    let older!: Promise<void>
+    await act(async () => { older = selection.controls.setLocale('pl') })
+    await act(async () => { await selection.controls.setLocale('en') })
+    await act(async () => {
+      olderCatalogue.reject(new Error('obsolete catalogue failed'))
+      await expect(older).resolves.toBeUndefined()
+    })
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY)!)).toEqual({ version: 1, mode: 'explicit', locale: 'en' })
+    expect(i18n.resolvedLanguage).toBe('en')
+  })
+
+  it.each(['enter', 'leave'] as const)('respects the current quest URL when a delayed selection finishes after SPA %s', async (direction) => {
+    const questPath = '/pl/quests/1/krakow-dragon'
+    const { Screen, hydrate } = setup(null, direction === 'leave' ? questPath : undefined)
+    const loaded = new Set(['ru', 'pl'])
+    const catalogue = createDeferred()
+    isWebLocaleLoaded.mockImplementation((locale: string) => loaded.has(locale))
+    loadWebLocale.mockImplementation(async (locale: string) => {
+      if (locale === 'en') await catalogue.promise
+      loaded.add(locale)
+    })
+    if (direction === 'leave') await prepareBootLocale()
+    let select!: ReturnType<typeof useLocale>['setLocale']
+    const Capture = () => {
+      select = useLocale().setLocale
+      return null
+    }
+    const tree = () => <LocaleProvider><Capture /><Screen /></LocaleProvider>
+    await hydrate(tree())
+    let selection!: Promise<void>
+    await act(async () => { selection = select('en') })
+    window.history.pushState(null, '', direction === 'leave' ? '/articles' : questPath)
+    await act(async () => { root!.render(tree()) })
+    expect(i18n.resolvedLanguage).toBe(direction === 'leave' ? 'ru' : 'pl')
+
+    await act(async () => { catalogue.resolve(); await selection })
+
+    const expectedLocale = direction === 'leave' ? 'en' : 'pl'
+    expect(i18n.resolvedLanguage).toBe(expectedLocale)
+    expect(container.textContent).toBe(`screen:${expectedLocale}`)
+    expect(document.documentElement.lang).toBe(expectedLocale)
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY)!)).toEqual({ version: 1, mode: 'explicit', locale: 'en' })
+    expect(recoverableErrors).toEqual([])
+  })
+
+  it.each(['explicit', 'system'] as const)('shares selection generation when an older %s choice finishes last', async (olderMode) => {
+    const selection = await setupSelection()
+    const systemLocale = jest.spyOn(require('@/i18n/config'), 'getSystemLocale').mockReturnValue('en')
+    try {
+      const olderCatalogue = createDeferred()
+      const delayedLocale = olderMode === 'system' ? 'en' : 'pl'
+      isWebLocaleLoaded.mockImplementation((locale: string) => locale !== delayedLocale)
+      loadWebLocale.mockReturnValue(olderCatalogue.promise)
+      let older!: Promise<void>
+      await act(async () => {
+        older = olderMode === 'system' ? selection.controls.useSystemLocale() : selection.controls.setLocale('pl')
+      })
+      await act(async () => {
+        if (olderMode === 'system') await selection.controls.setLocale('ru')
+        else await selection.controls.useSystemLocale()
+      })
+      await act(async () => { olderCatalogue.resolve(); await older })
+      const expected = olderMode === 'system'
+        ? { version: 1, mode: 'explicit', locale: 'ru' }
+        : { version: 1, mode: 'system' }
+      expect(selection.controls.preference).toEqual(expected)
+      expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY)!)).toEqual(expected)
+      expect(i18n.resolvedLanguage).toBe(olderMode === 'system' ? 'ru' : 'en')
+    } finally {
+      systemLocale.mockRestore()
+    }
+  })
+
+  it('reports the current catalogue failure and preserves the persisted preference', async () => {
+    const selection = await setupSelection()
+    isWebLocaleLoaded.mockImplementation((locale: string) => locale !== 'pl')
+    const failure = new Error('current catalogue unavailable')
+    loadWebLocale.mockRejectedValueOnce(failure)
+    await act(async () => { await expect(selection.controls.setLocale('pl')).rejects.toBe(failure) })
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull()
+    expect(i18n.resolvedLanguage).toBe('ru')
+  })
+
   it('subscribes the web translation hook and preserves compact-key arguments across locale changes', async () => {
     const { LocaleProvider, hydrate, loadWebLocale } = setup(null)
     loadWebLocale.mockResolvedValue(undefined)

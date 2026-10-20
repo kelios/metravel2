@@ -24,7 +24,7 @@ interface UseSettingsProfileFormArgs {
   userId?: string | null;
   username?: string | null;
   profile: UserProfile;
-  setProfile: (next: UserProfile) => void;
+  setProfile: ReturnType<typeof useUserProfile>['setProfile'];
   setAvatarPreviewUrl: (url: string) => void;
 }
 
@@ -130,7 +130,7 @@ export function useSettingsProfileForm({
       // Вытеснено более новым сохранением или unmount — не коммитим (иначе устаревший
       // ответ затрёт другую секцию).
       if (!mountedRef.current || seq !== saveSeqRef.current) return;
-      setProfile(saved);
+      setProfile(saved, Object.keys(payload) as (keyof UpdateUserProfilePayload)[]);
       showToast({ type: 'success', text1: i18nT('profile:hooks.useSettingsProfileForm.profil_obnovlen_cf1dea9c'), visibilityTime: 3000 });
     } catch (error) {
       if (!mountedRef.current || seq !== saveSeqRef.current) return;
@@ -149,12 +149,13 @@ export function useSettingsProfileForm({
       const seq = ++saveSeqRef.current;
       setProfileSaving(true);
       try {
-        const saved = await updateUserProfile(userId, {
+        const payload: UpdateUserProfilePayload = {
           email_notify_comments: nextComments,
           email_notify_messages: nextMessages,
-        });
+        };
+        const saved = await updateUserProfile(userId, payload);
         if (!mountedRef.current || seq !== saveSeqRef.current) return;
-        setProfile(saved);
+        setProfile(saved, Object.keys(payload) as (keyof UpdateUserProfilePayload)[]);
         showToast({ type: 'success', text1: i18nT('profile:hooks.useSettingsProfileForm.nastroyki_uvedomleniy_sohraneny_9c74887c'), visibilityTime: 2000 });
       } catch (error) {
         if (!mountedRef.current || seq !== saveSeqRef.current) return;

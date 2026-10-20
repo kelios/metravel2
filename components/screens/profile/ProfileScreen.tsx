@@ -103,7 +103,7 @@ export default function ProfileScreen() {
 
   const { profile, profileDataUpdatedAt, setProfile, isLoading: profileLoading, fullName } = useUserProfile();
   const { pickAndUpload, isUploading: avatarUploading } = useAvatarUpload({
-    onSuccess: (updated) => setProfile(updated),
+    onSuccess: (updated) => setProfile(updated, ['avatar']),
   });
 
   const [userInfo, setUserInfo] = useState<{ name: string; email: string }>({ name: '', email: '' });

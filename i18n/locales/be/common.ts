@@ -10,6 +10,8 @@ export const common = {
   'language.system': "Як у сістэме",
   'language.systemDescription': "Выкарыстоўваць мову прылады, калі яна падтрымліваецца",
   'language.headerLabel': "Змяніць мову",
+  'language.syncErrorTitle': 'Не ўдалося захаваць мову лістоў',
+  'language.syncErrorDescription': 'Мова інтэрфейсу захавана на прыладзе. Выберыце мову яшчэ раз, каб абнавіць мову лістоў у профілі.',
   'rail.scrollPrev': "Пракруціць назад",
   'rail.scrollNext': "Пракруціць наперад",
   'screenHeader.info': "Падрабязней пра раздзел",

@@ -10,6 +10,8 @@ export const common = {
   'language.system': "Jak w systemie",
   'language.systemDescription': "Użyj języka urządzenia, jeśli jest obsługiwany",
   'language.headerLabel': "Zmień język",
+  'language.syncErrorTitle': 'Nie udało się zapisać języka wiadomości e-mail',
+  'language.syncErrorDescription': 'Język interfejsu został zapisany na urządzeniu. Wybierz język ponownie, aby zaktualizować język wiadomości e-mail w profilu.',
   'rail.scrollPrev': "Przewiń w tył",
   'rail.scrollNext': "Przewiń w przód",
   'screenHeader.info': "Więcej o tej sekcji",

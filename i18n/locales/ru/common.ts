@@ -10,6 +10,8 @@ export const common = {
   'language.system': 'Как в системе',
   'language.systemDescription': 'Использовать язык устройства, если он поддерживается',
   'language.headerLabel': 'Изменить язык',
+  'language.syncErrorTitle': 'Не удалось сохранить язык писем',
+  'language.syncErrorDescription': 'Язык интерфейса сохранён на устройстве. Выберите язык ещё раз, чтобы обновить язык писем в профиле.',
   'rail.scrollPrev': "Прокрутить назад",
   'rail.scrollNext': "Прокрутить вперёд",
   'screenHeader.info': "Подробнее о разделе",

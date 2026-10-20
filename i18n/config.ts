@@ -57,7 +57,7 @@ export const SUPPORTED_LOCALES = Object.freeze(
 )
 
 export const isSupportedLocale = (value: unknown): value is SupportedLocale =>
-  typeof value === 'string' && value in LOCALE_REGISTRY
+  typeof value === 'string' && Object.prototype.hasOwnProperty.call(LOCALE_REGISTRY, value)
 
 export const resolveSupportedLocale = (
   candidates: ReadonlyArray<string | null | undefined>,

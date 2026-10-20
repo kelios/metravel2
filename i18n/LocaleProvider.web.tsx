@@ -104,6 +104,9 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [isBootPending, setIsBootPending] = useState(bootLocale !== null)
   const [bootRecovery, setBootRecovery] = useState<'loading' | 'slow' | 'failed'>('loading')
   const bootAbandoned = useRef(false)
+  const selectionGeneration = useRef(0)
+  const currentRouteLocale = useRef(routeLocale)
+  currentRouteLocale.current = routeLocale
   // Navigation can change the route before an effect commits its language.
   // Suspend that render immediately, so new screens cannot request the old
   // locale. Entering/leaving a URL-bound page never persists a preference.
@@ -205,23 +208,28 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     }
   }, [routeLocale])
 
-  const setLocale = useCallback(async (nextLocale: SupportedLocale) => {
-    const nextPreference: LocalePreference = { version: 1, mode: 'explicit', locale: nextLocale }
-    if (!isWebLocaleLoaded(nextLocale)) await loadWebLocale(nextLocale)
-    await writeLocalePreference(nextPreference)
-    setPreference(nextPreference)
-    // A language control persists an explicit choice, then navigates to its
-    // canonical link. Never replace a PL URL's content with EN in between.
-    if (!routeLocale) await i18n.changeLanguage(nextLocale)
-  }, [routeLocale])
+  const selectPreference = useCallback(async (nextPreference: LocalePreference) => {
+    const generation = ++selectionGeneration.current
+    const nextLocale = resolveLocalePreference(nextPreference)
+    try {
+      if (!isWebLocaleLoaded(nextLocale)) await loadWebLocale(nextLocale)
+      if (generation !== selectionGeneration.current) return
+      await writeLocalePreference(nextPreference)
+      if (generation !== selectionGeneration.current) return
+      setPreference(nextPreference)
+      // A language control persists an explicit choice, then navigates to its
+      // canonical link. Never replace a PL URL's content with EN in between.
+      if (!currentRouteLocale.current) await i18n.changeLanguage(nextLocale)
+    } catch (error) {
+      if (generation === selectionGeneration.current) throw error
+    }
+  }, [])
 
-  const useSystemLocale = useCallback(async () => {
-    const nextLocale = resolveLocalePreference(SYSTEM_LOCALE_PREFERENCE)
-    await loadWebLocale(nextLocale)
-    await writeLocalePreference(SYSTEM_LOCALE_PREFERENCE)
-    setPreference(SYSTEM_LOCALE_PREFERENCE)
-    if (!routeLocale) await i18n.changeLanguage(nextLocale)
-  }, [routeLocale])
+  const setLocale = useCallback((nextLocale: SupportedLocale) =>
+    selectPreference({ version: 1, mode: 'explicit', locale: nextLocale }), [selectPreference])
+
+  const useSystemLocale = useCallback(() =>
+    selectPreference(SYSTEM_LOCALE_PREFERENCE), [selectPreference])
 
   const value = useMemo<LocaleContextValue>(
     () => ({

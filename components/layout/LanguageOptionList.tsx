@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { useLocale } from '@/i18n/LocaleProvider'
+import { showLocaleSelectionError } from '@/i18n/languageSelectionFeedback'
 import { getLocaleDisplayCode, getLocaleDisplayName } from '@/i18n/localeLabels'
 import { useThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -30,7 +31,7 @@ export default function LanguageOptionList({
 
   const chooseLocale = (nextLocale: typeof locale) => {
     onChosen?.()
-    if (nextLocale !== locale) void setLocale(nextLocale)
+    void setLocale(nextLocale).catch(showLocaleSelectionError)
   }
 
   return (

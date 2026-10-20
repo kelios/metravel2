@@ -24,21 +24,36 @@ export const SYSTEM_LOCALE_PREFERENCE: LocalePreference = {
   mode: 'system',
 }
 
-export const parseLocalePreference = (raw: string | null): LocalePreference => {
-  if (!raw) return DEFAULT_LOCALE_PREFERENCE
+const parsePersistedLocalePreference = (raw: string | null): LocalePreference | null => {
+  if (!raw) return null
 
   try {
-    const parsed = JSON.parse(raw) as Partial<LocalePreference>
-    if (parsed.version !== 1) return DEFAULT_LOCALE_PREFERENCE
+    const parsed = JSON.parse(raw) as Partial<LocalePreference> | null
+    if (parsed?.version !== 1) return null
     if (parsed.mode === 'system') return SYSTEM_LOCALE_PREFERENCE
     if (parsed.mode === 'explicit' && isSupportedLocale(parsed.locale)) {
       return { version: 1, mode: 'explicit', locale: parsed.locale }
     }
   } catch {
-    // Invalid preferences fall back to the safe explicit Russian default.
+    // Missing, unreadable and invalid preferences are not a deliberate choice.
   }
 
-  return DEFAULT_LOCALE_PREFERENCE
+  return null
+}
+
+export const parseLocalePreference = (raw: string | null): LocalePreference =>
+  parsePersistedLocalePreference(raw) ?? DEFAULT_LOCALE_PREFERENCE
+
+let pendingWrite: Promise<void> = Promise.resolve()
+let writeGeneration = 0
+const preferenceListeners = new Set<(preference: LocalePreference) => void>()
+
+/** Reports deliberate preferences only after their latest storage write succeeds. */
+export const subscribeLocalePreference = (
+  listener: (preference: LocalePreference) => void,
+): (() => void) => {
+  preferenceListeners.add(listener)
+  return () => { preferenceListeners.delete(listener) }
 }
 
 export const resolveLocalePreference = (
@@ -48,13 +63,26 @@ export const resolveLocalePreference = (
   return getSystemLocale() || DEFAULT_LOCALE
 }
 
-export const readLocalePreference = async (): Promise<LocalePreference> => {
-  try {
-    return parseLocalePreference(await AsyncStorage.getItem(LOCALE_PREFERENCE_STORAGE_KEY))
-  } catch {
-    return DEFAULT_LOCALE_PREFERENCE
+/** A fallback or failed read must never become an account-language selection. */
+export const readPersistedLocalePreference = async (): Promise<LocalePreference | null> => {
+  while (true) {
+    const queuedWrite = pendingWrite
+    await queuedWrite
+    let raw: string | null
+    try {
+      raw = await AsyncStorage.getItem(LOCALE_PREFERENCE_STORAGE_KEY)
+    } catch {
+      if (queuedWrite !== pendingWrite) continue
+      return null
+    }
+    // A write can start while getItem is in flight. Read its final value instead.
+    if (queuedWrite !== pendingWrite) continue
+    return parsePersistedLocalePreference(raw)
   }
 }
+
+export const readLocalePreference = async (): Promise<LocalePreference> =>
+  (await readPersistedLocalePreference()) ?? DEFAULT_LOCALE_PREFERENCE
 
 /**
  * Синхронное чтение предпочтения на web (#2239): `AsyncStorage` там хранит ключ
@@ -71,8 +99,20 @@ export const readWebLocalePreferenceSync = (): LocalePreference | null => {
   }
 }
 
-export const writeLocalePreference = async (
+export const writeLocalePreference = (
   preference: LocalePreference,
 ): Promise<void> => {
-  await AsyncStorage.setItem(LOCALE_PREFERENCE_STORAGE_KEY, JSON.stringify(preference))
+  const generation = ++writeGeneration
+  const write = pendingWrite.then(async () => {
+    await AsyncStorage.setItem(LOCALE_PREFERENCE_STORAGE_KEY, JSON.stringify(preference))
+    if (generation !== writeGeneration) return
+    for (const listener of preferenceListeners) {
+      try { listener(preference) } catch {
+        // Subscriber failures cannot invalidate a successful preference write.
+      }
+    }
+  })
+  // Keep later writes/reads moving after a failure, while the caller sees its error.
+  pendingWrite = write.catch(() => {})
+  return write
 }

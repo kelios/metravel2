@@ -84,8 +84,14 @@ export function useUserProfile() {
     }, [profile, syncAvatar]);
 
     const setProfile = useCallback(
-        (next: UserProfileDto | null) => {
-            queryClient.setQueryData(queryKeys.userProfile(userId), next);
+        (next: UserProfileDto | null, updatedFields?: readonly (keyof UserProfileDto)[]) => {
+            queryClient.setQueryData<UserProfileDto | null>(queryKeys.userProfile(userId), (current) => {
+                if (!next || !current || !updatedFields) return next;
+                const patch: Partial<UserProfileDto> = Object.fromEntries(
+                    updatedFields.map((field) => [field, next[field]]),
+                );
+                return { ...current, ...patch };
+            });
         },
         [queryClient, userId],
     );

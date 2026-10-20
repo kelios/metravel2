@@ -13,6 +13,7 @@ import UnreadBadge from './UnreadBadge'
 import NavigationIcon from './NavigationIcon'
 import { translate as i18nT } from '@/i18n'
 import { useLocale } from '@/i18n/LocaleProvider'
+import { showLocaleSelectionError } from '@/i18n/languageSelectionFeedback'
 import { getLocaleDisplayName } from '@/i18n/localeLabels'
 import { webDataSetProps } from '@/utils/webProps'
 
@@ -127,7 +128,7 @@ export default function CustomHeaderMobileMenu({
     icon: 'globe',
     active: locale === supportedLocale,
     onPress: () => {
-      if (supportedLocale !== locale) void setLocale(supportedLocale);
+      void setLocale(supportedLocale).catch(showLocaleSelectionError);
     },
   }));
 

@@ -10,6 +10,8 @@ export const common = {
   'language.system': "As in the system",
   'language.systemDescription': "Use device language if supported",
   'language.headerLabel': "Change language",
+  'language.syncErrorTitle': 'Could not save the email language',
+  'language.syncErrorDescription': 'The interface language is saved on this device. Select a language again to update the email language in your profile.',
   'rail.scrollPrev': "Scroll back",
   'rail.scrollNext': "Scroll forward",
   'screenHeader.info': "About this section",

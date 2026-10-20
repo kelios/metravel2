@@ -1,11 +1,14 @@
 import React from 'react'
-import { fireEvent, render } from '@testing-library/react-native'
+import { fireEvent, render, waitFor } from '@testing-library/react-native'
 import { Platform, Pressable, StyleSheet, Text } from 'react-native'
 
 import BottomDockMoreList from '@/components/layout/BottomDockMoreList'
 import LanguageSwitcher from '@/components/layout/LanguageSwitcher'
 import { BOTTOM_DOCK_MORE_MENU_SECTIONS } from '@/components/layout/bottomDockModel'
 import LanguageSection from '@/components/settings/LanguageSection'
+import { showToast } from '@/utils/toast'
+
+jest.mock('@/utils/toast', () => ({ showToast: jest.fn(async () => undefined) }))
 
 jest.mock('@/i18n/LocaleProvider', () => {
   const state = {
@@ -56,6 +59,9 @@ const colors = {
 describe('language selection surfaces', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    localeState.locale = 'ru'
+    localeState.setLocale.mockReset().mockResolvedValue(undefined)
+    localeState.useSystemLocale.mockReset().mockResolvedValue(undefined)
   })
 
   it('opens the header picker and selects Ukrainian without authentication', () => {
@@ -71,6 +77,33 @@ describe('language selection surfaces', () => {
 
     fireEvent.press(getByTestId('header-language-option-uk'))
     expect(localeState.setLocale).toHaveBeenCalledWith('uk')
+  })
+
+  it('persists an intentional selection of the current language, including retry', () => {
+    const { getByTestId } = render(<LanguageSwitcher />)
+    fireEvent.press(getByTestId('header-language-switcher'))
+    fireEvent.press(getByTestId('header-language-option-ru'))
+    fireEvent.press(getByTestId('header-language-switcher'))
+    fireEvent.press(getByTestId('header-language-option-ru'))
+    expect(localeState.setLocale.mock.calls).toEqual([['ru'], ['ru']])
+  })
+
+  it('handles a rejected header language change through the existing toast', async () => {
+    localeState.setLocale.mockRejectedValueOnce(new Error('catalog unavailable'))
+    const { getByTestId } = render(<LanguageSwitcher />)
+    fireEvent.press(getByTestId('header-language-switcher'))
+    fireEvent.press(getByTestId('header-language-option-en'))
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'error', text1: 'Не удалось выполнить действие',
+    })))
+  })
+
+  it.each(['explicit', 'system'])('handles a rejected settings %s choice without an unhandled rejection', async (mode) => {
+    const reject = mode === 'explicit' ? localeState.setLocale : localeState.useSystemLocale
+    reject.mockRejectedValueOnce(new Error('storage unavailable'))
+    const { getByLabelText } = render(<LanguageSection colors={colors} styles={styles} />)
+    fireEvent.press(getByLabelText(mode === 'explicit' ? 'English' : 'Как в системе'))
+    await waitFor(() => expect(showToast).toHaveBeenCalledTimes(1))
   })
 
   // #2100: на вложенных экранах телефона бренд-строки нет — язык меняется из «Ещё».
