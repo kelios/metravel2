@@ -101,6 +101,28 @@ guard, падающий в CI на попытке обойти этот конт
 
 ## Реестр
 
+### TRAVEL-AUTHOR-PREVIEW-001 — маршрут черновика меняется до гидратации
+
+- **Canonical chain:** #2695; источник #2677. Смежные #778/#2240 — другие
+  причины ошибок гидратации; #1512 — серверная оболочка; #753/#1255 —
+  ожидаемая недоступность черновика анониму; #1950 — устаревшая fake-auth e2e.
+- **Confirmed cause:** inline bootstrap менял `/travel/new?previewTravel=<id>`
+  на `/travels/<id>` до React, хотя SSR принадлежал мастеру. Первый клиентский
+  route расходился с серверным деревом, вызывая #418. Публичный hero-preloader
+  затем закономерно получал 404 с `credentials: 'omit'`, авторский API — 200.
+- **Invariant:** исходный маршрут и spinner сохраняются до первого commit;
+  web bridge переходит через router после готовности cookie-сессии, не
+  монтируя мастер. Private preview не запускает public preload и не создаёт
+  его pending/target globals. Запоздавший public script не читает новый route.
+  Owner200/guest404 и анонимные credentials публичного preload сохраняются.
+- **Controls:** реальный RNW SSR → hydrateRoot с preview/no-preview/invalid/edit,
+  timing commit/authReady; исполнение production inline/preloader на исходном
+  `/travel/new` и при target drift; live-cookie UI popup e2e с видимым title/body,
+  сетевыми initiators и нулём hydration errors. Старый тест прямого detail URL
+  с подставленным success API этот механизм не проверял.
+- **Routing:** тот же сбой route/preview/preload — reuse/reopen #2695; новый
+  подтверждённый auth/cache или серверный механизм — отдельная связанная задача.
+
 ### ANDROID-BELKRAJ-CARDS-PRIVACY-001 — защита iPhone от трекеров скрыла каталог на Android
 
 - Canonical task: #2443. Historical matches: #2135, #978, #1024, #1460, #1452.

@@ -1,51 +1,42 @@
 import fs from 'fs'
 import path from 'path'
 
-function loadPreviewBootstrapScript(): string {
-  const source = fs.readFileSync(path.resolve(process.cwd(), 'app/+html.tsx'), 'utf8')
-  const marker = 'const getAuthorTravelPreviewBootstrapScript = () => String.raw`'
-  const start = source.indexOf(marker)
-  expect(start).toBeGreaterThan(-1)
-  const bodyStart = start + marker.length
-  const end = source.indexOf('`', bodyStart)
-  expect(end).toBeGreaterThan(bodyStart)
-  return source.slice(bodyStart, end)
+const htmlSource = fs.readFileSync(path.resolve(process.cwd(), 'app/+html.tsx'), 'utf8')
+
+function runHeroBootstrap(pathname: string, search = '') {
+  const marker = 'const getTravelHeroPreloadScript = () => String.raw`'
+  const start = htmlSource.indexOf(marker) + marker.length
+  const body = htmlSource.slice(start, htmlSource.indexOf('`', start))
+  const script = new Function('process', 'TRAVEL_HERO_PRELOAD_SCRIPT_SRC', `return String.raw\`${body}\``)(
+    { env: { NODE_ENV: 'production' } }, '/travel-hero-preload-v2.js',
+  )
+  const appendChild = jest.fn()
+  const win = { location: { pathname, search } } as Record<string, unknown>
+  const doc = { head: { appendChild }, createElement: () => ({ setAttribute: jest.fn() }) }
+  new Function('window', 'document', script)(win, doc)
+  return { win, appendChild }
 }
 
-function runOn(pathname: string, search: string): string | null {
-  let replacedWith: string | null = null
-  const win: any = {
-    location: { pathname, search },
-    history: {
-      replaceState: (_state: unknown, _title: string, target: string) => {
-        replacedWith = target
-      },
+describe('author preview keeps the original document route until React commits (#2695)', () => {
+  it('has no author-preview history rewrite before hydration', () => {
+    expect(htmlSource).not.toContain('getAuthorTravelPreviewBootstrapScript')
+  })
+
+  it.each(['?previewTravel=7100', '?previewTravel=0', '?previewTravel=slug', ''])(
+    'does not start public preload for the editor document %s', (search) => {
+      const { win, appendChild } = runHeroBootstrap('/travel/new', search)
+      expect(win.location).toEqual({ pathname: '/travel/new', search })
+      expect(appendChild).not.toHaveBeenCalled()
+      expect(win.__metravelTravelPreloadTargetPath).toBeUndefined()
+      expect(win.__metravelTravelPreloadScriptLoaded).toBeUndefined()
     },
-  }
+  )
 
-  new Function('window', 'URLSearchParams', loadPreviewBootstrapScript())(win, URLSearchParams)
-  return replacedWith
-}
-
-describe('+html author travel preview bootstrap', () => {
-  it('boots a saved draft detail by numeric id without a document navigation', () => {
-    expect(runOn('/travel/new', '?previewTravel=7100')).toBe('/travels/7100')
-    expect(runOn('/travel/new', '?previewTravel=42')).toBe('/travels/42')
-  })
-
-  it.each([
-    '?previewTravel=',
-    '?previewTravel=0',
-    '?previewTravel=-1',
-    '?previewTravel=slug',
-    '?previewTravel=1%2F2',
-  ])('ignores an invalid bridge value: %s', (search) => {
-    expect(runOn('/travel/new', search)).toBeNull()
-  })
-
-  it('does not rewrite other document routes', () => {
-    expect(runOn('/', '?previewTravel=7100')).toBeNull()
-    expect(runOn('/travel/7100', '?previewTravel=7100')).toBeNull()
-    expect(runOn('/travels/7100', '?previewTravel=7100')).toBeNull()
-  })
+  it.each(['/travels/42', '/travels/public-slug'])(
+    'still starts public preload for an initial detail document %s', (pathname) => {
+      const { win, appendChild } = runHeroBootstrap(pathname)
+      expect(appendChild).toHaveBeenCalledTimes(1)
+      expect(win.__metravelTravelPreloadTargetPath).toBe(pathname)
+    },
+  )
 })

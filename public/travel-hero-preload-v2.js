@@ -23,6 +23,10 @@
     if (!isProdHost) return;
     var path = window.location && window.location.pathname;
     if (!path || path.indexOf('/travels/') !== 0) return;
+    // An async script from a public document must not preload a later SPA route
+    // (including an author's private preview) with anonymous credentials.
+    var targetPath = window.__metravelTravelPreloadTargetPath;
+    if (targetPath && targetPath !== path) return;
     var slug = path.replace(/^\/travels\//, '').replace(/\/+$/, '');
     if (!slug) return;
 

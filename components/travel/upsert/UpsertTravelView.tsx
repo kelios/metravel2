@@ -473,8 +473,8 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
     if (pendingTab && !pendingTab.closed) {
       try {
         // Public document routing intentionally hides drafts before the app can
-        // boot. Enter through the exported /travel/new shell instead: its inline bridge rewrites
-        // this to /travels/<id> with history.replaceState, so the authenticated
+        // boot. Enter through the exported /travel/new shell instead: its route
+        // opens /travels/<id> after hydration and session readiness, so the authenticated
         // SPA detail request can read the author's unpublished travel.
         // `replace`, а не `assign`: `about:blank` не должен оставаться в истории
         // новой вкладки и перехватывать её кнопку «Назад».

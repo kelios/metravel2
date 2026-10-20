@@ -55,6 +55,24 @@ contract развёрнут и готов на production.
 Route-файлы остаются тонкими: hydration/SEO/back handling и передача управления
 feature-компоненту. Data flow и business state принадлежат hooks/API слоям.
 
+### Предпросмотр авторского черновика на web
+
+Команда «Открыть путешествие» открывает новую вкладку с экспортированной
+оболочкой `/travel/new?previewTravel=<positive numeric id>`. Адрес остаётся
+`/travel/new` до первого commit React: SSR и первый клиентский render показывают
+один и тот же spinner. `LazyUpsertTravelRoute.web.tsx` после commit и готовности
+проверки cookie-сессии выполняет `router.replace('/travels/<id>')`, не монтируя
+мастер. Ранний `history.replaceState` в HTML нарушает этот контракт (#2695).
+
+На исходном `/travel/new` публичный hero-preloader не запускается и не создаёт
+pending/target globals. Авторские детали читает существующий API-клиент с
+HttpOnly cookie; анонимный GET закрытого черновика по-прежнему возвращает 404.
+Публичный preload сохраняет `credentials: 'omit'`; запоздавший async-скрипт
+отказывается от чтения, если его исходный target уже отличается от маршрута.
+Неверный preview id оставляет обычный create flow; edit и native bridge не
+используют. Регрессии: реальная SSR/hydrate-пара spinner, eligibility preload и
+`e2e/travel-draft-owner-preview.spec.ts` с настоящей cookie-сессией и UI popup.
+
 ## List/search architecture
 
 | Owner | Ответственность |
