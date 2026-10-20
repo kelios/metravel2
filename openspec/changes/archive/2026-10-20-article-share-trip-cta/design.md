@@ -38,3 +38,9 @@ Auth redirect ограничен существующим normalizeInternalAuthR
 - `npm run test:i18n`, scoped type/lint, обязательный `npm run lint`; full Jest при крупном итоговом diff. Полный task diff: review-auditor → code-review-gate → explicit paths commit/push main.
 - После testing/deploy: проверить `.build-source.json`, guest registration→login return и auth directflow, owner suppression, edit values, no copied content; screenshots/console/network 390/1440, все пять локалей.
 - Regression e2e на production dist после review: nested auth return, no source content copying, unchanged save CTA, slider и slider-perf. Нет API mocks в обязательной прод-пробе.
+
+## Уточнение границы стран и закрытие
+
+Финальный auth e2e установил потерю optional country_code в каноническом API-нормализаторе до hook/prefill. Исправление сохраняет только валидный согласованный ISO2, не угадывает страну по названию и не меняет обязательные ID/title. Кэш стран хранится только в памяти страницы, поэтому миграция/сброс пользовательских данных не нужны. Регрессия проходит реальный fetchAllCountries → API-нормализацию → hook → разрешение начальных значений. Missing/invalid/conflicting/duplicate ISO2 оставляет выбор пустым; numeric ID остаётся рабочим.
+
+20.10.2026 владелец принял задачу и отменил оставшийся финальный runtime-повтор. Состояние done фиксирует это решение, выполненные source/deploy-проверки и сохранённые фактические результаты; невыполненные проверки не объявлены успешными. Исходный сетевой TypeError pre-UI не признан продуктовым дефектом без доказанной причины.
