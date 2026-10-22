@@ -533,4 +533,6 @@ export const travelGenerated4 = {
   "components.travel.TravelWizardHeader.stepProgressLabel": "Крок {{value1}} з {{value2}} · {{value3}}",
   "articleShareTrip.action": "Былі тут? Раскажыце пра сваю паездку",
   "articleShareTrip.countryLabel": "Краіны падарожжа",
+  "peerBadgePrompt.title": "Спадабаўся артыкул? Узнагародзьце аўтара значком",
+  "peerBadgePrompt.action": "Узнагародзіць аўтара",
 } as const

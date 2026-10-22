@@ -29,6 +29,8 @@ export const GROWTH_FUNNEL_EVENTS = {
   questCardImpression: 'quest_card_impression',
   questCardClick: 'quest_card_click',
   appDownloadClick: 'app_download_click',
+  peerBadgePromptImpression: 'peer_badge_prompt_impression',
+  peerBadgePromptClick: 'peer_badge_prompt_click',
 } as const;
 
 export type GrowthContentType = 'route' | 'article';
@@ -204,6 +206,18 @@ export const trackAppDownloadClicked = ({
     source,
     platform,
   });
+};
+
+export const trackPeerBadgePromptImpression = ({ travelId }: { travelId: unknown }) => {
+  emitGrowthFunnelEvent(GROWTH_FUNNEL_EVENTS.peerBadgePromptImpression, {
+    travel_id: safeString(travelId),
+  });
+};
+
+export const trackPeerBadgePromptClicked = ({ travelId }: { travelId: unknown }) => {
+  void sendAnalyticsEvent(GROWTH_FUNNEL_EVENTS.peerBadgePromptClick, compactParams({
+    travel_id: safeString(travelId),
+  }));
 };
 
 const contentActivationParams = ({ source, contentType, contentId }: ContentActivationParams) => ({

@@ -116,16 +116,18 @@ export async function fetchMyAchievements(locale: SupportedLocale = getActiveLoc
   }
 }
 
+/** Public content with viewer-specific grantedByMe; direct calls default to anonymous. */
 export async function fetchUserAchievements(
   userId: string | number,
   locale: SupportedLocale = getActiveLocale(),
+  options: { authenticated?: boolean } = {},
 ): Promise<PublicAchievements> {
   if (USE_MOCK) return (await loadAchievementsMock()).MOCK_PUBLIC_ACHIEVEMENTS;
   try {
     const dto = await apiClient.get<PublicAchievementsDto>(
       `/achievements/user/${userId}/?lang=${locale}`,
       undefined,
-      { skipAuth: true },
+      { skipAuth: !options.authenticated },
     );
     return mapPublic(dto);
   } catch (error) {
@@ -164,16 +166,17 @@ export async function fetchPeerBadgeCatalog(): Promise<PeerBadge[]> {
   }
 }
 
-/** Peer-значки, полученные конкретным travel (для travel-detail). */
+/** Received article awards; credentials must match the viewer in the query key. */
 export async function fetchTravelPeerBadges(
   travelId: string | number,
+  options: { authenticated?: boolean } = {},
 ): Promise<PeerBadgeReceived[]> {
   if (USE_MOCK) return (await loadAchievementsMock()).MOCK_TRAVEL_PEER_RECEIVED;
   try {
     const dto = await apiClient.get<TravelPeerBadgesDto>(
       `/achievements/travel/${travelId}/`,
       undefined,
-      { skipAuth: true },
+      { skipAuth: !options.authenticated },
     );
     return (dto?.peer_received ?? []).map(mapPeerReceived);
   } catch (error) {
@@ -199,13 +202,11 @@ export async function grantPeerBadge(input: GrantInput): Promise<GrantResult> {
     );
     return { granted: Boolean(dto?.granted), count: dto?.count ?? 0 };
   } catch (error) {
-    // Каталог сейчас мок (BE вернул пустой список, #577) — slug мок-значка
-    // неизвестен бэку, grant вернёт 400/404. Плюс случай «эндпоинта нет»
-    // (501/0). Во всех этих случаях симулируем «выдал», чтобы UI-toggle работал;
-    // реальные сетевые/5xx-сбои по-прежнему всплывают.
+    // A dev catalogue may contain slugs unknown to the local backend. Never
+    // turn a production validation rejection into a successful award.
     const isMockableGrant =
       shouldFallbackPeerToMock(error) ||
-      (error instanceof ApiError && error.status === 400);
+      (__DEV__ && error instanceof ApiError && error.status === 400);
     if (isMockableGrant) {
       devWarn('[achievements] grant → mock simulate');
       return { granted: true, count: 1 };

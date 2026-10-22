@@ -70,10 +70,13 @@ export function useMyAchievements(options: { enabled?: boolean } = {}) {
 /** Публичные достижения автора (earned + ранг + peer-награды от сообщества). */
 export function useUserAchievements(userId: string | number | null | undefined) {
   const locale = useLocaleRevision();
+  const authReady = useAuthStore((s) => s.authReady);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const viewer = useQueryOwner();
   return useQuery<PublicAchievements>({
-    queryKey: queryKeys.achievementsUser(userId, locale),
-    queryFn: () => fetchUserAchievements(userId as string | number, locale),
-    enabled: userId != null && userId !== '',
+    queryKey: queryKeys.achievementsUser(userId, viewer, locale),
+    queryFn: () => fetchUserAchievements(userId as string | number, locale, { authenticated: viewer != null }),
+    enabled: authReady && (!isAuthenticated || !!viewer) && userId != null && userId !== '',
     staleTime: STALE_TIME,
     retry: readRetryTwice,
   });
@@ -93,10 +96,13 @@ export function usePeerBadgeCatalog() {
 
 /** Peer-награды конкретного travel. */
 export function useTravelPeerBadges(travelId: string | number | null | undefined) {
+  const authReady = useAuthStore((s) => s.authReady);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const viewer = useQueryOwner();
   return useQuery<PeerBadgeReceived[]>({
-    queryKey: queryKeys.achievementsTravelPeer(travelId),
-    queryFn: () => fetchTravelPeerBadges(travelId as string | number),
-    enabled: travelId != null && travelId !== '',
+    queryKey: queryKeys.achievementsTravelPeer(travelId, viewer),
+    queryFn: () => fetchTravelPeerBadges(travelId as string | number, { authenticated: viewer != null }),
+    enabled: authReady && (!isAuthenticated || !!viewer) && travelId != null && travelId !== '',
     staleTime: STALE_TIME,
     retry: readRetryTwice,
   });
@@ -145,6 +151,7 @@ export function useMyRareAwards() {
 /** Публичные редкие награды автора. */
 export function useUserRareAwards(userId: string | number | null | undefined) {
   const locale = useLocaleRevision();
+  const viewer = useQueryOwner();
   const qc = useQueryClient();
   // /user/{id}/ отдаёт rare_awards top-level → сеемся из него, отдельный
   // /user/{id}/rare-awards/ только как fallback, когда поля не было.
@@ -161,20 +168,20 @@ export function useUserRareAwards(userId: string | number | null | undefined) {
     retry: readRetryTwice,
     initialData: () => {
       const cached = qc.getQueryData<PublicAchievements>(
-        queryKeys.achievementsUser(userId, locale),
+        queryKeys.achievementsUser(userId, viewer, locale),
       );
       return cached?.rareAwards ?? undefined;
     },
     initialDataUpdatedAt: () =>
-      qc.getQueryState(queryKeys.achievementsUser(userId, locale))?.dataUpdatedAt ?? 0,
+      qc.getQueryState(queryKeys.achievementsUser(userId, viewer, locale))?.dataUpdatedAt ?? 0,
   });
 
-  const updatedAt = qc.getQueryState(queryKeys.achievementsUser(userId, locale))?.dataUpdatedAt;
+  const updatedAt = qc.getQueryState(queryKeys.achievementsUser(userId, viewer, locale))?.dataUpdatedAt;
   useEffect(() => {
     if (ach?.rareAwards == null) return;
-    if (qc.getQueryData(queryKeys.achievementsUser(userId, locale)) !== ach) return;
+    if (qc.getQueryData(queryKeys.achievementsUser(userId, viewer, locale)) !== ach) return;
     qc.setQueryData(queryKeys.achievementsRareUser(userId, locale), ach.rareAwards, { updatedAt });
-  }, [ach, locale, qc, updatedAt, userId]);
+  }, [ach, locale, qc, updatedAt, userId, viewer]);
 
   const isFetching = query.isFetching || (!query.data && achFetching);
   return { ...query, isFetching };
@@ -242,6 +249,17 @@ const applyServerCount = (
       : r,
   );
 
+const restorePeerBadge = (
+  list: PeerBadgeReceived[],
+  badgeSlug: string,
+  previous: PeerBadgeReceived[] | undefined,
+): PeerBadgeReceived[] => {
+  const original = previous?.find((item) => item.badge.slug === badgeSlug);
+  return original
+    ? list.map((item) => item.badge.slug === badgeSlug ? original : item)
+    : list.filter((item) => item.badge.slug !== badgeSlug);
+};
+
 interface GrantContext {
   isTravel: boolean;
   owner: string | null;
@@ -278,8 +296,8 @@ export function useGrantPeerBadge() {
         isTravel: input.travelId != null,
         owner,
         locale,
-        travelKey: queryKeys.achievementsTravelPeer(input.travelId),
-        userKey: queryKeys.achievementsUser(input.recipientId, locale),
+        travelKey: queryKeys.achievementsTravelPeer(input.travelId, owner),
+        userKey: queryKeys.achievementsUser(input.recipientId, owner, locale),
       };
       const key = ctx.isTravel ? ctx.travelKey : ctx.userKey;
       ctx.query = qc.getQueryCache().find({ queryKey: key, exact: true });
@@ -300,10 +318,17 @@ export function useGrantPeerBadge() {
       }
       return ctx;
     },
-    onError: (_err, _input, ctx) => {
+    onError: (_err, input, ctx) => {
       if (!ctx || !isOriginalMutationCache(ctx, qc)) return;
-      if (ctx.isTravel) qc.setQueryData(ctx.travelKey, ctx.prevTravel);
-      else qc.setQueryData(ctx.userKey, ctx.prevUser);
+      if (ctx.isTravel) {
+        qc.setQueryData<PeerBadgeReceived[]>(ctx.travelKey, (old) =>
+          old ? restorePeerBadge(old, input.badgeSlug, ctx.prevTravel) : old,
+        );
+      } else {
+        qc.setQueryData<PublicAchievements>(ctx.userKey, (old) =>
+          old ? { ...old, peerReceived: restorePeerBadge(old.peerReceived, input.badgeSlug, ctx.prevUser?.peerReceived) } : old,
+        );
+      }
     },
     onSuccess: (result, input, ctx) => {
       if (!ctx || !isOriginalMutationCache(ctx, qc)) return;
@@ -320,15 +345,15 @@ export function useGrantPeerBadge() {
       }
     },
     onSettled: (_result, _error, input, ctx) => {
-      if (!ctx || currentOwner() !== ctx.owner) return;
+      if (!ctx) return;
       if (ctx.isTravel) {
-        void qc.invalidateQueries({ queryKey: ctx.travelKey });
+        void qc.invalidateQueries({ queryKey: queryKeys.achievementsTravelPeerAll(input.travelId) });
       }
       if (input.recipientId != null) {
         void qc.invalidateQueries({ queryKey: queryKeys.achievementsUserAll(input.recipientId) });
         void qc.invalidateQueries({ queryKey: queryKeys.achievementsRareUserAll(input.recipientId) });
       }
-      if (ctx.owner != null) {
+      if (ctx.owner != null && currentOwner() === ctx.owner) {
         void qc.invalidateQueries({ queryKey: queryKeys.achievementsMeAll(ctx.owner) });
         void qc.invalidateQueries({ queryKey: queryKeys.achievementsRareMeAll(ctx.owner) });
       }

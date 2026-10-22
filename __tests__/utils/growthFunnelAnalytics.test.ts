@@ -2,6 +2,8 @@ import { queueAnalyticsEvent, sendAnalyticsEvent } from '@/utils/analytics';
 import {
   GROWTH_FUNNEL_EVENTS,
   trackAppDownloadClicked,
+  trackPeerBadgePromptClicked,
+  trackPeerBadgePromptImpression,
   trackFavoriteIntentGuest,
   trackArticleEditorAutosaveSucceeded,
   trackContentCreateCtaClicked,
@@ -36,6 +38,29 @@ describe('growthFunnelAnalytics', () => {
   beforeEach(() => {
     mockedQueueAnalyticsEvent.mockClear();
     mockedSendAnalyticsEvent.mockClear();
+  });
+
+  it('queues a peer prompt impression with only the bounded travel id', () => {
+    trackPeerBadgePromptImpression({ travelId: 42 });
+    expect(mockedQueueAnalyticsEvent).toHaveBeenCalledWith('peer_badge_prompt_impression', {
+      travel_id: '42',
+    });
+    expect(mockedSendAnalyticsEvent).not.toHaveBeenCalled();
+  });
+
+  it('sends the peer prompt click immediately before navigation can interrupt an idle queue', () => {
+    trackPeerBadgePromptClicked({ travelId: ' 42 ' });
+    expect(mockedSendAnalyticsEvent).toHaveBeenCalledWith('peer_badge_prompt_click', { travel_id: '42' });
+    expect(mockedQueueAnalyticsEvent).not.toHaveBeenCalled();
+  });
+
+  it('drops invalid peer prompt ids and bounds scalar event values', () => {
+    trackPeerBadgePromptClicked({ travelId: { name: 'private content' } });
+    expect(mockedSendAnalyticsEvent).toHaveBeenLastCalledWith('peer_badge_prompt_click', {});
+    trackPeerBadgePromptImpression({ travelId: 'x'.repeat(180) });
+    expect(mockedQueueAnalyticsEvent).toHaveBeenLastCalledWith('peer_badge_prompt_impression', {
+      travel_id: 'x'.repeat(120),
+    });
   });
 
   it('keeps the source article id distinct from the newly created travel across the funnel', () => {

@@ -145,6 +145,17 @@ describe('#2697 achievement request locale', () => {
     ])
   })
 
+  it('requests viewer-personalized author awards only with explicit authentication', async () => {
+    mockGet.mockResolvedValueOnce({ rank: rankDto(), earned_badges: [] })
+      .mockResolvedValueOnce({ rank: rankDto(), earned_badges: [] })
+    await fetchUserAchievements(42, 'pl', { authenticated: true })
+    await fetchUserAchievements(42, 'en', { authenticated: false })
+    expect(mockGet.mock.calls).toEqual([
+      ['/achievements/user/42/?lang=pl', undefined, { skipAuth: false }],
+      ['/achievements/user/42/?lang=en', undefined, { skipAuth: true }],
+    ])
+  })
+
   it('captures the default locale at request start while another locale becomes active', async () => {
     let resolveCatalog!: (value: unknown) => void
     mockGetActiveLocale.mockReturnValue('pl')

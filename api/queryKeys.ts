@@ -1,5 +1,9 @@
 import { DEFAULT_LOCALE, type SupportedLocale } from '@/i18n/config';
 
+// Profile routes supply strings while article payloads supply numbers for the same target.
+const achievementTargetId = (id: string | number | null | undefined) =>
+  id == null ? id : String(id);
+
 export const queryKeys = {
   travel: (slugOrId: string | number) => ['travel', slugOrId] as const,
   travelAll: () => ['travel'] as const,
@@ -158,18 +162,21 @@ export const queryKeys = {
   achievementsMeAll: (userId: string | null) => ['achievements', 'me', userId] as const,
   achievementsMe: (userId: string | null, locale: string) => ['achievements', 'me', userId, locale] as const,
   achievementsUserAll: (userId: string | number | null | undefined) =>
-    ['achievements', 'user', userId] as const,
-  achievementsUser: (userId: string | number | null | undefined, locale: string) =>
-    ['achievements', 'user', userId, locale] as const,
+    ['achievements', 'user', achievementTargetId(userId)] as const,
+  // Received awards include grantedByMe, so public targets still need a viewer.
+  achievementsUser: (userId: string | number | null | undefined, viewerId: string | null, locale: string) =>
+    ['achievements', 'user', achievementTargetId(userId), viewerId, locale] as const,
   achievementsPeerCatalog: () => ['achievements', 'peer-catalog'] as const,
-  achievementsTravelPeer: (travelId: string | number | null | undefined) =>
-    ['achievements', 'travel-peer', travelId] as const,
+  achievementsTravelPeerAll: (travelId: string | number | null | undefined) =>
+    ['achievements', 'travel-peer', achievementTargetId(travelId)] as const,
+  achievementsTravelPeer: (travelId: string | number | null | undefined, viewerId: string | null) =>
+    ['achievements', 'travel-peer', achievementTargetId(travelId), viewerId] as const,
   achievementsRareMeAll: (userId: string | null) => ['achievements', 'rare', 'me', userId] as const,
   achievementsRareMe: (userId: string | null, locale: string) => ['achievements', 'rare', 'me', userId, locale] as const,
   achievementsRareUserAll: (userId: string | number | null | undefined) =>
-    ['achievements', 'rare', 'user', userId] as const,
+    ['achievements', 'rare', 'user', achievementTargetId(userId)] as const,
   achievementsRareUser: (userId: string | number | null | undefined, locale: string) =>
-    ['achievements', 'rare', 'user', userId, locale] as const,
+    ['achievements', 'rare', 'user', achievementTargetId(userId), locale] as const,
   achievementsRareCatalog: () => ['achievements', 'rare', 'catalog'] as const,
   gamificationPlaceBadgesMe: (userId: string | null) =>
     ['gamification', 'place-badges', 'me', userId] as const,

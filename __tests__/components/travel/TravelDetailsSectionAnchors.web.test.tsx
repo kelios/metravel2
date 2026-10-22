@@ -74,6 +74,7 @@ jest.mock('@/components/travel/details/sections/TravelWeatherBlock', () => () =>
 jest.mock('@/components/travel/details/sections/DeferredQuestForCitySection', () => () => null)
 jest.mock('@/components/travel/details/sections/TravelRegisterCtaSection', () => () => null)
 jest.mock('@/components/travel/details/sections/TravelArticleShareTripCta', () => () => null)
+jest.mock('@/components/travel/details/sections/TravelPeerBadgePrompt', () => () => null)
 jest.mock('@/components/travel/details/sections/YouTubeSectionSlot', () => () => null)
 jest.mock('@/components/legal/DataFreshnessNotice', () => () => null)
 jest.mock('@/components/ui/Button', () => () => null)

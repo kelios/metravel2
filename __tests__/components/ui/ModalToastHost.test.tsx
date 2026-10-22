@@ -1,5 +1,5 @@
 import React from 'react'
-import { Platform, Text, View } from 'react-native'
+import { Modal, Platform, Text, View } from 'react-native'
 import { act, fireEvent, render, waitFor, within } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
@@ -99,11 +99,20 @@ describe.each(['photo', 'quest_review'] as const)('%s parent modal report feedba
     </QueryClientProvider>)
   }
 
-  async function submit(result: ReturnType<typeof render>) {
+  function pressReportAction(result: ReturnType<typeof render>) {
     fireEvent.press(result.getByTestId(`${prefix}-menu`))
     fireEvent.press(result.getByTestId(`${prefix}-report`))
-    // iOS opens the next Modal after the action sheet's dismissal: explicitly
-    // await that lifecycle boundary before interacting with the reason sheet.
+    // The shared Modal mock does not emit UIKit's dismissal callback. Model
+    // the closed action sheet's real lifecycle instead of its wall-clock fallback.
+    const closedActionSheet = result.UNSAFE_getAllByType(Modal).find(
+      modal => modal.props.visible === false && typeof modal.props.onDismiss === 'function',
+    )
+    expect(closedActionSheet).toBeDefined()
+    act(() => { closedActionSheet!.props.onDismiss() })
+  }
+
+  async function submit(result: ReturnType<typeof render>) {
+    pressReportAction(result)
     await waitFor(() => expect(result.UNSAFE_getByType(ReportSheetComponent).props.visible).toBe(true))
     fireEvent.press(await result.findByTestId('report-reason-spam'))
     fireEvent.press(result.getByTestId('report-submit'))
@@ -123,8 +132,7 @@ describe.each(['photo', 'quest_review'] as const)('%s parent modal report feedba
     expect(within(message).getByText(/24/)).toBeTruthy()
     expect(within(result.getByTestId('root')).queryByTestId('toast-message')).toBeNull()
     expect(result.getAllByTestId('toast-layer')).toHaveLength(2)
-    fireEvent.press(result.getByTestId(`${prefix}-menu`))
-    fireEvent.press(result.getByTestId(`${prefix}-report`))
+    pressReportAction(result)
     await waitFor(() => expect(within(result.getByTestId('toast-message')).getByText('Вы уже пожаловались на это')).toBeTruthy())
     expect(result.UNSAFE_getByType(ReportSheetComponent).props.visible).toBe(false)
     expect(mockReport).toHaveBeenCalledTimes(1)

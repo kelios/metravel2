@@ -200,11 +200,11 @@ canonical-путь — поля прямо в `rank`.
 |-----|------|-----------------------|
 | `useBadgeCatalog` | `['achievements','badges',locale]` | всегда |
 | `useMyAchievements` | `['achievements','me',owner,locale]` | `isAuthenticated && options.enabled`; таймаут запроса 15 000 мс |
-| `useUserAchievements` | `['achievements','user',userId,locale]` | `userId != null`; запрос идёт `skipAuth` |
+| `useUserAchievements` | `['achievements','user',String(userId),viewer,locale]` | известная цель, `authReady` и разрешённый viewer; `skipAuth` только для гостя |
 | `usePeerBadgeCatalog` | `['achievements','peer-catalog']` | всегда |
-| `useTravelPeerBadges` | `['achievements','travel-peer',travelId]` | `travelId != null`, `skipAuth` |
+| `useTravelPeerBadges` | `['achievements','travel-peer',String(travelId),viewer]` | известная цель, `authReady` и разрешённый viewer; `skipAuth` только для гостя |
 | `useMyRareAwards` | `['achievements','rare','me',owner,locale]` | только если в `/me/` не было `rare_awards`; `initialData` — из кэша `achievementsMe` |
-| `useUserRareAwards` | `['achievements','rare','user',userId,locale]` | аналогично, из кэша `achievementsUser` |
+| `useUserRareAwards` | `['achievements','rare','user',String(userId),locale]` | аналогично, из кэша `achievementsUser` текущего viewer |
 | `useRareAwardCatalog(enabled)` | `['achievements','rare','catalog']` | включается только когда открыт админ-пикер |
 | `useMyPlaceFirstBadges` | `['gamification','place-badges','me',owner]` | `isAuthenticated` |
 | `useUserPlaceFirstBadges` | `['gamification','place-badges','user',userId]` | `userId != null` |
@@ -212,6 +212,13 @@ canonical-путь — поля прямо в `rank`.
 | `useUserGamificationProgress` | `['gamification','progress','user',userId]` | то же от `achievementsUser` |
 | `useMyCharacter` | `['gamification','character','me',owner]` | fallback-запрос; `initialData` = `mapCharacter(cached.characterDto)` |
 | `useUserCharacter` | `['gamification','character','user',userId]` | то же |
+
+`viewer` — ID известного вошедшего читателя из `useQueryOwner`, для гостя `null`.
+User/travel reads ждут `authReady` и при `isAuthenticated` требуют непустой viewer.
+Тот же snapshot задаёт `{authenticated: viewer != null}` существующего GET;
+прямые API-вызовы по умолчанию анонимны. Непустые ID целей user/travel-peer и
+public rare приводятся к строке, поэтому число из статьи и строка из URL профиля
+адресуют один кэш. Производные readers/seeds выбирают `achievementsUser(userId, viewer, locale)`.
 
 Catalog/me/user фиксируют фактически применённую UI-локаль RU/BE/UK/PL/EN через
 `useLocaleRevision` и передают тот же snapshot в ключ и явный `?lang=` запроса.
@@ -238,8 +245,10 @@ fallback приходят с сервера без клиентского пер
   через `achievementsUserAll` / `achievementsRareUserAll` / `achievementsMeAll` /
   `achievementsRareMeAll`: префиксы охватывают все ранее прогретые языки.
 - `useGrantPeerBadge` правит исходную копию оптимистично и после завершения
-  инвалидирует те же consolidated/rare префиксы; travel-цель также инвалидирует
-  `achievementsTravelPeer(travelId)`.
+  инвалидирует те же consolidated/rare префиксы всех viewer и локалей; travel-цель
+  инвалидирует `achievementsTravelPeerAll(travelId)` — все viewer данной статьи.
+  Префиксы `['achievements','user',String(recipientId)]` и
+  `['achievements','travel-peer',String(travelId)]` не включают viewer/locale.
 - `QuestPioneerBlock` после получения значка инвалидирует `achievementsMeAll(owner)`.
 - `achievementsBadgesAll()` адресует все языковые копии публичного каталога.
 - Редкие награды пересеваются при новом consolidated ответе, включая уже
@@ -261,8 +270,8 @@ fallback приходят с сервера без клиентского пер
 оптимистичным обновлением.
 
 - `onMutate` определяет цель по `input.travelId != null`: либо кэш
-  `achievementsTravelPeer(travelId)` (список `PeerBadgeReceived[]`), либо
-  `achievementsUser(recipientId, locale)` (поле `peerReceived` внутри `PublicAchievements`).
+  `achievementsTravelPeer(travelId, owner)` (список `PeerBadgeReceived[]`), либо
+  `achievementsUser(recipientId, owner, locale)` (поле `peerReceived` внутри `PublicAchievements`).
   Контекст фиксирует owner, locale, ключи и экземпляр Query; перед правкой —
   `cancelQueries` и снимок предыдущего значения.
 - `togglePeer()` переключает `grantedByMe` и двигает `count` на ±1, а если значка в

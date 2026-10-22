@@ -23,7 +23,7 @@ jest.mock('@/api/achievements', () => ({
   grantPeerBadge: jest.fn(), grantRareAward: jest.fn(),
 }))
 jest.mock('@/stores/authStore', () => ({
-  useAuthStore: jest.requireActual('zustand').create(() => ({ isAuthenticated: true, userId: 'owner-A' })),
+  useAuthStore: jest.requireActual('zustand').create(() => ({ isAuthenticated: true, userId: 'owner-A', authReady: true })),
 }))
 
 const catalog = (locale: SupportedLocale) => [{ ...MOCK_BADGES[0], description: `description-${locale}` }]
@@ -53,7 +53,7 @@ const useAllReads = () => ({ catalog: useBadgeCatalog(), mine: useMyAchievements
 
 beforeEach(async () => {
   jest.resetAllMocks()
-  useAuthStore.setState({ isAuthenticated: true, userId: 'owner-A' })
+  useAuthStore.setState({ isAuthenticated: true, userId: 'owner-A', authReady: true })
   await i18n.changeLanguage('ru')
   client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   jest.mocked(fetchBadgeCatalog).mockImplementation(async locale => catalog(locale!))
@@ -73,10 +73,10 @@ it.each(SUPPORTED_LOCALES)('captures the applied %s locale in every query and re
   expect(result.current.user.data).toEqual(publicData(locale))
   expect(fetchBadgeCatalog).toHaveBeenCalledWith(locale)
   expect(fetchMyAchievements).toHaveBeenCalledWith(locale)
-  expect(fetchUserAchievements).toHaveBeenCalledWith(104, locale)
+  expect(fetchUserAchievements).toHaveBeenCalledWith(104, locale, { authenticated: true })
   expect(client.getQueryData(queryKeys.achievementsBadges(locale))).toEqual(catalog(locale))
   expect(client.getQueryData(queryKeys.achievementsMe('owner-A', locale))).toEqual(mine(locale))
-  expect(client.getQueryData(queryKeys.achievementsUser(104, locale))).toEqual(publicData(locale))
+  expect(client.getQueryData(queryKeys.achievementsUser(104, 'owner-A', locale))).toEqual(publicData(locale))
 })
 
 it('keeps warm RU → delayed PL → EN → RU responses in their own locale entries', async () => {
@@ -110,7 +110,7 @@ it('seeds rare awards only from the active locale and retains neutral rare prose
   const pl = { ...mine('pl'), rareAwards: [{ ...MOCK_RARE_AWARDS[0], reason: 'server prose' }] }
   client.setQueryData(queryKeys.achievementsMe('owner-A', 'ru'), ru)
   client.setQueryData(queryKeys.achievementsMe('owner-A', 'pl'), pl)
-  client.setQueryData(queryKeys.achievementsUser(104, 'pl'), { ...publicData('pl'), rareAwards: pl.rareAwards })
+  client.setQueryData(queryKeys.achievementsUser(104, 'owner-A', 'pl'), { ...publicData('pl'), rareAwards: pl.rareAwards })
   await switchLocale('pl')
   const { result } = renderHook(() => ({ mine: useMyRareAwards(), user: useUserRareAwards(104) }), { wrapper })
   expect(result.current.mine.data).toEqual(pl.rareAwards)
@@ -124,7 +124,7 @@ it('refreshes derived rare data after an invalidated consolidated response chang
   const initialAwards = [MOCK_RARE_AWARDS[0]]
   const updatedAwards = [...initialAwards, MOCK_RARE_AWARDS[1]]
   const ownKey = queryKeys.achievementsMe('owner-A', 'ru')
-  const userKey = queryKeys.achievementsUser(104, 'ru')
+  const userKey = queryKeys.achievementsUser(104, 'owner-A', 'ru')
   client.setQueryData(ownKey, { ...mine('ru'), rareAwards: initialAwards })
   client.setQueryData(userKey, { ...publicData('ru'), rareAwards: initialAwards })
   jest.mocked(fetchMyAchievements).mockResolvedValue({ ...mine('ru'), rareAwards: updatedAwards })
@@ -147,19 +147,19 @@ it('invalidates all warmed consolidated and rare locale copies after a rare gran
   for (const locale of SUPPORTED_LOCALES) {
     client.setQueryData(queryKeys.achievementsMe('owner-A', locale), mine(locale))
     client.setQueryData(queryKeys.achievementsRareMe('owner-A', locale), [])
-    client.setQueryData(queryKeys.achievementsUser(104, locale), publicData(locale))
+    client.setQueryData(queryKeys.achievementsUser(104, 'owner-A', locale), publicData(locale))
     client.setQueryData(queryKeys.achievementsRareUser(104, locale), [])
     client.setQueryData(queryKeys.achievementsMe('owner-B', locale), mine(locale))
-    client.setQueryData(queryKeys.achievementsUser(999, locale), publicData(locale))
+    client.setQueryData(queryKeys.achievementsUser(999, 'owner-A', locale), publicData(locale))
   }
   const { result } = renderHook(useGrantRareAward, { wrapper })
   await act(async () => { await result.current.mutateAsync({ userId: 104, awardSlug: 'rare', reason: 'reason' }) })
   for (const locale of SUPPORTED_LOCALES) {
-    for (const key of [queryKeys.achievementsMe('owner-A', locale), queryKeys.achievementsRareMe('owner-A', locale), queryKeys.achievementsUser(104, locale), queryKeys.achievementsRareUser(104, locale)]) {
+    for (const key of [queryKeys.achievementsMe('owner-A', locale), queryKeys.achievementsRareMe('owner-A', locale), queryKeys.achievementsUser(104, 'owner-A', locale), queryKeys.achievementsRareUser(104, locale)]) {
       expect(client.getQueryState(key)?.isInvalidated).toBe(true)
     }
     expect(client.getQueryState(queryKeys.achievementsMe('owner-B', locale))?.isInvalidated).toBe(false)
-    expect(client.getQueryState(queryKeys.achievementsUser(999, locale))?.isInvalidated).toBe(false)
+    expect(client.getQueryState(queryKeys.achievementsUser(999, 'owner-A', locale))?.isInvalidated).toBe(false)
   }
   expect(grantRareAward).toHaveBeenCalledTimes(1)
 })
@@ -167,22 +167,22 @@ it('invalidates all warmed consolidated and rare locale copies after a rare gran
 it('rolls a failed peer toggle back only in its original locale and invalidates all locale copies', async () => {
   const pending = deferred<GrantResult>()
   jest.mocked(grantPeerBadge).mockReturnValue(pending.promise)
-  for (const locale of SUPPORTED_LOCALES) client.setQueryData(queryKeys.achievementsUser(104, locale), publicData(locale))
+  for (const locale of SUPPORTED_LOCALES) client.setQueryData(queryKeys.achievementsUser(104, 'owner-A', locale), publicData(locale))
   const { result } = renderHook(useGrantPeerBadge, { wrapper })
   let mutation!: Promise<unknown>
   act(() => { mutation = result.current.mutateAsync({ recipientId: 104, badgeSlug: MOCK_PEER_CATALOG[0].slug }).catch(error => error) })
-  await waitFor(() => expect(client.getQueryData<PublicAchievements>(queryKeys.achievementsUser(104, 'ru'))?.peerReceived[0].count).toBe(3))
+  await waitFor(() => expect(client.getQueryData<PublicAchievements>(queryKeys.achievementsUser(104, 'owner-A', 'ru'))?.peerReceived[0].count).toBe(3))
   await switchLocale('pl')
   await act(async () => { pending.reject(new Error('grant failed')); await mutation })
-  expect(client.getQueryData(queryKeys.achievementsUser(104, 'ru'))).toEqual(publicData('ru'))
-  expect(client.getQueryData(queryKeys.achievementsUser(104, 'pl'))).toEqual(publicData('pl'))
-  for (const locale of SUPPORTED_LOCALES) expect(client.getQueryState(queryKeys.achievementsUser(104, locale))?.isInvalidated).toBe(true)
+  expect(client.getQueryData(queryKeys.achievementsUser(104, 'owner-A', 'ru'))).toEqual(publicData('ru'))
+  expect(client.getQueryData(queryKeys.achievementsUser(104, 'owner-A', 'pl'))).toEqual(publicData('pl'))
+  for (const locale of SUPPORTED_LOCALES) expect(client.getQueryState(queryKeys.achievementsUser(104, 'owner-A', locale))?.isInvalidated).toBe(true)
 })
 
 it.each(['user', 'travel'] as const)('cannot resurrect a %s cache through late rollback after logout and same-owner login', async target => {
   const pending = deferred<GrantResult>()
   jest.mocked(grantPeerBadge).mockReturnValue(pending.promise)
-  const key = target === 'user' ? queryKeys.achievementsUser(104, 'ru') : queryKeys.achievementsTravelPeer(44)
+  const key = target === 'user' ? queryKeys.achievementsUser(104, 'owner-A', 'ru') : queryKeys.achievementsTravelPeer(44, 'owner-A')
   const initial = target === 'user' ? publicData('ru') : publicData('ru').peerReceived
   client.setQueryData(key, initial)
   const { result } = renderHook(useGrantPeerBadge, { wrapper })
@@ -192,7 +192,7 @@ it.each(['user', 'travel'] as const)('cannot resurrect a %s cache through late r
   await act(async () => {
     useAuthStore.setState({ isAuthenticated: false, userId: null })
     await dropQueryCacheForIdentityChange(client, () => true)
-    useAuthStore.setState({ isAuthenticated: true, userId: 'owner-A' })
+    useAuthStore.setState({ isAuthenticated: true, userId: 'owner-A', authReady: true })
   })
   expect(client.getQueryData(key)).toBeUndefined()
   await act(async () => { pending.reject(new Error('late error')); await mutation })
@@ -202,7 +202,8 @@ it.each(['user', 'travel'] as const)('cannot resurrect a %s cache through late r
 it('does not overwrite a recreated public cache when a previous identity mutation succeeds', async () => {
   const pending = deferred<GrantResult>()
   jest.mocked(grantPeerBadge).mockReturnValue(pending.promise)
-  const key = queryKeys.achievementsUser(104, 'ru')
+  const key = queryKeys.achievementsUser(104, 'owner-A', 'ru')
+  const newKey = queryKeys.achievementsUser(104, 'owner-B', 'ru')
   client.setQueryData(key, publicData('ru'))
   const { result } = renderHook(useGrantPeerBadge, { wrapper })
   let mutation!: Promise<unknown>
@@ -211,10 +212,11 @@ it('does not overwrite a recreated public cache when a previous identity mutatio
   await act(async () => {
     useAuthStore.setState({ isAuthenticated: true, userId: 'owner-B' })
     await dropQueryCacheForIdentityChange(client, () => true)
-    client.setQueryData(key, publicData('ru'))
+    client.setQueryData(newKey, publicData('ru'))
   })
   await act(async () => { pending.resolve({ granted: true, count: 99 }); await mutation })
-  expect(client.getQueryData(key)).toEqual(publicData('ru'))
+  expect(client.getQueryData(newKey)).toEqual(publicData('ru'))
+  expect(client.getQueryData(key)).toBeUndefined()
 })
 
 it('isolates delayed personal responses across logout and a different owner', async () => {

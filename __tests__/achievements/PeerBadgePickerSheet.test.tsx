@@ -6,8 +6,12 @@
 // jest.mock('@/hooks/useAchievementsApi').
 
 import React from 'react'
-import { render, fireEvent } from '@testing-library/react-native'
+import { render, fireEvent, waitFor } from '@testing-library/react-native'
 import type { PeerBadge, PeerBadgeReceived } from '@/api/achievements'
+import { showToast } from '@/utils/toast'
+
+jest.mock('@/utils/toast', () => ({ showToast: jest.fn() }))
+jest.mock('@/components/ui/ModalToastHost', () => () => null)
 
 // expo-linear-gradient
 jest.mock('expo-linear-gradient', () => {
@@ -41,6 +45,7 @@ jest.mock('@/components/ui/ImageCardMedia', () => {
 
 // Hooks — мокаем целиком
 const mockMutate = jest.fn().mockResolvedValue(undefined)
+const mockRefetch = jest.fn()
 
 jest.mock('@/hooks/useAchievementsApi', () => ({
   usePeerBadgeCatalog: jest.fn(),
@@ -99,6 +104,8 @@ const setupHooks = (catalogData: PeerBadge[] | undefined, isLoading = false) => 
     error: null,
     isError: false,
     isSuccess: !isLoading,
+    isFetching: false,
+    refetch: mockRefetch,
   } as any)
   mockUseGrantPeerBadge.mockReturnValue({
     mutateAsync: mockMutate,
@@ -167,6 +174,20 @@ describe('PeerBadgePickerSheet — visible=true, target filtering', () => {
       <PeerBadgePickerSheet {...defaultProps} visible target="user" />,
     )
     expect(queryByText('Любимый автор')).toBeNull()
+  })
+
+  it('shows a catalog error and retry instead of disguising the failure as an empty catalog', () => {
+    mockUsePeerBadgeCatalog.mockReturnValue({
+      data: makeCatalog(), isLoading: false, isError: true, isFetching: false,
+      refetch: mockRefetch,
+    } as ReturnType<typeof usePeerBadgeCatalog>)
+    const screen = render(<PeerBadgePickerSheet {...defaultProps} visible />)
+    expect(screen.getByTestId('peer-badge-catalog-error')).toBeTruthy()
+    expect(screen.queryByText('Нет доступных наград')).toBeNull()
+    expect(screen.queryByText('Любимый автор')).toBeNull()
+    fireEvent.press(screen.getByTestId('peer-badge-catalog-retry'))
+    expect(mockRefetch).toHaveBeenCalledTimes(1)
+    expect(mockMutate).not.toHaveBeenCalled()
   })
 })
 
@@ -256,6 +277,17 @@ describe('PeerBadgePickerSheet — tap calls mutate', () => {
     expect(mockMutate).toHaveBeenCalledWith(
       expect.objectContaining({ badgeSlug: 'best-article', travelId: 99 }),
     )
+  })
+
+  it('reports a rejected grant as an error without a successful award toast', async () => {
+    mockMutate.mockRejectedValueOnce(new Error('grant rejected'))
+    const screen = render(
+      <PeerBadgePickerSheet {...defaultProps} visible target="user" recipientId={42} />,
+    )
+    fireEvent.press(screen.getByLabelText(/Выдать значок «Любимый автор»/))
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' })))
+    expect(showToast).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'success' }))
+    expect(screen.queryByText('Выдано')).toBeNull()
   })
 
   it('label changes to "Забрать" for already granted badge', () => {

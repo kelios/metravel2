@@ -11,12 +11,14 @@ import TravelDescription from '@/components/travel/TravelDescription'
 import { buildArticleBodyMediaIndex } from '@/components/travel/stableContent/articleBodyMedia'
 import { safeGetYoutubeId } from '@/utils/travelMedia'
 import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
+import { htmlToPlainText } from '@/utils/seoText'
 import { useTravelDetailsContentSectionModel } from '../hooks/useTravelDetailsContentSectionModel'
 import YouTubeSectionSlot from './YouTubeSectionSlot'
 import DeferredQuestForCitySection from './DeferredQuestForCitySection'
 import { TravelDetailsDeferredTransition } from '@/components/travel/details/TravelDetailsDeferredTransition'
 import TravelRegisterCtaSection from './TravelRegisterCtaSection'
 import TravelArticleShareTripCta from './TravelArticleShareTripCta'
+import TravelPeerBadgePrompt from './TravelPeerBadgePrompt'
 import { translate as i18nT } from '@/i18n'
 import { getTabA11yProps, getTabListA11yProps } from '@/utils/a11yTabRoles'
 
@@ -62,6 +64,7 @@ export const TravelDetailsContentSection: React.FC<{
   const moderation = (travel as any).moderation
   // #709: canonical rich_text.*.safe_html с бэка, legacy-поля — fallback для старого payload
   const descriptionContent = resolveServerRichTextHtml(travel.rich_text?.description, travel.description || '')
+  const hasArticleText = useMemo(() => Boolean(htmlToPlainText(descriptionContent.html)), [descriptionContent.html])
   const recommendationContent = resolveServerRichTextHtml(travel.rich_text?.recommendation, travel.recommendation)
   const plusContent = resolveServerRichTextHtml(travel.rich_text?.plus, travel.plus)
   const minusContent = resolveServerRichTextHtml(travel.rich_text?.minus, travel.minus)
@@ -87,6 +90,7 @@ export const TravelDetailsContentSection: React.FC<{
     shouldUseMobileInsights,
   } = useTravelDetailsContentSectionModel({
     forceOpenKey,
+    hasDescriptionContent: Boolean(descriptionContent.html.trim()),
     isMobile,
     moderation,
     publish,
@@ -157,6 +161,8 @@ export const TravelDetailsContentSection: React.FC<{
           </CollapsibleSection>
         </View>
       )}
+
+      <TravelPeerBadgePrompt travel={travel} isMobile={isMobile} hasArticleText={hasArticleText} />
 
       {!shouldRenderDescriptionSection && (
         <TravelArticleShareTripCta travel={travel} isMobile={isMobile} />

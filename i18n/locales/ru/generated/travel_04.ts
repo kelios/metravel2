@@ -533,4 +533,6 @@ export const travelGenerated4 = {
   "components.travel.TravelWizardHeader.stepProgressLabel": "Шаг {{value1}} из {{value2}} · {{value3}}",
   "articleShareTrip.action": "Были здесь? Расскажите о своей поездке",
   "articleShareTrip.countryLabel": "Страны путешествия",
+  "peerBadgePrompt.title": "Понравилась статья? Наградите автора значком",
+  "peerBadgePrompt.action": "Наградить автора",
 } as const

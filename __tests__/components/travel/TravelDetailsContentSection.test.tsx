@@ -58,6 +58,13 @@ jest.mock('@/components/travel/details/sections/TravelArticleShareTripCta', () =
   }
 })
 
+jest.mock('@/components/travel/details/sections/TravelPeerBadgePrompt', () => {
+  const { Text } = require('react-native')
+  return function MockTravelPeerBadgePrompt({ hasArticleText }: { hasArticleText: boolean }) {
+    return hasArticleText ? <Text testID="travel-peer-badge-prompt">Наградить автора</Text> : null
+  }
+})
+
 jest.mock('@/components/travel/details/sections/LazyYouTubeSection', () => ({
   LazyYouTube: ({ url }: { url: string }) => {
     const { Text } = require('react-native')
@@ -141,6 +148,9 @@ describe('TravelDetailsContentSection', () => {
     const content = JSON.stringify(view.toJSON())
     expect(content.indexOf('travel-register-cta')).toBeLessThan(content.indexOf('travel-article-share-trip'))
     expect(content.indexOf('travel-article-share-trip')).toBeLessThan(content.indexOf('travel-description-Тестовый маршрут'))
+    expect(content.indexOf('travel-description-Тестовый маршрут')).toBeLessThan(content.indexOf('travel-peer-badge-prompt'))
+    expect(content.indexOf('travel-peer-badge-prompt')).toBeLessThan(content.indexOf('lazy-youtube'))
+    expect(screen.getByTestId('travel-details-description').findAllByProps({ testID: 'travel-peer-badge-prompt' })).toHaveLength(0)
   })
 
   it('retains the share invitation when the published article has no description section', () => {
@@ -157,6 +167,52 @@ describe('TravelDetailsContentSection', () => {
     expect(screen.queryByTestId('travel-details-description')).toBeNull()
     expect(screen.queryByTestId('travel-register-cta')).toBeNull()
     expect(screen.getAllByTestId('travel-article-share-trip')).toHaveLength(1)
+    expect(screen.queryByTestId('travel-peer-badge-prompt')).toBeNull()
+  })
+
+  it('renders canonical-only article text before the award invitation', () => {
+    const view = render(
+      <TravelDetailsContentSection
+        travel={createTravel({ description: '', rich_text: { description: { safe_html: '<p>Canonical article</p>', plain_text: 'Canonical article' } } })}
+        isMobile={false}
+        forceOpenKey={null}
+        anchors={createAnchors()}
+      />,
+      { wrapper: withQueryClient() },
+    )
+    expect(screen.getByTestId('travel-description-Тестовый маршрут').props.children).toBe('<p>Canonical article</p>')
+    const content = JSON.stringify(view.toJSON())
+    expect(content.indexOf('travel-description-Тестовый маршрут')).toBeLessThan(content.indexOf('travel-peer-badge-prompt'))
+  })
+
+  it.each(['<p><br></p>', '<p>&nbsp; &#160;</p>', ''])('does not invite an award for empty article markup %s', description => {
+    render(
+      <TravelDetailsContentSection
+        travel={createTravel({ description, publish: true, moderation: true })}
+        isMobile={false}
+        forceOpenKey={null}
+        anchors={createAnchors()}
+      />,
+      { wrapper: withQueryClient() },
+    )
+    if (description.trim()) expect(screen.getByTestId('travel-details-description')).toBeTruthy()
+    else expect(screen.queryByTestId('travel-details-description')).toBeNull()
+    expect(screen.queryByTestId('travel-peer-badge-prompt')).toBeNull()
+  })
+
+  it('preserves media-only article content without treating it as awardable article text', () => {
+    const description = '<p><img src="https://example.com/article-photo.jpg" alt="Trip" /></p>'
+    render(
+      <TravelDetailsContentSection
+        travel={createTravel({ description, publish: true, moderation: true })}
+        isMobile={false}
+        forceOpenKey={null}
+        anchors={createAnchors()}
+      />,
+      { wrapper: withQueryClient() },
+    )
+    expect(screen.getByTestId('travel-description-Тестовый маршрут').props.children).toBe(description)
+    expect(screen.queryByTestId('travel-peer-badge-prompt')).toBeNull()
   })
 
   it('renders description section for draft travel even when description is empty', () => {

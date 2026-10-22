@@ -533,4 +533,6 @@ export const travelGenerated4 = {
   "components.travel.TravelWizardHeader.stepProgressLabel": "Step {{value1}} of {{value2}} · {{value3}}",
   "articleShareTrip.action": "Been here? Share your trip",
   "articleShareTrip.countryLabel": "Trip countries",
+  "peerBadgePrompt.title": "Enjoyed the article? Give the author a badge",
+  "peerBadgePrompt.action": "Give the author a badge",
 } as const

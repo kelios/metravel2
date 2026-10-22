@@ -22,6 +22,8 @@ interface Props {
   style?: StyleProp<ViewStyle>;
   /** Компактный режим для тесных мест (мобильная шапка профиля): только иконка. */
   iconOnly?: boolean;
+  fullWidth?: boolean;
+  onPress?: () => void;
 }
 
 function PeerBadgeGiveButton({
@@ -34,6 +36,8 @@ function PeerBadgeGiveButton({
   testID,
   style,
   iconOnly = false,
+  fullWidth = false,
+  onPress,
 }: Props) {
   const colors = useThemedColors();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -43,6 +47,10 @@ function PeerBadgeGiveButton({
   if (!isAuthenticated) return null;
 
   const text = label ?? (target === 'travel' ? i18nT('achievements:components.achievements.PeerBadgeGiveButton.nagradit_db0e2e3a') : i18nT('achievements:components.achievements.PeerBadgeGiveButton.nagradit_avtora_fac91397'));
+  const openPicker = () => {
+    onPress?.();
+    setOpen(true);
+  };
 
   return (
     <>
@@ -50,7 +58,7 @@ function PeerBadgeGiveButton({
         <IconButton
           icon={<Feather name="award" size={18} color={colors.primaryText} />}
           label={text}
-          onPress={() => setOpen(true)}
+          onPress={openPicker}
           testID={testID}
           style={style}
         />
@@ -59,7 +67,9 @@ function PeerBadgeGiveButton({
           variant="soft"
           label={text}
           icon={<Feather name="award" size={16} color={colors.primaryText} />}
-          onPress={() => setOpen(true)}
+          onPress={openPicker}
+          fullWidth={fullWidth}
+          labelNumberOfLines={0}
           accessibilityLabel={text}
           testID={testID}
           style={style}

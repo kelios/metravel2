@@ -15,10 +15,12 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useActionFeedback } from '@/hooks/useActionFeedback';
 import ModalToastHost from '@/components/ui/ModalToastHost';
+import Button from '@/components/ui/Button';
 import { usePeerBadgeCatalog, useGrantPeerBadge } from '@/hooks/useAchievementsApi';
 import type { PeerBadgeReceived, PeerBadgeTarget } from '@/api/achievements';
 import BadgeMedal from '@/components/achievements/BadgeMedal';
 import { translate as i18nT } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider'
 
 
 interface Props {
@@ -42,7 +44,8 @@ function PeerBadgePickerSheet({
   title,
 }: Props) {
   const colors = useThemedColors();
-  const { data: catalog, isLoading } = usePeerBadgeCatalog();
+  const { data: catalog, isLoading, isError, isFetching, refetch } = usePeerBadgeCatalog();
+  const { t } = useTranslation();
   const grant = useGrantPeerBadge();
   const { run } = useActionFeedback();
 
@@ -68,7 +71,18 @@ function PeerBadgePickerSheet({
       panelStyle={{ maxHeight: '80%' }}
       modalContent={<ModalToastHost visible={visible} />}
     >
-      {isLoading ? (
+      {isError ? (
+        <View style={styles.emptyState} testID="peer-badge-catalog-error">
+          <Text accessibilityRole="alert" style={styles.emptyText}>{t('common:feedback.actionError')}</Text>
+          <Button
+            label={t('sharedStatic:errors.retry')}
+            onPress={() => { void refetch() }}
+            loading={isFetching}
+            variant="soft"
+            testID="peer-badge-catalog-retry"
+          />
+        </View>
+      ) : isLoading ? (
         <View style={styles.loading}>
           <ActivityIndicator color={colors.primaryDark} />
         </View>

@@ -256,7 +256,7 @@ describe('#2697 achievement locale keeps identity and privacy boundaries', () =>
   const localizedFactories = [
     (locale: typeof locales[number]) => queryKeys.achievementsBadges(locale),
     (locale: typeof locales[number]) => queryKeys.achievementsMe('A', locale),
-    (locale: typeof locales[number]) => queryKeys.achievementsUser('A', locale),
+    (locale: typeof locales[number]) => queryKeys.achievementsUser('A', 'viewer-A', locale),
     (locale: typeof locales[number]) => queryKeys.achievementsRareMe('A', locale),
     (locale: typeof locales[number]) => queryKeys.achievementsRareUser('A', locale),
   ]
@@ -270,9 +270,9 @@ describe('#2697 achievement locale keeps identity and privacy boundaries', () =>
   it.each(locales)('keeps private owners and public users separate in %s', (locale) => {
     expect(queryKeys.achievementsMe('A', locale)).not.toEqual(queryKeys.achievementsMe('B', locale))
     expect(queryKeys.achievementsRareMe('A', locale)).not.toEqual(queryKeys.achievementsRareMe('B', locale))
-    expect(queryKeys.achievementsUser('A', locale)).not.toEqual(queryKeys.achievementsUser('B', locale))
+    expect(queryKeys.achievementsUser('A', 'viewer-A', locale)).not.toEqual(queryKeys.achievementsUser('B', 'viewer-A', locale))
     expect(queryKeys.achievementsRareUser('A', locale)).not.toEqual(queryKeys.achievementsRareUser('B', locale))
-    expect(queryKeys.achievementsMe('A', locale)).not.toEqual(queryKeys.achievementsUser('A', locale))
+    expect(queryKeys.achievementsMe('A', locale)).not.toEqual(queryKeys.achievementsUser('A', 'viewer-A', locale))
     expect(queryKeys.achievementsRareMe('A', locale)).not.toEqual(queryKeys.achievementsRareUser('A', locale))
   })
 
@@ -291,10 +291,10 @@ describe('#2697 achievement locale keeps identity and privacy boundaries', () =>
         const ownKeys = locales.map(build)
         const otherKeys = [
           queryKeys.achievementsMe('B', 'pl'),
-          queryKeys.achievementsUser('B', 'pl'),
+          queryKeys.achievementsUser('B', 'viewer-A', 'pl'),
           queryKeys.achievementsRareMe('B', 'pl'),
           queryKeys.achievementsRareUser('B', 'pl'),
-          queryKeys.achievementsTravelPeer(7),
+          queryKeys.achievementsTravelPeer(7, 'viewer-A'),
         ]
         for (const key of [...ownKeys, ...otherKeys]) client.setQueryData(key, { value: 'warm' })
 
@@ -325,14 +325,56 @@ describe('#2697 achievement locale keeps identity and privacy boundaries', () =>
     }
   })
 
-  it('preserves neutral peer, travel, character and progression key shapes', () => {
+  it('preserves public catalogue and neutral character/progression key shapes', () => {
     expect(queryKeys.achievementsPeerCatalog()).toEqual(['achievements', 'peer-catalog'])
-    expect(queryKeys.achievementsTravelPeer(7)).toEqual(['achievements', 'travel-peer', 7])
+    expect(queryKeys.achievementsTravelPeer(7, 'viewer-A')).toEqual(['achievements', 'travel-peer', '7', 'viewer-A'])
     expect(queryKeys.gamificationCharacterMe('A')).toEqual(['gamification', 'character', 'me', 'A'])
     expect(queryKeys.gamificationCharacterUser('A')).toEqual(['gamification', 'character', 'user', 'A'])
     expect(queryKeys.gamificationProgressMe('A')).toEqual(['gamification', 'progress', 'me', 'A'])
     expect(queryKeys.gamificationProgressUser('A')).toEqual(['gamification', 'progress', 'user', 'A'])
     expect(queryKeys.gamificationPlaceBadgesMe('A')).toEqual(['gamification', 'place-badges', 'me', 'A'])
     expect(queryKeys.gamificationPlaceBadgesUser('A')).toEqual(['gamification', 'place-badges', 'user', 'A'])
+  })
+})
+
+describe('#2678 personalized peer state carries the viewer', () => {
+  const viewers = [null, 'reader-A', 'reader-B'] as const
+
+  it('uses the same public target for numeric article payloads and string profile routes', () => {
+    expect(queryKeys.achievementsUser(42, 'reader-A', 'ru')).toEqual(queryKeys.achievementsUser('42', 'reader-A', 'ru'))
+    expect(queryKeys.achievementsTravelPeer(7, 'reader-A')).toEqual(queryKeys.achievementsTravelPeer('7', 'reader-A'))
+    expect(queryKeys.achievementsRareUser(42, 'ru')).toEqual(queryKeys.achievementsRareUser('42', 'ru'))
+    expect(queryKeys.achievementsRareUserAll(42)).toEqual(queryKeys.achievementsRareUserAll('42'))
+  })
+
+  it('separates anonymous and different authenticated viewers for both author and article awards', () => {
+    expect(new Set(viewers.map(viewer => JSON.stringify(queryKeys.achievementsUser(42, viewer, 'ru')))).size).toBe(3)
+    expect(new Set(viewers.map(viewer => JSON.stringify(queryKeys.achievementsTravelPeer(7, viewer)))).size).toBe(3)
+    for (const viewer of viewers) {
+      expect(queryKeys.achievementsUser(42, viewer, 'ru')).not.toEqual(queryKeys.achievementsUser(42, viewer, 'pl'))
+    }
+  })
+
+  it.each(['author', 'article'] as const)('invalidates all viewers and locales only for the awarded %s', async target => {
+    const client = new QueryClient()
+    const awarded = target === 'author'
+      ? viewers.flatMap(viewer => ['ru', 'pl'].map(locale => queryKeys.achievementsUser('42', viewer, locale)))
+      : viewers.map(viewer => queryKeys.achievementsTravelPeer('7', viewer))
+    const others = [
+      queryKeys.achievementsUser(99, 'reader-A', 'ru'),
+      queryKeys.achievementsTravelPeer(99, 'reader-A'),
+      queryKeys.achievementsMe('reader-B', 'ru'),
+    ]
+    try {
+      for (const key of [...awarded, ...others]) client.setQueryData(key, { grantedByMe: true })
+      await client.invalidateQueries({
+        queryKey: target === 'author' ? queryKeys.achievementsUserAll(42) : queryKeys.achievementsTravelPeerAll(7),
+        refetchType: 'none',
+      })
+      expect(awarded.map(key => client.getQueryState(key)?.isInvalidated)).toEqual(awarded.map(() => true))
+      expect(others.map(key => client.getQueryState(key)?.isInvalidated)).toEqual(others.map(() => false))
+    } finally {
+      client.clear()
+    }
   })
 })

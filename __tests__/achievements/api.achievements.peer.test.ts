@@ -268,6 +268,16 @@ describe('fetchTravelPeerBadges', () => {
     )
   })
 
+  it('includes session credentials only for an explicit authenticated viewer', async () => {
+    mockGet.mockResolvedValueOnce({ peer_received: [] }).mockResolvedValueOnce({ peer_received: [] })
+    await fetchTravelPeerBadges(42, { authenticated: true })
+    await fetchTravelPeerBadges(42, { authenticated: false })
+    expect(mockGet.mock.calls).toEqual([
+      ['/achievements/travel/42/', undefined, { skipAuth: false }],
+      ['/achievements/travel/42/', undefined, { skipAuth: true }],
+    ])
+  })
+
   it('returns empty array when peer_received is absent', async () => {
     mockGet.mockResolvedValueOnce({})
     const result = await fetchTravelPeerBadges(1)
@@ -369,6 +379,18 @@ describe('grantPeerBadge', () => {
     ;(global as any).__DEV__ = false
     mockPost.mockRejectedValueOnce(new (ApiError as any)(404))
     await expect(grantPeerBadge({ badgeSlug: 'test', travelId: 1 })).rejects.toBeInstanceOf(ApiError)
+  })
+
+  it('propagates production 400 validation errors instead of fabricating an award', async () => {
+    const error = new ApiError(400, 'Cannot award this recipient')
+    mockPost.mockRejectedValueOnce(error)
+    await expect(grantPeerBadge({ badgeSlug: 'favorite-author', recipientId: 42 })).rejects.toBe(error)
+  })
+
+  it('retains the local development fallback for a mock catalogue slug rejected with 400', async () => {
+    ;(global as any).__DEV__ = true
+    mockPost.mockRejectedValueOnce(new ApiError(400, 'Unknown mock slug'))
+    await expect(grantPeerBadge({ badgeSlug: 'mock-only', recipientId: 42 })).resolves.toEqual({ granted: true, count: 1 })
   })
 
   it('re-throws non-ApiError regardless of __DEV__', async () => {

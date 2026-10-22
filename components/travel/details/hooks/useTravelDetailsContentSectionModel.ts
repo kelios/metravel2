@@ -10,6 +10,7 @@ export type InsightKey = 'recommendation' | 'plus' | 'minus'
 
 type UseTravelDetailsContentSectionModelArgs = {
   forceOpenKey: string | null
+  hasDescriptionContent: boolean
   isMobile: boolean
   moderation: unknown
   publish: unknown
@@ -18,16 +19,16 @@ type UseTravelDetailsContentSectionModelArgs = {
 
 export function useTravelDetailsContentSectionModel({
   forceOpenKey,
+  hasDescriptionContent,
   isMobile,
   moderation,
   publish,
   travel,
 }: UseTravelDetailsContentSectionModelArgs) {
   const shouldRenderDescriptionSection = useMemo(() => {
-    const desc = typeof travel.description === 'string' ? travel.description.trim() : ''
     const isDraft = publish === false || moderation === false
-    return Boolean(desc) || isDraft
-  }, [moderation, publish, travel.description])
+    return hasDescriptionContent || isDraft
+  }, [hasDescriptionContent, moderation, publish])
 
   const hasRecommendation = Boolean(travel.recommendation?.trim())
   const hasPlus = Boolean(travel.plus?.trim())

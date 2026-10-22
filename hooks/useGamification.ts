@@ -105,6 +105,7 @@ export function useUserGamificationProgress(
   userId: string | number | null | undefined,
 ) {
   const locale = useLocaleRevision();
+  const viewer = useQueryOwner();
   const qc = useQueryClient();
   // Публичный /user/{id}/ теперь отдаёт progression_lines одним ответом — подписываемся
   // на него и сеемся из консолидированного payload'а, отдельный /progression-lines/
@@ -122,13 +123,13 @@ export function useUserGamificationProgress(
     retry: readRetryTwice,
     initialData: () => {
       const cached = qc.getQueryData<PublicAchievements>(
-        queryKeys.achievementsUser(userId, locale),
+        queryKeys.achievementsUser(userId, viewer, locale),
       );
       if (cached?.progressionDto == null) return undefined;
       return mapProgress(cached.progressionDto);
     },
     initialDataUpdatedAt: () =>
-      qc.getQueryState(queryKeys.achievementsUser(userId, locale))?.dataUpdatedAt ?? 0,
+      qc.getQueryState(queryKeys.achievementsUser(userId, viewer, locale))?.dataUpdatedAt ?? 0,
   });
 
   const isFetching = query.isFetching || (!query.data && achFetching);
@@ -176,6 +177,7 @@ export function useMyCharacter() {
 
 export function useUserCharacter(userId: string | number | null | undefined) {
   const locale = useLocaleRevision();
+  const viewer = useQueryOwner();
   const qc = useQueryClient();
   // Тот же паттерн, что и /me/: сеемся из консолидированного /user/{id}/ (character),
   // отдельный /character/ дёргаем только когда поля там нет.
@@ -192,13 +194,13 @@ export function useUserCharacter(userId: string | number | null | undefined) {
     retry: readRetryTwice,
     initialData: () => {
       const cached = qc.getQueryData<PublicAchievements>(
-        queryKeys.achievementsUser(userId, locale),
+        queryKeys.achievementsUser(userId, viewer, locale),
       );
       if (cached?.characterDto == null) return undefined;
       return mapCharacter(cached.characterDto);
     },
     initialDataUpdatedAt: () =>
-      qc.getQueryState(queryKeys.achievementsUser(userId, locale))?.dataUpdatedAt ?? 0,
+      qc.getQueryState(queryKeys.achievementsUser(userId, viewer, locale))?.dataUpdatedAt ?? 0,
   });
 
   const isFetching = query.isFetching || (!query.data && achFetching);
