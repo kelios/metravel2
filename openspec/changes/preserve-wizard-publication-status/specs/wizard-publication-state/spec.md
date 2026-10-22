@@ -32,7 +32,7 @@ Ordinary full save, text autosave and route save MUST preserve the confirmed pub
 
 #### Scenario: Write failure
 - **WHEN** a write fails or is delayed
-- **THEN** the form preserves newer edits, reports the failure, permits retry, and does not report an unconfirmed state transition.
+- **THEN** the form preserves newer edits, reports the failure, permits retry, does not report an unconfirmed state transition, and the Save button does not leave an unhandled Promise rejection in either responsive layout.
 
 ### Requirement: Explicit moderation commands
 Only explicit submit, approve and reject commands SHALL request publication transitions; ordinary save and reading a prior reason SHALL NOT create a moderation decision.

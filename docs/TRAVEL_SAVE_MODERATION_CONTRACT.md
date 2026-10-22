@@ -72,6 +72,13 @@ true/false → pending_review, false/true → approved, true/true → published.
 Подготовка placeholder-полей использует адаптер: pending_review с false/false
 не считается черновиком. Завершение мастера также читает canonical.
 
+Обе responsive кнопки обычного сохранения в `TravelWizardHeader` используют
+общий обработчик UI-события: он ожидает `onSave: () => void | Promise<unknown>`
+и принимает уже показанную persistence-ошибку без повторного toast. Неожиданная
+ошибка callback получает обычный error toast. Сам persistence Promise остаётся
+отклонённым для программных вызовов и команд модерации; UI не объявляет успех и
+позволяет повторить сохранение.
+
 ### Design evidence — состояния публикации (#2693)
 
 Сохраняются summary, checklist, панель модератора и ConfirmDialog в прежнем

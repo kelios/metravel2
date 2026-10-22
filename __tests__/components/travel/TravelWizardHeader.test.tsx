@@ -1,7 +1,12 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { Modal, StyleSheet } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
+import { showToastMessage } from '@/utils/toast';
+
+jest.mock('@/utils/toast', () => ({
+  showToastMessage: jest.fn().mockResolvedValue(undefined),
+}));
 
 let mockResponsiveState = {
   isHydrated: true,
@@ -32,6 +37,7 @@ jest.mock('@/hooks/useResponsive', () => ({
 
 describe('TravelWizardHeader', () => {
   beforeEach(() => {
+    jest.clearAllMocks();
     mockResponsiveState = {
       isHydrated: true,
       isMobile: false,
@@ -216,4 +222,50 @@ describe('TravelWizardHeader', () => {
     fireEvent.press(saveButton);
     expect(onSave).not.toHaveBeenCalled();
   });
+
+  it.each([false, true])('consumes an already-reported save rejection and permits retry (mobile: %s)', async (isMobile) => {
+    mockResponsiveState = { isHydrated: true, isMobile };
+    const error = Object.assign(new Error('Controlled save failure'), { toastShown: true });
+    let rejectedSave!: Promise<unknown>;
+    const onSave = jest.fn()
+      .mockImplementationOnce(() => { rejectedSave = Promise.reject(error); return rejectedSave; })
+      .mockResolvedValueOnce({ id: 844, publication_status: 'pending_review' });
+    const screen = render(<TravelWizardHeader title="Маршрут" subtitle="Шаг 1 из 6"
+      progressPercent={17} onSave={onSave} autosaveBadge="Есть несохранённые изменения" />);
+
+    await act(async () => {
+      await expect(fireEvent.press(screen.getByTestId('travel-wizard-save'))).resolves.toBeUndefined();
+    });
+    // Only the Pressable event is handled. Programmatic/command callers retain the rejection.
+    await expect(rejectedSave).rejects.toBe(error);
+    expect(onSave).toHaveBeenNthCalledWith(1);
+    expect(showToastMessage).not.toHaveBeenCalled();
+    expect(screen.getByTestId('travel-autosave-status').props.children).toBe('Есть несохранённые изменения');
+
+    await act(async () => {
+      await expect(fireEvent.press(screen.getByTestId('travel-wizard-save'))).resolves.toBeUndefined();
+    });
+    expect(onSave).toHaveBeenCalledTimes(2);
+    expect(onSave).toHaveBeenNthCalledWith(2);
+    expect(showToastMessage).not.toHaveBeenCalled();
+  });
+
+  it.each(['sync', 'async'] as const)('reports an otherwise unreported %s save failure at the event boundary', async (failureType) => {
+    const error = new Error('Unexpected save failure');
+    const onSave = jest.fn(() => {
+      if (failureType === 'sync') throw error;
+      return Promise.reject(error);
+    });
+    const screen = render(<TravelWizardHeader title="Маршрут" subtitle="Шаг 1 из 6"
+      progressPercent={17} onSave={onSave} />);
+
+    await act(async () => {
+      await expect(fireEvent.press(screen.getByTestId('travel-wizard-save'))).resolves.toBeUndefined();
+    });
+    expect(showToastMessage).toHaveBeenCalledTimes(1);
+    expect(showToastMessage).toHaveBeenCalledWith({
+      type: 'error', text1: 'Ошибка сохранения', text2: 'Unexpected save failure',
+    });
+  });
+
 });

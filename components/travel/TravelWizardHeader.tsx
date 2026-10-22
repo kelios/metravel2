@@ -6,6 +6,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { createWizardHeaderStyles } from './travelWizardHeaderStyles';
 import { translatePlural, translate as i18nT } from '@/i18n'
+import { getErrorMessage, hasToastBeenShown } from '@/utils/errorHelpers';
+import { showToastMessage } from '@/utils/toast';
 import ActionListSheet, { type ActionListSheetItem } from '@/components/ui/ActionListSheet';
 
 
@@ -23,7 +25,7 @@ type TravelWizardHeaderProps = {
     primaryLabel?: string;
     primaryTestID?: string;
     primaryDisabled?: boolean;
-    onSave?: () => void;
+    onSave?: () => void | Promise<unknown>;
     saveLabel?: string;
     isSaveInFlight?: boolean;
     onQuickDraft?: () => void;
@@ -295,10 +297,24 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
         </Pressable>
     ) : null;
 
+    const handleSavePress = useCallback(async () => {
+        try {
+            await onSave?.();
+        } catch (error) {
+            // Persistence still rejects for command callers; the UI owns this final event boundary.
+            if (hasToastBeenShown(error)) return;
+            void showToastMessage({
+                type: 'error',
+                text1: i18nT('shared:hooks.useTravelFormPersistence.oshibka_sohraneniya_009a0024'),
+                text2: getErrorMessage(error) || i18nT('shared:hooks.useTravelFormPersistence.poprobuyte_esche_raz_b527c579'),
+            });
+        }
+    }, [onSave]);
+
     const SaveButton = onSave ? (
         isMobile ? (
             <Pressable
-                onPress={isSaveInFlight ? undefined : onSave}
+                onPress={isSaveInFlight ? undefined : handleSavePress}
                 disabled={isSaveInFlight}
                 style={({ pressed }) => [
                     styles.iconButton,
@@ -321,7 +337,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
             </Pressable>
         ) : (
             <Pressable
-                onPress={isSaveInFlight ? undefined : onSave}
+                onPress={isSaveInFlight ? undefined : handleSavePress}
                 disabled={isSaveInFlight}
                 style={({ pressed }) => [
                     styles.actionButton,
