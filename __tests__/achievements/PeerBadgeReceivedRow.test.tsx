@@ -34,6 +34,7 @@ jest.mock('@/components/ui/ImageCardMedia', () => {
 })
 
 import PeerBadgeReceivedRow from '@/components/achievements/PeerBadgeReceivedRow'
+import { mapPublic } from '@/api/achievementsNormalizers'
 
 // ── fixtures ────────────────────────────────────────────────────────────────
 
@@ -75,6 +76,30 @@ describe('PeerBadgeReceivedRow — empty items', () => {
 // ── badge name + count ──────────────────────────────────────────────────────
 
 describe('PeerBadgeReceivedRow — badge name and count', () => {
+  it('renders flat API summaries without catalogue IDs or visual metadata', () => {
+    const { peerReceived } = mapPublic({
+      rank: {}, earned_badges: [],
+      peer_received: [
+        { badge_slug: 'favorite-author', name: 'Любимый автор', image_url: '', count: 2, granted_by_me: true },
+        { badge_slug: 'inspired-me', name: 'Вдохновил меня', image_url: 'https://cdn.example.com/inspired.png', count: 3, granted_by_me: false },
+      ],
+    })
+    const consoleError = jest.spyOn(console, 'error')
+    try {
+      const { getByText, getByLabelText } = render(<PeerBadgeReceivedRow items={peerReceived} />)
+
+      expect(getByText('Любимый автор')).toBeTruthy()
+      expect(getByText('Вдохновил меня')).toBeTruthy()
+      expect(getByText('2')).toBeTruthy()
+      expect(getByText('3')).toBeTruthy()
+      expect(getByLabelText('Любимый автор, получен')).toBeTruthy()
+      expect(getByLabelText('Вдохновил меня')).toBeTruthy()
+      expect(consoleError.mock.calls.flat().join(' ')).not.toMatch(/unique.*key/i)
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
+
   it('renders badge name', () => {
     const { getByText } = render(
       <PeerBadgeReceivedRow items={[makeReceived({ name: 'Любимый автор' })]} />,

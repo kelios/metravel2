@@ -27,7 +27,7 @@ function PeerBadgeReceivedRow({ items, size = 56, title = i18nT('achievements:co
       {title ? <Text style={styles.heading}>{title}</Text> : null}
       <View style={styles.row}>
         {items.map((item) => (
-          <View key={item.badge.id} style={styles.item}>
+          <View key={item.badge.slug} style={styles.item}>
             <View style={styles.medalBox}>
               <BadgeMedal badge={item.badge} size={size} earned />
               <View style={styles.countPill}>

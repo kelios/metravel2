@@ -27,6 +27,9 @@ export interface Badge {
   order: number;
 }
 
+export type BadgePresentation = Pick<Badge, 'slug' | 'name' | 'imageUrl'> &
+  Partial<Pick<Badge, 'description' | 'categorySlug' | 'tier'>>;
+
 export interface UserBadge {
   id: number;
   badge: Badge;
@@ -134,8 +137,13 @@ export interface PeerBadge extends Badge {
   target: PeerBadgeTarget;
 }
 
+// Received endpoints omit catalogue IDs/metadata; legacy responses and optimistic
+// entries can still carry the complete catalogue badge.
+export type PeerBadgeSummary = Pick<PeerBadge, 'slug' | 'name' | 'imageUrl' | 'target'> &
+  Partial<Omit<PeerBadge, 'slug' | 'name' | 'imageUrl' | 'target'>>;
+
 export interface PeerBadgeReceived {
-  badge: PeerBadge;
+  badge: PeerBadgeSummary;
   count: number;
   grantedByMe: boolean;
 }

@@ -13,13 +13,13 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import BadgeEmblem from '@/components/achievements/BadgeEmblem';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-import type { Badge } from '@/api/achievements';
+import type { BadgePresentation } from '@/api/achievements';
 import { TIER_VISUALS, tierLabel } from '@/components/achievements/badgeVisuals';
 import { translate as i18nT } from '@/i18n'
 
 
 interface Props {
-  badge: Badge;
+  badge: BadgePresentation;
   /** Диаметр медали в px. */
   size?: number;
   /** Получен ли значок. Незаработанные затемнены + замок. */
@@ -47,14 +47,14 @@ function BadgeMedal({
   style,
 }: Props) {
   const colors = useThemedColors();
-  const tier = TIER_VISUALS[badge.tier];
+  const tier = TIER_VISUALS[badge.tier ?? 'none'];
   const ratio =
     progress && progress.threshold > 0
       ? Math.max(0, Math.min(1, progress.current / progress.threshold))
       : 0;
 
   const accessibilityLabel = useMemo(() => {
-    const tl = tierLabel(badge.tier);
+    const tl = tierLabel(badge.tier ?? 'none');
     const state = earned ? i18nT('achievements:components.achievements.BadgeMedal.poluchen_42e75e2d') : i18nT('achievements:components.achievements.BadgeMedal.ne_poluchen_4d0b411e');
     const base = tl ? `${badge.name}, ${tl}, ${state}` : `${badge.name}, ${state}`;
     if (!earned && progress) {

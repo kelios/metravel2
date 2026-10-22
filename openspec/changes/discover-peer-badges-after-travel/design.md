@@ -23,6 +23,8 @@ Order: full article text → prompt → remaining sections → deferred author. 
 
 Existing public peer catalogue supplies user options. Existing author/travel received reads supply viewer-personalized peerReceived, retaining optional authentication rather than forcing anonymity. POST `/achievements/peer-badges/grant/` sends badge_slug and recipient_id, no travel_id for an author award. Existing optimistic mutation/rollback remains authoritative with viewer keys and broad prefix invalidation. Capture real POST plus authenticated subsequent GET state in acceptance.
 
+Received user/travel responses use the existing flat wire projection `{badge_slug,name,image_url,image_media,count,granted_by_me}`. Normalize it to a truthful `PeerBadgeSummary` with endpoint target context; keep catalogue identity and optional visual metadata absent when the response omits them. The shared `BadgePresentation` renderer accepts the display projection, and received rows use the natural slug key. Legacy nested badge DTOs remain compatible. This avoids an extra catalogue request and prevents a successful grant from becoming a read error after reload.
+
 ## Risks / Trade-offs
 
 - Wrong recipient or stale open picker across SPA navigation → canonical ID resolution, keyed child and A→B/session-loss tests.

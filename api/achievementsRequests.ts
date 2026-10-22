@@ -178,7 +178,7 @@ export async function fetchTravelPeerBadges(
       undefined,
       { skipAuth: !options.authenticated },
     );
-    return (dto?.peer_received ?? []).map(mapPeerReceived);
+    return (dto?.peer_received ?? []).map((received) => mapPeerReceived(received, 'travel'));
   } catch (error) {
     if (shouldFallbackPeerToMock(error)) {
       devWarn('[achievements] travel peer → mock fallback');

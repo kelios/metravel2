@@ -10,7 +10,7 @@ import Svg, {
 } from 'react-native-svg';
 
 import { useTheme } from '@/hooks/useTheme';
-import type { Badge } from '@/api/achievements';
+import type { BadgePresentation } from '@/api/achievements';
 import {
   badgeMotif,
   categoryPalette,
@@ -25,7 +25,7 @@ import {
 } from '@/components/achievements/engravingPaper';
 
 interface Props {
-  badge: Badge;
+  badge: BadgePresentation;
   /** Диаметр эмблемы в px. */
   size?: number;
 }
@@ -367,20 +367,22 @@ function Banner({ ring, shade }: { ring: string; shade: string }) {
 
 function BadgeEmblem({ badge, size = 72 }: Props) {
   const { isDark } = useTheme();
+  const badgeTier = badge.tier ?? 'none';
+  const categorySlug = badge.categorySlug ?? 'other';
 
   const data = useMemo(() => {
-    const tier = TIER_VISUALS[badge.tier];
-    const pal = categoryPalette(badge.categorySlug);
+    const tier = TIER_VISUALS[badgeTier];
+    const pal = categoryPalette(categorySlug);
     return {
       paper: paperFor(pal.paper, isDark),
       line: lineFor(pal.line, isDark),
       ring: tier.ring,
       highlight: tier.highlight,
       shade: tier.shade,
-      frame: tierFrame(badge.tier),
-      motif: badgeMotif(badge.categorySlug, badge.slug),
+      frame: tierFrame(badgeTier),
+      motif: badgeMotif(categorySlug, badge.slug),
     };
-  }, [badge.categorySlug, badge.slug, badge.tier, isDark]);
+  }, [categorySlug, badge.slug, badgeTier, isDark]);
 
   const a11y =
     Platform.OS === 'web'

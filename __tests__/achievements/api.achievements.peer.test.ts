@@ -65,6 +65,16 @@ const peerReceivedDto = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 })
 
+const flatPeerReceivedDto = (overrides: Record<string, unknown> = {}) => ({
+  badge_slug: 'favorite-author',
+  name: 'Любимый автор',
+  image_url: 'https://cdn.example.com/favorite-author.png',
+  image_media: null,
+  count: 1,
+  granted_by_me: true,
+  ...overrides,
+})
+
 const rankDto = () => ({
   level: 2,
   title: 'Путешественник',
@@ -304,6 +314,87 @@ describe('fetchTravelPeerBadges', () => {
 })
 
 // ── grantPeerBadge ─────────────────────────────────────────────────────────
+
+describe.each(['user', 'travel'] as const)('flat peer_received — %s target', (target) => {
+  const fetchReceived = async () => target === 'user'
+    ? (await fetchUserAchievements(42, 'ru', { authenticated: true })).peerReceived
+    : fetchTravelPeerBadges(42, { authenticated: true })
+  const response = (peer_received: ReturnType<typeof flatPeerReceivedDto>[]) => ({
+    rank: rankDto(), earned_badges: [], peer_received,
+  })
+  const input = target === 'user'
+    ? { badgeSlug: 'favorite-author', recipientId: 42 }
+    : { badgeSlug: 'favorite-author', travelId: 42 }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(global as any).__DEV__ = false
+  })
+
+  it('keeps the real grant state and display fields after an independent refresh', async () => {
+    mockGet.mockResolvedValueOnce(response([]))
+    expect(await fetchReceived()).toEqual([])
+    mockPost.mockResolvedValueOnce({ granted: true, count: 1 })
+    await grantPeerBadge(input)
+    mockGet.mockResolvedValueOnce(response([flatPeerReceivedDto()]))
+    const [received] = await fetchReceived()
+
+    expect(received).toEqual({
+      badge: {
+        slug: 'favorite-author', name: 'Любимый автор',
+        imageUrl: 'https://cdn.example.com/favorite-author.png', target,
+      },
+      count: 1, grantedByMe: true,
+    })
+    expect(received.badge).not.toHaveProperty('id')
+    expect(received.badge).not.toHaveProperty('order')
+    const expectedGet = [
+      target === 'user' ? '/achievements/user/42/?lang=ru' : '/achievements/travel/42/',
+      undefined, { skipAuth: false },
+    ]
+    expect(mockGet.mock.calls).toEqual([expectedGet, expectedGet])
+  })
+
+  it('preserves other readers’ count and ungranted state after a revoke refresh', async () => {
+    mockPost.mockResolvedValueOnce({ granted: false, count: 3 })
+    await grantPeerBadge(input)
+    mockGet.mockResolvedValueOnce(response([
+      flatPeerReceivedDto({ count: 3, granted_by_me: false, image_url: '' }),
+    ]))
+
+    const [received] = await fetchReceived()
+
+    expect(received.count).toBe(3)
+    expect(received.grantedByMe).toBe(false)
+    expect(received.badge.imageUrl).toBeNull()
+    expect(received.badge.target).toBe(target)
+  })
+
+  it('retains catalogue identity and visual metadata in legacy nested responses', async () => {
+    mockGet.mockResolvedValueOnce({
+      ...response([]), peer_received: [peerReceivedDto({ badge: peerBadgeDto({ target }) })],
+    })
+
+    const [received] = await fetchReceived()
+
+    expect(received.badge).toMatchObject({
+      id: 101, slug: 'favorite-author', name: 'Любимый автор', target,
+      description: 'Один из ваших любимых авторов', categorySlug: 'community',
+      tier: 'gold', imageUrl: null, order: 101,
+    })
+  })
+
+  it.each([undefined, null])('uses endpoint context when a legacy nested target is %s', async (missingTarget) => {
+    mockGet.mockResolvedValueOnce({
+      ...response([]), peer_received: [peerReceivedDto({ badge: peerBadgeDto({ target: missingTarget }) })],
+    })
+
+    const [received] = await fetchReceived()
+
+    expect(received.badge.target).toBe(target)
+    expect(received.badge.id).toBe(101)
+  })
+})
 
 describe('grantPeerBadge', () => {
   beforeEach(() => {

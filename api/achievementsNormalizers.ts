@@ -131,11 +131,14 @@ export interface PeerBadgeDto extends BadgeDto {
   target?: string | null;
 }
 
-interface PeerBadgeReceivedDto {
-  badge: PeerBadgeDto;
+type PeerBadgeReceivedDto = ({
+  badge_slug: string;
+  name: string;
+  image_url?: string | null;
+} | { badge: PeerBadgeDto }) & {
   count?: number | null;
   granted_by_me?: boolean | null;
-}
+};
 
 export interface TravelPeerBadgesDto {
   peer_received?: PeerBadgeReceivedDto[];
@@ -286,8 +289,16 @@ export const mapPeerBadge = (dto: PeerBadgeDto): PeerBadge => ({
   target: normalizePeerTarget(dto.target),
 });
 
-export const mapPeerReceived = (dto: PeerBadgeReceivedDto): PeerBadgeReceived => ({
-  badge: mapPeerBadge(dto.badge),
+export const mapPeerReceived = (
+  dto: PeerBadgeReceivedDto,
+  target: PeerBadgeTarget = 'user',
+): PeerBadgeReceived => ({
+  badge: 'badge' in dto ? mapPeerBadge({ ...dto.badge, target: dto.badge.target ?? target }) : {
+    slug: dto.badge_slug,
+    name: dto.name,
+    imageUrl: dto.image_url || null,
+    target,
+  },
   count: dto.count ?? 0,
   grantedByMe: Boolean(dto.granted_by_me),
 });
@@ -295,7 +306,7 @@ export const mapPeerReceived = (dto: PeerBadgeReceivedDto): PeerBadgeReceived =>
 export const mapPublic = (dto: PublicAchievementsDto): PublicAchievements => ({
   rank: mapRank(dto.rank, dto.rank_levels),
   earned: (dto.earned_badges ?? []).map(mapUserBadge),
-  peerReceived: (dto.peer_received ?? []).map(mapPeerReceived),
+  peerReceived: (dto.peer_received ?? []).map((received) => mapPeerReceived(received, 'user')),
   activityTypes: (dto.activity_types ?? []).map(mapActivityType),
   // null (не []) когда поля не было — хук делает fallback-запрос за rare-awards.
   rareAwards: dto.rare_awards != null ? dto.rare_awards.map(mapRareAward) : null,
