@@ -263,12 +263,13 @@ describe('monthly metrics: CLI refuses unsupported work before source access', (
     expect(result.status).toBe(0)
     expect(result.stdout).toContain('--end-month YYYY-MM')
     expect(result.stdout).toContain('--property ID')
+    expect(result.stdout).toContain('--store-reports-dir DIR')
     expect(result.stderr).toBe('')
   })
 
   it.each([
     ['--days', '365'], ['--end-month'], ['--property', 'not-a-number'],
-    ['--end-month', '9999-01'], ['--end-month', '2025-13'], ['--json=false'],
+    ['--store-reports-dir'], ['--end-month', '9999-01'], ['--end-month', '2025-13'], ['--json=false'],
   ])('rejects invalid arguments %j without fetching a source', (...args) => {
     const result = invoke(args)
     expect(result.status).toBe(2)
@@ -699,5 +700,65 @@ describe('monthly metrics: shared Google auth cancellation', () => {
       sign.mockRestore()
       global.fetch = originalFetch
     }
+  })
+})
+
+
+describe('monthly metrics: official store downloads alongside click events', () => {
+  const { readStoreReports } = require('@/scripts/lib/store-download-reports')
+  let folder: string
+  beforeEach(() => {
+    const root = path.resolve('.codex-temp/store-summary-tests')
+    fs.mkdirSync(root, { recursive: true })
+    folder = fs.mkdtempSync(path.join(root, 'report-'))
+  })
+  afterEach(() => { fs.rmSync(folder, { recursive: true, force: true }) })
+
+  it('adds full-month store metrics and exact current periods without altering the existing 12-month window, clicks or YoY', () => {
+    const apple = (units: number, from: string, to: string) => [
+      'Apple Identifier\tProduct Type Identifier\tUnits\tBegin Date\tEnd Date',
+      `6801264369\t1\t${units}\t${from}\t${to}`,
+    ].join('\n')
+    fs.writeFileSync(path.join(folder, 'september.txt'), apple(12, '09/01/2026', '09/30/2026'))
+    fs.writeFileSync(path.join(folder, 'october.txt'), apple(3, '10/19/2026', '10/20/2026'))
+    fs.writeFileSync(path.join(folder, 'play.csv'), [
+      'Date,Package Name,Country,Daily Device Installs,Daily User Installs',
+      '2026-09-30,by.metravel.app,PL,8,6',
+    ].join('\n'))
+    fs.writeFileSync(path.join(folder, 'manifest.json'), JSON.stringify({ schemaVersion: 1, reports: [
+      { source: 'apple-sales-summary', file: 'september.txt', from: '2026-09-01', to: '2026-09-30', calendar: 'America/Los_Angeles', coverage: 'complete', appId: '6801264369' },
+      { source: 'apple-sales-summary', file: 'october.txt', from: '2026-10-19', to: '2026-10-20', calendar: 'America/Los_Angeles', coverage: 'complete', appId: '6801264369' },
+      { source: 'google-play-installs', file: 'play.csv', from: '2026-09-01', to: '2026-09-30', calendar: 'America/Los_Angeles', coverage: 'complete', packageName: 'by.metravel.app', dimension: 'country' },
+    ] }))
+    const sources = { ...emptySources(), ga4: { events: qualified([gaRow(['202609', 'app_download_click'], [42])]) } }
+    const baseline = buildSummary(sources, { now: NOW })
+    const report = buildSummary({ ...sources, storeDownloads: readStoreReports(folder) }, { now: NOW })
+    expect(report.window).toEqual(WINDOW)
+    expect(report.months.map((r: any) => r.month)).toEqual(baseline.months.map((r: any) => r.month))
+    expect(report.yoy).toEqual(baseline.yoy)
+    expect(report.months[11].funnels.app_download_click).toBe(42)
+    expect(report.months[11].storeDownloads).toMatchObject({
+      apple: { metrics: { firstTimeDownloads: 12, redownloads: 0 }, calendar: 'America/Los_Angeles' },
+      googlePlay: { metrics: { deviceInstalls: 8, userInstalls: 6 }, calendar: 'America/Los_Angeles' },
+    })
+    expect(report.months[10].storeDownloads).toEqual({ apple: null, googlePlay: null })
+    expect(report.storeDownloads.periods.find((p: any) => p.from === '2026-10-19')).toMatchObject({
+      to: '2026-10-20', status: 'collected', metrics: { firstTimeDownloads: 3, redownloads: 0 },
+    })
+    const markdown = renderMarkdown(report)
+    expect(markdown).toContain('## Скачивания и установки из магазинов')
+    expect(markdown).toContain('| 2026-09 | 12 | 0 | 8 | 6 |')
+    expect(markdown).toContain('| apple-sales-summary | 2026-10-19 | 2026-10-20 | America/Los_Angeles | complete | collected | 3 | 0 |')
+    expect(markdown).toContain('нажатие ссылки на сайте, не скачивание')
+  })
+
+  it('renders unknown store metrics and actionable source gaps when optional exports are missing', () => {
+    const report = buildSummary({ ...emptySources(), storeDownloads: readStoreReports(path.join(folder, 'missing')) }, { now: NOW })
+    expect(report.months[11].storeDownloads).toEqual({ apple: null, googlePlay: null })
+    expect(report.storeDownloads.periods).toEqual([])
+    expect(report.gaps.join(' ')).toMatch(/apple-sales-summary.*MISSING_REPORT/)
+    expect(report.gaps.join(' ')).toMatch(/google-play-installs.*MISSING_REPORT/)
+    expect(renderMarkdown(report)).toContain('Отсутствующая выгрузка не равна нулю')
+    expect(report.content).toMatchObject({ articles: 0, authors: 0, quests: 0 })
   })
 })

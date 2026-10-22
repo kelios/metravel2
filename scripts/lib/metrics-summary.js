@@ -165,7 +165,12 @@ function buildSummary(sources, { now = new Date(), window = reportingWindow(now)
   const gsc = aggregateGsc(sources.gsc, months, gaps)
   const ga4 = aggregateGa4(sources.ga4, months, gaps)
   const metrika = aggregateMetrika(sources.metrika, gaps)
-  const history = months.map((month) => ({ month, gsc: gsc[month], ...ga4[month], metrika: metrika[month] || null, community: community.monthly[month] }))
+  const storeDownloads = sources.storeDownloads || { periods: [], monthly: {}, sources: {} }
+  gaps.push(...(storeDownloads.gaps || []))
+  const history = months.map((month) => ({ month, storeDownloads: {
+    apple: storeDownloads.monthly?.[month]?.['apple-sales-summary'] || null,
+    googlePlay: storeDownloads.monthly?.[month]?.['google-play-installs'] || null,
+  }, gsc: gsc[month], ...ga4[month], metrika: metrika[month] || null, community: community.monthly[month] }))
   const current = history.slice(12)
   const completions = sources.quests?.map((q) => number(q.completions_count))
   if (completions?.some((n) => n === null)) gaps.push('quests: часть completions_count отсутствует или некорректна; сумма не вычислена')
@@ -174,6 +179,7 @@ function buildSummary(sources, { now = new Date(), window = reportingWindow(now)
   return {
     window, generatedAt: now.toISOString(), runDate: runDate(now),
     sources: sources.provenance || {}, months: current,
+    storeDownloads: { periods: storeDownloads.periods, sources: storeDownloads.sources },
     yoy: current.map((row, i) => ({ month: row.month, previousMonth: history[i].month, metrics: Object.fromEntries(Object.entries(YOY_METRICS).map(([key, mode]) => [key, compare(field(row, key), field(history[i], key), mode)])) })),
     content: { ...community.content, quests: sources.quests?.length ?? null, completions: completions && completions.every((n) => n !== null) ? completions.reduce((sum, n) => sum + n, 0) : null },
     gaps: [...new Set(gaps)],
@@ -192,6 +198,11 @@ function renderMarkdown(report) {
     '- Контент: https://metravel.by/api/travels/ (publish=1, moderation=1), https://metravel.by/api/quests/; текущий публичный снимок на момент запуска, не исторический размер каталога.', '',
     '## Помесячные показатели', '', table(['Месяц', 'GSC клики', 'Показы', 'CTR', 'Позиция', 'GA4 пользователи', 'Сессии', 'Bounce', 'Метрика пользователи', 'Визиты'], report.months.map((r) => [r.month, fmt(r.gsc?.clicks), fmt(r.gsc?.impressions), fmt(r.gsc?.ctr, true), fmt(r.gsc?.position), fmt(r.ga4?.activeUsers), fmt(r.ga4?.sessions), fmt(r.ga4?.bounceRate, true), fmt(r.metrika?.users), fmt(r.metrika?.visits)])), '',
     '## События GA4', '', table(['Месяц', ...EVENTS], report.months.map((r) => [r.month, ...EVENTS.map((e) => fmt(r.funnels[e]))])), '',
+    '## Скачивания и установки из магазинов', '',
+    'Официальные локальные выгрузки; app_download_click выше — нажатие ссылки на сайте, не скачивание. Apple: первичные скачивания (типы 1/1F/1T) и повторные (3/3F); обновления и покупки внутри приложения исключены. Google Play: установки на устройства и установки пользователями — отдельные показатели; их нельзя складывать с Apple или друг с другом. Магазины не участвуют в сравнении год к году. Месячный итог доступен только при полном покрытии календарного месяца в одном календаре источника.', '',
+    table(['Месяц', 'Apple первичные', 'Apple повторные', 'Play установки на устройства', 'Play установки пользователями'], report.months.map((r) => [r.month, fmt(r.storeDownloads.apple?.metrics.firstTimeDownloads), fmt(r.storeDownloads.apple?.metrics.redownloads), fmt(r.storeDownloads.googlePlay?.metrics.deviceInstalls), fmt(r.storeDownloads.googlePlay?.metrics.userInstalls)])), '',
+    'Точные окна импортированных выгрузок, включая текущий неполный месяц. «complete» означает полноту указанного окна, а не завершённость месяца. Отсутствующая выгрузка не равна нулю.', '',
+    table(['Источник', 'С', 'По', 'Календарь', 'Покрытие', 'Статус', 'Apple первичные', 'Apple повторные', 'Play устройства', 'Play пользователи'], report.storeDownloads.periods.length ? report.storeDownloads.periods.map((p) => [p.source, p.from, p.to, p.calendar, p.coverage, p.reason || p.status, fmt(p.metrics.firstTimeDownloads), fmt(p.metrics.redownloads), fmt(p.metrics.deviceInstalls), fmt(p.metrics.userInstalls)]) : [['нет выгрузок', null, null, null, null, 'unavailable', null, null, null, null]]), '',
     '## Каналы GA4', '', table(['Месяц', 'Канал', 'Пользователи', 'Сессии'], report.months.flatMap((r) => r.ga4?.channels?.length ? r.ga4.channels.map((c) => [r.month, c.channel, fmt(c.activeUsers), fmt(c.sessions)]) : [[r.month, 'нет данных', 'нет данных', 'нет данных']])), '',
     '## Источники GA4 / Instagram', '',
     'Нативные sessionSource / sessionMedium. Instagram: instagram, instagram.com, l.instagram.com, www.instagram.com; остальные источники показаны отдельно. Исходные source/medium сохранены, aliases и строки не складываются. Сессии запрошены отдельно от eventName; события — eventCount, не уникальные пользователи и не conversion rate. «Не зафиксировано» означает отсутствие строки при доступном качественном отчёте; недоступность или ограничения качества отмечены отдельно.', '',

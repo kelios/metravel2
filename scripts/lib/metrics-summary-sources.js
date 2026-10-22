@@ -6,6 +6,7 @@ const { runReport, allRows } = require('../fetch-ga4-stats')
 const { readOptionalSecretToken } = require('./yandex-token')
 const { EVENTS } = require('./metrics-summary')
 const { sourceReportRequests } = require('./ga4-source-breakdown')
+const { readStoreReports } = require('./store-download-reports')
 
 const ORIGIN = 'https://metravel.by'
 const DEADLINE_MS = 30000
@@ -190,7 +191,7 @@ async function collectGa4(window, property, source, provenance) {
   return { totals, channels, events, sourceSessions, sourceEvents }
 }
 
-async function collectSources({ window, now = new Date(), property = '362328641', site = 'sc-domain:metravel.by' }) {
+async function collectSources({ window, now = new Date(), property = '362328641', site = 'sc-domain:metravel.by', storeReportsDir }) {
   const gaps = []
   const provenance = {
     collectedAt: now.toISOString(),
@@ -259,7 +260,9 @@ async function collectSources({ window, now = new Date(), property = '362328641'
     }),
     source('quests', (signal) => readCatalog(`${ORIGIN}/api/quests/?lang=ru&page=1&page_size=100`, signal)),
   ])
-  return { gsc, ga4, metrika, travels, quests, gaps: gaps.sort(), provenance }
+  const storeDownloads = readStoreReports(storeReportsDir)
+  provenance.storeDownloads = storeDownloads.sources
+  return { gsc, ga4, metrika, travels, quests, storeDownloads, gaps: [...gaps, ...storeDownloads.gaps].sort(), provenance }
 }
 
 module.exports = { collectSources, readCatalog, safeFailure, gscStart, gscEnd, EVENTS }
