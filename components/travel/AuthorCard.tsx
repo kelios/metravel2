@@ -119,12 +119,20 @@ interface AuthorAchievementsProps {
 
 function AuthorAchievements({ userId, ownerName, styles, colors }: AuthorAchievementsProps) {
   const { data } = useUserAchievements(userId)
-  const [selected, setSelected] = useState<BadgeDetail | null>(null)
+  const [selectedUserBadgeId, setSelectedUserBadgeId] = useState<number | null>(null)
 
   if (!data) return null
   if (data.earned.length === 0 && data.rank.totalPoints === 0) return null
 
   const topBadges = data.earned.slice(0, 3)
+  const selectedBadge = data.earned.find((item) => item.id === selectedUserBadgeId)
+  const selected: BadgeDetail | null = selectedBadge ? {
+    badge: selectedBadge.badge,
+    earned: true,
+    userBadgeId: selectedBadge.id,
+    earnedAt: selectedBadge.earnedAt,
+    progress: null,
+  } : null
 
   return (
     <View style={styles.achievementsBlock}>
@@ -143,15 +151,7 @@ function AuthorAchievements({ userId, ownerName, styles, colors }: AuthorAchieve
                 size={40}
                 earned
                 showLabel
-                onPress={() =>
-                  setSelected({
-                    badge: ub.badge,
-                    earned: true,
-                    userBadgeId: ub.id,
-                    earnedAt: ub.earnedAt,
-                    progress: null,
-                  })
-                }
+                onPress={() => setSelectedUserBadgeId(ub.id)}
               />
             ))}
           </View>
@@ -160,7 +160,7 @@ function AuthorAchievements({ userId, ownerName, styles, colors }: AuthorAchieve
 
       <BadgeDetailSheet
         visible={selected != null}
-        onClose={() => setSelected(null)}
+        onClose={() => setSelectedUserBadgeId(null)}
         detail={selected}
         ownerName={ownerName}
       />

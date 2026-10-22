@@ -1,6 +1,6 @@
 # Фича: achievements (значки, ранг, награды, прогрессия)
 
-**Последняя актуализация:** 2026-08-17
+**Последняя актуализация:** 2026-10-22
 **Ответственный:** агент `achievements-expert`; скиллы `metravel-badge` (контент значка), `metravel-achievements-audit` (QA)
 
 ## TL;DR
@@ -198,20 +198,31 @@ canonical-путь — поля прямо в `rank`.
 
 | Хук | Ключ | Enabled / особенности |
 |-----|------|-----------------------|
-| `useBadgeCatalog` | `['achievements','badges']` | всегда |
-| `useMyAchievements` | `['achievements','me']` | `isAuthenticated && options.enabled`; таймаут запроса 15 000 мс |
-| `useUserAchievements` | `['achievements','user',userId]` | `userId != null`; запрос идёт `skipAuth` |
+| `useBadgeCatalog` | `['achievements','badges',locale]` | всегда |
+| `useMyAchievements` | `['achievements','me',owner,locale]` | `isAuthenticated && options.enabled`; таймаут запроса 15 000 мс |
+| `useUserAchievements` | `['achievements','user',userId,locale]` | `userId != null`; запрос идёт `skipAuth` |
 | `usePeerBadgeCatalog` | `['achievements','peer-catalog']` | всегда |
 | `useTravelPeerBadges` | `['achievements','travel-peer',travelId]` | `travelId != null`, `skipAuth` |
-| `useMyRareAwards` | `['achievements','rare','me']` | только если в `/me/` не было `rare_awards`; `initialData` — из кэша `achievementsMe` |
-| `useUserRareAwards` | `['achievements','rare','user',userId]` | аналогично, из кэша `achievementsUser` |
+| `useMyRareAwards` | `['achievements','rare','me',owner,locale]` | только если в `/me/` не было `rare_awards`; `initialData` — из кэша `achievementsMe` |
+| `useUserRareAwards` | `['achievements','rare','user',userId,locale]` | аналогично, из кэша `achievementsUser` |
 | `useRareAwardCatalog(enabled)` | `['achievements','rare','catalog']` | включается только когда открыт админ-пикер |
-| `useMyPlaceFirstBadges` | `['gamification','place-badges','me']` | `isAuthenticated` |
+| `useMyPlaceFirstBadges` | `['gamification','place-badges','me',owner]` | `isAuthenticated` |
 | `useUserPlaceFirstBadges` | `['gamification','place-badges','user',userId]` | `userId != null` |
-| `useMyGamificationProgress` | `['gamification','progress','me']` | fallback-запрос; `initialData` = `mapProgress(cached.progressionDto)` |
+| `useMyGamificationProgress` | `['gamification','progress','me',owner]` | fallback-запрос; `initialData` = `mapProgress(cached.progressionDto)` |
 | `useUserGamificationProgress` | `['gamification','progress','user',userId]` | то же от `achievementsUser` |
-| `useMyCharacter` | `['gamification','character','me']` | fallback-запрос; `initialData` = `mapCharacter(cached.characterDto)` |
+| `useMyCharacter` | `['gamification','character','me',owner]` | fallback-запрос; `initialData` = `mapCharacter(cached.characterDto)` |
 | `useUserCharacter` | `['gamification','character','user',userId]` | то же |
+
+Catalog/me/user фиксируют фактически применённую UI-локаль RU/BE/UK/PL/EN через
+`useLocaleRevision` и передают тот же snapshot в ключ и явный `?lang=` запроса.
+Императивные callers используют `getActiveLocale()` по умолчанию. Описания и RU
+fallback приходят с сервера без клиентского перевода; `Profile.language` не пишется.
+Производные rare-ключи и consolidated reads/seeds читают соответствующую языковую
+копию. Персонаж, прогрессия и place-first сохраняют нейтральные ключи; place-first
+`authorStatus`, peer/rare prose, названия и ранги не получают нового обещания перевода.
+Галерея, недавние награды и AuthorCard хранят только ID выбранного значка;
+открытый BadgeDetailSheet получает актуальную запись из текущей языковой копии.
+Пока данных этой копии нет или выбранная награда исчезла, старое описание не показывается.
 
 `staleTime` везде 5 минут. `retry` — не более 2 попыток и никогда на 401/403,
 `AbortError` и таймауте (`isTimeoutError`): достижения — deferred-секция, и повтор
@@ -223,9 +234,16 @@ canonical-путь — поля прямо в `rank`.
 
 ### Инвалидация
 
-- `useGrantRareAward` → `invalidateQueries` по `achievementsRareUser(input.userId)`
-  и `achievementsRareMe()`.
-- `useGrantPeerBadge` — **не инвалидирует**, а правит кэш точечно (см. ниже).
+- `useGrantRareAward` инвалидирует consolidated и rare копии получателя и владельца
+  через `achievementsUserAll` / `achievementsRareUserAll` / `achievementsMeAll` /
+  `achievementsRareMeAll`: префиксы охватывают все ранее прогретые языки.
+- `useGrantPeerBadge` правит исходную копию оптимистично и после завершения
+  инвалидирует те же consolidated/rare префиксы; travel-цель также инвалидирует
+  `achievementsTravelPeer(travelId)`.
+- `QuestPioneerBlock` после получения значка инвалидирует `achievementsMeAll(owner)`.
+- `achievementsBadgesAll()` адресует все языковые копии публичного каталога.
+- Редкие награды пересеваются при новом consolidated ответе, включая уже
+  заполненную копию; при удалённом источнике пересев не восстанавливает данные.
 - `useChooseCharacterPath` → `setQueryData(gamificationCharacterMe, next)` + событие
   `path_chosen`.
 - `useSeedGamificationFromAchievements(enabled)` — вызывается в `ProfileOverviewTab`;
@@ -233,24 +251,27 @@ canonical-путь — поля прямо в `rank`.
   `/achievements/me/`, но только если в этих кэшах пусто, и с `updatedAt` исходного
   запроса. Это фикс #588, где вкладка «Ваш путь» дублировала два медленных вызова.
 
-Никакой инвалидации `achievementsMe` после публикации статьи, прохождения квеста
-или лайка на фронте нет: значки появляются на следующем нестейл-фетче. Отсюда
-типовой симптом «ранг не обновился».
+После публикации статьи или лайка отдельной общей инвалидации нет: значки
+появляются на следующем нестейл-фетче. Квестовый pioneer-блок инвалидирует все
+языковые копии собственных достижений после получения награды.
 
 ## Peer-награды: оптимистичный toggle
 
-`useGrantPeerBadge` (`hooks/useAchievementsApi.ts:230-278`) — единственная мутация с
+`useGrantPeerBadge` (`hooks/useAchievementsApi.ts`) — единственная мутация с
 оптимистичным обновлением.
 
 - `onMutate` определяет цель по `input.travelId != null`: либо кэш
   `achievementsTravelPeer(travelId)` (список `PeerBadgeReceived[]`), либо
-  `achievementsUser(recipientId)` (поле `peerReceived` внутри `PublicAchievements`).
-  Перед правкой — `cancelQueries`, снимок предыдущего значения в контекст.
+  `achievementsUser(recipientId, locale)` (поле `peerReceived` внутри `PublicAchievements`).
+  Контекст фиксирует owner, locale, ключи и экземпляр Query; перед правкой —
+  `cancelQueries` и снимок предыдущего значения.
 - `togglePeer()` переключает `grantedByMe` и двигает `count` на ±1, а если значка в
   списке ещё нет — добирает его из кэша `achievementsPeerCatalog` и вставляет с
   `count: 1`. Если каталога в кэше нет, элемент не добавится и оптимистичного
   отклика не будет.
-- `onError` откатывает ровно ту ветку, которую правил.
+- `onError` откатывает исходную языковую копию только при прежнем owner и том же
+  экземпляре Query. После identity reset удалённая/пересозданная запись не
+  восстанавливается даже при повторном входе того же пользователя.
 - `onSuccess` перезаписывает `grantedByMe`/`count` серверными значениями.
 
 Гейты выдачи: `PeerBadgeGiveButton` рендерит `null` для неавторизованных;
@@ -383,6 +404,8 @@ Locked-значок: `opacity 0.5` + скрим + бейдж-замок в уг�
 - Unit/компонентные: `__tests__/achievements/` — `api.achievements.test.ts`,
   `api.achievements.peer.test.ts`, `api.gamification.test.ts`, `api.rareAwards.test.ts`,
   `badgeVisuals.test.ts`, `achievementShare.test.ts`, `useGamification.test.tsx`,
+  `useAchievementsApi.locale.test.tsx` (пять локалей, delayed/warm reads, invalidation/rollback/auth),
+  `badgeDetail.localeSelection.test.tsx` (выбранная запись при warm/cold смене данных),
   `RankBar.test.tsx`, `BadgeMedal.test.tsx`, `BadgeDetailSheet.test.tsx`,
   `PeerBadgePickerSheet.test.tsx`, `PeerBadgeReceivedRow.test.tsx`,
   `ProgressionLineBar.test.tsx`, `RareAwardCard.test.tsx`,
@@ -456,9 +479,9 @@ Locked-значок: `opacity 0.5` + скрим + бейдж-замок в уг�
    каждом прод-ответе** или fallback-запросы регулярно срабатывают.
 4. **Реально ли включён `is_fresh` у place-first бейджей на бэке** — от него зависит
    единственный триггер `PlaceFirstBadgeToast`.
-5. **Кто и когда инвалидирует `/achievements/me/` после действия пользователя.**
-   На фронте инвалидации нет; лаг появления значка = `staleTime` 5 минут плюс кэш бэка
-   (`ACH-CACHE-001`).
+5. **Обновление `/achievements/me/` после публикации статьи или лайка.**
+   Для pioneer-квеста и award mutations есть all-locale invalidation; остальные
+   действия всё ещё зависят от `staleTime` 5 минут и кэша бэка (`ACH-CACHE-001`).
 6. **Нет FE-запроса за `rank_levels` отдельно** — если бэк однажды перестанет слать
    summary в публичном ответе, legacy-ветка сработает только там, где пришёл
    `rank_levels`; полнота этого поля на публичном эндпоинте не проверена.

@@ -12,22 +12,18 @@ jest.mock('@/api/gamification')
 jest.mock('@/utils/gamificationAnalytics', () => ({
   trackPathChosen: jest.fn(),
 }))
+const mockLocaleRef = { value: 'ru' as 'ru' | 'pl' | 'en' }
+jest.mock('@/i18n/useLocaleRevision', () => ({
+  useLocaleRevision: () => mockLocaleRef.value,
+}))
 
 // useMyGamificationProgress/useMyCharacter (and the *user* variants) wait for the
 // consolidated /achievements/me/ resp. /user/{id}/ response before deciding whether
 // to fire separate requests. Mock both hooks to immediately resolve with no embedded
 // progression/character so the hooks fall back to their own fetches.
 jest.mock('@/hooks/useAchievementsApi', () => ({
-  useMyAchievements: () => ({
-    data: { progressionDto: null, characterDto: null },
-    isSuccess: true,
-    isFetching: false,
-  }),
-  useUserAchievements: () => ({
-    data: { progressionDto: null, characterDto: null },
-    isSuccess: true,
-    isFetching: false,
-  }),
+  useMyAchievements: jest.fn(),
+  useUserAchievements: jest.fn(),
 }))
 
 const isAuthenticatedRef = { value: true }
@@ -46,18 +42,27 @@ import {
   useMyCharacter,
   useUserCharacter,
   useChooseCharacterPath,
+  useMyPlaceFirstBadges,
+  useUserPlaceFirstBadges,
+  useSeedGamificationFromAchievements,
 } from '@/hooks/useGamification'
 import {
   fetchMyGamificationProgress,
   fetchUserGamificationProgress,
   fetchMyCharacter,
   fetchUserCharacter,
+  fetchMyPlaceFirstBadges,
+  fetchUserPlaceFirstBadges,
+  mapCharacter,
+  mapProgress,
   chooseCharacterPath,
   type CharacterState,
   type GamificationProgress,
+  type PlaceFirstBadge,
 } from '@/api/gamification'
 import { queryKeys } from '@/api/queryKeys'
 import { trackPathChosen } from '@/utils/gamificationAnalytics'
+import { useMyAchievements, useUserAchievements } from '@/hooks/useAchievementsApi'
 
 const mockFetchProgressMe = fetchMyGamificationProgress as jest.MockedFunction<
   typeof fetchMyGamificationProgress
@@ -72,6 +77,9 @@ const mockFetchCharUser = fetchUserCharacter as jest.MockedFunction<
 const mockChoosePath = chooseCharacterPath as jest.MockedFunction<
   typeof chooseCharacterPath
 >
+const mockMyAchievements = useMyAchievements as jest.Mock
+const mockUserAchievements = useUserAchievements as jest.Mock
+const actualGamification = jest.requireActual<typeof import('@/api/gamification')>('@/api/gamification')
 
 const progress: GamificationProgress = {
   lines: [
@@ -133,11 +141,128 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 beforeEach(() => {
   jest.clearAllMocks()
   isAuthenticatedRef.value = true
+  mockLocaleRef.value = 'ru'
+  const consolidated = {
+    data: { progressionDto: null, characterDto: null },
+    isSuccess: true,
+    isFetching: false,
+  }
+  mockMyAchievements.mockReturnValue(consolidated)
+  mockUserAchievements.mockReturnValue(consolidated)
+  jest.mocked(mapCharacter).mockImplementation(actualGamification.mapCharacter)
+  jest.mocked(mapProgress).mockImplementation(actualGamification.mapProgress)
   queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
       mutations: { retry: false },
     },
+  })
+})
+
+describe('#2697 localized consolidated reads seed neutral gamification caches', () => {
+  const consolidated = (name: string, userId: number) => {
+    const line = {
+      slug: 'fox', name, activity_type: 'reader', activity_label: 'Reader',
+      level: { level: 3, title: 'Level 3', min_score: 100 }, score: 150,
+    }
+    return { characterDto: { user_id: userId, active_path: line }, progressionDto: [line] }
+  }
+
+  const cases = [
+    {
+      label: 'own character', useHook: () => useMyCharacter(),
+      source: (locale: 'ru' | 'pl') => queryKeys.achievementsMe(OWNER, locale),
+      destination: () => queryKeys.gamificationCharacterMe(OWNER),
+      expected: { id: 77, name: 'Active source' },
+    },
+    {
+      label: 'public character', useHook: () => useUserCharacter(77),
+      source: (locale: 'ru' | 'pl') => queryKeys.achievementsUser(77, locale),
+      destination: () => queryKeys.gamificationCharacterUser(77),
+      expected: { id: 77, name: 'Active source' },
+    },
+    {
+      label: 'own progression', useHook: () => useMyGamificationProgress(),
+      source: (locale: 'ru' | 'pl') => queryKeys.achievementsMe(OWNER, locale),
+      destination: () => queryKeys.gamificationProgressMe(OWNER),
+      expected: { lines: [expect.objectContaining({ name: 'Active source', current: 150 })] },
+    },
+    {
+      label: 'public progression', useHook: () => useUserGamificationProgress(77),
+      source: (locale: 'ru' | 'pl') => queryKeys.achievementsUser(77, locale),
+      destination: () => queryKeys.gamificationProgressUser(77),
+      expected: { lines: [expect.objectContaining({ name: 'Active source', current: 150 })] },
+    },
+  ]
+
+  it.each(cases)('$label uses the active achievements locale and its update time', ({ useHook, source, destination, expected }) => {
+    mockLocaleRef.value = 'pl'
+    const active = consolidated('Active source', 77)
+    const updatedAt = Date.now() - 1000
+    queryClient.setQueryData(source('ru'), consolidated('Wrong Russian cache', 1), { updatedAt: updatedAt - 1000 })
+    queryClient.setQueryData(source('pl'), active, { updatedAt })
+    mockMyAchievements.mockReturnValue({ data: active, isSuccess: true, isFetching: false })
+    mockUserAchievements.mockReturnValue({ data: active, isSuccess: true, isFetching: false })
+
+    const { result } = renderHook(useHook, { wrapper })
+
+    expect(result.current.data).toMatchObject(expected)
+    expect(queryClient.getQueryData(destination())).toMatchObject(expected)
+    expect(queryClient.getQueryState(destination())?.dataUpdatedAt).toBe(updatedAt)
+    expect(mockFetchCharMe).not.toHaveBeenCalled()
+    expect(mockFetchCharUser).not.toHaveBeenCalled()
+    expect(mockFetchProgressMe).not.toHaveBeenCalled()
+    expect(mockFetchProgressUser).not.toHaveBeenCalled()
+  })
+
+  it('seeds empty neutral caches from the active locale without replacing existing character or progression', () => {
+    mockLocaleRef.value = 'pl'
+    const active = consolidated('Active source', 77)
+    const updatedAt = Date.now() - 1000
+    queryClient.setQueryData(queryKeys.achievementsMe(OWNER, 'ru'), consolidated('Wrong Russian cache', 1))
+    queryClient.setQueryData(queryKeys.achievementsMe(OWNER, 'pl'), active, { updatedAt })
+    mockMyAchievements.mockReturnValue({ data: active, isSuccess: true, isFetching: false })
+
+    const { rerender } = renderHook(() => useSeedGamificationFromAchievements(), { wrapper })
+
+    expect(queryClient.getQueryData(queryKeys.gamificationCharacterMe(OWNER))).toMatchObject({ id: 77, name: 'Active source' })
+    expect(queryClient.getQueryState(queryKeys.gamificationCharacterMe(OWNER))?.dataUpdatedAt).toBe(updatedAt)
+    expect(queryClient.getQueryState(queryKeys.gamificationProgressMe(OWNER))?.dataUpdatedAt).toBe(updatedAt)
+
+    queryClient.setQueryData(queryKeys.gamificationCharacterMe(OWNER), character)
+    queryClient.setQueryData(queryKeys.gamificationProgressMe(OWNER), progress)
+    mockLocaleRef.value = 'en'
+    mockMyAchievements.mockReturnValue({ data: consolidated('Other source', 88), isSuccess: true, isFetching: false })
+    rerender({})
+
+    expect(queryClient.getQueryData(queryKeys.gamificationCharacterMe(OWNER))).toEqual(character)
+    expect(queryClient.getQueryData(queryKeys.gamificationProgressMe(OWNER))).toEqual(progress)
+  })
+
+  it.each(['own', 'public'] as const)('keeps %s place-first author status and its neutral cache on locale change', async (scope) => {
+    const badges: PlaceFirstBadge[] = [{
+      id: 9, placeId: 42, placeName: 'Place', placeUrl: '/places/42',
+      discoveredAt: '2026-01-15T10:00:00Z', views: 100, saves: 20, visits: 5,
+      authorStatus: 'Первооткрыватель', imageUrl: null, tier: 'gold', isFresh: true,
+    }]
+    const fetchBadges = jest.mocked(scope === 'own' ? fetchMyPlaceFirstBadges : fetchUserPlaceFirstBadges)
+    fetchBadges.mockResolvedValue(badges)
+    const useBadges = () => {
+      const own = useMyPlaceFirstBadges({ enabled: scope === 'own' })
+      const user = useUserPlaceFirstBadges(scope === 'public' ? 77 : null)
+      return scope === 'own' ? own : user
+    }
+    const { result, rerender } = renderHook(useBadges, { wrapper })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    mockLocaleRef.value = 'pl'
+    rerender({})
+
+    expect(result.current.data?.[0].authorStatus).toBe('Первооткрыватель')
+    expect(fetchBadges).toHaveBeenCalledTimes(1)
+    expect(queryClient.getQueryData(scope === 'own'
+      ? queryKeys.gamificationPlaceBadgesMe(OWNER)
+      : queryKeys.gamificationPlaceBadgesUser(77))).toEqual(badges)
   })
 })
 

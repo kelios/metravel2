@@ -153,16 +153,23 @@ export const queryKeys = {
     ['strava', 'activities', userId, params] as const,
   stravaActivity: (userId: string | null, activityId: string | number | null | undefined) =>
     ['strava', 'activity', userId, activityId] as const,
-  achievementsBadges: () => ['achievements', 'badges'] as const,
-  achievementsMe: (userId: string | null) => ['achievements', 'me', userId] as const,
-  achievementsUser: (userId: string | number | null | undefined) =>
+  achievementsBadgesAll: () => ['achievements', 'badges'] as const,
+  achievementsBadges: (locale: string) => ['achievements', 'badges', locale] as const,
+  achievementsMeAll: (userId: string | null) => ['achievements', 'me', userId] as const,
+  achievementsMe: (userId: string | null, locale: string) => ['achievements', 'me', userId, locale] as const,
+  achievementsUserAll: (userId: string | number | null | undefined) =>
     ['achievements', 'user', userId] as const,
+  achievementsUser: (userId: string | number | null | undefined, locale: string) =>
+    ['achievements', 'user', userId, locale] as const,
   achievementsPeerCatalog: () => ['achievements', 'peer-catalog'] as const,
   achievementsTravelPeer: (travelId: string | number | null | undefined) =>
     ['achievements', 'travel-peer', travelId] as const,
-  achievementsRareMe: (userId: string | null) => ['achievements', 'rare', 'me', userId] as const,
-  achievementsRareUser: (userId: string | number | null | undefined) =>
+  achievementsRareMeAll: (userId: string | null) => ['achievements', 'rare', 'me', userId] as const,
+  achievementsRareMe: (userId: string | null, locale: string) => ['achievements', 'rare', 'me', userId, locale] as const,
+  achievementsRareUserAll: (userId: string | number | null | undefined) =>
     ['achievements', 'rare', 'user', userId] as const,
+  achievementsRareUser: (userId: string | number | null | undefined, locale: string) =>
+    ['achievements', 'rare', 'user', userId, locale] as const,
   achievementsRareCatalog: () => ['achievements', 'rare', 'catalog'] as const,
   gamificationPlaceBadgesMe: (userId: string | null) =>
     ['gamification', 'place-badges', 'me', userId] as const,

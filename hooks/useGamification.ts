@@ -25,6 +25,7 @@ import {
 import { queryKeys } from '@/api/queryKeys';
 import { useAuthStore } from '@/stores/authStore';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
+import { useLocaleRevision } from '@/i18n/useLocaleRevision';
 import { trackPathChosen } from '@/utils/gamificationAnalytics';
 import {
   useMyAchievements,
@@ -64,6 +65,7 @@ export function useUserPlaceFirstBadges(userId: string | number | null | undefin
 // ── Линейки прогрессии / типы активности ────────────────────────────────────
 
 export function useMyGamificationProgress() {
+  const locale = useLocaleRevision();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const owner = useQueryOwner();
   const qc = useQueryClient();
@@ -86,13 +88,13 @@ export function useMyGamificationProgress() {
     retry: readRetryTwice,
     initialData: () => {
       const cached = qc.getQueryData<{ progressionDto?: unknown }>(
-        queryKeys.achievementsMe(owner),
+        queryKeys.achievementsMe(owner, locale),
       ) as { progressionDto?: Parameters<typeof mapProgress>[0] } | undefined;
       if (cached?.progressionDto == null) return undefined;
       return mapProgress(cached.progressionDto);
     },
     initialDataUpdatedAt: () =>
-      qc.getQueryState(queryKeys.achievementsMe(owner))?.dataUpdatedAt ?? 0,
+      qc.getQueryState(queryKeys.achievementsMe(owner, locale))?.dataUpdatedAt ?? 0,
   });
 
   const isFetching = query.isFetching || (!query.data && achFetching);
@@ -102,6 +104,7 @@ export function useMyGamificationProgress() {
 export function useUserGamificationProgress(
   userId: string | number | null | undefined,
 ) {
+  const locale = useLocaleRevision();
   const qc = useQueryClient();
   // Публичный /user/{id}/ теперь отдаёт progression_lines одним ответом — подписываемся
   // на него и сеемся из консолидированного payload'а, отдельный /progression-lines/
@@ -119,13 +122,13 @@ export function useUserGamificationProgress(
     retry: readRetryTwice,
     initialData: () => {
       const cached = qc.getQueryData<PublicAchievements>(
-        queryKeys.achievementsUser(userId),
+        queryKeys.achievementsUser(userId, locale),
       );
       if (cached?.progressionDto == null) return undefined;
       return mapProgress(cached.progressionDto);
     },
     initialDataUpdatedAt: () =>
-      qc.getQueryState(queryKeys.achievementsUser(userId))?.dataUpdatedAt ?? 0,
+      qc.getQueryState(queryKeys.achievementsUser(userId, locale))?.dataUpdatedAt ?? 0,
   });
 
   const isFetching = query.isFetching || (!query.data && achFetching);
@@ -135,6 +138,7 @@ export function useUserGamificationProgress(
 // ── Персонажи + выбор пути ──────────────────────────────────────────────────
 
 export function useMyCharacter() {
+  const locale = useLocaleRevision();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const owner = useQueryOwner();
   const qc = useQueryClient();
@@ -153,14 +157,14 @@ export function useMyCharacter() {
     staleTime: STALE_TIME,
     retry: readRetryTwice,
     initialData: () => {
-      const cached = qc.getQueryData(queryKeys.achievementsMe(owner)) as
+      const cached = qc.getQueryData(queryKeys.achievementsMe(owner, locale)) as
         | { characterDto?: Parameters<typeof mapCharacter>[0] | null }
         | undefined;
       if (cached?.characterDto == null) return undefined;
       return mapCharacter(cached.characterDto);
     },
     initialDataUpdatedAt: () =>
-      qc.getQueryState(queryKeys.achievementsMe(owner))?.dataUpdatedAt ?? 0,
+      qc.getQueryState(queryKeys.achievementsMe(owner, locale))?.dataUpdatedAt ?? 0,
   });
 
   // Пока консолидированный запрос грузится, показываем его loading-состояние,
@@ -171,6 +175,7 @@ export function useMyCharacter() {
 }
 
 export function useUserCharacter(userId: string | number | null | undefined) {
+  const locale = useLocaleRevision();
   const qc = useQueryClient();
   // Тот же паттерн, что и /me/: сеемся из консолидированного /user/{id}/ (character),
   // отдельный /character/ дёргаем только когда поля там нет.
@@ -187,13 +192,13 @@ export function useUserCharacter(userId: string | number | null | undefined) {
     retry: readRetryTwice,
     initialData: () => {
       const cached = qc.getQueryData<PublicAchievements>(
-        queryKeys.achievementsUser(userId),
+        queryKeys.achievementsUser(userId, locale),
       );
       if (cached?.characterDto == null) return undefined;
       return mapCharacter(cached.characterDto);
     },
     initialDataUpdatedAt: () =>
-      qc.getQueryState(queryKeys.achievementsUser(userId))?.dataUpdatedAt ?? 0,
+      qc.getQueryState(queryKeys.achievementsUser(userId, locale))?.dataUpdatedAt ?? 0,
   });
 
   const isFetching = query.isFetching || (!query.data && achFetching);
@@ -224,15 +229,16 @@ export function useChooseCharacterPath() {
  * Вызывать на вкладке «Обзор», где `useMyAchievements` всё равно активен.
  */
 export function useSeedGamificationFromAchievements(enabled = true): void {
+  const locale = useLocaleRevision();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const owner = useQueryOwner();
   const qc = useQueryClient();
   const { data } = useMyAchievements({ enabled: enabled && isAuthenticated });
 
-  const updatedAt = qc.getQueryState(queryKeys.achievementsMe(owner))?.dataUpdatedAt;
+  const updatedAt = qc.getQueryState(queryKeys.achievementsMe(owner, locale))?.dataUpdatedAt;
 
   useEffect(() => {
-    if (!data) return;
+    if (!data || !isAuthenticated || qc.getQueryData(queryKeys.achievementsMe(owner, locale)) !== data) return;
 
     if (data.characterDto != null) {
       const state = qc.getQueryState(queryKeys.gamificationCharacterMe(owner));
@@ -255,5 +261,5 @@ export function useSeedGamificationFromAchievements(enabled = true): void {
         );
       }
     }
-  }, [data, owner, qc, updatedAt]);
+  }, [data, isAuthenticated, locale, owner, qc, updatedAt]);
 }

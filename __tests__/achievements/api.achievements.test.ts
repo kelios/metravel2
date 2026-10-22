@@ -23,7 +23,10 @@ jest.mock('@/utils/logger', () => ({
   devError: jest.fn(),
 }))
 
+jest.mock('@/i18n/format', () => ({ getActiveLocale: jest.fn(() => 'ru') }))
+
 import { apiClient, ApiError } from '@/api/client'
+import { getActiveLocale } from '@/i18n/format'
 import {
   fetchBadgeCatalog,
   fetchMyAchievements,
@@ -36,6 +39,12 @@ import {
 } from '@/api/achievementsMock'
 
 const mockGet = apiClient.get as jest.MockedFunction<typeof apiClient.get>
+const mockGetActiveLocale = jest.mocked(getActiveLocale)
+const locales = ['ru', 'be', 'uk', 'pl', 'en'] as const
+
+beforeEach(() => {
+  mockGetActiveLocale.mockReturnValue('ru')
+})
 
 describe('achievement mock fixtures', () => {
   it('keeps earned and locked sets stable when catalog-only badges are inserted', () => {
@@ -92,6 +101,80 @@ const userBadgeDto = (overrides: Record<string, unknown> = {}) => ({
   period: null,
   progress_snapshot: null,
   ...overrides,
+})
+
+describe('#2697 achievement request locale', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(global as any).__DEV__ = false
+  })
+
+  it.each(locales)('requests catalog, own and public descriptions in explicit %s', async (locale) => {
+    // The explicit request locale wins even when the UI has already moved on.
+    mockGetActiveLocale.mockReturnValue(locale === 'en' ? 'pl' : 'en')
+    const badge = badgeDto({ description: `server-${locale}` })
+    mockGet.mockResolvedValueOnce([badge])
+    mockGet.mockResolvedValueOnce({ rank: rankDto(), earned_badges: [userBadgeDto({ badge })] })
+    mockGet.mockResolvedValueOnce({ rank: rankDto(), earned_badges: [userBadgeDto({ badge })] })
+
+    expect((await fetchBadgeCatalog(locale))[0].description).toBe(`server-${locale}`)
+    expect((await fetchMyAchievements(locale)).earned[0].badge.description).toBe(`server-${locale}`)
+    expect((await fetchUserAchievements(42, locale)).earned[0].badge.description).toBe(`server-${locale}`)
+
+    expect(mockGet.mock.calls).toEqual([
+      [`/achievements/badges/?lang=${locale}`],
+      [`/achievements/me/?lang=${locale}`, 15000],
+      [`/achievements/user/42/?lang=${locale}`, undefined, { skipAuth: true }],
+    ])
+  })
+
+  it.each(locales)('defaults all reads to the applied %s locale', async (locale) => {
+    mockGetActiveLocale.mockReturnValue(locale)
+    mockGet.mockResolvedValueOnce([])
+    mockGet.mockResolvedValueOnce({ rank: rankDto(), earned_badges: [] })
+    mockGet.mockResolvedValueOnce({ rank: rankDto(), earned_badges: [] })
+
+    await fetchBadgeCatalog()
+    await fetchMyAchievements()
+    await fetchUserAchievements('public-user')
+
+    expect(mockGet.mock.calls.map(([url]) => url)).toEqual([
+      `/achievements/badges/?lang=${locale}`,
+      `/achievements/me/?lang=${locale}`,
+      `/achievements/user/public-user/?lang=${locale}`,
+    ])
+  })
+
+  it('captures the default locale at request start while another locale becomes active', async () => {
+    let resolveCatalog!: (value: unknown) => void
+    mockGetActiveLocale.mockReturnValue('pl')
+    mockGet.mockReturnValueOnce(new Promise((resolve) => { resolveCatalog = resolve }))
+
+    const pending = fetchBadgeCatalog()
+    mockGetActiveLocale.mockReturnValue('en')
+    mockGet.mockResolvedValueOnce([badgeDto({ description: 'English response' })])
+    const current = await fetchBadgeCatalog()
+    resolveCatalog([badgeDto({ description: 'Polska odpowiedź' })])
+
+    expect(current[0].description).toBe('English response')
+    expect((await pending)[0].description).toBe('Polska odpowiedź')
+    expect(mockGet.mock.calls.map(([url]) => url)).toEqual([
+      '/achievements/badges/?lang=pl',
+      '/achievements/badges/?lang=en',
+    ])
+  })
+
+  it('preserves server Russian fallback descriptions for a non-Russian request', async () => {
+    const description = 'Серверное описание без перевода'
+    const badge = badgeDto({ description })
+    mockGet.mockResolvedValueOnce([badge])
+    mockGet.mockResolvedValueOnce({ rank: rankDto(), earned_badges: [userBadgeDto({ badge })] })
+    mockGet.mockResolvedValueOnce({ rank: rankDto(), earned_badges: [userBadgeDto({ badge })] })
+
+    expect((await fetchBadgeCatalog('pl'))[0].description).toBe(description)
+    expect((await fetchMyAchievements('pl')).earned[0].badge.description).toBe(description)
+    expect((await fetchUserAchievements(42, 'pl')).earned[0].badge.description).toBe(description)
+  })
 })
 
 // ── fetchBadgeCatalog ──────────────────────────────────────────────────────────
@@ -621,7 +704,7 @@ describe('fetchUserAchievements', () => {
     mockGet.mockResolvedValueOnce({ rank: rankDto(), earned_badges: [] })
     await fetchUserAchievements(99)
     expect(mockGet).toHaveBeenCalledWith(
-      '/achievements/user/99/',
+      '/achievements/user/99/?lang=ru',
       undefined,
       expect.objectContaining({ skipAuth: true }),
     )
@@ -631,7 +714,7 @@ describe('fetchUserAchievements', () => {
     mockGet.mockResolvedValueOnce({ rank: rankDto(), earned_badges: [] })
     await fetchUserAchievements('abc')
     expect(mockGet).toHaveBeenCalledWith(
-      '/achievements/user/abc/',
+      '/achievements/user/abc/?lang=ru',
       undefined,
       expect.anything(),
     )

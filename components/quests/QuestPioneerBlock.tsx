@@ -48,7 +48,7 @@ function QuestPioneerBlock({ questId, questNumericId }: Props) {
   useEffect(() => {
     if (!isPioneer || triggeredRef.current) return
     triggeredRef.current = true
-    void queryClient.invalidateQueries({ queryKey: queryKeys.achievementsMe(owner) })
+    void queryClient.invalidateQueries({ queryKey: queryKeys.achievementsMeAll(owner) })
   }, [isPioneer, owner, queryClient])
 
   if (!isPioneer) return null

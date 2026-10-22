@@ -3,7 +3,8 @@ import { readRetryTwice } from '@/utils/queryRetryPolicy';
 // React Query хуки системы достижений. Серверный стейт — только через React Query
 // (docs/ACHIEVEMENTS_DESIGN.md §8).
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type Query } from '@tanstack/react-query';
+import { useEffect } from 'react';
 
 import {
   fetchBadgeCatalog,
@@ -32,6 +33,8 @@ import {
 import { queryKeys } from '@/api/queryKeys';
 import { useAuthStore } from '@/stores/authStore';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
+import { useLocaleRevision } from '@/i18n/useLocaleRevision';
+import type { SupportedLocale } from '@/i18n/config';
 
 const STALE_TIME = 5 * 60 * 1000;
 
@@ -41,9 +44,10 @@ const STALE_TIME = 5 * 60 * 1000;
 
 /** Справочник всех значков (галерея, в т.ч. ещё не полученных). */
 export function useBadgeCatalog() {
+  const locale = useLocaleRevision();
   return useQuery<Badge[]>({
-    queryKey: queryKeys.achievementsBadges(),
-    queryFn: fetchBadgeCatalog,
+    queryKey: queryKeys.achievementsBadges(locale),
+    queryFn: () => fetchBadgeCatalog(locale),
     staleTime: STALE_TIME,
     retry: readRetryTwice,
   });
@@ -51,11 +55,12 @@ export function useBadgeCatalog() {
 
 /** Достижения текущего пользователя: значки + ранг + прогресс к незакрытым. */
 export function useMyAchievements(options: { enabled?: boolean } = {}) {
+  const locale = useLocaleRevision();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const owner = useQueryOwner();
   return useQuery<MyAchievements>({
-    queryKey: queryKeys.achievementsMe(owner),
-    queryFn: fetchMyAchievements,
+    queryKey: queryKeys.achievementsMe(owner, locale),
+    queryFn: () => fetchMyAchievements(locale),
     enabled: isAuthenticated && (options.enabled ?? true),
     staleTime: STALE_TIME,
     retry: readRetryTwice,
@@ -64,9 +69,10 @@ export function useMyAchievements(options: { enabled?: boolean } = {}) {
 
 /** Публичные достижения автора (earned + ранг + peer-награды от сообщества). */
 export function useUserAchievements(userId: string | number | null | undefined) {
+  const locale = useLocaleRevision();
   return useQuery<PublicAchievements>({
-    queryKey: queryKeys.achievementsUser(userId),
-    queryFn: () => fetchUserAchievements(userId as string | number),
+    queryKey: queryKeys.achievementsUser(userId, locale),
+    queryFn: () => fetchUserAchievements(userId as string | number, locale),
     enabled: userId != null && userId !== '',
     staleTime: STALE_TIME,
     retry: readRetryTwice,
@@ -100,6 +106,7 @@ export function useTravelPeerBadges(travelId: string | number | null | undefined
 
 /** Редкие награды текущего пользователя (своя зона профиля). */
 export function useMyRareAwards() {
+  const locale = useLocaleRevision();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const owner = useQueryOwner();
   const qc = useQueryClient();
@@ -111,18 +118,25 @@ export function useMyRareAwards() {
   const needsSeparateFetch = achSuccess && !consolidatedHasRare;
 
   const query = useQuery<RareAward[]>({
-    queryKey: queryKeys.achievementsRareMe(owner),
+    queryKey: queryKeys.achievementsRareMe(owner, locale),
     queryFn: fetchMyRareAwards,
     enabled: isAuthenticated && needsSeparateFetch,
     staleTime: STALE_TIME,
     retry: readRetryTwice,
     initialData: () => {
-      const cached = qc.getQueryData<MyAchievements>(queryKeys.achievementsMe(owner));
+      const cached = qc.getQueryData<MyAchievements>(queryKeys.achievementsMe(owner, locale));
       return cached?.rareAwards ?? undefined;
     },
     initialDataUpdatedAt: () =>
-      qc.getQueryState(queryKeys.achievementsMe(owner))?.dataUpdatedAt ?? 0,
+      qc.getQueryState(queryKeys.achievementsMe(owner, locale))?.dataUpdatedAt ?? 0,
   });
+
+  const updatedAt = qc.getQueryState(queryKeys.achievementsMe(owner, locale))?.dataUpdatedAt;
+  useEffect(() => {
+    if (ach?.rareAwards == null || !isAuthenticated || currentOwner() !== owner) return;
+    if (qc.getQueryData(queryKeys.achievementsMe(owner, locale)) !== ach) return;
+    qc.setQueryData(queryKeys.achievementsRareMe(owner, locale), ach.rareAwards, { updatedAt });
+  }, [ach, isAuthenticated, locale, owner, qc, updatedAt]);
 
   const isFetching = query.isFetching || (!query.data && achFetching);
   return { ...query, isFetching };
@@ -130,6 +144,7 @@ export function useMyRareAwards() {
 
 /** Публичные редкие награды автора. */
 export function useUserRareAwards(userId: string | number | null | undefined) {
+  const locale = useLocaleRevision();
   const qc = useQueryClient();
   // /user/{id}/ отдаёт rare_awards top-level → сеемся из него, отдельный
   // /user/{id}/rare-awards/ только как fallback, когда поля не было.
@@ -139,20 +154,27 @@ export function useUserRareAwards(userId: string | number | null | undefined) {
   const needsSeparateFetch = achSuccess && !consolidatedHasRare;
 
   const query = useQuery<RareAward[]>({
-    queryKey: queryKeys.achievementsRareUser(userId),
+    queryKey: queryKeys.achievementsRareUser(userId, locale),
     queryFn: () => fetchUserRareAwards(userId as string | number),
     enabled: userId != null && userId !== '' && needsSeparateFetch,
     staleTime: STALE_TIME,
     retry: readRetryTwice,
     initialData: () => {
       const cached = qc.getQueryData<PublicAchievements>(
-        queryKeys.achievementsUser(userId),
+        queryKeys.achievementsUser(userId, locale),
       );
       return cached?.rareAwards ?? undefined;
     },
     initialDataUpdatedAt: () =>
-      qc.getQueryState(queryKeys.achievementsUser(userId))?.dataUpdatedAt ?? 0,
+      qc.getQueryState(queryKeys.achievementsUser(userId, locale))?.dataUpdatedAt ?? 0,
   });
+
+  const updatedAt = qc.getQueryState(queryKeys.achievementsUser(userId, locale))?.dataUpdatedAt;
+  useEffect(() => {
+    if (ach?.rareAwards == null) return;
+    if (qc.getQueryData(queryKeys.achievementsUser(userId, locale)) !== ach) return;
+    qc.setQueryData(queryKeys.achievementsRareUser(userId, locale), ach.rareAwards, { updatedAt });
+  }, [ach, locale, qc, updatedAt, userId]);
 
   const isFetching = query.isFetching || (!query.data && achFetching);
   return { ...query, isFetching };
@@ -173,12 +195,16 @@ export function useRareAwardCatalog(enabled = true) {
 export function useGrantRareAward() {
   const qc = useQueryClient();
   const owner = useQueryOwner();
-  return useMutation<RareAwardGrant, unknown, GrantRareAwardInput>({
+  return useMutation<RareAwardGrant, unknown, GrantRareAwardInput, { owner: string | null }>({
     mutationFn: grantRareAward,
-    onSuccess: (_result, input) => {
-      qc.invalidateQueries({ queryKey: queryKeys.achievementsRareUser(input.userId) });
-      // Выдача самому себе меняет и свою зону наград — ключ владельца тот же.
-      qc.invalidateQueries({ queryKey: queryKeys.achievementsRareMe(owner) });
+    onMutate: () => ({ owner }),
+    onSuccess: (_result, input, ctx) => {
+      void qc.invalidateQueries({ queryKey: queryKeys.achievementsRareUserAll(input.userId) });
+      void qc.invalidateQueries({ queryKey: queryKeys.achievementsUserAll(input.userId) });
+      if (ctx?.owner != null) {
+        void qc.invalidateQueries({ queryKey: queryKeys.achievementsRareMeAll(ctx.owner) });
+        void qc.invalidateQueries({ queryKey: queryKeys.achievementsMeAll(ctx.owner) });
+      }
     },
   });
 }
@@ -218,14 +244,31 @@ const applyServerCount = (
 
 interface GrantContext {
   isTravel: boolean;
+  owner: string | null;
+  locale: SupportedLocale;
+  query?: Query;
   travelKey: ReturnType<typeof queryKeys.achievementsTravelPeer>;
   userKey: ReturnType<typeof queryKeys.achievementsUser>;
   prevTravel?: PeerBadgeReceived[];
   prevUser?: PublicAchievements;
 }
 
+const currentOwner = (): string | null => {
+  const state = useAuthStore.getState();
+  return state.isAuthenticated ? state.userId : null;
+};
+
+// Removed/recreated queries belong to a new cache lifetime, even after a same-user login.
+const isOriginalMutationCache = (
+  ctx: GrantContext,
+  qc: ReturnType<typeof useQueryClient>,
+): boolean => ctx.query != null && currentOwner() === ctx.owner &&
+  qc.getQueryCache().find({ queryKey: ctx.isTravel ? ctx.travelKey : ctx.userKey, exact: true }) === ctx.query;
+
 /** Мутация выдачи peer-значка с оптимистичным toggle. */
 export function useGrantPeerBadge() {
+  const locale = useLocaleRevision();
+  const owner = useQueryOwner();
   const qc = useQueryClient();
   return useMutation<GrantResult, unknown, GrantInput, GrantContext>({
     mutationFn: grantPeerBadge,
@@ -233,17 +276,21 @@ export function useGrantPeerBadge() {
       const catalog = qc.getQueryData<PeerBadge[]>(queryKeys.achievementsPeerCatalog());
       const ctx: GrantContext = {
         isTravel: input.travelId != null,
+        owner,
+        locale,
         travelKey: queryKeys.achievementsTravelPeer(input.travelId),
-        userKey: queryKeys.achievementsUser(input.recipientId),
+        userKey: queryKeys.achievementsUser(input.recipientId, locale),
       };
+      const key = ctx.isTravel ? ctx.travelKey : ctx.userKey;
+      ctx.query = qc.getQueryCache().find({ queryKey: key, exact: true });
+      await qc.cancelQueries({ queryKey: key });
+      if (!isOriginalMutationCache(ctx, qc)) return ctx;
       if (ctx.isTravel) {
-        await qc.cancelQueries({ queryKey: ctx.travelKey });
         ctx.prevTravel = qc.getQueryData<PeerBadgeReceived[]>(ctx.travelKey);
         qc.setQueryData<PeerBadgeReceived[]>(ctx.travelKey, (old) =>
           togglePeer(old ?? [], input.badgeSlug, catalog),
         );
       } else {
-        await qc.cancelQueries({ queryKey: ctx.userKey });
         ctx.prevUser = qc.getQueryData<PublicAchievements>(ctx.userKey);
         qc.setQueryData<PublicAchievements>(ctx.userKey, (old) =>
           old
@@ -254,12 +301,12 @@ export function useGrantPeerBadge() {
       return ctx;
     },
     onError: (_err, _input, ctx) => {
-      if (!ctx) return;
+      if (!ctx || !isOriginalMutationCache(ctx, qc)) return;
       if (ctx.isTravel) qc.setQueryData(ctx.travelKey, ctx.prevTravel);
       else qc.setQueryData(ctx.userKey, ctx.prevUser);
     },
     onSuccess: (result, input, ctx) => {
-      if (!ctx) return;
+      if (!ctx || !isOriginalMutationCache(ctx, qc)) return;
       if (ctx.isTravel) {
         qc.setQueryData<PeerBadgeReceived[]>(ctx.travelKey, (old) =>
           old ? applyServerCount(old, input.badgeSlug, result) : old,
@@ -270,6 +317,20 @@ export function useGrantPeerBadge() {
             ? { ...old, peerReceived: applyServerCount(old.peerReceived, input.badgeSlug, result) }
             : old,
         );
+      }
+    },
+    onSettled: (_result, _error, input, ctx) => {
+      if (!ctx || currentOwner() !== ctx.owner) return;
+      if (ctx.isTravel) {
+        void qc.invalidateQueries({ queryKey: ctx.travelKey });
+      }
+      if (input.recipientId != null) {
+        void qc.invalidateQueries({ queryKey: queryKeys.achievementsUserAll(input.recipientId) });
+        void qc.invalidateQueries({ queryKey: queryKeys.achievementsRareUserAll(input.recipientId) });
+      }
+      if (ctx.owner != null) {
+        void qc.invalidateQueries({ queryKey: queryKeys.achievementsMeAll(ctx.owner) });
+        void qc.invalidateQueries({ queryKey: queryKeys.achievementsRareMeAll(ctx.owner) });
       }
     },
   });

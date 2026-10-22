@@ -3,6 +3,8 @@
 import { apiClient, ApiError } from '@/api/client';
 import { resolveDevMockFlag } from '@/utils/devMockFlags';
 import { devWarn } from '@/utils/logger';
+import { getActiveLocale } from '@/i18n/format';
+import type { SupportedLocale } from '@/i18n/config';
 import type {
   GrantInput,
   GrantRareAwardInput,
@@ -83,10 +85,10 @@ const shouldFallbackPeerToMock = (error: unknown): boolean => {
 
 // ── Публичные fetch-функции ─────────────────────────────────────────────────
 
-export async function fetchBadgeCatalog(): Promise<Badge[]> {
+export async function fetchBadgeCatalog(locale: SupportedLocale = getActiveLocale()): Promise<Badge[]> {
   if (USE_MOCK) return (await loadAchievementsMock()).MOCK_BADGES;
   try {
-    const dto = await apiClient.get<BadgeDto[]>('/achievements/badges/');
+    const dto = await apiClient.get<BadgeDto[]>(`/achievements/badges/?lang=${locale}`);
     return (dto ?? []).map(mapBadge);
   } catch (error) {
     if (shouldFallbackToMock(error)) {
@@ -97,11 +99,11 @@ export async function fetchBadgeCatalog(): Promise<Badge[]> {
   }
 }
 
-export async function fetchMyAchievements(): Promise<MyAchievements> {
+export async function fetchMyAchievements(locale: SupportedLocale = getActiveLocale()): Promise<MyAchievements> {
   if (USE_MOCK) return (await loadAchievementsMock()).MOCK_MY_ACHIEVEMENTS;
   try {
     const dto = await apiClient.get<MyAchievementsDto>(
-      '/achievements/me/',
+      `/achievements/me/?lang=${locale}`,
       MY_ACHIEVEMENTS_TIMEOUT,
     );
     return mapMy(dto);
@@ -116,11 +118,12 @@ export async function fetchMyAchievements(): Promise<MyAchievements> {
 
 export async function fetchUserAchievements(
   userId: string | number,
+  locale: SupportedLocale = getActiveLocale(),
 ): Promise<PublicAchievements> {
   if (USE_MOCK) return (await loadAchievementsMock()).MOCK_PUBLIC_ACHIEVEMENTS;
   try {
     const dto = await apiClient.get<PublicAchievementsDto>(
-      `/achievements/user/${userId}/`,
+      `/achievements/user/${userId}/?lang=${locale}`,
       undefined,
       { skipAuth: true },
     );

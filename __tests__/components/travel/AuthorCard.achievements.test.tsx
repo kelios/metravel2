@@ -69,9 +69,10 @@ const mockData: PublicAchievements = {
     },
   ],
 }
+const mockAchievementsRef: { data: PublicAchievements | undefined } = { data: mockData }
 
 jest.mock('@/hooks/useAchievementsApi', () => ({
-  useUserAchievements: () => ({ data: mockData }),
+  useUserAchievements: () => ({ data: mockAchievementsRef.data }),
 }))
 
 const baseTravel: any = {
@@ -84,10 +85,12 @@ const baseTravel: any = {
 
 const renderWithClient = (ui: React.ReactElement) => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>)
+  return render(ui, { wrapper: ({ children }) => <QueryClientProvider client={client}>{children}</QueryClientProvider> })
 }
 
 describe('AuthorCard achievements block', () => {
+  beforeEach(() => { mockAchievementsRef.data = mockData })
+
   it('explains the rank with a "Уровень:" prefix', () => {
     const { getByText } = renderWithClient(<AuthorCard travel={baseTravel} />)
     expect(getByText('Уровень: Эксперт')).toBeTruthy()
@@ -108,5 +111,25 @@ describe('AuthorCard achievements block', () => {
     // Реальное описание значка из данных, а не выдуманный текст
     expect(getByText('За 3 завершённых похода')).toBeTruthy()
     expect(getByText('30 XP')).toBeTruthy()
+  })
+
+  it.each([false, true])('uses the active author description after a locale change (cold=%s)', cold => {
+    const view = renderWithClient(<AuthorCard travel={baseTravel} />)
+    fireEvent.press(view.getByLabelText(/Хайкер, .*получен/))
+    expect(view.getByText('За 3 завершённых похода')).toBeTruthy()
+
+    if (cold) {
+      mockAchievementsRef.data = undefined
+      view.rerender(<AuthorCard travel={{ ...baseTravel }} />)
+      expect(view.queryByText('За 3 завершённых похода')).toBeNull()
+    }
+    mockAchievementsRef.data = {
+      ...mockData,
+      earned: [{ ...mockData.earned[0], badge: { ...mockData.earned[0].badge, description: 'Opis po polsku' } }],
+    }
+    view.rerender(<AuthorCard travel={{ ...baseTravel }} />)
+
+    expect(view.getByText('Opis po polsku')).toBeTruthy()
+    expect(view.queryByText('За 3 завершённых похода')).toBeNull()
   })
 })

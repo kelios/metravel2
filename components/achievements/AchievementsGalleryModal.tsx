@@ -57,7 +57,7 @@ function groupByCategory(data: MyAchievements): CategoryGroup[] {
 function AchievementsGalleryModal({ visible, onClose, data, ownerName }: Props) {
   const colors = useThemedColors();
   const groups = useMemo(() => groupByCategory(data), [data]);
-  const [detail, setDetail] = useState<BadgeDetail | null>(null);
+  const [selectedBadgeId, setSelectedBadgeId] = useState<number | null>(null);
 
   const detailByBadgeId = useMemo(() => {
     const map = new Map<number, BadgeDetail>();
@@ -78,10 +78,10 @@ function AchievementsGalleryModal({ visible, onClose, data, ownerName }: Props) 
     );
     return map;
   }, [data]);
+  const detail = selectedBadgeId == null ? null : detailByBadgeId.get(selectedBadgeId) ?? null;
 
   const openDetail = (badge: Badge) => {
-    const found = detailByBadgeId.get(badge.id);
-    if (found) setDetail(found);
+    if (detailByBadgeId.has(badge.id)) setSelectedBadgeId(badge.id);
   };
 
   const styles = useMemo(
@@ -122,7 +122,7 @@ function AchievementsGalleryModal({ visible, onClose, data, ownerName }: Props) 
       modalContent={
         <BadgeDetailSheet
           visible={visible && detail !== null}
-          onClose={() => setDetail(null)}
+          onClose={() => setSelectedBadgeId(null)}
           detail={detail}
           ownerName={ownerName}
         />

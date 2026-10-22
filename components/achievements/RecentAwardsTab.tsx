@@ -46,10 +46,17 @@ function RecentAwardsTab({ testID, style }: Props) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const ownerName = useAuthStore((s) => s.username)
   const { data, isFetching } = useMyAchievements()
-  const [detail, setDetail] = useState<BadgeDetail | null>(null)
+  const [selectedUserBadgeId, setSelectedUserBadgeId] = useState<number | null>(null)
   const [galleryOpen, setGalleryOpen] = useState(false)
 
   const items = useMemo(() => (data ? pickRecent(data) : []), [data])
+  const selectedBadge = items.find((item) => item.id === selectedUserBadgeId)
+  const detail: BadgeDetail | null = selectedBadge ? {
+    badge: selectedBadge.badge,
+    earned: true,
+    userBadgeId: selectedBadge.id,
+    earnedAt: selectedBadge.earnedAt,
+  } : null
 
   if (!isAuthenticated) {
     return (
@@ -92,14 +99,7 @@ function RecentAwardsTab({ testID, style }: Props) {
               return (
                 <Pressable
                   key={ub.id}
-                  onPress={() =>
-                    setDetail({
-                      badge: ub.badge,
-                      earned: true,
-                      userBadgeId: ub.id,
-                      earnedAt: ub.earnedAt,
-                    })
-                  }
+                  onPress={() => setSelectedUserBadgeId(ub.id)}
                   accessibilityRole="button"
                   accessibilityLabel={`${ub.badge.name}${when ? `, ${when}` : ''}`}
                   testID={`recent-award-${ub.badge.id}`}
@@ -118,7 +118,7 @@ function RecentAwardsTab({ testID, style }: Props) {
 
       <BadgeDetailSheet
         visible={detail != null}
-        onClose={() => setDetail(null)}
+        onClose={() => setSelectedUserBadgeId(null)}
         detail={detail}
         ownerName={ownerName}
       />
