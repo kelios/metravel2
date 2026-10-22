@@ -19,6 +19,22 @@ type Props = {
   list?: boolean;
 };
 
+const { spacing, typography, touchTarget } = DESIGN_TOKENS;
+const FEEDBACK_LINE_HEIGHT = typography.scale.bodySmall.lineHeight;
+const REASON_LINE_HEIGHT = typography.sizes.sm * 1.5;
+const DATE_LINE_HEIGHT = typography.scale.caption.lineHeight;
+const CORRECTION_LINE_HEIGHT = typography.scale.body.lineHeight;
+// One collapsed author-list floor, independent of the current decision/row.
+// Button sm has spacing.xs vertical padding and outline has two 2px borders.
+// Reserve two date/action lines as well as the bounded reason preview; use a
+// minimum, so larger accessibility text remains free to grow rather than clip.
+const LIST_FEEDBACK_MIN_HEIGHT = 2 * spacing.md
+  + FEEDBACK_LINE_HEIGHT + 2 * spacing.xs
+  + FEEDBACK_LINE_HEIGHT + 2 * REASON_LINE_HEIGHT + touchTarget.minHeight
+  + 2 * DATE_LINE_HEIGHT
+  + Math.max(touchTarget.minHeight, 2 * CORRECTION_LINE_HEIGHT + 2 * spacing.xs + 4)
+  + 3 * spacing.sm;
+
 export default function TravelModerationFeedback({ travel, onCorrect, showStatus = true, list = false }: Props) {
   const { t } = useTranslation();
   const colors = useThemedColors();
@@ -26,12 +42,13 @@ export default function TravelModerationFeedback({ travel, onCorrect, showStatus
   const [openedReason, setOpenedReason] = useState<string | null>(null);
   useEffect(() => setOpenedReason(null), [feedback.status, feedback.reason]);
   const styles = useMemo(() => StyleSheet.create({
-    root: { gap: DESIGN_TOKENS.spacing.sm, minWidth: 0, ...(list ? { padding: DESIGN_TOKENS.spacing.md, flexGrow: 1 } : {}) },
-    reason: { color: colors.text, fontSize: DESIGN_TOKENS.typography.sizes.sm, lineHeight: 21 },
-    reasonLabel: { color: colors.text, fontWeight: '600', fontSize: DESIGN_TOKENS.typography.sizes.sm },
-    date: { color: colors.textMuted, fontSize: DESIGN_TOKENS.typography.sizes.xs },
-    details: { alignSelf: 'flex-start', justifyContent: 'center', minHeight: DESIGN_TOKENS.touchTarget.minHeight },
-    detailsText: { color: colors.primaryText, fontSize: DESIGN_TOKENS.typography.sizes.sm, fontWeight: '600' },
+    root: { gap: spacing.sm, minWidth: 0, ...(list ? { padding: spacing.md, flexGrow: 1, minHeight: LIST_FEEDBACK_MIN_HEIGHT } : {}) },
+    reason: { color: colors.text, fontSize: typography.sizes.sm, lineHeight: REASON_LINE_HEIGHT, ...(list ? { minHeight: 2 * REASON_LINE_HEIGHT } : {}) },
+    reasonLabel: { color: colors.text, fontWeight: '600', fontSize: typography.sizes.sm, lineHeight: FEEDBACK_LINE_HEIGHT },
+    date: { color: colors.textMuted, fontSize: typography.sizes.xs, lineHeight: DATE_LINE_HEIGHT },
+    details: { alignSelf: 'flex-start', justifyContent: 'center', minHeight: touchTarget.minHeight },
+    detailsText: { color: colors.primaryText, fontSize: typography.sizes.sm, fontWeight: '600', lineHeight: FEEDBACK_LINE_HEIGHT },
+    correctionLabel: { lineHeight: CORRECTION_LINE_HEIGHT },
   }), [colors, list]);
   const showFullReason = Boolean(feedback.reason && openedReason === feedback.reason);
 
@@ -60,7 +77,8 @@ export default function TravelModerationFeedback({ travel, onCorrect, showStatus
       ) : null}
       {feedback.status === 'rejected' && onCorrect ? (
         <Button label={t('travel:moderationFeedback.correctAndResubmit')} onPress={onCorrect}
-          variant="outline" fullWidth labelNumberOfLines={2} testID="moderation-correct-button" />
+          variant="outline" size={list ? 'sm' : 'md'} fullWidth labelNumberOfLines={2}
+          labelStyle={list ? styles.correctionLabel : undefined} testID="moderation-correct-button" />
       ) : null}
       <InfoSheet visible={showFullReason} onClose={() => setOpenedReason(null)}
         title={t('travel:moderationFeedback.reason')} paragraphs={feedback.reason ? [feedback.reason] : []} />

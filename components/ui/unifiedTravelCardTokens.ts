@@ -23,6 +23,6 @@ export const CARD_TOP_SLOT_Z_INDEX = 10
  */
 export const CARD_HOVER_LIFT_Y = -6
 export const CARD_HOVER_LIFT_SCALE = 1.02
-/** CSS-форма для карточки; обёртка берёт те же числа в RN-форме без каста. */
+/** CSS-форма подъёма для карточки и DOM-обёртки поднятых кнопок. */
 export const CARD_HOVER_LIFT_TRANSFORM = `translateY(${CARD_HOVER_LIFT_Y}px) scale(${CARD_HOVER_LIFT_SCALE})`
 export const CARD_HOVER_TRANSITION = 'transform 0.2s ease'

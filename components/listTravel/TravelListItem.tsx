@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useMemo, useRef, useState } from 'react'
+import React, { memo, useCallback, useMemo, useRef } from 'react'
 import { ActivityIndicator, Platform, Pressable, Text, View, type ViewStyle } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { router } from 'expo-router'
@@ -13,8 +13,7 @@ import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard'
 import {
   CARD_TOP_SLOT_INSET,
   CARD_TOP_SLOT_Z_INDEX,
-  CARD_HOVER_LIFT_SCALE,
-  CARD_HOVER_LIFT_Y,
+  CARD_HOVER_LIFT_TRANSFORM,
 } from '@/components/ui/unifiedTravelCardTokens'
 import CardActionPressable from '@/components/ui/CardActionPressable'
 import ContentSafetyActions from '@/components/safety/ContentSafetyActions'
@@ -97,12 +96,12 @@ const POINTER_EVENTS_BOX_NONE = { pointerEvents: 'box-none' } as any
  * контейнер 340 → 329 px, кнопка 362 → 362). Обёртка содержит и якорь, и
  * кнопки, поэтому переход указателя с карточки на кнопку подъём не срывает.
  *
- * Псевдокласс `:hover` не годится: в обычном объекте стиля react-native-web его
- * молча выбрасывает, а из `StyleSheet.create` правило до узла не доходило —
- * класс `r-:hover-…` в разметке появлялся, `transform` оставался `none`.
+ * DOM-hover идёт через dataSet и app/global.css: React mouseenter/mouseleave
+ * считают вложенный Modal-портал частью карточки и могут оставить подъём после
+ * его закрытия. CSS следует DOM-границе, общей для якоря и поднятых кнопок.
  */
-const WRAP_HOVER_LIFT_STYLE: ViewStyle = {
-  transform: [{ translateY: CARD_HOVER_LIFT_Y }, { scale: CARD_HOVER_LIFT_SCALE }],
+const WRAP_HOVER_STYLE: ViewStyle & { '--travel-card-hover-transform': string } = {
+  '--travel-card-hover-transform': CARD_HOVER_LIFT_TRANSFORM,
 }
 
 const HOISTED_SLOT_BASE: ViewStyle = {
@@ -492,7 +491,6 @@ function TravelListItem({
   // режиме и на нативе якоря нет, слоты остаются на своём месте в карточке.
   const hoistsActionsOutOfAnchor = IS_WEB && !selectable
   const wrapOwnsHover = hoistsActionsOutOfAnchor && !isMobile
-  const [wrapHovered, setWrapHovered] = useState(false)
 
   const rightTopSlot = (
     <View
@@ -811,11 +809,10 @@ function TravelListItem({
         style={[
           renderAuthorFeedback ? [styles.wrap, { height: 'auto', flexGrow: 1 }] : styles.wrap,
           IS_WEB && typeof cardWidth === 'number' && { width: '100%' },
-          wrapOwnsHover && wrapHovered && WRAP_HOVER_LIFT_STYLE,
+          wrapOwnsHover && WRAP_HOVER_STYLE,
         ]}
         {...(wrapOwnsHover && {
-          onMouseEnter: () => setWrapHovered(true),
-          onMouseLeave: () => setWrapHovered(false),
+          dataSet: { travelCardHover: 'true' },
         })}
       >
         {wrappedCard}
@@ -825,13 +822,6 @@ function TravelListItem({
           по HTML вложенность интерактивного контента в ссылку. Обёртка не ловит
           указатель (`box-none`), поэтому клик мимо кнопок по-прежнему достаётся
           ссылке под ней.
-
-          Плата за подъём: обёртки — соседи якоря, а не потомки контейнера
-          карточки, поэтому web-hover карточки (`UnifiedTravelCard`,
-          `containerHovered`: `translateY(-6px) scale(1.02)`) на них НЕ
-          распространяется, и наведение на саму кнопку снимает hover с карточки
-          (`mouseleave`, кнопка ей не потомок). Убрать это можно только сменой
-          владельца hover в самой карточке — см. #1626 → follow-up.
         */}
         {hoistsActionsOutOfAnchor && leftTopSlot ? (
           <View style={HOISTED_LEFT_SLOT_STYLE} pointerEvents="box-none">

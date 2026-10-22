@@ -56,6 +56,10 @@ The system SHALL present a nonempty rejection reason as the moderator's plain te
 - **WHEN** the reason contains markup-like characters and line breaks
 - **THEN** it remains plain text rather than executable markup and its complete content can be read
 
+#### Scenario: Closing a reason portal preserves normal card interaction
+- **WHEN** an author opens a reason from a hovered desktop card, moves the pointer outside the card, and closes the sheet
+- **THEN** the card automatically returns to its resting visual bounds without an extra enter/leave gesture or grid reflow, focus returns to the initiating control, and subsequently hovering the card or its hoisted actions still lifts them together
+
 #### Scenario: Language change
 - **WHEN** the author selects any supported UI locale
 - **THEN** feedback labels and date formatting follow that locale while the reason content stays unchanged

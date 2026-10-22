@@ -614,6 +614,14 @@ select:focus-visible {
 
 /* Leaflet overrides moved to utils/ensureLeafletCss.ts — injected only on map page */
 
+/* DOM-граница объединяет карточку и поднятые кнопки; Modal-портал лежит снаружи.
+ * Transform приходит из unifiedTravelCardTokens через inline CSS-переменную. */
+@media (hover: hover) and (pointer: fine) {
+  [data-travel-card-hover="true"]:hover {
+    transform: var(--travel-card-hover-transform);
+  }
+}
+
 /* CARD-ADMIN: Показываем кнопки редактирования/удаления только при hover на карточку */
 [data-testid^="travel-card"]:hover [data-testid="admin-actions"] {
   opacity: 1 !important;

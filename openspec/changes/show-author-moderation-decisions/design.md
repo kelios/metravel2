@@ -30,6 +30,8 @@ A small `components/travel/TravelModerationFeedback.tsx` (or an equivalently nam
 
 Wizard placement is in PublishStatusSummaryPanel's current-status card, above checklist/moderator controls. The correction callback uses existing `onStepSelect(1)`, without save or status selection. List placement uses a private feedback sibling inside RenderTravelItem's cell but outside the article anchor; actions retain existing edit/returnTo semantics. Extract/reuse the existing small passive status chip if needed, using an explicit presentation flag to suppress the duplicate generic draft badge, never changing `isDraft`, navigation, filters, or counters. Uniform collapsed card content height and unchanged media/column geometry are mandatory. Adapt the authored wrapper's existing height behavior only as necessary to contain the bounded footer. General catalogs retain their layout and confidentiality. Existing oversized files must not grow by blank-line pruning or unrelated refactoring.
 
+Row stretching alone does not satisfy that minimum: profile rows are independent and mobile rows contain one card. The list feedback therefore reserves one common minimum derived from its real typography, two-line reason preview, date, existing control touch targets, gaps, and padding. Use a minimum rather than a fixed or maximum height so enlarged text can grow. Missing fields remain absent from the DOM; no placeholder content is rendered. Verify different states and independent rows, not only one card before and after disclosure.
+
 Rejected alternative: inline full-length reasons in grid cards. Arbitrary moderator text stretches individual cards, causes layout shifts, and duplicates expansion UI. Existing InfoSheet keeps the full text available without reflowing the grid.
 
 ### 3. Use explicit visibility context, not field presence
@@ -46,11 +48,19 @@ The full/partial boundary is the known request path, not a guess based on object
 
 Use a common travel key family for rejected/reason/full reason/correction/date/a11y and reuse canonical existing labels. Add each new key to RU/BE/UK/PL/EN. Use reactive translation and `i18n/format.ts` only after validating the optional date. Never translate/sanitize into HTML the moderator's plain text. No SEO/canonical/SSG, external-link, analytics, auth storage or OS-specific changes; no new package or requests.
 
+### 6. Card hover follows the DOM across portal boundaries
+
+Production acceptance found a wrapper retaining its 1.02 hover transform after the reason Modal closed with the pointer outside the card; intrinsic layout stayed unchanged. The React enter/leave boundary includes logical portal descendants, so React hover state is unsuitable for this DOM-only effect. Keep the existing wrapper as the single lift owner for the article anchor, hoisted actions, and feedback, but use the canonical `dataSet` plus `app/global.css` hover channel for fine pointers. Supply the existing shared transform token through a CSS custom property rather than duplicating lift values. Native and mobile layouts retain their existing behavior.
+
+Reject a reason-specific `onClose` reset: other portaled controls would retain the same failure mechanism. Reuse the existing global CSS channel instead of adding per-card listeners or observers. A DOM regression must exercise the actual React portal boundary and verify marker/token propagation; deployed browser evidence must additionally prove positive lift, action alignment, and automatic resting bounds after dismissal without a corrective enter/leave gesture.
+
 ## Affected files and ownership
 
 Implementation: `types/types.ts`, `utils/travelPublicationStatus.ts`, `utils/travelFormUtils.ts`, `hooks/useTravelFormPersistence.ts`, `components/travel/upsert/useUpsertTravelController.ts`, `components/profile/travelNormalize.ts`, `components/listTravel/RenderTravelItem.tsx`, `components/travel/{useTravelPublishModeration,PublishStatusSummaryPanel,TravelWizardStepPublish,TravelModerationFeedback}.tsx/ts`, associated existing styles/types, `components/listTravel/TravelListItem.tsx`, its authored-context plumbing via ProfileTravelGrid/ProfileScreen and `/metravel`, travel i18n resources, and focused tests. Exact paths follow the source mechanism and avoid unrelated travel changes.
 
 Planning: this change and the append-only #2669 section of `docs/TRAVEL_SAVE_MODERATION_CONTRACT.md`. Preserve the foreign #2693 task state and #2678 achievement/peer work. No edits to backend or protected configuration.
+
+The acceptance repair additionally owns the wrapper hover rule in `app/global.css`, the existing shared card-token comment, and its focused DOM regression. It does not change the separate card-owned hover used by selectable cards.
 
 ## Risks / Trade-offs
 
@@ -59,13 +69,14 @@ Planning: this change and the append-only #2669 section of `docs/TRAVEL_SAVE_MOD
 - Partial save response drops feedback or explicit null fails to clear it → test both partial-preserve and explicit-clear semantics in the existing mapper/persistence path.
 - Private response fields accidentally render in public cards → opt-in own-list context plus role check and negative public/catalog test with deliberately populated fields.
 - Long/translated text disturbs grid or creates nested interactive HTML → bounded preview, existing sheet, fixed collapsed layout, hoisted controls, 390/1440 browser evidence.
+- Portaled controls leave a card visually lifted with an outside pointer → DOM-owned hover, shared transform token, real portal regression and unmodified pointer-dismiss browser probe.
 - Missing live list fields → real GET acceptance on a disposable author fixture; never synthesize approval/rejection from legacy flags.
 
 ## Validation matrix
 
 | Layer | Coverage | Evidence |
 | --- | --- | --- |
-| Static/unit before runtime | Canonical×decision matrix; optional/malformed fields; profile/editor mapping; read-only write exclusion; save/submit preservation/clear; CTA no write; author/admin vs public | Focused Jest, selective lint/typecheck/guards, `npm run test:i18n`, full-task independent review-and-fix then code-review gate |
+| Static/unit before runtime | Canonical×decision matrix; optional/malformed fields; profile/editor mapping; read-only write exclusion; save/submit preservation/clear; CTA no write; author/admin vs public; real portal ancestry, hover CSS reachability and token propagation | Focused Jest, selective lint/typecheck/guards, `npm run test:i18n`, full-task independent review-and-fix then code-review gate |
 | Desktop web 1440 / mobile web 390 in testing | Both surfaces, rejected short/long/empty reason, valid/malformed date, approved/published, stale decision on draft/pending, missing fields, loading/network error; RU/BE/UK/PL/EN; light/dark; keyboard/touch/focus/sheet | Production browser screenshots, console and network; no horizontal overflow, no false Published, no private reason on public context |
 | Real API in testing | Disposable author detail/list, QA-superuser approval/rejection, content/full Save, correction navigation with zero writes, explicit resubmit | Sanitized request/response evidence, UI readback after refresh, cleanup readback; no real author content |
 | Android/iOS | Common code preserves responsive semantics; no platform-specific behavior changed | No additional device gate required for this scope |

@@ -29,7 +29,11 @@ export default function TravelPublicationStatusChip({ status, compact = false, t
       maxWidth: '100%', paddingVertical: compact ? 2 : DESIGN_TOKENS.spacing.xs,
       paddingHorizontal: compact ? 6 : DESIGN_TOKENS.spacing.sm, borderRadius: DESIGN_TOKENS.radii.pill,
     },
-    label: { fontSize: compact ? 11 : DESIGN_TOKENS.typography.sizes.sm, fontWeight: '700', flexShrink: 1 },
+    label: {
+      fontSize: compact ? 11 : DESIGN_TOKENS.typography.sizes.sm,
+      ...(compact ? {} : { lineHeight: DESIGN_TOKENS.typography.scale.bodySmall.lineHeight }),
+      fontWeight: '700', flexShrink: 1,
+    },
   }), [compact]);
   const tone = status === 'rejected' ? colors.dangerDark
     : status === 'published' || status === 'approved' ? colors.successDark
