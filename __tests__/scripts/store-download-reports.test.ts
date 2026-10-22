@@ -3,7 +3,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { gzipSync } from 'node:zlib'
-import { execFileSync, spawnSync } from 'node:child_process'
+import { makeTempDir, runCli, runNodeCli } from './cli-test-utils'
 
 const { readStoreReports } = require('@/scripts/lib/store-download-reports')
 const APPLE = 'apple-sales-summary'
@@ -22,8 +22,7 @@ const entry = (source = APPLE, extra = {}) => ({ source, file: source === APPLE 
 let folder: string
 beforeEach(() => {
   const root = path.resolve('.codex-temp/store-import-tests')
-  fs.mkdirSync(root, { recursive: true })
-  folder = fs.mkdtempSync(path.join(root, 'report-'))
+  folder = makeTempDir('report-', { root })
 })
 afterEach(() => { fs.rmSync(folder, { recursive: true, force: true }) })
 const manifest = (reports: unknown[]) => fs.writeFileSync(path.join(folder, 'manifest.json'), JSON.stringify({ schemaVersion: 1, reports }))
@@ -247,12 +246,12 @@ describe('official store imports: bounded and private local inputs', () => {
 
   it('rejects a named pipe before opening it so local input cannot block the command', () => {
     manifest([entry()])
-    execFileSync('mkfifo', [path.join(folder, 'apple.txt')])
-    const child = spawnSync(process.execPath, ['-e', `
+    const fifo = runCli('mkfifo', [path.join(folder, 'apple.txt')], { timeoutMs: 3000 })
+    expect(fifo.status).toBe(0)
+    const child = runNodeCli(['-e', `
       const { readStoreReports } = require('./scripts/lib/store-download-reports');
       process.stdout.write(JSON.stringify(readStoreReports(process.argv[1]).periods[0]));
-    `, folder], { cwd: path.resolve('.'), encoding: 'utf8', timeout: 3000 })
-    expect(child.error).toBeUndefined()
+    `, folder], {}, { cwd: path.resolve('.'), timeoutMs: 3000 })
     expect(child.status).toBe(0)
     expect(JSON.parse(child.stdout)).toMatchObject({ reason: 'INVALID_FORMAT', metrics: { firstTimeDownloads: null } })
   })

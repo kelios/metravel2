@@ -1,7 +1,7 @@
 /** @jest-environment node */
 
 import path from 'node:path'
-import { runCli } from './cli-test-utils'
+import { makeTempDir, runCli } from './cli-test-utils'
 import fs from 'node:fs'
 import crypto from 'node:crypto'
 
@@ -709,8 +709,7 @@ describe('monthly metrics: official store downloads alongside click events', () 
   let folder: string
   beforeEach(() => {
     const root = path.resolve('.codex-temp/store-summary-tests')
-    fs.mkdirSync(root, { recursive: true })
-    folder = fs.mkdtempSync(path.join(root, 'report-'))
+    folder = makeTempDir('report-', { root })
   })
   afterEach(() => { fs.rmSync(folder, { recursive: true, force: true }) })
 
