@@ -339,4 +339,10 @@ export const travelGenerated3 = {
   "components.travel.InstagramPublishPanel.simvolov_6dd28e72_few": "{{value1}}/{{value2}} znaki",
   "components.travel.InstagramPublishPanel.simvolov_6dd28e72_many": "{{value1}}/{{value2}} znaków",
   "components.travel.InstagramPublishPanel.simvolov_6dd28e72_other": "{{value1}}/{{value2}} znaku",
+  "moderationFeedback.rejected": "Odrzucono",
+  "moderationFeedback.reason": "Powód",
+  "moderationFeedback.fullReason": "Pokaż pełny powód odrzucenia",
+  "moderationFeedback.more": "Więcej",
+  "moderationFeedback.decidedAt": "Decyzja z {{date}}",
+  "moderationFeedback.correctAndResubmit": "Popraw i wyślij ponownie",
 } as const

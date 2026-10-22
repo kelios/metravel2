@@ -777,7 +777,7 @@ export default function ProfileScreen() {
       isFirst={index === 0}
       currentUserId={userId}
       isSuperuser={isSuperuser}
-      onDeletePress={isProfileTravelTab(activeTab) ? handleDeleteMyTravel : undefined}
+      {...(isProfileTravelTab(activeTab) ? { onDeletePress: handleDeleteMyTravel, showAuthorModerationFeedback: true } : {})}
       viewportWidth={width}
       isDeleting={travelList.removingTravelId === item.id}
     />

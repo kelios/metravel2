@@ -1,4 +1,4 @@
-import type { Travel, TravelPublicationStatus } from '@/types/types';
+import type { Travel, TravelModerationMetadata, TravelPublicationStatus } from '@/types/types';
 import { translate as i18nT } from '@/i18n';
 
 type TravelDraftFields = Pick<Travel, 'publication_status' | 'publish'>;
@@ -31,6 +31,40 @@ export type TravelPublicationFields = {
 
 export type TravelPublicationCommand = 'save' | 'submit' | 'approve' | 'reject';
 
+type ModerationReadFields = {
+  moderation_decision?: unknown;
+  moderation_decision_reason?: unknown;
+  moderation_decided_at?: unknown;
+};
+
+/** Full server snapshots own these fields, including their absence. */
+export function readTravelModerationMetadata(source: ModerationReadFields): Required<TravelModerationMetadata> {
+  return {
+    moderation_decision: source.moderation_decision === 'approved' || source.moderation_decision === 'rejected'
+      ? source.moderation_decision : null,
+    moderation_decision_reason: typeof source.moderation_decision_reason === 'string'
+      ? source.moderation_decision_reason : '',
+    moderation_decided_at: typeof source.moderation_decided_at === 'string'
+      ? source.moderation_decided_at : null,
+  };
+}
+
+export type TravelDisplayStatus = TravelPublicationStatus | 'rejected' | null;
+
+export function resolveTravelModerationFeedback(travel: TravelPublicationFields & ModerationReadFields) {
+  const publicationStatus = resolveTravelPublicationStatus(travel);
+  const metadata = readTravelModerationMetadata(travel);
+  const rejected = publicationStatus === 'draft' && metadata.moderation_decision === 'rejected';
+  const status: TravelDisplayStatus = rejected ? 'rejected' : publicationStatus;
+  const hasCurrentDecision = rejected || (publicationStatus === 'published' && metadata.moderation_decision === 'approved');
+  const timestamp = metadata.moderation_decided_at;
+  return {
+    status,
+    reason: rejected && metadata.moderation_decision_reason.trim() ? metadata.moderation_decision_reason : '',
+    decidedAt: hasCurrentDecision && timestamp && Number.isFinite(Date.parse(timestamp)) ? timestamp : null,
+  };
+}
+
 const PUBLICATION_STATUSES: readonly TravelPublicationStatus[] = [
   'draft', 'pending_review', 'approved', 'published',
 ];
@@ -62,14 +96,14 @@ export function buildTravelPublicationWrite<T extends TravelPublicationFields>(
   data: T,
   command: TravelPublicationCommand = 'save',
   rejectionReason?: string,
-): Omit<T, 'publish' | 'moderation' | 'publication_status' | 'moderation_decision_reason' | 'moderation_decision'> & {
+): Omit<T, 'publish' | 'moderation' | 'publication_status' | 'moderation_decision_reason' | 'moderation_decision' | 'moderation_decided_at'> & {
   publication_status: TravelPublicationStatus;
   enforce_moderation_validation: boolean;
   moderation_decision_reason?: string;
 } {
   const status = requireTravelPublicationStatus(data);
   const payload = { ...data } as Record<string, unknown>;
-  for (const field of ['publish', 'moderation', 'publication_status', 'moderation_decision_reason', 'moderation_decision', 'enforce_moderation_validation']) {
+  for (const field of ['publish', 'moderation', 'publication_status', 'moderation_decision_reason', 'moderation_decision', 'moderation_decided_at', 'enforce_moderation_validation']) {
     delete payload[field];
   }
   const reason = rejectionReason?.trim();

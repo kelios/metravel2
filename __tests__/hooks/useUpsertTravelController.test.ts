@@ -811,6 +811,89 @@ describe('useUpsertTravelController', () => {
     },
   );
 
+  it.each([
+    {
+      label: 'omitted server metadata',
+      current: { publication_status: 'pending_review' },
+      expected: { moderation_decision: null, moderation_decision_reason: '', moderation_decided_at: null },
+    },
+    {
+      label: 'explicitly cleared server metadata',
+      current: { publication_status: 'pending_review', moderation_decision: null, moderation_decision_reason: null, moderation_decided_at: null },
+      expected: { moderation_decision: null, moderation_decision_reason: '', moderation_decided_at: null },
+    },
+    {
+      label: 'a newer rejection',
+      current: { publication_status: 'draft', moderation_decision: 'rejected', moderation_decision_reason: 'Add the route duration', moderation_decided_at: '2026-10-21T09:15:00Z' },
+      expected: { moderation_decision: 'rejected', moderation_decision_reason: 'Add the route duration', moderation_decided_at: '2026-10-21T09:15:00Z' },
+    },
+  ])('recovers local content using $label read after asynchronous storage completes (#2669)', async ({ current, expected }) => {
+    mockUseLocalSearchParams.mockReturnValue({ id: '123' });
+    const recovered = {
+      ...baseForm.formData,
+      id: '123',
+      name: 'Locally edited route',
+      description: '<p>Recovered author content</p>',
+      coordsMeTravel: [{ id: 7, lat: 53.9, lng: 27.56 }],
+      publication_status: 'draft',
+      moderation_decision: 'rejected',
+      moderation_decision_reason: 'An obsolete rejection',
+      moderation_decided_at: '2026-10-20T09:00:00Z',
+    };
+    let finishRecovery!: (value: typeof recovered) => void;
+    const recoverDraft = jest.fn(() => new Promise<typeof recovered>(resolve => { finishRecovery = resolve; }));
+    const getFormData = jest.fn<Record<string, unknown>, []>(() => recovered);
+    const setFormData = jest.fn();
+    mockUseDraftRecovery.mockReturnValue({ ...mockUseDraftRecovery(), recoverDraft, hasPendingDraft: true });
+    mockUseTravelFormData.mockReturnValue({ ...baseForm, getFormData, setFormData });
+    const { result } = renderHook(() => useUpsertTravelController());
+    let recovery!: Promise<void>;
+    act(() => { recovery = result.current.draftRecovery.recoverDraft(); });
+    getFormData.mockReturnValue({ id: '123', ...current });
+    await act(async () => { finishRecovery(recovered); await recovery; });
+
+    expect(setFormData).toHaveBeenCalledWith(expect.objectContaining({
+      id: '123', name: recovered.name, description: recovered.description,
+      coordsMeTravel: recovered.coordsMeTravel,
+      publication_status: current.publication_status, ...expected,
+    }));
+  });
+
+  it('qualifies private feedback against the current viewer even if inherited form access remains true (#2669)', () => {
+    mockUseLocalSearchParams.mockReturnValue({ id: '640' });
+    mockUseTravelFormData.mockReturnValue({ ...baseForm,
+      formData: { ...baseForm.formData, id: '640', publication_status: 'draft', moderation_decision: 'rejected', moderation_decision_reason: 'Private reason' },
+      travelDataOld: { id: 640, userIds: 'u1' }, hasAccess: true, isInitialLoading: false });
+    const { result, rerender } = renderHook(() => useUpsertTravelController());
+    expect(result.current.moderationFeedbackContextKey).toBe('640:u1');
+    mockUseAuth.mockReturnValue({ userId: 'u2', isAuthenticated: true, isSuperuser: false, authReady: true });
+    rerender({});
+    expect(result.current.hasAccess).toBe(true);
+    expect(result.current.moderationFeedbackContextKey).toBeNull();
+    mockUseAuth.mockReturnValue({ userId: 'u2', isAuthenticated: true, isSuperuser: true, authReady: true });
+    rerender({});
+    expect(result.current.moderationFeedbackContextKey).toBe('640:u2');
+    mockUseAuth.mockReturnValue({ userId: 'u2', isAuthenticated: false, isSuperuser: true, authReady: true });
+    rerender({});
+    expect(result.current.moderationFeedbackContextKey).toBeNull();
+  });
+
+  it.each([
+    { label: 'another route', routeId: '641', formId: '640', serverId: 640, ready: true },
+    { label: 'another form', routeId: '640', formId: '641', serverId: 640, ready: true },
+    { label: 'another server record', routeId: '640', formId: '640', serverId: 641, ready: true },
+    { label: 'no trusted GET after creation', routeId: '640', formId: '640', serverId: null, ready: true },
+    { label: 'new route', routeId: undefined, formId: '640', serverId: 640, ready: true },
+    { label: 'auth not ready', routeId: '640', formId: '640', serverId: 640, ready: false },
+  ])('hides private feedback for $label despite retained access (#2669)', ({ routeId, formId, serverId, ready }) => {
+    mockUseLocalSearchParams.mockReturnValue({ id: routeId });
+    mockUseAuth.mockReturnValue({ userId: 'u1', isAuthenticated: true, isSuperuser: false, authReady: ready });
+    mockUseTravelFormData.mockReturnValue({ ...baseForm, formData: { ...baseForm.formData, id: formId },
+      travelDataOld: serverId == null ? null : { id: serverId, userIds: 'u1' }, hasAccess: true });
+    const { result } = renderHook(() => useUpsertTravelController());
+    expect(result.current.moderationFeedbackContextKey).toBeNull();
+  });
+
   it('keeps the legacy server state rather than recovered flags when canonical is absent (#2693)', async () => {
     mockUseLocalSearchParams.mockReturnValue({ id: '123' });
     const recovered = { ...baseForm.formData, id: '123', name: 'Локальные правки', publication_status: 'draft' };

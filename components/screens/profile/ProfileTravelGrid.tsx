@@ -120,6 +120,7 @@ export function ProfileTravelGrid({
                       isMobile={isMobileDevice}
                       isFirst={rowIndex === 0 && itemIndex === 0}
                       currentUserId={userId}
+                      showAuthorModerationFeedback={isOwnTravelTab(activeTab)}
                       isSuperuser={isSuperuser}
                       onDeletePress={isOwnTravelTab(activeTab) ? handleDeleteMyTravel : undefined}
                       viewportWidth={width}

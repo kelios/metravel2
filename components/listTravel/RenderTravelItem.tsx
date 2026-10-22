@@ -1,8 +1,10 @@
 // src/components/listTravel/RenderTravelItem.tsx
-import React, { memo, useMemo } from "react";
+import React, { memo, useCallback, useMemo } from "react";
 import { Platform, View, ViewStyle } from "react-native";
 import TravelListItem from "./TravelListItem";
 import type { Travel } from "@/types/types";
+import TravelModerationFeedback from '@/components/travel/TravelModerationFeedback';
+import { extractOwnerIds } from '@/components/listTravel/travelListItemHelpers';
 
 /** Extra fields that the API may include on travel cards but are missing from the global Travel type */
 interface TravelCardExtras {
@@ -43,6 +45,12 @@ const hasSameRenderedTravelSnapshot = (prev: Travel, next: Travel) => {
         p.rating_count === n.rating_count &&
         p.created_at === n.created_at &&
         p.updated_at === n.updated_at &&
+        p.publication_status === n.publication_status &&
+        p.publish === n.publish &&
+        p.moderation === n.moderation &&
+        p.moderation_decision === n.moderation_decision &&
+        p.moderation_decision_reason === n.moderation_decision_reason &&
+        p.moderation_decided_at === n.moderation_decided_at &&
         p.userIds === n.userIds &&
         p.userId === n.userId &&
         p.user_id === n.user_id &&
@@ -66,6 +74,7 @@ type RenderTravelItemProps = {
     isSuperuser?: boolean;
     currentUserId?: string | null;
     isMetravel?: boolean;
+    showAuthorModerationFeedback?: boolean;
     onDeletePress?: (id: number) => void;
     isFirst?: boolean;
     isSingle?: boolean;
@@ -96,6 +105,7 @@ function RenderTravelItem({
                               isSuperuser,
                               currentUserId,
                               isMetravel,
+                              showAuthorModerationFeedback = false,
                               onDeletePress,
                               isFirst,
                               isSingle = false,
@@ -121,13 +131,19 @@ function RenderTravelItem({
         return undefined;
     }, [cardWidth]);
 
+    const authorFeedbackVisible = Boolean(item && !selectable && (showAuthorModerationFeedback || isMetravel)
+        && currentUserId && extractOwnerIds(item).includes(String(currentUserId).trim()));
+    const renderAuthorFeedback = useCallback((onEdit: () => void) => (
+        <TravelModerationFeedback key={`${item.id}:${currentUserId}`} travel={item} onCorrect={onEdit} list />
+    ), [currentUserId, item]);
     const containerStyle = useMemo<ViewStyle>(() => ({
         width: '100%',
         maxWidth: '100%',
         flexShrink: 0,
+        flexGrow: authorFeedbackVisible ? 1 : 0,
         overflow: 'visible',
-        ...(Platform.OS === 'web' ? { height: '100%' } : {}),
-    }), []);
+        ...(Platform.OS === 'web' ? { height: authorFeedbackVisible ? 'auto' : '100%' } : {}),
+    }), [authorFeedbackVisible]);
 
     if (!item) return null;
 
@@ -139,6 +155,7 @@ function RenderTravelItem({
                 isSuperuser={isSuperuser}
                 isMetravel={isMetravel}
                 onDeletePress={onDeletePress}
+                renderAuthorFeedback={authorFeedbackVisible ? renderAuthorFeedback : undefined}
                 isFirst={isFirst}
                 isSingle={isSingle}
                 selectable={selectable}
@@ -170,6 +187,7 @@ function areEqual(prev: RenderTravelItemProps, next: RenderTravelItemProps) {
     // 3. Режимы работы (меняются при навигации)
     if (prev.selectable !== next.selectable) return false;
     if (prev.isMetravel !== next.isMetravel) return false;
+    if (prev.showAuthorModerationFeedback !== next.showAuthorModerationFeedback) return false;
     
     // 4. Редкие изменения (меняются только при resize или смене роли)
     if (prev.isMobile !== next.isMobile) return false;

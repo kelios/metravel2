@@ -8,8 +8,8 @@ import { useTravelFormData } from '@/hooks/useTravelFormData';
 import { useTravelWizard } from '@/hooks/useTravelWizard';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useDraftRecovery } from '@/hooks/useDraftRecovery';
-import { normalizeTravelId } from '@/utils/travelFormUtils';
-import { resolveTravelPublicationStatus } from '@/utils/travelPublicationStatus';
+import { checkTravelEditAccess, normalizeTravelId } from '@/utils/travelFormUtils';
+import { readTravelModerationMetadata, resolveTravelPublicationStatus } from '@/utils/travelPublicationStatus';
 import { formatRelativeTime, translate as i18nT } from '@/i18n'
 import {
   buildTravelArticleCreateIntentHref,
@@ -25,6 +25,7 @@ export interface UpsertTravelController {
   isNew: boolean;
   isInitialLoading: boolean;
   hasAccess: boolean;
+  moderationFeedbackContextKey: string | null;
   loadError: { status: number; message: string } | null;
   retryLoad: () => Promise<void>;
   isAuthenticated: boolean;
@@ -167,6 +168,16 @@ export function useUpsertTravelController(): UpsertTravelController {
     },
   });
 
+  // Access/loading state can still belong to the previous route or viewer until
+  // its load effect runs. Private feedback requires this render's trusted record.
+  const routeTravelId = normalizeTravelId(travelId);
+  const moderationFeedbackContextKey = authReady && isAuthenticated && userId && !isNew &&
+    routeTravelId != null && form.travelDataOld &&
+    normalizeTravelId(form.travelDataOld.id) === routeTravelId &&
+    normalizeTravelId(form.formData.id) === routeTravelId &&
+    checkTravelEditAccess(form.travelDataOld, userId, isSuperuser)
+    ? `${routeTravelId}:${userId}` : null;
+
   const [autosaveClock, setAutosaveClock] = useState(() => Date.now());
   useEffect(() => {
     if (form.autosave.phase !== 'saved' || !form.autosave.lastSaved) return;
@@ -306,6 +317,7 @@ export function useUpsertTravelController(): UpsertTravelController {
       // Read after storage resolves, since a save may have completed meanwhile.
       const dataForCurrentRoute = {
         ...recoveredData,
+        ...readTravelModerationMetadata(currentData),
         ...(isNew && normalizeTravelId(recoveredData.id) != null ? { id: null } : {}),
         publication_status: currentData.publication_status !== undefined
           ? currentData.publication_status
@@ -355,6 +367,7 @@ export function useUpsertTravelController(): UpsertTravelController {
       isNew,
       isInitialLoading: form.isInitialLoading,
       hasAccess: form.hasAccess,
+      moderationFeedbackContextKey,
       loadError: form.loadError,
       retryLoad: form.retryLoad,
       isAuthenticated,
@@ -397,6 +410,7 @@ export function useUpsertTravelController(): UpsertTravelController {
       shareTripCountryField,
       form.isInitialLoading,
       form.hasAccess,
+      moderationFeedbackContextKey,
       form.loadError,
       form.retryLoad,
       isAuthenticated,

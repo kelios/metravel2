@@ -41,6 +41,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     countries = [],
     setFormData,
     isSuperAdmin,
+    moderationFeedbackContextKey = null,
     onManualSave,
     onGoBack,
     onFinish: _onFinish,
@@ -75,7 +76,6 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const {
         status,
         setStatus,
-        currentBackendStatus,
         publicationStatus,
         publicationStatusError,
         pendingModeration,
@@ -187,7 +187,9 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                     <PublishStatusSummaryPanel
                         colors={colors}
                         styles={styles}
-                        currentBackendStatus={currentBackendStatus}
+                        formData={formData}
+                        moderationFeedbackContextKey={moderationFeedbackContextKey}
+                        onCorrect={onStepSelect ? () => onStepSelect(1) : undefined}
                         publicationStatus={publicationStatus}
                         publicationStatusError={publicationStatusError}
                         pendingModeration={pendingModeration}

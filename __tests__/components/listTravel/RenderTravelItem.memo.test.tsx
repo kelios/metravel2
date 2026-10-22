@@ -99,3 +99,37 @@ describe('RenderTravelItem memoization', () => {
     expect(mockTravelListItem).toHaveBeenCalledTimes(2)
   })
 })
+
+describe('author moderation identity and refresh', () => {
+  beforeEach(() => mockTravelListItem.mockClear());
+
+  it.each([
+    ['publication_status', 'pending_review'], ['publish', true], ['moderation', true],
+    ['moderation_decision', 'rejected'], ['moderation_decision_reason', 'Fix route details'],
+    ['moderation_decided_at', '2026-10-22T12:00:00Z'],
+  ])('refreshes after the server changes %s', (field, value) => {
+    const screen = render(<RenderTravelItem item={baseTravel} currentUserId="42" showAuthorModerationFeedback />);
+    screen.rerender(<RenderTravelItem item={{ ...baseTravel, [field]: value }} currentUserId="42" showAuthorModerationFeedback />);
+    expect(mockTravelListItem).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    { currentUserId: '42', showAuthorModerationFeedback: false, isMetravel: false, isSuperuser: false },
+    { currentUserId: '99', showAuthorModerationFeedback: true, isMetravel: false, isSuperuser: false },
+    { currentUserId: '99', showAuthorModerationFeedback: true, isMetravel: true, isSuperuser: true },
+    { currentUserId: null, showAuthorModerationFeedback: true, isMetravel: true, isSuperuser: false },
+  ])('does not expose private feedback outside its author context: %p', (context) => {
+    render(<RenderTravelItem item={{ ...baseTravel, moderation_decision: 'rejected', moderation_decision_reason: 'Private reason' }} {...context} />);
+    expect(mockTravelListItem.mock.calls[0][0].renderAuthorFeedback).toBeUndefined();
+  });
+
+  it('removes owner feedback immediately when the viewer changes and returns only for the owner', () => {
+    const props = { item: baseTravel, showAuthorModerationFeedback: true };
+    const screen = render(<RenderTravelItem {...props} currentUserId="42" />);
+    expect(mockTravelListItem.mock.calls[0][0].renderAuthorFeedback).toEqual(expect.any(Function));
+    screen.rerender(<RenderTravelItem {...props} currentUserId="99" />);
+    expect(mockTravelListItem.mock.lastCall[0].renderAuthorFeedback).toBeUndefined();
+    screen.rerender(<RenderTravelItem {...props} currentUserId={null} />);
+    expect(mockTravelListItem.mock.lastCall[0].renderAuthorFeedback).toBeUndefined();
+  });
+});

@@ -27,7 +27,7 @@ import {
   isLocalPreviewUrl,
 } from '@/utils/travelFormNormalization';
 import { findUnusedMarkerIndex, mergeSavedMarkersIntoLive } from '@/utils/travelMarkerSaveResponse';
-import { requireTravelPublicationStatus, resolveTravelPublicationStatus } from '@/utils/travelPublicationStatus';
+import { readTravelModerationMetadata, requireTravelPublicationStatus, resolveTravelPublicationStatus } from '@/utils/travelPublicationStatus';
 import { applySmartImageLayout } from '@/utils/richTextImageLayout';
 import {
   planTravelContentSave,
@@ -96,7 +96,7 @@ const SERVER_OWNED_SAVE_RESPONSE_FIELDS = new Set<keyof TravelFormData>([
   'categoriesIds',
   'publish',
   'moderation',
-  'publication_status',
+  'publication_status', 'moderation_decision', 'moderation_decision_reason', 'moderation_decided_at',
 ]);
 const LOCAL_EDITING_STATE_FIELDS = new Set<keyof TravelFormData>(['name', 'description', 'plus', 'minus', 'recommendation', 'youtube_link']);
 
@@ -504,7 +504,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
       const epoch = ++applyEpochRef.current;
 
       let normalizedSavedData = normalizeDraftPlaceholders({
-        ...savedData,
+        ...savedData, ...readTravelModerationMetadata(savedData),
         publication_status: savedData.publication_status !== undefined
           ? savedData.publication_status
           : resolveTravelPublicationStatus(savedData),
@@ -599,8 +599,8 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         coordsMeTravel: effectiveMarkers,
       };
       const persistedBaselineData =
-        sourceData && !isEqual(currentDataSnapshot, sourceData)
-          ? { ...sourceData, publication_status: finalData.publication_status }
+        sourceData && !isEqual({ ...currentDataSnapshot, ...readTravelModerationMetadata(currentDataSnapshot) }, { ...sourceData, ...readTravelModerationMetadata(sourceData) })
+          ? { ...sourceData, ...readTravelModerationMetadata(finalData), publication_status: finalData.publication_status }
           : finalData;
 
       confirmedSaveBaselineRef.current = persistedBaselineData;
@@ -815,12 +815,12 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
       throw new Error('Request aborted');
     }
     const snapshot = {
-      ...dataToSave,
+      ...dataToSave, ...readTravelModerationMetadata(formDataRef.current),
       publication_status: requireTravelPublicationStatus(formDataRef.current),
     };
     const operation = (async () => {
-      const canonicalBaseline = baseline && baseline.publication_status === undefined
-        ? { ...baseline, publication_status: resolveTravelPublicationStatus(baseline) }
+      const canonicalBaseline = baseline
+        ? { ...baseline, ...readTravelModerationMetadata(baseline), publication_status: baseline.publication_status !== undefined ? baseline.publication_status : resolveTravelPublicationStatus(baseline) }
         : baseline;
       const plan = planTravelContentSave(snapshot, canonicalBaseline, stableTravelId);
       if (plan.kind === 'content') {

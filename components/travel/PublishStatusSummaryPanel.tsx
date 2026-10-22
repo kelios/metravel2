@@ -9,17 +9,18 @@ import type { TravelPublicationStatus } from '@/types/types';
 import type { ThemedColors } from '@/hooks/useTheme';
 import type { ModerationIssue } from '@/utils/formValidation';
 import { translate as i18nT } from '@/i18n'
+import TravelModerationFeedback from '@/components/travel/TravelModerationFeedback';
+import TravelPublicationStatusChip from '@/components/travel/TravelPublicationStatusChip';
+import { resolveTravelModerationFeedback } from '@/utils/travelPublicationStatus';
+import type { TravelFormData } from '@/types/types';
 
-
-type BackendStatusTone = 'success' | 'warning' | 'muted';
 
 type PublishStatusSummaryPanelProps = {
     colors: ThemedColors;
     styles: any;
-    currentBackendStatus: {
-        label: string;
-        tone: BackendStatusTone;
-    };
+    formData: TravelFormData;
+    moderationFeedbackContextKey: string | null;
+    onCorrect?: () => void;
     publicationStatus: TravelPublicationStatus | null;
     publicationStatusError: string | null;
     pendingModeration: boolean;
@@ -39,7 +40,9 @@ type PublishStatusSummaryPanelProps = {
 export default function PublishStatusSummaryPanel({
     colors,
     styles,
-    currentBackendStatus,
+    formData,
+    moderationFeedbackContextKey,
+    onCorrect,
     publicationStatus,
     publicationStatusError,
     pendingModeration,
@@ -56,16 +59,7 @@ export default function PublishStatusSummaryPanel({
             <View style={[styles.card, styles.statusChipCard]}>
                 <Text style={styles.cardTitle}>{i18nT('travel:components.travel.PublishStatusSummaryPanel.tekuschiy_status_382752e0')}</Text>
                 <View style={styles.statusChipRow}>
-                    <View
-                        style={[
-                            styles.statusChip,
-                            currentBackendStatus.tone === 'success' && styles.statusChipSuccess,
-                            currentBackendStatus.tone === 'warning' && styles.statusChipWarning,
-                            currentBackendStatus.tone === 'muted' && styles.statusChipMuted,
-                        ]}
-                    >
-                        <Text style={styles.statusChipText}>{currentBackendStatus.label}</Text>
-                    </View>
+                    <TravelPublicationStatusChip status={moderationFeedbackContextKey ? resolveTravelModerationFeedback(formData).status : publicationStatus} />
                     <Text style={styles.statusChipHint}>
                         {pendingModeration
                             ? i18nT('travel:components.travel.PublishStatusSummaryPanel.marshrut_otpravlen_na_moderatsiyu_ozhidaet_r_69b645e9')
@@ -74,6 +68,7 @@ export default function PublishStatusSummaryPanel({
                                 : i18nT('travel:components.travel.PublishStatusSummaryPanel.savePreservesStatus')}
                     </Text>
                 </View>
+                {moderationFeedbackContextKey ? <TravelModerationFeedback key={moderationFeedbackContextKey} travel={formData} onCorrect={onCorrect} showStatus={false} /> : null}
             </View>
 
             {publicationStatusError && (

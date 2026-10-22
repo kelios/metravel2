@@ -1,4 +1,11 @@
 export type TravelPublicationStatus = 'draft' | 'pending_review' | 'approved' | 'published';
+export type TravelModerationDecision = 'approved' | 'rejected';
+
+export type TravelModerationMetadata = {
+    moderation_decision?: TravelModerationDecision | null;
+    moderation_decision_reason?: string;
+    moderation_decided_at?: string | null;
+}
 
 // Типы для gallery и travelAddress
 export type GalleryItem = string | {
@@ -101,7 +108,7 @@ export type TravelMedia = {
     article_body?: TravelMediaGroup | null
 }
 
-export type Travel = {
+export type Travel = TravelModerationMetadata & {
     id: number
     slug: string
 
@@ -362,7 +369,7 @@ export interface TravelFilters {
 }
 
 
-export interface TravelFormData {
+export interface TravelFormData extends TravelModerationMetadata {
     id?: string | null;
     slug?: string;
     name?: string;

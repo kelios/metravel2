@@ -2,6 +2,7 @@ import type { Travel } from '@/types/types';
 import { attachTravelEngagementStats } from '@/utils/travelEngagementStats'
 import { buildTravelPath, normalizeRouteSegment, sanitizeTravelHref } from '@/utils/routePaths'
 import { translate as i18nT } from '@/i18n'
+import { readTravelModerationMetadata } from '@/utils/travelPublicationStatus'
 
 export type ProfileListItem = {
   type?: string;
@@ -99,7 +100,7 @@ export const normalizeToTravel = (item: Record<string, unknown>): Travel => {
   const cityName = String(item?.cityName ?? item?.city ?? '').trim();
   const countUnicIpView = String(item?.countUnicIpView ?? item?.views ?? '0');
 
-  const publicationStatus = item?.publication_status ?? item?.publicationStatus;
+  const publicationStatus = item?.publication_status !== undefined ? item.publication_status : item?.publicationStatus;
 
   return attachTravelEngagementStats({
     id,
@@ -140,6 +141,7 @@ export const normalizeToTravel = (item: Record<string, unknown>): Travel => {
     updated_at: item?.updated_at as string | undefined,
     publish: toStatusFlag(item?.publish),
     moderation: toStatusFlag(item?.moderation),
-    publication_status: publicationStatus == null ? undefined : String(publicationStatus),
+    publication_status: publicationStatus === undefined ? undefined : publicationStatus === null ? null : String(publicationStatus),
+    ...readTravelModerationMetadata(item),
   }, item)
 };

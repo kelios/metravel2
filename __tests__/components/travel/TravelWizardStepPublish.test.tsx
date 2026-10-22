@@ -1332,3 +1332,64 @@ describe('TravelWizardStepPublish - moderation submit', () => {
   });
 
 });
+
+describe('author rejection feedback in the existing wizard', () => {
+  const rejectedData: TravelFormData = { ...baseFormData, publication_status: 'draft',
+    moderation_decision: 'rejected', moderation_decision_reason: 'Добавьте фотографию точки маршрута',
+    moderation_decided_at: '2026-10-22T12:00:00Z' };
+  beforeEach(() => jest.clearAllMocks());
+
+  it('correction navigates to editing without saving, selecting submission, or clearing the decision', () => {
+    const onStepSelect = jest.fn();
+    const onManualSave = jest.fn();
+    const setFormData = jest.fn();
+    const screen = render(<TravelWizardStepPublish currentStep={6} totalSteps={6} formData={rejectedData} moderationFeedbackContextKey="640:u1"
+      setFormData={setFormData} isSuperAdmin={false} onManualSave={onManualSave}
+      onGoBack={jest.fn()} onFinish={jest.fn()} onStepSelect={onStepSelect} />);
+    fireEvent.press(screen.getByTestId('moderation-correct-button'));
+    expect(onStepSelect).toHaveBeenCalledWith(1);
+    expect(onManualSave).not.toHaveBeenCalled();
+    expect(setFormData).not.toHaveBeenCalled();
+    expect(screen.getByText('Отклонено')).toBeTruthy();
+    expect(rejectedData.moderation_decision_reason).toBe('Добавьте фотографию точки маршрута');
+  });
+
+  it('hides private decision metadata synchronously when the viewer context is denied', () => {
+    const props = { currentStep: 6, totalSteps: 6, formData: rejectedData,
+      setFormData: jest.fn(), isSuperAdmin: false, onManualSave: jest.fn(), onGoBack: jest.fn(), onFinish: jest.fn() };
+    const screen = render(<TravelWizardStepPublish {...props} moderationFeedbackContextKey="640:u1" />);
+    expect(screen.getByText('Отклонено')).toBeTruthy();
+    expect(screen.getByTestId('moderation-reason-preview')).toBeTruthy();
+    screen.rerender(<TravelWizardStepPublish {...props} moderationFeedbackContextKey={null} />);
+    expect(screen.getByText('Черновик')).toBeTruthy();
+    expect(screen.queryByText('Отклонено')).toBeNull();
+    expect(screen.queryByTestId('moderation-reason-preview')).toBeNull();
+    expect(screen.queryByTestId('moderation-decision-date')).toBeNull();
+    expect(screen.queryByTestId('moderation-correct-button')).toBeNull();
+    expect(props.onManualSave).not.toHaveBeenCalled();
+  });
+
+  it('denies private metadata by default even when stale form data includes a rejection', () => {
+    const screen = render(<TravelWizardStepPublish currentStep={6} totalSteps={6} formData={rejectedData}
+      setFormData={jest.fn()} isSuperAdmin={false} onManualSave={jest.fn()} onGoBack={jest.fn()} onFinish={jest.fn()} />);
+    expect(screen.getByText('Черновик')).toBeTruthy();
+    expect(screen.queryByText('Отклонено')).toBeNull();
+    expect(screen.queryByTestId('moderation-reason-preview')).toBeNull();
+  });
+
+  it('failed explicit resubmission keeps the reason and allows a retry', async () => {
+    const onManualSave = jest.fn().mockRejectedValueOnce(new Error('Network failure')).mockResolvedValueOnce(undefined);
+    const screen = render(<TravelWizardStepPublish currentStep={6} totalSteps={6} formData={rejectedData} moderationFeedbackContextKey="640:u1"
+      setFormData={jest.fn()} isSuperAdmin={false} onManualSave={onManualSave} onGoBack={jest.fn()} onFinish={jest.fn()} />);
+    const moderationRow = screen.getByText('Отправить на модерацию').parent?.parent;
+    if (!moderationRow) throw new Error('Moderation option row not found');
+    fireEvent.press(moderationRow);
+    await act(async () => fireEvent.press(screen.getByTestId('primary-button')));
+    expect(onManualSave).toHaveBeenCalledWith(rejectedData, { intent: 'submit' });
+    expect(screen.getByTestId('moderation-reason-preview').props.children).toBe(rejectedData.moderation_decision_reason);
+    expect(screen.getByText('Отклонено')).toBeTruthy();
+    await act(async () => fireEvent.press(screen.getByTestId('primary-button')));
+    expect(onManualSave).toHaveBeenCalledTimes(2);
+    expect(rejectedData.description).toBe(baseFormData.description);
+  });
+});

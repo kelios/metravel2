@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Platform,
     ScrollView,
@@ -82,16 +82,6 @@ export function useTravelPublishModeration({
         ? i18nT('errorsStatic:api.misc.unsupportedPublicationStatus')
         : null;
     useEffect(() => setStatus('draft'), [formData.id, publicationStatus]);
-
-    const currentBackendStatus = useMemo(() => {
-        switch (publicationStatus) {
-            case 'published': return { label: i18nT('travel:components.travel.TravelWizardStepPublish.opublikovano_572457aa'), tone: 'success' } as const;
-            case 'approved': return { label: i18nT('travel:components.travel.TravelWizardStepPublish.approved'), tone: 'success' } as const;
-            case 'pending_review': return { label: i18nT('travel:components.travel.TravelWizardStepPublish.otpravleno_na_moderatsiyu_6f9b87dd'), tone: 'warning' } as const;
-            case 'draft': return { label: i18nT('travel:components.travel.TravelWizardStepPublish.chernovik_80f263f2'), tone: 'muted' } as const;
-            default: return { label: i18nT('errorsStatic:api.misc.unsupportedPublicationStatus'), tone: 'warning' } as const;
-        }
-    }, [publicationStatus]);
 
     const pendingModeration = publicationStatus === 'pending_review';
     const userPendingModeration = !isSuperAdmin && pendingModeration;
@@ -502,7 +492,6 @@ export function useTravelPublishModeration({
         setStatus,
         publicationStatus,
         publicationStatusError,
-        currentBackendStatus,
         pendingModeration,
         userPendingModeration,
         missingForModeration,

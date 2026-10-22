@@ -1,20 +1,16 @@
 import React from 'react';
+import { router } from 'expo-router';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { ThemeProvider } from '@/hooks/useTheme';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-const mockRouterPush = jest.fn();
+const mockRouterPush = router.push as jest.Mock;
 
-jest.mock('expo-router', () => ({
-  router: {
-    push: mockRouterPush,
-  },
-  useRouter: () => ({
-    push: mockRouterPush,
-  }),
-  usePathname: () => '',
-}));
+jest.mock('expo-router', () => {
+  const mockRouter = { push: jest.fn() };
+  return { router: mockRouter, useRouter: () => mockRouter, usePathname: () => '' };
+});
 
 jest.mock('@/context/AuthContext', () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -201,5 +197,31 @@ describe('RenderTravelItem Component', () => {
     fireEvent.press(checkbox);
 
     expect(mockOnToggle).toHaveBeenCalled();
+  });
+});
+
+describe('real author-card moderation controls', () => {
+  const rejectedTravel = { ...mockTravel, publication_status: 'draft' as const,
+    moderation_decision: 'rejected' as const, moderation_decision_reason: 'Добавьте сведения о маршруте' };
+  beforeEach(() => jest.clearAllMocks());
+
+  it('shows the rejection without a duplicate draft badge and correction opens the existing editor', () => {
+    const screen = renderWithProviders(<RenderTravelItem item={rejectedTravel} currentUserId="1" showAuthorModerationFeedback />);
+    expect(screen.getByText('Отклонено')).toBeTruthy();
+    expect(screen.queryByTestId('draft-status-badge')).toBeNull();
+    fireEvent.press(screen.getByTestId('moderation-correct-button'));
+    expect(mockRouterPush).toHaveBeenCalledTimes(1);
+    expect(mockRouterPush).toHaveBeenCalledWith('/travel/1');
+  });
+
+  it.each([
+    { currentUserId: '1', showAuthorModerationFeedback: false },
+    { currentUserId: '2', showAuthorModerationFeedback: true },
+    { currentUserId: '2', showAuthorModerationFeedback: true, isSuperuser: true },
+  ])('does not render a cached private reason for %p', (context) => {
+    const screen = renderWithProviders(<RenderTravelItem item={rejectedTravel} {...context} />);
+    expect(screen.queryByText('Отклонено')).toBeNull();
+    expect(screen.queryByText(rejectedTravel.moderation_decision_reason)).toBeNull();
+    expect(screen.queryByTestId('moderation-correct-button')).toBeNull();
   });
 });

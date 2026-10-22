@@ -927,8 +927,12 @@ describe('handleManualSave — server echo while editing', () => {
     });
 
     expect(mockConfirmAction).not.toHaveBeenCalled();
-    expect(params.formDataRef.current).toEqual({ ...savedTravel, publication_status: 'draft' });
-    expect(params.updateBaselineRef.current).toHaveBeenLastCalledWith({ ...savedTravel, publication_status: 'draft' });
+    const normalizedSavedTravel = {
+      ...savedTravel, publication_status: 'draft',
+      moderation_decision: null, moderation_decision_reason: '', moderation_decided_at: null,
+    };
+    expect(params.formDataRef.current).toEqual(normalizedSavedTravel);
+    expect(params.updateBaselineRef.current).toHaveBeenLastCalledWith(normalizedSavedTravel);
   });
 });
 

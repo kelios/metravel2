@@ -46,7 +46,7 @@ export const createProfileScreenStyles = ({
       flexWrap: 'wrap',
       maxWidth: '100%',
       minWidth: 0,
-      alignItems: 'flex-start',
+      alignItems: 'stretch',
       ...Platform.select({
         web: {
           columnGap: gapSize,

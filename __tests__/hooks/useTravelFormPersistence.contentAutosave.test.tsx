@@ -558,3 +558,109 @@ describe('#2693 — canonical publication state in every persistence path', () =
   });
 
 });
+
+describe('#2669 — authoritative moderation metadata across full and content saves', () => {
+  const previousDecision = {
+    publication_status: 'draft',
+    moderation_decision: 'rejected',
+    moderation_decision_reason: 'Old route correction',
+    moderation_decided_at: '2026-10-20T09:00:00Z',
+  };
+  const clearedMetadata = {
+    moderation_decision: null, moderation_decision_reason: '', moderation_decided_at: null,
+  };
+  const currentDecision = {
+    moderation_decision: 'rejected',
+    moderation_decision_reason: 'Add the route duration',
+    moderation_decided_at: '2026-10-21T09:15:00Z',
+  };
+  const serverCases = [
+    { label: 'omitted', metadata: {}, status: 'pending_review', expected: clearedMetadata },
+    { label: 'explicit null', metadata: { moderation_decision: null, moderation_decision_reason: null, moderation_decided_at: null }, status: 'pending_review', expected: clearedMetadata },
+    { label: 'new decision', metadata: currentDecision, status: 'draft', expected: currentDecision },
+  ];
+
+  describe.each(['manual', 'autosave'] as const)('%s full save', (mode) => {
+    it.each(serverCases)('applies $label server metadata despite concurrent local content and stale feedback', async ({ metadata, status, expected }) => {
+      const baseline = travelSnapshot(previousDecision);
+      const { result, params, formState, autosaveOptions } = setupPersistence(baseline);
+      const pending = deferredSave();
+      mockSaveFormData.mockReturnValueOnce(pending.promise);
+      let saving!: Promise<TravelFormData | void>;
+      act(() => {
+        saving = mode === 'manual'
+          ? result.current.handleManualSave()
+          : autosaveOptions.onSave({ ...baseline, categories: [1, 2, 3] }, undefined, baseline);
+      });
+      await waitFor(() => expect(mockSaveFormData).toHaveBeenCalledTimes(1));
+      params.formDataRef.current = {
+        ...baseline,
+        description: '<p>New author text typed while the save was pending.</p>',
+        moderation_decision_reason: 'Stale local reason changed during the request',
+      };
+      await act(async () => {
+        pending.resolve(travelSnapshot({ publication_status: status, ...metadata }) as unknown as TravelFormData);
+        await saving;
+      });
+
+      expect(params.formDataRef.current).toMatchObject({
+        publication_status: status,
+        description: '<p>New author text typed while the save was pending.</p>',
+        ...expected,
+      });
+      expect(formState.reset).toHaveBeenLastCalledWith(expect.objectContaining(expected));
+      expect(params.updateBaselineRef.current).toHaveBeenLastCalledWith(expect.objectContaining({
+        publication_status: status, ...expected,
+      }));
+      for (const field of ['moderation_decision', 'moderation_decision_reason', 'moderation_decided_at']) {
+        expect(mockSaveFormData.mock.calls[0][0]).not.toHaveProperty(field);
+      }
+      expect(mockSaveTravelContent).not.toHaveBeenCalled();
+    });
+  });
+
+  it.each([
+    previousDecision,
+    { ...previousDecision, publication_status: 'published', moderation_decision: 'approved' },
+  ])('retains confirmed $moderation_decision metadata when a real partial content response omits it', async (metadata) => {
+    const baseline = travelSnapshot(metadata);
+    const next = { ...baseline, description: '<p>New author text saved through the content endpoint.</p>' };
+    const { params, formState, autosaveOptions } = setupPersistence(baseline);
+    params.formDataRef.current = next;
+    mockSaveTravelContent.mockResolvedValue(contentResponse({ description: next.description, slug: 'updated-route' }) as any);
+
+    let confirmed!: TravelFormData;
+    await act(async () => { confirmed = await autosaveOptions.onSave(next, undefined, baseline); });
+    expect(mockSaveTravelContent).toHaveBeenCalledTimes(1);
+    expect(mockSaveTravelContent.mock.calls[0][1]).toEqual({ description: next.description });
+    expect(mockSaveFormData).not.toHaveBeenCalled();
+    expect(formState.reset).not.toHaveBeenCalled();
+    expect(params.formDataRef.current).toMatchObject({ ...metadata, description: next.description, slug: 'updated-route' });
+    expect(confirmed).toMatchObject(metadata);
+    expect(params.updateBaselineRef.current).toHaveBeenLastCalledWith(expect.objectContaining(metadata));
+  });
+
+  it('rebases a stale pre-submit content snapshot onto the confirmed cleared decision before PATCH and baseline', async () => {
+    const baseline = travelSnapshot(previousDecision);
+    const { result, params, autosaveOptions } = setupPersistence(baseline);
+    mockSaveFormData.mockResolvedValue(travelSnapshot({ publication_status: 'pending_review', ...clearedMetadata }) as any);
+    await act(async () => { await result.current.handleManualSave(undefined, { intent: 'submit' }); });
+    const confirmedPending = params.formDataRef.current;
+    const description = '<p>Text entered around the moderation transition.</p>';
+    params.formDataRef.current = { ...confirmedPending, description };
+    mockSaveTravelContent.mockResolvedValue(contentResponse({ description }) as any);
+
+    let saved!: TravelFormData;
+    await act(async () => {
+      saved = await autosaveOptions.onSave({ ...baseline, description }, undefined, confirmedPending);
+    });
+    expect(mockSaveFormData).toHaveBeenCalledTimes(1);
+    expect(mockSaveTravelContent).toHaveBeenCalledTimes(1);
+    expect(mockSaveTravelContent.mock.calls[0][1]).toEqual({ description });
+    expect(saved).toMatchObject({ publication_status: 'pending_review', ...clearedMetadata });
+    expect(params.formDataRef.current).toMatchObject({ publication_status: 'pending_review', description, ...clearedMetadata });
+    expect(params.updateBaselineRef.current).toHaveBeenLastCalledWith(expect.objectContaining({
+      publication_status: 'pending_review', ...clearedMetadata,
+    }));
+  });
+});

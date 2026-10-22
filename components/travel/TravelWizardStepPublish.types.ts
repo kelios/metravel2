@@ -17,6 +17,7 @@ export interface TravelWizardStepPublishProps {
     }>;
     setFormData: React.Dispatch<React.SetStateAction<TravelFormData>>;
     isSuperAdmin: boolean;
+    moderationFeedbackContextKey?: string | null;
     onManualSave: (
         data?: TravelFormData,
         options?: SaveFormDataOptions,

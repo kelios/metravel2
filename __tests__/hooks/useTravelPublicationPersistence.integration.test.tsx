@@ -55,7 +55,10 @@ describe('#2693 — real autosave engine and publication commands', () => {
       await background;
       if (command) await command;
     });
-    expect(result.current.formState.data.id).not.toBeNull();
+    expect(String(result.current.formState.data.id)).toBe('9901');
+    expect(result.current.formState.data).toMatchObject({
+      moderation_decision: null, moderation_decision_reason: '', moderation_decided_at: null,
+    });
     if (withCommand) {
       expect(save).toHaveBeenCalledTimes(2);
       expect(save.mock.calls[1][0]).toEqual(expect.objectContaining({ id: 9901, slug: 'created-by-server' }));
@@ -63,6 +66,7 @@ describe('#2693 — real autosave engine and publication commands', () => {
     }
     await act(async () => { jest.advanceTimersByTime(15000); await Promise.resolve(); });
     expect(save).toHaveBeenCalledTimes(withCommand ? 2 : 1);
+    expect(String(result.current.formState.data.id)).toBe('9901');
     expect(result.current.autosave.hasUnsavedChanges).toBe(false);
   });
 });

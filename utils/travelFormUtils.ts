@@ -1,5 +1,5 @@
 import { TravelFormData, Travel, MarkerData } from '@/types/types';
-import { resolveTravelPublicationStatus } from '@/utils/travelPublicationStatus';
+import { readTravelModerationMetadata, resolveTravelPublicationStatus } from '@/utils/travelPublicationStatus';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 
 type UnknownRecord = Record<string, unknown>;
@@ -292,6 +292,7 @@ export function transformTravelToFormData(travel: Travel): TravelFormData {
 
   return {
     ...mergedTravel,
+    ...readTravelModerationMetadata(travel),
     id: String(travel.id),
     year: yearStr,
     visitedDate: String(travelRecord.visitedDate ?? travelRecord.visited_date ?? ''),

@@ -5,7 +5,9 @@ import { ensureRequiredDraftFields } from '@/utils/travelFormNormalization';
 import { getEmptyFormData, transformTravelToFormData } from '@/utils/travelFormUtils';
 import {
   buildTravelPublicationWrite,
+  readTravelModerationMetadata,
   requireTravelPublicationStatus,
+  resolveTravelModerationFeedback,
   resolveTravelPublicationStatus,
   type TravelPublicationCommand,
 } from '@/utils/travelPublicationStatus';
@@ -49,6 +51,7 @@ describe('travel publication status contract', () => {
         enforce_moderation_validation: true,
         moderation_decision_reason: 'A reason read from GET',
         moderation_decision: { decision: 'rejected', reason: 'A previous decision' },
+        moderation_decided_at: '2026-10-21T09:15:00Z',
       };
       const original = { ...article };
 
@@ -102,6 +105,7 @@ describe('travel publication status contract', () => {
       moderation: false,
       moderation_decision_reason: 'Old reason from GET',
       moderation_decision: { decision: 'rejected' },
+      moderation_decided_at: '2026-10-21T09:15:00Z',
     }, command, 'An unrelated option')).toEqual({
       publication_status: target,
       enforce_moderation_validation: validate,
@@ -151,11 +155,18 @@ describe('real GET → form normalization → full-save publication contract', (
     publish: false,
     moderation: false,
     moderation_decision_reason: 'Previous reason returned by GET',
-    moderation_decision: { decision: 'rejected', reason: 'A past decision' },
+    moderation_decision: 'rejected',
+    moderation_decided_at: '2026-10-21T09:15:00Z',
   } as unknown as Travel);
 
   it.each(statuses)('keeps %s through the real mapper, normalizer and JSON serializer', async (status) => {
     const form = ensureRequiredDraftFields(transformTravelToFormData(apiArticle(status)));
+    expect(form).toMatchObject({
+      publication_status: status,
+      moderation_decision: 'rejected',
+      moderation_decision_reason: 'Previous reason returned by GET',
+      moderation_decided_at: '2026-10-21T09:15:00Z',
+    });
     form.name = 'Content edited without moderation';
     await saveFormData(form);
     expect(mockApiRequest).toHaveBeenCalledTimes(1);
@@ -167,7 +178,7 @@ describe('real GET → form normalization → full-save publication contract', (
       enforce_moderation_validation: false,
     });
     expect(String(payload.id)).toBe('42');
-    for (const field of ['publish', 'moderation', 'moderation_decision', 'moderation_decision_reason']) {
+    for (const field of ['publish', 'moderation', 'moderation_decision', 'moderation_decision_reason', 'moderation_decided_at']) {
       expect(payload).not.toHaveProperty(field);
     }
   });
@@ -183,6 +194,8 @@ describe('real GET → form normalization → full-save publication contract', (
     expect(payload).toMatchObject({ publication_status: status, enforce_moderation_validation: enforce });
     expect(payload).not.toHaveProperty('publish');
     expect(payload).not.toHaveProperty('moderation');
+    expect(payload).not.toHaveProperty('moderation_decision');
+    expect(payload).not.toHaveProperty('moderation_decided_at');
     if (command === 'reject') expect(payload.moderation_decision_reason).toBe('Fix the route details');
     else expect(payload).not.toHaveProperty('moderation_decision_reason');
     expect(form.publication_status).toBe('pending_review');
@@ -206,5 +219,110 @@ describe('real GET → form normalization → full-save publication contract', (
     expect(payload.publication_status).toBe('pending_review');
     expect(payload).not.toHaveProperty('publish');
     expect(payload).not.toHaveProperty('moderation');
+  });
+});
+
+describe('#2669 — moderation feedback follows the current publication state', () => {
+  const decidedAt = '2026-10-21T09:15:00Z';
+  const reason = 'Add the missing route details';
+
+  const feedbackCases = [
+    ['draft', 'rejected', 'rejected', reason, decidedAt],
+    ['draft', 'approved', 'draft', '', null],
+    ['pending_review', 'rejected', 'pending_review', '', null],
+    ['pending_review', 'approved', 'pending_review', '', null],
+    ['approved', 'rejected', 'approved', '', null],
+    ['approved', 'approved', 'approved', '', null],
+    ['published', 'rejected', 'published', '', null],
+    ['published', 'approved', 'published', '', decidedAt],
+  ] as const;
+
+  it.each(feedbackCases)(
+    'shows only the current decision for canonical %s and decision %s',
+    (publication_status, moderation_decision, status, visibleReason, visibleDate) => {
+      expect(resolveTravelModerationFeedback({
+        publication_status, moderation_decision,
+        moderation_decision_reason: reason,
+        moderation_decided_at: decidedAt,
+        publish: publication_status !== 'published', moderation: publication_status !== 'published',
+      })).toEqual({ status, reason: visibleReason, decidedAt: visibleDate });
+    },
+  );
+
+  it.each([
+    [false, false, 'rejected', 'rejected', reason, decidedAt],
+    [false, false, 'approved', 'draft', '', null],
+    [true, false, 'rejected', 'pending_review', '', null],
+    [true, false, 'approved', 'pending_review', '', null],
+    [false, true, 'rejected', 'approved', '', null],
+    [false, true, 'approved', 'approved', '', null],
+    [true, true, 'rejected', 'published', '', null],
+    [true, true, 'approved', 'published', '', decidedAt],
+  ] as const)(
+    'resolves absent canonical legacy %s/%s before decision %s',
+    (publish, moderation, moderation_decision, status, visibleReason, visibleDate) => {
+      expect(resolveTravelModerationFeedback({
+        publish, moderation, moderation_decision,
+        moderation_decision_reason: reason, moderation_decided_at: decidedAt,
+      })).toEqual({ status, reason: visibleReason, decidedAt: visibleDate });
+    },
+  );
+
+  it.each([null, '', 'future_state'])(
+    'does not turn invalid canonical %p into a rejection or publication from history',
+    (publication_status) => {
+      for (const moderation_decision of ['rejected', 'approved']) {
+        expect(resolveTravelModerationFeedback({
+          publication_status, moderation_decision, publish: true, moderation: true,
+          moderation_decision_reason: reason, moderation_decided_at: decidedAt,
+        })).toEqual({ status: null, reason: '', decidedAt: null });
+      }
+    },
+  );
+
+  it.each([undefined, null, 'deferred', 'REJECTED', 1, [], { decision: 'rejected' }].map(value => [value]))(
+    'ignores absent or malformed decision %p without hiding the canonical state',
+    (moderation_decision) => {
+      for (const publication_status of statuses) {
+        expect(resolveTravelModerationFeedback({
+          publication_status, moderation_decision,
+          moderation_decision_reason: reason, moderation_decided_at: decidedAt,
+        })).toEqual({ status: publication_status, reason: '', decidedAt: null });
+      }
+    },
+  );
+
+  it.each([undefined, null, '', '  ', 'not-a-date', 12, [], {}].map(value => [value]))(
+    'hides invalid decision date %p while retaining the known decision',
+    (moderation_decided_at) => {
+      expect(resolveTravelModerationFeedback({
+        publication_status: 'draft', moderation_decision: 'rejected',
+        moderation_decision_reason: reason, moderation_decided_at,
+      })).toEqual({ status: 'rejected', reason, decidedAt: null });
+      expect(resolveTravelModerationFeedback({
+        publication_status: 'published', moderation_decision: 'approved', moderation_decided_at,
+      })).toEqual({ status: 'published', reason: '', decidedAt: null });
+    },
+  );
+
+  it.each([undefined, null, '', ' \n\t ', 0, [], {}].map(value => [value]))(
+    'keeps a known rejection without inventing a missing or malformed reason %p',
+    (moderation_decision_reason) => {
+      expect(resolveTravelModerationFeedback({
+        publication_status: 'draft', moderation_decision: 'rejected',
+        moderation_decision_reason, moderation_decided_at: decidedAt,
+      })).toEqual({ status: 'rejected', reason: '', decidedAt });
+    },
+  );
+
+  it.each([
+    {},
+    { moderation_decision: null, moderation_decision_reason: null, moderation_decided_at: null },
+    { moderation_decision: 'future', moderation_decision_reason: 42, moderation_decided_at: [] },
+    { moderation_decision: { decision: 'rejected' }, moderation_decision_reason: {}, moderation_decided_at: false },
+  ])('normalizes a complete server snapshot with missing or malformed metadata %p', (source) => {
+    expect(readTravelModerationMetadata(source)).toEqual({
+      moderation_decision: null, moderation_decision_reason: '', moderation_decided_at: null,
+    });
   });
 });

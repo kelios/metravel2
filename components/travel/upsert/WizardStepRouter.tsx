@@ -185,6 +185,7 @@ const WizardStepRouter = React.memo(function WizardStepRouter({
             setFormData={controller.setFormData}
             countries={controller.filters.countries}
             isSuperAdmin={controller.isSuperAdmin}
+            moderationFeedbackContextKey={controller.moderationFeedbackContextKey}
             onGoBack={wizard.handleBack}
             onFinish={wizard.handleFinishWizard}
             onNavigateToIssue={wizard.handleNavigateToIssue}

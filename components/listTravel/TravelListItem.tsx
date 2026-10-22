@@ -6,6 +6,7 @@ import { router } from 'expo-router'
 import type { Travel } from '@/types/types'
 import FavoriteButton from '@/components/travel/FavoriteButton'
 import TravelStatusButton from '@/components/travel/TravelStatusButton'
+import TravelPublicationStatusChip from '@/components/travel/TravelPublicationStatusChip'
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers'
 import { routes } from '@/utils/routes'
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard'
@@ -129,6 +130,7 @@ type Props = {
   isSuperuser?: boolean
   isMetravel?: boolean
   onDeletePress?: (id: number) => void
+  renderAuthorFeedback?: (onEdit: () => void) => React.ReactNode
   isFirst?: boolean
   isSingle?: boolean
   selectable?: boolean
@@ -162,6 +164,7 @@ function TravelListItem({
   isSuperuser,
   isMetravel = false,
   onDeletePress,
+  renderAuthorFeedback,
   isFirst = false,
   isSingle = false,
   selectable = false,
@@ -435,7 +438,7 @@ function TravelListItem({
 
   const a11yLabel =
     i18nT('travel:components.listTravel.TravelListItem.a11yTitle', { value1: title }) +
-    (isDraft ? i18nT('travel:components.listTravel.TravelListItem.status_chernovik_a0df151f') : '') +
+    (isDraft && !renderAuthorFeedback ? i18nT('travel:components.listTravel.TravelListItem.status_chernovik_a0df151f') : '') +
     (countries.length ? i18nT('travel:components.listTravel.TravelListItem.strany_value1_755975ff', { value1: countries.join(', ') }) : '') +
     (displayYear ? i18nT('travel:components.listTravel.TravelListItem.god_value1_e70dda0d', { value1: displayYear }) : '') +
     (views > 0 ? i18nT('travel:components.listTravel.TravelListItem.prosmotrov_value1_aadc926b', { value1: viewsFormatted }) : '')
@@ -665,7 +668,7 @@ function TravelListItem({
 
   const hasSecondaryMeta =
     topRowItems.length > 0 ||
-    isDraft ||
+    (isDraft && !renderAuthorFeedback) ||
     hasEngagementStats ||
     hasRating ||
     displayYear != null
@@ -674,12 +677,7 @@ function TravelListItem({
     <View style={styles.metaRow}>
       <View style={styles.inlineMetaGroup}>{topRowItems}</View>
       <View style={styles.metaBadgesRow}>
-        {isDraft && (
-          <View style={styles.draftStatusBadge} testID="draft-status-badge">
-            <Feather name="edit-3" size={VIEW_ICON_SIZE} color={colors.warningDark} />
-            <Text style={styles.draftStatusText}>{i18nT('travel:components.listTravel.TravelListItem.chernovik_c4f08662')}</Text>
-          </View>
-        )}
+        {isDraft && !renderAuthorFeedback ? <TravelPublicationStatusChip status="draft" compact testID="draft-status-badge" /> : null}
         {displayYear != null && (
           <View style={styles.metaYear} testID="year-meta">
             <Feather name="calendar" size={VIEW_ICON_SIZE} color={colors.textMuted} />
@@ -716,7 +714,7 @@ function TravelListItem({
     styles.card,
     visualVariant === 'home-featured' && styles.cardHomeFeatured,
     isDeleting && ({ opacity: 0.6 } as any),
-    IS_WEB && ({ height: '100%' } as any),
+    IS_WEB && ({ height: renderAuthorFeedback ? 'auto' : '100%' } as any),
     IS_WEB && ({ borderRadius: responsiveValues.borderRadius } as any),
     globalFocusStyles.focusable,
     Platform.OS === 'android' && styles.androidOptimized,
@@ -808,10 +806,10 @@ function TravelListItem({
     )
 
   return (
-    <HiddenContentGate contentRef={safetyRef} style={styles.wrap}>
+    <HiddenContentGate contentRef={safetyRef} style={[styles.wrap, renderAuthorFeedback && { height: 'auto', flexGrow: 1 }]}>
       <View
         style={[
-          styles.wrap,
+          renderAuthorFeedback ? [styles.wrap, { height: 'auto', flexGrow: 1 }] : styles.wrap,
           IS_WEB && typeof cardWidth === 'number' && { width: '100%' },
           wrapOwnsHover && wrapHovered && WRAP_HOVER_LIFT_STYLE,
         ]}
@@ -845,6 +843,7 @@ function TravelListItem({
             {rightTopSlot}
           </View>
         ) : null}
+        {renderAuthorFeedback?.(handleEdit)}
       </View>
     </HiddenContentGate>
   )
@@ -859,6 +858,7 @@ function areEqual(prev: Props, next: Props) {
     prev.currentUserId === next.currentUserId &&
     prev.onToggle === next.onToggle &&
     prev.onDeletePress === next.onDeletePress &&
+    prev.renderAuthorFeedback === next.renderAuthorFeedback &&
     prev.isSuperuser === next.isSuperuser &&
     prev.isMetravel === next.isMetravel &&
     prev.isFirst === next.isFirst &&
