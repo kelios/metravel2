@@ -1,4 +1,8 @@
 export const travelGenerated4 = {
+  "components.travel.TravelWizardStepPublish.approved": "Одобрено",
+  "components.travel.TravelWizardStepPublish.save": "Сохранить",
+  "components.travel.PublishStatusSummaryPanel.saveChanges": "Сохранить изменения",
+  "components.travel.PublishStatusSummaryPanel.savePreservesStatus": "Сохранение не меняет состояние публикации.",
   "components.listTravel.ModernFilters.status.allAuthorsUnpublishedOnly": "Неопубликованные (на модерации)",
   "components.listTravel.ModernFilters.status.allAuthorsUnpublishedOnlyHint": "Показывать неопубликованные статьи на модерации",
   "components.travel.TravelStatusButton.dobavit_v_plan_c8d5333c": "Добавить в план",

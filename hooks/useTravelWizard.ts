@@ -5,6 +5,7 @@ import { useRouter, useNavigation, useLocalSearchParams } from 'expo-router';
 import { trackWizardEvent } from '@/utils/analytics';
 import { goBackOrReplace } from '@/utils/backNavigation';
 import type { ValidationError, ModerationIssue } from '@/utils/formValidation';
+import { resolveTravelPublicationStatus } from '@/utils/travelPublicationStatus';
 import type { TravelFormData } from '@/types/types';
 import { showToastMessage } from '@/utils/toast';
 import { getErrorMessage } from '@/utils/errorHelpers';
@@ -14,6 +15,7 @@ import { translate as i18nT } from '@/i18n'
 
 
 type WizardSaveResult = {
+  publication_status?: string | null;
   publish?: boolean;
   moderation?: boolean;
 } | null | undefined;
@@ -471,7 +473,8 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
 
   const handleFinishWizard = useCallback(async () => {
     const saved = await onSave();
-    const shouldClear = Boolean(saved?.publish || saved?.moderation);
+    const status = saved ? resolveTravelPublicationStatus(saved) : null;
+    const shouldClear = status !== null && status !== 'draft';
     if (shouldClear) {
       await clearPersistedStep();
     }

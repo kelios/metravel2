@@ -27,6 +27,7 @@ import {
   isLocalPreviewUrl,
 } from '@/utils/travelFormNormalization';
 import { findUnusedMarkerIndex, mergeSavedMarkersIntoLive } from '@/utils/travelMarkerSaveResponse';
+import { requireTravelPublicationStatus, resolveTravelPublicationStatus } from '@/utils/travelPublicationStatus';
 import { applySmartImageLayout } from '@/utils/richTextImageLayout';
 import {
   planTravelContentSave,
@@ -95,6 +96,7 @@ const SERVER_OWNED_SAVE_RESPONSE_FIELDS = new Set<keyof TravelFormData>([
   'categoriesIds',
   'publish',
   'moderation',
+  'publication_status',
 ]);
 const LOCAL_EDITING_STATE_FIELDS = new Set<keyof TravelFormData>(['name', 'description', 'plus', 'minus', 'recommendation', 'youtube_link']);
 
@@ -334,6 +336,9 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
   // ответ. Храним его отдельно, чтобы поздний response не объявил более свежую
   // форму (например, уже с точкой B) успешно сохранённым baseline.
   const lastAutosaveSourceRef = useRef<TravelFormData | null>(null);
+  const activeAutosaveRef = useRef<Promise<TravelFormData> | null>(null);
+  const appliedAutosaveRef = useRef<TravelFormData | null>(null);
+  const confirmedSaveBaselineRef = useRef<TravelFormData | null>(null);
 
   // Итог последнего узкого сохранения (#1516). onSuccess движка получает только
   // возвращённое значение, а узкий ответ — это подтверждение текста, а не статья
@@ -354,11 +359,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
     reset: resetAutosaveErrorToastThrottle,
   } = useAutosaveErrorToast(showToast);
 
-  // Хвостовой сейв: если во время in-flight ручного сохранения приходит ещё один
-  // вызов с dataOverride, мы дедуплицируем (возвращаем текущий промис), но НЕ теряем
-  // override — запоминаем последний и один раз прогоняем его после завершения текущего.
-  // Сценарий: правка categories точки B во время сейва точки A на опубликованном travel
-  // (автосейв выключен) — без этого override B молча терялся.
+  // Coalesce ordinary route-save overrides while a manual write is in flight.
   const queuedManualSaveRef = useRef<{
     dataOverride?: TravelFormData;
     options?: SaveFormDataOptions;
@@ -381,9 +382,11 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
   ) => {
     return runWithSaveAbortController(saveAbortControllerRef, externalSignal, async (saveSignal) => {
       const baseFormData = getEmptyFormData(data?.id ? String(data.id) : null);
+      const publicationStatus = requireTravelPublicationStatus(data);
       const mergedData = normalizeNullableStrings({
         ...baseFormData,
         ...Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined)),
+        publication_status: publicationStatus,
       } as TravelFormData);
 
       const normalizedGallery = normalizeGalleryForSave(mergedData.gallery);
@@ -500,7 +503,12 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
 
       const epoch = ++applyEpochRef.current;
 
-      let normalizedSavedData = normalizeDraftPlaceholders(savedData);
+      let normalizedSavedData = normalizeDraftPlaceholders({
+        ...savedData,
+        publication_status: savedData.publication_status !== undefined
+          ? savedData.publication_status
+          : resolveTravelPublicationStatus(savedData),
+      });
       // `sourceData` is the snapshot that started this request. The live ref can
       // already contain another point by the time the response arrives, so it is
       // the only safe merge target. Using the request snapshot here made a stale
@@ -592,9 +600,10 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
       };
       const persistedBaselineData =
         sourceData && !isEqual(currentDataSnapshot, sourceData)
-          ? sourceData
+          ? { ...sourceData, publication_status: finalData.publication_status }
           : finalData;
 
+      confirmedSaveBaselineRef.current = persistedBaselineData;
       const shouldSkipFormReset =
         options?.preserveEditingState === true &&
         hadId &&
@@ -657,6 +666,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
             isEqual(persistedBaselineData, finalData) &&
             isEqual(liveDataSnapshot, finalData)
           ) {
+            confirmedSaveBaselineRef.current = refreshedData;
             updateBaselineRef.current?.(refreshedData);
           }
         }
@@ -697,6 +707,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
     (contentSave: { confirmed: TravelFormData; response: TravelContentSaveResponse }) => {
       const { confirmed, response } = contentSave;
 
+      confirmedSaveBaselineRef.current = confirmed;
       captureTextBaseline(confirmed);
 
       const nextSlug = typeof response?.slug === 'string' ? response.slug : '';
@@ -715,6 +726,11 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
 
   const handleSaveSuccess = useCallback(
     (savedData: TravelFormData) => {
+      if (appliedAutosaveRef.current === savedData) {
+        appliedAutosaveRef.current = null;
+        if (confirmedSaveBaselineRef.current) updateBaselineRef.current?.(confirmedSaveBaselineRef.current);
+        return;
+      }
       const contentSave = lastContentSaveRef.current;
       lastContentSaveRef.current = null;
 
@@ -736,7 +752,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         { preserveEditingState: true },
       );
     },
-    [applyContentSavedData, applySavedData, formDataRef, mountedRef, resetAutosaveErrorToastThrottle]
+    [applyContentSavedData, applySavedData, formDataRef, mountedRef, resetAutosaveErrorToastThrottle, updateBaselineRef]
   );
 
   const handleSaveError = useCallback(
@@ -798,45 +814,55 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
     if (manualSaveInFlightRef.current) {
       throw new Error('Request aborted');
     }
-
-    // Правка одного абзаца не должна стоить полной пересборки графа статьи:
-    // если относительно подтверждённого состояния изменился только текст —
-    // уходим узким контрактом (#1516). Всё остальное идёт полным сохранением.
-    const plan = planTravelContentSave(dataToSave, baseline, stableTravelId);
-    if (plan.kind === 'content') {
-      const response = await saveContentDelta(plan, dataToSave.slug, signal);
-      // Подтверждённое состояние — отправленный снимок; slug сервер мог
-      // перестроить по новому названию, берём его подтверждённое значение.
-      const confirmed: TravelFormData =
-        typeof response?.slug === 'string' && response.slug && response.slug !== dataToSave.slug
-          ? { ...dataToSave, slug: response.slug }
-          : dataToSave;
-      lastAutosaveSourceRef.current = dataToSave;
-      lastContentSaveRef.current = { confirmed, response };
-      return confirmed;
+    const snapshot = {
+      ...dataToSave,
+      publication_status: requireTravelPublicationStatus(formDataRef.current),
+    };
+    const operation = (async () => {
+      const canonicalBaseline = baseline && baseline.publication_status === undefined
+        ? { ...baseline, publication_status: resolveTravelPublicationStatus(baseline) }
+        : baseline;
+      const plan = planTravelContentSave(snapshot, canonicalBaseline, stableTravelId);
+      if (plan.kind === 'content') {
+        const response = await saveContentDelta(plan, snapshot.slug, signal);
+        const confirmed: TravelFormData =
+          typeof response?.slug === 'string' && response.slug && response.slug !== snapshot.slug
+            ? { ...snapshot, slug: response.slug }
+            : snapshot;
+        lastAutosaveSourceRef.current = snapshot;
+        lastContentSaveRef.current = { confirmed, response };
+        return confirmed;
+      }
+      const savedData = await cleanAndSave(snapshot, { autosave: true }, signal);
+      lastAutosaveSourceRef.current = snapshot;
+      return savedData;
+    })();
+    const completion = operation.then(savedData => {
+      // Confirm IDs/status/slug before a waiting command builds its live snapshot.
+      // The engine may suppress its later onSuccess during manual-save cleanup.
+      handleSaveSuccess(savedData);
+      appliedAutosaveRef.current = savedData;
+      return savedData;
+    });
+    activeAutosaveRef.current = completion;
+    try {
+      return await completion;
+    } finally {
+      if (activeAutosaveRef.current === completion) activeAutosaveRef.current = null;
     }
-
-    const savedData = await cleanAndSave(dataToSave, { autosave: true }, signal);
-    lastAutosaveSourceRef.current = dataToSave;
-    return savedData;
-  }, [cleanAndSave, saveContentDelta, manualSaveInFlightRef, stableTravelId]);
-
+  }, [cleanAndSave, saveContentDelta, manualSaveInFlightRef, stableTravelId, formDataRef, handleSaveSuccess]);
   const autosave = useImprovedAutoSave(formState.data, initialFormData, {
     debounce: 5000,
     onSave: handleAutosave,
     onSuccess: handleSaveSuccess,
     onError: handleSaveError,
-    // Не автосейвим, когда travel уже в "терминальном" состоянии (moderation/publish),
-    // иначе получаем повторные upsert и 400 на обязательные поля.
     enabled:
       isAuthenticated &&
       hasAccess &&
       // Гидратация формы — обязательное условие: до неё formState.data это пустой
       // getEmptyFormData(id), и любой автосейв стёр бы существующую статью.
       isFormHydrated &&
-      !isManualSaveInFlight &&
-      !formState.data.moderation &&
-      !formState.data.publish,
+      !isManualSaveInFlight,
     isOnline,
   });
 
@@ -844,7 +870,8 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
     dataOverride?: TravelFormData,
     options?: SaveFormDataOptions,
   ) => {
-    if (options?.moderationDecisionReason !== undefined) {
+    const isCommand = options?.intent === 'submit' || options?.intent === 'approve' || options?.intent === 'reject';
+    if (isCommand) {
       while (manualSavePromiseRef.current) await manualSavePromiseRef.current.catch(() => undefined);
       if (!mountedRef.current) throw new Error('Component unmounted');
     }
@@ -858,43 +885,32 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
     }
 
     manualSaveInFlightRef.current = true;
-    setIsManualSaveInFlight(true);
-    const promise = (async () => {
+    // Register the promise before validation can fail and release its slot.
+    const promise = Promise.resolve().then(async () => {
       try {
-        // Publish-намерение определяется ЯВНЫМ флагом от шага публикации
-        // (handleSendToModeration/handleApproveModeration), а НЕ по значению
-        // dataOverride.publish: у уже опубликованной поездки (travel/225)
-        // инкрементальный сейв точки несёт publish=true, но это не публикация —
-        // его нельзя гонять через модерационную валидацию и нельзя глушить тосты
-        // (тикет #505). По умолчанию любое ручное/фоновое сохранение = intent 'save'.
-        const isPublishIntent = options?.intent === 'publish';
+        // Let a dispatched content write finish before sending a state command.
+        // Disabling/cancelling autosave earlier would abort its HTTP request without
+        // proving that the server stopped processing it.
+        if (activeAutosaveRef.current) {
+          await activeAutosaveRef.current.catch(() => undefined);
+        }
+        setIsManualSaveInFlight(true);
+        const isPublishIntent = options?.intent === 'submit';
         if (isPublishIntent) {
           // После успешной публикации/модерации пользователь уходит со страницы —
           // тосты автосейва больше не нужны.
           suppressAutosaveErrorToastRef.current = true;
         }
 
-        // Отменяем отложенный автосейв, чтобы не отправить старые данные (publish=false) после ручного сохранения.
+        // Отменяем отложенный автосейв, чтобы не отправить старый снимок после ручного сохранения.
         autosaveCancelPendingRef.current?.();
-        // Abort any in-flight autosave request (it will still appear in Network, but won't win the race).
-        if (saveAbortControllerRef.current) {
-          saveAbortControllerRef.current.abort();
-        }
-
-        // Rejection may have waited for older saves and their tail. Apply only
-        // its status change to the live content, never replay its older snapshot.
-        const toSave = options?.moderationDecisionReason !== undefined
-          ? {
-              ...formDataRef.current,
-              publish: false,
-              moderation: false,
-            }
-          : dataOverride
-          ? mergeOverridePreservingUserInput(
-              (formDataRef.current as TravelFormData) ?? ({} as TravelFormData),
-              dataOverride,
-            )
-          : formDataRef.current as TravelFormData;
+        const liveData = formDataRef.current;
+        const toSave = {
+          ...(isCommand || !isFormDataOverride(dataOverride)
+            ? liveData
+            : mergeOverridePreservingUserInput(liveData, dataOverride)),
+          publication_status: requireTravelPublicationStatus(liveData),
+        };
 
         // Guard «анти-потеря текста»: у существующей статьи (есть id) сверяем rich-text
         // поля с серверным baseline. Если текст резко разрушается (затирается на пустоту/
@@ -916,21 +932,9 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
           }
         }
 
-        // Guard «фото исчезнувшей точки» (#1834): `/address-image/<id>/` в теле
-        // живёт по строке `travel_address` и умирает вместе с точкой. Сверяем id
-        // из тела с точками сохраняемого маршрута и показываем список, а не
-        // переписываем текст за автора.
-        //
-        // Только НАМЕРЕННОЕ сохранение: кнопка «Сохранить» в шапке мастера либо
-        // публикация. Инкрементальный сейв маршрута приходит сюда с override'ом
-        // формы и пользователя перед экраном не подразумевает: каждый клик по
-        // карте идёт через `scheduleAddPointSave` → `saveRoute` → сюда
-        // (`TravelWizardStepRoute.tsx:227`), у опубликованной статьи автосейв
-        // выключен, и модалка на этом пути не предупреждала бы, а теряла точку —
-        // отмена оставила бы её без server-id, то есть без возможности приложить
-        // фото (отказ #505). Предупреждение автор всё равно увидит: удалить точку
-        // и не сохранить статью нельзя.
-        const isDeliberateSave = !isFormDataOverride(dataOverride) || isPublishIntent;
+        // Deliberate saves warn about body images owned by removed route points.
+        // Incremental route saves must not pause in a dialog before obtaining IDs.
+        const isDeliberateSave = !isFormDataOverride(dataOverride) || isCommand;
         if (isDeliberateSave) {
           const proceedWithBodyImages = await confirmDanglingPointImagesIfNeeded(
             bodySnapshot,
@@ -943,12 +947,8 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         }
 
         formDataRef.current = toSave as TravelFormData;
-        // Явная публикация/отправка на модерацию (пользователь нажал кнопку в шаге
-        // публикации → options.intent === 'publish') проходит серверную модерационную
-        // валидацию. Любое другое ручное/фоновое сохранение (в т.ч. инкрементальный
-        // сейв точки уже опубликованной поездки, тикет #505) лишь персистит текущее
-        // состояние без блокирующей проверки полноты.
-        const intent: 'save' | 'publish' = isPublishIntent ? 'publish' : 'save';
+        // Content saves preserve state; only explicit commands request a transition.
+        const intent = options?.intent ?? 'save';
         // Если пришли извне готовые данные — сохраняем напрямую, минуя отложенный стейт.
         const savedData = await cleanAndSave(toSave, { ...options, intent });
         const normalizedSavedData = normalizeDraftPlaceholders(savedData);
@@ -979,7 +979,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         const mappedRu = rawDetails ? mapKnownServerErrorToRu(rawDetails) : null;
         // isPublishIntent объявлен в try-блоке выше — в catch он вне области видимости,
         // поэтому пересчитываем локально.
-        const isPublishIntent = options?.intent === 'publish';
+        const isPublishIntent = options?.intent === 'submit';
         const isModerationPublishError = mappedRu != null && isPublishIntent;
         const localizedDetails = rawDetails
           ? getLocalizedSaveErrorDetails(error, rawDetails)
@@ -1019,7 +1019,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
           }
         }
       }
-    })();
+    });
 
     manualSavePromiseRef.current = promise;
     return promise;
@@ -1031,7 +1031,6 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
     manualSaveInFlightRef,
     manualSavePromiseRef,
     mountedRef,
-    saveAbortControllerRef,
     setIsManualSaveInFlight,
     suppressAutosaveErrorToastRef,
     serverTextBaselineRef,

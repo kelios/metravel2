@@ -927,8 +927,8 @@ describe('handleManualSave — server echo while editing', () => {
     });
 
     expect(mockConfirmAction).not.toHaveBeenCalled();
-    expect(params.formDataRef.current).toEqual(savedTravel);
-    expect(params.updateBaselineRef.current).toHaveBeenLastCalledWith(savedTravel);
+    expect(params.formDataRef.current).toEqual({ ...savedTravel, publication_status: 'draft' });
+    expect(params.updateBaselineRef.current).toHaveBeenLastCalledWith({ ...savedTravel, publication_status: 'draft' });
   });
 });
 
@@ -958,7 +958,7 @@ describe('handleManualSave — localized backend errors', () => {
     await i18n.changeLanguage('ru');
   });
 
-  const expectRejectedManualSave = async (error: Error, intent?: 'save' | 'publish') => {
+  const expectRejectedManualSave = async (error: Error, intent?: 'save' | 'submit') => {
     mockSaveFormData.mockRejectedValueOnce(error);
     const { result } = setupPersistence({
       initialFormData: baseTravel,
@@ -1033,7 +1033,7 @@ describe('handleManualSave — localized backend errors', () => {
       detail: moderationMessage,
     });
 
-    await expectRejectedManualSave(error, 'publish');
+    await expectRejectedManualSave(error, 'submit');
 
     expect(mockShowToastMessage).toHaveBeenCalledWith({
       type: 'info',
@@ -1125,11 +1125,26 @@ describe('handleManualSave — guard «фото исчезнувшей точк�
     const { result } = setupPersistence({ initialFormData: baseTravel, baselineText });
 
     await act(async () => {
-      await result.current.handleManualSave(baseTravel as any, { intent: 'publish' });
+      await result.current.handleManualSave(baseTravel as any, { intent: 'submit' });
     });
 
     expect(mockConfirmAction).toHaveBeenCalledTimes(1);
     expect(mockSaveFormData).not.toHaveBeenCalled();
+  });
+
+  it.each(['approve', 'reject'] as const)('cancelled %s preserves pending state when a body photo belongs to a removed point (#2693)', async (intent) => {
+    mockConfirmAction.mockResolvedValueOnce(false);
+    const pending = { ...baseTravel, publication_status: 'pending_review', publish: false, moderation: false };
+    const { result, params } = setupPersistence({ initialFormData: pending, baselineText });
+    await act(async () => {
+      await expect(result.current.handleManualSave(pending as any, {
+        intent,
+        ...(intent === 'reject' ? { moderationDecisionReason: 'Добавьте фотографии' } : {}),
+      })).resolves.toBeUndefined();
+    });
+    expect(mockConfirmAction).toHaveBeenCalledTimes(1);
+    expect(mockSaveFormData).not.toHaveBeenCalled();
+    expect(params.formDataRef.current).toEqual(pending);
   });
 
   // Шапка мастера подключена как `onSave={onManualSave}`, а RN Pressable зовёт

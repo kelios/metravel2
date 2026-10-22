@@ -1,4 +1,8 @@
 export const travelGenerated4 = {
+  "components.travel.TravelWizardStepPublish.approved": "Approved",
+  "components.travel.TravelWizardStepPublish.save": "Save",
+  "components.travel.PublishStatusSummaryPanel.saveChanges": "Save changes",
+  "components.travel.PublishStatusSummaryPanel.savePreservesStatus": "Saving does not change the publication state.",
   "components.listTravel.ModernFilters.status.allAuthorsUnpublishedOnly": "Unpublished (in review)",
   "components.listTravel.ModernFilters.status.allAuthorsUnpublishedOnlyHint": "Show unpublished articles in review",
   "components.travel.TravelStatusButton.dobavit_v_plan_c8d5333c": "Add to plan",

@@ -21,6 +21,7 @@ import { getActiveLocale, resolveSupportedLocale, translate as i18nT } from '@/i
 import { normalizeFilterCountries, normalizeFilterDictionaries } from '@/api/filterDictionaries';
 import { localizeBackendFieldError } from '@/utils/errorHelpers';
 import { isBlankTravelContent } from '@/utils/travelFormNormalization';
+import { buildTravelPublicationWrite, requireTravelPublicationStatus, type TravelPublicationCommand } from '@/utils/travelPublicationStatus';
 import type { TravelContentSaveField } from '@/utils/travelContentSaveDelta';
 
 const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
@@ -159,7 +160,7 @@ const sanitizeTravelBodyForWrite = async (html: string, maxLength?: number): Pro
   return sanitized;
 };
 
-export type SaveFormDataIntent = 'autosave' | 'save' | 'publish';
+export type SaveFormDataIntent = 'autosave' | TravelPublicationCommand;
 export type SaveFormDataOptions = {
   autosave?: boolean;
   intent?: SaveFormDataIntent;
@@ -176,11 +177,9 @@ export const saveFormData = async (
 
     const intent: SaveFormDataIntent =
       options?.intent ?? (options?.autosave === true ? 'autosave' : 'save');
-    const moderationDecisionReason = intent === 'save' ? options?.moderationDecisionReason?.trim() : undefined;
-    if (moderationDecisionReason === '') {
-      throw new Error(i18nT('travel:components.travel.PublishModerationAdminPanel.ukazhite_prichinu_otkloneniya_c5c0761c'));
-    }
-    const isDraft = !data?.publish && !data?.moderation;
+    const command = intent === 'autosave' ? 'save' : intent;
+    const publicationWrite = buildTravelPublicationWrite(data, command, options?.moderationDecisionReason);
+    const isDraft = requireTravelPublicationStatus(data) === 'draft';
     const isAutosaveDraft = intent === 'autosave' && isDraft;
 
     // ✅ FIX: Валидация критичных полей перед отправкой
@@ -221,12 +220,12 @@ export const saveFormData = async (
     });
 
     // Модерационная валидация обязательных полей выполняется только при ЯВНОЙ
-    // публикации/отправке на модерацию (intent === 'publish'). Фоновые сейвы
+    // публикации/отправке на модерацию (intent === 'submit'). Фоновые сейвы
     // (autosave, инкрементальное сохранение точки маршрута) лишь персистят
     // текущее состояние уже опубликованной/сохранённой поездки и не должны
     // блокироваться требованием полноты (тикет #505). Статус publish/moderation
     // при этом не меняется — сохраняем как есть.
-    if (intent === 'publish') {
+    if (intent === 'submit') {
       const moderationValidation = validateReadyForModeration(data);
       if (!moderationValidation.isValid) {
         throw new Error(
@@ -261,17 +260,7 @@ export const saveFormData = async (
       payload.slug = existing || makeUniqueSlug(payload.name || 'travel');
     }
 
-    // Контракт FE↔BE: бэк должен запускать модерационную валидацию полноты
-    // (categories у каждой точки и т.п.) ТОЛЬКО при явной публикации/отправке на
-    // модерацию, а не на каждом content-save опубликованного маршрута — иначе
-    // инкрементальный автосейв точки падает с 400. Флаг сообщает бэку «это submit
-    // на модерацию», а не «сохрани контент». Поле инертно, пока бэк его не читает
-    // (DRF игнорирует неизвестные ключи) — см. тикет на пер-точечную валидацию.
-    const body = {
-      ...payload,
-      enforce_moderation_validation: intent === 'publish',
-      ...(moderationDecisionReason !== undefined ? { moderation_decision_reason: moderationDecisionReason } : {}),
-    };
+    const body = buildTravelPublicationWrite(payload, command, publicationWrite.moderation_decision_reason);
 
     return await apiClient.request<TravelFormData>(
       '/travels/upsert/',

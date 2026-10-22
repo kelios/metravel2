@@ -292,11 +292,11 @@ describe('#2685 — transient rejection options', () => {
 
     await act(async () => {
       await result.current.handleManualSave(baseline as unknown as TravelFormData, {
-        intent: 'save',
+        intent: 'reject',
         moderationDecisionReason: 'Explicit rejection',
       });
     });
-    expect(mockSaveFormData.mock.calls[0][2]).toEqual({ intent: 'save', moderationDecisionReason: 'Explicit rejection' });
+    expect(mockSaveFormData.mock.calls[0][2]).toEqual({ intent: 'reject', moderationDecisionReason: 'Explicit rejection' });
     expect(mockSaveFormData.mock.calls[0][0]).not.toHaveProperty('moderation_decision_reason');
     expect(params.formDataRef.current).not.toHaveProperty('moderationDecisionReason');
 
@@ -327,7 +327,7 @@ describe('#2685 — transient rejection options', () => {
       firstSave = result.current.handleManualSave();
       queuedSave = result.current.handleManualSave(tailSnapshot as unknown as TravelFormData);
       rejectionSave = result.current.handleManualSave(baseline as unknown as TravelFormData, {
-        intent: 'save', moderationDecisionReason: 'Add route photos',
+        intent: 'reject', moderationDecisionReason: 'Add route photos',
       });
       void rejectionSave.then(fulfilled, rejected);
     });
@@ -348,7 +348,7 @@ describe('#2685 — transient rejection options', () => {
       publish: false,
       moderation: false,
     }));
-    expect(mockSaveFormData.mock.calls[2][2]).toEqual({ intent: 'save', moderationDecisionReason: 'Add route photos' });
+    expect(mockSaveFormData.mock.calls[2][2]).toEqual({ intent: 'reject', moderationDecisionReason: 'Add route photos' });
     expect(fulfilled).not.toHaveBeenCalled();
     expect(rejected).not.toHaveBeenCalled();
 
@@ -384,7 +384,7 @@ describe('#2685 — transient rejection options', () => {
     const firstSave = result.current.handleManualSave();
     const queuedSave = result.current.handleManualSave(tailSnapshot as unknown as TravelFormData);
     const rejectionSave = result.current.handleManualSave(baseline as unknown as TravelFormData, {
-      intent: 'save', moderationDecisionReason: 'Add photos',
+      intent: 'reject', moderationDecisionReason: 'Add photos',
     });
     await waitFor(() => expect(mockSaveFormData).toHaveBeenCalledTimes(1));
     await act(async () => {
@@ -399,7 +399,7 @@ describe('#2685 — transient rejection options', () => {
         await expect(rejectionSave).resolves.toBe(saved);
       });
       expect(mockSaveFormData.mock.calls[2][0]).toEqual(expect.objectContaining({ categories: [1, 2, 3] }));
-      expect(mockSaveFormData.mock.calls[2][2]).toEqual({ intent: 'save', moderationDecisionReason: 'Add photos' });
+      expect(mockSaveFormData.mock.calls[2][2]).toEqual({ intent: 'reject', moderationDecisionReason: 'Add photos' });
     } finally {
       log.mockRestore();
     }
@@ -412,7 +412,7 @@ describe('#2685 — transient rejection options', () => {
     mockSaveFormData.mockReturnValueOnce(first.promise);
     const firstSave = result.current.handleManualSave();
     const rejectionSave = result.current.handleManualSave(baseline as unknown as TravelFormData, {
-      intent: 'save', moderationDecisionReason: 'Add photos',
+      intent: 'reject', moderationDecisionReason: 'Add photos',
     });
     const error = expect(rejectionSave).rejects.toThrow('Component unmounted');
     await waitFor(() => expect(mockSaveFormData).toHaveBeenCalledTimes(1));
@@ -425,4 +425,136 @@ describe('#2685 — transient rejection options', () => {
     });
     expect(mockSaveFormData).toHaveBeenCalledTimes(1);
   });
+});
+
+const canonicalStates = ['draft', 'pending_review', 'approved', 'published'] as const;
+
+describe('#2693 — canonical publication state in every persistence path', () => {
+  it.each(canonicalStates)('manual, route, full autosave and content delta preserve %s', async (publication_status) => {
+    const baseline = travelSnapshot({ publication_status, publish: false, moderation: false });
+    const { result, autosaveOptions } = setupPersistence(baseline);
+    mockSaveFormData.mockImplementation(async data => data);
+    mockSaveTravelContent.mockResolvedValue(contentResponse());
+    expect(autosaveOptions.enabled).toBe(true);
+
+    await act(async () => { await result.current.handleManualSave(); });
+    await act(async () => { await result.current.handleManualSave({ countries: ['3'], coordsMeTravel: [POINT] } as unknown as TravelFormData); });
+    await autosaveOptions.onSave({ ...baseline, categories: [1, 2, 3] }, undefined, baseline);
+    expect(mockSaveFormData).toHaveBeenCalledTimes(3);
+    for (const [data, , options] of mockSaveFormData.mock.calls) {
+      expect(data.publication_status).toBe(publication_status);
+      expect(options?.intent ?? 'save').toBe('save');
+      expect(options).not.toHaveProperty('moderationDecisionReason');
+    }
+
+    await autosaveOptions.onSave({ ...baseline, description: '<p>New text that remains on the same state.</p>' }, undefined, baseline);
+    expect(mockSaveTravelContent).toHaveBeenCalledTimes(1);
+    expect(mockSaveTravelContent.mock.calls[0][1]).toEqual({ description: '<p>New text that remains on the same state.</p>' });
+  });
+
+  it.each([null, '', 'future_state'])('blocks unknown canonical %p before either full or content write', async (publication_status) => {
+    const baseline = travelSnapshot({ publication_status });
+    const { result, autosaveOptions } = setupPersistence(baseline);
+    const log = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      await expect(autosaveOptions.onSave({ ...baseline, description: '<p>Changed text</p>' }, undefined, baseline)).rejects.toThrow('Неизвестное состояние публикации');
+      await act(async () => { await expect(result.current.handleManualSave()).rejects.toThrow('Неизвестное состояние публикации'); });
+      expect(mockSaveTravelContent).not.toHaveBeenCalled();
+      expect(mockSaveFormData).not.toHaveBeenCalled();
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it('releases a failed unknown-status save so a corrected status can be saved or submitted', async () => {
+    const baseline = travelSnapshot({ publication_status: 'future_state' });
+    const { result, params } = setupPersistence(baseline);
+    const log = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    mockSaveFormData.mockImplementation(async data => data);
+    try {
+      await act(async () => {
+        await expect(result.current.handleManualSave()).rejects.toThrow('Неизвестное состояние публикации');
+      });
+      expect(params.manualSavePromiseRef.current).toBeNull();
+      expect(params.manualSaveInFlightRef.current).toBe(false);
+      params.formDataRef.current = { ...baseline, publication_status: 'draft' };
+      await act(async () => { await result.current.handleManualSave(undefined, { intent: 'submit' }); });
+      expect(mockSaveFormData).toHaveBeenCalledTimes(1);
+      expect(mockSaveFormData.mock.calls[0][0].publication_status).toBe('draft');
+      expect(mockSaveFormData.mock.calls[0][2]).toEqual({ intent: 'submit' });
+      expect(params.manualSavePromiseRef.current).toBeNull();
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it('rebases a queued ordinary save onto the confirmed command state', async () => {
+    const baseline = travelSnapshot({ publication_status: 'pending_review' });
+    const { result } = setupPersistence(baseline);
+    const approval = deferredSave();
+    mockSaveFormData.mockReturnValueOnce(approval.promise).mockImplementation(async data => data);
+    let command!: Promise<TravelFormData | void>;
+    act(() => {
+      command = result.current.handleManualSave(baseline as unknown as TravelFormData, { intent: 'approve' });
+      void result.current.handleManualSave({ ...baseline, categories: [1, 2, 3] } as unknown as TravelFormData);
+    });
+    await waitFor(() => expect(mockSaveFormData).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      approval.resolve({ ...baseline, publication_status: 'published' } as unknown as TravelFormData);
+      await command;
+    });
+    await waitFor(() => expect(mockSaveFormData).toHaveBeenCalledTimes(2));
+    expect(mockSaveFormData.mock.calls[0][2]).toEqual({ intent: 'approve' });
+    expect(mockSaveFormData.mock.calls[1][0]).toEqual(expect.objectContaining({ publication_status: 'published', categories: [1, 2, 3] }));
+    expect(mockSaveFormData.mock.calls[1][2]).toEqual({ intent: 'save' });
+  });
+
+  it('waits for an already dispatched autosave before sending a command', async () => {
+    const baseline = travelSnapshot({ publication_status: 'pending_review' });
+    const { result, autosaveOptions } = setupPersistence(baseline);
+    const background = deferredSave();
+    mockSaveFormData.mockReturnValueOnce(background.promise).mockImplementation(async data => data);
+    let autosave!: Promise<TravelFormData>;
+    let command!: Promise<TravelFormData | void>;
+    act(() => {
+      autosave = autosaveOptions.onSave({ ...baseline, categories: [1, 2, 3] }, undefined, baseline);
+      command = result.current.handleManualSave(undefined, { intent: 'approve' });
+    });
+    await waitFor(() => expect(mockSaveFormData).toHaveBeenCalledTimes(1));
+    expect(mockSaveFormData.mock.calls[0][1]?.aborted).toBe(false);
+    await act(async () => {
+      background.resolve(baseline as unknown as TravelFormData);
+      await autosave;
+      await command;
+    });
+    expect(mockSaveFormData).toHaveBeenCalledTimes(2);
+    expect(mockSaveFormData.mock.calls[1][2]).toEqual({ intent: 'approve' });
+  });
+
+  it('applies the first autosave server ID before a waiting submit even if engine onSuccess comes later', async () => {
+    const baseline = travelSnapshot({ id: null, publication_status: 'draft' });
+    const { result, params, autosaveOptions, formState } = setupPersistence(baseline, { stableTravelId: null });
+    const creation = deferredSave();
+    mockSaveFormData.mockReturnValueOnce(creation.promise).mockImplementation(async data => data);
+    let background!: Promise<TravelFormData>;
+    let submit!: Promise<TravelFormData | void>;
+    act(() => {
+      background = autosaveOptions.onSave(baseline, undefined, baseline);
+      submit = result.current.handleManualSave(undefined, { intent: 'submit' });
+    });
+    await waitFor(() => expect(mockSaveFormData).toHaveBeenCalledTimes(1));
+    const created = { ...baseline, id: '9001', slug: 'server-created-slug', publication_status: 'draft' } as unknown as TravelFormData;
+    await act(async () => {
+      creation.resolve(created);
+      await background;
+      await submit;
+    });
+    expect(mockSaveFormData).toHaveBeenCalledTimes(2);
+    expect(mockSaveFormData.mock.calls[1][0]).toEqual(expect.objectContaining({ id: 9001, slug: 'server-created-slug' }));
+    expect(params.formDataRef.current.id).not.toBeNull();
+    const resets = formState.reset.mock.calls.length;
+    act(() => autosaveOptions.onSuccess(created));
+    expect(formState.reset).toHaveBeenCalledTimes(resets);
+  });
+
 });

@@ -1,4 +1,6 @@
 export const errorsStaticResources = {
+  "api.misc.unsupportedPublicationStatus": "Невідомий стан публікації. Оновіть сторінку або зверніться до підтримки. Вміст не втрачено.",
+  "api.misc.rejectionReasonRequired": "Вкажіть причину відхилення довжиною від 1 до 2000 символів.",
   "unknownError": "Невідома помилка",
   "unexpectedError": "Сталася непередбачена помилка",
   "map.routeFailed": "Помилка маршруту",

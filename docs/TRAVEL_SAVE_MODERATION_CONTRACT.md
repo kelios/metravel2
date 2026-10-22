@@ -1,6 +1,6 @@
 # Контракт сохранения и модерации travel
 
-Актуализировано: 2026-07-15.
+Актуализировано: 2026-10-22 (#2693).
 
 Load-bearing контракт для `components/travel/**`,
 `hooks/useTravelFormPersistence.ts`, `hooks/useTravelWizard.ts` и
@@ -23,45 +23,65 @@ Load-bearing контракт для `components/travel/**`,
 
 ## Status model
 
-Состояния задаются парой булевых флагов `publish` / `moderation`. Это то, что
-пишет и читает мастер (`components/travel/useTravelPublishModeration.ts`):
+Источник истины — `publication_status`, который читает общий адаптер
+`utils/travelPublicationStatus.ts`. `moderation_decision` описывает прошлое
+решение и не определяет состояние статьи.
 
-| `publish` | `moderation` | Смысл | Чип в мастере | Кто выставляет |
-| --- | --- | --- | --- | --- |
-| false | false | черновик | «Черновик» | автор («Сохранить как черновик»), админ при отклонении |
-| **true** | **false** | **отправлено, ждёт решения админа** | «Отправлено на модерацию» | автор («Отправить на модерацию»), `intent='publish'` |
-| true | true | опубликовано | «Опубликовано» | админ при одобрении |
-| false | true | — | — | **фронт такого не создаёт** |
+| `publication_status` | legacy `publish` / `moderation` | Чип в мастере |
+| --- | --- | --- |
+| `draft` | false / false | «Черновик» |
+| `pending_review` | false / false | «Отправлено на модерацию» |
+| `approved` | false / true | «Одобрено» |
+| `published` | true / true | «Опубликовано» |
 
-Чип считается по `moderation` в первую очередь, `publish` — во вторую
-(`useTravelPublishModeration.ts:87-91`); «ждёт админа» определяется как
-`publish && !moderation` (`:94`).
-
-Отдельно существует **бэкендовое поле `publication_status`** (`draft` /
-`approved` / `published`). Мастер его **не выставляет** — оно используется для
-фильтров списков и очереди модерации (`utils/travelPublicationStatus.ts`,
-`utils/filterQuery.ts`, `components/profile/travelNormalize.ts`). Как бэкенд
-маппит пару флагов в это поле, из фронтенд-репозитория не видно; смешивать две
-модели в одну таблицу нельзя — прежняя редакция этого раздела делала именно так
-и приписывала `approved` комбинацию `publish=false, moderation=true`, которой
-на фронте не бывает.
-
-Поля `publish` и `moderation` описывают текущий status, а не намерение
-текущего запроса.
+Canonical всегда имеет приоритет над флагами. Только при отсутствующем
+`publication_status` разрешён legacy fallback: false/false → draft,
+true/false → pending_review, false/true → approved, true/true → published.
+`null`, пустое или неизвестное canonical значение сохраняется в форме,
+показывает локализованную ошибку и запрещает запись, включая content PATCH.
+Два состояния false/false современного API различаются только canonical.
 
 ## Frontend flow
 
-- Глобальный autosave живёт в `hooks/useTravelFormPersistence.ts`.
+- Глобальный autosave живёт в `hooks/useTravelFormPersistence.ts`, действует
+  во всех четырёх состояниях и сохраняет прежние hydration/debounce guards.
 - Инкрементальное сохранение route point идёт из
   `components/travel/TravelWizardStepRoute.tsx` через `onManualSave`.
-- Ручное сохранение использует `intent='save'`.
-- Явный submit на модерацию/публикацию использует `intent='publish'`.
-- Явное отклонение администратором использует `intent='save'` и разовый параметр
-  `moderationDecisionReason` в `SaveFormDataOptions`. `saveFormData` отправляет его
-  как `moderation_decision_reason` только для этой команды. Причина не входит в
-  состояние формы; одноимённое поле из ответа API не становится командой при
-  последующем сохранении, автосохранении или одобрении. Если ручное сохранение
-  уже выполняется, отклонение ожидает завершения собственного запроса.
+- Полный payload собирается единственным `buildTravelPublicationWrite`.
+  Он удаляет `publish`, `moderation`, исторические `moderation_decision` и
+  `moderation_decision_reason`; обычный save не создаёт нового решения.
+- Состояние формы и выбранное следующее действие UI разделены. Только
+  подтверждённый ответ меняет состояние; ошибки оставляют текст и комментарий
+  доступными для повторной попытки.
+- Команда ждёт предыдущие ручные и уже отправленный autosave запросы, после
+  чего отменяет отложенный autosave. Обычные сохранения из очереди берут
+  актуальный canonical, поэтому старый override не возвращает прежний статус.
+- Восстановление локального черновика возвращает содержимое, сохраняя текущее
+  серверное состояние публикации. Статус из старого локального снимка не
+  становится командой; неизвестный текущий canonical также остаётся видимым.
+
+| Явное действие (`intent`) | `publication_status` | `enforce_moderation_validation` | Причина |
+| --- | --- | --- | --- |
+| `save` / `autosave` | текущее S | false | отсутствует |
+| `submit` | pending_review | true | отсутствует |
+| `approve` | published | false | отсутствует |
+| `reject` | draft | false | trim, 1–2000 символов |
+
+`moderationDecisionReason` — разовый параметр options только для `reject`;
+он не переносится в форму и не повторяется при следующем save/approve.
+Подготовка placeholder-полей использует адаптер: pending_review с false/false
+не считается черновиком. Завершение мастера также читает canonical.
+
+### Design evidence — состояния публикации (#2693)
+
+Сохраняются summary, checklist, панель модератора и ConfirmDialog в прежнем
+порядке на desktop web 1440px и mobile web 390px. Чип отражает четыре canonical
+состояния сразу после загрузки. У pending_review панель модератора доступна
+администратору без переключения отправки; автор видит ожидание и может сохранить
+правку. Обычная кнопка «Сохранить» не снимает статью с модерации и не переводит
+approved/published в draft. Выбор отправки — отдельное действие для draft.
+При неизвестном canonical видна ошибка, запись отключена, форма остаётся.
+При ошибке сети состояние не объявляется изменённым, причина reject остаётся.
 
 ### Design evidence — обязательная причина отклонения (#2685)
 
@@ -97,22 +117,14 @@ web 390px: пустая или пробельная причина оставл�
 `ad2fdc9eb` (26.07.2026) в нём не было `details`/`summary`, и статьи 554 и 134
 молча потеряли FAQPage. Что считается разметкой — `utils/faqDisclosureMarkup.ts`.
 
-Ручное сохранение и публикация всегда идут через
-`api/misc.ts::saveFormData` и `PUT /travels/upsert/`; формат этого запроса не
-менялся.
+Ручное сохранение и команды всегда идут через
+`api/misc.ts::saveFormData` и `PUT /travels/upsert/`. Полный запрос содержит
+`publication_status` и `enforce_moderation_validation` по таблице действий,
+без legacy-флагов. Узкий `PATCH /travels/{id}/content/` содержит только
+изменённые текстовые поля: status, флаги, enforce и причина туда не попадают.
 
-Перед отправкой `saveFormData` добавляет:
-
-```ts
-{
-  ...payload,
-  enforce_moderation_validation: intent === 'publish',
-}
-```
-
-`validateReadyForModeration` запускается на frontend только при
-`intent='publish'`. На `intent='save'` отсутствие категории или другого
-publication-required поля не должно блокировать persistence текущей правки.
+`validateReadyForModeration` запускается на frontend для `intent='submit'`.
+Обычный save, autosave и сохранение точки не требуют полноты для публикации.
 
 Route-point save отправляется сразу, включая новую точку без категории: ей нужен
 server id для последующей загрузки media. Старые mitigation/defer guards для
@@ -134,8 +146,8 @@ frontend-дефера, который снова создаёт риск пот�
 
 ## Safe change checklist
 
-- [ ] `intent='save'` и `intent='publish'` не смешаны.
-- [ ] Текущий `publish/moderation` status не трактуется как intent.
+- [ ] `save/autosave` и явные `submit/approve/reject` не смешаны.
+- [ ] Текущий canonical не трактуется как команда; legacy-флаги не пишутся.
 - [ ] Autosave/route save не блокируется publication validation.
 - [ ] Полный payload не перетирает более свежий form snapshot.
 - [ ] Ошибка сохранения видна пользователю и не превращается в fake success.
@@ -154,3 +166,9 @@ frontend-дефера, который снова создаёт риск пот�
 
 Production readiness backend-dependent сценария требует реального upsert payload и
 response evidence; unit tests проверяют frontend contract, но не deployment.
+
+Постоянный контроль #2693: `__tests__/utils/travelPublicationStatus.test.ts`
+проверяет настоящий mapper → form → serializer без мока адаптера;
+`__tests__/governance/travelPublicationContract.test.ts` запрещает обход
+адаптера в чтении/записи мастера. Persistence/UI tests контролируют full/PATCH,
+route-save, очереди, ошибки, причину и четыре canonical состояния.

@@ -1,6 +1,7 @@
 import { useMemo, useEffect, useCallback, useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
+import type { TravelFormData } from '@/types/types';
 import { useAuth } from '@/context/AuthContext';
 import { useTravelFilters } from '@/hooks/useTravelFilters';
 import { useTravelFormData } from '@/hooks/useTravelFormData';
@@ -8,6 +9,7 @@ import { useTravelWizard } from '@/hooks/useTravelWizard';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useDraftRecovery } from '@/hooks/useDraftRecovery';
 import { normalizeTravelId } from '@/utils/travelFormUtils';
+import { resolveTravelPublicationStatus } from '@/utils/travelPublicationStatus';
 import { formatRelativeTime, translate as i18nT } from '@/i18n'
 import {
   buildTravelArticleCreateIntentHref,
@@ -215,12 +217,8 @@ export function useUpsertTravelController(): UpsertTravelController {
     [handleManualSave, getFormData, flushDraft, clearDraft, form.autosave]
   );
 
-  // The wizard only reads `publish`/`moderation` from the save result and
-  // never passes arguments, so adapt the richer save signature to its shape.
-  const handleWizardSave = useCallback(async (): Promise<{
-    publish?: boolean;
-    moderation?: boolean;
-  } | null> => {
+  // Adapt the save signature while preserving canonical state for wizard cleanup.
+  const handleWizardSave = useCallback(async (): Promise<TravelFormData | null> => {
     const result = await saveAndClearDraft();
     return result && typeof result === 'object' ? result : null;
   }, [saveAndClearDraft]);
@@ -303,9 +301,16 @@ export function useUpsertTravelController(): UpsertTravelController {
   const recoverAndApplyDraft = useCallback(async () => {
     const recoveredData = await recoverDraft();
     if (recoveredData) {
-      const dataForCurrentRoute = isNew && normalizeTravelId(recoveredData.id) != null
-        ? { ...recoveredData, id: null }
-        : recoveredData;
+      const currentData = getFormData();
+      // A local content snapshot cannot undo a confirmed moderation transition.
+      // Read after storage resolves, since a save may have completed meanwhile.
+      const dataForCurrentRoute = {
+        ...recoveredData,
+        ...(isNew && normalizeTravelId(recoveredData.id) != null ? { id: null } : {}),
+        publication_status: currentData.publication_status !== undefined
+          ? currentData.publication_status
+          : resolveTravelPublicationStatus(currentData),
+      };
       const recoveredMarkers = Array.isArray(dataForCurrentRoute.coordsMeTravel)
         ? dataForCurrentRoute.coordsMeTravel
         : [];
@@ -313,7 +318,7 @@ export function useUpsertTravelController(): UpsertTravelController {
       setFormData(dataForCurrentRoute);
       setMarkers(recoveredMarkers);
     }
-  }, [isNew, recoverDraft, setFormData, setMarkers]);
+  }, [isNew, recoverDraft, setFormData, setMarkers, getFormData]);
 
   const draftRecovery = useMemo(
     () => ({

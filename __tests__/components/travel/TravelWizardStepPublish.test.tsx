@@ -152,7 +152,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
-        formData={{ ...baseFormData, publish: true }}
+        formData={{ ...baseFormData, publication_status: 'published', publish: true, moderation: true }}
         setFormData={jest.fn()}
         isSuperAdmin={false}
         onManualSave={jest.fn()}
@@ -185,7 +185,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     expect(screen.queryByTestId('travel-publish-share-button')).toBeNull();
   });
 
-  it('sets publish=true and moderation=false when sending to moderation (user flow)', async () => {
+  it('sends an explicit submit command without changing confirmed state', async () => {
     const onManualSave = jest.fn().mockResolvedValue(undefined);
     const onFinish = jest.fn();
     const setFormData = jest.fn();
@@ -219,25 +219,11 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       fireEvent.press(primarySubmit);
     });
 
-    // setFormData called with publish true, moderation false
-    expect(setFormData).toHaveBeenCalledWith(
-      expect.objectContaining({
-        publish: true,
-        moderation: false,
-      })
-    );
-
-    // onManualSave invoked with the same payload (triggers email on backend)
-    expect(onManualSave).toHaveBeenCalledWith(
-      expect.objectContaining({
-        publish: true,
-        moderation: false,
-      }),
-      { intent: 'publish' },
-    );
+    expect(setFormData).not.toHaveBeenCalled();
+    expect(onManualSave).toHaveBeenCalledWith(baseFormData, { intent: 'submit' });
   }, 15000);
 
-  it('admin approve sets moderation=true and publish=true', async () => {
+  it('admin approve uses its own command without an optimistic state change', async () => {
     const onManualSave = jest.fn().mockResolvedValue(undefined);
     const onFinish = jest.fn();
     const setFormData = jest.fn();
@@ -267,20 +253,8 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       fireEvent.press(approveButton);
     });
 
-    expect(setFormData).toHaveBeenCalledWith(
-      expect.objectContaining({
-        publish: true,
-        moderation: true,
-      })
-    );
-
-    expect(onManualSave).toHaveBeenCalledWith(
-      expect.objectContaining({
-        publish: true,
-        moderation: true,
-      }),
-      { intent: 'publish' },
-    );
+    expect(setFormData).not.toHaveBeenCalled();
+    expect(onManualSave).toHaveBeenCalledWith(adminData, { intent: 'approve' });
 
     expect(onFinish).not.toHaveBeenCalled();
   });
@@ -1102,56 +1076,39 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     expect(queryByText('Статус публикации')).toBeNull();
   });
 
-  it('saves draft with publish=false and moderation=false when user switches from published', async () => {
-    const onManualSave = jest.fn().mockResolvedValue(undefined);
-    const onFinish = jest.fn();
+  it.each(['pending_review', 'approved', 'published'] as const)('ordinary save preserves %s', async (publication_status) => {
+    const data = { ...baseFormData, publication_status, publish: false, moderation: false };
+    const onManualSave = jest.fn().mockResolvedValue(data);
     const setFormData = jest.fn();
+    const screen = render(<TravelWizardStepPublish currentStep={6} totalSteps={6}
+      formData={data} setFormData={setFormData} isSuperAdmin={false}
+      onManualSave={onManualSave} onGoBack={jest.fn()} onFinish={jest.fn()} />);
+    await act(async () => fireEvent.press(screen.getByTestId('primary-button')));
+    expect(onManualSave).toHaveBeenCalledWith(data, { intent: 'save' });
+    expect(setFormData).not.toHaveBeenCalled();
+  });
 
-    const publishedData: TravelFormData = {
-      ...baseFormData,
-      publish: true,
-      moderation: true,
-    };
+  it('shows pending state and admin actions immediately for false/false legacy flags', () => {
+    const data = { ...baseFormData, publication_status: 'pending_review', publish: false, moderation: false };
+    const screen = render(<TravelWizardStepPublish currentStep={6} totalSteps={6}
+      formData={data} setFormData={jest.fn()} isSuperAdmin
+      onManualSave={jest.fn()} onGoBack={jest.fn()} onFinish={jest.fn()} />);
+    expect(screen.getByText('Отправлено на модерацию')).toBeTruthy();
+    expect(screen.getByText('Одобрить модерацию')).toBeTruthy();
+    expect(screen.queryByText('Черновик')).toBeNull();
+  });
 
-    const { getByText, getByTestId } = render(
-      <TravelWizardStepPublish
-        currentStep={6}
-        totalSteps={6}
-        formData={publishedData}
-        setFormData={setFormData}
-        isSuperAdmin={false}
-        onManualSave={onManualSave}
-        onGoBack={jest.fn()}
-        onFinish={onFinish}
-      />
-    );
-
-    await act(async () => {
-      const draftLabel = getByText('Сохранить как черновик');
-      const draftRow = draftLabel.parent?.parent;
-      if (!draftRow) {
-        throw new Error('Draft option row not found');
-      }
-      fireEvent.press(draftRow);
-    });
-
-    await act(async () => {
-      fireEvent.press(getByTestId('primary-button'));
-    });
-
-    expect(setFormData).toHaveBeenCalledWith(
-      expect.objectContaining({
-        publish: false,
-        moderation: false,
-      })
-    );
-
-    expect(onManualSave).toHaveBeenCalledWith(
-      expect.objectContaining({
-        publish: false,
-        moderation: false,
-      })
-    );
+  it('shows an unsupported canonical state error and blocks writes without discarding content', () => {
+    const onManualSave = jest.fn();
+    const data = { ...baseFormData, publication_status: 'future_state' };
+    const screen = render(<TravelWizardStepPublish currentStep={6} totalSteps={6}
+      formData={data} setFormData={jest.fn()} isSuperAdmin
+      onManualSave={onManualSave} onGoBack={jest.fn()} onFinish={jest.fn()} />);
+    expect(screen.getAllByText(/Неизвестное состояние публикации/).length).toBeGreaterThan(0);
+    fireEvent.press(screen.getByTestId('primary-button'));
+    expect(onManualSave).not.toHaveBeenCalled();
+    expect(screen.queryByText('Одобрить модерацию')).toBeNull();
+    expect(data.description).toBe(baseFormData.description);
   });
 
   it('keeps draft save flow working even when backend returns empty response payload', async () => {
@@ -1244,16 +1201,9 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     });
 
     expect(onManualSave).toHaveBeenCalledTimes(1);
-    expect(onManualSave).toHaveBeenCalledWith(
-      expect.objectContaining({
-        publish: false,
-        moderation: false,
-      }),
-      { intent: 'save', moderationDecisionReason: 'нет фото' }
-    );
-
-    expect(setFormData.mock.calls[0][0]).not.toHaveProperty('moderation_decision_reason');
-    expect(setFormData.mock.calls[0][0]).not.toHaveProperty('moderationDecisionReason');
+    expect(onManualSave).toHaveBeenCalledWith(adminData,
+      { intent: 'reject', moderationDecisionReason: 'нет фото' });
+    expect(setFormData).not.toHaveBeenCalled();
 
     expect(onFinish).not.toHaveBeenCalled();
   });
@@ -1277,9 +1227,8 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     fireEvent.press(screen.getByLabelText('Отклонить модерацию'));
     await act(async () => fireEvent.press(screen.getByLabelText('Отклонить')));
 
-    const rollback = setFormData.mock.calls.at(-1)?.[0];
-    expect(typeof rollback).toBe('function');
-    expect(rollback({ ...adminData, publish: false })).toEqual(adminData);
+    expect(setFormData).not.toHaveBeenCalled();
+    expect(adminData.publish).toBe(true);
     await waitFor(() => {
       expect(screen.getByLabelText('Комментарий при отклонении').props.value).toBe('нет фото');
     });
@@ -1354,18 +1303,32 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       fireEvent.press(getByTestId('primary-button'));
     });
 
-    expect(setFormData).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        publish: true,
-        moderation: false,
-      })
-    );
-    expect(setFormData).toHaveBeenLastCalledWith(baseFormData);
+    expect(setFormData).not.toHaveBeenCalled();
+    expect(onManualSave).toHaveBeenCalledWith(baseFormData, { intent: 'submit' });
     expect(showToast).toHaveBeenCalledWith({
       type: 'error',
       text1: 'Не удалось отправить',
       text2: 'Network error',
     });
   });
+
+  it.each(['submit', 'approve'] as const)('does not announce success or leave after cancelled %s', async (intent) => {
+    const data = { ...baseFormData, publication_status: intent === 'submit' ? 'draft' : 'pending_review' };
+    const onManualSave = jest.fn().mockResolvedValue(undefined);
+    const { result } = renderHook(() => useTravelPublishModeration({
+      formData: data, setFormData: jest.fn(), onManualSave,
+      currentStep: 6, isSuperAdmin: intent === 'approve',
+      routePoints: data.coordsMeTravel, galleryItems: data.gallery ?? [], checklist: [],
+    }));
+    if (intent === 'submit') act(() => result.current.setStatus('moderation'));
+    await act(async () => {
+      if (intent === 'submit') result.current.handlePrimaryAction();
+      else await result.current.handleApproveModeration();
+    });
+    expect(onManualSave).toHaveBeenCalledWith(data, { intent });
+    expect(mockRouterReplace).not.toHaveBeenCalled();
+    expect(showToast).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'success' }));
+    expect(result.current.publicationStatus).toBe(data.publication_status);
+  });
+
 });

@@ -773,6 +773,60 @@ describe('useUpsertTravelController', () => {
     expect(setMarkers).toHaveBeenCalledWith(recoveredMarkers);
   });
 
+  it.each(['draft', 'pending_review', 'approved', 'published', null, 'future_state'])(
+    'recovers content without replacing the current canonical %p from an old local draft (#2693)',
+    async (publication_status) => {
+      mockUseLocalSearchParams.mockReturnValue({ id: '123' });
+      const recoveredMarkers = [{ id: 7, lat: 53.9, lng: 27.56 }];
+      const recovered = {
+        ...baseForm.formData,
+        id: '123',
+        name: 'Несохранённые правки',
+        description: '<p>Восстановленный текст</p>',
+        coordsMeTravel: recoveredMarkers,
+        publication_status: 'draft',
+        publish: false,
+        moderation: false,
+      };
+      let finishRecovery!: (value: typeof recovered) => void;
+      const recoverDraft = jest.fn(() => new Promise<typeof recovered>(resolve => { finishRecovery = resolve; }));
+      const getFormData = jest.fn(() => ({ ...recovered, publication_status: 'draft' as string | null }));
+      const setFormData = jest.fn();
+      const setMarkers = jest.fn();
+      mockUseDraftRecovery.mockReturnValue({
+        ...mockUseDraftRecovery(), recoverDraft, hasPendingDraft: true,
+      });
+      mockUseTravelFormData.mockReturnValue({ ...baseForm, getFormData, setFormData, setMarkers });
+      const { result } = renderHook(() => useUpsertTravelController());
+      let recovery!: Promise<void>;
+      act(() => { recovery = result.current.draftRecovery.recoverDraft(); });
+      // A moderation response arriving during the storage read is authoritative too.
+      getFormData.mockReturnValue({ ...recovered, publication_status });
+      await act(async () => { finishRecovery(recovered); await recovery; });
+      expect(setFormData).toHaveBeenCalledWith(expect.objectContaining({
+        id: '123', name: recovered.name, description: recovered.description,
+        coordsMeTravel: recoveredMarkers, publication_status,
+      }));
+      expect(setMarkers).toHaveBeenCalledWith(recoveredMarkers);
+    },
+  );
+
+  it('keeps the legacy server state rather than recovered flags when canonical is absent (#2693)', async () => {
+    mockUseLocalSearchParams.mockReturnValue({ id: '123' });
+    const recovered = { ...baseForm.formData, id: '123', name: 'Локальные правки', publication_status: 'draft' };
+    const setFormData = jest.fn();
+    mockUseDraftRecovery.mockReturnValue({
+      ...mockUseDraftRecovery(), recoverDraft: jest.fn(async () => recovered), hasPendingDraft: true,
+    });
+    mockUseTravelFormData.mockReturnValue({
+      ...baseForm, setFormData,
+      getFormData: jest.fn(() => ({ id: '123', publish: false, moderation: true })),
+    });
+    const { result } = renderHook(() => useUpsertTravelController());
+    await act(async () => { await result.current.draftRecovery.recoverDraft(); });
+    expect(setFormData).toHaveBeenCalledWith(expect.objectContaining({ name: recovered.name, publication_status: 'approved' }));
+  });
+
   it('reflects the server id in the URL after the first save of a new travel (F-09)', () => {
     mockUseLocalSearchParams.mockReturnValue({ id: undefined });
     mockUseTravelFormData.mockReturnValue({

@@ -1,3 +1,5 @@
+export type TravelPublicationStatus = 'draft' | 'pending_review' | 'approved' | 'published';
+
 // Типы для gallery и travelAddress
 export type GalleryItem = string | {
     id: number;
@@ -166,7 +168,7 @@ export type Travel = {
     updated_at?: string
     publish?: boolean | number | null
     moderation?: boolean | number | null
-    publication_status?: 'draft' | 'approved' | 'published' | string | null
+    publication_status?: TravelPublicationStatus | (string & {}) | null
     engagementStats?: {
         favoritesCount: number | null
         wishlistCount: number | null
@@ -399,6 +401,7 @@ export interface TravelFormData {
     visa: boolean;
     publish: boolean;
     moderation?: boolean;
+    publication_status?: TravelPublicationStatus | (string & {}) | null;
     travel_image_thumb_url?: string | null;
     travel_image_thumb_small_url?: string | null;
 

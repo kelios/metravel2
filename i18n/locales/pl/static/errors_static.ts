@@ -1,4 +1,6 @@
 export const errorsStaticResources = {
+  "api.misc.unsupportedPublicationStatus": "Nieznany stan publikacji. Odśwież stronę lub skontaktuj się z pomocą. Treść nie została utracona.",
+  "api.misc.rejectionReasonRequired": "Podaj powód odrzucenia o długości od 1 do 2000 znaków.",
   "unknownError": "Nieznany błąd",
   "unexpectedError": "Wystąpił nieoczekiwany błąd",
   "map.routeFailed": "Błąd trasy",

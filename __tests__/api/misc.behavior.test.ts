@@ -151,7 +151,7 @@ describe('api/misc', () => {
     mockApiClientRequest.mockResolvedValue(baseForm)
     const form = { ...baseForm, moderation_decision_reason: 'Old API decision' }
 
-    await saveFormData(form, undefined, { intent: 'save', moderationDecisionReason: '  Добавьте фотографии.\n ' })
+    await saveFormData(form, undefined, { intent: 'reject', moderationDecisionReason: '  Добавьте фотографии.\n ' })
 
     const body = JSON.parse(mockApiClientRequest.mock.calls[0][1].body)
     expect(body.moderation_decision_reason).toBe('Добавьте фотографии.')
@@ -165,7 +165,7 @@ describe('api/misc', () => {
     ['explicit save', { intent: 'save' }],
     ['autosave flag', { autosave: true, moderationDecisionReason: 'Do not replay' }],
     ['autosave intent', { intent: 'autosave', moderationDecisionReason: 'Do not replay' }],
-    ['approval', { intent: 'publish', moderationDecisionReason: 'Do not replay' }],
+    ['approval', { intent: 'approve', moderationDecisionReason: 'Do not replay' }],
   ])('saveFormData omits historical rejection reason during %s', async (_label, options) => {
     mockGetSecureItem.mockResolvedValue('token')
     mockApiClientRequest.mockResolvedValue(baseForm)
@@ -185,25 +185,25 @@ describe('api/misc', () => {
 
     const body = JSON.parse(mockApiClientRequest.mock.calls[0][1].body)
     expect(body).not.toHaveProperty('moderation_decision_reason')
-    expect(body.enforce_moderation_validation).toBe(options?.intent === 'publish')
+    expect(body.enforce_moderation_validation).toBe(options?.intent === 'submit')
   })
 
   it('saveFormData blocks a whitespace-only explicit rejection before sending a request', async () => {
     mockGetSecureItem.mockResolvedValue('token')
 
-    await expect(saveFormData(baseForm, undefined, { intent: 'save', moderationDecisionReason: ' \n\t ' }))
+    await expect(saveFormData(baseForm, undefined, { intent: 'reject', moderationDecisionReason: ' \n\t ' }))
       .rejects.toThrow('Укажите причину отклонения')
     expect(mockApiClientRequest).not.toHaveBeenCalled()
   })
 
-  it('saveFormData preserves an over-limit reason for server validation instead of truncating it', async () => {
+  it('saveFormData rejects an over-limit reason before a request', async () => {
     mockGetSecureItem.mockResolvedValue('token')
     mockApiClientRequest.mockRejectedValue(new Error('Reason exceeds 2000 characters'))
     const reason = 'А'.repeat(2001)
 
-    await expect(saveFormData(baseForm, undefined, { intent: 'save', moderationDecisionReason: reason }))
-      .rejects.toThrow('Reason exceeds 2000 characters')
-    expect(JSON.parse(mockApiClientRequest.mock.calls[0][1].body).moderation_decision_reason).toBe(reason)
+    await expect(saveFormData(baseForm, undefined, { intent: 'reject', moderationDecisionReason: reason }))
+      .rejects.toThrow('Укажите причину отклонения')
+    expect(mockApiClientRequest).not.toHaveBeenCalled()
   })
 
   it('saveFormData sanitizes rich-text description without stripping supported embeds', async () => {
@@ -327,7 +327,7 @@ describe('api/misc', () => {
       moderation: false,
     } as any
 
-    await expect(saveFormData(payload, undefined, { intent: 'publish' })).rejects.toThrow('description')
+    await expect(saveFormData(payload, undefined, { intent: 'submit' })).rejects.toThrow('description')
     expect(mockApiClientRequest).not.toHaveBeenCalled()
   })
 
@@ -345,7 +345,7 @@ describe('api/misc', () => {
       moderation: false,
     } as any
 
-    await expect(saveFormData(payload, undefined, { intent: 'publish' })).rejects.toThrow('categories')
+    await expect(saveFormData(payload, undefined, { intent: 'submit' })).rejects.toThrow('categories')
     expect(mockApiClientRequest).not.toHaveBeenCalled()
   })
 

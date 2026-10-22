@@ -76,6 +76,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         status,
         setStatus,
         currentBackendStatus,
+        publicationStatus,
+        publicationStatusError,
         pendingModeration,
         userPendingModeration,
         missingForModeration,
@@ -111,7 +113,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     });
 
     const shareId = formData.slug || formData.id;
-    const canShare = Boolean(shareId && formData.publish);
+    const canShare = Boolean(shareId && publicationStatus === 'published');
     const handleShare = useCallback(() => {
         if (!canShare || !shareId) return;
         void shareTravel({
@@ -147,14 +149,12 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                         isSaving
                             ? i18nT('travel:components.travel.TravelWizardStepPublish.sohranenie_6ac62247')
                             : primaryOverrideLabel ??
-                              (pendingModeration
-                                  ? i18nT('travel:components.travel.TravelWizardStepPublish.otpravleno_na_moderatsiyu_6f9b87dd')
-                                  : status === 'draft'
-                                  ? i18nT('travel:components.travel.TravelWizardStepPublish.sohranit_chernovik_7d6023b4')
-                                  : i18nT('travel:components.travel.TravelWizardStepPublish.otpravit_na_moderatsiyu_55154a94'))
+                              (status === 'moderation' && publicationStatus === 'draft'
+                                  ? i18nT('travel:components.travel.TravelWizardStepPublish.otpravit_na_moderatsiyu_55154a94')
+                                  : i18nT('travel:components.travel.TravelWizardStepPublish.save'))
                     }
                     primaryTestID="primary-button"
-                    primaryDisabled={pendingModeration || isSaving}
+                    primaryDisabled={!!publicationStatusError || isSaving}
                     tipTitle={stepMeta?.tipTitle}
                     tipBody={stepMeta?.tipBody}
                     currentStep={currentStep}
@@ -188,6 +188,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                         colors={colors}
                         styles={styles}
                         currentBackendStatus={currentBackendStatus}
+                        publicationStatus={publicationStatus}
+                        publicationStatusError={publicationStatusError}
                         pendingModeration={pendingModeration}
                         userPendingModeration={userPendingModeration}
                         status={status}
@@ -208,7 +210,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                         onNavigateToIssue={onNavigateToIssue}
                     />
 
-                    {isSuperAdmin && (pendingModeration || formData.moderation || status === 'moderation') && (
+                    {isSuperAdmin && publicationStatus && (publicationStatus !== 'draft' || status === 'moderation') && (
                         <PublishModerationAdminPanel
                             colors={colors}
                             styles={styles}
@@ -280,13 +282,11 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                         isSaving
                             ? i18nT('travel:components.travel.TravelWizardStepPublish.sohranenie_6ac62247')
                             : primaryOverrideLabel ??
-                              (pendingModeration
-                                  ? i18nT('travel:components.travel.TravelWizardStepPublish.otpravleno_na_moderatsiyu_6f9b87dd')
-                                  : status === 'draft'
-                                  ? i18nT('travel:components.travel.TravelWizardStepPublish.sohranit_chernovik_7d6023b4')
-                                  : i18nT('travel:components.travel.TravelWizardStepPublish.otpravit_na_moderatsiyu_55154a94'))
+                              (status === 'moderation' && publicationStatus === 'draft'
+                                  ? i18nT('travel:components.travel.TravelWizardStepPublish.otpravit_na_moderatsiyu_55154a94')
+                                  : i18nT('travel:components.travel.TravelWizardStepPublish.save'))
                     }
-                    primaryDisabled={pendingModeration || isSaving}
+                    primaryDisabled={!!publicationStatusError || isSaving}
                     primaryTestID="primary-button"
                 />
 

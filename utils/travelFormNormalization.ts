@@ -2,6 +2,7 @@
 // ✅ АРХИТЕКТУРА: Чистые функции нормализации данных формы путешествия
 // Извлечены из hooks/useTravelFormData.ts для независимого тестирования и переиспользования
 
+import { resolveTravelPublicationStatus } from '@/utils/travelPublicationStatus';
 import type { TravelFormData } from '@/types/types';
 
 export const DRAFT_PLACEHOLDER_PREFIX = '__draft_placeholder__';
@@ -199,7 +200,7 @@ export function ensureRequiredDraftFields(payload: TravelFormData): TravelFormDa
         }
     });
 
-    const isDraft = !normalized.publish && !normalized.moderation;
+    const isDraft = resolveTravelPublicationStatus(normalized) === 'draft';
     const normalizedName = typeof normalized.name === 'string' ? normalized.name.trim() : '';
 
     if (isDraft && normalizedName.length < 3) {

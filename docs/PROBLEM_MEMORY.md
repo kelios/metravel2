@@ -6950,3 +6950,31 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
 - **Evidence status:** исправления требуют production-проверки транспорта;
   метрика <10% требует семи полных дней после выката +48h обработки. История
   GA не исправляется задним числом. Consent/native scope не расширяется.
+
+
+### WIZARD-PUBLICATION-001 — legacy flags снимают pending_review при сохранении
+
+- **Problem key:** `wizard-pending-review-legacy-flags-drift`.
+- **Инвариант:** обычный full/content/route-save сохраняет canonical состояние
+  статьи и прежнее решение; только submit/approve/reject выполняют переход.
+- **Surface/owner:** shared travel wizard, `/travel/:id` и `/travel/new`;
+  desktop/mobile web. Backend read-only.
+- **Цепочка:** #910/#911 (канонический статус и очередь), #2685 (причина
+  отклонения), #2693 (адаптер чтения и команд записи). #2669 владеет показом
+  решения модерации, #2686 — серверными правами; это другие механизмы.
+- **Подтверждённая причина:** GET pending_review возвращает false/false,
+  мастер вычислял draft по этим флагам; allowlist формы отбрасывала canonical,
+  а полный PUT пересылал флаги с приоритетом над canonical на сервере.
+  Источник и production evidence до исправления записаны в #2693.
+- **Корректирующий слой:** `utils/travelPublicationStatus.ts` — единое чтение
+  canonical, legacy fallback только при отсутствии поля, явные команды и
+  сериализация полного payload без legacy-флагов. Unknown canonical блокирует
+  full и content save с видимой ошибкой, сохраняя форму.
+- **Постоянный контроль:** реальные mapper → form → serializer tests в
+  `__tests__/utils/travelPublicationStatus.test.ts`; AST governance в
+  `__tests__/governance/travelPublicationContract.test.ts`; persistence/UI
+  regressions четырёх статусов, очередей, ошибок и разовой причины reject.
+  Controller tests сохраняют текущий canonical при восстановлении старого
+  локального черновика, в том числе при завершении модерации во время чтения.
+  Production приёмка #2693 доказывает payload и повторный GET своих тестовых
+  статей; зелёные unit сами по себе не подтверждают production deployment.

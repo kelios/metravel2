@@ -5,6 +5,7 @@ import Feather from '@expo/vector-icons/Feather';
 
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import { QualityIndicator } from '@/components/travel/ValidationFeedback';
+import type { TravelPublicationStatus } from '@/types/types';
 import type { ThemedColors } from '@/hooks/useTheme';
 import type { ModerationIssue } from '@/utils/formValidation';
 import { translate as i18nT } from '@/i18n'
@@ -19,6 +20,8 @@ type PublishStatusSummaryPanelProps = {
         label: string;
         tone: BackendStatusTone;
     };
+    publicationStatus: TravelPublicationStatus | null;
+    publicationStatusError: string | null;
     pendingModeration: boolean;
     userPendingModeration: boolean;
     status: 'draft' | 'moderation';
@@ -37,6 +40,8 @@ export default function PublishStatusSummaryPanel({
     colors,
     styles,
     currentBackendStatus,
+    publicationStatus,
+    publicationStatusError,
     pendingModeration,
     userPendingModeration,
     status,
@@ -64,12 +69,20 @@ export default function PublishStatusSummaryPanel({
                     <Text style={styles.statusChipHint}>
                         {pendingModeration
                             ? i18nT('travel:components.travel.PublishStatusSummaryPanel.marshrut_otpravlen_na_moderatsiyu_ozhidaet_r_69b645e9')
-                            : i18nT('travel:components.travel.PublishStatusSummaryPanel.eto_status_kotoryy_uzhe_sohranen_nizhe_vy_mo_eff24d3d')}
+                            : publicationStatus === 'draft'
+                                ? i18nT('travel:components.travel.PublishStatusSummaryPanel.eto_status_kotoryy_uzhe_sohranen_nizhe_vy_mo_eff24d3d')
+                                : i18nT('travel:components.travel.PublishStatusSummaryPanel.savePreservesStatus')}
                     </Text>
                 </View>
             </View>
 
-            {!pendingModeration && (
+            {publicationStatusError && (
+                <View style={[styles.card, styles.bannerError]} accessibilityRole="alert">
+                    <Text style={styles.bannerDescription}>{publicationStatusError}</Text>
+                </View>
+            )}
+
+            {publicationStatus === 'draft' && (
                 <View style={[styles.card, styles.statusCard]}>
                     <Text style={styles.cardTitle}>{i18nT('travel:components.travel.PublishStatusSummaryPanel.status_publikatsii_1fc92ecd')}</Text>
                     <View style={styles.statusOptions}>
@@ -77,15 +90,15 @@ export default function PublishStatusSummaryPanel({
                             style={[styles.statusOption, status === 'draft' && styles.statusOptionActive]}
                             onPress={() => onStatusChange('draft')}
                             disabled={userPendingModeration}
-                            accessibilityLabel={i18nT('travel:components.travel.PublishStatusSummaryPanel.sohranit_kak_chernovik_1e0b8a83')}
+                            accessibilityLabel={i18nT('travel:components.travel.PublishStatusSummaryPanel.saveChanges')}
                         >
                             <View style={styles.radioOuter}>
                                 {status === 'draft' && <View style={styles.radioInner} />}
                             </View>
                             <View style={styles.statusTextCol}>
-                                <Text style={styles.statusLabel}>{i18nT('travel:components.travel.PublishStatusSummaryPanel.sohranit_kak_chernovik_1e0b8a83')}</Text>
+                                <Text style={styles.statusLabel}>{i18nT('travel:components.travel.PublishStatusSummaryPanel.saveChanges')}</Text>
                                 <Text style={styles.statusHint}>
-                                    {i18nT('travel:components.travel.PublishStatusSummaryPanel.chernovik_viden_tolko_vam_ego_mozhno_dopolny_9ac19698')}</Text>
+                                    {i18nT('travel:components.travel.PublishStatusSummaryPanel.savePreservesStatus')}</Text>
                             </View>
                         </CardActionPressable>
 
@@ -110,11 +123,11 @@ export default function PublishStatusSummaryPanel({
                 </View>
             )}
 
-            {status === 'moderation' && missingForModeration.length > 0 && (
+            {missingForModeration.length > 0 && (
                 <View ref={missingBannerAnchor} nativeID="travelwizard-publish-missing-banner" />
             )}
 
-            {status === 'moderation' && missingForModeration.length > 0 && (
+            {missingForModeration.length > 0 && (
                 <View style={[styles.card, styles.bannerError]}>
                     <Text style={styles.bannerTitle}>{i18nT('travel:components.travel.PublishStatusSummaryPanel.nuzhno_dopolnit_pered_moderatsiey_1285b2fa')}</Text>
                     <Text style={styles.bannerDescription}>

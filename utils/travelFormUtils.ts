@@ -1,4 +1,5 @@
 import { TravelFormData, Travel, MarkerData } from '@/types/types';
+import { resolveTravelPublicationStatus } from '@/utils/travelPublicationStatus';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 
 type UnknownRecord = Record<string, unknown>;
@@ -230,6 +231,7 @@ export function getEmptyFormData(id: string | null): TravelFormData {
     plus: '',
     recommendation: '',
     description: '',
+    publication_status: 'draft',
     publish: false,
     moderation: false,
     visa: false,
@@ -300,6 +302,9 @@ export function transformTravelToFormData(travel: Travel): TravelFormData {
     minus,
     recommendation,
     youtube_link,
+    publication_status: travel.publication_status !== undefined
+      ? travel.publication_status
+      : resolveTravelPublicationStatus(travel),
     moderation: coerceBoolean(travelRecord.moderation, false),
     publish: coerceBoolean(travelRecord.publish, false),
     visa: coerceBoolean(travelRecord.visa, false),

@@ -1,4 +1,8 @@
 export const travelGenerated4 = {
+  "components.travel.TravelWizardStepPublish.approved": "Ухвалена",
+  "components.travel.TravelWizardStepPublish.save": "Захаваць",
+  "components.travel.PublishStatusSummaryPanel.saveChanges": "Захаваць змены",
+  "components.travel.PublishStatusSummaryPanel.savePreservesStatus": "Захаванне не змяняе стан публікацыі.",
   "components.listTravel.ModernFilters.status.allAuthorsUnpublishedOnly": "Неапублікаваныя (на мадэрацыі)",
   "components.listTravel.ModernFilters.status.allAuthorsUnpublishedOnlyHint": "Паказваць неапублікаваныя артыкулы на мадэрацыі",
   "components.travel.TravelStatusButton.dobavit_v_plan_c8d5333c": "Дадаць у план",

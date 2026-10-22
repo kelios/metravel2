@@ -1,4 +1,6 @@
 export const errorsStaticResources = {
+  "api.misc.unsupportedPublicationStatus": "Unknown publication state. Refresh the page or contact support. Your content has not been lost.",
+  "api.misc.rejectionReasonRequired": "Enter a rejection reason between 1 and 2000 characters.",
   "unknownError": "Unknown error",
   "unexpectedError": "An unexpected error occurred",
   "map.routeFailed": "Route error",

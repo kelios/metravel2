@@ -26,6 +26,7 @@ import {
 } from '@/utils/growthFunnelAnalytics';
 import { showToastMessage } from '@/utils/toast';
 import { hasToastBeenShown } from '@/utils/errorHelpers';
+import { resolveTravelPublicationStatus } from '@/utils/travelPublicationStatus';
 import { translate as i18nT } from '@/i18n';
 
 type ChecklistItem = { ok: boolean };
@@ -54,7 +55,6 @@ type UseTravelPublishModerationArgs = {
 
 export function useTravelPublishModeration({
     formData,
-    setFormData,
     onManualSave,
     currentStep,
     isSuperAdmin,
@@ -75,25 +75,26 @@ export function useTravelPublishModeration({
         actionPendingRef.current = false;
     }, []);
 
-    const [status, setStatus] = useState<'draft' | 'moderation'>(
-        formData.moderation || formData.publish ? 'moderation' : 'draft',
-    );
-
-    // ✅ FIX: Синхронизация status с formData при изменении (например, при редактировании)
-    useEffect(() => {
-        const newStatus = formData.moderation || formData.publish ? 'moderation' : 'draft';
-        setStatus(newStatus);
-    }, [formData.moderation, formData.publish]);
+    // The radio selects the next action; it is never the persisted article state.
+    const [status, setStatus] = useState<'draft' | 'moderation'>('draft');
+    const publicationStatus = resolveTravelPublicationStatus(formData);
+    const publicationStatusError = publicationStatus === null
+        ? i18nT('errorsStatic:api.misc.unsupportedPublicationStatus')
+        : null;
+    useEffect(() => setStatus('draft'), [formData.id, publicationStatus]);
 
     const currentBackendStatus = useMemo(() => {
-        if (formData.moderation) return { label: i18nT('travel:components.travel.TravelWizardStepPublish.opublikovano_572457aa'), tone: 'success' } as const;
-        if (formData.publish) return { label: i18nT('travel:components.travel.TravelWizardStepPublish.otpravleno_na_moderatsiyu_6f9b87dd'), tone: 'warning' } as const;
-        return { label: i18nT('travel:components.travel.TravelWizardStepPublish.chernovik_80f263f2'), tone: 'muted' } as const;
-    }, [formData.moderation, formData.publish]);
+        switch (publicationStatus) {
+            case 'published': return { label: i18nT('travel:components.travel.TravelWizardStepPublish.opublikovano_572457aa'), tone: 'success' } as const;
+            case 'approved': return { label: i18nT('travel:components.travel.TravelWizardStepPublish.approved'), tone: 'success' } as const;
+            case 'pending_review': return { label: i18nT('travel:components.travel.TravelWizardStepPublish.otpravleno_na_moderatsiyu_6f9b87dd'), tone: 'warning' } as const;
+            case 'draft': return { label: i18nT('travel:components.travel.TravelWizardStepPublish.chernovik_80f263f2'), tone: 'muted' } as const;
+            default: return { label: i18nT('errorsStatic:api.misc.unsupportedPublicationStatus'), tone: 'warning' } as const;
+        }
+    }, [publicationStatus]);
 
-    const isUser = !isSuperAdmin;
-    const pendingModeration = formData.publish && !formData.moderation;
-    const userPendingModeration = isUser && pendingModeration;
+    const pendingModeration = publicationStatus === 'pending_review';
+    const userPendingModeration = !isSuperAdmin && pendingModeration;
     const isNew = !formData.id;
 
     const [missingForModeration, setMissingForModeration] = useState<ModerationIssue[]>([]);
@@ -162,71 +163,65 @@ export function useTravelPublishModeration({
 
     const handleSaveDraft = async () => {
         // ✅ FIX: Предотвращаем одновременные операции
-        if (!startAction()) return;
+        if (!publicationStatus || !startAction()) return;
         setIsSaving(true);
-        const previousForm = formData;
-
         try {
-            const nextForm = {
-                ...formData,
-                publish: false,
-                moderation: false,
-            };
-            setFormData(nextForm);
+            const nextForm = formData;
             setMissingForModeration([]);
-            const saved = await onManualSave(nextForm);
+            const saved = await onManualSave(nextForm, { intent: 'save' });
+            if (!saved) return;
             const resolvedId = resolveSavedId(saved, nextForm);
 
-            const hasName = !!nextForm.name && nextForm.name.trim().length > 0;
-            const hasDescription = !!nextForm.description && nextForm.description.trim().length > 0;
-            const hasCountries = Array.isArray(nextForm.countries) && nextForm.countries.length > 0;
-            const hasRoute = routePoints.length > 0;
-            const galleryArr = galleryItems;
-            const hasCover = !!nextForm.travel_image_thumb_small_url;
-            const hasPhotos = hasCover || galleryArr.length > 0;
-            const fieldsCompletedCount = [
-                hasName,
-                hasDescription,
-                hasCountries,
-                hasRoute,
-                hasPhotos,
-            ].filter(Boolean).length;
+            if (publicationStatus === 'draft') {
+                const hasName = !!nextForm.name && nextForm.name.trim().length > 0;
+                const hasDescription = !!nextForm.description && nextForm.description.trim().length > 0;
+                const hasCountries = Array.isArray(nextForm.countries) && nextForm.countries.length > 0;
+                const hasRoute = routePoints.length > 0;
+                const galleryArr = galleryItems;
+                const hasCover = !!nextForm.travel_image_thumb_small_url;
+                const hasPhotos = hasCover || galleryArr.length > 0;
+                const fieldsCompletedCount = [
+                    hasName,
+                    hasDescription,
+                    hasCountries,
+                    hasRoute,
+                    hasPhotos,
+                ].filter(Boolean).length;
 
-            await trackWizardEvent('wizard_draft_saved', {
-                travel_id: resolvedId,
-                step: currentStep,
-                fields_filled: {
-                    name: hasName,
-                    description: hasDescription,
-                    countries: hasCountries,
-                    markers: hasRoute,
-                    photos: hasPhotos,
-                },
-            });
+                await trackWizardEvent('wizard_draft_saved', {
+                    travel_id: resolvedId,
+                    step: currentStep,
+                    fields_filled: {
+                        name: hasName,
+                        description: hasDescription,
+                        countries: hasCountries,
+                        markers: hasRoute,
+                        photos: hasPhotos,
+                    },
+                });
 
-            trackRouteCreateDraftSaved({
-                travelId: resolvedId,
-                step: currentStep,
-                fieldsCompletedCount,
-                hasName,
-                hasDescription,
-                hasCountries,
-                hasRoute,
-                hasPhotos,
-            });
+                trackRouteCreateDraftSaved({
+                    travelId: resolvedId,
+                    step: currentStep,
+                    fieldsCompletedCount,
+                    hasName,
+                    hasDescription,
+                    hasCountries,
+                    hasRoute,
+                    hasPhotos,
+                });
+            }
 
             hapticNotification('success');
 
-            // После сохранения на последнем шаге логично вывести пользователя из мастера
-            // в раздел "Мои путешествия", где он увидит черновик.
+            // The final step returns to the user-owned list after a confirmed save.
             router.replace('/metravel');
         } catch (error) {
-            trackRouteCreateDraftFailed({
+            if (publicationStatus === 'draft') trackRouteCreateDraftFailed({
                 travelId: formData.id,
                 step: currentStep,
                 errorType: 'save_failed',
             });
-            setFormData(previousForm);
             hapticNotification('error');
             if (!hasToastBeenShown(error)) {
                 void showToastMessage({
@@ -260,7 +255,7 @@ export function useTravelPublishModeration({
     ]);
 
     const handleSendToModeration = async () => {
-        if (!startAction()) return;
+        if (!publicationStatus || !startAction()) return;
         const criticalMissing = collectCriticalMissing();
         const missingLabels = criticalMissing.map(i => i.label);
 
@@ -294,27 +289,19 @@ export function useTravelPublishModeration({
 
         setMissingForModeration([]);
         setIsSaving(true);
-        const previousForm = formData;
-        const nextForm = {
-            ...formData,
-            moderation: false,
-            publish: true, // пользователь отправляет на модерацию: publish=true, moderation остаётся false до решения админа
-        };
-        setFormData(nextForm);
+        const nextForm = formData;
 
         // Сохраняем статус на бэкенд (отсюда триггерятся уведомления)
         try {
-            const saved = await onManualSave(nextForm, { intent: 'publish' });
+            const saved = await onManualSave(nextForm, { intent: 'submit' });
+            if (!saved) return;
             const resolvedId = resolveSavedId(saved, nextForm);
             if (!resolvedId) {
-                // Сохранение не дало id — откатываем оптимистичный publish=true,
-                // иначе UI покажет «на модерации», хотя ничего не отправлено.
                 trackRouteCreatePublishFailed({
                     travelId: formData.id,
                     step: currentStep,
                     errorType: 'missing_saved_id',
                 });
-                setFormData(previousForm);
                 void showToastMessage({
                     type: 'error',
                     text1: i18nT('travel:components.travel.TravelWizardStepPublish.ne_udalos_otpravit_46d67527'),
@@ -344,7 +331,7 @@ export function useTravelPublishModeration({
 
             hapticNotification('success');
 
-            // Навигация без повторного сохранения (чтобы не перезаписать publish=false старым стейтом)
+            // The confirmed command is already saved; leaving must not submit it again.
             // Используем replace, чтобы мастер точно размонтировался и не продолжал автосохранение.
             router.replace('/metravel');
         } catch (error) {
@@ -353,7 +340,6 @@ export function useTravelPublishModeration({
                 step: currentStep,
                 errorType: 'save_failed',
             });
-            setFormData(previousForm);
             hapticNotification('error');
             if (!hasToastBeenShown(error)) {
                 void showToastMessage({
@@ -363,18 +349,15 @@ export function useTravelPublishModeration({
                 });
             }
         } finally {
+            setIsSaving(false);
             finishAction();
         }
     };
 
     const handleApproveModeration = async () => {
-        if (!startAction()) return;
+        if (!publicationStatus || !startAction()) return;
 
-        // Одобрение админа — такой же submit на модерацию (publish+moderation=true),
-        // и бэк гоняет ту же валидацию полноты. Без пред-проверки запрос улетал и
-        // возвращался 400 со структурой `{coordsMeTravel: [...]}`, из которой FE не
-        // показывал ничего внятного. Ловим то же самое до запроса и подсвечиваем,
-        // что именно не заполнено.
+        // Keep the existing readiness feedback before the explicit approve command.
         const criticalMissing = collectCriticalMissing();
         if (criticalMissing.length > 0) {
             setMissingForModeration(criticalMissing);
@@ -385,21 +368,15 @@ export function useTravelPublishModeration({
             return;
         }
         setMissingForModeration([]);
+        setIsSaving(true);
 
-        const previousForm = formData;
-        const nextForm = {
-            ...formData,
-            moderation: true,
-            publish: true,
-        };
-        setFormData(nextForm);
+        const nextForm = formData;
 
         try {
-            const saved = await onManualSave(nextForm, { intent: 'publish' });
+            const saved = await onManualSave(nextForm, { intent: 'approve' });
+            if (!saved) return;
             const resolvedId = resolveSavedId(saved, nextForm);
             if (!resolvedId) {
-                // Откатываем оптимистичный moderation/publish=true при неуспешном сохранении.
-                setFormData(previousForm);
                 void showToastMessage({
                     type: 'error',
                     text1: i18nT('travel:components.travel.TravelWizardStepPublish.ne_udalos_sohranit_4605a31e'),
@@ -420,7 +397,6 @@ export function useTravelPublishModeration({
 
             router.replace('/metravel');
         } catch (error) {
-            setFormData(previousForm);
             hapticNotification('error');
             if (!hasToastBeenShown(error)) {
                 void showToastMessage({
@@ -430,6 +406,7 @@ export function useTravelPublishModeration({
                 });
             }
         } finally {
+            setIsSaving(false);
             finishAction();
         }
     };
@@ -437,31 +414,18 @@ export function useTravelPublishModeration({
     const handleRejectModeration = async () => {
         const commentText = rejectionComment.trim();
         if (!isSuperAdmin || !commentText || commentText.length > 2000) return;
-        if (!startAction()) return;
-        const previousForm = formData;
-        const restorePreviousStatus = () => setFormData(current => ({
-            ...current,
-            publish: previousForm.publish,
-            moderation: previousForm.moderation,
-        }));
-        const nextForm = {
-            ...formData,
-            moderation: false,
-            publish: false,
-        };
-        setFormData(nextForm);
+        if (!publicationStatus || !startAction()) return;
+        setIsSaving(true);
+        const nextForm = formData;
 
         try {
-            const saved = await onManualSave(nextForm, { intent: 'save', moderationDecisionReason: commentText });
+            const saved = await onManualSave(nextForm, { intent: 'reject', moderationDecisionReason: commentText });
             // A cancelled text-loss confirmation returns void without writing.
             if (!saved) {
-                restorePreviousStatus();
                 return;
             }
             const resolvedId = resolveSavedId(saved, nextForm);
             if (!resolvedId) {
-                // Откатываем оптимистичный moderation/publish=false при неуспешном сохранении.
-                restorePreviousStatus();
                 void showToastMessage({
                     type: 'error',
                     text1: i18nT('travel:components.travel.TravelWizardStepPublish.ne_udalos_sohranit_4605a31e'),
@@ -510,7 +474,6 @@ export function useTravelPublishModeration({
             setRejectionComment('');
             router.replace('/metravel');
         } catch (error) {
-            restorePreviousStatus();
             hapticNotification('error');
             if (!hasToastBeenShown(error)) {
                 void showToastMessage({
@@ -520,13 +483,14 @@ export function useTravelPublishModeration({
                 });
             }
         } finally {
+            setIsSaving(false);
             finishAction();
         }
     };
 
     const handlePrimaryAction = () => {
-        if (userPendingModeration) return;
-        if (status === 'draft') {
+        if (!publicationStatus) return;
+        if (status === 'draft' || publicationStatus !== 'draft') {
             void handleSaveDraft();
         } else {
             void handleSendToModeration();
@@ -536,6 +500,8 @@ export function useTravelPublishModeration({
     return {
         status,
         setStatus,
+        publicationStatus,
+        publicationStatusError,
         currentBackendStatus,
         pendingModeration,
         userPendingModeration,
