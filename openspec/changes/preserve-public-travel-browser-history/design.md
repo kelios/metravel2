@@ -14,6 +14,7 @@
 2. Воспроизводимым `patches/expo-router+57.0.28.patch` исправить fullHistory дедуп: удалить последнюю запись только при совпадении key **и** глубоком равенстве params; начальная запись тоже хранит params. Использовать уже установленный `fast-deep-equal` (зависимость Expo Router). В том же режиме REPLACE заменяет последнее посещение: штатная ветка ошибочно удаляет запись по индексу таба, что после A/B/C сохраняет C вместо исходного search. При REPLACE всегда меняется navigator key, чтобы linking сделал replace даже для таба0. Native ветка REPLACE сохранена. JS — исполняемый источник; source map не подделывается. Postinstall уже применяет patch-package с error-on-fail.
 3. Отвергнуты: getId/dangerouslySingular с history (старые ключи исчезают из routes, GO_BACK возвращает null); fullHistory без исправления (same key заменяется независимо от params); ручной pushState (рассинхронизирует владельцев истории); nested Stack/UNSTABLE_router (меняет дерево маршрутов либо дублирует алгоритм владельца).
 4. Unit проверяет настоящий pinned TabRouter через проектную конфигурацию: A/B/C, same-current, GO_BACK, params, native-контроль. Browser regression использует реальные near cards и CDP entries в штатном production-smoke пути.
+5. Приёмка RAW03 на app179f9d50f подтвердила browser A/B/C и CDP identities, но mobile app Back после внешних Back/Forward выбрал главную. Изолированного reducer недостаточно: нужен actual pinned memory/linking regression, удерживающий сохранённые snapshots после external popstate → replace. Source-разбор выявил отсутствие closure-index sync в web memory fork: replace пишет текущий browser ID в прежний slot, уничтожая forward snapshot; следующий Forward переходит к URL-only rehydration без предшественника. Эта внутренняя production ветка пока не снята. До функционального изменения — red regression и callback attribution #2702; candidate correction восстанавливает два sync-момента sibling (external listener и timeout settlement) в том же воспроизводимом patch. App Back helper не меняется: browser-history-length fallback скрывает испорченную память и может покинуть сайт на прямом входе.
 
 ## Boundaries and impact
 
@@ -27,6 +28,7 @@ SEO: реальные hydrated title/canonical/main/OG/Twitter descriptions по
 - Привязка patch к57.0.28 → чистая проверка apply, postinstall error-on-fail и integration tests защищают обновление.
 - Непредсказуемые production рекомендации → выбирать C из настоящих карточек, исключая A/B; не вставлять тестовые ссылки.
 - #2702 не считается закрытой этим изменением; отдельный editor runtime не входит.
+- Memory correction требует controls ненулевого cursor, subsequent push/replace/backIndex, pending/internal traversal, timeout и interrupt. Даже корректный cursor не доказывает отсутствие ошибочного дополнительного go в #2702.
 
 ## Migration Plan
 

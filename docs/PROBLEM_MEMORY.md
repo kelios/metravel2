@@ -111,6 +111,7 @@ guard, падающий в CI на попытке обойти этот конт
 - Корректирующий слой: web `fullHistory`, native прежний `history` в `app/(tabs)/_layout.tsx`; воспроизводимый `patches/expo-router+57.0.28.patch` хранит initial params и дедуплицирует одинаковый key только при deep-equal params. В fullHistory REPLACE заменяет последнее посещение, а не запись по индексу таба. getId/dangerouslySingular отвергнуты: старые ключи отсутствуют в routes и GO_BACK возвращает null. Native-specific поведение, editorial content и SEO renderer не меняются.
 - Постоянные controls: `__tests__/screens/TabLayout.travelHistory.test.tsx` вызывает настоящий pinned reducer через platform policy: A/B/C, app Back, same-current/direct entry, cross-tab, SET_PARAMS/REPLACE_PARAMS, REPLACE, stale/direct rehydration и Android/iOS. `e2e/travel-public-history-production-smoke.spec.ts` в штатном production-smoke проверяет реальные карточки A/B/C, native browser и app Back/Forward, CDP entries/index/state IDs/timeOrigin, metadata, modifier/middle, screenshots и errors/writes0. Прежние mocked router.push/helper tests не доказывают эти entries.
 - Граница доказательства: отсутствие enabled same-current ссылки фиксируется явно; это не runtime click PASS. Негативный same-current контроль выполняется настоящим reducer, прямой вход — реальным браузером. До production acceptance source/unit PASS не означает исправление на проде. Editor double traversal после корректного popstate остаётся отдельной #2702.
+- Дополнительный контроль семьи: browser entries и правильный URL после Forward не доказывают сохранность внутреннего снимка навигатора. Production179f9d50f RAW03 восстановил A/B/C и CDP IDs/timeOrigin, но следующий mobile header Back ушёл на `/`. Actual pinned memory/linking regression удерживает сохранённые state snapshots после external popstate и последующего replace; app Back после полного Back/Forward цикла обязан вернуть B. Red baseline на настоящих модулях: 7FAIL/6PASS, включая перезапись B, неверные nonzero push/replace/backIndex/timeout и URL-only Forward state с canGoBack=false. Это доказывает несинхронизированный closure cursor на pinned source; исполнение внутренней ветки RAW03 не наблюдалось. Устранение test initScript/about:blank и ожидание полного catalogue response не подменяют продуктовый gate.
 - Решение новой жалобы: reuse #2703; после done — reopen при той же потере записи ДО Back. Второй traversal после восстановления — reuse #2702.
 
 ### PERF-FIRST-SCREEN-PAINT-VISIBILITY-001 — геометрия невидимого элемента проходит DOM-бюджет
@@ -1609,7 +1610,7 @@ guard, падающий в CI на попытке обойти этот конт
   read-only контракт из этого workspace.
 - **Цепочка:** `#1932` — намеренная серверная политика, `#1524` — исторически
   отсутствовавший editor-shell location, `#2669` — обнаружившая проверка
-  приватности. Каноническое исправление — `#2701` (`front`, `todo`).
+  приватности. Каноническое исправление — `#2701` (`front`).
 - **Подтверждённая причина:** `travels/views_public.py:59–72` и канонический
   `deploy/prod/nginx/nginx.conf:929–980` возвращают nonmanager правильный
   `+not-found.html` с 404, сохраняя numeric URL. На frontend
@@ -1621,6 +1622,15 @@ guard, падающий в CI на попытке обойти этот конт
   показан, pageerror React `#418` записан. После cleanup три ограниченных GET
   независимо подтвердили побайтное совпадение numeric 404 и NotFound HTML,
   отличное от доступного editor template. Масштаб на guest/mobile не измерен.
+- **Граница исправления:** согласуется полное дерево документа, включая root
+  Stack/SceneView, Tabs/header, footer/dock и eager wizard prefetch. Локальный
+  NotFound вместо spinner оставляет несовпадающих предков. Общая document-view
+  policy читает исходный marker один раз, сохраняет настоящий URL и навигатор,
+  навсегда прекращает boot override после ухода; marker не является правом
+  доступа. Numeric shape — серверный digit string, не JavaScript safe integer.
+  Регрессия должна гидратировать настоящее SSR-дерево root boundary вместе с
+  footer/dock и Suspense, затем проверять Home/Back и SPA revisit; отдельно
+  сохраняются owner/new и поддерживаемые localized quest catch-all маршруты.
 - **Почему прежний контроль не помог:** тесты HTTP/config `#1932` намеренно
   удерживают статус и NotFound-шаблон, но не запускают браузерную гидратацию.
   Старый registry routing «numeric 404 → #1524» не учитывал новый контракт прав.
@@ -1646,7 +1656,7 @@ guard, падающий в CI на попытке обойти этот конт
   сайта; смена записи/контекста не оставляет чужую приватную причину и не пишет
   статью без явной команды.
 - **Surface/owner:** frontend web navigation/Expo Router, desktop web и mobile
-  web; локализация не меняется. Каноническая задача — `#2702` (`front`, `todo`),
+  web; локализация не меняется. Каноническая задача — `#2702` (`front`),
   связана с `#2669/#1727/#528`. Старые `BACK-NAV-SINGLE-OWNER-001` и `#1727`
   удерживали другие механизмы back/returnTo; их статус `done` сохранён.
 - **Подтверждённый факт:** production SHA
@@ -1679,6 +1689,14 @@ guard, падающий в CI на попытке обойти этот конт
   writes=0, console/pageerrors=0. Нужен устойчивый project-owned regression;
   прямые ручные изменения `node_modules`, отключение feedback и подавление
   диагностик не являются исправлением.
+- **Обязательный causal control:** call-time stack и точный bundle/source
+  фиксируются до функциональной правки; сохраняются безопасный полный path с
+  разрешёнными returnTo/query/hash и фактическое сравнение pending path. Старый
+  pathname-only trace не доказывает mismatch. Для single-Back нужен список с
+  ненулевой memory position: одна нижняя safety clamp способна скрыть второй
+  traversal только на index0. В той же pinned primitive проверяются external
+  Back/Forward → push/replace/backIndex и timeout/interrupt, а setup/cleanup
+  расходных данных учитываются отдельно от navigation writes0.
 - **Решение для новой жалобы:** `reuse #2702`; после закрытия — `reopen` при
   подтверждении того же дополнительного browser traversal. Отдельный
   document-404/React `#418` — семья `TRAVEL-EDITOR-DENIED-HYDRATION-001`, `#2701`.

@@ -12,6 +12,7 @@ const LIVE_CONTRACT_SPECS = [
   'planned-trip-overnight-booking.spec.ts',
   'public-trips.spec.ts',
   'travel-content-save-delta.spec.ts',
+  'travel-editor-history.live.spec.ts',
   'travel-crud.spec.ts',
   'travel-draft-owner-preview.spec.ts',
   'travel-full-flow.spec.ts',

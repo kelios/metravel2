@@ -10,6 +10,8 @@
 - [x] 2.1 Выполнить узкие unit/static/guards и OpenSpec validation.
 - [x] 2.2 Независимый review-auditor review-and-fix, затем отдельный code-review-gate pass по всему task diff.
 - [x] 2.3 По разрешённому AGENTS.md пайплайну: commit явных task paths и push main, записать SHA и перевести #2703 в testing.
+- [ ] 2.4 После RAW03: закрепить actual memory/linking red regression потери state snapshots и исправить подтверждённый общий owner, сохранив первый TabRouter fix и native boundary.
+- [ ] 2.5 Source-check и повторные независимые review-auditor/code-review-gate по исправленному train, explicit commit/push и новый штатный выкат до повторной приёмки.
 
 ## 3. Testing
 

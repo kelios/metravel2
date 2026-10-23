@@ -225,8 +225,12 @@ test.describe('Public travel browser history — production smoke (#2703)', () =
   test.beforeEach(async ({ page, context }) => {
     await preacceptCookies(page)
     await context.addInitScript(() => {
-      window.localStorage.setItem('@metravel/locale-preference:v1',
-        JSON.stringify({ version: 1, mode: 'explicit', locale: 'ru' }))
+      // A real modifier/middle-click popup first runs scripts in about:blank,
+      // where storage is unavailable. Seed only the actual HTTP document.
+      if (location.protocol === 'https:' || location.protocol === 'http:') {
+        window.localStorage.setItem('@metravel/locale-preference:v1',
+          JSON.stringify({ version: 1, mode: 'explicit', locale: 'ru' }))
+      }
       const counters = { programmatic: 0, popstate: 0 }
       ;(window as Window & { __travelHistoryTraversals?: Traversals }).__travelHistoryTraversals = counters
       const { go, back, forward } = window.history
@@ -326,8 +330,19 @@ test.describe('Public travel browser history — production smoke (#2703)', () =
         const startTraversals = await readTraversals(page)
         const searchLink = profile.mobile ? page.getByTestId('footer-item-home') :
           page.getByTestId('main-header').getByRole('link', { name: 'Маршруты', exact: true }).first()
+        const catalogueResponse = page.waitForResponse((response) => {
+          const url = new URL(response.url())
+          return /\/api\/travels\/$/.test(url.pathname) && response.request().method() === 'GET' &&
+            url.searchParams.has('where') && url.searchParams.get('page') === '1'
+        })
         await searchLink.click()
         const search = await searchSnapshot(page, a)
+        // SEO can commit before the catalogue body finishes. Leaving then
+        // cancels its real query; finish this precondition without filtering
+        // aborted requests out of the zero-error observation.
+        const catalogue = await catalogueResponse
+        expect(catalogue.ok(), 'real catalogue response succeeds').toBe(true)
+        expect(await catalogue.finished(), 'real catalogue body completes before native Back').toBeNull()
         const searchHistory = await checkpoint(page, cdp, info, 'A-to-search')
         expectPush(aHistory, searchHistory, '/search')
         await traverse(page, cdp, info, 'search-Back-A', a, aHistory, searchHistory.entries, 'back')

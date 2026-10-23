@@ -26,6 +26,13 @@ describe('e2e suite classification', () => {
     expect(getE2ESuiteSelection('').testIgnore).toContain(spec)
   })
 
+  it('keeps disposable editor history fixtures in local live-contract only', () => {
+    const spec = 'travel-editor-history.live.spec.ts'
+    expect(LIVE_CONTRACT_SPECS).toContain(spec)
+    expect(PRODUCTION_SMOKE_SPECS).not.toContain(spec)
+    expect(getE2ESuiteSelection('').testIgnore).toContain(spec)
+  })
+
   it('runs Google authorization only in the production smoke suite', () => {
     expect(PRODUCTION_SMOKE_SPECS).toContain('google-signin.spec.ts')
     expect(getE2ESuiteSelection('')).toEqual(
