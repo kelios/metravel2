@@ -5,7 +5,8 @@ open-browser reference from actual CUA state. These prompts request preparation
 or read-only review; append a concrete save/publish instruction only when that
 action is intended. They do not carry approvals between sessions. Every request applies
 `docs/INSTAGRAM_CONTENT_SPEC.md` section 27: asset-by-asset rights evidence, no upload without
-its gate, silence/checked own audio when music rights are missing, and no inference of rights
+its gate, silence as a working base or checked own audio when music rights are missing,
+final silence only on explicit request with its F11 record, and no inference of rights
 from a platform audio label.
 
 ## Audit a post
@@ -36,12 +37,29 @@ from a platform audio label.
 > Use $metravel-instagram-editor to prepare a carousel about [topic/source URL].
 > Use only published, moderated author-1 articles or confirmed project quests.
 > Choose a coherent slide sequence, verify each number and each photo's place,
-> use the existing carousel builder and brand footer, and produce slides,
+> follow CONTENT_SPEC sections 17–18 for MeTravel C and its scene-based story, and produce slides,
 > caption, one CTA, alt-text draft, geotag, source manifest and preview. Follow
 > the planner → researcher → creator → visual-qa role contracts, run
 > `scripts/instagram/lint-package.py` before review. If illustrations are
 > requested, use $metravel-instagram-visuals. Prepare a draft without posting or
 > changing the schedule.
+
+## Invite readers into a quest
+
+> Use $metravel-instagram-editor to prepare a local carousel draft about [quest URLs/IDs]
+> for [audience] around [requested theme, e.g. Halloween castles, legends and ghosts].
+> Read the full quests and preserve the requested collection; one story thread does not
+> require one hero quest. Follow CONTENT_SPEC section 3: connect the requested quests through
+> reader choices (for example, six quests in three paired scenes), show real reader actions,
+> and lead to one verified
+> first step on the site. Write story.md before dividing it into scenes; use one consistent
+> MeTravel C layout with whole photographs (contain) by default, per section 17;
+> apply the voice, scope and review rules from sections 17–18/25. Keep observations,
+> product mechanics and personal experience distinct; verify mobile access and auth in
+> UI/code/API. Use only sourced permitted social proof, or invite feedback without inventing
+> reviews. Keep quest answers and the playable ending private. Deliver slides, caption,
+> sources, rights evidence and preview with an honest QA status. Prepare only: do not
+> upload, replace/delete a scheduled post, schedule or publish this draft.
 
 ## Prepare a weekly content pack
 

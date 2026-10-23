@@ -50,9 +50,12 @@ as usable navigation; any route map must use verified coordinates and order.
   recent-image context according to the tool contract. Preserve transparency
   for existing transparent artwork unless requested otherwise.
 - Generate scene art separately from text/layout when lettering must be exact.
-  Use the existing carousel builder for precise Russian typography, footer
-  bird from `assets/images/icon.png`, `@metravelby`, pagination and legibility.
-  Carry a shared style brief through every prompt: aspect, palette, season,
+  Compose according to CONTENT_SPEC section 17 (MeTravel C), using a renderer that
+  preserves exact Russian text, brand/footer, pagination and mobile legibility.
+  Resolve explicit site-theme and edge-blending requests from its canonical
+  reference/token and subject-preservation rules before choosing a layout.
+  The legacy serif/list builder is not the required default. Retain exact slide
+  text for the package linter. Carry a shared style brief through every prompt: aspect, palette, season,
   lighting, landmark proportions and motif. Reuse existing approved slide text.
 
 ## Validate and deliver

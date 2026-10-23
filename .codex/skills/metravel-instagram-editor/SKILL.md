@@ -18,8 +18,9 @@ copy rules into this skill:
 | 5. Schedule, publish, metrics, follower cleanup | `.claude/agents/instagram-editor.md` + `docs/INSTAGRAM_OPERATIONS.md` | `published.md` |
 
 The package folder, its file contract and the QA round limits are in
-`docs/INSTAGRAM_CONTENT_SPEC.md` section 0; voice and form rules are numbered V1–V10 and F1–F13
-in section 18; owner hard rules are in section 25; the accepted/rejected reference pair is
+`docs/INSTAGRAM_CONTENT_SPEC.md` section 0; MeTravel C is in section 17; voice and form rules
+are V1–V11 and F1–F13 in section 18. Select personal diary, quest adventure (section 3), or
+site-action mode (section 2) before drafting; owner hard rules are in section 25; references are
 section 26. For examples of scoped requests, read [references/prompts.md](references/prompts.md).
 For visual changes add `$metravel-instagram-visuals`.
 
@@ -28,12 +29,15 @@ For visual changes add `$metravel-instagram-visuals`.
 Read `docs/INSTAGRAM_CONTENT_SPEC.md` section 27 before every content or account task: it is
 the canonical music/media rights policy for all five roles. Require asset-by-asset hashed
 `rights.json` evidence and its gate before any upload, rehearsal, schedule or publication;
-use silence or checked own voice/nature when music rights are unproven. For existing posts
+use silence as a working base or checked own voice/nature when music rights are unproven.
+Final silence requires the owner's explicit request and the F11 record from section 27;
+otherwise an uncleared track blocks handoff to QA and scheduling. For existing posts
 report cleared/unknown/restricted and audit coverage; unknown is neither illegal nor cleared.
 
-- Sources: only published, moderated author-1 articles (`userIds == "1"`) and project quests;
-  every claim is quoted in `sources.md`. Quest answers are never revealed (F10).
-- One coherent story in Yulia's first-person voice, never fragments or service notes (V1–V6).
+- Sources and product mechanics follow section 25: author-1 articles, project quests and
+  verified UI/code/API evidence. Record claims in `sources.md`; exclude spoilers (F10).
+- Draft the coherent story before slides, with voice and editorial scope from V1–V4/V11;
+  a product invitation must not invent a personal visit or playthrough.
 - Before handing a package to review: `python3 scripts/instagram/lint-package.py <package>` exits
   0; Belarus packages also pass `node scripts/scan-content-sources.js <package>` with zero hits.
   The reviewer runs both again first.
