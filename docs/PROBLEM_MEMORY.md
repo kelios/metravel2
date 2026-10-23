@@ -104,11 +104,13 @@ guard, падающий в CI на попытке обойти этот конт
 ### TRAVEL-PUBLIC-SAME-TAB-HISTORY-REPLACE-001 — соседняя статья заменяет исходную запись
 
 - Инвариант: обычный переход A→B между разными публичными `/travels/:param` сохраняет обе browser history entries; native Back возвращает A один раз, Forward — B. SEO и отсутствие нового документа сами по себе историю не доказывают.
-- Canonical: #2703 (todo); related #2702/#1727/#573/#2658/#2700, без hard dependency.
+- Canonical: #2703; related #2702/#1727/#573/#2658/#2700, без hard dependency.
 - Подтверждённый факт: прод80e33d668491930bfda38fb82d4c06584f035a15, гость RU, реальные near-card480→672, desktop1440/mobile390. До клика blank(ID2)+480(ID4), после blank(ID2)+672(тот жеID4), length2/index1;480 уже нет до Back. Один Back даёт index0 blank, без промежуточного480/второго traversal. Документ исходного SPA перехода тот же, новых document-запросов0, ошибок0. Cross-tab480→search→Back→Forward PASS2/2.
 - Причина: same-tab route identity/history replacement; source-compatible цепочка application router.push→Expo PUSH/NAVIGATE→неизменный tab key/history length→fork replaceState. Точный production function stack ещё не записан. Это другая причина, чем дополнительный go(-1) после корректного popstate редактора в #2702. Navigation source byte-unchanged с pre-taskfbb6961; новая SEO регрессия не заявляется.
 - Прежний пробел: #1727 helper guard, #573 видимый/native back и #528 returnTo не удерживают browser entries разных параметров одного tab route.
-- Regression control до Done: committed настоящий card-click/browser-history regression A→B→Back A→Forward B, desktop/mobile, цепочкаA→B→C, прямой вход/modifier control; проверять entries/index/document, не внедрять историю в test и не заменять native Back другим действием. До его выполнения card не done.
+- Корректирующий слой: web `fullHistory`, native прежний `history` в `app/(tabs)/_layout.tsx`; воспроизводимый `patches/expo-router+57.0.28.patch` хранит initial params и дедуплицирует одинаковый key только при deep-equal params. В fullHistory REPLACE заменяет последнее посещение, а не запись по индексу таба. getId/dangerouslySingular отвергнуты: старые ключи отсутствуют в routes и GO_BACK возвращает null. Native-specific поведение, editorial content и SEO renderer не меняются.
+- Постоянные controls: `__tests__/screens/TabLayout.travelHistory.test.tsx` вызывает настоящий pinned reducer через platform policy: A/B/C, app Back, same-current/direct entry, cross-tab, SET_PARAMS/REPLACE_PARAMS, REPLACE, stale/direct rehydration и Android/iOS. `e2e/travel-public-history-production-smoke.spec.ts` в штатном production-smoke проверяет реальные карточки A/B/C, native browser и app Back/Forward, CDP entries/index/state IDs/timeOrigin, metadata, modifier/middle, screenshots и errors/writes0. Прежние mocked router.push/helper tests не доказывают эти entries.
+- Граница доказательства: отсутствие enabled same-current ссылки фиксируется явно; это не runtime click PASS. Негативный same-current контроль выполняется настоящим reducer, прямой вход — реальным браузером. До production acceptance source/unit PASS не означает исправление на проде. Editor double traversal после корректного popstate остаётся отдельной #2702.
 - Решение новой жалобы: reuse #2703; после done — reopen при той же потере записи ДО Back. Второй traversal после восстановления — reuse #2702.
 
 ### PERF-FIRST-SCREEN-PAINT-VISIBILITY-001 — геометрия невидимого элемента проходит DOM-бюджет
@@ -1687,44 +1689,6 @@ guard, падающий в CI на попытке обойти этот конт
   Исправление и полная cold/warm desktop/mobile матрица остаются будущим gate.
   Все disposable 903–906 и аккаунты 283/284 удалены, связанные DB counts — 0.
 
-
-### TRAVEL-PUBLIC-SAME-TAB-HISTORY-REPLACE-001 — разные статьи заменяют одну запись таба
-
-- **Инвариант:** обычный web-переход A→B→C сохраняет каждую статью отдельной
-  browser entry в том же документе. Один Back/Forward проходит ровно одну запись;
-  встроенный Back восстанавливает параметры предыдущей статьи. Прямой вход и
-  повтор текущей цели не создают фиктивные записи.
-- **Surface/owner:** публичная travel navigation, desktop/mobile web;
-  `#2703`, связанные `#1727/#573/#2702/#2658/#2700`. Локализация не меняется.
-- **Факт:** production `80e33d668491930bfda38fb82d4c06584f035a15`,
-  23.10.2026, настоящий near-card480→672 на1440/390: CDP entries до/после
-  сохраняют одну запись и её ID; исходная480 заменяется672 ещё до Back.
-  Один browser Back достигает about:blank. Cross-tab480→search→Back→Forward
-  проходит. Source-цепочка не выдаётся за захваченный production callback.
-- **Подтверждённый source-механизм:** pinned Expo Router57.0.28 превращает
-  tab PUSH в NAVIGATE; history дедуплицирует неизменный tab key, теряя прежние
-  params. useLinking получает historyDelta0 и вызывает replace. Сам fullHistory
-  тоже дедуплицирует последний key без сравнения params. Настоящий reducer
-  воспроизводит потерю A/B/C; одного mocked router.push недостаточно.
-- **Корректирующий слой:** web `fullHistory`, native прежний `history` в
-  `app/(tabs)/_layout.tsx`; воспроизводимый
-  `patches/expo-router+57.0.28.patch` хранит params начальной записи и
-  дедуплицирует одинаковый key только при deep-equal params. В fullHistory
-  REPLACE заменяет последнее посещение, а не запись по индексу таба; иначе
-  после A/B/C→replaceD встроенный Back ошибочно возвращался к C. getId отвергнут:
-  старые ключи отсутствуют в routes и GO_BACK возвращает null.
-- **Постоянные controls:**
-  `__tests__/screens/TabLayout.travelHistory.test.tsx` вызывает pinned reducer
-  с реальной platform policy: A/B/C, app Back, same-current/direct entry,
-  cross-tab/SET_PARAMS, Android/iOS-control. Реальный browser/CDP regression —
-  `e2e/travel-public-history-production-smoke.spec.ts` в production-smoke:
-  настоящие карточки, Back/Forward, entries/index/state IDs/timeOrigin,
-  metadata, modifiers, screenshots, errors/writes0.
-- **Граница:** editor double traversal после корректного popstate — отдельная
-  `#2702`; её закрытие не следует из этой правки. Без production acceptance
-  #2703 source/unit результаты не означают исправление на проде.
-- **Решение при повторе:** reuse/reopen #2703 для того же params-dedup механизма;
-  другой callback/history механизм требует отдельного подтверждения.
 
 ### ROUTING-ORS-001 — degraded routing must not look healthy
 

@@ -1,5 +1,7 @@
-import { test, expect, devices, type BrowserContext, type CDPSession, type Locator, type Page, type TestInfo } from '@playwright/test'
+import { test, expect, type BrowserContext, type CDPSession, type Locator, type Page, type TestInfo } from '@playwright/test'
 import { gotoWithRetry, preacceptCookies } from './helpers/navigation'
+
+test.use({ screenshot: 'only-on-failure' })
 
 // #2703: real guest navigation only. No router calls, injected links, history
 // writes, API mocks or fabricated preceding article may repair the history.
@@ -9,7 +11,13 @@ const PROFILES = [
   { name: 'desktop 1440x900', options: { viewport: { width: 1440, height: 900 } }, mobile: false },
   {
     name: 'mobile 390x844',
-    options: { ...devices['iPhone 13'], viewport: { width: 390, height: 844 }, browserName: 'chromium' as const },
+    options: {
+      viewport: { width: 390, height: 844 },
+      isMobile: true,
+      hasTouch: true,
+      deviceScaleFactor: 3,
+      userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Mobile/15E148 Safari/604.1',
+    },
     mobile: true,
   },
 ]
@@ -193,7 +201,7 @@ async function sameCurrentControl(page: Page, cdp: CDPSession, info: TestInfo, b
 }
 
 test.describe('Public travel browser history — production smoke (#2703)', () => {
-  test.use({ storageState: { cookies: [], origins: [] }, locale: 'ru-RU', screenshot: 'only-on-failure' })
+  test.use({ storageState: { cookies: [], origins: [] }, locale: 'ru-RU' })
 
   test.beforeEach(async ({ page, context }) => {
     await preacceptCookies(page)
