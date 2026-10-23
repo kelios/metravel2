@@ -114,11 +114,12 @@ guard, падающий в CI на попытке обойти этот конт
 ### PERF-FIRST-SCREEN-PAINT-VISIBILITY-001 — геометрия невидимого элемента проходит DOM-бюджет
 
 - Инвариант: `collectFirstScreenElements` исключает полностью невидимые из-за computed visibility:hidden/collapse и opacity0 self/ancestor элементы при сохранении геометрических условий; `documentElements` всегда полный DOM.
-- Canonical: #2704 (review); related #1287/#2151/#2658/#2700.
-- Подтверждённый факт: локальная production build80e33d668491930bfda38fb82d4c06584f035a15, QUESTS.mobile412×839DPR2.625, collector167/377; независимая инвентаризация8 невидимых (6opacity/2visibility)→159. AppInstall18 видимых законно включены, FAQ0. Действующий160 не меняется. Это не production UI defect и не PASS проваленного штатного гейта.
-- Причина: `e2e/helpers/perfBudget.ts:203–222` проверяет только rect и viewport; layout box существует при opacity0/visibilityhidden. CSS primitive/query не мокать. Visibility у самого ребёнка может быть overridevisible, opacity0 предка не может.
+- Canonical: #2704; related #1287/#2151/#2658/#2700.
+- Подтверждённый факт: локальная production build80e33d668491930bfda38fb82d4c06584f035a15, QUESTS.mobile412×839DPR2.625, collector167/377; независимая инвентаризация8 невидимых (6opacity/2visibility)→159. AppInstall18 геометрических/17 CSS-visible (один opacity0 img), FAQ0; баннер целиком не исключался. Действующий160 не меняется. Это не production UI defect и не PASS проваленного штатного гейта.
+- Причина: исходный collector80e в `e2e/helpers/perfBudget.ts:203–222` проверял только rect и viewport; layout box существует при opacity0/visibilityhidden. CSS primitive/query не мокать. Visibility у самого ребёнка может быть overridevisible, opacity0 предка не может.
 - История: #1287 ввёл профиль/DOM gate и обещал нерисуемые исключать, но negative overflow не проверял CSS-hidden. #2151 consent/readiness и #1499 mobilethrottling исправляли другие причины и остаются done. Новый узкий collector defect связан с #1287.
 - Regression control до Done: committed browser CSS fixtures с точным count delta hide/show, self/ancestoropacity0, hidden/collapse, override-child, positiveopacity0.01, aria-hidden, zero/offscreen; настоящий collector и неизменный document count. Видимый overflow обязан по-прежнему нарушать бюджет. Реальный `verify:slider`/`verify:slider-perf` после source fix без skips/retries/threshold changes.
+- Проверено23.10.2026 после review/gate и explicit push `e24f25a2`: новая CSS-проба ловит старую ошибку3/3 actual FAIL на Chromium desktop/narrow/mobile; исправленный collector+visible-overflow negative6/6PASS; canonical slider2/2 и slider-perf37/37PASS без fail/skip/flaky. QUESTS.mobile159/377 при прежнем160. Один свежий локальный production export,30 watchdog200, UI/app source80e не менялся.
 - Решение новой жалобы: reuse #2704; после done — reopen при ошибке этого CSS-фильтра. Новый неверный UI/render cost сначала подтверждать независимо и не выводить из старого ошибочного collector.
 
 
