@@ -59,6 +59,7 @@ type ContentCreateParams = {
   intent?: unknown;
   action?: unknown;
   sourceTravelId?: unknown;
+  variant?: unknown;
 };
 
 type RouteCreateParams = {
@@ -305,6 +306,7 @@ export const trackContentCreateCtaClicked = ({
   intent,
   action,
   sourceTravelId,
+  variant,
 }: ContentCreateParams) => {
   emitGrowthFunnelEvent(GROWTH_FUNNEL_EVENTS.contentCreateCtaClick, {
     content_type: contentType,
@@ -313,6 +315,7 @@ export const trackContentCreateCtaClicked = ({
     intent: safeString(intent),
     action: safeString(action),
     source_travel_id: safeString(sourceTravelId),
+    variant: safeString(variant),
   });
 };
 

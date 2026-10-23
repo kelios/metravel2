@@ -22,6 +22,8 @@ import {
 export function NotFoundContent() {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
+  const screenTitle = i18nT('shared:app.missing.oops_a237d9cd')
+  const screenOptions = useMemo(() => ({ title: screenTitle }), [screenTitle])
 
   // Кадр гидратации уже совпал с +not-found.html. Дальше возвращаем настоящий
   // URL города: это клиентский переход, не вторая гидратация, и редирект
@@ -35,7 +37,7 @@ export function NotFoundContent() {
 
   return (
     <>
-      <Stack.Screen options={{ title: i18nT('shared:app.missing.oops_a237d9cd') }} />
+      <Stack.Screen options={screenOptions} />
       {/*
         #1441: без canonical. Этот экран экспортируется в один статический
         `+not-found.html`, который nginx отдаёт на ЛЮБОЙ несуществующий адрес,

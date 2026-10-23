@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { useThemedColors } from '@/hooks/useTheme'
 import { ResponsiveContainer, ResponsiveStack } from '@/components/layout'
+import ContributionBanner from '@/components/common/ContributionBanner'
 import HomeHero from './HomeHero'
 import HomeQuickActions from './HomeQuickActions'
 import { queueAnalyticsEvent } from '@/utils/analytics'
@@ -305,6 +306,8 @@ function Home() {
       <DeferredSection marginTop={gap.weekends} minHeight={isMobile ? 520 : 560} container={{}} fallback={<SectionSkeleton />}>
         <HomeWeekendRoutesSection enabled={isFocused} />
       </DeferredSection>
+
+      <ContributionBanner variant="author-home" />
 
       {/* `normal`, а не `high`: секция лежит глубоко под первыми экранами, и
           её ранний маунт добавил бы лишний запрос рядом с LCP. Поведение то

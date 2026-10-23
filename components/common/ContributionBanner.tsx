@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native'
-import { useRouter } from 'expo-router'
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Link, useRouter } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -12,6 +12,7 @@ import Button from '@/components/ui/Button'
 import { buildLoginHref } from '@/utils/authNavigation'
 import { trackContentCreateCtaClicked, trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics'
 import { translate as i18nT } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider'
 
 
 export type ContributionBannerVariant =
@@ -23,16 +24,26 @@ export type ContributionBannerVariant =
   | 'history'
   | 'about'
   | 'default'
+  | 'author-home'
+  | 'author-catalog'
 
 interface ContributionBannerProps {
   variant?: ContributionBannerVariant
   density?: 'regular' | 'compact'
 }
 
+const AUTHOR_COPY = {
+  icon: 'edit-3',
+  get title() { return i18nT('homeStatic:becomeAuthor.banner.title') },
+  get subtitle() { return i18nT('homeStatic:becomeAuthor.banner.description') },
+}
+
 const COPY: Record<
   ContributionBannerVariant,
   { title: string; subtitle: string; icon: string }
 > = {
+  'author-home': AUTHOR_COPY,
+  'author-catalog': AUTHOR_COPY,
   home: {
     icon: 'map-pin',
     get title() { return i18nT('sharedStatic:components.common.ContributionBanner.dobavte_mesto_v_kotorom_pobyvali_c75bd52e') },
@@ -78,6 +89,7 @@ const COPY: Record<
 const ADD_PLACE_PATH = '/travel/new'
 
 function ContributionBanner({ variant = 'default', density = 'regular' }: ContributionBannerProps) {
+  const { t } = useTranslation()
   const router = useRouter()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const { isMobile } = useResponsive()
@@ -91,6 +103,18 @@ function ContributionBanner({ variant = 'default', density = 'regular' }: Contri
   const copy = COPY[variant]
   const authState = isAuthenticated ? 'authenticated' : 'guest'
   const source = `contribution_banner_${variant}`
+  const isAuthorVariant = variant === 'author-home' || variant === 'author-catalog'
+
+  const handleAuthorLink = () => {
+    trackContentCreateCtaClicked({
+      contentType: 'route',
+      source: variant === 'author-home' ? 'home' : 'travelsby',
+      authState,
+      intent: 'create-travel',
+      action: 'learn_more',
+      variant,
+    })
+  }
 
   const handleAddPlace = () => {
     trackContentCreateCtaClicked({
@@ -145,6 +169,15 @@ function ContributionBanner({ variant = 'default', density = 'regular' }: Contri
           </View>
 
           <View style={[styles.buttons, isMobile ? styles.buttonsMobile : styles.buttonsDesktop]}>
+            {isAuthorVariant ? (
+              <Link href="/become-author" asChild>
+                <Pressable accessibilityRole="link" onPress={handleAuthorLink} style={styles.authorLink}>
+                  <Text style={styles.authorLinkText}>{t('homeStatic:becomeAuthor.banner.link')}</Text>
+                  <Feather name="arrow-right" size={16} color={colors.primaryText} />
+                </Pressable>
+              </Link>
+            ) : (
+            <>
             {!isAuthenticated && (
               <Button
                 label={i18nT('shared:components.common.ContributionBanner.zaregistrirovatsya_f38770f0')}
@@ -169,6 +202,8 @@ function ContributionBanner({ variant = 'default', density = 'regular' }: Contri
               style={isAuthenticated ? styles.primaryBtn : styles.outlineBtn}
               accessibilityLabel={i18nT('shared:components.common.ContributionBanner.dobavit_mesto_na_kartu_b151a49c')}
             />
+            </>
+            )}
           </View>
         </View>
       </ResponsiveContainer>
@@ -181,6 +216,21 @@ const createStyles = (colors: ThemedColors, isMobile: boolean, isCompact: boolea
     wrapper: {
       width: '100%',
       paddingVertical: isCompact ? (isMobile ? 8 : 10) : isMobile ? 12 : 20,
+    },
+    authorLink: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+      minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+      paddingVertical: DESIGN_TOKENS.spacing.sm,
+      paddingHorizontal: DESIGN_TOKENS.spacing.md,
+      flexShrink: 1,
+    },
+    authorLinkText: {
+      ...DESIGN_TOKENS.typography.scale.bodyStrong,
+      color: colors.primaryText,
+      flexShrink: 1,
     },
     card: {
       borderRadius: isCompact ? DESIGN_TOKENS.radii.lg : DESIGN_TOKENS.radii.xl,

@@ -1,4 +1,6 @@
 export const seoStaticResources = {
+  "root.becomeAuthor.title": "Zostań autorem: trasy i książka podróży | MeTravel",
+  "root.becomeAuthor.description": "Dziel się trasami i zdjęciami, zapisuj podróże na mapie, twórz książkę PDF i poznawaj czytelników. Zostań autorem MeTravel i opowiedz o swoich podróżach.",
   "root.home.title": "Questy i trasy na weekend po Białorusi | Metravel",
   "root.home.description": "Wybieraj miejskie questy i gotowe trasy po Białorusi: zadania, punkty na mapie oraz pomysły na weekendowe wycieczki i spacery.",
   "root.default.description": "Trasy, notatki i zdjęcia z podróży po Białorusi i poza nią. Znajdź pomysły na podróż, zapisuj miejsca i udostępniaj swoje plany podróży w Metravel.",

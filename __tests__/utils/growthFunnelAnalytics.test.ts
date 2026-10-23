@@ -40,6 +40,15 @@ describe('growthFunnelAnalytics', () => {
     mockedSendAnalyticsEvent.mockClear();
   });
 
+  it('bounds an optional contribution variant without changing existing create-click payloads', () => {
+    trackContentCreateCtaClicked({ contentType: 'route', source: 'home', action: 'learn_more', variant: 'author-home' });
+    expect(mockedQueueAnalyticsEvent).toHaveBeenLastCalledWith('content_create_cta_click', {
+      content_type: 'route', source: 'home', action: 'learn_more', variant: 'author-home',
+    });
+    trackContentCreateCtaClicked({ contentType: 'route', variant: { private: 'not an event value' } });
+    expect(mockedQueueAnalyticsEvent).toHaveBeenLastCalledWith('content_create_cta_click', { content_type: 'route' });
+  });
+
   it('queues a peer prompt impression with only the bounded travel id', () => {
     trackPeerBadgePromptImpression({ travelId: 42 });
     expect(mockedQueueAnalyticsEvent).toHaveBeenCalledWith('peer_badge_prompt_impression', {

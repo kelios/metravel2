@@ -94,7 +94,7 @@ const {
   insertQuestLocaleSlots,
   markCyrillicLanguage,
 } = require('./lib/questSeoContract');
-const { disableExpoRouterHydration, emptyAppRoot, readQuestLocaleBootChunks, shipBootChunks, writeQuestLocaleBootCatalogs } = require('./lib/expoStaticShell');
+const { disableExpoRouterHydration, emptyAppRoot, prepareNotFoundDocumentBoot, readQuestLocaleBootChunks, shipBootChunks, writeQuestLocaleBootCatalogs } = require('./lib/expoStaticShell');
 const { scoreDetailCohort } = require('./lib/questDetailCohort');
 const {
   buildQuestCityWalkModel,
@@ -3605,6 +3605,12 @@ const STATIC_PAGES = [
     breadcrumb: 'О проекте',
   },
   {
+    route: '/become-author',
+    title: readRequiredRuTranslation('seoStatic:root.becomeAuthor.title'),
+    description: readRequiredRuTranslation('seoStatic:root.becomeAuthor.description'),
+    breadcrumb: readRequiredRuTranslation('homeStatic:becomeAuthor.title'),
+  },
+  {
     route: '/contact',
     title: 'Контакты и обратная связь | Metravel',
     description:
@@ -4065,6 +4071,7 @@ async function main() {
   }
 
   const baseHtml = fs.readFileSync(indexPath, 'utf8');
+  prepareNotFoundDocumentBoot(DIST_DIR);
 
   // Route-specific templates contain the correct JS chunk for each route.
   // Falling back to index.html would embed the home-page chunk instead of the

@@ -18,7 +18,7 @@ jest.mock('expo-router', () => {
   const React = require('react')
   const Stack = ({ children }: any) => children
   Stack.Screen = () => null
-  return { usePathname: () => mockPath, useRouter: () => ({ navigate: mockNavigate }), Stack,
+  return { usePathname: () => mockPath, useSegments: () => [], useRouter: () => ({ navigate: mockNavigate }), Stack,
     SplashScreen: { preventAutoHideAsync: () => Promise.resolve() },
     DarkTheme: { dark: true, colors: { base: 'dark' } }, DefaultTheme: { dark: false, colors: { base: 'light' } },
     ThemeProvider: ({ value, children }: any) => { mockThemeValues.push(value); return React.createElement(React.Fragment, null, children) },

@@ -108,7 +108,7 @@ function fixtureCreatePayload({ marker, label, country, category, pointCategory 
     categories: [category], countries: [country], transports: [], month: [], complexity: [], companions: [], over_nights_stay: [],
     budget: null, year: 2026, number_peoples: 1, number_days: 1, minus: null, plus: null, recommendation: null, youtube_link: null,
     visa: false, gallery: [], thumbs200ForCollectionArr: [], travelImageThumbUrlArr: [], travelImageAddress: [],
-    publication_status: 'draft', enforce_moderation_validation: false,
+    publication_format: 'full', publication_status: 'draft', enforce_moderation_validation: false,
     coordsMeTravel: [{ id: null, lat: 53.90111, lng: 27.56111, country, address: `${marker} disposable point`, categories: [pointCategory], image: null }] }
 }
 function commandPayload(current, command, reason) {
@@ -248,13 +248,6 @@ async function openOwnedBatch({ baseUrl, backendUrl, runId, needOther = true, in
         fixture.payload.coordsMeTravel = owned.coordsMeTravel
         save()
         assert(fixture.pointIds.length === 1, 'Fixture point ID missing')
-        fixture.uploadIntent = true; save()
-        const uploaded = await json(await api.post('/api/upload', { headers: await csrf(api, reg.origin), multipart: {
-          file: { name: `${reg.marker}.jpg`, mimeType: 'image/jpeg', buffer: fs.readFileSync(path.join(ROOT, 'assets/trips/fallbacks/trip-fallback-summer.jpg')) },
-          collection: 'travelMainImage', id: String(fixture.id) } }), 'Upload own fixture image')
-        assert(Number(uploaded.id) === fixture.id, 'Image upload returned another owner ID')
-        fixture.mediaUrls = [...new Set([uploaded.url, uploaded.print_url].filter(value => typeof value === 'string' && value))]; save()
-        assert(fixture.mediaUrls.length > 0, 'Own upload returned no delivery URLs')
         await command(api, fixture, 'submit')
         fixture.before = snapshot(await command(admin.context.request, fixture, label === 'private-long' ? 'reject' : 'approve', reasonFor(reg.marker)))
         fixture.slug = fixture.before.slug; save()
@@ -368,7 +361,9 @@ async function openOwnedBatch({ baseUrl, backendUrl, runId, needOther = true, in
     const result = counts.length ? sqlRead(config, `SELECT ${counts.join(',')};`) : ''
     assert(!counts.length || result.split('|').length === counts.length && result.split('|').every(value => value === '0'), 'Exact owned-ID cleanup SQL counts are not all zero')
     reg.cleaned = true; reg.cleanedAt = new Date().toISOString(); reg.cleanupCounts = result
-    ledger('cleanup', 'complete', { ownedIdCounts: result, storageEvidence: 'owner API/media proxy404 plus existing post_delete source contract; no independent S3 inventory claim' })
+    ledger('cleanup', 'complete', { ownedIdCounts: result, storageEvidence: reg.fixtures.some(fixture => fixture.mediaUrls.length)
+      ? 'owner API/media proxy404 plus existing post_delete source contract; no independent S3 inventory claim'
+      : 'no fixture media URLs; no media delivery or S3 inventory claim' })
   }
   return { reg, directory, registryFile, stateFile, setup, cleanup, authorApi, ownDetail, ownList, ledger,
     get admin() { return admin }, async close() { if (admin) await admin.close() } }

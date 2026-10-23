@@ -15,6 +15,7 @@ import {
 import { useHasListFilterQuery } from '@/components/layout/useListFilterQuery';
 import { useHydrationReady } from '@/hooks/useHydrationReady';
 import { readViewportWidth } from '@/utils/viewportMetrics';
+import { useDocumentRouteRegistration } from '@/components/layout/documentView';
 
 const getHeaderHeightCacheKey = (variant: HeaderVariant) => `mt:header-height:${variant}`;
 
@@ -218,8 +219,10 @@ const Header = React.memo(function Header({ isNavigationTarget }: { isNavigation
 // - undefined -> экран адресуем, но скрыт из таббара
 const HIDDEN = { title: '', href: undefined, lazy: true } as const;
 const HIDDEN_NOHREF = { title: '', href: null, lazy: true } as const;
+const registrationOnlyLayout = () => <></>;
 
 export default function TabLayout() {
+    const registrationOnly = useDocumentRouteRegistration();
     const tabBarHiddenStyle = useMemo(() => ({ display: 'none' as const }), []);
     const travelDetailsOptions =
       Platform.OS === 'web'
@@ -234,6 +237,7 @@ export default function TabLayout() {
     return (
         <>
             <Tabs
+                layout={registrationOnly ? registrationOnlyLayout : undefined}
                 tabBar={() => null}
                 // Android hardware Back и router.back() должны возвращать на
                 // предыдущий активный таб (напр. Профиль → Настройки → Back → Профиль),
@@ -287,6 +291,7 @@ export default function TabLayout() {
 
                 {/* полностью скрытые из линкинга */}
                 <Tabs.Screen name="about" options={HIDDEN} />
+                <Tabs.Screen name="become-author" options={HIDDEN} />
                 <Tabs.Screen name="privacy" options={HIDDEN} />
                 <Tabs.Screen name="disclaimer" options={HIDDEN} />
                 <Tabs.Screen name="terms" options={HIDDEN} />

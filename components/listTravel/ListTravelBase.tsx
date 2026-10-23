@@ -677,6 +677,7 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
         containerStyle: sidebarContainerStyle,
       }}
       rightColumn={{
+        contributionBannerVariant: isTravelBy ? 'author-catalog' : 'search',
         listIntroContent: catalogIntro,
         search,
         setSearch,

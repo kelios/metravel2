@@ -20,8 +20,9 @@ describe('editor diagnostic observation and owned-fixture boundaries', () => {
       'minus', 'plus', 'recommendation', 'description', 'visa', 'youtube_link', 'thumbs200ForCollectionArr', 'travelImageThumbUrlArr', 'travelImageAddress']
     expect(required.filter(key => !Object.hasOwn(payload, key))).toEqual([])
     for (const key of ['minus', 'plus', 'recommendation', 'youtube_link']) expect(payload[key]).toBeNull()
-    expect(payload).toEqual(expect.objectContaining({ id: null, name: `QAEDITOR-unit ${label}`, publication_status: 'draft',
-      enforce_moderation_validation: false, categories: [4], countries: [3], visa: false }))
+    expect(payload).toEqual(expect.objectContaining({ id: null, name: `QAEDITOR-unit ${label}`, publication_format: 'full', publication_status: 'draft',
+      enforce_moderation_validation: false, categories: [4], countries: [3], visa: false,
+      gallery: [], thumbs200ForCollectionArr: [], travelImageThumbUrlArr: [], travelImageAddress: [] }))
     expect(payload.coordsMeTravel).toEqual([{ id: null, lat: 53.90111, lng: 27.56111, country: 3,
       address: 'QAEDITOR-unit disposable point', categories: [5], image: null }])
   })
@@ -38,6 +39,7 @@ describe('editor diagnostic observation and owned-fixture boundaries', () => {
     for (const payload of [submitted, approved, rejected]) {
       for (const key of ['minus', 'plus', 'recommendation', 'youtube_link']) expect(payload[key]).toBeNull()
       expect(payload.coordsMeTravel).toEqual(created.coordsMeTravel)
+      expect(payload.publication_format).toBe('full'); expect(payload.gallery).toEqual([])
       expect(payload.countries).toEqual([3]); expect(payload.categories).toEqual([4])
       expect(payload).not.toHaveProperty('publish'); expect(payload).not.toHaveProperty('moderation')
       expect(payload).not.toHaveProperty('moderation_decision'); expect(payload).not.toHaveProperty('moderation_decided_at')

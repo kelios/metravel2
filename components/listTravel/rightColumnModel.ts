@@ -129,6 +129,7 @@ export function getWebRowIntrinsicSize(isMobile: boolean) {
 }
 
 type RightColumnComparableProps = {
+  contributionBannerVariant?: string
   activeConditionChips?: unknown
   activeFiltersCount: number
   cardSpacing?: number
@@ -170,6 +171,7 @@ export function areRightColumnPropsEqual(
   next: RightColumnComparableProps,
 ) {
   return (
+    prev.contributionBannerVariant === next.contributionBannerVariant &&
     prev.search === next.search &&
     prev.total === next.total &&
     prev.travels === next.travels &&

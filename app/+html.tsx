@@ -268,6 +268,8 @@ const getCriticalHeadScript = () => {
   const ARTICLES_DESCRIPTION = i18nT('seoStatic:root.articles.description');
   const ABOUT_TITLE = i18nT('seoStatic:root.about.title');
   const ABOUT_DESCRIPTION = i18nT('seoStatic:root.about.description');
+  const AUTHOR_TITLE = i18nT('seoStatic:root.becomeAuthor.title');
+  const AUTHOR_DESCRIPTION = i18nT('seoStatic:root.becomeAuthor.description');
   const CONTACT_TITLE = i18nT('seoStatic:root.contact.title');
   const CONTACT_DESCRIPTION = i18nT('seoStatic:root.contact.description');
   const TRAVELSBY_TITLE = i18nT('seoStatic:root.travelsBy.title');
@@ -326,6 +328,7 @@ const getCriticalHeadScript = () => {
       if(normalized==='/map')return{title:${JSON.stringify(MAP_TITLE)},description:${JSON.stringify(MAP_DESCRIPTION)},ogType:'website'};
       if(normalized==='/articles')return{title:${JSON.stringify(ARTICLES_TITLE)},description:${JSON.stringify(ARTICLES_DESCRIPTION)},ogType:'website'};
       if(normalized==='/about')return{title:${JSON.stringify(ABOUT_TITLE)},description:${JSON.stringify(ABOUT_DESCRIPTION)},ogType:'website'};
+      if(normalized==='/become-author')return{title:${JSON.stringify(AUTHOR_TITLE)},description:${JSON.stringify(AUTHOR_DESCRIPTION)},ogType:'website'};
       if(normalized==='/contact')return{title:${JSON.stringify(CONTACT_TITLE)},description:${JSON.stringify(CONTACT_DESCRIPTION)},ogType:'website'};
       if(normalized==='/travelsby')return{title:${JSON.stringify(TRAVELSBY_TITLE)},description:${JSON.stringify(TRAVELSBY_DESCRIPTION)},ogType:'website'};
       if(normalized==='/quests')return{title:${JSON.stringify(QUESTS_TITLE)},description:${JSON.stringify(QUESTS_DESCRIPTION)},ogType:'website'};

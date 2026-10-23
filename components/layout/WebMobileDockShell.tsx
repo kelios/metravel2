@@ -11,13 +11,15 @@ import { getTabA11yProps, getTabListA11yProps } from '@/utils/a11yTabRoles'
 import NavigationIcon from './NavigationIcon'
 import { BOTTOM_DOCK_HEIGHT, BOTTOM_DOCK_ITEM_DEFS, normalizeBottomDockActivePath, OPEN_WEB_DOCK_MORE_EVENT } from './bottomDockItemDefs'
 import { WEB_MOBILE_DOCK_LAYOUT, WEB_MOBILE_DOCK_LABEL_LAYOUT, WEB_MOBILE_DOCK_SIDE_PADDING } from './webMobileDockLayout'
+import { useDocumentView } from './documentView'
 
 // No auth, sheet, map store or complete menu model in this eager row.
 export default function WebMobileDockShell() {
   const colors = useThemedColors()
   const router = useRouter()
   const pathname = usePathname() || '/'
-  const activePath = normalizeBottomDockActivePath(pathname)
+  const documentView = useDocumentView()
+  const activePath = documentView?.kind === 'not-found' ? '' : normalizeBottomDockActivePath(pathname)
   // Web reserves the dock through CSS --mt-dock-h. Avoid an eager root/context
   // state update while route Suspense boundaries may still be hydrating.
   const styles = useMemo(() => createStyles(colors), [colors])

@@ -7,6 +7,7 @@ import FreezeWhenBlurred from '@/components/layout/FreezeWhenBlurred'
 import { useThemedColors } from '@/hooks/useTheme'
 import { parseQuestLocaleRoute } from '@/utils/questLocaleRouting'
 import { readSyncImport } from '@/utils/syncImport'
+import { useDocumentRouteRegistration } from '@/components/layout/documentView'
 
 // Явное расширение: без него платформенное разрешение вернуло бы этот же адаптер.
 // Нативный catch-all остаётся в том же web-чанке — `scripts/lib/expoStaticShell.js`
@@ -50,6 +51,7 @@ function QuestScreenFallback() {
 }
 
 export default function QuestLocaleRouteScreen() {
+  const registrationOnly = useDocumentRouteRegistration()
   // The card's own segments, not the global pathname: a hidden stack card must
   // keep its address when a language link pushes the same quest in another
   // locale (#2464).
@@ -59,6 +61,7 @@ export default function QuestLocaleRouteScreen() {
   // One component type for the life of this mount: switching lazy → loaded
   // after a commit would remount the whole quest screen.
   const [QuestByIdScreen] = useState(() => loadedQuestScreen ?? LazyQuestByIdScreen)
+  if (registrationOnly) return null
   if (!route) return <NotFoundScreen />
 
   // CustomHeader owns the top inset for this root Stack route, as on contact.

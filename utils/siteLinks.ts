@@ -73,6 +73,7 @@ export const APP_ROUTE_ROOTS: ReadonlySet<string> = new Set([
   'app',
   'articles',
   'assistant',
+  'become-author',
   'blocked-users',
   'calendar',
   'community-rules',

@@ -1,4 +1,6 @@
 export const seoStaticResources = {
+  "root.becomeAuthor.title": "Become an author: routes and trip books | MeTravel",
+  "root.becomeAuthor.description": "Share routes and photos, save your trips on the map, create a PDF book and connect with readers. Become a MeTravel author and tell the story of your travels.",
   "root.home.title": "Belarus City Quests and Weekend Routes | Metravel",
   "root.home.description": "Choose city quests and ready-made routes across Belarus, with challenges, map points, and ideas for weekend trips and walks.",
   "root.default.description": "Routes, notes and photos of travel in Belarus and beyond. Find travel ideas, save places and share your itineraries on Metravel.",

@@ -45,6 +45,15 @@ function appendDescriptions(doc: Document, values: string[], marked = false): vo
 }
 
 describe('critical head fallback', () => {
+  it('keeps the author landing identity before hydration without closing it to indexing', () => {
+    const doc = document.implementation.createHTMLDocument('MeTravel')
+    runCriticalHead(doc, '/become-author')
+    expect(doc.title).toBe(i18nT('seoStatic:root.becomeAuthor.title'))
+    expect(doc.querySelector('meta[name="description"]')?.getAttribute('content')).toBe(i18nT('seoStatic:root.becomeAuthor.description'))
+    expect(doc.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe('https://metravel.by/become-author')
+    expect(doc.querySelector('meta[name="robots"]')?.getAttribute('content') ?? '').not.toMatch(/noindex/)
+  })
+
   it.each(['ordinary', 'generic-prefix'])('preserves one SSG description per owner before the app loads (%s), with charset first and descriptions before the script', kind => {
     const stored = kind === 'ordinary'
       ? 'Прогулка по старому городу: замок, набережная и тихие улицы. Советы для самостоятельной поездки.'

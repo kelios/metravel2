@@ -1,8 +1,7 @@
-import StandaloneScreen from '@/components/layout/StandaloneScreen'
-import { NotFoundContent } from '@/components/screens/NotFoundContent'
+import NotFoundScreen from '@/components/screens/NotFoundScreen'
 
-export { NotFoundContent }
+export { NotFoundContent } from '@/components/screens/NotFoundContent'
 
-export default function NotFoundScreen() {
-  return <StandaloneScreen><NotFoundContent /></StandaloneScreen>
+export default function MissingRoute() {
+  return <NotFoundScreen />
 }

@@ -9,7 +9,7 @@
 
 - [x] 2.1 Add real mapper→form→serializer and persistence regression tests for four states, full/PATCH/route writes, commands, reason replay, errors and races; add adapter-bypass governance control.
 - [x] 2.2 Run targeted Jest, relevant lint/tsc, test:i18n and required full lint/test baseline with shared quality operation coordination; verify the final Save-event repair with focused tests and static checks.
-- [ ] 2.3 Complete independent review-auditor repair pass and code-review-gate; explicit-path commit/push main and testing transition per assigned #2693 pipeline, including the production error-path repair.
+- [x] 2.3 Complete independent review-auditor repair pass and code-review-gate; explicit-path commit/push main and testing transition per assigned #2693 pipeline, including the production error-path repair.
 - [x] 2.4 Handle reported save callback rejection at the common header event boundary and test rejection→retry in both responsive layouts without swallowing persistence or moderation-command failures.
 
 ## 3. Testing on production

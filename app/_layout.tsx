@@ -1,6 +1,6 @@
 import React, { startTransition, useEffect, useMemo, useState } from "react";
 import { Image, Platform, StatusBar as RNStatusBar, StyleSheet, View, LogBox, useWindowDimensions } from "react-native";
-import { DarkTheme, DefaultTheme, SplashScreen, Stack, ThemeProvider as NavigationThemeProvider, usePathname } from "expo-router";
+import { DarkTheme, DefaultTheme, SplashScreen, ThemeProvider as NavigationThemeProvider, usePathname, useSegments } from "expo-router";
 import AppProviders from "@/components/layout/AppProviders";
 import NativeAppRuntime from "@/components/layout/NativeAppRuntime";
 import LaunchCover from "@/components/layout/LaunchCover";
@@ -33,7 +33,8 @@ const RootContainerView: React.ComponentType<any> = View;
 const DOCK_OFF_DATASET = { mtDock: 'off' } as const;
 import { DESIGN_TOKENS } from "@/constants/designSystem";
 import { createOptimizedQueryClient } from "@/utils/reactQueryConfig";
-import { shouldPrefetchTravelStatics } from "@/utils/staticPrefetchRoutes";
+import { DocumentViewProvider, getDocumentPresentation, useDocumentView, useRootDocumentView } from '@/components/layout/documentView';
+import RootDocumentStack from '@/components/layout/RootDocumentStack';
 import { setActiveQueryClient } from "@/api/activeQueryClient";
 import { patchWebShadowStyles } from "@/utils/patchWebShadowStyles";
 import { installChunkErrorReloadHandler } from "@/utils/chunkReload";
@@ -175,6 +176,7 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
 
 	function RootLayoutNav() {
 	    const pathname = usePathname();
+      const segments = useSegments();
       const { width } = useWindowDimensions();
       const [isViewportHydrated, setIsViewportHydrated] = useState(!isWeb);
 
@@ -192,19 +194,18 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
 
 
     // usePathname() is the reactive source of truth and re-runs this memo on every
-    // client-side navigation. The window.location fallback is intentionally only a
-    // first-frame/SSR safety net for when expo-router has not resolved pathname yet
-    // (empty or '/'); it is not a reactive input, so it is deliberately omitted from
-    // deps. Once pathname is populated the fallback branch is never taken again.
+    // client-side navigation. Empty segments distinguish the unresolved '/' from
+    // the actual Home route: linking mirrors a committed navigation to window
+    // later, so reading its old URL for a resolved Home would retain editor chrome.
     const effectivePathname = useMemo(() => {
-      if (typeof pathname === 'string' && pathname.length > 0 && pathname !== '/') {
+      if (typeof pathname === 'string' && pathname.length > 0 && (pathname !== '/' || segments.length > 0)) {
         return pathname;
       }
       if (isWeb && typeof window !== 'undefined') {
         return window.location?.pathname || pathname || '';
       }
       return pathname || '';
-    }, [pathname]);
+    }, [pathname, segments]);
 
     // Dev-only QA: дамп runtime-состояния в logcat ([QA-STATE]) на смене роута +
     // globalThis.__QA__(). No-op в проде. Помогает device-QA читать состояние без правок кода.
@@ -212,24 +213,9 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
       installQaDebug(effectivePathname);
     }, [effectivePathname]);
 
-    const showFooter = useMemo(
-      () => {
-        const p = effectivePathname || "";
-        // Auth entrypoints own the full screen. Mounting the mobile dock after
-        // hydration also inserts its 56px gutter and moves the centered form by
-        // half that height on the first interaction (#1299).
-        if (p === "/login" || p === "/registration" || p === "/register") return false;
-        if (p === "/messages") return false;
-        // On the travel create/edit wizard (/travel/new and /travel/<id>) we render our
-        // own bottom actions footer; the global mobile dock would overlap the form fields
-        // (the last field — description — ends up behind the dock, so taps hit the tabs and
-        // abandon the form). Match only the upsert route shape — NOT /travels/<id> (read
-        // detail) or /travels (list), which keep the dock. Mirrors isTravelUpsert in (tabs)/_layout.
-        if (p === '/travel/new' || /^\/travel\/[^/]+$/.test(p)) return false;
-        return true;
-      },
-      [effectivePathname]
-    );
+    const documentView = useRootDocumentView(effectivePathname, segments);
+    const presentation = getDocumentPresentation(documentView);
+    const { showFooter } = presentation;
     // ✅ FIX: Создаем queryClient внутри компонента для избежания проблем с SSR/гидрацией
     //
     // NOTE: enableStaticPrefetch is a one-shot flag — createOptimizedQueryClient()
@@ -249,7 +235,7 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
           },
         },
         {
-          enableStaticPrefetch: shouldPrefetchTravelStatics(effectivePathname),
+          enableStaticPrefetch: presentation.prefetchTravelStatics,
         }
       );
       // Expose the mounted client to non-hook code (authStore boot) so the
@@ -347,9 +333,10 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
     const showMapBackground =
       Platform.OS === 'web' &&
       !isMobile &&
-      (pathname?.includes('roulette') || pathname?.includes('random'));
+      presentation.hasMapBackground;
 
     return (
+      <DocumentViewProvider value={documentView}>
       <ThemeProvider>
         <ErrorBoundary>
           <ThemedContent
@@ -364,6 +351,7 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
           />
         </ErrorBoundary>
       </ThemeProvider>
+      </DocumentViewProvider>
     );
 }
 
@@ -388,6 +376,7 @@ function ThemedContent({
   queryClient: any;
 }) {
   const colors = useThemedColors();
+  const documentView = useDocumentView();
   const { isDark, themeReady } = useTheme();
   const launchFailsafeExpired = useLaunchReadinessStore((state) => state.failsafeExpired);
   useEffect(() => {
@@ -398,14 +387,9 @@ function ThemedContent({
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const mapBackground = showMapBackground ? require("../assets/travel/roulette-map-bg.jpg") : null;
-  const isTravelRoute =
-    Platform.OS === 'web' &&
-    typeof pathname === 'string' &&
-    /^\/travels\/[^/]+$/.test(pathname);
-  const isMapRoute =
-    Platform.OS === 'web' &&
-    typeof pathname === 'string' &&
-    (pathname === '/map' || pathname.startsWith('/map/'));
+  const presentation = getDocumentPresentation(documentView ?? { kind: 'route', pathname: pathname ?? '' });
+  const isTravelRoute = isWeb && presentation.isTravelRoute;
+  const isMapRoute = isWeb && presentation.isMapRoute;
   // Travel details defer several below-the-fold/runtime widgets already.
   // Deferring the root auth/favorites providers swaps fallback contexts for
   // real providers after first interaction, which remounts the entire route
@@ -478,9 +462,7 @@ function ThemedContent({
                                 nativeID="main-content"
                                 {...(Platform.OS === 'web' ? ({ tabIndex: -1 } as any) : null)}
                               >
-                                  <Stack screenOptions={{ headerShown: false }}>
-                                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                                  </Stack>
+                                  <RootDocumentStack />
                               </View>
 
                               {Platform.OS === 'web' && __DEV__ && !isMobile && !isTravelRoute && !isMapRoute && ReactQueryDevtoolsComponent ? (

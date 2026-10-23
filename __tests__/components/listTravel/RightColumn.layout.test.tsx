@@ -50,6 +50,13 @@ jest.mock('@/context/AuthContext', () => ({
   }),
 }));
 
+jest.mock('@/components/common/ContributionBanner', () => {
+  const { Text } = require('react-native');
+  return function MockContributionBanner({ variant }: { variant: string }) {
+    return <Text testID="contribution-footer">{variant}</Text>;
+  };
+});
+
 jest.mock('@/components/mainPage/StickySearchBar', () => {
   const React = require('react');
   const { Pressable, Text } = require('react-native');
@@ -97,11 +104,13 @@ const renderWithProviders = (ui: React.ReactElement) => {
     },
   });
 
-  return render(
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>{ui}</ThemeProvider>
+      <ThemeProvider>{children}</ThemeProvider>
     </QueryClientProvider>
   );
+
+  return render(ui, { wrapper: Wrapper });
 };
 
 describe('RightColumn layout invariants', () => {
@@ -121,6 +130,24 @@ describe('RightColumn layout invariants', () => {
 
   beforeEach(() => {
     mockFlashListProps.mockClear();
+  });
+
+  it('keeps one footer promotion and updates its destination between search and catalog', () => {
+    const props = {
+      search: '', setSearch: jest.fn(), isRecommendationsVisible: false,
+      handleRecommendationsVisibilityChange: jest.fn(), activeFiltersCount: 0,
+      total: travels.length, contentPadding: 16, showInitialLoading: false,
+      isError: false, showEmptyState: false, getEmptyStateMessage: null,
+      travels, gridColumns: 1, isMobile: true, showNextPageLoading: false,
+      refetch: jest.fn(), renderItem,
+    };
+    const view = renderWithProviders(<RightColumn {...props} contributionBannerVariant="search" />);
+    expect(view.getAllByTestId('contribution-footer')).toHaveLength(1);
+    expect(view.getByText('search')).toBeTruthy();
+    view.rerender(<RightColumn {...props} contributionBannerVariant="author-catalog" />);
+    expect(view.getAllByTestId('contribution-footer')).toHaveLength(1);
+    expect(view.getByText('author-catalog')).toBeTruthy();
+    expect(view.queryByText('search')).toBeNull();
   });
 
   it('passes the bounded FlashList v2 draw distance without legacy no-op tuning props', () => {

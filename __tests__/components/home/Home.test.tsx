@@ -91,6 +91,12 @@ describe('Home Component', () => {
       const { getByTestId } = renderHome();
       expect(getByTestId('home-faq')).toBeTruthy();
     });
+
+    it('invites readers to the author landing inside the home scroll content', () => {
+      const { getByText } = renderHome();
+      expect(getByText('Ваш опыт пригодится другим путешественникам')).toBeTruthy();
+      expect(getByText('Стать автором')).toBeTruthy();
+    });
   });
 
   describe('Authentication States', () => {

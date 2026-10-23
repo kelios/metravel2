@@ -324,7 +324,7 @@ f.fetchJsonOnce=f.fetchJson=async url=>{
       // An export ships its web chunks; translated members boot with them (#2465).
       const webJs = path.join(dist, '_expo/static/js/web')
       fs.mkdirSync(webJs, { recursive: true })
-      for (const chunk of ['entry-0a.js', '[...missing]-0a.js', 'locale-be-0a.js', 'locale-uk-0a.js', 'locale-pl-0a.js', 'locale-en-0a.js']) {
+      for (const chunk of ['entry-0a.js', '_layout-0a.js', '_layout-0b.js', '[...missing]-0a.js', 'locale-be-0a.js', 'locale-uk-0a.js', 'locale-pl-0a.js', 'locale-en-0a.js']) {
         // #2484: a locale chunk exports its catalogue; the build writes a boot subset from it.
         const locale = /^locale-(\w+)-/.exec(chunk)?.[1]
         fs.writeFileSync(path.join(webJs, chunk), locale
@@ -334,6 +334,10 @@ f.fetchJsonOnce=f.fetchJson=async url=>{
       fs.writeFileSync(path.join(dist, 'index.html'), '<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Fixture</title><script src="/_expo/static/js/web/entry-0a.js" defer></script></head><body><div id="root"></div></body></html>')
       // The exported catch-all selects actual route assets; a directory listing is not membership.
       const entryTag = '<script src="/_expo/static/js/web/entry-0a.js" defer></script>'
+      const layoutTags = '<script src="/_expo/static/js/web/_layout-0a.js" defer></script><script src="/_expo/static/js/web/_layout-0b.js" defer></script>'
+      fs.mkdirSync(path.join(dist, 'travel'))
+      fs.writeFileSync(path.join(dist, 'travel/new.html'), fs.readFileSync(path.join(dist, 'index.html'), 'utf8').replace(entryTag, layoutTags + entryTag))
+      fs.copyFileSync(path.join(dist, 'index.html'), path.join(dist, '+not-found.html'))
       fs.writeFileSync(path.join(dist, '[...missing].html'), fs.readFileSync(path.join(dist, 'index.html'), 'utf8')
         .replace(entryTag, '<script src="/_expo/static/js/web/[...missing]-0a.js" defer></script>' + entryTag))
       fs.copyFileSync(path.join(dist, 'index.html'), path.join(dist, 'quests/country/[country].html'))

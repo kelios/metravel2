@@ -82,6 +82,7 @@ describe('siteLinks', () => {
       '/travels/slug?returnTo=%2Fsearch',
     )
     expect(resolveAppRouteForSiteUrl('https://metravel.by/#top')).toBe('/')
+    expect(resolveAppRouteForSiteUrl('https://metravel.by/become-author#benefits')).toBe('/become-author')
     expect(resolveAppRouteForSiteUrl('https://metravel.by/book-exports/1b2f8c70-3c9e-4a65-8f44-6f8a8e1c0d11#download')).toBe(
       '/book-exports/1b2f8c70-3c9e-4a65-8f44-6f8a8e1c0d11',
     )

@@ -16,7 +16,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import StickySearchBar from '@/components/mainPage/StickySearchBar'
-import ContributionBanner from '@/components/common/ContributionBanner'
+import ContributionBanner, { type ContributionBannerVariant } from '@/components/common/ContributionBanner'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { Travel } from '@/types/types'
 import {
@@ -46,6 +46,7 @@ import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 
 
 export interface RightColumnProps {
+  contributionBannerVariant?: ContributionBannerVariant
   listIntroContent?: React.ReactNode
   search: string
   setSearch: (value: string) => void
@@ -133,6 +134,7 @@ const RightColumn: React.FC<RightColumnProps> = (
      contentPadding,
      showInitialLoading,
      isSearchPending = false,
+     contributionBannerVariant = 'search',
      isError,
      showEmptyState,
      getEmptyStateMessage,
@@ -514,10 +516,10 @@ const RightColumn: React.FC<RightColumnProps> = (
               ) : null}
             </View>
           ) : null}
-          <ContributionBanner variant="search" />
+          <ContributionBanner variant={contributionBannerVariant} />
         </>
       ),
-      [showNextPageLoading, footerLoaderStyle, colors.textMuted]
+      [showNextPageLoading, footerLoaderStyle, colors.textMuted, contributionBannerVariant]
     )
 
     // Стабильная ссылка: новый массив на каждом рендере заставил бы FlashList
