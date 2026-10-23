@@ -54,13 +54,15 @@ async function readTraversals(page: Page): Promise<Traversals> {
 async function readMetadata(page: Page) {
   return page.evaluate(() => {
     const content = (selector: string) => document.head.querySelector(selector)?.getAttribute('content') || ''
-    const heading = Array.from(document.querySelectorAll('[data-testid="travel-details-title"]'))
-      .find((node) => node.getClientRects().length > 0)?.textContent?.trim() || ''
+    const heading = window.location.pathname.startsWith('/travels/') ?
+      Array.from(document.querySelectorAll('[data-testid="travel-details-title"]'))
+        .find((node) => node.getClientRects().length > 0)?.textContent?.trim() || '' : ''
     return {
       path: window.location.pathname,
       heading,
       title: document.title,
       canonical: document.head.querySelector('link[rel="canonical"]')?.getAttribute('href') || '',
+      canonicalCount: document.head.querySelectorAll('link[rel="canonical"]').length,
       description: content('meta[name="description"]'),
       ogDescription: content('meta[property="og:description"]'),
       twitterDescription: content('meta[name="twitter:description"]'),
@@ -68,17 +70,30 @@ async function readMetadata(page: Page) {
   })
 }
 
+function seoCommitted(meta: ArticleSnapshot, path: string) {
+  return meta.path === path && meta.canonicalCount === 1 && Boolean(meta.title && meta.description) &&
+    new URL(meta.canonical || 'about:blank').pathname === path &&
+    meta.description === meta.ogDescription && meta.description === meta.twitterDescription
+}
+
 async function articleSnapshot(page: Page, path: string, previous?: ArticleSnapshot, name?: string) {
   await expect(page).toHaveURL((url) => url.pathname === path)
   await expect(page.locator('html')).toHaveAttribute('lang', 'ru')
   await expect.poll(async () => {
     const meta = await readMetadata(page)
-    return meta.path === path && Boolean(meta.heading && meta.title && meta.description) &&
-      new URL(meta.canonical || 'about:blank').pathname === path &&
-      meta.description === meta.ogDescription && meta.description === meta.twitterDescription &&
+    return seoCommitted(meta, path) && Boolean(meta.heading) &&
       (!previous || (meta.heading !== previous.heading && meta.title !== previous.title)) &&
       (!name || meta.heading === name)
   }, { message: `${path}: hydrated article and its three descriptions`, timeout: 30_000 }).toBe(true)
+  return readMetadata(page)
+}
+
+async function searchSnapshot(page: Page, previous: ArticleSnapshot) {
+  await expect(page).toHaveURL((url) => url.pathname === '/search')
+  await expect.poll(async () => {
+    const meta = await readMetadata(page)
+    return seoCommitted(meta, '/search') && meta.title !== previous.title && meta.description !== previous.description
+  }, { message: '/search: one canonical and committed search title/descriptions', timeout: 30_000 }).toBe(true)
   return readMetadata(page)
 }
 
@@ -163,7 +178,11 @@ function observeNearResponses(page: Page): NearResponses {
 }
 
 async function nearCard(page: Page, responses: NearResponses, sourceId: number, targetId?: number) {
+  // This stable placeholder is mounted before the viewport observer admits the
+  // sidebar runtime. The near region itself cannot be scrolled to until then.
+  await page.getByTestId('travel-details-sidebar-transition').scrollIntoViewIfNeeded()
   const region = page.locator('[data-section-key="near"]:visible').first()
+  await expect(region).toBeVisible()
   await region.scrollIntoViewIfNeeded()
   await expect.poll(() => responses.has(sourceId), { message: `real /travels/${sourceId}/near/ response` }).toBe(true)
   const cards = await responses.get(sourceId)!
@@ -308,9 +327,7 @@ test.describe('Public travel browser history — production smoke (#2703)', () =
         const searchLink = profile.mobile ? page.getByTestId('footer-item-home') :
           page.getByTestId('main-header').getByRole('link', { name: 'Маршруты', exact: true }).first()
         await searchLink.click()
-        await expect(page).toHaveURL((url) => url.pathname === '/search')
-        await expect(page.locator('head link[rel="canonical"]')).toHaveAttribute('href', /\/search$/)
-        const search = await readMetadata(page)
+        const search = await searchSnapshot(page, a)
         const searchHistory = await checkpoint(page, cdp, info, 'A-to-search')
         expectPush(aHistory, searchHistory, '/search')
         await traverse(page, cdp, info, 'search-Back-A', a, aHistory, searchHistory.entries, 'back')
