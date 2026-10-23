@@ -216,7 +216,7 @@ async function runEditorHistory({ context, page, batch, width, temperature, edit
     if (editorState === 'step6') await exerciseReason(page, fixture)
     else {
       await expect(page.getByTestId('info-sheet-body')).toHaveCount(0)
-      await expect(page.getByTestId('travel-wizard.step-basic.countries')).toBeVisible()
+      await expect((await wizard(page, fixture)).locator('#field-name').getByRole('textbox')).toHaveValue(fixture.name)
     }
     const editor = await trace.readHistory()
     expect(editor.timeOrigin).toBe(list.timeOrigin)
