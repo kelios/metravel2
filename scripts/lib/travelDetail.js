@@ -103,6 +103,9 @@ function normalizeTravelDetail(detail) {
   }
   return {
     description: detail.description || '',
+    ...(typeof detail.meta_description === 'string' || detail.meta_description === null
+      ? { meta_description: detail.meta_description }
+      : {}),
     // #1116: media-манифест обязателен здесь — из него hero preload берёт тот же
     // вариант, что запросит клиент. Без него preload уходил в клиентскую сборку
     // (`?v=…&q=82`), расходился с LCP-`<img>` и грел лишний файл.

@@ -22,6 +22,7 @@ const {
   injectHomeHeroPreload,
   resolveHomeHeroAssetHref,
   injectTravelBootstrapData,
+  buildTravelBootstrapData,
   gateAppScriptsBehindHero,
   injectHiddenH1,
   injectBreadcrumbJsonLd,
@@ -296,6 +297,26 @@ describe('replaceOrInsert', () => {
 });
 
 describe('injectTravelBootstrapData', () => {
+  it.each([undefined, null, '', 123])('does not revive list metadata when the authoritative detail has %p', meta => {
+    const staleMeta = 'Старое описание из списка: замок, набережная и тихие улицы. Советы для самостоятельной поездки.';
+    const summary = { id: 42, name: 'Минск', slug: 'minsk', meta_description: staleMeta };
+    const { normalizeTravelDetail } = require('@/scripts/lib/travelDetail');
+    const { getStoredTravelSeoDescription } = require('@/utils/seoText');
+    const detail = normalizeTravelDetail({
+      description: '<p>Текущее описание статьи для прогулки по Минску: старый город, набережная и спокойные улицы.</p>',
+      meta_description: meta,
+    });
+    const html = injectTravelBootstrapData(MINIMAL_BASE, buildTravelBootstrapData(summary, detail), summary.slug);
+    const serialized = html.match(/window\.__metravelTravelPreload=([\s\S]*?);window\.__metravelTravelPreloadScriptLoaded/);
+    const bootstrap = JSON.parse(serialized![1]).data;
+
+    expect(bootstrap.meta_description).toBe(detail.meta_description);
+    expect(getStoredTravelSeoDescription(bootstrap.meta_description)).toBeNull();
+    expect(buildTravelSeoDescription(summary, detail.description, detail.meta_description))
+      .toBe(buildTravelSeoDescription(summary, detail.description));
+    expect(bootstrap).toMatchObject({ id: summary.id, name: summary.name, slug: summary.slug, description: detail.description });
+  });
+
   it('injects travel preload data into the body before the app root', () => {
     const html = injectTravelBootstrapData(MINIMAL_BASE, { id: 42, name: 'Hexenstieg' }, 'hexenstieg');
 
@@ -363,15 +384,22 @@ describe('injectTravelBootstrapData', () => {
   });
 
   it('escapes embedded HTML so bootstrap data does not add raw markup to the page source', () => {
+    const rawMeta = '</script><script>alert("meta")</script> & \u2028\u2029';
     const html = injectTravelBootstrapData(
       MINIMAL_BASE,
-      { id: 42, description: '<h1>Nested heading</h1><p>Body</p>' },
+      { id: 42, description: '<h1>Nested heading</h1><p>Body</p>', meta_description: rawMeta },
       'hexenstieg',
     );
 
     expect(html).toContain('\\u003ch1\\u003eNested heading\\u003c/h1\\u003e');
     expect(html).not.toContain('<h1>Nested heading</h1>');
     expect((html.match(/<h1\b/gi) || []).length).toBe(0);
+    expect(html).not.toContain(rawMeta);
+    expect(html).toContain('\\u003c/script\\u003e\\u003cscript\\u003ealert');
+    expect(html).toContain('\\u0026 \\u2028\\u2029');
+    const serialized = html.match(/window\.__metravelTravelPreload=([\s\S]*?);window\.__metravelTravelPreloadScriptLoaded/);
+    expect(JSON.parse(serialized![1]).data.meta_description).toBe(rawMeta);
+    expect(html.match(/<script\b/g)).toHaveLength(1);
   });
 
   it('preserves title-critical travel fields when detail data is merged into bootstrap payload', () => {
@@ -753,6 +781,48 @@ describe('stripHtml', () => {
 });
 
 describe('travel SEO fallback helpers', () => {
+  const explicitMeta = 'Прогулка по старому городу: замок, набережная и тихие улицы. Советы для самостоятельной поездки.';
+
+  it('does not leave sentence punctuation before the ellipsis after dropping a dangling metadata word', () => {
+    const sentence = `${'Парк '.repeat(20)}бесплатный вход и парковка.`;
+    const raw = `${sentence} Как ${'добраться'.repeat(15)}`;
+    expect(buildTravelSeoDescription({ name: 'Парк' }, '<p>Different body</p>', raw))
+      .toBe(`${sentence.slice(0, -1)}…`);
+  });
+
+  it('renders stored detail metadata in each head description without changing title, canonical or body', () => {
+    const source = '<html><head><title>Old</title></head><body><main>Original body</main></body></html>';
+    const description = buildTravelSeoDescription(
+      { name: 'Минск', countryName: 'Беларусь' }, '<p>Different body lead</p>', explicitMeta,
+    );
+    const html = injectMeta(source, { title: 'Минск | Metravel', description,
+      canonical: 'https://metravel.by/travels/minsk', image: 'https://metravel.by/cover.jpg' });
+    expect(description).toBe(explicitMeta);
+    for (const attribute of ['name="description"', 'property="og:description"', 'name="twitter:description"']) {
+      expect(html.match(new RegExp(`<meta[^>]*${attribute}[^>]*>`, 'g'))).toHaveLength(1);
+      expect(html).toMatch(new RegExp(`<meta[^>]*${attribute}[^>]*content="${escapeAttr(explicitMeta)}"`));
+    }
+    expect(html).toContain('<title data-rh="true">Минск | Metravel</title>');
+    expect(html).toContain('href="https://metravel.by/travels/minsk"');
+    expect(html).toContain('<main>Original body</main>');
+  });
+
+  it.each([undefined, null, '', '<p></p>', 'Коротко', {}, 123])('retains the old body fallback for unusable detail meta %p', meta => {
+    const travel = { name: 'Минск', countryName: 'Беларусь', meta_description: explicitMeta };
+    const body = '<p>Маршрут по Минску: Верхний город, Троицкое предместье и набережная Свислочи для самостоятельной прогулки.</p>';
+    expect(buildTravelSeoDescription(travel, body, meta)).toBe(buildTravelSeoDescription(travel, body));
+  });
+
+  it('escapes explicit markup-looking punctuation once and keeps its encoded budget', () => {
+    const raw = `${explicitMeta} " onmouseover="alert(1) & ${explicitMeta}`;
+    const description = buildTravelSeoDescription({}, '', raw);
+    const html = injectMeta('<html><head></head><body></body></html>', { title: 'Article', description });
+    expect(escapeAttr(description).length).toBeLessThanOrEqual(160);
+    expect(html).not.toContain('content="' + description + '"');
+    expect(html).toContain(`content="${escapeAttr(description)}"`);
+    expect(html).not.toMatch(/<script[^>]*>alert/);
+  });
+
   it('buildTravelSeoDescription keeps detailed description first when available', () => {
     const result = buildTravelSeoDescription(
       {
@@ -2069,6 +2139,7 @@ describe('patchNoindexFallbackTemplate', () => {
     expect(html).not.toContain('rel="canonical"');
     expect(html).not.toContain('[city]');
     expect(html).not.toContain('[questId]');
+    expect(html).not.toContain('data-ssg-description');
   });
 
   it('deduplicates existing robots meta', () => {

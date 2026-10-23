@@ -36,6 +36,9 @@ const {
   buildSeoTitle: buildSharedSeoTitle,
   htmlToPlainText,
   normalizeSeoLead,
+  finishTruncatedSnippet,
+  clampDescriptionForAttr,
+  getStoredTravelSeoDescription,
 } = require('../utils/seoText');
 const {
   questRouteKey,
@@ -204,22 +207,6 @@ function stripHtml(html, maxLength = 160) {
   const lastSpace = cut.lastIndexOf(' ');
   const onWord = lastSpace > 0 ? cut.slice(0, lastSpace) : cut;
   return finishTruncatedSnippet(onWord) || `${cut}…`;
-}
-
-// Connectives/prepositions that must not dangle at the end of a truncated
-// snippet — «Пляж с золотым песком и…» reads worse than «Пляж с золотым песком…».
-const DANGLING_WORD_RE =
-  /\s+(?:и|а|но|или|же|как|что|в|во|на|с|со|у|о|об|обо|к|ко|по|за|из|изо|от|до|над|под|при|про|для|без|перед|через|the|a|an|of|in|on|at|to|and|or)$/i;
-
-/** Trim trailing punctuation and dangling connectives, then append «…». */
-function finishTruncatedSnippet(cutText) {
-  let out = String(cutText || '').replace(/[\s,;:.–—-]+$/g, '');
-  let prev;
-  do {
-    prev = out;
-    out = out.replace(DANGLING_WORD_RE, '').replace(/[\s,;:–—-]+$/g, '');
-  } while (out !== prev);
-  return out ? `${out}…` : '';
 }
 
 function toAbsoluteUrl(input) {
@@ -491,38 +478,9 @@ function upgradeThumbToDetailUrl(input) {
   return value.replace(/-thumb_200(?=\.[a-z0-9]+(?:$|[?#]))/i, '-detail_hd');
 }
 
-// Post-deploy SEO check measures the attribute-encoded length of the
-// description (raw content="..."), not the plain-text length. Characters
-// <, >, &, " expand to HTML entities (e.g. ">" → "&gt;") and inflate the
-// attribute by 3 chars each. Clamp the plain text so the encoded form
-// stays within the SEO-friendly range (80–160 chars).
-function clampDescriptionForAttr(plain, maxEncoded = 160) {
-  const text = String(plain || '').trim();
-  if (!text) return '';
-  if (escapeAttr(text).length <= maxEncoded) return text;
-
-  let lo = 0;
-  let hi = text.length;
-  while (lo < hi) {
-    const mid = (lo + hi + 1) >> 1;
-    if (escapeAttr(text.slice(0, mid)).length <= maxEncoded) {
-      lo = mid;
-    } else {
-      hi = mid - 1;
-    }
-  }
-  const hard = text.slice(0, lo).trimEnd();
-  // The binary search lands mid-word; back off to a word boundary and finish
-  // with «…» (1 encoded char) so the clamped description reads as truncated
-  // rather than broken. Keep the hard cut for space-less single tokens.
-  const lastSpace = hard.lastIndexOf(' ');
-  const base = lastSpace >= Math.floor(hard.length * 0.6) ? hard.slice(0, lastSpace) : hard;
-  const finished = finishTruncatedSnippet(base);
-  if (finished && escapeAttr(finished).length <= maxEncoded) return finished;
-  return hard;
-}
-
-function buildTravelSeoDescription(travel, detailDescription) {
+function buildTravelSeoDescription(travel, detailDescription, detailMetaDescription) {
+  const stored = getStoredTravelSeoDescription(detailMetaDescription);
+  if (stored) return stored;
   const primary = stripHtmlToSnippet(detailDescription || travel?.description || '', 160);
   const travelName = String(travel?.name || '').trim();
   const countryName = String(travel?.countryName || '').trim();
@@ -1049,14 +1007,16 @@ function applyHtmlFragment(html, anchor, fragment, placement = 'replace') {
 
 /**
  * Replace or insert a tag in the HTML.
- * If the regex matches, replace it; otherwise insert the tag before </head>.
+ * Deduplicate and insert before </head>, or before head scripts when requested.
  */
-function replaceOrInsert(html, regex, tag) {
+function replaceOrInsert(html, regex, tag, beforeHeadScripts = false) {
   // Ensure uniqueness: remove all existing matches, then insert one canonical tag.
   const flags = regex.flags.includes('g') ? regex.flags : `${regex.flags}g`;
   const globalRegex = new RegExp(regex.source, flags);
   const withoutMatches = html.replace(globalRegex, '');
-  return applyHtmlFragment(withoutMatches, '</head>', `${tag}\n`, 'before');
+  return beforeHeadScripts
+    ? applyHtmlFragment(withoutMatches, /<head\b[^>]*>/i, `${tag}\n`, 'after')
+    : applyHtmlFragment(withoutMatches, '</head>', `${tag}\n`, 'before');
 }
 
 /**
@@ -1076,11 +1036,15 @@ function injectMeta(baseHtml, { title, description, canonical, image, ogType = '
     `<title data-rh="true">${escapeAttr(title)}</title>`
   );
 
+  // Descriptions must precede the critical head script so it sees the SSG value
+  // during parsing. The existing charset postprocessor keeps charset first.
+  // Provenance preserves selected text even when it resembles a generic shell fallback.
   // --- meta description ---
   html = replaceOrInsert(
     html,
     /<meta[^>]*name="description"[^>]*\/?>/i,
-    `<meta data-rh="true" name="description" content="${escapeAttr(description)}"/>`
+    `<meta data-rh="true" name="description" content="${escapeAttr(description)}" data-ssg-description="true"/>`,
+    true
   );
 
   // --- canonical ---
@@ -1115,7 +1079,8 @@ function injectMeta(baseHtml, { title, description, canonical, image, ogType = '
   html = replaceOrInsert(
     html,
     /<meta[^>]*property="og:description"[^>]*\/?>/i,
-    `<meta data-rh="true" property="og:description" content="${escapeAttr(description)}"/>`
+    `<meta data-rh="true" property="og:description" content="${escapeAttr(description)}" data-ssg-description="true"/>`,
+    true
   );
 
   // --- og:url ---
@@ -1182,7 +1147,8 @@ function injectMeta(baseHtml, { title, description, canonical, image, ogType = '
   html = replaceOrInsert(
     html,
     /<meta[^>]*name="twitter:description"[^>]*\/?>/i,
-    `<meta data-rh="true" name="twitter:description" content="${escapeAttr(description)}"/>`
+    `<meta data-rh="true" name="twitter:description" content="${escapeAttr(description)}" data-ssg-description="true"/>`,
+    true
   );
 
   // --- twitter:image ---
@@ -1342,6 +1308,17 @@ function injectHomeHeroPreload(baseHtml, href) {
   if (!href) return baseHtml;
   const tag = `<link data-home-hero-preload="true" rel="preload" as="image" href="${escapeAttr(href)}" fetchpriority="high"/>`;
   return replaceOrInsert(baseHtml, /<link[^>]*data-home-hero-preload="true"[^>]*\/?>/i, tag);
+}
+
+function buildTravelBootstrapData(travel, detail) {
+  return {
+    ...travel,
+    ...detail,
+    gallery: Array.isArray(detail.gallery) ? detail.gallery : travel.gallery,
+    description: detail.description || travel.description || '',
+    // Match the SSG selector even when an older detail omits this optional field.
+    meta_description: detail.meta_description,
+  };
 }
 
 function injectTravelBootstrapData(baseHtml, travel, routeKey) {
@@ -4202,10 +4179,10 @@ async function main() {
       const name = travel.name || '';
       const title = buildSeoTitle(name || 'Путешествие');
 
-      // Use detail description when available, otherwise build contextual fallback
-      // from list payload fields to avoid generic, duplicate snippets.
+      // The detail is authoritative: a cleared meta must not revive a stale list value.
+      // Without usable editorial metadata, preserve the existing body/context fallback.
       const detail = detailMap.get(id) || { description: '', gallery: [] };
-      const description = buildTravelSeoDescription(travel, detail.description);
+      const description = buildTravelSeoDescription(travel, detail.description, detail.meta_description);
       const canonical = `${SITE_URL}/travels/${routeKey}`;
 
       // Prefer HD gallery/detail variants and avoid thumb_200 for social previews.
@@ -4264,12 +4241,7 @@ async function main() {
 
       const travelHeroPreload = buildTravelHeroPreloadData(travel, detail);
       const htmlWithTravelPreload = injectTravelHeroPreload(htmlWithFaqJsonLd, travelHeroPreload);
-      const bootstrapTravel = {
-        ...travel,
-        ...detail,
-        gallery: Array.isArray(detail.gallery) ? detail.gallery : travel.gallery,
-        description: detail.description || travel.description || '',
-      };
+      const bootstrapTravel = buildTravelBootstrapData(travel, detail);
       const questMatches = findTravelQuestPromoMatches(bootstrapTravel, questPromoCatalog, 6);
       if (questMatches.length > 0) withQuestPromoCount++;
       const htmlWithTravelBootstrap = injectTravelBootstrapData(
@@ -4773,6 +4745,7 @@ if (typeof module !== 'undefined' && module.exports) {
     injectHomeHeroPreload,
     resolveHomeHeroAssetHref,
     injectTravelBootstrapData,
+    buildTravelBootstrapData,
     gateAppScriptsBehindHero,
     injectHiddenH1,
     disableExpoRouterHydration,

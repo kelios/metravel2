@@ -2,6 +2,29 @@ import { getTravelDetailsSeoViewModel } from '@/components/travel/details/hooks/
 import { normalizeTravelItem } from '@/api/travelsNormalize';
 
 describe('getTravelDetailsSeoViewModel', () => {
+  it('uses the same stored metadata as SSG after API normalization without changing canonical or title', () => {
+    const meta = 'Прогулка по старому городу: замок, набережная и тихие улицы. Советы для самостоятельной поездки.';
+    const raw = { id: 116, name: 'Прогулка по Минску', slug: 'minsk-fixture',
+      description: '<p>Different body lead</p>', meta_description: meta, gallery: [] };
+    const travel = normalizeTravelItem(raw);
+    const seo = getTravelDetailsSeoViewModel(travel, raw.slug);
+    const { buildTravelSeoDescription } = require('@/scripts/generate-seo-pages');
+    const { normalizeTravelDetail } = require('@/scripts/lib/travelDetail');
+    const detail = normalizeTravelDetail(raw);
+    expect(seo.readyDesc).toBe(meta);
+    expect(seo.readyDesc).toBe(buildTravelSeoDescription(raw, detail.description, detail.meta_description));
+    expect(seo.readyTitle).toBe('Прогулка по Минску | Metravel');
+    expect(seo.canonicalUrl).toBe('https://metravel.by/travels/minsk-fixture');
+    expect(travel.description).toBe(raw.description);
+  });
+
+  it.each([null, '', '<p></p>', 'Короткое описание', 123])('preserves the existing loaded body fallback for invalid stored meta %p', meta => {
+    const travel = { id: 116, name: 'Минск', slug: 'minsk-fixture',
+      description: '<p>Утро в Минске: набережная и старые улицы.</p>', gallery: [] };
+    expect(getTravelDetailsSeoViewModel({ ...travel, meta_description: meta }, travel.slug).readyDesc)
+      .toBe(getTravelDetailsSeoViewModel(travel, travel.slug).readyDesc);
+  });
+
   it('uses travel title for SEO title instead of latin slug fallback', () => {
     const seo = getTravelDetailsSeoViewModel(
       {

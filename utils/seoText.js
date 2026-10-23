@@ -77,6 +77,60 @@ function htmlToPlainText(html) {
     .trim();
 }
 
+// Same cost as a double-quoted HTML attribute in the static generator.
+function encodedDescriptionLength(text) {
+  return text.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;').replace(/>/g, '&gt;').length;
+}
+
+const DANGLING_WORD_RE =
+  /\s+(?:и|а|но|или|же|как|что|в|во|на|с|со|у|о|об|обо|к|ко|по|за|из|изо|от|до|над|под|при|про|для|без|перед|через|the|a|an|of|in|on|at|to|and|or)$/i;
+
+/** Existing body-snippet ending, shared with the explicit metadata clamp. */
+function finishTruncatedSnippet(cutText) {
+  let out = String(cutText || '');
+  let prev;
+  do {
+    prev = out;
+    out = out.replace(/[\s,;:.–—-]+$/g, '').replace(DANGLING_WORD_RE, '');
+  } while (out !== prev);
+  return out ? `${out}…` : '';
+}
+
+/** Clamp plain text against the escaped attribute budget without splitting Unicode. */
+function clampDescriptionForAttr(plain, maxEncoded = 160) {
+  const text = String(plain || '').trim();
+  if (!text) return '';
+  if (encodedDescriptionLength(text) <= maxEncoded) return text;
+
+  const characters = Array.from(text);
+  let lo = 0;
+  let hi = characters.length;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (encodedDescriptionLength(characters.slice(0, mid).join('')) <= maxEncoded) lo = mid;
+    else hi = mid - 1;
+  }
+  const hard = characters.slice(0, lo).join('').trimEnd();
+  const lastSpace = hard.lastIndexOf(' ');
+  const base = lastSpace >= Math.floor(hard.length * 0.6) ? hard.slice(0, lastSpace) : hard;
+  const finished = finishTruncatedSnippet(base);
+  return finished && encodedDescriptionLength(finished) <= maxEncoded ? finished : hard;
+}
+
+/** Explicit editorial metadata has no body-introduction/epigraph heuristics. */
+function getStoredTravelSeoDescription(value) {
+  if (typeof value !== 'string') return null;
+  const plain = htmlToPlainText(value)
+    .replace(INVISIBLE_JOINER_RE, '')
+    .replace(INVISIBLE_SPACER_RE, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (plain.length < 80) return null;
+  const description = clampDescriptionForAttr(plain);
+  return description.length >= 80 ? description : null;
+}
+
 // Хвостовые знаки, которые нельзя оставлять перед многоточием: «…центр,…» читается хуже «…центр…».
 const TRAILING_PUNCTUATION = /[\s.,;:!?·–—-]+$/u;
 
@@ -444,4 +498,7 @@ module.exports = {
   buildSeoTitle,
   htmlToPlainText,
   normalizeSeoLead,
+  finishTruncatedSnippet,
+  clampDescriptionForAttr,
+  getStoredTravelSeoDescription,
 };

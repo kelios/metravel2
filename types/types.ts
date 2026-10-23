@@ -125,6 +125,7 @@ export type Travel = TravelModerationMetadata & {
         title: string
     } | null
     description: string
+    meta_description?: string | null
     recommendation: string
     plus: string
     minus: string

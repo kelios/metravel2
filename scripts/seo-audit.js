@@ -45,7 +45,7 @@ const { extractFaqEntries, FAQ_SECTION_OPEN_TAG } = require('./generate-seo-page
 const TITLE_MAX = 60; // chars rendered before Google/Yandex clip the SERP title
 const TITLE_MIN = 25; // shorter titles usually lack a searchable keyword phrase
 const THIN_WORDS = 400; // below this a travel reads as a thin photo dump
-const LEAD_CHARS = 160; // the SERP snippet = first ~160 chars of the description body
+const LEAD_CHARS = 160; // body-lead quality; also snippet fallback without usable explicit metadata
 const KEYWORD_MIN_LEN = 4; // title words this long+ count as topical keywords
 const KEYWORD_STEM_LEN = 5; // compare keywords on this-long stem to absorb inflection
 
@@ -145,10 +145,10 @@ function keywordStem(word) {
 }
 
 /**
- * The SERP snippet is built from the first ~160 chars of the description body
- * (scripts/generate-seo-pages.js → buildTravelSeoDescription), NOT from any
- * meta_description field (which the frontend ignores). A lead is "weak" when
- * that opening shares no keyword STEM with the title — i.e. the snippet does
+ * Analyze the opening ~160 chars of the body independently of stored metadata.
+ * The frontend prefers usable meta_description since #2700; the body is its
+ * fallback. A lead is "weak" when that opening shares no keyword STEM with
+ * the title — i.e. the opening does
  * not even mention what the page is about (a personal hook like "Очередное
  * обещание собаке…").
  */

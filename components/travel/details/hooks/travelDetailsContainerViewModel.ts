@@ -1,5 +1,6 @@
 import { Platform } from 'react-native'
 import { DEFAULT_OG_IMAGE_PATH, buildCanonicalUrl, normalizeOgImageUrl } from '@/utils/seo'
+import { getStoredTravelSeoDescription } from '@/utils/seoText'
 
 import {
   buildIndexableTravelPath,
@@ -25,12 +26,13 @@ export function getTravelDetailsSeoViewModel(travel: any, slug: string) {
   // и Метрика/GA4 успевали снять hit с транслитом (см. Метрика 12.07.2026).
   // Анти-generic фолбэк для не-пререндеренных страниц живёт в app/+html.tsx.
   const title = displayTitle ? buildTravelSeoTitle(displayTitle) : null
-  const desc =
+  const desc = getStoredTravelSeoDescription(travel?.meta_description) ?? (
     typeof travel?.description === 'string' && travel.description.trim()
       ? getTravelSeoDescription(travel.description)
       : displayTitle
         ? buildTravelSeoFallbackDescription(displayTitle)
         : null
+  )
   // #1438: ветки проверяли только `typeof slug === 'string' && slug`, поэтому
   // литерал `'null'` (его давал нормализатор из `slug: null`) считался живым
   // слагом, и страница отдавала canonical/og:url `https://metravel.by/travels/null`.

@@ -349,6 +349,13 @@ const getCriticalHeadScript = () => {
       el.setAttribute('content',content);
       return el;
     }
+    function upsertDescription(selector,attrs,content){
+      var el=document.querySelector(selector);
+      var current=el&&el.getAttribute('content')||'';
+      if(el&&el.getAttribute('data-ssg-description')==='true'&&current.trim())return el;
+      if(!el||isGenericDescription(current))return upsertMeta(selector,attrs,content);
+      return el;
+    }
     var routePath=window.location&&window.location.pathname||'/';
     var routeMeta=getRouteMeta(routePath);
     var titleEl=document.querySelector('head title[data-rh="true"]')||document.querySelector('head title');
@@ -359,21 +366,12 @@ const getCriticalHeadScript = () => {
       document.title=routeMeta.title;
     }
     if(isGenericTitle(document.title))document.title=routeMeta.title;
-    var descriptionMeta=document.querySelector('meta[name="description"]');
-    if(descriptionMeta){
-      var currentDescription=descriptionMeta.getAttribute('content')||'';
-      if(isGenericDescription(currentDescription))descriptionMeta.setAttribute('content',routeMeta.description);
-    }else{
-      descriptionMeta=document.createElement('meta');
-      descriptionMeta.setAttribute('name','description');
-      descriptionMeta.setAttribute('content',routeMeta.description);
-      document.head.appendChild(descriptionMeta);
-    }
+    upsertDescription('meta[name="description"]',{name:'description'},routeMeta.description);
     if(routeMeta.robots||shouldNoindexPath(routePath))upsertMeta('meta[name="robots"]',{name:'robots'},routeMeta.robots||'noindex, nofollow');
     upsertMeta('meta[property="og:title"]',{property:'og:title'},routeMeta.title);
-    upsertMeta('meta[property="og:description"]',{property:'og:description'},routeMeta.description);
+    upsertDescription('meta[property="og:description"]',{property:'og:description'},routeMeta.description);
     upsertMeta('meta[name="twitter:title"]',{name:'twitter:title'},routeMeta.title);
-    upsertMeta('meta[name="twitter:description"]',{name:'twitter:description'},routeMeta.description);
+    upsertDescription('meta[name="twitter:description"]',{name:'twitter:description'},routeMeta.description);
     upsertMeta('meta[property="og:type"]',{property:'og:type'},routeMeta.ogType||'website');
   } catch(_){}
   try {

@@ -1,9 +1,63 @@
-import { buildSeoTitle, htmlToPlainText, normalizeSeoLead } from '@/utils/seoText';
+import { buildSeoTitle, clampDescriptionForAttr, finishTruncatedSnippet, getStoredTravelSeoDescription, htmlToPlainText, normalizeSeoLead } from '@/utils/seoText';
 
 // Общие правила текста выдачи. Заголовок отдельно покрыт в
 // __tests__/scripts/generate-seo-pages.test.ts (buildSeoTitle через SSG-обёртку),
 // здесь фиксируем контракт самого модуля и очистку лида.
 describe('seoText', () => {
+  describe('stored travel metadata (#2700)', () => {
+    const meta = 'Прогулка по старому городу: замок, набережная и тихие улицы. Советы для самостоятельной поездки.';
+
+    it('preserves a canonical editorial description exactly, including intentional introductory text', () => {
+      expect(getStoredTravelSeoDescription(meta)).toBe(meta);
+      const explicitIntro = `Привет! ${meta}`;
+      expect(getStoredTravelSeoDescription(explicitIntro)).toBe(explicitIntro);
+      expect(getStoredTravelSeoDescription(getStoredTravelSeoDescription(meta))).toBe(meta);
+    });
+
+    it.each([undefined, null, false, 12, {}, [], '', '   ', '<p></p>', '<script>alert(1)</script>', 'я'.repeat(79)])(
+      'rejects unusable metadata %p without inventing padding', value => {
+        expect(getStoredTravelSeoDescription(value)).toBeNull();
+      },
+    );
+
+    it('accepts the minimum boundary and normalizes markup/entities/spacers as plain text', () => {
+      expect(getStoredTravelSeoDescription('я'.repeat(80))).toBe('я'.repeat(80));
+      const raw = `<style>hidden</style><p>Прогулка&nbsp;&amp; история.</p>\n${meta}\u2800\u200B<script>hidden()</script>`;
+      expect(getStoredTravelSeoDescription(raw)).toBe(`Прогулка & история. ${meta}`);
+      expect(getStoredTravelSeoDescription(meta.replace('старому', 'ста\u00ADрому'))).toBe(meta);
+    });
+
+    it('budgets escaped punctuation instead of plain-text length', () => {
+      const result = getStoredTravelSeoDescription(`${meta} «Музей "A & B"»: ${meta}`);
+      expect(result).not.toBeNull();
+      const encoded = result!.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      expect(encoded.length).toBeLessThanOrEqual(160);
+      expect(result!.length).toBeGreaterThanOrEqual(80);
+      expect(getStoredTravelSeoDescription('&'.repeat(80))).toBeNull();
+    });
+
+    it('clips at a Unicode boundary and preserves already-fitting text', () => {
+      expect(clampDescriptionForAttr('я'.repeat(159) + '😀tail')).toBe('я'.repeat(159) + '…');
+      expect(clampDescriptionForAttr(meta)).toBe(meta);
+      expect(clampDescriptionForAttr('')).toBe('');
+    });
+
+    it('removes punctuation exposed by dangling words when clipping stored metadata', () => {
+      const sentence = `${'Парк '.repeat(20)}бесплатный вход и парковка.`;
+      const raw = `${sentence} Как ${'добраться'.repeat(15)}`;
+      const expected = `${sentence.slice(0, -1)}…`;
+      expect(clampDescriptionForAttr(raw)).toBe(expected);
+      expect(getStoredTravelSeoDescription(raw)).toBe(expected);
+    });
+  });
+
+  describe('finishTruncatedSnippet', () => {
+    it.each(['Бесплатный вход и парковка. Как', 'Бесплатный вход и парковка. Как и в', 'Бесплатный вход и парковка. Как. и'])('%p has one clean truncation ending', input => {
+      expect(finishTruncatedSnippet(input)).toBe('Бесплатный вход и парковка…');
+    });
+  });
+
   describe('htmlToPlainText', () => {
     it.each([
       ['<p>Жемыславле</p><p>Дворец Умястовских</p>', 'Жемыславле Дворец Умястовских'],

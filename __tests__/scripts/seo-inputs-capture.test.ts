@@ -104,6 +104,36 @@ describe('build-local SEO input capture', () => {
     expect(Object.values(sizes.section_bytes).reduce((sum: number, count: any) => sum + count, 9)).toBe(sizes.payload_bytes)
     expect(logged).not.toContain('тело статьи')
   })
+  it('retains authoritative metadata through real capture/replay into the renderer', () => {
+    const meta = 'Прогулка по старому городу: замок, набережная и тихие улицы. Советы для самостоятельной поездки.'
+    const input = withTravelDetails()
+    const raw = { ...completeRawDetail(), meta_description: meta }
+    input.rawTravelDetails = [[`${identity.api_origin}/api/travels/116/`, raw]] as any
+    input.travelDetails = [[116, normalizeTravelDetail(raw)]] as any
+    capture.writeSeoInputs(file, identity, input)
+    const replayed = capture.materializeTravelDetails(capture.readSeoInputs(file, identity), identity)[0][1]
+    const { buildTravelSeoDescription } = require('../../scripts/generate-seo-pages')
+    expect(replayed.meta_description).toBe(meta)
+    expect(buildTravelSeoDescription(input.travels[0], replayed.description, replayed.meta_description)).toBe(meta)
+    expect(replayed.description).toBe(raw.description)
+    expect(replayed.gallery).toEqual(raw.gallery)
+    expect(replayed.coordsMeTravel).toEqual(raw.coordsMeTravel)
+    expect(normalizeTravelDetail(replayed)).toEqual(replayed)
+    expect(normalizeTravelDetail({ ...raw, meta_description: null }).meta_description).toBeNull()
+  })
+  it.each([undefined, 123])('keeps omitted/invalid detail metadata authoritative after capture/replay (%p)', meta => {
+    const input = withTravelDetails()
+    const raw = { ...completeRawDetail(), meta_description: meta }
+    const summary = { ...input.travels[0], meta_description: 'Старое описание из списка: замок, набережная и тихие улицы. Советы для самостоятельной поездки.' }
+    input.travels = [summary] as any
+    input.rawTravelDetails = [[`${identity.api_origin}/api/travels/116/`, raw]] as any
+    input.travelDetails = [[116, normalizeTravelDetail(raw)]] as any
+    capture.writeSeoInputs(file, identity, input)
+    const replayed = capture.materializeTravelDetails(capture.readSeoInputs(file, identity), identity)[0][1]
+    const { buildTravelBootstrapData } = require('../../scripts/generate-seo-pages')
+    expect(Object.hasOwn(replayed, 'meta_description')).toBe(false)
+    expect(JSON.parse(JSON.stringify(buildTravelBootstrapData(summary, replayed))).meta_description).toBeUndefined()
+  })
   it('refuses a normalized/raw mismatch without falling back to a duplicated inline detail', () => {
     const input = withTravelDetails()
     ;(input.travelDetails[0][1] as any).recommendation = '<p>different</p>'

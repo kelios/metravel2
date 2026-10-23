@@ -73,6 +73,38 @@ HttpOnly cookie; анонимный GET закрытого черновика п
 используют. Регрессии: реальная SSR/hydrate-пара spinner, eligibility preload и
 `e2e/travel-draft-owner-preview.spec.ts` с настоящей cookie-сессией и UI popup.
 
+## Travel SEO metadata
+
+Публичная деталь использует сохранённый `meta_description`, если после перевода
+в обычный текст и очистки пробелов он содержит не менее 80 символов. Общий helper
+`utils/seoText.js:getStoredTravelSeoDescription` ограничивает HTML-экранированное
+значение бюджетом 160 символов; корректное значение в бюджете не меняется.
+Здесь нет эвристик удаления эпиграфа, приветствия или маршрутной строки из тела.
+Пустое, некорректное или короткое значение сохраняет прежний body/context
+fallback. Пока данные статьи не загружены, клиент оставляет SSG-описание на месте.
+SSG размещает три description-тега до ранних head-скриптов и помечает их
+происхождение. Существующий critical-head owner сохраняет непустое значение
+с этой меткой даже при совпадении с generic-prefix эвристикой; отмеченное пустое значение
+и непомеченные placeholders сохраняют прежний fallback. Charset остаётся первым.
+
+Поле проходит через `scripts/lib/travelDetail.js` и capture/replay SSG;
+`generate-seo-pages.js` и travel head viewmodel используют один helper для
+description/OG/Twitter. Текущая detail-мета авторитетна: пустое значение не
+заменяется старой метой из списка. Article JSON-LD SSG получает уже выбранное
+описание; FAQ и клиентские body-derived structured data сохраняют своих владельцев.
+Название, canonical, URL и тело статьи этот выбор не меняет. Editorial content
+не переводится клиентом; app-owned i18n keys не добавляются.
+
+Регрессии: `__tests__/utils/seoText.test.ts`, `__tests__/scripts/generate-seo-pages.test.ts`,
+`__tests__/scripts/seo-inputs-capture.test.ts`,
+`__tests__/components/travel/travelDetailsContainerViewModel.test.ts` и
+`__tests__/app/html.head-fallback.test.ts` (настоящий critical-script и порядок парсинга).
+Для metadata-only редакторской задачи достаточно разрешённого изменения поля
+`meta_description`; правка лида/тела не требуется. Поле в API не подтверждает
+свежесть статики: после записи нужен штатный выкат и сверка raw HTML с гидрацией.
+Google может выбрать собственный сниппет; #2700 подтверждает переданную мету,
+а #2658 отдельно ведёт редактуру и 28-дневный замер CTR.
+
 ## List/search architecture
 
 | Owner | Ответственность |
