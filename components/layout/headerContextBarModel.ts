@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import { HEADER_LAYOUT_BREAKPOINTS } from './headerLayoutContract';
 import { isPhoneLayout } from '@/utils/phoneLayout';
+import { isQuestDetailHeaderPath, resolveQuestHeaderPresentation } from './questHeaderPresentation';
 
 export type HeaderContextBarAction = 'map-panel' | 'travel-sections' | 'none';
 
@@ -8,13 +9,18 @@ type ResolveIsMobileArgs = {
   width: number;
   isPhone: boolean;
   isLargePhone: boolean;
+  pathname?: string;
 };
 
 export function resolveHeaderContextBarIsMobile({
   width,
   isPhone,
   isLargePhone,
+  pathname,
 }: ResolveIsMobileArgs): boolean {
+  if (Platform.OS === 'web' && pathname && isQuestDetailHeaderPath(pathname)) {
+    return resolveQuestHeaderPresentation({ width, height: 0, isWeb: true }).headerInScreenRow;
+  }
   // width уже из useResponsive (hydration-safe: SSR и первый клиентский рендер дают 0).
   // Прямое чтение window.innerWidth здесь давало расхождение SSR→клиент (React #418).
   return Platform.OS === 'web'

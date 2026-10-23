@@ -16,6 +16,7 @@ import {
 import {
   getHeaderActivePath,
   getIsHeaderMobile,
+  isQuestDetailHeaderPath,
   shouldShowBrandRow,
   shouldShowHeaderContextBar,
 } from './customHeaderModel'
@@ -73,7 +74,9 @@ function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeade
     !shouldShowHeaderContextBar(pathname, false, false, false)
   const webContextFallbackKind =
     Platform.OS === 'web'
-      ? pathname.startsWith('/travels/')
+      ? isQuestDetailHeaderPath(pathname)
+        ? 'quest'
+        : pathname.startsWith('/travels/')
         ? 'travel'
         : hasPhoneOnlyContextBar
           ? 'phone'
@@ -90,6 +93,7 @@ function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeade
     width,
     isPhone: responsive.isPhone,
     isLargePhone: responsive.isLargePhone,
+    pathname,
   })
   const showHeaderContextBar = shouldShowHeaderContextBar(pathname, isMobile, hasListFilterQuery, isBarMobile)
   // #2100: вложенный экран телефона — без бренд-строки, только строка «←».
@@ -100,7 +104,9 @@ function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeade
   const renderBrandRow =
     Platform.OS === 'web' && !isHydrated ? true : shouldShowBrandRow(pathname, isBarMobile)
   const brandRowProps =
-    Platform.OS === 'web' && brandRowPhoneHidden ? webDataSetProps({ headerBrand: 'phone-hidden' }) : null
+    Platform.OS === 'web' && brandRowPhoneHidden
+      ? webDataSetProps({ headerBrand: isQuestDetailHeaderPath(pathname) ? 'quest-compact-hidden' : 'phone-hidden' })
+      : null
 
   // Predict whether the lazy HeaderContextBar will actually render visible UI
   // (mirrors HeaderContextBar conditions). Native needs this to reserve height;

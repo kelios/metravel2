@@ -88,6 +88,17 @@ const contentScroll = (view: WizardView) => view.UNSAFE_getAllByType(ScrollView)
   .find((scroll) => scroll.props.keyboardShouldPersistTaps === 'handled')!
 const routeInContent = (view: WizardView) => isDescendant(view.getByTestId('quest-route-strip'), contentScroll(view))
 
+function expectSingleQuestTitle(view: WizardView) {
+  // The shared web screen row uses role=heading; the quest sidebar/panel use
+  // native accessibilityRole=header. Both become H1 in the browser.
+  const headings = [...new Set([
+    ...view.queryAllByRole('heading'),
+    ...view.queryAllByRole('header'),
+  ])].filter(heading => heading.props['aria-level'] === 1)
+  expect(headings).toHaveLength(1)
+  expect(headings[0].props.children).toBe('Тест-квест')
+}
+
 describe('QuestWizard short viewport (#2198)', () => {
   const originalOS = Platform.OS
   let mounts: number
@@ -326,9 +337,100 @@ describe('QuestWizard short viewport (#2198)', () => {
       expect(input.props.value).toBe('orientation answer')
       const mobileActions = view.queryAllByTestId('screen-header-more').length
       const panelActions = view.queryAllByTestId('quest-header-actions').length
-      expect([mobileActions, panelActions]).toEqual(width < 768 ? [1, 0] : [0, 1])
+      expect([mobileActions, panelActions]).toEqual([1, 0])
       expect(routeInContent(view)).toBe(true)
     }
+  })
+
+  it.each([[718, 735], [844, 390], [960, 640], [1024, 768], [1279, 640]] as const)(
+    '%dx%d keeps tablet/landscape navigation in the reading host with one screen action owner', async (width, height) => {
+      const { view, resize } = await setup(390, 640, undefined, true)
+      const scroll = contentScroll(view)
+      const input = view.UNSAFE_getByType(TextInput)
+      fireEvent.changeText(input, 'tablet draft')
+      await resize(width, height)
+      expect(contentScroll(view) === scroll).toBe(true)
+      expect(view.UNSAFE_getByType(TextInput) === input).toBe(true)
+      expect(input.props.value).toBe('tablet draft')
+      expect(view.getAllByTestId('screen-header-more')).toHaveLength(1)
+      expect(view.queryByTestId('quest-header-actions')).toBeNull()
+      expect(isDescendant(view.getByRole('button', { name: /^Точка 1:/ }), scroll)).toBe(true)
+      expect([mounts, unmounts]).toEqual([1, 0])
+    },
+  )
+
+  it.each([[1279, 640, 1280, 640], [1024, 1366, 1366, 1024], [1440, 900, 1024, 768]] as const)(
+    '%dx%d → %dx%d preserves an unfocused draft and the reading subtree across the sidebar boundary', async (fromW, fromH, toW, toH) => {
+      const { view, resize } = await setup(fromW, fromH, undefined, true)
+      const scroll = contentScroll(view)
+      const input = view.UNSAFE_getByType(TextInput)
+      fireEvent.changeText(input, 'draft across desktop boundary')
+      fireEvent.press(view.getByTestId('reading-state'))
+      for (const [width, height] of [[toW, toH], [fromW, fromH]]) {
+        await resize(width, height)
+        expect(contentScroll(view) === scroll).toBe(true)
+        expect(view.UNSAFE_getByType(TextInput) === input).toBe(true)
+        expect(input.props.value).toBe('draft across desktop boundary')
+        expect(view.getByTestId('reading-state').findByType(Text).props.children).toBe(1)
+        expect(Boolean(view.queryByTestId('quest-desktop-sidebar'))).toBe(width >= 1280)
+        expectSingleQuestTitle(view)
+        expect([mounts, unmounts]).toEqual([1, 0])
+      }
+    },
+  )
+
+  it('keeps the route sheet across a jump to desktop, then returns focus to the sidebar current point', async () => {
+    const { view, resize } = await setup(390, 640, undefined, true)
+    const scroll = contentScroll(view)
+    const input = view.UNSAFE_getByType(TextInput)
+    fireEvent.changeText(input, 'sheet draft')
+    fireEvent.press(view.getByTestId('quest-route-strip'))
+    const sheet = view.getByTestId('quest-route-sheet')
+    await resize(1440, 900)
+    expect(view.getByTestId('quest-route-sheet') === sheet).toBe(true)
+    expect(view.getByTestId('quest-route-row-p1').props.accessibilityState.selected).toBe(true)
+    expect(view.queryByTestId('quest-desktop-sidebar')).toBeNull()
+    expectSingleQuestTitle(view)
+    fireEvent.press(view.getByRole('button', { name: 'Закрыть' }))
+    await act(async () => { await Promise.resolve() })
+    expect(view.queryByTestId('quest-route-sheet')).toBeNull()
+    expect(view.getByTestId('quest-desktop-sidebar')).toBeTruthy()
+    expect(routeFocus).toHaveBeenLastCalledWith('current')
+    expect(contentScroll(view) === scroll).toBe(true)
+    expect(view.UNSAFE_getByType(TextInput) === input).toBe(true)
+    expect(input.props.value).toBe('sheet draft')
+    await resize(390, 640)
+    fireEvent.press(view.getByTestId('quest-route-strip'))
+    expect(view.getByTestId('quest-route-sheet')).toBeTruthy()
+    fireEvent.press(view.getByRole('button', { name: 'Закрыть' }))
+    expect(view.queryByTestId('quest-route-sheet')).toBeNull()
+    expect([mounts, unmounts]).toEqual([1, 0])
+  })
+
+  it('defers the desktop panel handoff until input blur without duplicating the live title owner', async () => {
+    const { view, resize } = await setup(1024, 768, undefined, true)
+    const scroll = contentScroll(view)
+    const input = view.UNSAFE_getByType(TextInput)
+    fireEvent(input, 'focus')
+    fireEvent.changeText(input, 'focused tablet draft')
+    await resize(1366, 1024)
+    expect(view.queryByTestId('quest-desktop-sidebar')).toBeNull()
+    expectSingleQuestTitle(view)
+    fireEvent(input, 'blur')
+    await act(async () => { await Promise.resolve() })
+    expect(view.getByTestId('quest-desktop-sidebar')).toBeTruthy()
+    fireEvent(input, 'focus')
+    await resize(1024, 768)
+    expect(view.queryByTestId('quest-desktop-sidebar')).toBeNull()
+    expect(view.getAllByTestId('screen-header-more')).toHaveLength(1)
+    expect(view.queryByTestId('quest-header-actions')).toBeNull()
+    expectSingleQuestTitle(view)
+    fireEvent(input, 'blur')
+    await act(async () => { await Promise.resolve() })
+    expect(contentScroll(view) === scroll).toBe(true)
+    expect(view.UNSAFE_getByType(TextInput) === input).toBe(true)
+    expect(input.props.value).toBe('focused tablet draft')
+    expect([mounts, unmounts]).toEqual([1, 0])
   })
 
   it('keyboard overlap alone defers relocation after input blur, without treating it as layout height', async () => {

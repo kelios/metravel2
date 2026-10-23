@@ -2,6 +2,7 @@ import { render, fireEvent } from '@testing-library/react-native'
 import Footer from '@/components/layout/Footer'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { SITE_OWNER_LEGAL_NAME } from '@/constants/legal'
+import { LocaleProvider } from '@/i18n/LocaleProvider'
 
 // Jest Expo prefers .native; these web ownership cases need the actual shared
 // Footer used by RootWebDeferredChrome in the browser.
@@ -152,6 +153,25 @@ describe('Footer', () => {
         configurable: true,
         value: prevOS,
       })
+    }
+  })
+
+  it.each([960, 1024, 1279])('keeps site navigation and language reachable through More at compact quest width %d', async width => {
+    const { Platform } = require('react-native')
+    const previousOS = Platform.OS
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
+    ;(global as any).__mockResponsive = { width, height: 640, isDesktop: false, isMobile: false }
+    try {
+      const view = render(<LocaleProvider><Footer /></LocaleProvider>)
+      expect(await view.findByTestId('footer-item-map')).toBeTruthy()
+      expect(view.getByTestId('footer-item-quests')).toBeTruthy()
+      fireEvent.press(view.getByTestId('footer-item-more'))
+      fireEvent.press(view.getByTestId('footer-more-item-language'))
+      for (const locale of ['ru', 'be', 'uk', 'pl', 'en']) {
+        expect(view.getByTestId(`more-language-option-${locale}`)).toBeTruthy()
+      }
+    } finally {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: previousOS })
     }
   })
 

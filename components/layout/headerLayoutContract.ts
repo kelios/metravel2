@@ -1,4 +1,5 @@
 import { METRICS } from '@/constants/layout'
+import { QUEST_HEADER_PRESENTATION } from './questHeaderPresentation'
 
 /**
  * Shared responsive contract for the global header.
@@ -26,7 +27,7 @@ export const HEADER_LOGO_WEB_SRC = '/assets/icons/logo_yellow_60x60.png'
 
 export type HeaderViewportBand = 'mobile' | 'compact' | 'wide'
 // `screen` — только строка экрана без бренд-строки: вложенный экран телефона (#2100).
-export type HeaderVariant = `${HeaderViewportBand}-${'bar' | 'nobar' | 'screen'}`
+export type HeaderVariant = `${HeaderViewportBand}-${'bar' | 'nobar' | 'screen'}` | 'quest-screen'
 
 const HEADER_ROW_HEIGHT: Record<HeaderViewportBand, number> = {
   mobile: 64,
@@ -43,6 +44,7 @@ const HEADER_CONTEXT_HEIGHT: Record<HeaderViewportBand, number> = {
 const HEADER_BORDERS_HEIGHT = 2
 
 export const HEADER_HEIGHT_FALLBACK: Record<HeaderVariant, number> = {
+  'quest-screen': QUEST_HEADER_PRESENTATION.screenSlotHeight,
   'mobile-bar': HEADER_ROW_HEIGHT.mobile + HEADER_CONTEXT_HEIGHT.mobile,
   'mobile-nobar': HEADER_ROW_HEIGHT.mobile,
   'compact-bar': HEADER_ROW_HEIGHT.compact + HEADER_CONTEXT_HEIGHT.compact,

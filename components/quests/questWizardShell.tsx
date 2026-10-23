@@ -81,6 +81,7 @@ type QuestCompactSidebarProps = NavigationSharedProps & {
   /** Нужен блоку экскурсий для SubID партнёрских ссылок (`quest-<id>`). */
   questId?: string
   showExcursions?: boolean
+  routeTriggerRef?: React.Ref<View>
 }
 
 type QuestHeaderPanelProps = NavigationSharedProps & {
@@ -361,12 +362,13 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
     completionSlot,
     showExcursions = true,
     questId,
+    routeTriggerRef,
   } = props
   const pointsTotal = countRoutePoints(allSteps)
   const iconOnlyActions = Platform.OS === 'web'
 
   return (
-    <View style={styles.compactSidebar}>
+    <View style={styles.compactSidebar} testID="quest-desktop-sidebar">
       <View style={styles.compactSidebarHeader}>
         {/* Заголовок квеста — единственный H1 страницы в этой раскладке. RNW
             превращает role=heading + aria-level в настоящий тег <h1>, поэтому
@@ -469,6 +471,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
           return (
             <QuestStepPill
               key={step.id}
+              focusRef={isActive ? routeTriggerRef : undefined}
               colors={colors}
               styles={styles}
               compact
@@ -495,6 +498,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
           styles={styles}
           compact
           active={showFinaleOnly}
+          focusRef={showFinaleOnly ? routeTriggerRef : undefined}
           onPress={onShowFinale}
         />
 

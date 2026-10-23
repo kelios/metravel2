@@ -182,7 +182,7 @@ describe('CustomHeader: до-гидрационная геометрия стр�
     expect(utils.queryByTestId('mock-header-context-bar')).toBeNull()
   })
 
-  it.each(['/settings', '/quests/minsk/e2e-quest'])(
+  it.each(['/settings'])(
     'передаёт обычную web context-заглушку critical CSS для %s без inline-высоты',
     (pathname) => {
       ;(usePathname as jest.Mock).mockReturnValue(pathname)
@@ -194,6 +194,19 @@ describe('CustomHeader: до-гидрационная геометрия стр�
       expect(fallbacks).toHaveLength(1)
       expect(StyleSheet.flatten(fallbacks[0].props.style)).toMatchObject({ width: '100%' })
       expect(StyleSheet.flatten(fallbacks[0].props.style)?.minHeight).toBeUndefined()
+    },
+  )
+
+  it.each(['/quests/35/istanbul', '/pl/quests/35/istanbul'])(
+    'keeps the quest screen-row fallback distinct from ordinary breadcrumbs for %s',
+    (pathname) => {
+      ;(usePathname as jest.Mock).mockReturnValue(pathname)
+      setResponsive(0, false)
+      const utils = renderHeader()
+      const fallbacks = findByDataSet(utils, 'headerContextFallback', 'quest')
+      expect(fallbacks).toHaveLength(1)
+      expect(StyleSheet.flatten(fallbacks[0].props.style)?.minHeight).toBeUndefined()
+      expect(findByDataSet(utils, 'headerBrand', 'quest-compact-hidden')).toHaveLength(1)
     },
   )
 

@@ -1,6 +1,7 @@
 import { Platform } from 'react-native'
 
 import { isCompactHeaderWidth } from './headerLayoutContract'
+import { isQuestDetailHeaderPath } from './questHeaderPresentation'
 import { isTopLevelSectionPath, needsGlobalBackAffordance } from './topLevelSections'
 
 export const isHeaderTestEnv =
@@ -22,8 +23,7 @@ export const getIsHeaderMobile = (width: number, effectiveWebWidth: number) => {
 
 const ACTIVE_PATH_PREFIXES = ['/search', '/travelsby', '/export', '/map', '/places', '/trips', '/quests', '/roulette']
 
-export const isQuestDetailHeaderPath = (pathname: string) =>
-  /^\/quests\/[^/]+\/[^/]+\/?$/.test(pathname || '')
+export { isQuestDetailHeaderPath } from './questHeaderPresentation'
 
 export const isTravelUpsertHeaderPath = (pathname: string) =>
   pathname === '/travel/new' || /^\/travel\/[^/]+\/?$/.test(pathname || '')
@@ -74,6 +74,9 @@ export const shouldShowHeaderContextBar = (
     return true
   }
 
+  // Wide quest details already own identity/actions in their route sidebar.
+  if (isQuestDetailHeaderPath(pathname)) return isMobile
+
   // /userpoints — глобальный контекст-бар с крошками «Главная › Профиль › Мои точки»
   // на web (mobile + desktop); собственная шапка экрана (ProfileCollectionHeader) убрана.
   if (isUserPointsRoute) return true
@@ -95,7 +98,7 @@ export const shouldShowHeaderContextBar = (
 // тот же `isTopLevelSectionPath`, по которому HeaderContextBar решает «←».
 // Параметры запроса не учитываются намеренно: статический HTML их не знает, а
 // решение обязано совпасть до и после гидратации (иначе сдвиг шапки, #1144).
-// `isPhone` — ветка телефонной строки «←» (`resolveHeaderContextBarIsMobile`):
-// 768–1279 и desktop не меняются.
+// `isPhone` — ветка строки «←» (`resolveHeaderContextBarIsMobile`): на web
+// quest detail она распространяется на tablet; остальные маршруты сохраняют 768.
 export const shouldShowBrandRow = (pathname: string, isPhone: boolean): boolean =>
   !isPhone || isTopLevelSectionPath(pathname || '/', false, true)

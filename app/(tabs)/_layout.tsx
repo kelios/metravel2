@@ -15,6 +15,7 @@ import {
 import { useHasListFilterQuery } from '@/components/layout/useListFilterQuery';
 import { useHydrationReady } from '@/hooks/useHydrationReady';
 import { readViewportWidth } from '@/utils/viewportMetrics';
+import { resolveQuestHeaderPresentation } from '@/components/layout/questHeaderPresentation';
 import { useDocumentRouteRegistration } from '@/components/layout/documentView';
 
 const getHeaderHeightCacheKey = (variant: HeaderVariant) => `mt:header-height:${variant}`;
@@ -39,6 +40,11 @@ const getHeaderVariant = (pathname: string, hasFilterQuery: boolean): HeaderVari
             ? readViewportWidth() ?? HEADER_LAYOUT_BREAKPOINTS.compactRow
             : HEADER_LAYOUT_BREAKPOINTS.compactRow;
     const isCompact = width < HEADER_LAYOUT_BREAKPOINTS.compactRow;
+    if (Platform.OS === 'web' && isQuestDetailHeaderPath(pathname)) {
+        return resolveQuestHeaderPresentation({ width, height: 0, isWeb: true }).headerInScreenRow
+            ? 'quest-screen'
+            : 'wide-nobar';
+    }
     // Строку «←» в телефонном виде рисует бар только ниже mobileContext (#2099).
     const isBarMobile = width < HEADER_LAYOUT_BREAKPOINTS.mobileContext;
     const hasBar = shouldShowHeaderContextBar(pathname || '/', isCompact, hasFilterQuery, isBarMobile);
@@ -182,14 +188,17 @@ const Header = React.memo(function Header({ isNavigationTarget }: { isNavigation
         const heightForBand = (band: HeaderViewportBand, hasBar: boolean, hasBrandRow = true) =>
             HEADER_HEIGHT_FALLBACK[getHeaderVariantForBand(band, hasBar, hasBrandRow)];
         const mobileHeight = heightForBand('mobile', hasPhoneContextBar, hasPhoneBrandRow);
-        const compactHeight = heightForBand('compact', hasCompactContextBar);
+        const isQuestDetail = isQuestDetailHeaderPath(pathname);
+        const compactHeight = isQuestDetail
+            ? HEADER_HEIGHT_FALLBACK['quest-screen']
+            : heightForBand('compact', hasCompactContextBar);
         const wideHeight = heightForBand('wide', hasWideContextBar);
         const headerSlotStyle: React.CSSProperties & {
             '--mt-header-slot-mobile': string;
             '--mt-header-slot-compact': string;
             '--mt-header-slot-wide': string;
         } = {
-            '--mt-header-slot-mobile': `${mobileHeight}px`,
+            '--mt-header-slot-mobile': `${isQuestDetail ? HEADER_HEIGHT_FALLBACK['quest-screen'] : mobileHeight}px`,
             '--mt-header-slot-compact': `${compactHeight}px`,
             '--mt-header-slot-wide': `${wideHeight}px`,
             ...(hasMeasuredHeight ? { height: measuredHeight } : null),

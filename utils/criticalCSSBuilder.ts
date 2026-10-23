@@ -14,6 +14,7 @@ import { APP_DOWNLOAD_LAYOUT } from '@/components/appDownload/appDownloadLayout'
 import { MY_CREATED_TRIPS_LAYOUT } from '@/components/trips/myCreatedTripsLayout';
 import { buildBreakpointLayoutCss } from '@/utils/breakpointLayout';
 import { getIconFontGuardCss } from '@/utils/iconFontShell';
+import { QUEST_HEADER_PRESENTATION } from '@/components/layout/questHeaderPresentation';
 
 /**
  * Build critical CSS string for the HTML shell.
@@ -109,6 +110,9 @@ export function buildCriticalCSS(): string {
     '  [data-header-slot="account"]{flex:1 1 0% !important;min-width:0 !important}',
     '  [data-header-lang-chevron="true"]{display:none !important}',
     '  [data-testid="header-language-switcher"]{min-width:54px !important;padding-left:8px !important;padding-right:8px !important}',
+    // Quest details use the existing single screen row through tablet widths.
+    '  [data-header-brand="quest-compact-hidden"]{padding-bottom:0 !important;min-height:0 !important}',
+    '  [data-header-brand="quest-compact-hidden"] [data-header-inner="true"]{display:none !important}',
     '}',
     `@media (max-width:${HEADER_MEDIA_MAX_WIDTHS.mobile}px){`,
     '  [data-header-slot=""][data-map-header-slot="true"]{display:none !important;height:0 !important;min-height:0 !important}',
@@ -124,6 +128,7 @@ export function buildCriticalCSS(): string {
     // Keep these declarations non-route-specific; travel has an extra wide
     // suppression rule below because that route owns its desktop navigation.
     '[data-header-context-fallback="default"]{height:52px !important;min-height:52px !important}',
+    `[data-header-context-fallback="quest"]{height:${QUEST_HEADER_PRESENTATION.screenRowHeight}px !important;min-height:${QUEST_HEADER_PRESENTATION.screenRowHeight}px !important}`,
     `@media (min-width:${HEADER_LAYOUT_BREAKPOINTS.mobileContext}px){`,
     '  [data-header-context-fallback="default"]{height:46px !important;min-height:46px !important}',
     '}',
@@ -155,6 +160,7 @@ export function buildCriticalCSS(): string {
     '}',
     `@media (min-width:${HEADER_LAYOUT_BREAKPOINTS.compactRow}px){`,
     '  [data-header-context-fallback="travel"]{display:none !important;height:0 !important;min-height:0 !important}',
+    '  [data-header-context-fallback="quest"]{display:none !important;height:0 !important;min-height:0 !important}',
     '}',
     // #1334: `/places` есть в статическом HTML, а ширины окна до гидратации нет
     // (SSR-снимок даёт width=0 -> desktop-раскладка). Раньше компактная панель

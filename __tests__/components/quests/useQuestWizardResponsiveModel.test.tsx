@@ -77,9 +77,9 @@ describe('useQuestWizardResponsiveModel (web)', () => {
     // кадром: `isMobile` — высоту счётчика, `compactNav`/`screenW < 600` — ленту.
     expect(frames.every((frame) => frame.isMobile === false)).toBe(true)
     expect(frames.every((frame) => frame.compactNav === false)).toBe(true)
-    // #2148: и шапка не уезжает в строку экрана ни на одном кадре — иначе ряд
-    // действий панели мигнул бы на desktop-ширине.
-    expect(frames.every((frame) => frame.headerInScreenRow === false)).toBe(true)
+    // Compact web shares the screen row with its site shell from its first
+    // frame; wide desktop keeps the existing sidebar owner.
+    expect(frames.every((frame) => frame.headerInScreenRow === (measured.width < 1280))).toBe(true)
 
     await probe.unmount()
   })

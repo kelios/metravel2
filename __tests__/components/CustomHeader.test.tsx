@@ -129,6 +129,20 @@ describe('CustomHeader', () => {
         );
     };
 
+    it.each([960, 1024, 1279, 1440])('quest detail at %d has exactly one site/quest identity owner', width => {
+        Object.defineProperty(Platform, 'OS', { value: 'web' });
+        (global as any).__mockResponsive = { width, height: 768, isPhone: false, isLargePhone: false, isDesktop: width >= 1280, isMobile: false, isHydrated: true };
+        (usePathname as jest.Mock).mockReturnValue('/pl/quests/35/istanbul');
+        try {
+            const view = renderHeader();
+            expect(Boolean(view.queryByTestId('main-header-row'))).toBe(width >= 1280);
+            expect(Boolean(view.queryByTestId('mock-header-context-bar'))).toBe(width < 1280);
+            if (width >= 1280) expect(view.getByTestId('header-language-switcher')).toBeTruthy();
+        } finally {
+            (global as any).__mockResponsive = undefined;
+        }
+    });
+
     it.each(['android', 'ios'])('keeps %s seasonal decoration inside the brand row without changing safe-area geometry', platform => {
         Object.defineProperty(Platform, 'OS', { value: platform });
         mockSafeAreaInsets = { top: 59, right: 0, bottom: 34, left: 0 };

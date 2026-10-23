@@ -868,6 +868,12 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
         />
     );
 
+    // Keep an open route panel until the placement guard can hand it to the
+    // sidebar. In the reverse direction compact web must immediately fit the
+    // viewport and let the live screen row own identity/actions; the reading
+    // host below remains mounted in either composition.
+    const showDesktopSidebar = compactDesktopLayout && headerPlacement.compactDesktopLayout;
+
     // #2473: язык текста квеста для разметки цитат-вывесок — тот же, что у печатной версии.
     const contentLanguageLocale = questContentLocale(intro, steps);
 
@@ -876,8 +882,8 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
             <GestureHandlerRootView style={{ flex: 1 }}>
                 <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                        {compactDesktopLayout ? (
-                            <View style={styles.compactShell}>
+                        <View style={showDesktopSidebar ? styles.compactShell : styles.container}>
+                            {showDesktopSidebar ? (
                                 <QuestCompactSidebar
                                     colors={colors}
                                     styles={styles}
@@ -907,55 +913,35 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                                     completionSlot={completionSlot}
                                     questId={questId}
                                     showExcursions={false}
+                                    routeTriggerRef={headerPlacement.routeTriggerRef}
                                 />
+                            ) : !headerPlacement.headerInContentFlow ? questHeader : null}
 
-                                <ScrollView
-                                    ref={contentScrollRef}
-                                    style={[styles.content, styles.compactMainContent]}
-                                    showsVerticalScrollIndicator={false}
-                                    keyboardShouldPersistTaps="handled"
-                                    onTouchStart={headerPlacement.onTouchBegin}
-                                    onTouchEnd={headerPlacement.onTouchEnd}
-                                    onTouchCancel={headerPlacement.onTouchEnd}
-                                    onScrollBeginDrag={beginReadingScroll}
-                                    onScrollEndDrag={headerPlacement.onScrollEnd}
-                                    onMomentumScrollBegin={headerPlacement.onScrollBegin}
-                                    onMomentumScrollEnd={headerPlacement.onScrollEnd}
-                                    onScroll={handleReadingScroll}
-                                    scrollEventThrottle={16}
-                                    contentContainerStyle={{ paddingBottom: SPACING.xl + 96 + keyboardInset }}
-                                >
-                                    {mainContent}
-                                    <View style={{ height: SPACING.xl }} />
-                                </ScrollView>
-                            </View>
-                        ) : (
-                            <>
-                                {!headerPlacement.headerInContentFlow ? questHeader : null}
-
-                                {/* Контент */}
-                                <ScrollView
-                                    ref={contentScrollRef}
-                                    style={[styles.content, headerPlacement.headerInContentFlow && styles.contentWithFlowHeader]}
-                                    showsVerticalScrollIndicator={false}
-                                    keyboardShouldPersistTaps="handled"
-                                    onTouchStart={headerPlacement.onTouchBegin}
-                                    onTouchEnd={headerPlacement.onTouchEnd}
-                                    onTouchCancel={headerPlacement.onTouchEnd}
-                                    onScrollBeginDrag={beginReadingScroll}
-                                    onScrollEndDrag={headerPlacement.onScrollEnd}
-                                    onMomentumScrollBegin={headerPlacement.onScrollBegin}
-                                    onMomentumScrollEnd={headerPlacement.onScrollEnd}
-                                    onScroll={handleReadingScroll}
-                                    scrollEventThrottle={16}
-                                    contentContainerStyle={[{ paddingBottom: SPACING.xl + 96 + keyboardInset }, useWideExcursionsSidebar && styles.contentInner]}
-                                >
-                                    {headerPlacement.headerInContentFlow ? questHeader : null}
-                                    {mainContent}
-                                    <View style={{ height: SPACING.xl }} />
-                                </ScrollView>
-                            </>
-                        )}
+                            <ScrollView
+                                key="quest-reading-scroll"
+                                ref={contentScrollRef}
+                                style={[
+                                    styles.content,
+                                    showDesktopSidebar ? styles.compactMainContent : headerPlacement.headerInContentFlow && styles.contentWithFlowHeader,
+                                ]}
+                                showsVerticalScrollIndicator={false}
+                                keyboardShouldPersistTaps="handled"
+                                onTouchStart={headerPlacement.onTouchBegin}
+                                onTouchEnd={headerPlacement.onTouchEnd}
+                                onTouchCancel={headerPlacement.onTouchEnd}
+                                onScrollBeginDrag={beginReadingScroll}
+                                onScrollEndDrag={headerPlacement.onScrollEnd}
+                                onMomentumScrollBegin={headerPlacement.onScrollBegin}
+                                onMomentumScrollEnd={headerPlacement.onScrollEnd}
+                                onScroll={handleReadingScroll}
+                                scrollEventThrottle={16}
+                                contentContainerStyle={[{ paddingBottom: SPACING.xl + 96 + keyboardInset }, useWideExcursionsSidebar && styles.contentInner]}
+                            >
+                                {!showDesktopSidebar && headerPlacement.headerInContentFlow ? questHeader : null}
+                                {mainContent}
+                                <View style={{ height: SPACING.xl }} />
+                            </ScrollView>
+                        </View>
                     </KeyboardAvoidingView>
                 </SafeAreaView>
                 <QuestFontScaleSheet visible={fontScaleSheetOpen} onClose={closeFontScaleSheet} />

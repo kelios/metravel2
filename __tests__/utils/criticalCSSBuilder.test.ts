@@ -164,6 +164,22 @@ describe('buildCriticalCSS: default context fallback matches responsive geometry
   })
 })
 
+describe('buildCriticalCSS: quest detail compact row matches first-frame ownership', () => {
+  const css = buildCriticalCSS()
+  it('suppresses branding through tablet widths and retains the 52px row fallback', () => {
+    const tail = css.slice(css.indexOf('@media (max-width:1279.98px){'))
+    const compact = tail.slice(0, tail.indexOf('\n}') + 2)
+    expect(compact).toContain('[data-header-brand="quest-compact-hidden"]{padding-bottom:0 !important;min-height:0 !important}')
+    expect(compact).toContain('[data-header-brand="quest-compact-hidden"] [data-header-inner="true"]{display:none !important}')
+    expect(css).toContain('[data-header-context-fallback="quest"]{height:52px !important;min-height:52px !important}')
+  })
+  it('does not add a second quest row above the wide desktop sidebar', () => {
+    const tail = css.slice(css.indexOf('@media (min-width:1280px){'))
+    const wide = tail.slice(0, tail.indexOf('\n}') + 2)
+    expect(wide).toContain('[data-header-context-fallback="quest"]{display:none !important;height:0 !important;min-height:0 !important}')
+  })
+})
+
 // #1334: `/places` до гидратации не знает ширину и рисует обе шапки каталога.
 // Выбор между ними делает только этот блок; без него компактная панель
 // появлялась после гидратации и опускала каталог на 115 px (CLS 0,537).

@@ -290,12 +290,13 @@ const responsiveFor = (width: number) => ({
 })
 
 /**
- * Карточка, п. 2: порог «телефон» у панели визарда и у строки экрана — один. Иначе
- * на какой-то ширине пропали бы и кнопки панели, и строка (или нарисовались бы
- * обе). Проба рендерит строку экрана и визардную модель на одной ширине.
+ * Панель и строка экрана согласуют владельца: native сохраняет телефонную
+ * границу, web-деталь использует строку до desktop. Иначе на какой-то ширине
+ * пропали бы обе группы действий или появились бы вместе. Проба рендерит
+ * строку экрана и визардную модель на одной ширине.
  */
-describe('один порог «телефон» у панели и строки экрана (#2148)', () => {
-  const WIDTHS = [320, 359, 390, 599, 600, 767, 768, 1024, 1279]
+describe('единый владелец панели и строки экрана (#2148)', () => {
+  const WIDTHS = [320, 359, 390, 599, 600, 767, 768, 1024, 1279, 1280, 1440]
 
   function ParityProbe({ out }: { out: { headerInScreenRow?: boolean } }) {
     out.headerInScreenRow = useQuestWizardResponsiveModel().headerInScreenRow
@@ -320,7 +321,8 @@ describe('один порог «телефон» у панели и строки
           </>,
         )
         expect([width, view.queryByTestId('screen-header-more') !== null]).toEqual([width, out.headerInScreenRow])
-        expect([width, out.headerInScreenRow]).toEqual([width, width < METRICS.breakpoints.tablet])
+        const screenRowBoundary = os === 'web' ? METRICS.breakpoints.desktop : METRICS.breakpoints.tablet
+        expect([width, out.headerInScreenRow]).toEqual([width, width < screenRowBoundary])
         view.unmount()
       }
     } finally {
@@ -331,9 +333,12 @@ describe('один порог «телефон» у панели и строки
 
 describe('quest short-height policy (#2198)', () => {
   const cases = [
-    [320, 640, true], [390, 640, true], [390, 839, true],
-    [390, 840, false], [390, 844, false],
-    [599, 640, true], [600, 640, false], [1440, 640, false],
+    // width, height, native phone flow, web compact flow
+    [320, 640, true, true], [390, 640, true, true], [390, 839, true, true],
+    [390, 840, false, false], [390, 844, false, false],
+    [599, 640, true, true], [600, 640, false, true], [768, 640, false, true],
+    [960, 640, false, true], [1024, 768, false, true], [1279, 640, false, true],
+    [1280, 640, false, false], [1440, 640, false, false],
   ] as const
 
   function PlacementProbe({ out }: { out: { flow?: boolean } }) {
@@ -344,11 +349,11 @@ describe('quest short-height policy (#2198)', () => {
   it.each(['web', 'android', 'ios'] as const)('%s uses the same layout-height boundary', (os) => {
     const platform = jest.replaceProperty(Platform, 'OS', os)
     try {
-      for (const [width, height, expected] of cases) {
+      for (const [width, height, nativeFlow, webFlow] of cases) {
         ;(global as any).__mockResponsive = { ...responsiveFor(width), height }
         const out: { flow?: boolean } = {}
         const view = render(<PlacementProbe out={out} />)
-        expect([width, height, out.flow]).toEqual([width, height, expected])
+        expect([width, height, out.flow]).toEqual([width, height, os === 'web' ? webFlow : nativeFlow])
         view.unmount()
       }
     } finally {

@@ -2,18 +2,18 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { Platform, type NativeScrollEvent, type NativeSyntheticEvent, type ScrollView, type View } from 'react-native'
 import { useResponsive } from '@/hooks/useResponsive'
 import { resolveHeaderContextBarIsMobile } from '@/components/layout/headerContextBarModel'
+import { resolveQuestHeaderPresentation } from '@/components/layout/questHeaderPresentation'
 
 export type QuestWizardResponsiveModel = {
   screenW: number
   screenH: number
   isMobile: boolean
   /**
-   * #2148: шапка квеста живёт в строке экрана (`HeaderContextBar` + декларация
-   * `useQuestScreenHeader`), а не в панели визарда. Тот же предикат, что у
-   * самой строки, — иначе на какой-то ширине пропали бы и кнопки, и строка.
+   * Shared quest policy: compact web and native phones use the screen row;
+   * wide web keeps its existing sidebar title/actions.
    */
   headerInScreenRow: boolean
-  /** Short layout window: navigation is the first child of the reading scroll. */
+  /** Short layout window: route/progress is the first child of the reading scroll. */
   headerInContentFlow: boolean
   isSmallScreen: boolean
   compactNav: boolean
@@ -66,10 +66,12 @@ export function useQuestWizardResponsiveModel() {
 
   return useMemo<QuestWizardResponsiveModel>(() => {
     const isSmallScreen = width < 360
-    const compactNav = width < 600
-    const headerInScreenRow = resolveHeaderContextBarIsMobile({ width, isPhone, isLargePhone })
+    const presentation = resolveQuestHeaderPresentation({
+      width, height, isWeb: Platform.OS === 'web',
+      nativeScreenRow: resolveHeaderContextBarIsMobile({ width, isPhone, isLargePhone }),
+    })
     const wideDesktop = width >= 1100
-    const compactDesktopLayout = Platform.OS === 'web' && width >= 1280
+    const { compactDesktopLayout } = presentation
     const useWideInlineLayout = wideDesktop
     const useWideExcursionsSidebar = wideDesktop && !compactDesktopLayout
 
@@ -81,12 +83,9 @@ export function useQuestWizardResponsiveModel() {
       screenW: width,
       screenH: height,
       isMobile,
-      headerInScreenRow,
-      headerInContentFlow: compactNav && headerInScreenRow && height < 840,
+      ...presentation,
       isSmallScreen,
-      compactNav,
       wideDesktop,
-      compactDesktopLayout,
       useWideInlineLayout,
       useWideExcursionsSidebar,
       sidebarWidth,
@@ -97,9 +96,10 @@ export function useQuestWizardResponsiveModel() {
 }
 
 
-type HeaderPlacement = Pick<QuestWizardResponsiveModel, 'headerInContentFlow' | 'compactNav'>
+type HeaderPlacement = Pick<QuestWizardResponsiveModel, 'headerInContentFlow' | 'compactNav' | 'compactDesktopLayout'>
 const samePlacement = (a: HeaderPlacement, b: HeaderPlacement) =>
-  a.headerInContentFlow === b.headerInContentFlow && a.compactNav === b.compactNav
+  a.headerInContentFlow === b.headerInContentFlow && a.compactNav === b.compactNav &&
+  a.compactDesktopLayout === b.compactDesktopLayout
 
 /** Wait until the gesture/scroll momentum settles, including browser-toolbar resizing. */
 const SCROLL_IDLE_MS = 120
@@ -143,6 +143,7 @@ export function useQuestHeaderPlacement(
   const [applied, setApplied] = useState<HeaderPlacement>(() => ({
     headerInContentFlow: desired.headerInContentFlow,
     compactNav: desired.compactNav,
+    compactDesktopLayout: desired.compactDesktopLayout,
   }))
   const [busy, setBusy] = useState({ sheet: false, input: false, scroll: false })
   const busyRef = useRef(busy)
@@ -266,7 +267,11 @@ export function useQuestHeaderPlacement(
     } else if (samePlacement(applied, desired)) {
       focusRoute()
     } else {
-      const next = { headerInContentFlow: desired.headerInContentFlow, compactNav: desired.compactNav }
+      const next = {
+        headerInContentFlow: desired.headerInContentFlow,
+        compactNav: desired.compactNav,
+        compactDesktopLayout: desired.compactDesktopLayout,
+      }
       measureReadingDepth(scroller, mainContentRef.current, (depth) => {
         if (!isCurrent() || isBusy() || !samePlacement(next, desiredRef.current)) return
         anchor.current = !stepChanged && depth !== null ? { depth, gesture: false } : null
@@ -274,7 +279,7 @@ export function useQuestHeaderPlacement(
       })
     }
     return () => { cancelled = true }
-  }, [applied, desired.headerInContentFlow, desired.compactNav, busy, keyboardInset, scrollRef, stepKey, stepChanged])
+  }, [applied, desired.headerInContentFlow, desired.compactNav, desired.compactDesktopLayout, busy, keyboardInset, scrollRef, stepKey, stepChanged])
 
   return { ...applied, mainContentRef, routeTriggerRef, onRouteSheetChange, onAnswerFocusChange, onContentScroll, onScrollBegin, onScrollEnd, onTouchBegin, onTouchEnd }
 }
