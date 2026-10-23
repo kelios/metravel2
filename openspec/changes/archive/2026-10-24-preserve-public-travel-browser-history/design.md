@@ -50,3 +50,14 @@ SEO: реальные hydrated title/canonical/main/OG/Twitter descriptions по
 | RU/BE/UK/PL/EN | localization impact none, новых строк нет | новая языковая матрица не требуется |
 
 Новый тест включён в `PRODUCTION_SMOKE_SPECS`, стандартный smoke путь. Текущий `travel-card-link-semantics.spec.ts` дополнительно выполняется локально в testing с живым local backend после обязательного sync. Ни browser, ни API QA не запускаются в code review.
+
+
+## Final acceptance — 24.10.2026
+
+Reviewed/deployed source `6b84b69156ec635be910eb4e48832c755b917aa8`: независимые review-auditor/code-review-gate PASS0, actual staged/prepush PASS без SKIPPED, source7suites/42PASS. Production06 strict5/5 PASS,31.705 с; local04 immutable6b84 existing semantics2/2 PASS,76.697 с со свежей стандартной сборкой. Workers1/retries0/skip0/flaky0; production console/page/network/writes0. A/B/C и mobile header Back B→Forward C, cross-tab/search canonical, catalog/modifier controls, metadata и59 CDP checkpoints приняты; четыре production и два local screenshots независимо просмотрены. After-provenance6718/6718 exact Git blobs, missing0/mismatch0 и шесть installed Expo/native hashes MATCH; local backend watchdog16 HTTP200/0fail.
+
+Evidence: `.codex-temp/task-2703/acceptance-prod-06/results.json` SHA256 `902adb27a5f5febe52c4cd0a18e6b25d31fda71529e1e249f191facfa7b718f2`, рядом `acceptance-notes.md`; `.codex-temp/task-2703/acceptance-local-04/results.json` SHA256 `3ead9b7015255f22ad77c6b3c5b500a417fc14aaba710e1efdc549dfe46e0416`, рядом `source-provenance-after.json` и `watchdog-summary.json`. Один canonical deploy exit0/exactSHA/readiness/health/SEO/media PASS за547 с, превышение бюджета300 с на247 с; log `.codex-temp/deploy/prod-6b84b6915-20261023T225717Z.log`. Процесс не дублировался.
+
+RAW03/RAW04/RAW05 остаются историческими FAIL. Новый runtime PASS не выдаётся за наблюдение прежних внутренних callback branches/writer stack. #2702 остаётся отдельной задачей. Финальный closeout меняет registry/specs/archive; app/dependency/native inputs сохраняются равными принятому6b84.
+
+Общая `openspec validate --all --strict` выполнена:71PASS/1FAIL — прежняя `persist-planned-trip-original-route-file` не содержит delta specs; оба её файла byte-identical принятому6b84. Собственная change и все main specs strict PASS; чужой незавершённый proposal не менялся. Следующий check владельца #1496: добавить intended delta (либо корректное intentional no-spec declaration, если scope действительно изменился), затем повторить --all. Raw global FAIL и diagnostic сохранены в `.codex-temp/2703/final-docs-prepared/` и не объявлены global PASS.
