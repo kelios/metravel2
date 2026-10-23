@@ -5,11 +5,46 @@
  * `utils/consent.ts` и пресеты вьюпортов 320/390/1440.
  */
 jest.mock('playwright', () => ({ chromium: {}, request: {} }));
+jest.mock('@playwright/test', () => ({ request: {} }));
+jest.mock('../../scripts/e2e-env-files', () => ({ applyEnvFile: jest.fn() }));
 
 const probe = require('../../e2e/prod-probe/prodProbe');
+const { identity } = require('../../e2e/prod-probe/travelEditorFixtures');
 
 const BASE = 'https://metravel.by';
 const NOW = Date.UTC(2026, 8, 23, 12, 0, 0);
+
+describe('openProdProbe relative request consumers (#2702)', () => {
+  it.each(['https://metravel.by', 'http://127.0.0.1:8085'])('binds browser-context requests to %s while preserving absolute URLs and context options', async baseUrl => {
+    const requests: string[] = [];
+    const response = { ok: () => true, status: () => 200, json: async () => ({ id: 104, is_superuser: true }) };
+    const page = { goto: jest.fn(async () => response), waitForLoadState: jest.fn(async () => undefined) };
+    const context = { request: { get: jest.fn() }, addInitScript: jest.fn(), newPage: jest.fn(async () => page) };
+    const browser = { newContext: jest.fn(async (options: { baseURL?: string }) => {
+      context.request.get.mockImplementation(async (url: string) => {
+        requests.push(new URL(url, options.baseURL).href);
+        return response;
+      });
+      return context;
+    }), close: jest.fn() };
+    require('playwright').chromium.launch = jest.fn(async () => browser);
+    const storageState = { cookies: [{ name: 'authToken', value: 'unit-cookie', domain: new URL(baseUrl).hostname }], origins: [] };
+    // Constructor wiring only: no real session, browser or network is created.
+    const handle = await probe.openProdProbe({ baseUrl, auth: false, viewport: 'mobile',
+      contextOptions: { storageState, hasTouch: true, userAgent: 'unit-mobile-agent' } });
+    try {
+      await expect(identity(handle.context.request, 104, true)).resolves.toEqual({ id: 104, is_superuser: true });
+      await handle.context.request.get('https://static.example.test/asset');
+      expect(requests).toEqual([`${baseUrl}/api/user/me/`, 'https://static.example.test/asset']);
+      expect(browser.newContext).toHaveBeenCalledWith({ baseURL: baseUrl, viewport: { width: 390, height: 844 },
+        storageState, hasTouch: true, userAgent: 'unit-mobile-agent' });
+      await handle.goto('/search');
+      expect(page.goto).toHaveBeenCalledWith(`${baseUrl}/search`, { waitUntil: 'domcontentloaded' });
+      expect(context.addInitScript).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining({ key: probe.CONSENT_KEY }));
+    } finally { await handle.close(); }
+    expect(browser.close).toHaveBeenCalledTimes(1);
+  });
+});
 
 const stateWith = (overrides: { expires?: number; userId?: string; domain?: string; origin?: string } = {}) => ({
   cookies: [

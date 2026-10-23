@@ -93,6 +93,7 @@ describe('editor diagnostic observation and owned-fixture boundaries', () => {
     const batch = { reg: { origin } }
     await expect(openRoleContext(browser, batch, 'guest', 390)).resolves.toEqual({ context, page })
     expect(browser.newContext).toHaveBeenLastCalledWith(expect.objectContaining({
+      baseURL: origin,
       viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3, userAgent: 'unit-mobile-agent',
       storageState: { cookies: [], origins: [] },
     }))
@@ -101,6 +102,22 @@ describe('editor diagnostic observation and owned-fixture boundaries', () => {
       viewport: { width: 1440, height: 900 }, hasTouch: false, isMobile: false, deviceScaleFactor: 1,
     }))
     expect(browser.newContext.mock.calls[1][0]).not.toHaveProperty('userAgent')
+  })
+
+  it.each(['https://metravel.by', 'http://127.0.0.1:8085'])('uses the role context baseURL for its actual relative identity GET on %s', async baseURL => {
+    const requests: string[] = []
+    const context = { request: { get: jest.fn() }, addInitScript: jest.fn(), newPage: jest.fn(async () => ({})) }
+    const browser = { newContext: jest.fn(async (options: { baseURL?: string }) => {
+      context.request.get.mockImplementation(async (url: string) => {
+        requests.push(new URL(url, options.baseURL).href)
+        return { ok: () => true, status: () => 200, json: async () => ({ id: 900, is_superuser: false }) }
+      })
+      return context
+    }) }
+    const batch = { reg: { origin: baseURL, accounts: { author: { id: 900 } } }, stateFile: () => 'owned-unit.storage.json' }
+    await expect(openRoleContext(browser, batch, 'author', 1440)).resolves.toEqual({ context, page: {} })
+    expect(requests).toEqual([`${baseURL}/api/user/me/`])
+    expect(browser.newContext).toHaveBeenCalledWith(expect.objectContaining({ baseURL, storageState: 'owned-unit.storage.json' }))
   })
 
   it('uses real canonical commands without echoing readonly history, and validates rejection bounds', () => {

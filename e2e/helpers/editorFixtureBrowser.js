@@ -90,7 +90,7 @@ function observeReadOnly(context, reg, expected404 = []) {
   }
 }
 async function openRoleContext(browser, batch, role, width) {
-  const options = { viewport: { width, height: width === 390 ? 844 : 900 }, hasTouch: width === 390, isMobile: width === 390, deviceScaleFactor: width === 390 ? 3 : 1,
+  const options = { baseURL: batch.reg.origin, viewport: { width, height: width === 390 ? 844 : 900 }, hasTouch: width === 390, isMobile: width === 390, deviceScaleFactor: width === 390 ? 3 : 1,
     ...(width === 390 ? { userAgent: devices['Pixel 7'].userAgent } : {}),
     locale: 'ru-RU', storageState: role === 'guest' ? { cookies: [], origins: [] } : role === 'admin' ? await batch.admin.context.storageState() : batch.stateFile(role) }
   const context = await browser.newContext(options)

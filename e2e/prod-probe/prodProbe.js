@@ -246,6 +246,7 @@ async function openProdProbe(options = {}) {
     const session = auth ? await ensureProbeSession({ browser, baseUrl, fresh }) : null
     const context = await browser.newContext({
       ...contextOptions,
+      baseURL: baseUrl,
       viewport: resolveViewport(viewport),
       ...(session ? { storageState: session.file } : {}),
     })
