@@ -2,7 +2,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 const { once } = require('node:events');
@@ -247,54 +246,10 @@ test('CDP discovery rejects ambiguous maps and closes every discovered connectio
   }
 });
 
-test('LLDB setup, stop and detach failures retain negative receipts with a fake debugger', () => {
-  const temporary = fs.mkdtempSync(path.resolve(__dirname, '../../.codex-temp/native-map-unit-'));
-  try {
-    execFileSync('python3', ['-c', `
-import json, pathlib, runpy, sys, types
-root = pathlib.Path(sys.argv[1])
-for mode in ['wrong-abi', 'missing-breakpoint', 'stop-failure', 'detach-failure', 'success']:
-    directory = root / mode
-    directory.mkdir()
-    class Error:
-        def __init__(self, fail=False): self.fail = fail
-        def Fail(self): return self.fail
-        def Success(self): return not self.fail
-    class Process:
-        detached = False
-        def GetBroadcaster(self): return None
-        def Continue(self): return Error()
-        def GetState(self): return 1
-        def Stop(self): return Error(mode == 'stop-failure')
-        def Detach(self): self.detached = True; return Error(mode == 'detach-failure')
-    class Breakpoint:
-        def GetNumLocations(self): return 0 if mode == 'missing-breakpoint' else 1
-        def SetScriptCallbackFunction(self, name): pass
-        def GetID(self): return 1
-    process = Process()
-    target = types.SimpleNamespace(GetProcess=lambda: process,
-        GetTriple=lambda: 'x86_64' if mode == 'wrong-abi' else 'arm64-apple-ios',
-        BreakpointCreateByName=lambda name: Breakpoint(), BreakpointDelete=lambda number: True)
-    sys.modules['lldb'] = types.SimpleNamespace(debugger=types.SimpleNamespace(
-        GetSelectedTarget=lambda: target, SetAsync=lambda flag: None),
-        SBListener=lambda name: types.SimpleNamespace(StartListeningForEvents=lambda *args: None),
-        SBProcess=types.SimpleNamespace(eBroadcastBitStateChanged=1), eStateRunning=1)
-    config = dict(output=str(directory / 'samples'), ready=str(directory / 'ready'),
-        finished=str(directory / 'finished'), seconds=0, nonce='unit', script='', stop=str(directory / 'stop'))
-    config_path = directory / 'config'
-    config_path.write_text(json.dumps(config))
-    probe = runpy.run_path(sys.argv[2])
-    try:
-        probe['run'](str(config_path))
-        assert mode == 'success', mode
-    except RuntimeError:
-        assert mode != 'success', mode
-    assert process.detached, mode
-    receipt = json.loads((directory / 'finished').read_text())
-    assert receipt['detached'] == (mode != 'detach-failure'), mode
-    assert receipt['completed'] == (mode in ['detach-failure', 'success']), mode
-`, temporary, path.join(__dirname, 'lldb_probe.py')], { timeout: 5000 });
-  } finally {
-    fs.rmSync(temporary, { recursive: true, force: true });
-  }
+test('LLDB exact-entry ABI, frozen pointers and failure receipts with a fake debugger', context => {
+  const output = execFileSync('python3', ['-B', path.join(__dirname, 'lldb_probe_test.py')], {
+    encoding: 'utf8', timeout: 10000,
+  });
+  assert.match(output, /Ran [1-9]\d* tests/);
+  context.diagnostic(output.trim());
 });

@@ -20,10 +20,12 @@ The owner approved the complete current dataset for #2471/#2483 on 2026-10-18
 The snapshot defines the exact expected set; its count is not hardcoded.
 
 Acceptance of #2483 requires the reviewed `UserPointsMap.pointsOnly` wiring and
-native dataset guard in the code actually running on the target. The previously
-installed iOS Release **1.0.5(14)** predates that fix: build and install a new
-local candidate from the reviewed source, then verify its bundled JavaScript
-provenance. Changing `--source` cannot update an installed application. For the
+native dataset guard in the code actually running on the target. Version/build
+alone cannot establish whether an installed iOS Release **1.0.5(14)** includes
+that fix: both older and reviewed candidates can share those values. Compare
+the installed executable and bundled JavaScript with the reviewed source and
+candidate stamp; rebuild/install only after a confirmed provenance mismatch.
+Changing `--source` cannot update an installed application. For the
 Android dev-client, separately verify that its loaded JavaScript bundle contains
 the reviewed fix; installed binary version/build alone does not identify that
 bundle. Store build/upload authorization remains separate from this scenario.
@@ -81,13 +83,20 @@ do not provide pinch; use the tester's qualified native gesture driver.
 
 On iOS this uses the previously exercised arm64 Objective-C callback
 `-[RNCWebViewImpl userContentController:didReceiveScriptMessage:]`. LLDB must
-attach to that exact app PID and resolve exactly one callback. The observer
-reads `$x3`'s script-message body and schedules JavaScript on `$x0.webView`;
+attach to that exact app PID and resolve exactly one loaded callback symbol.
+The address breakpoint must stop at its exact entry: a name breakpoint can skip
+the optimized prologue, where the argument registers no longer have their entry
+meaning. The observer freezes numeric `$x0`/`$x3` pointers before evaluating the
+message body or scheduling JavaScript on the captured receiver's WebView;
 only nonce-matched QA snapshots are saved, never other bridge messages. This
 ABI is deliberately unsupported on x86_64 or a changed native WebView driver.
 The runner checks installed version/build and binds the supplied PID to the
 selected booted simulator's `launchctl` MeTravel process before attaching.
 An attach/evaluate failure is operational failure, not application pass.
+Attach before the prepared native My Points list → Map entry opens a fresh map
+and emits `READY`. Attaching to an already open, quiet map does not bootstrap
+the observer; `attached` alone is not telemetry readiness. Evaluation failures
+stop without retry, with phase and numeric LLDB error diagnostics.
 
 On Android qualify the **dev-client** WebView debugging endpoint first. The
 installed `react-native-webview` manager enables WebView debugging for a debug

@@ -5,18 +5,55 @@ import time
 import lldb
 
 _probe = None
+CALLBACK_NAME = '-[RNCWebViewImpl userContentController:didReceiveScriptMessage:]'
+
+
+def callback_entry(target):
+    symbols = target.FindSymbols(CALLBACK_NAME, lldb.eSymbolTypeCode)
+    if symbols.GetSize() != 1:
+        raise RuntimeError('Exactly one RNCWebViewImpl callback symbol is required')
+    symbol = symbols.GetContextAtIndex(0).GetSymbol()
+    if not symbol.IsValid():
+        raise RuntimeError('Invalid RNCWebViewImpl callback symbol')
+    entry = symbol.GetStartAddress().GetLoadAddress(target)
+    if entry in (0, lldb.LLDB_INVALID_ADDRESS):
+        raise RuntimeError('RNCWebViewImpl callback entry is not loaded')
+    return entry
+
+
+def evaluate(frame, probe, expression, phase):
+    probe['phase'] = phase
+    result = frame.EvaluateExpression(expression)
+    error = result.GetError()
+    if error.Fail():
+        # GetCString() can contain the evaluated script or unrelated bridge data.
+        # Record the failing operation and LLDB's numeric error, never its body.
+        probe['error'] = '%s failed (LLDB type=%s code=%s)' % (phase, error.GetType(), error.GetError())
+        return None
+    return result
 
 
 def callback(frame, _location, _extra, _internal):
     probe = _probe
     if probe is None:
         return False
-    body = frame.EvaluateExpression('(id)[(id)$x3 body]')
-    if body.GetError().Fail():
-        probe['error'] = 'Cannot read the arm64 WKScriptMessage body'
+    if probe['error']:
+        return True
+    probe['phase'] = 'callback-entry'
+    if frame.GetPC() != probe['entry']:
+        probe['error'] = 'callback-entry: PC is not the qualified symbol start'
+        return True
+    # Name breakpoints skip the optimized prologue, where x0 is already message,
+    # not self. Even at exact entry, expression calls may change live registers.
+    receiver = frame.FindRegister('x0').GetValueAsUnsigned(lldb.LLDB_INVALID_ADDRESS)
+    message = frame.FindRegister('x3').GetValueAsUnsigned(lldb.LLDB_INVALID_ADDRESS)
+    if receiver in (0, lldb.LLDB_INVALID_ADDRESS) or message in (0, lldb.LLDB_INVALID_ADDRESS):
+        probe['error'] = 'callback-entry: invalid self/message pointers'
+        return True
+    body = evaluate(frame, probe, '(id)[(id)0x%x body]' % message, 'message-body')
+    if body is None:
         return True
     raw = body.GetObjectDescription() or ''
-    receiver = frame.FindRegister('x0').GetValue()
     try:
         payload = json.loads(raw)
     except (ValueError, TypeError):
@@ -32,20 +69,22 @@ def callback(frame, _location, _extra, _internal):
         return False
     if payload.get('type') == 'METRAVEL_QA_MAP_SNAPSHOT' and payload.get('nonce') == probe['nonce']:
         if os.path.exists(probe['stop']):
-            result = frame.EvaluateExpression('(void)[(id)[(id)$x0 valueForKey:@"webView"] evaluateJavaScript:@"window.__metravelQaMapObserver && window.__metravelQaMapObserver.stop()" completionHandler:nil]')
-            probe['cleaned'] = result.GetError().Success()
+            result = evaluate(frame, probe, '(void)[(id)[(id)0x%x valueForKey:@"webView"] evaluateJavaScript:@"window.__metravelQaMapObserver && window.__metravelQaMapObserver.stop()" completionHandler:nil]' % receiver, 'observer-stop')
+            if result is None:
+                return True
+            probe['cleaned'] = True
             return False
         probe['stream'].write(json.dumps(payload) + '\n')
         probe['stream'].flush()
         probe['sampled'] = True
-    elif not probe['sampled'] and time.monotonic() - probe['injected_at'] > 1:
+    elif not probe['sampled'] and not probe['injected_at']:
         # Scheduling evaluateJavaScript with no completion handler leaves the main
         # thread free. The actual snapshot returns through this same breakpoint.
+        # A missing sample is not permission to repeat the same injection; only
+        # a new receiver/READY above establishes a new bootstrap precondition.
         script = probe['script']
-        expression = '(void)[(id)[(id)$x0 valueForKey:@"webView"] evaluateJavaScript:@%s completionHandler:nil]' % json.dumps(script)
-        result = frame.EvaluateExpression(expression)
-        if result.GetError().Fail():
-            probe['error'] = 'WKWebView evaluateJavaScript unavailable'
+        expression = '(void)[(id)[(id)0x%x valueForKey:@"webView"] evaluateJavaScript:@%s completionHandler:nil]' % (receiver, json.dumps(script))
+        if evaluate(frame, probe, expression, 'observer-inject') is None:
             return True
         probe['injected_at'] = time.monotonic()
     return False
@@ -60,17 +99,21 @@ def run(config_path):
     breakpoint = None
     stream = None
     completed = False
+    failure = None
     try:
         if 'arm64' not in (target.GetTriple() or ''):
             raise RuntimeError('Only the qualified iOS arm64 callback ABI is supported')
         listener = lldb.SBListener('metravel-map-probe')
         listener.StartListeningForEvents(process.GetBroadcaster(), lldb.SBProcess.eBroadcastBitStateChanged)
-        breakpoint = target.BreakpointCreateByName('-[RNCWebViewImpl userContentController:didReceiveScriptMessage:]')
-        if breakpoint.GetNumLocations() != 1:
-            raise RuntimeError('Exactly one RNCWebViewImpl callback is required')
+        entry = callback_entry(target)
+        breakpoint = target.BreakpointCreateByAddress(entry)
+        if (breakpoint.GetNumLocations() != 1 or
+                breakpoint.GetLocationAtIndex(0).GetAddress().GetLoadAddress(target) != entry):
+            raise RuntimeError('Observer breakpoint must resolve to the exact callback entry')
         descriptor = os.open(config['output'], os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         stream = os.fdopen(descriptor, 'w', encoding='utf-8')
-        _probe = dict(config, stream=stream, sampled=False, injected_at=0, error=None, receiver=None, cleaned=False)
+        _probe = dict(config, entry=entry, stream=stream, sampled=False, injected_at=0,
+                      error=None, phase='attached', receiver=None, cleaned=False)
         breakpoint.SetScriptCallbackFunction(__name__ + '.callback')
         lldb.debugger.SetAsync(True)
         error = process.Continue()
@@ -93,25 +136,34 @@ def run(config_path):
                     raise RuntimeError('Application left the attached running state')
                 if state == lldb.eStateStopped and not lldb.SBProcess.GetRestartedFromEvent(event):
                     raise RuntimeError(_probe['error'] or 'Unexpected debugger stop')
+        if _probe['error']:
+            raise RuntimeError(_probe['error'])
         completed = True
+    except RuntimeError as error:
+        failure = str(error)
+        raise
     finally:
         cleanup_ok = True
         try:
             if process.GetState() == lldb.eStateRunning and process.Stop().Fail():
                 cleanup_ok = False
-                raise RuntimeError('Cannot stop debugger for safe detach')
+                failure = failure or 'Cannot stop debugger for safe detach'
+                raise RuntimeError(failure)
             if breakpoint is not None and not target.BreakpointDelete(breakpoint.GetID()):
                 cleanup_ok = False
-                raise RuntimeError('Cannot delete observer breakpoint')
+                failure = failure or 'Cannot delete observer breakpoint'
+                raise RuntimeError(failure)
         finally:
             # A failed Stop/breakpoint cleanup must still attempt detach.
             error = process.Detach()  # Detach resumes a stopped application.
             if stream is not None:
                 stream.close()
+            phase = _probe['phase'] if _probe else 'setup'
             _probe = None
             # LLDB's `script` command can print an exception yet exit zero.
             # The parent must require this positive receipt, not only exitCode.
             with open(config['finished'], 'x', encoding='utf-8') as receipt:
-                json.dump({'completed': completed and cleanup_ok, 'detached': error.Success()}, receipt)
+                json.dump({'completed': completed and cleanup_ok, 'detached': error.Success(),
+                           'phase': phase, 'error': failure or ('LLDB detach failed' if error.Fail() else None)}, receipt)
             if error.Fail():
                 raise RuntimeError('LLDB detach failed; verify target process before reuse')
