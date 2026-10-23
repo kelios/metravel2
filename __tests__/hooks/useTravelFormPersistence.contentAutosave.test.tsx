@@ -105,7 +105,6 @@ function setupPersistence(
     suppressAutosaveErrorToastRef: makeRef(false),
     pendingBaselineRef: makeRef(null),
     serverTextBaselineRef: makeRef(null),
-    didInvalidateAfterCreateRef: makeRef(false),
     updateBaselineRef: makeRef(jest.fn()),
     rehydrateMarkerIdsFromServer: jest.fn().mockResolvedValue(null),
     uploadPendingMarkerImages: jest.fn().mockResolvedValue(undefined),

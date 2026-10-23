@@ -2,7 +2,12 @@
 // скачивал весь каталог автора страницами. Вкладка обязана обходиться одним
 // запросом своего среза, а повторное открытие — нулём.
 
-import { act, renderHook } from '@testing-library/react-native';
+import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, renderHook as renderQueryHook, waitFor } from '@testing-library/react-native';
+
+jest.mock('@/hooks/useQueryOwner', () => ({ useQueryOwner: () => 'u-1' }));
+jest.mock('@/stores/authStore', () => ({ useAuthStore: { getState: () => ({ isAuthenticated: Boolean('u-1'), userId: 'u-1' }) } }));
 
 jest.mock('@/api/travelsApi', () => ({
   fetchMyTravels: jest.fn(),
@@ -22,6 +27,7 @@ import { deleteTravel, fetchMyTravels } from '@/api/travelsApi';
 import { useProfileTravelTabList } from '@/components/screens/profile/useProfileTravelTabList';
 import type { UseMyTravelsResult } from '@/hooks/useMyTravels';
 import { confirmAction } from '@/utils/confirmAction';
+import { invalidateTravelCollections } from '@/utils/travelQueryInvalidation';
 
 const mockFetchMyTravels = fetchMyTravels as jest.MockedFunction<typeof fetchMyTravels>;
 const mockDeleteTravel = deleteTravel as jest.MockedFunction<typeof deleteTravel>;
@@ -165,4 +171,65 @@ describe('useProfileTravelTabList', () => {
     expect(mockDeleteTravel).not.toHaveBeenCalled();
     expect(onAfterRemove).not.toHaveBeenCalled();
   });
+
+  it('подтверждённая смена статуса обновляет уже посещённые вкладки до возврата на них', async () => {
+    let published = false;
+    mockFetchMyTravels.mockImplementation(async params => {
+      const isPublished = params.publicationStatus?.includes('published');
+      return page(isPublished === published ? [10] : [], isPublished === published ? 1 : 0, published ? 'published' : 'draft') as any;
+    });
+    const { result, rerender } = renderTabList('draftTravels', createAllTravels());
+    await waitFor(() => expect(result.current.travels.map(t => t.id)).toEqual([10]));
+    rerender({ tab: 'publishedTravels' });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.travels).toEqual([]);
+    rerender({ tab: 'travels' });
+    published = true;
+    await act(async () => { await invalidateTravelCollections([...queryClients].at(-1)!, 'u-1'); });
+    const readsAfterInvalidation = mockFetchMyTravels.mock.calls.length;
+    rerender({ tab: 'draftTravels' });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.travels).toEqual([]);
+    rerender({ tab: 'publishedTravels' });
+    await waitFor(() => expect(result.current.travels.map(t => t.id)).toEqual([10]));
+    expect(result.current.travels[0].publication_status).toBe('published');
+    // Returning is cache use, not a compensating reload that hides stale data.
+    expect(mockFetchMyTravels).toHaveBeenCalledTimes(readsAfterInvalidation);
+  });
+
+  it('инвалидация посещённого среза не загружает ещё не открытую вкладку', async () => {
+    let status = 'draft';
+    mockFetchMyTravels.mockImplementation(async params => {
+      const selected = params.publicationStatus?.includes(status);
+      return page(selected ? [10] : [], selected ? 1 : 0, status) as any;
+    });
+    const { result, rerender } = renderTabList('draftTravels', createAllTravels());
+    await waitFor(() => expect(result.current.travels).toHaveLength(1));
+    status = 'published';
+    await act(async () => { await invalidateTravelCollections([...queryClients].at(-1)!, 'u-1'); });
+    expect(result.current.travels).toEqual([]);
+    expect(mockFetchMyTravels.mock.calls.filter(([p]) => p.publicationStatus?.includes('published'))).toHaveLength(0);
+    rerender({ tab: 'publishedTravels' });
+    await waitFor(() => expect(result.current.travels.map(t => t.id)).toEqual([10]));
+    expect(result.current.travels[0].publication_status).toBe('published');
+    expect(mockFetchMyTravels.mock.calls.filter(([p]) => p.publicationStatus?.includes('published'))).toHaveLength(1);
+  });
+});
+
+
+// Isolated real QueryClient: cache lifecycle is part of the hook contract.
+const queryClients = new Set<QueryClient>();
+const renderHook: typeof renderQueryHook = (callback, options) => {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: Infinity, staleTime: 300_000 } },
+  });
+  queryClients.add(client);
+  const wrapper = ({ children }: React.PropsWithChildren) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  );
+  return renderQueryHook(callback, { ...options, wrapper });
+};
+afterEach(() => {
+  for (const client of queryClients) client.clear();
+  queryClients.clear();
 });

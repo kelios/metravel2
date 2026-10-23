@@ -289,7 +289,6 @@ interface UseTravelFormPersistenceParams {
   // (выставляется при загрузке и после каждого успешного сохранения). Источник для guard'а
   // «анти-потеря текста» при ручном сохранении существующей статьи.
   serverTextBaselineRef: MutableRefObject<RichTextSnapshot | null>;
-  didInvalidateAfterCreateRef: MutableRefObject<boolean>;
   updateBaselineRef: MutableRefObject<((data: TravelFormData) => void) | null>;
   rehydrateMarkerIdsFromServer: (
     travelId: number | null,
@@ -321,7 +320,6 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
     suppressAutosaveErrorToastRef,
     pendingBaselineRef,
     serverTextBaselineRef,
-    didInvalidateAfterCreateRef,
     updateBaselineRef,
     rehydrateMarkerIdsFromServer,
     uploadPendingMarkerImages,
@@ -339,6 +337,13 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
   const activeAutosaveRef = useRef<Promise<TravelFormData> | null>(null);
   const appliedAutosaveRef = useRef<TravelFormData | null>(null);
   const confirmedSaveBaselineRef = useRef<TravelFormData | null>(null);
+  // The confirmed form response is applied immediately. Only navigation-facing
+  // manual saves wait for this write's collection reads to settle.
+  const collectionRefreshRef = useRef<Promise<void>>(Promise.resolve());
+  const refreshConfirmedCollections = useCallback(() => {
+    const refresh = invalidateTravelCollections(queryClient, userId).catch(() => undefined);
+    collectionRefreshRef.current = refresh;
+  }, [queryClient, userId]);
 
   // Итог последнего узкого сохранения (#1516). onSuccess движка получает только
   // возвращённое значение, а узкий ответ — это подтверждение текста, а не статья
@@ -446,9 +451,10 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         mergedData.slug,
       );
 
+      refreshConfirmedCollections();
       return result;
     });
-  }, [queryClient, stableTravelId, mountedRef, saveAbortControllerRef]);
+  }, [queryClient, stableTravelId, mountedRef, saveAbortControllerRef, refreshConfirmedCollections]);
 
   /**
    * Узкий путь фонового сохранения (#1516): уходят только изменившиеся текстовые
@@ -488,9 +494,10 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         previousSlug,
       );
 
+      refreshConfirmedCollections();
       return response;
     });
-  }, [queryClient, mountedRef, saveAbortControllerRef]);
+  }, [queryClient, mountedRef, saveAbortControllerRef, refreshConfirmedCollections]);
 
   const applySavedData = useCallback(
     (
@@ -673,21 +680,12 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         await uploadPendingMarkerImages(markersForUpload);
       })();
 
-      // When a new travel is created and receives an id, invalidate "travels" lists
-      // so "Мои путешествия" can show the new draft without a hard refresh.
-      if (!hadId && hasId && !didInvalidateAfterCreateRef.current) {
-        didInvalidateAfterCreateRef.current = true;
-        void invalidateTravelCollections(queryClient, userId);
-      }
     },
     [
       formState,
-      queryClient,
       rehydrateMarkerIdsFromServer,
       stableTravelId,
       uploadPendingMarkerImages,
-      userId,
-      didInvalidateAfterCreateRef,
       formDataRef,
       mountedRef,
       pendingBaselineRef,
@@ -951,11 +949,13 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         const intent = options?.intent ?? 'save';
         // Если пришли извне готовые данные — сохраняем напрямую, минуя отложенный стейт.
         const savedData = await cleanAndSave(toSave, { ...options, intent });
+        const confirmedCollectionsRefresh = collectionRefreshRef.current;
         const normalizedSavedData = normalizeDraftPlaceholders(savedData);
         applySavedData(normalizedSavedData, toSave as TravelFormData, {
           preserveEditingState: true,
         });
         autosaveCancelPendingRef.current?.();
+        await confirmedCollectionsRefresh;
         if (!dataOverride) {
           showToast(i18nT('shared:hooks.useTravelFormPersistence.sohraneno_6f40d98d'));
         }

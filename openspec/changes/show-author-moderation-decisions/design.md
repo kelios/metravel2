@@ -36,7 +36,7 @@ Rejected alternative: inline full-length reasons in grid cards. Arbitrary modera
 
 ### 3. Use explicit visibility context, not field presence
 
-Only authored profile tabs and `/metravel` callers explicitly opt in to feedback; viewer id must also match a record owner id. Neither general `canEdit` nor superuser alone enables it in a list. The editor already verifies owner/superuser edit access; retain that boundary. Public profiles/catalogs must not render private reasons even if a test or stray response includes them. Reset sheet/expansion state on article/context change and do not cache feedback separately. Add canonical status, legacy publish/moderation flags, and all three decision fields to the existing RenderTravelItem memo comparison, so old API fallback updates too. No extra requests or token/auth changes.
+Only authored profile tabs and `/metravel` callers explicitly opt in to feedback; viewer id must also match a record owner id. Neither general `canEdit` nor superuser alone enables it in a list. The editor already verifies owner/superuser edit access; retain that boundary. Public profiles/catalogs must not render private reasons even if a test or stray response includes them. Reset sheet/expansion state on article/context change and do not cache feedback separately. Add canonical status, legacy publish/moderation flags, and all three decision fields to the existing RenderTravelItem memo comparison, so old API fallback updates too. No feedback-specific requests or token/auth changes.
 
 ### 4. Historical data is read-only
 
@@ -46,13 +46,29 @@ The full/partial boundary is the known request path, not a guess based on object
 
 ### 5. Localization and access
 
-Use a common travel key family for rejected/reason/full reason/correction/date/a11y and reuse canonical existing labels. Add each new key to RU/BE/UK/PL/EN. Use reactive translation and `i18n/format.ts` only after validating the optional date. Never translate/sanitize into HTML the moderator's plain text. No SEO/canonical/SSG, external-link, analytics, auth storage or OS-specific changes; no new package or requests.
+Use a common travel key family for rejected/reason/full reason/correction/date/a11y and reuse canonical existing labels. Add each new key to RU/BE/UK/PL/EN. Use reactive translation and `i18n/format.ts` only after validating the optional date. Never translate/sanitize into HTML the moderator's plain text. No SEO/canonical/SSG, external-link, analytics, auth storage or OS-specific changes; no new package or endpoint.
 
 ### 6. Card hover follows the DOM across portal boundaries
 
 Production acceptance found a wrapper retaining its 1.02 hover transform after the reason Modal closed with the pointer outside the card; intrinsic layout stayed unchanged. The React enter/leave boundary includes logical portal descendants, so React hover state is unsuitable for this DOM-only effect. Keep the existing wrapper as the single lift owner for the article anchor, hoisted actions, and feedback, but use the canonical `dataSet` plus `app/global.css` hover channel for fine pointers. Supply the existing shared transform token through a CSS custom property rather than duplicating lift values. Native and mobile layouts retain their existing behavior.
 
 Reject a reason-specific `onClose` reset: other portaled controls would retain the same failure mechanism. Reuse the existing global CSS channel instead of adding per-card listeners or observers. A DOM regression must exercise the actual React portal boundary and verify marker/token propagation; deployed browser evidence must additionally prove positive lift, action alignment, and automatic resting bounds after dismissal without a corrective enter/leave gesture.
+
+### 7. Confirmed writes refresh every existing author collection
+
+Actual production run15 on `80e33d668491930bfda38fb82d4c06584f035a15` confirmed ordinary PUT/PATCH, failed-write retry and explicit resubmit: the server returned pending with all three historical fields cleared. The already-mounted own list still displayed the original rejected whole DTO. Existing saves invalidated only singular detail keys; collection invalidation was create-only, while lists intentionally disable mount/focus refetch during their five-minute freshness window. Profile author grids additionally kept server rows in local `useMyTravels` state with one-shot load guards.
+
+Reuse `invalidateTravelCollections` after each confirmed full/content write. Start all existing collection/counter invalidations together, keep old/new/numeric detail invalidation, and apply the confirmed form ID/status/slug baseline immediately. Manual save captures and awaits its write's collection-refresh promise before resolving to a navigating caller. Failed writes do not invalidate. Failed or paused follow-up GETs remain collection errors and never become fake failed writes or restore confirmed moderation history.
+
+Move the three profile `useMyTravels` server collections to genuine infinite queries under the existing `travels` root, keyed by viewer/session, target author, private/public mode, page size and canonical status filter. Preserve its public load/loadMore/remove API, first-page counts and summaries, pagination and existing error/toast copy. Initial unvisited tabs stay disabled; after first load, their observers remain enabled while mounted so common invalidation reaches warm slices. Preserve the existing Draft filter containing both draft and pending_review. Do not bridge identities with previous-data placeholders or inject a private DTO into public queries.
+
+A paused invalidated collection cannot present its stale rejected row as current truth; reuse existing loading/error/retry presentation. Optimistic removal and rollback target only the captured existing query and live scope. A later authoritative GET wins even when structural sharing preserves the optimistic object reference: rollback also requires the captured query dataUpdateCount to remain unchanged. Test real QueryClient state, membership, cancellation, late identity/removal responses and equal-data server refreshes.
+
+The shared author-block guard also consumes the new infinite-query shape. Pagination must use its existing servedPageLength/blockHiddenCount helpers: a page emptied by hiding a blocked coauthor is not a server terminal page, cumulative hidden rows must leave the displayed total, and the existing guard must be able to advance to later visible rows without an extra terminal request. If automatic advance fails or pauses while no rows are visible, expose the existing retry/offline state rather than a false empty result; a genuine empty server page still terminates. Cover real guard installation, block/unblock, cumulative totals, server-empty termination, automatic503/retry and reconnect.
+
+Authenticated server reads filter blocked authors before pagination/counting, but the client guard can apply a newer policy to an older response; public reads can also be anonymous. A client-stripped incomplete window cannot prove coherent global totals or status breakdown against the separate draft probe. Preserve visible rows and pagination, emit the existing unavailable total/breakdown state, and discard the older global engagement summary. Once the served window is complete, count all deduplicated visible rows with the shared draft predicate; unstripped authoritative responses continue to use server-wide counts without extra reads. Never subtract a guessed hidden-draft counter from a possibly newer probe. Optimistic deletion decrements each page's own server total and the raw draft probe independently, preserving block metadata and exact rollback.
+
+Rejected alternative: reload only after navigating to `/metravel`, patch one row, or add a revision/event bus. Those miss ordinary/PATCH saves, profile/search/status slices and changed membership. The cost is refresh fanout across already-cached variants/pages; never activate unvisited tabs or broaden into map/calendar/recommendation domains. No backend/data migration or new UI copy is involved.
 
 ## Affected files and ownership
 
@@ -61,6 +77,8 @@ Implementation: `types/types.ts`, `utils/travelPublicationStatus.ts`, `utils/tra
 Planning: this change and the append-only #2669 section of `docs/TRAVEL_SAVE_MODERATION_CONTRACT.md`. Preserve the foreign #2693 task state and #2678 achievement/peer work. No edits to backend or protected configuration.
 
 The acceptance repair additionally owns the wrapper hover rule in `app/global.css`, the existing shared card-token comment, and its focused DOM regression. It does not change the separate card-owned hover used by selectable cards.
+
+The confirmed-write cache repair additionally owns `api/queryKeys.ts`, `api/travelUserQueries.ts`, `hooks/useMyTravels.ts`, `hooks/useTravelFormData.ts`, `utils/travelQueryInvalidation.ts`, `components/listTravel/hooks/useListTravelData.ts`, the existing persistence hook and focused real-cache/profile/persistence tests. Profile callers and their existing public hook contract remain intact.
 
 ## Risks / Trade-offs
 
@@ -71,13 +89,15 @@ The acceptance repair additionally owns the wrapper hover rule in `app/global.cs
 - Long/translated text disturbs grid or creates nested interactive HTML → bounded preview, existing sheet, fixed collapsed layout, hoisted controls, 390/1440 browser evidence.
 - Portaled controls leave a card visually lifted with an outside pointer → DOM-owned hover, shared transform token, real portal regression and unmodified pointer-dismiss browser probe.
 - Missing live list fields → real GET acceptance on a disposable author fixture; never synthesize approval/rejection from legacy flags.
+- Warm own/profile collections retain rejected metadata after a confirmed write → common collection lifecycle, real infinite queries, delayed/failed/paused refresh regression and same-document warm browser acceptance.
+- Late optimistic rollback overrides newer equal-data server truth → exact query/owner/scope/data reference plus dataUpdateCount guard, with a structural-sharing regression.
 
 ## Validation matrix
 
 | Layer | Coverage | Evidence |
 | --- | --- | --- |
-| Static/unit before runtime | Canonical×decision matrix; optional/malformed fields; profile/editor mapping; read-only write exclusion; save/submit preservation/clear; CTA no write; author/admin vs public; real portal ancestry, hover CSS reachability and token propagation | Focused Jest, selective lint/typecheck/guards, `npm run test:i18n`, full-task independent review-and-fix then code-review gate |
-| Desktop web 1440 / mobile web 390 in testing | Both surfaces, rejected short/long/empty reason, valid/malformed date, approved/published, stale decision on draft/pending, missing fields, loading/network error; RU/BE/UK/PL/EN; light/dark; keyboard/touch/focus/sheet | Production browser screenshots, console and network; no horizontal overflow, no false Published, no private reason on public context |
+| Static/unit before runtime | Real QueryClient collection freshness, lazy active/inactive profile slices, pagination/count/delete/identity races and refresh error/paused states; canonical×decision matrix; optional/malformed fields; profile/editor mapping; read-only write exclusion; save/submit preservation/clear; CTA no write; author/admin vs public; real portal ancestry, hover CSS reachability and token propagation | Focused Jest, selective lint/typecheck/guards, `npm run test:i18n`, full-task independent review-and-fix then code-review gate |
+| Desktop web 1440 / mobile web 390 in testing | Both surfaces, rejected short/long/empty reason, valid/malformed date, approved/published, stale decision on draft/pending, missing fields, loading/network error; RU/BE/UK/PL/EN; light/dark; keyboard/touch/focus/sheet | Production browser screenshots, console and network; warm own/profile all/draft/published slices stay authoritative after save/resubmit without reload; no horizontal overflow, no false Published, no private reason on public context |
 | Real API in testing | Disposable author detail/list, QA-superuser approval/rejection, content/full Save, correction navigation with zero writes, explicit resubmit | Sanitized request/response evidence, UI readback after refresh, cleanup readback; no real author content |
 | Android/iOS | Common code preserves responsive semantics; no platform-specific behavior changed | No additional device gate required for this scope |
 
@@ -89,4 +109,4 @@ No data migration: fields already exist, absence remains compatible. Revert only
 
 ## Open Questions
 
-Only deferrable runtime facts: actual owner-list payload visibility and suitable disposable QA fixture creation/cleanup on production. Both are explicit Done-gate checks; no new business rule is assumed.
+Owner payload visibility, ordinary/failed-write retry and disposable cleanup have real run15 evidence. Remaining facts require the new reviewed deployment: warm own-list/profile slices and the reopened pending editor must show current title/slug/status without old reason/date/correction, with final diagnostics and exact cleanup. Raw run15 remains FAIL; linked #2701/#2702 are separate unchanged defects.

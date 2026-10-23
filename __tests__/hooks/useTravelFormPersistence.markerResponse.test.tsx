@@ -23,7 +23,7 @@ function setup(source: TravelFormData, current: TravelFormData = source) {
     formDataRef: { current }, saveAbortControllerRef: { current: null }, mountedRef: { current: true },
     manualSaveInFlightRef: { current: false }, manualSavePromiseRef: { current: null },
     suppressAutosaveErrorToastRef: { current: false }, pendingBaselineRef: { current: null },
-    serverTextBaselineRef: { current: null }, didInvalidateAfterCreateRef: { current: false },
+    serverTextBaselineRef: { current: null },
     updateBaselineRef: { current: baseline }, rehydrateMarkerIdsFromServer: jest.fn().mockResolvedValue(null),
     uploadPendingMarkerImages: jest.fn().mockResolvedValue(undefined),
   } as unknown as Parameters<typeof useTravelFormPersistence>[0];

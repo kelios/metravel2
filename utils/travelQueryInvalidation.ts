@@ -11,12 +11,15 @@ export async function invalidateTravelCollections(
 ) {
   if (!queryClient?.invalidateQueries) return;
 
-  await queryClient.invalidateQueries({ queryKey: queryKeys.travels(), refetchType: 'all' });
-
-  if (!userId) return;
-
-  await queryClient.invalidateQueries({ queryKey: queryKeys.myTravelsCount(userId), refetchType: 'all' });
-  await queryClient.invalidateQueries({ queryKey: queryKeys.exportMyTravelsCount(userId), refetchType: 'all' });
+  // Start every affected read together. A failed GET belongs to that query's
+  // retry state; it must not turn an already-confirmed write into a failed PUT.
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: queryKeys.travels(), refetchType: 'all' }, { throwOnError: false }),
+    ...(userId ? [
+      queryClient.invalidateQueries({ queryKey: queryKeys.myTravelsCount(userId), refetchType: 'all' }, { throwOnError: false }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.exportMyTravelsCount(userId), refetchType: 'all' }, { throwOnError: false }),
+    ] : []),
+  ]);
 }
 
 export async function invalidateTravelDetails(

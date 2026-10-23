@@ -8,6 +8,21 @@ export const queryKeys = {
   travel: (slugOrId: string | number) => ['travel', slugOrId] as const,
   travelAll: () => ['travel'] as const,
   travels: () => ['travels'] as const,
+  // All author grids share collection invalidation, but never identity or filters.
+  authorTravels: (
+    owner: string | number | null | undefined,
+    userId: string | number | null | undefined,
+    options: { perPage: number; includeDrafts: boolean; publicationStatus?: readonly string[] },
+  ) => [
+    'travels', 'author',
+    owner == null ? null : String(owner).trim() || null,
+    userId == null ? null : String(userId).trim() || null,
+    {
+      perPage: options.perPage,
+      includeDrafts: options.includeDrafts,
+      publicationStatus: [...new Set(options.publicationStatus ?? [])].sort(),
+    },
+  ] as const,
   randomTravels: () => ['random-travels'] as const,
   travelsNear: (travelId: number) => ['travels-near', travelId] as const,
   travelsNearMap: (

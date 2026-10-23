@@ -73,7 +73,6 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   const mountedRef = useRef(true);
   const initialLoadKeyRef = useRef<string | null>(null);
   const pendingBaselineRef = useRef<TravelFormData | null>(null);
-  const didInvalidateAfterCreateRef = useRef(false);
   // Каждый вызов loadTravelData увеличивает epoch. Если loadKey меняется (например,
   // userId приходит после authReady и запускается повторная загрузка), более старый
   // fetchTravel не должен затирать state/hasAccess, выставленные более новой загрузкой.
@@ -171,7 +170,6 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     suppressAutosaveErrorToastRef,
     pendingBaselineRef,
     serverTextBaselineRef,
-    didInvalidateAfterCreateRef,
     updateBaselineRef,
     rehydrateMarkerIdsFromServer,
     uploadPendingMarkerImages,

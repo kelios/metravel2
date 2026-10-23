@@ -82,6 +82,7 @@ export const fetchMyTravels = async (params: {
     page?: number;
     perPage?: number;
     throwOnError?: boolean;
+    signal?: AbortSignal;
 }): Promise<MyTravelsPayload> => {
     type MyTravelsYearRange = {
         gte?: string;
@@ -150,6 +151,7 @@ export const fetchMyTravels = async (params: {
             ? await getSecureItem(TOKEN_KEY)
             : null;
         const init: RequestInit = {
+            signal: params.signal,
             ...getApiRequestCredentials(!params.includeDrafts),
             ...(token ? { headers: { Authorization: `Token ${token}` } } : {}),
         };

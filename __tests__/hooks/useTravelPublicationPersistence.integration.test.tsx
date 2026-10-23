@@ -26,7 +26,7 @@ function usePersistence(initial: TravelFormData) {
     manualSaveInFlightRef: useRef(false),
     manualSavePromiseRef: useRef<Promise<TravelFormData | void> | null>(null),
     suppressAutosaveErrorToastRef: useRef(false), pendingBaselineRef: useRef<TravelFormData | null>(null),
-    serverTextBaselineRef: useRef(null), didInvalidateAfterCreateRef: useRef(false),
+    serverTextBaselineRef: useRef(null),
     updateBaselineRef: useRef<((data: TravelFormData) => void) | null>(null),
     rehydrateMarkerIdsFromServer: asyncNoop, uploadPendingMarkerImages: asyncNoop,
   };

@@ -383,9 +383,18 @@ describe('useTravelFormData', () => {
       await result.current.handleManualSave();
     });
 
-    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['travels'], refetchType: 'all' });
-    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['my-travels-count', '42'], refetchType: 'all' });
-    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['export-my-travels-count', '42'], refetchType: 'all' });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith(
+      { queryKey: ['travels'], refetchType: 'all' },
+      { throwOnError: false },
+    );
+    expect(mockInvalidateQueries).toHaveBeenCalledWith(
+      { queryKey: ['my-travels-count', '42'], refetchType: 'all' },
+      { throwOnError: false },
+    );
+    expect(mockInvalidateQueries).toHaveBeenCalledWith(
+      { queryKey: ['export-my-travels-count', '42'], refetchType: 'all' },
+      { throwOnError: false },
+    );
   });
 
   it('invalidates travel detail cache after successful save', async () => {

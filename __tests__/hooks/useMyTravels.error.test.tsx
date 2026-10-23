@@ -3,7 +3,12 @@
 // возвращался [], и пользователь Play-сборки видел «маршрутов нет» вместо ошибки —
 // без текста причины и без возможности повторить.
 
-import { renderHook, waitFor, act } from '@testing-library/react-native';
+import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { renderHook as renderQueryHook, waitFor, act } from '@testing-library/react-native';
+
+jest.mock('@/hooks/useQueryOwner', () => ({ useQueryOwner: () => 'u-1' }));
+jest.mock('@/stores/authStore', () => ({ useAuthStore: { getState: () => ({ isAuthenticated: Boolean('u-1'), userId: 'u-1' }) } }));
 
 jest.mock('@/api/travelsApi', () => ({
   fetchMyTravels: jest.fn(),
@@ -18,6 +23,7 @@ jest.mock('@/utils/toast', () => ({
 
 import { useMyTravels } from '@/hooks/useMyTravels';
 import { fetchMyTravels } from '@/api/travelsApi';
+import { invalidateTravelCollections } from '@/utils/travelQueryInvalidation';
 
 const mockFetchMyTravels = fetchMyTravels as jest.MockedFunction<typeof fetchMyTravels>;
 
@@ -138,4 +144,64 @@ describe('useMyTravels — состояние ошибки первой стра
 
     expect(result.current.error).toBeNull();
   });
+
+  it('после ошибки фонового обновления не выдаёт старый отказ за актуальный список', async () => {
+    mockFetchMyTravels.mockResolvedValueOnce(travelPayload([1]) as any);
+    const onTotalChange = jest.fn();
+    const { result } = renderHook(() => useMyTravels({ userId: 'u-1', perPage: 10, onTotalChange }));
+    await act(async () => { await result.current.load(); });
+    await waitFor(() => expect(result.current.myTravels.map(t => t.id)).toEqual([1]));
+    mockFetchMyTravels.mockRejectedValueOnce(httpError(503, 'Service Unavailable'));
+
+    // Real invalidation refetches this already-visited mounted observer.
+    await act(async () => { await invalidateTravelCollections([...queryClients].at(-1)!, 'u-1'); });
+    await waitFor(() => expect(result.current.error).toContain('503'));
+    expect(result.current.myTravels).toEqual([]);
+    expect(result.current.publicationCounts).toBeNull();
+    expect(onTotalChange).toHaveBeenLastCalledWith(null);
+
+    mockFetchMyTravels.mockResolvedValueOnce(travelPayload([2]) as any);
+    await act(async () => { await result.current.load(); });
+    await waitFor(() => expect(result.current.myTravels.map(t => t.id)).toEqual([2]));
+    expect(result.current.error).toBeNull();
+    expect(onTotalChange).toHaveBeenLastCalledWith(1);
+  });
+
+  it('ошибка следующей страницы замораживает автоподгрузку до явного обновления', async () => {
+    mockFetchMyTravels.mockResolvedValueOnce(travelPayload([1, 2], 4) as any);
+    const { result } = renderHook(() => useMyTravels({ userId: 'u-1', perPage: 2 }));
+    await act(async () => { await result.current.load(); });
+    await waitFor(() => expect(result.current.hasMore).toBe(true));
+    mockFetchMyTravels.mockRejectedValueOnce(httpError(503, 'Service Unavailable'));
+    await act(async () => { await result.current.loadMore(); });
+    await waitFor(() => expect(result.current.hasMore).toBe(false));
+    const attempted = mockFetchMyTravels.mock.calls.length;
+    await act(async () => { await result.current.loadMore(); });
+    expect(mockFetchMyTravels).toHaveBeenCalledTimes(attempted);
+    expect(result.current.myTravels.map(t => t.id)).toEqual([1, 2]);
+    expect(result.current.error).toBeNull();
+
+    mockFetchMyTravels.mockResolvedValueOnce(travelPayload([3, 4], 6) as any);
+    await act(async () => { await result.current.load(); });
+    await waitFor(() => expect(result.current.myTravels.map(t => t.id)).toEqual([3, 4]));
+    expect(result.current.hasMore).toBe(true);
+  });
+});
+
+
+// Isolated real QueryClient: cache lifecycle is part of the hook contract.
+const queryClients = new Set<QueryClient>();
+const renderHook: typeof renderQueryHook = (callback, options) => {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: Infinity, staleTime: 300_000 } },
+  });
+  queryClients.add(client);
+  const wrapper = ({ children }: React.PropsWithChildren) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  );
+  return renderQueryHook(callback, { ...options, wrapper });
+};
+afterEach(() => {
+  for (const client of queryClients) client.clear();
+  queryClients.clear();
 });

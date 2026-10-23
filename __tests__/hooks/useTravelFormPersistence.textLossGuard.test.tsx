@@ -155,7 +155,6 @@ function setupPersistence(opts: {
     suppressAutosaveErrorToastRef: makeRef(false),
     pendingBaselineRef: makeRef(null),
     serverTextBaselineRef: makeRef(opts.baselineText),
-    didInvalidateAfterCreateRef: makeRef(false),
     updateBaselineRef: makeRef(jest.fn()),
     rehydrateMarkerIdsFromServer:
       opts.rehydrateMarkerIdsFromServer ?? jest.fn().mockResolvedValue(null),

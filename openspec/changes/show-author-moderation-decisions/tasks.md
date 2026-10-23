@@ -17,16 +17,20 @@
 
 - [x] 3.1 Run focused Jest for normalization/model/UI/memo/recovery/writes, role/public-context negative cases, partial-save/clear semantics, and zero-write correction actions; retain #2693 status persistence regressions.
 - [x] 3.2 Run scope-appropriate lint/typecheck/guards, `npm run test:i18n`, and docs/prompt audit under the agreed shared quality slot, without browser/API runtime in review.
-- [ ] 3.3 Complete mandatory independent full-task review-and-fix and code-review gate; rerun affected code checks after real findings.
-- [ ] 3.4 Confirm the owned OpenSpec change passes strict validation and its normative design matches the final implementation before the root's reviewed commit/push and testing transition.
-- [ ] 3.5 Repair the acceptance-discovered portal hover boundary through the existing DOM/CSS channel, retain shared lift tokens and hoisted-action alignment, and add a deterministic real-portal regression before reviewed rollout.
-- [ ] 3.6 Repair the reviewed collapsed-height gap across independent rows and mobile cards with a common authored feedback minimum, preserving actual labels, bounded reason preview, and absent-field semantics; cover mixed canonical states.
+- [x] 3.3 Complete mandatory independent full-task review-and-fix and code-review gate; rerun affected code checks after real findings.
+- [x] 3.4 Confirm the owned OpenSpec change passes strict validation and its normative design matches the final implementation before the root's reviewed commit/push and testing transition.
+- [x] 3.5 Repair the acceptance-discovered portal hover boundary through the existing DOM/CSS channel, retain shared lift tokens and hoisted-action alignment, and add a deterministic real-portal regression before reviewed rollout.
+- [x] 3.6 Repair the reviewed collapsed-height gap across independent rows and mobile cards with a common authored feedback minimum, preserving actual labels, bounded reason preview, and absent-field semantics; cover mixed canonical states.
+
+- [ ] 3.7 Repair confirmed-write collection freshness through the existing query root: convert profile server rows to real lazy infinite queries, preserve identity/pagination/count/delete/error semantics, refresh full/PATCH successes and await manual navigation freshness without delaying the confirmed baseline. Prove the original stale-cache behavior RED and meaningful real-cache, refresh failure/offline and equal-data rollback regressions GREEN. Preserve the shared author-block guard's served-page progression, cumulative hidden totals, unblock, genuine-empty termination and automatic error/offline retry behavior with real-client regressions.
+- [ ] 3.8 Run the migration's scope checks and full lint/Jest, complete independent full-task review-and-fix and code-review gate, then explicitly commit/push the reviewed cache repair before testing.
 
 ## 4. Testing-stage production Done gate
 
-- [ ] 4.1 After the root's штатный frontend rollout, verify deployed SHA contains the reviewed task commit; use a disposable ordinary author and authorized QA superuser, never real author content.
+- [x] 4.1 After the root's штатный frontend rollout, verify deployed SHA contains the reviewed task commit; use a disposable ordinary author and authorized QA superuser, never real author content.
 - [ ] 4.2 Capture real private detail/list API and save/submit request-response evidence: approve one fixture, reject another with a long reason, preserve rejected feedback after ordinary save, and clear it only after explicit confirmed resubmission.
 - [ ] 4.3 Run browser acceptance on both author surfaces at 1440px/390px across RU/BE/UK/PL/EN: rejected short/long/empty reason, valid/invalid date, published/approved/pending, historical approval on draft, missing decision, loading/error; capture screenshots, console, and network.
 - [ ] 4.4 Verify light/dark, keyboard/touch, full reason and close/focus return, no horizontal overflow/nested controls/grid reflow, positive desktop card/action lift and automatic resting bounds with an outside pointer after portal close (without an extra enter/leave gesture), and no mutation merely from correction navigation.
 - [ ] 4.5 Verify public/catalog/other-viewer privacy and record/account changes, reload truthfulness, and clean up disposable fixtures/side effects with readback.
 - [ ] 4.6 Record only factual Done-gate results. Reconcile completed tasks, run strict owned validation and `openspec validate --all` before archive; record unrelated foreign failures without changing their scope, then complete root's archive/board handoff.
+- [ ] 4.7 After the reviewed cache-repair rollout, prewarm own list and profile all/draft/published slices in the same browser document; verify ordinary save/PATCH and failed-submit retry produce current title/slug/pending with no old feedback on both surfaces and reopened editor at 1440/390, preserving Draft's draft+pending membership and exact cleanup. This gate must pass before archive task 4.6.

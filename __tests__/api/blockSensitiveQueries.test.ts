@@ -218,8 +218,16 @@ describe('installBlockedAuthorGuard', () => {
 
 // ---- Полнота реестра ------------------------------------------------------------
 
-const rootOf = (factory: (...args: any[]) => readonly unknown[]): string =>
-  String(factory(...new Array(Math.max(factory.length, 1)).fill(undefined))[0])
+const rootOf = (factory: (...args: any[]) => readonly unknown[]): string => {
+  const key = factory === queryKeys.authorTravels
+    ? queryKeys.authorTravels('1', '1', {
+        perPage: 20,
+        includeDrafts: true,
+        publicationStatus: ['draft', 'pending_review'],
+      })
+    : factory(...new Array(Math.max(factory.length, 1)).fill(undefined))
+  return String(key[0])
+}
 
 const SOURCE_DIRS = ['api', 'app', 'components', 'context', 'hooks', 'screens', 'services', 'stores', 'utils']
 const AD_HOC_KEY = /queryKey:\s*\[\s*['"]([^'"]+)['"]/g

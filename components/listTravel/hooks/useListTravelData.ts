@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useInfiniteQuery, useQueryClient, type InfiniteData, type QueryObserverResult } from '@tanstack/react-query';
 import { fetchTravels, fetchRandomTravels } from '@/api/travelListQueries';
 import { queryKeys } from '@/api/queryKeys';
@@ -138,6 +138,12 @@ function useBaseTravelData(
     refetchOnWindowFocus: QUERY_CONFIG.REFETCH_ON_WINDOW_FOCUS,
   });
 
+  const isInvalidated = useSyncExternalStore(
+    useCallback((notify) => queryClient.getQueryCache().subscribe(notify), [queryClient]),
+    useCallback(() => queryClient.getQueryState(queryKey)?.isInvalidated === true, [queryClient, queryKey]),
+    () => false,
+  );
+
   const normalizedPages = useMemo(() => {
     if (!data?.pages?.length) return [];
     return data.pages.map((page) => normalizeApiResponse(page));
@@ -171,8 +177,9 @@ function useBaseTravelData(
   // «0 путешествий» над пустотой. Пауза без данных — сбой загрузки: UI отдаёт
   // «Нет подключения» с «Повторить», а запрос сам доедет, когда сеть вернётся.
   // Это также относится к догрузке страницы после блока без видимых карточек.
-  // Завершённый пустой ответ при паузе рефетча остаётся честным «пусто».
-  const isLoadPaused = fetchStatus === 'paused' && !hasAnyItems && (status === 'pending' || hasMore);
+  // После подтверждённой записи invalidated cache уже не доказывает текущее
+  // состояние: даже старые карточки/пустой ответ уступают offline/retry UI.
+  const isLoadPaused = fetchStatus === 'paused' && (isInvalidated || (!hasAnyItems && (status === 'pending' || hasMore)));
 
   // Страницы без видимых карточек при `hasNextPage` — блокировка автора
   // вырезала всё загруженное, и слой блокировок уже догружает следующую.
@@ -185,6 +192,7 @@ function useBaseTravelData(
   // себе «пусто» не даёт; ошибка (`status === 'error'`) — тоже не пусто.
   const isEmpty =
     status === 'success' &&
+    !isLoadPaused &&
     !isFetching &&
     !isLoading &&
     !isFetchingNextPage &&

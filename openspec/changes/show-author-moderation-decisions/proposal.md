@@ -38,7 +38,7 @@ Accessibility: full keyboard/touch access to the correction and full-reason acti
 
 Security: display feedback only in authorized author/superuser editor and own-list contexts; never expose it through public/catalog cards, even if stray fields exist. Render moderator text as text, not markup. No token/auth lifecycle changes.
 
-Performance: no new requests, packages, media changes, or catalog-wide feedback. Keep card media geometry and uniform collapsed card height; full reasons open outside the grid layout.
+Performance: no dedicated feedback endpoint or new package, media change, or catalog-wide feedback. Confirmed travel writes refresh already-cached collection variants through the existing query root; unvisited profile slices remain unfetched. Keep card media geometry and uniform collapsed card height; full reasons open outside the grid layout.
 
 SEO and external links: none; authenticated author UI has no route/canonical/SSG/sitemap changes. Analytics: none; no new measurement requirement.
 
