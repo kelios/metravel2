@@ -6,13 +6,61 @@ jest.mock('@playwright/test', () => ({ request: {}, expect: {}, devices: { 'Pixe
 jest.mock('playwright', () => ({ chromium: {}, request: {} }))
 jest.mock('../../scripts/e2e-env-files', () => ({ applyEnvFile: jest.fn() }))
 const { createPathSanitizer, installHistoryObserver, armScopeCapture } = require('../../e2e/helpers/browserHistoryTrace')
-const { targetConfig, validateRegistry, ownsTravel, commandPayload, reasonFor, openOwnedBatch, writePrivate } = require('../../e2e/prod-probe/travelEditorFixtures')
+const { targetConfig, validateRegistry, ownsTravel, fixtureCreatePayload, commandPayload, reasonFor, openOwnedBatch, writePrivate, json } = require('../../e2e/prod-probe/travelEditorFixtures')
 const { parseOptions, cellsFor } = require('../../e2e/prod-probe/editorRegression')
 const { label, openRoleContext } = require('../../e2e/helpers/editorFixtureBrowser')
 const origin = 'https://metravel.by'
 const config = { origin, travelIds: [42], slugs: ['qa-public'], userIds: [900] }
 
 describe('editor diagnostic observation and owned-fixture boundaries', () => {
+  it.each(['private-long', 'public'])('sends every required TravelUpsert field, including required nullable text, for %s', label => {
+    const payload = fixtureCreatePayload({ marker: 'QAEDITOR-unit', label, country: 3, category: 4, pointCategory: 5 })
+    // The backend requires these keys even when its text fields allow null.
+    const required = ['categories', 'transports', 'month', 'complexity', 'companions', 'over_nights_stay', 'countries',
+      'minus', 'plus', 'recommendation', 'description', 'visa', 'youtube_link', 'thumbs200ForCollectionArr', 'travelImageThumbUrlArr', 'travelImageAddress']
+    expect(required.filter(key => !Object.hasOwn(payload, key))).toEqual([])
+    for (const key of ['minus', 'plus', 'recommendation', 'youtube_link']) expect(payload[key]).toBeNull()
+    expect(payload).toEqual(expect.objectContaining({ id: null, name: `QAEDITOR-unit ${label}`, publication_status: 'draft',
+      enforce_moderation_validation: false, categories: [4], countries: [3], visa: false }))
+    expect(payload.coordsMeTravel).toEqual([{ id: null, lat: 53.90111, lng: 27.56111, country: 3,
+      address: 'QAEDITOR-unit disposable point', categories: [5], image: null }])
+  })
+
+  it('preserves required nullable fields and route data across the actual create→submit→moderator command payloads', () => {
+    const created = { ...fixtureCreatePayload({ marker: 'QAEDITOR-unit', label: 'private-long', country: 3, category: 4, pointCategory: 5 }), id: 42 }
+    const submitted = commandPayload(created, 'submit')
+    const approved = commandPayload(submitted, 'approve')
+    const reason = reasonFor('QAEDITOR-unit')
+    const rejected = commandPayload(submitted, 'reject', reason)
+    expect(submitted).toEqual(expect.objectContaining({ publication_status: 'pending_review', enforce_moderation_validation: true }))
+    expect(approved).toEqual(expect.objectContaining({ publication_status: 'published', enforce_moderation_validation: false }))
+    expect(rejected).toEqual(expect.objectContaining({ publication_status: 'draft', enforce_moderation_validation: false, moderation_decision_reason: reason }))
+    for (const payload of [submitted, approved, rejected]) {
+      for (const key of ['minus', 'plus', 'recommendation', 'youtube_link']) expect(payload[key]).toBeNull()
+      expect(payload.coordsMeTravel).toEqual(created.coordsMeTravel)
+      expect(payload.countries).toEqual([3]); expect(payload.categories).toEqual([4])
+      expect(payload).not.toHaveProperty('publish'); expect(payload).not.toHaveProperty('moderation')
+      expect(payload).not.toHaveProperty('moderation_decision'); expect(payload).not.toHaveProperty('moderation_decided_at')
+    }
+    expect(reason).toHaveLength(2000)
+    expect(reason).toMatch(/QAEDITOR-unit END$/)
+  })
+
+  it('reports only bounded allowed validation field names and status, never server values or auth bodies', async () => {
+    const failure = { ok: () => false, status: () => 400,
+      json: jest.fn(async () => ({ minus: ['private reason'], youtube_link: ['token=private-token'], password: ['private-password'], 'private-email@example.test': ['ignored'] })) }
+    await expect(json(failure, 'Create own fixture', ['youtube_link', 'minus'])).rejects.toThrow('Create own fixture: HTTP400; validationFields=minus,youtube_link')
+    const auth = { ok: () => false, status: () => 401, json: jest.fn() }
+    await expect(json(auth, 'Verify real cookie identity')).rejects.toThrow('Verify real cookie identity: HTTP401')
+    expect(auth.json).not.toHaveBeenCalled()
+    const many = { ok: () => false, status: () => 400,
+      json: async () => Object.fromEntries(Array.from({ length: 20 }, (_, index) => [`field${index}`, 'private-value'])) }
+    const allowed = Array.from({ length: 20 }, (_, index) => `field${index}`)
+    const error: Error = await json(many, 'Fixture submit', allowed).catch((value: Error) => value)
+    expect(error.message).not.toContain('private-value')
+    expect(error.message.split('validationFields=')[1].split(',')).toHaveLength(12)
+  })
+
   it('keeps allowed full returnTo/hash while redacting nested secrets without conflating equality', () => {
     const safe = createPathSanitizer(config)
     const permitted = '/travel/42?returnTo=%2Fmetravel%3Fpage%3D2%23top#publish'

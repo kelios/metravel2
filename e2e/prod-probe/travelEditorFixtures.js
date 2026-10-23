@@ -77,8 +77,15 @@ exec psql -X -qAt -v ON_ERROR_STOP=1 -h "$APP_DB_HOST" -p "$APP_DB_PORT" -U "$AP
     { cwd: ROOT, input: `${sql.trim()}\n`, encoding: 'utf8', timeout: 60_000, stdio: ['pipe', 'pipe', 'pipe'] }).trim()
   } catch { throw new Error('Owned readonly DB lookup failed; subprocess output withheld to protect activation/config secrets') }
 }
-async function json(response, label) {
-  assert(response.ok(), `${label}: HTTP${response.status()}`)
+async function json(response, label, validationFields = []) {
+  if (!response.ok()) {
+    // Only a caller-supplied payload field name can enter the durable error.
+    // Never log validation messages/values or inspect auth response bodies.
+    const body = validationFields.length ? await response.json().catch(() => null) : null
+    const fields = body && typeof body === 'object' && !Array.isArray(body)
+      ? validationFields.filter(key => Object.hasOwn(body, key)).sort().slice(0, 12) : []
+    throw new Error(`${label}: HTTP${response.status()}${fields.length ? `; validationFields=${fields.join(',')}` : ''}`)
+  }
   const result = await response.json().catch(() => null)
   assert(result && typeof result === 'object', `${label}: expected JSON, not document HTML`)
   return result
@@ -95,6 +102,14 @@ async function csrf(api, origin) {
 }
 function snapshot(dto) {
   return Object.fromEntries(['id', 'name', 'slug', 'publication_status', ...METADATA].map(key => [key, dto[key] ?? null]))
+}
+function fixtureCreatePayload({ marker, label, country, category, pointCategory }) {
+  return { id: null, name: `${marker} ${label}`, description: `<p>${marker}: расходная проверка редактора, запись будет удалена.</p>`,
+    categories: [category], countries: [country], transports: [], month: [], complexity: [], companions: [], over_nights_stay: [],
+    budget: null, year: 2026, number_peoples: 1, number_days: 1, minus: null, plus: null, recommendation: null, youtube_link: null,
+    visa: false, gallery: [], thumbs200ForCollectionArr: [], travelImageThumbUrlArr: [], travelImageAddress: [],
+    publication_status: 'draft', enforce_moderation_validation: false,
+    coordsMeTravel: [{ id: null, lat: 53.90111, lng: 27.56111, country, address: `${marker} disposable point`, categories: [pointCategory], image: null }] }
 }
 function commandPayload(current, command, reason) {
   assert(['draft', 'pending_review', 'approved', 'published'].includes(current.publication_status), 'Unknown fixture publication state')
@@ -196,7 +211,7 @@ async function openOwnedBatch({ baseUrl, backendUrl, runId, needOther = true, in
     const payload = commandPayload({ ...fixture.payload, name: current.name, description: current.description,
       coordsMeTravel: current.coordsMeTravel, gallery: current.gallery, publication_status: current.publication_status }, name, reason)
     ledger('setup', `${name}-intent`, { id: fixture.id })
-    await json(await api.put('/api/travels/upsert/', { headers: await csrf(api, reg.origin), data: payload }), `Fixture ${name}`)
+    await json(await api.put('/api/travels/upsert/', { headers: await csrf(api, reg.origin), data: payload }), `Fixture ${name}`, Object.keys(payload))
     const after = await ownDetail(api, fixture)
     assert(after.publication_status === payload.publication_status, 'Fixture command did not commit status')
     if (name === 'reject') assert(after.moderation_decision === 'rejected' && after.moderation_decision_reason === reason && after.moderation_decided_at, 'Real rejection metadata missing')
@@ -218,13 +233,9 @@ async function openOwnedBatch({ baseUrl, backendUrl, runId, needOther = true, in
       const category = first(filters.categories ?? filters.categoryTravel), pointCategory = first(filters.categoryTravelAddress)
       assert([country, category, pointCategory].every(positiveId), 'Required fixture dictionaries unavailable')
       for (const label of ['private-long', 'public']) {
-        const payload = { id: null, name: `${reg.marker} ${label}`, description: `<p>${reg.marker}: расходная проверка редактора, запись будет удалена.</p>`,
-          categories: [category], countries: [country], transports: [], month: [], complexity: [], companions: [], over_nights_stay: [],
-          budget: null, year: 2026, number_peoples: 1, number_days: 1, visa: false, gallery: [], thumbs200ForCollectionArr: [], travelImageThumbUrlArr: [], travelImageAddress: [],
-          publication_status: 'draft', enforce_moderation_validation: false,
-          coordsMeTravel: [{ id: null, lat: 53.90111, lng: 27.56111, country, address: `${reg.marker} disposable point`, categories: [pointCategory], image: null }] }
+        const payload = fixtureCreatePayload({ marker: reg.marker, label, country, category, pointCategory })
         reg.pendingCreate = { label, name: payload.name }; ledger('setup', 'create-intent', { label })
-        const created = await json(await api.put('/api/travels/upsert/', { headers: await csrf(api, reg.origin), data: payload }), 'Create own fixture')
+        const created = await json(await api.put('/api/travels/upsert/', { headers: await csrf(api, reg.origin), data: payload }), 'Create own fixture', Object.keys(payload))
         assert(positiveId(created.id), 'Fixture creation returned no ID')
         const fixture = { id: Number(created.id), label, name: payload.name,
           payload: { ...payload, id: Number(created.id), coordsMeTravel: created.coordsMeTravel ?? payload.coordsMeTravel },
@@ -374,7 +385,7 @@ async function resumeCleanup(runId) {
 }
 
 module.exports = { ROOT, OUT, METADATA, targetConfig, runDirectory, writePrivate, readPrivate, validateRegistry, ownsTravel,
-  commandPayload, reasonFor, identity, snapshot, openOwnedBatch, resumeCleanup, assert, unpack, json }
+  fixtureCreatePayload, commandPayload, reasonFor, identity, snapshot, openOwnedBatch, resumeCleanup, assert, unpack, json }
 
 if (require.main === module) {
   const args = process.argv.slice(2), runId = args.find(arg => arg.startsWith('--run-id='))?.slice(9)
