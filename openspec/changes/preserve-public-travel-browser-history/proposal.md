@@ -5,6 +5,7 @@
 ## What Changes
 
 - Исправить общий web navigation boundary публичных статей на закреплённой версии роутера, сохранив встроенный возврат и один документ.
+- Сохранять полные снимки навигатора при browser Back/Forward: синхронизировать cursor web memory history при внешнем popstate и завершении go без popstate, чтобы последующая app Back возвращала предыдущую статью.
 - Закрепить причинный механизм unit/integration проверкой и реальным read-only production browser regression.
 - Записать постоянный контроль семьи в Problem Memory.
 
@@ -31,6 +32,6 @@
 - Performance: SPA документ и timeOrigin сохраняются, нового media pipeline/размеров нет; history snapshots растут по числу переходов.
 - Security: auth/права/секреты и URL allowlists не затронуты.
 - Analytics: существующая смена маршрута сохраняется; новых событий/параметров нет.
-- Existing behavior: каталог→деталь, прямой вход, повтор текущей цели, cross-tab переход, app Back и modifier links.
+- Existing behavior: каталог→деталь, прямой вход, повтор текущей цели, cross-tab переход, app Back после полного browser Back/Forward цикла, pending/interrupted go и modifier links.
 - Non-goals: #2702 editor double-pop, SEO-редактура #2658/#2700, native navigation, backend, редизайн, произвольное обновление зависимостей.
 - Open questions: материальных продуктовых вопросов нет. Архитектурное сравнение вариантов фиксируется до apply в design.md.
