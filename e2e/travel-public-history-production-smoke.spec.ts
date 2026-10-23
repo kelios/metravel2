@@ -34,6 +34,7 @@ type NearResponses = Map<number, Promise<NearCard[] | Error>>
 type Traversals = { programmatic: number; popstate: number }
 type Observations = { errors: string[]; failedRequests: string[]; badResponses: string[]; apiWrites: string[] }
 const observations = new WeakMap<BrowserContext, Observations>()
+const pendingLocationReads = new WeakMap<Page, Set<Promise<Error | null>>>()
 
 function safeUrl(url: string) {
   try {
@@ -49,6 +50,18 @@ function safeMessage(message: string) {
 
 async function readTraversals(page: Page): Promise<Traversals> {
   return page.evaluate(() => (window as Window & { __travelHistoryTraversals?: Traversals }).__travelHistoryTraversals!)
+}
+
+async function finishPendingLocationReads(page: Page) {
+  const pending = pendingLocationReads.get(page)!
+  // Article SEO can commit while its nearby-quest response body is still in
+  // flight. Complete already-started reads before deliberately leaving their
+  // last query observer; keep all cancellation/error observations strict.
+  while (pending.size) {
+    const results = await Promise.all([...pending])
+    expect(results, 'started nearby-quest response bodies complete before navigation')
+      .toEqual(results.map(() => null))
+  }
 }
 
 async function readMetadata(page: Page) {
@@ -145,6 +158,7 @@ async function traverse(
   metadata: ArticleSnapshot, entry: HistorySnapshot, entries: HistorySnapshot['entries'],
   direction: 'back' | 'forward' | (() => Promise<unknown>),
 ) {
+  await finishPendingLocationReads(page)
   const before = await readTraversals(page)
   if (direction === 'back') await page.goBack()
   else if (direction === 'forward') await page.goForward()
@@ -198,6 +212,7 @@ async function nearCard(page: Page, responses: NearResponses, sourceId: number, 
 }
 
 async function clickCard(slot: Locator) {
+  await finishPendingLocationReads(slot.page())
   // Desktop cards own a real anchor. Mobile round cards own the click on their
   // container; their role=link child is deliberately pointer-events:none.
   const anchor = slot.locator('a[href]').first()
@@ -242,6 +257,16 @@ test.describe('Public travel browser history — production smoke (#2703)', () =
     const log: Observations = { errors: [], failedRequests: [], badResponses: [], apiWrites: [] }
     observations.set(context, log)
     const observePage = (target: Page) => {
+      const pending = new Set<Promise<Error | null>>()
+      pendingLocationReads.set(target, pending)
+      target.on('request', (request) => {
+        if (request.method() !== 'GET' || !/\/api\/quests\/near-location\/$/.test(new URL(request.url()).pathname)) return
+        const finished = request.response()
+          .then((response) => response ? response.finished() : new Error('Nearby-quest request ended without a response'))
+          .catch((error: Error) => new Error(safeMessage(error.message)))
+        pending.add(finished)
+        void finished.then(() => pending.delete(finished))
+      })
       target.on('console', (message) => {
         if (message.type() === 'error') log.errors.push(safeMessage(message.text()))
       })
@@ -335,6 +360,7 @@ test.describe('Public travel browser history — production smoke (#2703)', () =
           return /\/api\/travels\/$/.test(url.pathname) && response.request().method() === 'GET' &&
             url.searchParams.has('where') && url.searchParams.get('page') === '1'
         })
+        await finishPendingLocationReads(page)
         await searchLink.click()
         const search = await searchSnapshot(page, a)
         // SEO can commit before the catalogue body finishes. Leaving then

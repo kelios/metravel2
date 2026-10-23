@@ -107,6 +107,7 @@ function useOfflineTravelRecentCache(
 function useTravelSeoElement({
   canonicalUrl,
   headKey,
+  isFocused,
   jsonLd,
   readyDesc,
   readyImage,
@@ -114,6 +115,7 @@ function useTravelSeoElement({
 }: {
   canonicalUrl?: string
   headKey: string
+  isFocused: boolean
   jsonLd?: Record<string, unknown> | null
   readyDesc: string | null
   readyImage: string
@@ -123,7 +125,7 @@ function useTravelSeoElement({
     () =>
       // Без данных статьи head не трогаем: SSG-<title>/description корректны,
       // а слаг-фолбэк отдавал транслит в Метрику/GA4.
-      readyTitle ? (
+      readyTitle && (Platform.OS !== 'web' || typeof window === 'undefined' || isFocused) ? (
         <TravelDetailsSeoBlock
           canonicalUrl={canonicalUrl}
           headKey={headKey}
@@ -133,7 +135,7 @@ function useTravelSeoElement({
           readyTitle={readyTitle}
         />
       ) : null,
-    [canonicalUrl, headKey, jsonLd, readyDesc, readyImage, readyTitle],
+    [canonicalUrl, headKey, isFocused, jsonLd, readyDesc, readyImage, readyTitle],
   )
 }
 
@@ -286,6 +288,7 @@ export default function TravelDetailsContainer() {
   const seoElement = useTravelSeoElement({
     canonicalUrl,
     headKey,
+    isFocused,
     jsonLd,
     readyDesc,
     readyImage,

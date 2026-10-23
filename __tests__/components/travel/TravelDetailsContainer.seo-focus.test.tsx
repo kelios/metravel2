@@ -20,11 +20,6 @@ jest.mock('expo-router/head', () => ({
   default: ({ children }: { children?: React.ReactNode }) => children ?? null,
 }))
 
-jest.mock('@/components/seo/LazyInstantSEO', () => ({
-  __esModule: true,
-  default: () => null,
-}))
-
 jest.mock('@/context/AuthContext', () => ({
   useAuth: () => ({
     user: null,
@@ -109,6 +104,7 @@ describe('TravelDetailsContainer SEO focus guard', () => {
   })
 
   beforeEach(() => {
+    require('react-native').Platform.OS = 'web'
     jest.useFakeTimers()
     mockSetOptions.mockClear()
     mockUseIsFocused.mockReturnValue(false)
@@ -149,6 +145,39 @@ describe('TravelDetailsContainer SEO focus guard', () => {
     expect(
       document.querySelector('link[rel="canonical"]')?.getAttribute('href')
     ).toBe('https://metravel.by/search')
+  })
+
+  it('releases the retained article head writer on blur and restores it on refocus', async () => {
+    mockUseIsFocused.mockReturnValue(true)
+    const articleCanonical = 'https://metravel.by/travels/energylandia-polskiy-disneylend'
+    const rendered = render(<TravelDetailsContainer />)
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(articleCanonical)
+    expect(JSON.stringify(rendered.toJSON())).toContain('travel-article-jsonld')
+
+    mockUseIsFocused.mockReturnValue(false)
+    rendered.rerender(<TravelDetailsContainer />)
+
+    await act(async () => {
+      document.head.querySelector('link[rel="canonical"]')?.setAttribute('href', 'https://metravel.by/search')
+      // A late destination Head reconciliation must not wake an offscreen
+      // article's actual LazyInstantSEO MutationObserver.
+      document.head.insertAdjacentHTML('beforeend', '<meta name="destination-ready" content="search">')
+      await Promise.resolve()
+    })
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe('https://metravel.by/search')
+    expect(JSON.stringify(rendered.toJSON())).not.toContain('travel-article-jsonld')
+
+    mockUseIsFocused.mockReturnValue(true)
+    rendered.rerender(<TravelDetailsContainer />)
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(articleCanonical)
+    expect(JSON.stringify(rendered.toJSON())).toContain('travel-article-jsonld')
+  })
+
+  it.each(['android', 'ios'])('preserves the existing native head subtree on %s', platform => {
+    require('react-native').Platform.OS = platform
+    const rendered = render(<TravelDetailsContainer />)
+    expect(JSON.stringify(rendered.toJSON())).toContain('travel-article-jsonld')
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe('https://metravel.by/search')
   })
 
   it('patches only head metadata without scanning or mutating matching body nodes', () => {
