@@ -72,3 +72,29 @@ diff --git a/node_modules/expo-router/build/react-navigation/routers/TabRouter.j
                  // If the state is valid and we didn't JUMP_TO a single history state,
                  // then remove the previous state.
                  if (nextState.index !== 0) {
+diff --git a/node_modules/expo-router/build/fork/useLinking.js b/node_modules/expo-router/build/fork/useLinking.js
+--- a/node_modules/expo-router/build/fork/useLinking.js
++++ b/node_modules/expo-router/build/fork/useLinking.js
+@@ -268,20 +268,12 @@
+         if (ref.current) {
+             // We need to record the current metadata on the first render if they aren't set
+             // This will allow the initial state to be in the history entry
+-            // START FORK
+-            // Instead of using the rootState (which might be stale) we should use the focused state
+-            // const state = ref.current.getRootState();
+-            const rootState = ref.current.getRootState();
+-            const state = store.state;
+-            // END FORK
++            const state = ref.current.getRootState();
+             if (state) {
+                 const route = (0, native_1.findFocusedRoute)(state);
+                 const path = getPathForRoute(route, state);
+                 if (previousStateRef.current === undefined) {
+-                    // START FORK
+-                    // previousStateRef.current = state;
+-                    previousStateRef.current = rootState;
+-                    // END FORK
++                    previousStateRef.current = state;
+                 }
+                 history.replace({ path, state });
+             }

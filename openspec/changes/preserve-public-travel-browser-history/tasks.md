@@ -11,7 +11,7 @@
 - [x] 2.2 Независимый review-auditor review-and-fix, затем отдельный code-review-gate pass по всему task diff.
 - [x] 2.3 По разрешённому AGENTS.md пайплайну: commit явных task paths и push main, записать SHA и перевести #2703 в testing.
 - [x] 2.4 После RAW03: закрепить actual memory/linking red regression потери state snapshots и исправить подтверждённый общий owner, сохранив первый TabRouter fix и native boundary. RED 7FAIL/6PASS → 13PASS; с прежним router/native suite 25PASS; lint/strict test TS/guards и clean pinned tarball apply/reverse/reapply PASS. Отдельная #2702 lag-гипотеза сохранена без изменения assertions в ignored evidence, её RED не входит в #2703 verdict.
-- [ ] 2.5 Source-check и повторные независимые review-auditor/code-review-gate по исправленному train, explicit commit/push и новый штатный выкат до повторной приёмки.
+- [ ] 2.5 После RAW04 закрепить actual ExpoRoot/container regression (исходный 3FAIL/1PASS), исправить только initial history snapshot на hydrated root с сохранением later store.state callback, пройти source-check и повторные независимые review-auditor/code-review-gate по полному train, explicit commit/push и новый штатный выкат до повторной приёмки. Source correction и checks выполнены: 4PASS actual-container + 25 прежних controls = 29PASS, scoped lint/strict TS/guards/clean patch proof PASS; review/commit/rollout остаются обязательными.
 
 ## 3. Testing
 
