@@ -123,7 +123,6 @@ async function actualEdit(page, fixture, reg) {
     ? 'xpath=ancestor::*[./*[@data-testid="travel-moderation-feedback"] and .//*[@data-testid="admin-actions"]][1]'
     : 'xpath=ancestor::*[@data-travel-card-hover="true"][1]')
   await expect(unit).toHaveCount(1)
-  if (!mobile) await card.hover()
   const control = unit.getByTestId('admin-actions').getByRole('button', { name: label(selectors.edit), exact: true })
   await expect(control).toHaveCount(1); await expect(control).toBeVisible()
   const responsePromise = page.waitForResponse(response => response.request().method() === 'GET' && new URL(response.url()).pathname === `/api/travels/${fixture.id}/`)
