@@ -239,7 +239,9 @@ export default function TabLayout() {
                 // предыдущий активный таб (напр. Профиль → Настройки → Back → Профиль),
                 // а не сбрасывать на первый таб (index). Выход с главной всё ещё
                 // обрабатывает useAndroidBackHandler (двойной тап) до этого поведения.
-                backBehavior="history"
+                // Web visits keep params for each dynamic route so article A→B
+                // is a separate browser entry and app Back can restore A.
+                backBehavior={Platform.OS === 'web' ? 'fullHistory' : 'history'}
                 screenOptions={{
                     tabBarStyle: tabBarHiddenStyle,
                     // React Navigation keeps the previous screen header mounted during

@@ -19,6 +19,13 @@ describe('e2e suite classification', () => {
     expect(getE2ESuiteSelection('production-smoke')).toEqual({ testMatch: PRODUCTION_SMOKE_SPECS })
   })
 
+  it('includes real public travel history acceptance in the read-only production smoke suite', () => {
+    const spec = 'travel-public-history-production-smoke.spec.ts'
+    expect(getE2ESuiteSelection('production-smoke').testMatch).toContain(spec)
+    expect(LIVE_CONTRACT_SPECS).not.toContain(spec)
+    expect(getE2ESuiteSelection('').testIgnore).toContain(spec)
+  })
+
   it('runs Google authorization only in the production smoke suite', () => {
     expect(PRODUCTION_SMOKE_SPECS).toContain('google-signin.spec.ts')
     expect(getE2ESuiteSelection('')).toEqual(

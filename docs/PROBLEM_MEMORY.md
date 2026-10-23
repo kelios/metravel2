@@ -1688,6 +1688,44 @@ guard, падающий в CI на попытке обойти этот конт
   Все disposable 903–906 и аккаунты 283/284 удалены, связанные DB counts — 0.
 
 
+### TRAVEL-PUBLIC-SAME-TAB-HISTORY-REPLACE-001 — разные статьи заменяют одну запись таба
+
+- **Инвариант:** обычный web-переход A→B→C сохраняет каждую статью отдельной
+  browser entry в том же документе. Один Back/Forward проходит ровно одну запись;
+  встроенный Back восстанавливает параметры предыдущей статьи. Прямой вход и
+  повтор текущей цели не создают фиктивные записи.
+- **Surface/owner:** публичная travel navigation, desktop/mobile web;
+  `#2703`, связанные `#1727/#573/#2702/#2658/#2700`. Локализация не меняется.
+- **Факт:** production `80e33d668491930bfda38fb82d4c06584f035a15`,
+  23.10.2026, настоящий near-card480→672 на1440/390: CDP entries до/после
+  сохраняют одну запись и её ID; исходная480 заменяется672 ещё до Back.
+  Один browser Back достигает about:blank. Cross-tab480→search→Back→Forward
+  проходит. Source-цепочка не выдаётся за захваченный production callback.
+- **Подтверждённый source-механизм:** pinned Expo Router57.0.28 превращает
+  tab PUSH в NAVIGATE; history дедуплицирует неизменный tab key, теряя прежние
+  params. useLinking получает historyDelta0 и вызывает replace. Сам fullHistory
+  тоже дедуплицирует последний key без сравнения params. Настоящий reducer
+  воспроизводит потерю A/B/C; одного mocked router.push недостаточно.
+- **Корректирующий слой:** web `fullHistory`, native прежний `history` в
+  `app/(tabs)/_layout.tsx`; воспроизводимый
+  `patches/expo-router+57.0.28.patch` хранит params начальной записи и
+  дедуплицирует одинаковый key только при deep-equal params. В fullHistory
+  REPLACE заменяет последнее посещение, а не запись по индексу таба; иначе
+  после A/B/C→replaceD встроенный Back ошибочно возвращался к C. getId отвергнут:
+  старые ключи отсутствуют в routes и GO_BACK возвращает null.
+- **Постоянные controls:**
+  `__tests__/screens/TabLayout.travelHistory.test.tsx` вызывает pinned reducer
+  с реальной platform policy: A/B/C, app Back, same-current/direct entry,
+  cross-tab/SET_PARAMS, Android/iOS-control. Реальный browser/CDP regression —
+  `e2e/travel-public-history-production-smoke.spec.ts` в production-smoke:
+  настоящие карточки, Back/Forward, entries/index/state IDs/timeOrigin,
+  metadata, modifiers, screenshots, errors/writes0.
+- **Граница:** editor double traversal после корректного popstate — отдельная
+  `#2702`; её закрытие не следует из этой правки. Без production acceptance
+  #2703 source/unit результаты не означают исправление на проде.
+- **Решение при повторе:** reuse/reopen #2703 для того же params-dedup механизма;
+  другой callback/history механизм требует отдельного подтверждения.
+
 ### ROUTING-ORS-001 — degraded routing must not look healthy
 
 - **Инвариант:** нормальный production probe возвращает `provider: ors`,
