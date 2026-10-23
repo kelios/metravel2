@@ -208,6 +208,31 @@ export async function collectFirstScreenElements(page: any): Promise<{
     const all = document.querySelectorAll('*')
     const viewportHeight = window.innerHeight
     const viewportWidth = window.innerWidth
+    const styles = new WeakMap<Element, CSSStyleDeclaration>()
+    const transparentBranches = new WeakMap<Element, boolean>()
+    const styleOf = (element: Element) => {
+      let style = styles.get(element)
+      if (!style) {
+        style = getComputedStyle(element)
+        styles.set(element, style)
+      }
+      return style
+    }
+    const isTransparent = (element: Element) => {
+      const branch: Element[] = []
+      let ancestor: Element | null = element
+      while (ancestor && !transparentBranches.has(ancestor)) {
+        branch.push(ancestor)
+        if (styleOf(ancestor).opacity === '0') {
+          transparentBranches.set(ancestor, true)
+          break
+        }
+        ancestor = ancestor.parentElement
+      }
+      const transparent = ancestor ? transparentBranches.get(ancestor) === true : false
+      for (const node of branch) transparentBranches.set(node, transparent)
+      return transparent
+    }
     let firstScreen = 0
 
     for (const element of Array.from(all)) {
@@ -215,6 +240,10 @@ export async function collectFirstScreenElements(page: any): Promise<{
       if (rect.width <= 0 || rect.height <= 0) continue
       if (rect.bottom <= 0 || rect.top >= viewportHeight) continue
       if (rect.right <= 0 || rect.left >= viewportWidth) continue
+      // visibility can be overridden by a descendant; zero ancestor opacity
+      // cannot. Keep full documentElements independent of CSS visibility.
+      const visibility = styleOf(element).visibility
+      if (visibility === 'hidden' || visibility === 'collapse' || isTransparent(element)) continue
       firstScreen += 1
     }
 

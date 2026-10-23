@@ -46,6 +46,71 @@ const PROBE_BUDGET: PageBudget = {
 }
 
 test.describe('@perf pages-perf-budget — negative probe', () => {
+  test('first-screen DOM respects CSS visibility while retaining the complete document count', async ({ page }) => {
+    await page.route(`**${FIXTURE_PATH}`, (route) => route.fulfill({
+      status: 200,
+      contentType: 'text/html; charset=utf-8',
+      body: `<!doctype html><html><head><style>
+        body { margin: 0; }
+        #parent { position: absolute; left: 20px; top: 20px; width: 120px; height: 100px; }
+        #child, #sibling { width: 40px; height: 30px; background: red; }
+      </style></head><body><div id="parent"><div id="child"></div><div id="sibling" aria-hidden="true"></div></div></body></html>`,
+    }))
+    await page.goto(FIXTURE_PATH, { waitUntil: 'load' })
+    const baseline = await collectFirstScreenElements(page)
+    expect(baseline.firstScreenElements).toBeGreaterThanOrEqual(3)
+    const counts = async (removed: number) => {
+      expect(await collectFirstScreenElements(page)).toEqual({
+        firstScreenElements: baseline.firstScreenElements - removed,
+        documentElements: baseline.documentElements,
+      })
+    }
+    const style = (id: string, cssText: string) => page.locator(`#${id}`).evaluate(
+      (element, value) => { (element as HTMLElement).style.cssText = value }, cssText,
+    )
+
+    await test.step('an invisible box retains geometry but leaves the first-screen count', async () => {
+      await style('child', 'opacity: 0')
+      expect(await page.locator('#child').evaluate(element => element.getBoundingClientRect().height)).toBe(30)
+      await counts(1)
+      await style('child', '')
+      await counts(0)
+    })
+    await test.step('zero ancestor opacity hides descendants despite their own positive opacity', async () => {
+      await style('child', 'opacity: 1')
+      await style('parent', 'opacity: 0')
+      await counts(3)
+      await style('parent', 'opacity: 0.01')
+      await counts(0)
+      await style('parent', '')
+      await style('child', '')
+    })
+    await test.step('visibility supports an explicitly visible descendant', async () => {
+      await style('parent', 'visibility: hidden')
+      await counts(3)
+      await style('child', 'visibility: visible')
+      await counts(2)
+      await style('parent', '')
+      await style('child', '')
+      await style('child', 'visibility: collapse')
+      await counts(1)
+      await style('child', '')
+      await counts(0)
+    })
+    await test.step('ARIA alone does not hide a painted box; geometry filters remain active', async () => {
+      await page.locator('#sibling').evaluate(element => element.removeAttribute('aria-hidden'))
+      await counts(0)
+      await style('child', 'height: 0')
+      await counts(1)
+      await style('child', 'position: fixed; left: 200vw')
+      await counts(1)
+      await style('child', 'position: fixed; top: 200vh')
+      await counts(1)
+      await style('child', '')
+      await counts(0)
+    })
+  })
+
   test('the gate reports layout-shift, first-screen DOM and forbidden-source violations', async ({
     page,
   }) => {

@@ -101,6 +101,27 @@ guard, падающий в CI на попытке обойти этот конт
 
 ## Реестр
 
+### TRAVEL-PUBLIC-SAME-TAB-HISTORY-REPLACE-001 — соседняя статья заменяет исходную запись
+
+- Инвариант: обычный переход A→B между разными публичными `/travels/:param` сохраняет обе browser history entries; native Back возвращает A один раз, Forward — B. SEO и отсутствие нового документа сами по себе историю не доказывают.
+- Canonical: #2703 (todo); related #2702/#1727/#573/#2658/#2700, без hard dependency.
+- Подтверждённый факт: прод80e33d668491930bfda38fb82d4c06584f035a15, гость RU, реальные near-card480→672, desktop1440/mobile390. До клика blank(ID2)+480(ID4), после blank(ID2)+672(тот жеID4), length2/index1;480 уже нет до Back. Один Back даёт index0 blank, без промежуточного480/второго traversal. Документ исходного SPA перехода тот же, новых document-запросов0, ошибок0. Cross-tab480→search→Back→Forward PASS2/2.
+- Причина: same-tab route identity/history replacement; source-compatible цепочка application router.push→Expo PUSH/NAVIGATE→неизменный tab key/history length→fork replaceState. Точный production function stack ещё не записан. Это другая причина, чем дополнительный go(-1) после корректного popstate редактора в #2702. Navigation source byte-unchanged с pre-taskfbb6961; новая SEO регрессия не заявляется.
+- Прежний пробел: #1727 helper guard, #573 видимый/native back и #528 returnTo не удерживают browser entries разных параметров одного tab route.
+- Regression control до Done: committed настоящий card-click/browser-history regression A→B→Back A→Forward B, desktop/mobile, цепочкаA→B→C, прямой вход/modifier control; проверять entries/index/document, не внедрять историю в test и не заменять native Back другим действием. До его выполнения card не done.
+- Решение новой жалобы: reuse #2703; после done — reopen при той же потере записи ДО Back. Второй traversal после восстановления — reuse #2702.
+
+### PERF-FIRST-SCREEN-PAINT-VISIBILITY-001 — геометрия невидимого элемента проходит DOM-бюджет
+
+- Инвариант: `collectFirstScreenElements` исключает полностью невидимые из-за computed visibility:hidden/collapse и opacity0 self/ancestor элементы при сохранении геометрических условий; `documentElements` всегда полный DOM.
+- Canonical: #2704 (review); related #1287/#2151/#2658/#2700.
+- Подтверждённый факт: локальная production build80e33d668491930bfda38fb82d4c06584f035a15, QUESTS.mobile412×839DPR2.625, collector167/377; независимая инвентаризация8 невидимых (6opacity/2visibility)→159. AppInstall18 видимых законно включены, FAQ0. Действующий160 не меняется. Это не production UI defect и не PASS проваленного штатного гейта.
+- Причина: `e2e/helpers/perfBudget.ts:203–222` проверяет только rect и viewport; layout box существует при opacity0/visibilityhidden. CSS primitive/query не мокать. Visibility у самого ребёнка может быть overridevisible, opacity0 предка не может.
+- История: #1287 ввёл профиль/DOM gate и обещал нерисуемые исключать, но negative overflow не проверял CSS-hidden. #2151 consent/readiness и #1499 mobilethrottling исправляли другие причины и остаются done. Новый узкий collector defect связан с #1287.
+- Regression control до Done: committed browser CSS fixtures с точным count delta hide/show, self/ancestoropacity0, hidden/collapse, override-child, positiveopacity0.01, aria-hidden, zero/offscreen; настоящий collector и неизменный document count. Видимый overflow обязан по-прежнему нарушать бюджет. Реальный `verify:slider`/`verify:slider-perf` после source fix без skips/retries/threshold changes.
+- Решение новой жалобы: reuse #2704; после done — reopen при ошибке этого CSS-фильтра. Новый неверный UI/render cost сначала подтверждать независимо и не выводить из старого ошибочного collector.
+
+
 ### TRAVEL-AUTHOR-PREVIEW-001 — маршрут черновика меняется до гидратации
 
 - **Canonical chain:** #2695; источник #2677. Смежные #778/#2240 — другие
