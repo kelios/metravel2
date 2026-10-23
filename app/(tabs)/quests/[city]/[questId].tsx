@@ -29,7 +29,6 @@ import {
 import { useQuestRatingMeta } from '@/hooks/useQuestRatingMeta';
 import { useQuestServing } from '@/hooks/useQuestServing';
 import { usePublishQuestVersionNavigation } from '@/hooks/useQuestVersionNavigation';
-import QuestVersionLinks from '@/components/quests/QuestVersionLinks';
 import QuestLocaleUnavailable from '@/components/quests/QuestLocaleUnavailable';
 import { questServingAlternates, type QuestLocaleRoute } from '@/utils/questLocaleRouting';
 import { useQuestCompletionMeta } from '@/hooks/useQuestCompletionMeta';
@@ -775,7 +774,6 @@ export default function QuestByIdScreen({ route }: { route?: QuestLocaleRoute } 
             additionalTags={structuredDataTags}
           />
         ) : null}
-        <QuestVersionLinks projection={serving.projection} currentLocale={route?.locale ?? 'ru'} />
         {Platform.OS === 'web' ? (
           <Suspense fallback={<View style={styles.wizardFallback}><ActivityIndicator color={colors.primaryDark} /></View>}>
             <QuestWizardComponent
@@ -856,7 +854,6 @@ export default function QuestByIdScreen({ route }: { route?: QuestLocaleRoute } 
             additionalTags={structuredDataTags}
           />
         ) : null}
-        <QuestVersionLinks projection={serving.projection} currentLocale={route?.locale ?? 'ru'} />
         <QuestConsentGate
           title={bundle.title}
           coverUrl={bundle.coverUrl}
@@ -887,7 +884,6 @@ export default function QuestByIdScreen({ route }: { route?: QuestLocaleRoute } 
           additionalTags={structuredDataTags}
         />
       ) : null}
-      <QuestVersionLinks projection={serving.projection} currentLocale={route?.locale ?? 'ru'} />
       {Platform.OS === 'web' ? (
         <Suspense fallback={<View style={styles.wizardFallback}><ActivityIndicator color={colors.primaryDark} /></View>}>
           <QuestWizardComponent
