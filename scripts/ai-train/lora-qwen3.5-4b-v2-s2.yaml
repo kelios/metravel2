@@ -15,7 +15,7 @@ mask_prompt: true
 num_layers: 6
 batch_size: 1
 grad_accumulation_steps: 1
-iters: __S2_ITERS__        # ≈ 1 epoch of the S2 train split (site + 15 % replay) at batch 1
+iters: 9926        # ≈ 1 epoch of the S2 train split (site + 15 % replay) at batch 1
 resume_adapter_file: adapters/metravel-llm-v2-s1/adapters.safetensors
 learning_rate: 4.0e-5      # a little lower than S1: the adapter already carries the foundation
 max_seq_length: 1024       # site set built with chunk_chars 2600 so sections fit
@@ -35,4 +35,4 @@ lr_schedule:
   name: cosine_decay
   warmup: 100
   warmup_init: 1.0e-6
-  arguments: [4.0e-5, __S2_ITERS__, 1.0e-6]
+  arguments: [4.0e-5, 9926, 1.0e-6]

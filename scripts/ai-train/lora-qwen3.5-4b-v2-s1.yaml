@@ -15,7 +15,7 @@ mask_prompt: true          # loss only on assistant tokens
 num_layers: 6              # last 6 of 32 decoder layers; 8 → ~20 GB peak
 batch_size: 1              # one 1024-token sample ≈ 15 GB peak; batch 2 ≈ 27 GB
 grad_accumulation_steps: 1 # graphs of all micro-steps are kept → OOM at 2
-iters: __S1_ITERS__        # ≈ 1 epoch of the S1 train split at batch 1
+iters: 6258        # ≈ 1 epoch of the S1 train split at batch 1
 learning_rate: 5.0e-5
 max_seq_length: 1024       # sets are built so one sample fits (wikivoyage max_chars 1800)
 grad_checkpoint: true
@@ -34,4 +34,4 @@ lr_schedule:
   name: cosine_decay
   warmup: 100
   warmup_init: 1.0e-6
-  arguments: [5.0e-5, __S1_ITERS__, 1.0e-6]
+  arguments: [5.0e-5, 6258, 1.0e-6]
