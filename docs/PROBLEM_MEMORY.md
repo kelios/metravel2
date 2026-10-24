@@ -756,6 +756,11 @@ guard, падающий в CI на попытке обойти этот конт
   завершения. Норматив — `docs/design/travel-catalog-warm-return.md`;
   regression — реальные DOM layout-checkpoint, warm microtask, cold/offscreen,
   late decode и version/signature/candidate mismatch tests.
+  Первый выкат `7fd88a5b4` не прошёл mobile в обеих плотностях. Native decode
+  вызывался заранее, но его Promise завершался позже собственного готового
+  currentSrc; IO recovery должен проверять готовность непосредственно перед
+  decode/poll, а не безусловно ждать их. Новый контроль — синхронное раскрытие
+  own-ready изображения в отложенном IO callback без decode и таймера.
 - **Recurrence Log — 2026-08-11 (`/search`, `#1400`):** закрытый инвариант
   «виртуализированный скролл не создаёт отменённых image requests» снова
   нарушен на production. Независимый raw CDP-прогон без request interception и

@@ -135,6 +135,33 @@ describe('WebMainImage real DOM responsive source updates', () => {
     } finally { fixture.close(); }
   });
 
+  it('reveals pixels synchronously when they become ready before lazy recovery starts', () => {
+    const originalObserver = globalThis.IntersectionObserver;
+    let intersection!: () => void;
+    const disconnect = jest.fn();
+    globalThis.IntersectionObserver = jest.fn((callback: IntersectionObserverCallback) => {
+      intersection = () => callback([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+      return { observe: jest.fn(), disconnect };
+    }) as unknown as typeof IntersectionObserver;
+    const src = imageA.replace('.webp', '-ready-before-intersection.webp');
+    const fixture = mount(responsive(src), true);
+    const decode = jest.fn(() => new Promise<void>(() => undefined));
+    Object.defineProperty(fixture.image, 'decode', { configurable: true, value: decode });
+    try {
+      expect(fixture.image.style.opacity).toBe('0');
+      expect(fixture.onLoad).not.toHaveBeenCalled();
+      fixture.pixels(`${src}?w=320`);
+      act(() => intersection());
+      expect(fixture.image.style.opacity).toBe('1');
+      expect(fixture.onLoad).toHaveBeenCalledWith(`${src}?w=320`, { width: 48, height: 32 });
+      expect(decode).not.toHaveBeenCalled();
+      expect(disconnect).toHaveBeenCalledTimes(1);
+    } finally {
+      fixture.close();
+      globalThis.IntersectionObserver = originalObserver;
+    }
+  });
+
   it('decodes a visible warm source set without eagerly decoding cold or changed source sets', () => {
     const warm = `${imageA}?v=warm-visible`;
     const other = `${imageB}?v=warm-visible`;

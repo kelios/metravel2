@@ -10,6 +10,14 @@
 - [ ] 6.4 Независимые review-auditor и code-review-gate pass; коммит явными путями, push main и штатный production deploy.
 - [ ] 6.5 На выкаченном SHA повторить desktop/mobile first-return frame, консоль/байты/DOM bounds и соседнюю shared media surface; только затем done.
 
+Первый выкат `7fd88a5b4` прошёл review/static/75 unit tests, но не mobile
+приёмку: compact и comfortable дали по одному readyHidden кадру при 0 байт.
+Ранний decode был, его Promise завершался позднее actual currentSrc.
+
+- [x] 7.1 Перед deferred recovery из IntersectionObserver повторно проверить actual own pixels; RED→GREEN DOM test на готовое фото к моменту callback. 10 media suites/76 tests, scoped lint, image architecture и diff check pass.
+- [ ] 7.2 Повторить targeted checks, независимые review и штатный commit/push/deploy.
+- [ ] 7.3 Выполнить новый production first-return и bilateral slider gates; предыдущий выкат не считать visual pass.
+
 - [x] 1.1 Reproduce the fill-only scroll window in the local production-like `/search` build with the agreed 1280×900 and 390×844 throttled traces, recording visible image readiness, source ownership, requests, downloaded bytes, duplicate URLs, and response failures.
       Traced on the live production bundle instead of a local build: the production API answers CORS only for its own origin, so a locally served build never receives the list. The former lookahead is restored in-page by wrapping the Metro module registry and overriding `RVEngagedIndicesTrackerImpl.prototype.drawDistance`, which leaves the shipped bundle, the API and the HTTP cache untouched.
 - [x] 1.2 Add a focused real-browser regression scenario that drives the actual virtualized search list and fails on any visible fill-only cover, stale/wrong-photo swap, geometry shift, duplicate effective image URL, or exceeded request/byte budget.

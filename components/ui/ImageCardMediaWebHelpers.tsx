@@ -413,6 +413,9 @@ export const WebMainImage = memo(function WebMainImage({
       if (cancelled || recoveryStarted) return;
       recoveryStarted = true;
       intersectionObserver?.disconnect();
+      // Responsive selection can finish before the observer callback while a
+      // previous decode promise is still pending. Reveal those pixels now.
+      if (reportIfReady()) return;
 
       if (retainRequestOnSourceSwap && !isCurrentImageSourceComplete(img, src, srcSet)) {
         retainWebImageRequest({ src, srcSet, sizes, priority });
