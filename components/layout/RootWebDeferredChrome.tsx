@@ -151,7 +151,7 @@ export default function RootWebDeferredChrome({
     <>
       {showNetworkStatusChrome && (
         <React.Suspense fallback={null}>
-          <NetworkStatusLazy position="top" />
+          <NetworkStatusLazy position="bottom" />
         </React.Suspense>
       )}
 

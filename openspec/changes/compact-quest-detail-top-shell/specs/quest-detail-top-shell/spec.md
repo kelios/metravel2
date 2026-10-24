@@ -36,3 +36,28 @@ RU and BE/UK/PL/EN quest detail routes SHALL use the same shell contract, retain
 #### Scenario: Loading and error
 - **WHEN** quest content is loading or fails to load
 - **THEN** back navigation remains reachable within the same reserved header geometry
+
+
+### Requirement: Network status preserves navigation access
+Web network-status notifications SHALL keep the quest header and bottom navigation visible and reachable. Simultaneous bottom notices SHALL have stable non-overlapping positions, and the reading content SHALL provide sufficient trailing space to reveal its final action above visible notices.
+
+#### Scenario: Offline tablet navigation
+- **WHEN** a loaded quest loses connectivity at a tablet or landscape viewport
+- **THEN** its existing header Back and More controls and bottom navigation remain visible and operable, while the unsent answer and current route point remain intact
+
+#### Scenario: Status with other notices and the More menu
+- **WHEN** network status, consent or an install offer coexist and the reader opens the bottom More menu
+- **THEN** the menu remains unobstructed, notification positions do not grow in a feedback loop, and a still-relevant status returns after closing the menu
+
+#### Scenario: Reconnected or removed status
+- **WHEN** connectivity recovers and the status finishes dismissing, or the status owner unmounts
+- **THEN** its reserved space and invisible hit area are released while other visible notices retain their own space
+
+
+#### Scenario: Short phone with several eligible notices
+- **WHEN** a short phone window such as 600×320 has pending consent and an install offer when a network-status notice becomes relevant
+- **THEN** network status takes temporary presentation priority above the dock without reaching the header, lower notices retain their pending state, and they return after the status lifecycle finishes
+
+#### Scenario: More while a critical notice is pending
+- **WHEN** More opens and closes before offline or restored status has finished
+- **THEN** status releases its occupied space while hidden but retains presentation priority, so lower notices do not briefly return beneath the menu or ahead of the status

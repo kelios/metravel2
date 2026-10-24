@@ -6,7 +6,17 @@ import { openExternalUrl } from '@/utils/externalLinks'
 import { markAppInstallHintDismissed } from '@/utils/appInstallHint'
 import { APP_STORE_APP_URL, GOOGLE_PLAY_APP_URL } from '@/constants/appStore'
 import { getMobileAppOpenUrl } from '@/utils/mobileAppHandoff'
-import { getBottomChromeReserve, resetBottomChromeReserve, setBottomChromeReserve } from '@/utils/bottomChromeReserve'
+import { writeConsent } from '@/utils/consent'
+import { getBottomChromeReserve, getCriticalBottomChromeOwner, resetBottomChromeReserve, setBottomChromeReserve } from '@/utils/bottomChromeReserve'
+
+let mockViewportWidth = 320
+let mockIsConnected = false
+let mockKeyboardInset = 0
+const mockKeyboardListeners = new Set<() => void>()
+const setKeyboardInset = (inset: number) => act(() => {
+  mockKeyboardInset = inset
+  mockKeyboardListeners.forEach(listener => listener())
+})
 
 jest.mock('expo-router', () => {
   const react = jest.requireActual<typeof import('react')>('react')
@@ -15,13 +25,30 @@ jest.mock('expo-router', () => {
     __MockRouterContext: context,
     usePathname: () => react.useContext(context).pathname,
     useGlobalSearchParams: () => react.useContext(context).searchParams,
+    useRouter: () => ({ push: jest.fn() }),
+    Link: ({ children }: { children: React.ReactNode }) => children,
   }
 })
 const MockRouterContext = require('expo-router').__MockRouterContext as React.Context<{
   pathname: string
   searchParams: Record<string, string>
 }>
-jest.mock('@/hooks/useResponsive', () => ({ useResponsive: () => ({ isMobile: true, width: 320 }) }))
+jest.mock('@/hooks/useResponsive', () => ({ useResponsive: () => ({ isMobile: true, width: mockViewportWidth }) }))
+jest.mock('@/hooks/useNetworkStatus', () => ({ useNetworkStatus: () => ({ isConnected: mockIsConnected }) }))
+jest.mock('@/hooks/useWebKeyboardInset', () => ({
+  useWebKeyboardInset: () => {
+    const React = jest.requireActual<typeof import('react')>('react')
+    return React.useSyncExternalStore(
+      (listener: () => void) => { mockKeyboardListeners.add(listener); return () => { mockKeyboardListeners.delete(listener) } },
+      () => mockKeyboardInset,
+    )
+  },
+}))
+jest.mock('@/utils/consent', () => ({ readConsent: () => null, writeConsent: jest.fn() }))
+jest.mock('@/components/layout/bottomChromeInset', () => ({
+  ...jest.requireActual('@/components/layout/bottomChromeInset'),
+  useDockReservePx: () => 56,
+}))
 jest.mock('@/hooks/useSafeAreaInsetsSafe', () => ({
   useSafeAreaInsetsSafe: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }))
@@ -50,8 +77,14 @@ describe('AppInstallBar', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     resetBottomChromeReserve()
+    mockViewportWidth = 320
+    mockIsConnected = false
+    mockKeyboardInset = 0
   })
-  afterEach(() => resetBottomChromeReserve())
+  afterEach(() => {
+    resetBottomChromeReserve()
+    jest.useRealTimers()
+  })
 
   it.each([
     ['ios', APP_STORE_APP_URL], ['android', GOOGLE_PLAY_APP_URL],
@@ -90,6 +123,97 @@ describe('AppInstallBar', () => {
     expect(markAppInstallHintDismissed).toHaveBeenCalled()
     expect(queryByTestId('app-install-bar')).toBeNull()
     expect(getBottomChromeReserve()).toBe(240)
+  })
+
+  it('ignores the network banner above it when positioning over consent', () => {
+    setBottomChromeReserve('consent-banner', 240)
+    setBottomChromeReserve('network-status', 500)
+    const AppInstallBar = require('@/components/layout/AppInstallBar').default
+    const view = render(<AppInstallBar />)
+    expect(StyleSheet.flatten(view.getByTestId('app-install-bar').props.style).bottom).toContain('240px')
+    act(() => setBottomChromeReserve('network-status', 600))
+    expect(StyleSheet.flatten(view.getByTestId('app-install-bar').props.style).bottom).toContain('240px')
+    expect(getBottomChromeReserve('network-status')).toBe(240 + 8 + 112 + 8)
+    view.unmount()
+    expect(getBottomChromeReserve('network-status')).toBe(240)
+  })
+
+  it('keeps initially offline navigation clear at 600×320, yields for More, then restores pending optional notices after exit', async () => {
+    jest.useFakeTimers()
+    mockViewportWidth = 600
+    const AppInstallBar = require('@/components/layout/AppInstallBar').default
+    const ConsentBanner = require('@/components/layout/ConsentBanner').default
+    const { NetworkStatus } = require('@/components/ui/NetworkStatus.web')
+    const view = render(<><ConsentBanner /><AppInstallBar /><NetworkStatus position="bottom" /></>)
+    fireEvent(view.getByTestId('network-status-banner'), 'layout', { nativeEvent: { layout: { height: 60 } } })
+    const networkExtent = 56 + 8 + 60 + 8
+    expect(getCriticalBottomChromeOwner()).toBe('network-status')
+    expect(getBottomChromeReserve()).toBe(networkExtent)
+    expect(320 - getBottomChromeReserve()).toBeGreaterThan(54)
+    expect(view.queryByTestId('consent-banner')).toBeNull()
+    expect(view.queryByTestId('app-install-bar')).toBeNull()
+    expect(document.body.hasAttribute('data-consent-banner-open')).toBe(false)
+    expect(StyleSheet.flatten(view.getByTestId('network-status-banner').props.style).bottom).toBe('calc(var(--mt-dock-h, 0px) + 8px)')
+    act(() => window.dispatchEvent(new CustomEvent('metravel:footer-more', { detail: { open: true } })))
+    expect(getBottomChromeReserve()).toBe(0)
+    expect(view.queryByTestId('network-status-banner')).toBeNull()
+    expect(view.queryByTestId('app-install-bar')).toBeNull()
+    expect(getCriticalBottomChromeOwner()).toBe('network-status')
+    act(() => window.dispatchEvent(new CustomEvent('metravel:footer-more', { detail: { open: false } })))
+    expect(getBottomChromeReserve()).toBe(networkExtent)
+    expect(view.queryByTestId('consent-banner')).toBeNull()
+    expect(view.queryByTestId('app-install-bar')).toBeNull()
+    mockIsConnected = true
+    view.rerender(<><ConsentBanner /><AppInstallBar /><NetworkStatus position="bottom" /></>)
+    await act(async () => { jest.advanceTimersByTime(2000) })
+    expect(getCriticalBottomChromeOwner()).toBe('network-status')
+    expect(getBottomChromeReserve()).toBe(0)
+    expect(view.queryByTestId('consent-banner')).toBeNull()
+    expect(view.queryByTestId('app-install-bar')).toBeNull()
+    await act(async () => { jest.advanceTimersByTime(300) })
+    expect(getCriticalBottomChromeOwner()).toBeNull()
+    expect(view.getByTestId('consent-banner')).toBeTruthy()
+    expect(view.getByTestId('app-install-bar')).toBeTruthy()
+    fireEvent(view.getByTestId('consent-banner'), 'layout', { nativeEvent: { layout: { height: 100 } } })
+    fireEvent(view.getByTestId('app-install-bar'), 'layout', { nativeEvent: { layout: { height: 112 } } })
+    expect(getBottomChromeReserve()).toBe(300)
+    expect(StyleSheet.flatten(view.getByTestId('app-install-bar').props.style).bottom).toContain('172px')
+    expect(writeConsent).not.toHaveBeenCalled()
+    expect(markAppInstallHintDismissed).not.toHaveBeenCalled()
+    view.unmount()
+    expect(getBottomChromeReserve()).toBe(0)
+  })
+
+  it('suspends physical notices for the existing keyboard overlap without releasing network priority', () => {
+    const AppInstallBar = require('@/components/layout/AppInstallBar').default
+    const ConsentBanner = require('@/components/layout/ConsentBanner').default
+    const { NetworkStatus } = require('@/components/ui/NetworkStatus.web')
+    const tree = <><ConsentBanner /><AppInstallBar /><NetworkStatus position="bottom" /></>
+    const view = render(tree)
+    expect(getBottomChromeReserve()).toBe(132)
+    setKeyboardInset(240)
+    expect(getBottomChromeReserve()).toBe(0)
+    expect(getCriticalBottomChromeOwner()).toBe('network-status')
+    expect(view.queryByTestId('network-status-banner')).toBeNull()
+    expect(view.queryByTestId('consent-banner')).toBeNull()
+    expect(view.queryByTestId('app-install-bar')).toBeNull()
+    setKeyboardInset(0)
+    expect(getBottomChromeReserve()).toBe(132)
+    view.unmount()
+    expect(getCriticalBottomChromeOwner()).toBeNull()
+    mockIsConnected = true
+    const online = render(<><ConsentBanner /><AppInstallBar /></>)
+    expect(online.getByTestId('consent-banner')).toBeTruthy()
+    expect(online.getByTestId('app-install-bar')).toBeTruthy()
+    setKeyboardInset(240)
+    expect(getBottomChromeReserve()).toBe(0)
+    expect(online.queryByTestId('consent-banner')).toBeNull()
+    expect(online.queryByTestId('app-install-bar')).toBeNull()
+    setKeyboardInset(0)
+    expect(online.getByTestId('consent-banner')).toBeTruthy()
+    expect(online.getByTestId('app-install-bar')).toBeTruthy()
+    expect(writeConsent).not.toHaveBeenCalled()
+    expect(markAppInstallHintDismissed).not.toHaveBeenCalled()
   })
 
   it('refreshes the native banner destination after a query-only navigation', () => {

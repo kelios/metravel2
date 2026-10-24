@@ -7,12 +7,14 @@ import {
   BottomChromeInsetProvider,
   useBottomChromeInset,
   useDockReservePx,
+  useBottomChromeReservePx,
   useScrollBottomPadding,
   useNativeBottomChromeOcclusion,
   WEB_BOTTOM_CHROME_INSET,
   webBottomChromeInset,
   webDockReserve,
 } from '@/components/layout/bottomChromeInset'
+import { releaseBottomChromeReserve, resetBottomChromeReserve, setBottomChromeReserve } from '@/utils/bottomChromeReserve'
 
 let mockInsets = { top: 0, bottom: 0, left: 0, right: 0 }
 jest.mock('@/hooks/useSafeAreaInsetsSafe', () => ({
@@ -25,6 +27,7 @@ describe('bottomChromeInset', () => {
   afterEach(() => {
     Object.defineProperty(Platform, 'OS', { value: originalOS, configurable: true })
     mockInsets = { top: 0, bottom: 0, left: 0, right: 0 }
+    resetBottomChromeReserve()
   })
 
   it('на native до замера отдаёт фолбэк высоты дока и safe-area', () => {
@@ -58,6 +61,40 @@ describe('bottomChromeInset', () => {
     )
     expect(renderHook(() => useDockReservePx()).result.current).toBe(0)
     expect(webDockReserve(16)).toBe('calc(var(--mt-dock-h, 0px) + 16px)')
+  })
+
+  it('includes measured dock and named web notices for numeric reveal consumers, releasing each independently', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
+    const rect = jest.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      return { height: this.hasAttribute('data-mt-dock-measure') ? 56 : 0 } as DOMRect
+    })
+    const hook = renderHook(useBottomChromeReservePx)
+    try {
+      expect(hook.result.current).toBe(56)
+      act(() => setBottomChromeReserve('consent-banner', 180))
+      expect(hook.result.current).toBe(180)
+      act(() => setBottomChromeReserve('network-status', 280))
+      expect(hook.result.current).toBe(280)
+      act(() => releaseBottomChromeReserve('network-status'))
+      expect(hook.result.current).toBe(180)
+      act(() => releaseBottomChromeReserve('consent-banner'))
+      expect(hook.result.current).toBe(56)
+    } finally {
+      hook.unmount()
+      rect.mockRestore()
+    }
+  })
+
+  it.each(['ios', 'android'] as const)('keeps %s numeric reveal at the measured dock without web reserves', os => {
+    Object.defineProperty(Platform, 'OS', { value: os, configurable: true })
+    setBottomChromeReserve('network-status', 500)
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <BottomChromeInsetProvider measuredHeight={89}>{children}</BottomChromeInsetProvider>
+    )
+    const hook = renderHook(useBottomChromeReservePx, { wrapper })
+    expect(hook.result.current).toBe(89)
+    act(() => setBottomChromeReserve('network-status', 600))
+    expect(hook.result.current).toBe(89)
   })
 
   it('keeps owner-scoped native occlusion separate from dock and scroll reserves', () => {

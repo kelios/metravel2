@@ -7,8 +7,8 @@
 
 ## 2. Code review and validation
 
-- [x] 2.1 Run coordinated targeted static/unit checks and existing i18n checks; record actual results without treating SKIPPED as PASS.
-- [x] 2.2 Independent review-and-fix of the complete task diff, followed by code-review gate.
+- [ ] 2.1 Run coordinated targeted static/unit checks and existing i18n checks; record actual results without treating SKIPPED as PASS.
+- [ ] 2.2 Independent review-and-fix of the complete task diff, followed by code-review gate.
 
 ## 3. Testing after review
 
@@ -16,6 +16,14 @@
 - [ ] 3.2 Verify RU/BE/UK/PL/EN routes and fallback notice, loading/error/offline, intro/step, desktop sidebar and all row/menu actions.
 - [ ] 3.3 Verify route sheet/current point, answer draft/focus and reading anchor during portrait/landscape resize.
 - [ ] 3.4 Run final OpenSpec validation before archive; update completion only from actual evidence.
+
+## 4. Offline navigation repair found in production
+
+- [x] 4.1 Record actual tablet hit-test evidence, shared bottom-owner design, rejected options, native boundary and rollback before code.
+- [ ] 4.2 Integrate web network status with ordered bottom reserves, independent critical priority, short-window navigation protection, dock/menu coexistence, correct dismissal and cleanup; use the same reserve in quest web reading padding and automatic answer reveal.
+- [ ] 4.3 Run targeted reserve/status/install/quest regressions, static checks and strict spec validation under the coordinated source slot.
+- [ ] 4.4 Complete fresh independent review-and-fix and the final code-review gate for the full task diff.
+- [ ] 4.5 Commit/push, deploy the exact reviewed app SHA, and accept offline header/dock/More, notice coexistence and final reading-action reachability with screenshots and console evidence.
 
 ## Verification receipt (2026-10-23)
 
@@ -36,5 +44,5 @@
 - Desktop and dock language menus on the unprefixed route changed document, interface and quest content to EN while retaining the pathname, as required by the existing preference contract. The first harness incorrectly expected `/en/` navigation; its timeout is retained separately, not represented as a product failure. Prefixed routes retain the existing version-link contract.
 - Header/slot reservation stayed 54 px while the 52 px screen row mounted. The initial hidden-DOM top offset is identical to baseline: the existing SSG introduction precedes the hidden app root, then the shared `rnw-styles-ready` handoff hides that introduction and reveals the root. No header-associated layout shifts were captured. These samples do not establish zero global CLS or first-paint visibility.
 - Normal screenshots and raw network/frame results: ignored `.codex-temp/quest-language-row/final/report.json`; baseline: `.codex-temp/quest-language-row/baseline/report.json`. Draft and route-sheet resize screenshots, error and authenticated consent screenshots were captured. The continuation exited 1; aggregate interaction/error/authenticated exit checks remain pending, not PASS. The ignored harness must retain partial observations and use visible CTA/exit locators before the narrow follow-up; do not rerun the 13 completed normal cases.
-- Separate existing risk: `components/ui/NetworkStatus.web.tsx` places its offline banner at fixed top 0 with z-index 9999, covering the 54 px header in the captured offline fixture. The banner code is outside this task diff; the baseline narrow header was already 54 px. Body route navigation and bottom navigation remain visible. Recheck the focused/blurred header actions after a separate banner-layout correction; do not silently accept the covered More click.
+- Confirmed repair requirement (supersedes the initial outside-scope classification): `components/ui/NetworkStatus.web.tsx` places its offline banner at fixed top 0 with z-index 9999, covering the 54 px header in the captured offline fixture. The baseline narrow header was already 54 px, but the new tablet composition exposes this overlap at 960px too. Body route navigation and bottom navigation remain visible; that does not make the covered header More acceptable. Repair its shared placement before final acceptance.
 - No answer submission, progress reset, authored quest text or media changes. The offline and bundle-abort cases are local browser fault fixtures; their expected failures are separate from normal production network health.

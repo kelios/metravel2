@@ -14,6 +14,7 @@ import {
   getBottomChromeReserve,
   resetBottomChromeReserve,
   setBottomChromeReserve,
+  setCriticalBottomChromeOwner,
 } from '@/utils/bottomChromeReserve'
 
 // #2135: на мобильном web текст баннера ограничен `numberOfLines={2}` (решение
@@ -198,5 +199,23 @@ describe('ConsentBanner measured bottom reserve', () => {
 
     screen.unmount()
     expect(getBottomChromeReserve()).toBe(0)
+  })
+
+  it('yields to critical network status and restores the same pending choice and measurement without granting consent', () => {
+    const ConsentBanner: ComponentType = require('@/components/layout/ConsentBanner').default
+    const screen = render(<ConsentBanner />)
+    const banner = screen.getByTestId('consent-banner')
+    fireEvent(banner, 'layout', { nativeEvent: { layout: { height: 156 } } })
+    expect(getBottomChromeReserve()).toBe(172)
+    const writesBefore = jest.mocked(writeConsent).mock.calls.length
+    act(() => setCriticalBottomChromeOwner('network-status'))
+    expect(screen.queryByTestId('consent-banner')).toBeNull()
+    expect(document.body.hasAttribute('data-consent-banner-open')).toBe(false)
+    expect(getBottomChromeReserve()).toBe(0)
+    act(() => setCriticalBottomChromeOwner(null))
+    expect(screen.getByTestId('consent-banner')).toBe(banner)
+    expect(document.body.getAttribute('data-consent-banner-open')).toBe('true')
+    expect(getBottomChromeReserve()).toBe(172)
+    expect(jest.mocked(writeConsent).mock.calls).toHaveLength(writesBefore)
   })
 })

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   Platform,
   Pressable,
@@ -12,10 +12,20 @@ import { useRouter } from 'expo-router'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
+import { useFooterOverlayOpen } from '@/hooks/useFooterOverlayOpen'
+import { useWebKeyboardInset } from '@/hooks/useWebKeyboardInset'
+import { asBottomDimension, useDockReservePx, webDockReserve } from '@/components/layout/bottomChromeInset'
 import { translate as i18nT } from '@/i18n'
 import { webViewStyle } from '@/utils/webProps'
 import { preloadOfflineRoute } from '@/utils/offlineRoutePreload.web'
+import {
+  releaseBottomChromeReserve,
+  setCriticalBottomChromeOwner,
+  setBottomChromeReserve,
+} from '@/utils/bottomChromeReserve'
 
+const RESERVE_OWNER = 'network-status'
+const useWebLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
 interface NetworkStatusProps {
   showWhenOnline?: boolean
@@ -32,7 +42,30 @@ export const NetworkStatus: React.FC<NetworkStatusProps> = ({
   const [wasOffline, setWasOffline] = useState(false)
   const [visible, setVisible] = useState(!isConnected)
   const [offlineRouteReady, setOfflineRouteReady] = useState(false)
+  const [bannerHeight, setBannerHeight] = useState(44 + 2 * DESIGN_TOKENS.spacing.xs)
+  const footerOverlayOpen = useFooterOverlayOpen()
+  const keyboardInset = useWebKeyboardInset()
+  const dockReservePx = useDockReservePx()
+  const bottomOffset = dockReservePx + DESIGN_TOKENS.spacing.xs
+  const bottomPosition = webDockReserve(DESIGN_TOKENS.spacing.xs)
+  const suspended = footerOverlayOpen || (position === 'bottom' && keyboardInset > 0)
+  const criticalActive = position === 'bottom' && (!isConnected || wasOffline)
   const openingOfflineRouteRef = useRef(false)
+
+  useWebLayoutEffect(() => {
+    if (!criticalActive) return
+    setCriticalBottomChromeOwner(RESERVE_OWNER)
+    return () => {
+      releaseBottomChromeReserve(RESERVE_OWNER)
+      setCriticalBottomChromeOwner(null)
+    }
+  }, [criticalActive])
+
+  useEffect(() => {
+    if (position !== 'bottom' || !visible || suspended) return
+    setBottomChromeReserve(RESERVE_OWNER, bottomOffset + bannerHeight + DESIGN_TOKENS.spacing.xs)
+    return () => releaseBottomChromeReserve(RESERVE_OWNER)
+  }, [bannerHeight, bottomOffset, suspended, position, visible])
 
   useEffect(() => {
     if (!isConnected) return undefined
@@ -48,6 +81,7 @@ export const NetworkStatus: React.FC<NetworkStatusProps> = ({
   }, [isConnected])
 
   useEffect(() => {
+    let exitTimer: ReturnType<typeof setTimeout> | undefined
     if (!isConnected) {
       setWasOffline(true)
       setVisible(true)
@@ -58,9 +92,12 @@ export const NetworkStatus: React.FC<NetworkStatusProps> = ({
       setVisible(true)
       const timer = setTimeout(() => {
         setVisible(false)
-        setTimeout(() => setWasOffline(false), 300)
+        exitTimer = setTimeout(() => setWasOffline(false), 300)
       }, 2000)
-      return () => clearTimeout(timer)
+      return () => {
+        clearTimeout(timer)
+        clearTimeout(exitTimer)
+      }
     }
 
     setVisible(false)
@@ -75,9 +112,11 @@ export const NetworkStatus: React.FC<NetworkStatusProps> = ({
     router.push('/offline')
   }, [offlineRouteReady, router])
 
-  const translateY = visible ? 0 : -100
+  const transform = visible ? 'translateY(0)' : position === 'bottom'
+    ? `translateY(calc(100% + ${bottomPosition}))`
+    : 'translateY(-100%)'
 
-  if (isConnected && !wasOffline && !showWhenOnline) {
+  if (suspended || (isConnected && !wasOffline && !showWhenOnline)) {
     return null
   }
 
@@ -86,12 +125,14 @@ export const NetworkStatus: React.FC<NetworkStatusProps> = ({
 
   return (
     <View
-      pointerEvents="box-none"
+      pointerEvents={visible ? 'box-none' : 'none'}
+      aria-hidden={!visible}
       testID="network-status-banner"
+      onLayout={(event) => setBannerHeight(event.nativeEvent.layout.height)}
       style={[
         styles.container,
-        position === 'top' ? styles.top : styles.bottom,
-        { backgroundColor, transform: [{ translateY }] },
+        position === 'top' ? styles.top : { bottom: asBottomDimension(bottomPosition) },
+        { backgroundColor, transform },
       ]}
     >
       <View pointerEvents="box-none" style={styles.content}>
@@ -147,9 +188,6 @@ const styles = StyleSheet.create({
   },
   top: {
     top: 0,
-  },
-  bottom: {
-    bottom: 0,
   },
   text: {
     flex: 1,

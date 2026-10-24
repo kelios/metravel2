@@ -13,6 +13,8 @@ import { QuestStepCard } from '@/components/quests/questWizardStepCard'
 import { createQuestWizardStyles } from '@/components/quests/questWizardStyles'
 import { getThemedColors } from '@/constants/designSystem'
 import { buildAnswerChecker } from '@/utils/questAdapters'
+import { useBottomChromeReservePx } from '@/components/layout/bottomChromeInset'
+import { releaseBottomChromeReserve, resetBottomChromeReserve, setBottomChromeReserve } from '@/utils/bottomChromeReserve'
 
 jest.mock('react-native-safe-area-context', () => {
   const React = require('react')
@@ -88,6 +90,7 @@ describe('useQuestKeyboardReveal (#1072)', () => {
   })
 
   afterEach(() => {
+    resetBottomChromeReserve()
     jest.useRealTimers()
     jest.restoreAllMocks()
   })
@@ -248,6 +251,32 @@ describe('useQuestKeyboardReveal (#1072)', () => {
       await showFeedback(result, feedbackBottom, measurable(windowHeight - dock - 300, INPUT_HEIGHT))
 
       expect(scrollTo).toHaveBeenLastCalledWith({ y: 20 + GAP, animated: true })
+    })
+
+    it('reveals fresh web feedback above the full live notification extent instead of only the dock', async () => {
+      const platform = jest.replaceProperty(Platform, 'OS', 'web')
+      const rect = jest.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+        return { height: this.hasAttribute('data-mt-dock-measure') ? 56 : 0 } as DOMRect
+      })
+      const scrollTo = jest.fn()
+      const scrollRef = { current: { scrollTo, ...measurable(VIEWPORT_TOP, windowHeight - VIEWPORT_TOP) } as unknown as ScrollView }
+      const hook = renderHook(() => useQuestKeyboardReveal(scrollRef, useBottomChromeReservePx()))
+      try {
+        // 56px dock + two 8px gaps + a 60px network banner.
+        act(() => setBottomChromeReserve('network-status', 132))
+        const feedbackBottom = windowHeight - 66
+        const input = measurable(windowHeight - 356, INPUT_HEIGHT)
+        await showFeedback(hook.result, feedbackBottom, input)
+        expect(scrollTo).toHaveBeenLastCalledWith({ y: 82, animated: true })
+        expect(feedbackBottom - 82 + GAP).toBeLessThanOrEqual(windowHeight - 132)
+        act(() => releaseBottomChromeReserve('network-status'))
+        await showFeedback(hook.result, feedbackBottom, input)
+        expect(scrollTo).toHaveBeenLastCalledWith({ y: 6, animated: true })
+      } finally {
+        hook.unmount()
+        rect.mockRestore()
+        platform.restore()
+      }
     })
 
     it('начальная обратная связь шага (из сохранённого прогресса) экран без клавиатуры не двигает', async () => {

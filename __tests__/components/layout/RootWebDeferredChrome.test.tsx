@@ -4,9 +4,9 @@ import RootWebDeferredChrome from '@/components/layout/RootWebDeferredChrome'
 
 jest.mock('@/components/ui/NetworkStatus', () => ({
   __esModule: true,
-  NetworkStatus: () => {
+  NetworkStatus: ({ position }: { position: string }) => {
     const { Text } = require('react-native')
-    return <Text testID="network-status">network-status</Text>
+    return <Text testID="network-status" accessibilityHint={position}>network-status</Text>
   },
 }))
 
@@ -110,6 +110,13 @@ describe('RootWebDeferredChrome', () => {
       expect(getByTestId('footer').props.accessibilityHint).toBe('true')
     })
   })
+
+  it.each(['/quests/35/istanbul', '/pl/quests/35/istanbul', '/map'])(
+    'keeps the global network status away from top navigation on %s', async pathname => {
+      const view = render(<RootWebDeferredChrome isMobile pathname={pathname} showFooter={false} isTravelPerformanceRoute={false} setDockHeight={jest.fn()} />)
+      await waitFor(() => expect(view.getByTestId('network-status').props.accessibilityHint).toBe('bottom'))
+    },
+  )
 
   // #2655: плашка установки адресована и iPhone — гейт монтирования чанка
   // обязан пропускать тот же набор телефонов, что и сама плашка.

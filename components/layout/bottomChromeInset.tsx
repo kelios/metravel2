@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useState, useSyncExter
 import { Platform } from 'react-native'
 
 import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe'
+import { getBottomChromeReserve, subscribeBottomChromeReserve } from '@/utils/bottomChromeReserve'
 
 import { BOTTOM_DOCK_HEIGHT } from './bottomDockItemDefs'
 
@@ -99,6 +100,7 @@ const subscribeWebDock = (listener: () => void): (() => void) => {
 
 const getWebDockSnapshot = () => webDockHeight
 const getServerDockSnapshot = () => 0
+const subscribeNoop = () => () => {}
 
 export function webBottomChromeInset(extra = 0): string {
   if (!extra) return WEB_BOTTOM_CHROME_INSET
@@ -165,6 +167,17 @@ export function useDockReservePx(): number {
     return BOTTOM_DOCK_HEIGHT + Math.max(0, insets.bottom || 0)
   }
   return measuredHeight
+}
+
+/** Content/reveal consumers include all web notices; banner positioning uses dock-only reserves. */
+export function useBottomChromeReservePx(): number {
+  const dock = useDockReservePx()
+  const banners = useSyncExternalStore(
+    Platform.OS === 'web' ? subscribeBottomChromeReserve : subscribeNoop,
+    Platform.OS === 'web' ? getBottomChromeReserve : getServerDockSnapshot,
+    getServerDockSnapshot,
+  )
+  return Math.max(dock, banners)
 }
 
 export function useBottomChromeInset(): { bottom: number | string } {

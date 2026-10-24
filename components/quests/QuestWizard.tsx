@@ -54,7 +54,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useQuestFontScaleStore } from '@/stores/questFontScaleStore';
 import { useQuestHeaderPlacement, useQuestWizardResponsiveModel } from './hooks/useQuestWizardResponsiveModel';
 import { useQuestKeyboardReveal } from './hooks/useQuestKeyboardReveal';
-import { useDockReservePx } from '@/components/layout/bottomChromeInset';
+import { asBottomDimension, useBottomChromeReservePx, useScrollBottomPadding } from '@/components/layout/bottomChromeInset';
 import { useQuestWizardAnalytics } from './hooks/useQuestWizardAnalytics';
 import { createQuestWizardStyles } from './questWizardStyles';
 import { useTranslation } from '@/i18n/LocaleProvider';
@@ -264,14 +264,15 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
     // Клавиатура не ужимает окно (edge-to-edge Android / visual viewport на mobile
     // web), поэтому поле ответа надо и подпереть отступом, и домотать до него.
     // Нижняя панель навигации лежит поверх области прокрутки — её полоса тоже не видна.
-    const dockReservePx = useDockReservePx();
+    const bottomChromeReservePx = useBottomChromeReservePx();
     const {
         keyboardInset,
         handleContentScroll,
         handleInputFocus,
         handleInputBlur,
         handleAnswerFeedback,
-    } = useQuestKeyboardReveal(contentScrollRef, dockReservePx, stepCardVisible ? currentStep?.id : null);
+    } = useQuestKeyboardReveal(contentScrollRef, bottomChromeReservePx, stepCardVisible ? currentStep?.id : null);
+    const webReadingBottomPadding = useScrollBottomPadding(SPACING.xl + keyboardInset);
     const headerPlacement = useQuestHeaderPlacement(wizardModel, contentScrollRef, keyboardInset, stepCardVisible ? currentStep?.id : null);
     const {
         onAnswerFocusChange,
@@ -935,7 +936,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                                 onMomentumScrollEnd={headerPlacement.onScrollEnd}
                                 onScroll={handleReadingScroll}
                                 scrollEventThrottle={16}
-                                contentContainerStyle={[{ paddingBottom: SPACING.xl + 96 + keyboardInset }, useWideExcursionsSidebar && styles.contentInner]}
+                                contentContainerStyle={[{ paddingBottom: Platform.OS === 'web' ? asBottomDimension(webReadingBottomPadding) : SPACING.xl + 96 + keyboardInset }, useWideExcursionsSidebar && styles.contentInner]}
                             >
                                 {!showDesktopSidebar && headerPlacement.headerInContentFlow ? questHeader : null}
                                 {mainContent}

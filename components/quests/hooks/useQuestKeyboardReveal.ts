@@ -57,9 +57,9 @@ function measureWindowRect(node: MeasurableInput): Promise<WindowRect | null> {
  * то есть БЕЗ nav-bar инсета, тогда как корневая вьюха рисуется за этим баром —
  * поэтому добавляем `insets.bottom` обратно.
  *
- * `bottomChromePx` — нижняя панель навигации, которая лежит поверх области
- * прокрутки (на телефоне ScrollView уходит под неё): её полоса тоже не видна,
- * и вердикт под ней игрок не прочтёт (замер Android, #2271).
+ * `bottomChromePx` — перекрытие области чтения снизу: измеренный dock на
+ * native, dock и видимые нижние уведомления на web. Вердикт раскрывается
+ * над всей занятой полосой (замер Android, #2271).
  */
 export function useQuestKeyboardReveal(scrollRef: React.RefObject<ScrollView | null>, bottomChromePx = 0, stepKey?: string | null) {
   const insets = useSafeAreaInsets()

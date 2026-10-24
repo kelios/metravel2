@@ -9,6 +9,7 @@ import type { AppStorePlatform } from '@/constants/appStore'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { asBottomDimension, useDockReservePx, webDockReserve } from '@/components/layout/bottomChromeInset'
 import { useFooterOverlayOpen } from '@/hooks/useFooterOverlayOpen'
+import { useWebKeyboardInset } from '@/hooks/useWebKeyboardInset'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { useTranslation } from '@/i18n/LocaleProvider'
@@ -21,7 +22,8 @@ import {
   shouldOfferAppInstall,
 } from '@/utils/appInstallHint'
 import {
-  getBottomChromeReserve,
+  getLowerBottomChromeReserve,
+  getCriticalBottomChromeOwner,
   releaseBottomChromeReserve,
   setBottomChromeReserve,
   subscribeBottomChromeReserve,
@@ -34,7 +36,7 @@ import { webViewStyle } from '@/utils/webProps'
 const IS_WEB = Platform.OS === 'web'
 const RESERVE_OWNER = 'app-install-bar'
 const APP_ICON = require('@/assets/images/app-icon.webp')
-const getOtherReserve = () => getBottomChromeReserve(RESERVE_OWNER)
+const getLowerReserve = () => getLowerBottomChromeReserve(RESERVE_OWNER)
 const getServerReserve = () => 0
 
 /** One phone-only offer; the OS handles app availability after an explicit tap. */
@@ -45,16 +47,19 @@ function AppInstallBar() {
   const searchParams = useGlobalSearchParams()
   const { isMobile, width } = useResponsive()
   const footerOverlayOpen = useFooterOverlayOpen()
+  const keyboardInset = useWebKeyboardInset()
+  const criticalOwner = useSyncExternalStore(subscribeBottomChromeReserve, getCriticalBottomChromeOwner, () => null)
   const [storePlatform, setStorePlatform] = useState<AppStorePlatform | null>(null)
   const [closed, setClosed] = useState(false)
   const shownRecorded = useRef(false)
   const [barHeight, setBarHeight] = useState(112)
   const styles = useMemo(() => createStyles(colors), [colors])
   const dockReservePx = useDockReservePx()
-  const otherReserve = useSyncExternalStore(subscribeBottomChromeReserve, getOtherReserve, getServerReserve)
-  const bottomOffset = Math.max(dockReservePx, otherReserve) + DESIGN_TOKENS.spacing.xs
-  const bottomPosition = webDockReserve(DESIGN_TOKENS.spacing.xs, otherReserve)
-  const shown = IS_WEB && isMobile && storePlatform !== null && !closed && !footerOverlayOpen && pathname !== '/app'
+  const lowerReserve = useSyncExternalStore(subscribeBottomChromeReserve, getLowerReserve, getServerReserve)
+  const bottomOffset = Math.max(dockReservePx, lowerReserve) + DESIGN_TOKENS.spacing.xs
+  const bottomPosition = webDockReserve(DESIGN_TOKENS.spacing.xs, lowerReserve)
+  const shown = IS_WEB && isMobile && storePlatform !== null && !closed && !footerOverlayOpen &&
+    keyboardInset === 0 && !criticalOwner && pathname !== '/app'
 
   useEffect(() => {
     if (!IS_WEB || typeof window === 'undefined') return

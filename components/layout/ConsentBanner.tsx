@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Link, usePathname } from 'expo-router';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -9,8 +9,9 @@ import Button from '@/components/ui/Button';
 import { readConsent, writeConsent, ConsentState } from '@/utils/consent';
 import { clearAnalyticsIdentity } from '@/utils/analyticsContext';
 import { clearQuestFunnelRuns } from '@/utils/questFunnelAnalytics';
-import { releaseBottomChromeReserve, setBottomChromeReserve } from '@/utils/bottomChromeReserve';
+import { getCriticalBottomChromeOwner, releaseBottomChromeReserve, setBottomChromeReserve, subscribeBottomChromeReserve } from '@/utils/bottomChromeReserve';
 import { useFooterOverlayOpen } from '@/hooks/useFooterOverlayOpen';
+import { useWebKeyboardInset } from '@/hooks/useWebKeyboardInset';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -21,7 +22,10 @@ function ConsentBanner() {
   const pathname = usePathname();
   const [visible, setVisible] = useState(false);
   const [measuredHeight, setMeasuredHeight] = useState<number | null>(null);
-  const suspendForOverlay = useFooterOverlayOpen();
+  const footerOverlayOpen = useFooterOverlayOpen();
+  const keyboardInset = useWebKeyboardInset();
+  const criticalOwner = useSyncExternalStore(subscribeBottomChromeReserve, getCriticalBottomChromeOwner, () => null);
+  const suspendForOverlay = footerOverlayOpen || keyboardInset > 0 || criticalOwner !== null;
   const { isMobile, width } = useResponsive();
   const isNarrowMobile = isMobile && width > 0 && width < 360;
   const dockReservePx = useDockReservePx();

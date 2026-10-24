@@ -66,6 +66,7 @@ import { getLocaleDisplayName } from '@/i18n/localeLabels'
 import HeaderContextBar from '@/components/layout/HeaderContextBar'
 import { resetScreenHeaderForTests } from '@/components/layout/ScreenHeaderContext'
 import { SPACING } from '@/components/quests/questWizardStyles/shared'
+import { releaseBottomChromeReserve, resetBottomChromeReserve, setBottomChromeReserve } from '@/utils/bottomChromeReserve'
 
 const steps = ['p1', 'p2', 'p3'].map((id, index) => ({
   id, title: `Точка ${index + 1}`, location: '', story: `Story ${id}`, task: `Task ${id}`,
@@ -184,10 +185,35 @@ describe('QuestWizard short viewport (#2198)', () => {
     routeFocus = jest.fn()
     scrollY = 0
     resetScreenHeaderForTests()
+    resetBottomChromeReserve()
     await AsyncStorage.clear()
     window.localStorage.clear()
   })
-  afterEach(() => { cleanup(); jest.restoreAllMocks(); Platform.OS = originalOS })
+  afterEach(() => { cleanup(); resetBottomChromeReserve(); jest.restoreAllMocks(); Platform.OS = originalOS })
+
+  it('keeps the mounted web reading tail tied to the live shared notice reserve', async () => {
+    const { view } = await setup(960, 640)
+    const scroll = contentScroll(view)
+    const padding = () => StyleSheet.flatten(scroll.props.contentContainerStyle).paddingBottom
+    expect(padding()).toBe(`calc(max(var(--mt-dock-h, 0px), var(--mt-consent-h, 0px)) + ${SPACING.xl}px)`)
+    act(() => {
+      setBottomChromeReserve('consent-banner', 180)
+      setBottomChromeReserve('network-status', 280)
+    })
+    expect(document.documentElement.style.getPropertyValue('--mt-consent-h')).toBe('280px')
+    expect(contentScroll(view)).toBe(scroll)
+    expect(padding()).toContain('var(--mt-consent-h, 0px)')
+    act(() => releaseBottomChromeReserve('network-status'))
+    expect(document.documentElement.style.getPropertyValue('--mt-consent-h')).toBe('180px')
+    expect(padding()).toContain('var(--mt-consent-h, 0px)')
+  })
+
+  it.each(['ios', 'android'] as const)('keeps the mounted %s reading tail numeric and unchanged', async os => {
+    Platform.OS = os
+    setBottomChromeReserve('network-status', 500)
+    const { view } = await setup(390, 640)
+    expect(StyleSheet.flatten(contentScroll(view).props.contentContainerStyle).paddingBottom).toBe(SPACING.xl + 96)
+  })
 
   it.each([[320, 640, true], [390, 640, true], [390, 839, true], [390, 840, false], [390, 844, false], [599, 640, true]] as const)(
     '%dx%d has one route in the expected reading surface', async (width, height, flow) => {

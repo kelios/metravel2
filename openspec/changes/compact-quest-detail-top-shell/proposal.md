@@ -8,6 +8,7 @@ The quest detail stacks site branding, language versions and quest navigation ab
 - Place route/progress in the existing reading scroll on windows below 840px high without a desktop route sidebar; retain the wide sidebar.
 - Share route recognition and presentation geometry between first-frame reservation, global header and quest layout.
 - Preserve route locale as content-language authority and the existing passive fallback-language notice.
+- Keep the global web network notification away from the compact header by integrating it with existing measured bottom-banner reserves, preserving dock/menu and final-content access; pending consent/install offers temporarily yield to critical status without changing their saved state.
 
 ## Capabilities
 
@@ -30,4 +31,5 @@ Dependencies: no backend work; reviewed production rollout and browser evidence 
 Fallback/mock policy: existing loading/error/offline behavior stays; mocks only support source regression tests.
 Preserve: wide desktop brand/navigation/language control, route sidebar, all quest actions, passive fallback notice, answer/form and scroll identity.
 Non-goals: catalog/city/country layouts, site navigation redesign, bottom dock, authored quest text, API contracts.
+Production acceptance found a related interaction: at 960×640 the 60px offline status banner at top 0 covers the new 54px header, including the More target. The overlap already existed on narrow phones, and this composition exposes it on tablets. Closing this interaction belongs to the header task; unchanged banner source does not make the tablet regression acceptable.
 Open questions: none.
