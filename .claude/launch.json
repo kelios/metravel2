@@ -2,6 +2,30 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "Llama Server v1 CPU 8080",
+      "runtimeExecutable": "llama-server",
+      "runtimeArgs": [
+        "-m",
+        "/Users/juliasavran/metravel-ai/gguf/metravel-llm-v1-Q4_K_M.gguf",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8080",
+        "-c",
+        "4096",
+        "--parallel",
+        "2",
+        "-ngl",
+        "0",
+        "--jinja",
+        "--no-warmup",
+        "--chat-template-kwargs",
+        "{\"enable_thinking\": false}"
+      ],
+      "port": 8080,
+      "autoPort": false
+    },
+    {
       "name": "Assistant 2460 Web 8081",
       "runtimeExecutable": "sh",
       "runtimeArgs": [
