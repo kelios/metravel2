@@ -142,6 +142,10 @@ type RetainedWebImageRequest = {
 };
 
 const retainedWebImageRequests = new Map<string, RetainedWebImageRequest>();
+// Only a scheduling hint, never proof that the recycled DOM node owns pixels.
+// Keep strings rather than decoded images or DOM nodes, and bound long sessions.
+const completedWebImageSources = new Set<string>();
+const MAX_COMPLETED_WEB_IMAGE_SOURCES = 256;
 const RETAINED_WEB_IMAGE_TIMEOUT_MS = 60_000;
 // Chromium starts native-lazy image transfers up to roughly 1250 px outside
 // the viewport. Use the same bounded band for catalog request ownership: a
@@ -151,11 +155,19 @@ const RECYCLED_IMAGE_RETAIN_MARGIN_PX = 1250;
 const LAZY_IMAGE_RECOVERY_MARGIN_PX = 300;
 const useWebLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
-const isCurrentImageIdentityComplete = (image: HTMLImageElement, src: string): boolean => {
+const isCurrentImageSourceComplete = (image: HTMLImageElement, src: string, srcSet?: string): boolean => {
   if (!image.complete || image.naturalWidth <= 0) return false;
-  const requestedIdentity = resolveImageIdentityKey(src);
-  const currentIdentity = resolveImageIdentityKey(image.currentSrc || image.src);
-  return requestedIdentity !== null && requestedIdentity === currentIdentity;
+  if (!image.currentSrc) return false;
+  const candidates = srcSet
+    ? srcSet.split(',').map(candidate => candidate.trim().split(/\s+/)[0])
+    : [src];
+  return candidates.some(candidate => {
+    try {
+      return new URL(candidate, document.baseURI).href === image.currentSrc;
+    } catch {
+      return false;
+    }
+  });
 };
 
 /**
@@ -240,38 +252,63 @@ export const WebMainImage = memo(function WebMainImage({
    */
   const onDecodedRef = useRef(onDecoded);
   onDecodedRef.current = onDecoded;
+  const sourceKey = `${src}\n${srcSet ?? ''}\n${sizes ?? ''}`;
+  const activeSourceKeyRef = useRef(sourceKey);
+  const previousLoadedRef = useRef(loaded);
   const handleLoad = useCallback(() => {
-    // Раскрываем резкий слой прямо здесь, а не следующим React-рендером. Блюр-подложка
-    // ставит свою `opacity` в DOM из собственного `load`, поэтому ожидание `setState`
-    // давало видимую двухфазность: сначала кадр «только блюр», затем фото поверх.
-    // Событие `load` означает, что пиксели выбранного кандидата готовы, так что
-    // раскрытие тут не обходит decode-гейт, а лишь не опаздывает на кадр.
+    // Neither a cached URL nor a late event proves that this node already owns
+    // the active candidate. Reveal only its actual, complete pixels.
     const img = imgRef.current;
-    if (img) img.style.opacity = '1';
+    if (!img || !isCurrentImageSourceComplete(img, src, srcSet)) return false;
+    img.style.opacity = '1';
+    completedWebImageSources.delete(sourceKey);
+    completedWebImageSources.add(sourceKey);
+    if (completedWebImageSources.size > MAX_COMPLETED_WEB_IMAGE_SOURCES) {
+      completedWebImageSources.delete(completedWebImageSources.values().next().value!);
+    }
 
-    // #1177: пропорции сообщаем ДО once-гарда.
-    //
-    // Родитель имеет право считать слой загруженным ещё до маунта — так работает
-    // первый слайд, чей файл уже лежит в кэше от hero-preload. Тогда эффект ниже
-    // вызывает `handleLoad()` немедленно, пикселей ещё нет, `naturalSizeOf` отдаёт
-    // undefined, а `loadReportedRef` уже взведён — и настоящее событие `load`
-    // возвращалось на строке ниже, так и не сообщив пропорции. В браузере это
-    // выглядело так: соседние слайды уходили в сегменты, а слайд 0 — единственный
-    // видимый — оставался с подложкой на всю плитку.
+    // Responsive candidates can change their natural dimensions without a new
+    // source set, so report dimensions independently of the once-per-source load.
     const natural = naturalSizeOf(img);
     if (natural) onNaturalSize?.(natural);
     if (natural && img) onDecodedRef.current?.(img);
 
-    if (loadReportedRef.current) return;
+    if (loadReportedRef.current) return true;
     loadReportedRef.current = true;
     const resolvedSrc = img?.currentSrc || src;
     onLoad?.(resolvedSrc, natural);
-  }, [onLoad, onNaturalSize, src]);
+    return true;
+  }, [onLoad, onNaturalSize, sourceKey, src, srcSet]);
 
-  // A new source must be able to report its own load again.
-  useEffect(() => {
-    loadReportedRef.current = false;
-  }, [src]);
+  const handleLoadRef = useRef(handleLoad);
+  handleLoadRef.current = handleLoad;
+
+  // A warm recycled source can become complete between commit and the first
+  // paint. Check before paint and again after responsive selection's microtask;
+  // the passive recovery effect is too late for that first returned frame.
+  useWebLayoutEffect(() => {
+    if (activeSourceKeyRef.current !== sourceKey || (previousLoadedRef.current && !loaded)) {
+      activeSourceKeyRef.current = sourceKey;
+      loadReportedRef.current = false;
+    }
+    previousLoadedRef.current = loaded;
+    let cancelled = false;
+    const reportIfCurrent = () => !cancelled && handleLoadRef.current();
+    if (!reportIfCurrent()) {
+      const img = imgRef.current;
+      if (img && !showImmediately) img.style.opacity = '0';
+      void Promise.resolve().then(reportIfCurrent);
+      if (img && completedWebImageSources.has(sourceKey) && typeof img.decode === 'function') {
+        const rect = img.getBoundingClientRect();
+        if (rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth) {
+          // The exact source set was decoded before. Cold lazy candidates still
+          // wait for the existing near-viewport observer below.
+          void img.decode().then(reportIfCurrent).catch(() => undefined);
+        }
+      }
+    }
+    return () => { cancelled = true; };
+  }, [loaded, showImmediately, sourceKey]);
 
   // Start the keeper in the same commit that rewrites the recycled node's
   // responsive source. Waiting for IntersectionObserver alone leaves a race:
@@ -295,7 +332,7 @@ export const WebMainImage = memo(function WebMainImage({
       // That policy-only update must not create a detached owner for an image
       // whose same identity is already decoded. During a real recycle swap the
       // node still reports the previous currentSrc, so the keeper stays active.
-      if (isNearViewport && !isCurrentImageIdentityComplete(img, src)) {
+      if (isNearViewport && !isCurrentImageSourceComplete(img, src, srcSet)) {
         retainWebImageRequest({ src, srcSet, sizes, priority });
       }
       return isNearViewport;
@@ -307,7 +344,7 @@ export const WebMainImage = memo(function WebMainImage({
     // owner as soon as FlashList places it, without enabling decode recovery.
     const retainObserver = new IntersectionObserver((entries) => {
       if (!entries.some((entry) => entry.isIntersecting)) return;
-      if (!isCurrentImageIdentityComplete(img, src)) {
+      if (!isCurrentImageSourceComplete(img, src, srcSet)) {
         retainWebImageRequest({ src, srcSet, sizes, priority });
       }
       retainObserver.disconnect();
@@ -333,27 +370,8 @@ export const WebMainImage = memo(function WebMainImage({
   // доступ к `currentSrc`.
   const attachImgRef = useCallback((node: HTMLImageElement | null) => {
     imgRef.current = node;
-    // Кэш-хит: у файла из памяти браузера пиксели есть уже к моменту вставки узла.
-    // Ставим `opacity` до первого paint, иначе кадр «только блюр» видно даже там,
-    // где ждать нечего — на возврате назад, повторном открытии и соседних слайдах.
-    if (node && node.complete && node.naturalWidth > 0) {
-      node.style.opacity = '1';
-      // #1177: и сразу отдаём пропорции. Родитель мог посчитать этот слой уже
-      // загруженным до маунта (кэш hero-preload у первого слайда) — тогда `onLoad`
-      // не сработает, и без этого вызова подложка навсегда осталась бы на всю плитку.
-      const natural = naturalSizeOf(node);
-      if (natural) onNaturalSize?.(natural);
-      if (natural) onDecodedRef.current?.(node);
-    }
-  }, [onNaturalSize]);
-
-  // То же самое, когда родитель СНОВА закрыл уже показанный слой: активный слайд
-  // включает decode-гейт, ячейка списка переиспользуется. `<img>` с неизменным `src`
-  // второго события `load` не выдаёт, поэтому без сброса единственный, кто мог бы
-  // подтвердить готовность, молчит — и слой навсегда остаётся под блюром.
-  useEffect(() => {
-    if (!loaded) loadReportedRef.current = false;
-  }, [loaded]);
+    if (node) handleLoadRef.current();
+  }, []);
 
   // Synthesize onLoad for cache hits and for iOS WebKit images whose real load event
   // is lost after a responsive-source swap or scroll restoration. Chrome, Firefox,
@@ -363,8 +381,7 @@ export const WebMainImage = memo(function WebMainImage({
   // WebKit builds where decode rejects even though the image later completes.
   useEffect(() => {
     const img = imgRef.current;
-    if (loaded || (img && img.complete && img.naturalWidth > 0)) {
-      handleLoad();
+    if (handleLoad()) {
       return;
     }
 
@@ -387,9 +404,9 @@ export const WebMainImage = memo(function WebMainImage({
     let intersectionObserver: IntersectionObserver | undefined;
     let pollTimer: ReturnType<typeof setInterval> | undefined;
     const reportIfReady = (): boolean => {
-      if (cancelled || !img.complete || img.naturalWidth <= 0) return false;
-      handleLoad();
-      return true;
+      // A source commit precedes passive cleanup. A completion in that gap must
+      // check the committed source rather than the previous effect's closure.
+      return !cancelled && handleLoadRef.current();
     };
 
     const startRecovery = () => {
@@ -397,7 +414,7 @@ export const WebMainImage = memo(function WebMainImage({
       recoveryStarted = true;
       intersectionObserver?.disconnect();
 
-      if (retainRequestOnSourceSwap && !isCurrentImageIdentityComplete(img, src)) {
+      if (retainRequestOnSourceSwap && !isCurrentImageSourceComplete(img, src, srcSet)) {
         retainWebImageRequest({ src, srcSet, sizes, priority });
       }
 

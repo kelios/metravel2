@@ -744,6 +744,18 @@ guard, падающий в CI на попытке обойти этот конт
 - **Решение для новой жалобы:** если в цепочке есть открытая подходящая карточка —
   `reuse` её. Если каноническая карточка нужного слоя закрыта, переоткрывай её;
   новый linked task допустим только для другой подтверждённой причины/owner.
+- **Linked recurrence — 2026-10-24 (`/travelsby`, `#2705`):** при первом
+  возврате вверх собственные уже готовые cover-кандидаты оставались opacity 0.
+  Независимые source/DOM и live-rAF проверки: Chrome149, аккаунт104,
+  compact390×844 DPR3 CPU×4; обложки672/664 complete=true, naturalWidth181,
+  currentSrc собственный, но скрыты. 12 cached-обращений передали 0 байт;
+  desktop1440×900 DPR2 — здоровый контроль (113 кадров). Прежний замер после
+  120мс и нулевые байты не проверяли первый paint. Это другой corrective layer,
+  чем overscan #1263 и keeper #1400: общий WebMainImage проверяет готовность
+  активного responsive-кандидата до paint/в microtask и отвергает чужие
+  завершения. Норматив — `docs/design/travel-catalog-warm-return.md`;
+  regression — реальные DOM layout-checkpoint, warm microtask, cold/offscreen,
+  late decode и version/signature/candidate mismatch tests.
 - **Recurrence Log — 2026-08-11 (`/search`, `#1400`):** закрытый инвариант
   «виртуализированный скролл не создаёт отменённых image requests» снова
   нарушен на production. Независимый raw CDP-прогон без request interception и

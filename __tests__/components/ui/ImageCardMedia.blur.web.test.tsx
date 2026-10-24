@@ -598,12 +598,20 @@ describe('ImageCardMedia blur background (web)', () => {
     // callback (which releases the travel-details skeleton overlay) never runs and
     // the page stays blank behind the skeleton until a 6s safety timeout.
     const src = 'https://example.com/photo-cache-hit.jpg'
+    const cachedPixels = (element: any) => element.type === 'img' ? {
+      complete: true,
+      naturalWidth: 640,
+      naturalHeight: 360,
+      currentSrc: element.props.srcSet?.split(',')[0].trim().split(/\s+/)[0] ?? element.props.src,
+      style: {},
+    } : null
 
     // First mount + load primes loadedWebImageBaseCache for this base src.
     let firstTree: any
     renderer.act(() => {
       firstTree = renderer.create(
-        <ImageCardMedia src={src} height={200} blurBackground fit="contain" />
+        <ImageCardMedia src={src} height={200} blurBackground fit="contain" />,
+        { createNodeMock: cachedPixels },
       )
     })
     const firstMainImage = firstTree!.root.findAll((node: any) => {
@@ -624,7 +632,8 @@ describe('ImageCardMedia blur background (web)', () => {
     let secondTree: any
     renderer.act(() => {
       secondTree = renderer.create(
-        <ImageCardMedia src={`${src}?w=480&q=60`} height={200} blurBackground fit="contain" onLoad={onLoad} />
+        <ImageCardMedia src={`${src}?w=480&q=60`} height={200} blurBackground fit="contain" onLoad={onLoad} />,
+        { createNodeMock: cachedPixels },
       )
     })
 

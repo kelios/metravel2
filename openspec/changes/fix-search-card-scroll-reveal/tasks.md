@@ -1,5 +1,15 @@
 ## 1. Baseline and Regression Harness
 
+### Дополнение 24.10.2026 — отдельная проверка готового web-кандидата
+
+Исторические `[x]` ниже не являются приёмкой этого дополнения.
+
+- [x] 6.1 Подтвердить source-механизм и первый скрытый готовый кадр на production mobile; desktop служит здоровым контролем. Норматив: `docs/design/travel-catalog-warm-return.md`.
+- [x] 6.2 Исправить общий WebMainImage: проверка активного кандидата до paint и после responsive microtask, ограниченный тёплый decode, защита от старых завершений.
+- [x] 6.3 Закрепить warm/cold/source mismatch/signature/size/async regression, выполнить targeted unit, lint, typecheck и image architecture. Первый targeted прогон: 10 suites/70 tests pass; дополнительные async-регрессии проходят отдельный итоговый прогон. Scoped lint, typecheck, image architecture, audit:prompts и OpenSpec strict pass.
+- [ ] 6.4 Независимые review-auditor и code-review-gate pass; коммит явными путями, push main и штатный production deploy.
+- [ ] 6.5 На выкаченном SHA повторить desktop/mobile first-return frame, консоль/байты/DOM bounds и соседнюю shared media surface; только затем done.
+
 - [x] 1.1 Reproduce the fill-only scroll window in the local production-like `/search` build with the agreed 1280×900 and 390×844 throttled traces, recording visible image readiness, source ownership, requests, downloaded bytes, duplicate URLs, and response failures.
       Traced on the live production bundle instead of a local build: the production API answers CORS only for its own origin, so a locally served build never receives the list. The former lookahead is restored in-page by wrapping the Metro module registry and overriding `RVEngagedIndicesTrackerImpl.prototype.drawDistance`, which leaves the shipped bundle, the API and the HTTP cache untouched.
 - [x] 1.2 Add a focused real-browser regression scenario that drives the actual virtualized search list and fails on any visible fill-only cover, stale/wrong-photo swap, geometry shift, duplicate effective image URL, or exceeded request/byte budget.

@@ -45,6 +45,8 @@ const findMainImage = (tree: any) =>
 
 /** Настоящее событие `load`: пиксели у узла появились. */
 const fireLoad = (tree: any, node: FakeImg) => {
+  const props = findMainImage(tree).props;
+  node.currentSrc = props.srcSet?.split(',')[0].trim().split(/\s+/)[0] ?? props.src;
   node.complete = true;
   node.naturalWidth = 800;
   node.naturalHeight = 600;

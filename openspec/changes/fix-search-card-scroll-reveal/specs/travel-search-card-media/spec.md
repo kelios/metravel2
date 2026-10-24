@@ -36,6 +36,19 @@ color fill alone MUST NOT count as a ready cover.
 - **THEN** their own decoded covers remain fully revealed without a second
   fill-to-photo replacement
 
+#### Scenario: Cached candidate becomes ready between commit and paint
+
+- **WHEN** a recycled web image returns to a previously decoded source set
+- **AND** its own selected currentSrc becomes complete before the first paint
+- **THEN** that first frame displays the photograph with full opacity
+- **AND** a passive-effect delay or cached HTTP status does not count as readiness
+
+#### Scenario: Previous candidate completes after the requested source changes
+
+- **WHEN** load or decode completes for an obsolete source or responsive candidate
+- **THEN** only a complete currentSrc belonging to the active src/srcSet may reveal
+- **AND** versions, signatures and candidates outside the active set remain distinct
+
 ### Requirement: Recycled cards never expose another travel's photo
 
 The result list MUST preserve source ownership while virtualized cells are

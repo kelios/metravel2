@@ -1,5 +1,23 @@
 ## Context
 
+### Текущее дополнение 24.10.2026
+
+Остальной документ сохраняет историческое августовское решение. Сейчас
+drawDistance равен 820/760 на web и 800 на native. Новый corrective layer —
+готовность собственного DOM-кандидата в `WebMainImage`, а не размер окна.
+До paint проверяются complete, naturalWidth и точное соответствие currentSrc
+активному src/srcSet; версия, подпись и размер не подменяются другим кандидатом.
+Microtask повторяет проверку после responsive selection. Для ранее показанного
+точного source tuple допускается decode видимого узла; ограниченные строковые
+подсказки не доказывают готовность и не удерживают изображения в памяти.
+Поздние завершения отменённого эффекта не раскрывают старый источник.
+Безусловное раскрытие отвергнуто из-за чужих фото; увеличение окна — из-за
+ненужных DOM/байтов. Откат: только общий helper и его регрессии.
+Норматив и baseline: `docs/design/travel-catalog-warm-return.md`.
+Платформы текущего дополнения: desktop/mobile web, localization none.
+Ревью ограничено static/unit; затем commit/push, testing, штатный prod deploy
+и повтор той же покадровой проверки на выкаченном SHA.
+
 See [proposal.md](proposal.md) for the production symptom and recurrence history.
 The search result list uses FlashList with a shared configuration model. On web,
 its current `drawDistance` is 180 px on desktop and 160 px on mobile, while the

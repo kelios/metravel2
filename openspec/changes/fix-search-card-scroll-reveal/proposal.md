@@ -1,5 +1,15 @@
 ## Why
 
+### Дополнение 24.10.2026: готовые фото при возврате
+
+Предыдущие замеры и выполненные задачи ниже относятся к августовскому окну
+подготовки. Текущие web drawDistance — desktop 820/mobile 760, native 800.
+Новая подтверждённая причина находится внутри WebMainImage: уже готовый
+собственный currentSrc оставался opacity 0 до passive effect. Подтверждение
+и норматив состояний: `docs/design/travel-catalog-warm-return.md`.
+Исправляется общий web renderer; API, тексты, native и окно списка не меняются.
+Повторный cached 200 с нулём байт не считается доказательством отсутствия мигания.
+
 On production `/search`, a fast 1160 px scroll leaves all six newly visible
 travel-card covers hidden behind their dominant-color fill for at least 100 ms;
 the sharp images become visible only around 600 ms later. The behavior was
