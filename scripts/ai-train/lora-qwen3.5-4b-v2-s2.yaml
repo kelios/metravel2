@@ -1,0 +1,38 @@
+# metravel-llm v2, stage S2 "site" (docs/AI_TRAIN_DATASETS.md § 3, #2480):
+# the S1 adapter continues on the site set with 15 % replay of S1 samples
+# (data/sft-v2/s2 from build_mix.py, mix v2 replay: 0.15). If S2 drops the S1
+# slices below the threshold, rebuild with replay 0.3 and rerun this stage.
+# iters = one epoch of the S2 train split (site + replay); set from
+# data/sft-v2/s2/stats.json after the build.
+#   cd ~/metravel-ai && nohup caffeinate -i env AI_HOME=$HOME/metravel-ai RUN=v2-s2 \
+#     CONFIG=<repo>/scripts/ai-train/lora-qwen3.5-4b-v2-s2.yaml <repo>/scripts/ai-train/train.sh &
+model: models/Qwen3.5-4B-MLX-4bit
+data: data/sft-v2/s2
+train: true
+fine_tune_type: lora
+optimizer: adamw
+mask_prompt: true
+num_layers: 6
+batch_size: 1
+grad_accumulation_steps: 1
+iters: __S2_ITERS__        # ≈ 1 epoch of the S2 train split (site + 15 % replay) at batch 1
+resume_adapter_file: adapters/metravel-llm-v2-s1/adapters.safetensors
+learning_rate: 4.0e-5      # a little lower than S1: the adapter already carries the foundation
+max_seq_length: 1024       # site set built with chunk_chars 2600 so sections fit
+grad_checkpoint: true
+steps_per_report: 20
+steps_per_eval: 1000
+val_batches: 10
+save_every: 500
+adapter_path: adapters/metravel-llm-v2
+seed: 20261017
+lora_parameters:
+  rank: 16
+  scale: 20.0
+  dropout: 0.05
+  keys: ["self_attn.q_proj", "self_attn.k_proj", "self_attn.v_proj", "self_attn.o_proj", "mlp.gate_proj", "mlp.up_proj", "mlp.down_proj"]
+lr_schedule:
+  name: cosine_decay
+  warmup: 100
+  warmup_init: 1.0e-6
+  arguments: [4.0e-5, __S2_ITERS__, 1.0e-6]

@@ -1,0 +1,10 @@
+{"id": "w01", "group": "no_article", "lang": "ru", "expect": "info", "accept": ["Пружан"], "prompt": "Что посмотреть в Пружанах?"}
+{"id": "w02", "group": "no_article", "lang": "ru", "expect": "info", "accept": ["Кобрин"], "prompt": "Расскажи о Кобрине — что это за город и что там есть?"}
+{"id": "w03", "group": "no_article", "lang": "ru", "expect": "info", "accept": ["Волковыск"], "prompt": "Как добраться до Волковыска и что там посмотреть?"}
+{"id": "w04", "group": "no_article", "lang": "ru", "expect": "info", "accept": ["Речиц"], "prompt": "Что известно о Речице?"}
+{"id": "w05", "group": "no_article", "lang": "ru", "expect": "info", "accept": ["Солигорск"], "prompt": "Чем заняться в Солигорске?"}
+{"id": "w06", "group": "no_article", "lang": "ru", "expect": "info", "accept": ["Плоцк"], "prompt": "Что посмотреть в Плоцке?"}
+{"id": "w07", "group": "no_article", "lang": "ru", "expect": "info", "accept": ["Тарнув|Тарнов"], "prompt": "Тарнув — что это за город и стоит ли туда ехать?"}
+{"id": "w08", "group": "no_article", "lang": "ru", "expect": "info", "accept": ["Эльблонг"], "prompt": "Как добраться до Эльблонга и что там есть интересного?"}
+{"id": "w09", "group": "no_article", "lang": "pl", "expect": "info", "accept": ["Kalisz"], "prompt": "Co warto zobaczyć w Kaliszu?"}
+{"id": "w10", "group": "no_article", "lang": "en", "expect": "info", "accept": ["Sopot"], "prompt": "What is there to do in Sopot?"}

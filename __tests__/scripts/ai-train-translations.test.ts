@@ -184,12 +184,14 @@ texts = {
 known = {"https://metravel.by/quests/1"}
 out = {k: detect_lang(v) for k, v in texts.items()}
 out["none"] = detect_lang("https://metravel.by/quests/1 {{value1}} 123")
-out["be_ok"] = verdict("lang", check(texts["be"], known), "be")
-out["be_as_uk"] = verdict("lang", check(texts["be"], known), "uk")
-out["made_up"] = verdict("lang", check(texts["be"] + " https://metravel.by/quests/999", known), "be")
-out["no_link"] = verdict("lang", check(texts["uk"], known), "uk")
-out["loop"] = verdict("lang", check(texts["be"] + " Яму ўжо шасцццццццц", known), "be")
-out["answer_untouched"] = verdict("answer", check(texts["ru"], known))
+def v(expect, answer, lang=None):
+    return verdict({"expect": expect, "lang": lang}, check(answer, known), answer)
+out["be_ok"] = v("lang", texts["be"], "be")
+out["be_as_uk"] = v("lang", texts["be"], "uk")
+out["made_up"] = v("lang", texts["be"] + " https://metravel.by/quests/999", "be")
+out["no_link"] = v("lang", texts["uk"], "uk")
+out["loop"] = v("lang", texts["be"] + " Яму ўжо шасцццццццц", "be")
+out["answer_untouched"] = v("answer", texts["ru"])
 print(json.dumps(out))
 `;
     const res = runCli('python3', ['-I', '-c', code, DIR]);

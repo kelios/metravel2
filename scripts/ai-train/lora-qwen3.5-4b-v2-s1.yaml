@@ -1,0 +1,37 @@
+# metravel-llm v2, stage S1 "foundation" (docs/AI_TRAIN_DATASETS.md § 3, #2480):
+# a fresh adapter on the open-data sets toponyms + translations + wikivoyage +
+# osm_intents (mix v2, data/sft-v2/s1 from build_mix.py). Same memory-bound
+# settings as v0/v1 (batch 1, seq 1024, 6 layers, MLX_DISABLE_COMPILE=1 in
+# train.sh). iters = one epoch of the S1 train split; set from
+# data/sft-v2/s1/stats.json after the build.
+#   cd ~/metravel-ai && nohup caffeinate -i env AI_HOME=$HOME/metravel-ai RUN=v2-s1 \
+#     CONFIG=<repo>/scripts/ai-train/lora-qwen3.5-4b-v2-s1.yaml <repo>/scripts/ai-train/train.sh &
+model: models/Qwen3.5-4B-MLX-4bit
+data: data/sft-v2/s1
+train: true
+fine_tune_type: lora
+optimizer: adamw
+mask_prompt: true          # loss only on assistant tokens
+num_layers: 6              # last 6 of 32 decoder layers; 8 → ~20 GB peak
+batch_size: 1              # one 1024-token sample ≈ 15 GB peak; batch 2 ≈ 27 GB
+grad_accumulation_steps: 1 # graphs of all micro-steps are kept → OOM at 2
+iters: __S1_ITERS__        # ≈ 1 epoch of the S1 train split at batch 1
+learning_rate: 5.0e-5
+max_seq_length: 1024       # sets are built so one sample fits (wikivoyage max_chars 1800)
+grad_checkpoint: true
+steps_per_report: 20
+steps_per_eval: 1000
+val_batches: 10
+save_every: 500
+adapter_path: adapters/metravel-llm-v2-s1
+seed: 20261017
+lora_parameters:
+  rank: 16
+  scale: 20.0
+  dropout: 0.05
+  keys: ["self_attn.q_proj", "self_attn.k_proj", "self_attn.v_proj", "self_attn.o_proj", "mlp.gate_proj", "mlp.up_proj", "mlp.down_proj"]
+lr_schedule:
+  name: cosine_decay
+  warmup: 100
+  warmup_init: 1.0e-6
+  arguments: [5.0e-5, __S1_ITERS__, 1.0e-6]

@@ -1,0 +1,12 @@
+# The v2 `wikivoyage` set alone (#2478): ru/pl/en Wikivoyage guides of Belarus
+# and Poland as general knowledge — "по открытым данным", no URLs. For checking
+# the set and its eval slice before #2480; the v2 mix takes it with weight 0.7
+# and the 1.5 M token cap.
+name: wikivoyage
+seed: 20261017
+split: {by: key, valid_share: 0.03, test_share: 0.02}
+sets:
+  wikivoyage:
+    weight: 1.0
+    cap_tokens: 1500000
+    options: {langs: [ru, pl, en], max_chars: 1800, max_chunks: 2, min_chars: 200}

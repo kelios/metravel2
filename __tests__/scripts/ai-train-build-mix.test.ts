@@ -162,9 +162,12 @@ print(len(s1["parts"]["train"]), s1["replayed"], len(s2["parts"]["train"]), s2["
       const orphan = run({ name: 'o', sets: { site: {} }, stages: [{ name: 's1', sets: [] }] }, path.join(bare, 'o'), bare);
       expect(orphan.status).not.toBe(0);
       expect(orphan.stderr).toContain('exactly one stage');
-      const missing = run({ name: 'm', sets: { toponyms: {} } }, path.join(bare, 'm'), bare);
+      const missing = run({ name: 'm', sets: { not_a_set: {} } }, path.join(bare, 'm'), bare);
       expect(missing.status).not.toBe(0);
       expect(missing.stderr).toContain('not implemented yet');
+      const noCache = run({ name: 't', sets: { toponyms: {} } }, path.join(bare, 't'), bare);
+      expect(noCache.status).not.toBe(0);
+      expect(noCache.stderr).toContain('sources/wikidata.py');
       const noFilters = run({ name: 'f', sets: { site: { options: { structured: true } } } }, path.join(bare, 'f'), bare);
       expect(noFilters.status).not.toBe(0);
       expect(noFilters.stderr).toContain('sources/site_filters.py');

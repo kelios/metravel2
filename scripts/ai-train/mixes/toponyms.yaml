@@ -1,0 +1,12 @@
+# The v2 `toponyms` set alone (#2477): Wikidata places of Belarus and Poland —
+# names in five languages, administrative unit, kind of object, "same place?".
+# For checking the set and its eval slice before #2480; the v2 mix caps it at
+# 0.4 M tokens with the same options.
+name: toponyms
+seed: 20261017
+split: {by: key, valid_share: 0.03, test_share: 0.02}
+sets:
+  toponyms:
+    weight: 1.0
+    cap_tokens: 400000
+    options: {max_items: 600, name_langs: 2, be_share: 0.1}

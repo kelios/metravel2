@@ -1,0 +1,15 @@
+{"id": "p01", "group": "name", "lang": "ru", "expect": "exact", "accept": ["\\bGrodno\\b"], "prompt": "Как по-польски называется Гродно?"}
+{"id": "p02", "group": "name", "lang": "ru", "expect": "exact", "accept": ["Магілёў"], "prompt": "Как по-белорусски называется Могилёв?"}
+{"id": "p03", "group": "name", "lang": "ru", "expect": "exact", "accept": ["\\bBrest\\b"], "prompt": "Как по-английски пишется Брест (город в Беларуси)?"}
+{"id": "p04", "group": "name", "lang": "ru", "expect": "exact", "accept": ["Белосток"], "prompt": "Как по-русски называется Białystok?"}
+{"id": "p05", "group": "name", "lang": "ru", "expect": "exact", "accept": ["Люблін"], "prompt": "Как по-украински называется Люблин?"}
+{"id": "p06", "group": "name", "lang": "ru", "expect": "exact", "accept": ["Гродно"], "prompt": "Hrodna — что это за город по-русски?"}
+{"id": "p07", "group": "where", "lang": "ru", "expect": "exact", "accept": ["Гродненск"], "prompt": "В какой области находится Мир (посёлок с замком)?"}
+{"id": "p08", "group": "where", "lang": "ru", "expect": "exact", "accept": ["Малопольск"], "prompt": "В каком воеводстве находится Закопане?"}
+{"id": "p09", "group": "where", "lang": "ru", "expect": "exact", "accept": ["Пулав"], "prompt": "В каком повяте находится Казимеж-Дольны?"}
+{"id": "p10", "group": "where", "lang": "ru", "expect": "exact", "accept": ["Минск"], "prompt": "В какой области Беларуси находится Несвиж?"}
+{"id": "p11", "group": "what", "lang": "ru", "expect": "exact", "accept": ["озеро"], "prompt": "Что это за объект — Нарочь?"}
+{"id": "p12", "group": "what", "lang": "ru", "expect": "exact", "accept": ["национальн\\w+ парк|\\bлес\\b|лесн\\w+ массив|заповедник"], "prompt": "Что такое Беловежская пуща?"}
+{"id": "p13", "group": "what", "lang": "ru", "expect": "exact", "accept": ["замок"], "prompt": "Расскажи коротко, что такое Мирский замок."}
+{"id": "p14", "group": "same", "lang": "ru", "expect": "exact", "accept": ["^\\s*да\\b|одно и то же|одно место|один и тот же"], "reject": ["^\\s*нет\\b", "разные\\s+(места|объекты|города|замки)"], "prompt": "Мальборк и Marienburg — одно и то же?"}
+{"id": "p15", "group": "same", "lang": "ru", "expect": "exact", "accept": ["^\\s*нет\\b|разные|не одно"], "reject": ["^\\s*да\\b", "(?<!не )одно и то же"], "prompt": "Гомель и Гродно — одно и то же?"}

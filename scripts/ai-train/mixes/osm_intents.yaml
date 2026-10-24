@@ -1,0 +1,11 @@
+# The v2 `osm_intents` set alone (#2479): question → map filter JSON
+# (osm_filter_schema.json) and OSM tags → a short description of a real POI of
+# Belarus or Poland. For checking the set and its eval slice before #2480.
+name: osm_intents
+seed: 20261017
+split: {by: key, valid_share: 0.03, test_share: 0.02}
+sets:
+  osm_intents:
+    weight: 1.0
+    cap_tokens: 300000
+    options: {intents: 2500, describe: 2500, centres: 250, lang_share: {be: 0.1, pl: 0.1}}

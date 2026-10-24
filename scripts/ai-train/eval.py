@@ -23,9 +23,19 @@ A prompt with expect=answer passes when there is at least one known URL,
 no unknown and no external link; expect=refuse passes when the model refuses
 and invents no URL; expect=lang (the translations slice) is expect=answer in
 the prompt's `lang`: the language matches, at least one known URL, no unknown
-or external link and no degenerate loop. Factual accuracy, tone and the
-quality of a translation (Russian words inside a Belarusian answer pass the
-letter check) are still read by a human — the report leaves a column for that.
+or external link and no degenerate loop. The v2 slices (#2477–#2479) add:
+  * expect=exact (toponyms) — every regex in `accept` matches the answer, none
+    of `reject` does, no unknown or external URL;
+  * expect=info (wikivoyage) — an informative answer without any link: ≥ 200
+    characters, no URL at all (known pages included — the model has no
+    material and must not pretend), the prompt's language, no degenerate
+    loop, `accept` regexes if given;
+  * expect=json (osm_intents) — the first {…} in the answer parses and passes
+    sets.osm_intents.validate_filter() (osm_filter_schema.json), `accept`
+    regexes if given.
+Factual accuracy, tone and the quality of a translation (Russian words inside
+a Belarusian answer pass the letter check) are still read by a human — the
+report leaves a column for that.
 
 Output: <out>/results.jsonl (both answers + checks) and <out>/report.md.
 """
@@ -41,6 +51,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from sets.common import SITE, SYSTEM  # noqa: E402
+from sets.osm_intents import extract_json, validate_filter  # noqa: E402
 
 URL_RE = re.compile(r"https?://[^\s)\]>»\"']+")
 REFUSE_RE = re.compile(r"(пока\s+)?нет\s+(материал|стат|квест|ничего)|не\s+нашл|нет\s+информации|brak\s+materia|nie\s+ma(my)?\s+(materia|artyku)", re.I)
@@ -122,16 +133,32 @@ def check(answer: str, known: set[str]) -> dict:
         "refused": bool(REFUSE_RE.search(answer)),
         "lang": detect_lang(answer),
         "degenerate": bool(DEGENERATE_RE.search(URL_RE.sub(" ", answer))),
+        "json_ok": (lambda obj: obj is not None and not validate_filter(obj))(extract_json(answer)),
     }
 
 
-def verdict(expect: str, c: dict, lang: str | None = None) -> bool:
+INFO_MIN_CHARS = 200
+
+
+def matches(answer: str, patterns: list[str] | None) -> bool:
+    return all(re.search(p, answer, re.I | re.M) for p in patterns or [])
+
+
+def verdict(p: dict, c: dict, answer: str) -> bool:
+    expect, lang = p["expect"], p.get("lang")
     if c["external"] or c["urls_unknown"]:
         return False
     if expect == "lang":
         return c["lang"] == lang and c["urls_ok"] > 0 and not c["degenerate"]
     if expect == "refuse":
         return c["refused"]
+    if expect == "exact":
+        return matches(answer, p.get("accept")) and not any(re.search(r, answer, re.I | re.M) for r in p.get("reject") or [])
+    if expect == "info":
+        return (not c["urls"] and len(answer) >= INFO_MIN_CHARS and not c["degenerate"]
+                and (not lang or c["lang"] == lang) and matches(answer, p.get("accept")))
+    if expect == "json":
+        return c["json_ok"] and matches(answer, p.get("accept"))
     return c["urls_ok"] > 0
 
 
@@ -243,8 +270,8 @@ def main() -> int:
     with (out / "results.jsonl").open("w", encoding="utf-8") as fh:
         for p, b, a in zip(prompts, base_ans, ad_ans):
             cb, ca = check(b, known), check(a, known)
-            row = {**p, "base": {"answer": b, **cb, "pass": verdict(p["expect"], cb, p.get("lang"))},
-                   "adapter": {"answer": a, **ca, "pass": verdict(p["expect"], ca, p.get("lang"))}}
+            row = {**p, "base": {"answer": b, **cb, "pass": verdict(p, cb, b)},
+                   "adapter": {"answer": a, **ca, "pass": verdict(p, ca, a)}}
             rows.append(row)
             fh.write(json.dumps(row, ensure_ascii=False) + "\n")
             for side, key in (("base", "base"), ("v", "adapter")):
@@ -265,6 +292,8 @@ def main() -> int:
             flags.append("отказ")
         if r.get("degenerate"):
             flags.append("зацикливание")
+        if r.get("json_ok"):
+            flags.append("JSON по схеме")
         lang = f", язык {r['lang']}" if r.get("lang") else ""
         return ("✅" if r["pass"] else "❌") + " " + (", ".join(flags) or "без ссылок") + lang
 
