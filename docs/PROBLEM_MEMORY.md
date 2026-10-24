@@ -751,16 +751,21 @@ guard, падающий в CI на попытке обойти этот конт
   currentSrc собственный, но скрыты. 12 cached-обращений передали 0 байт;
   desktop1440×900 DPR2 — здоровый контроль (113 кадров). Прежний замер после
   120мс и нулевые байты не проверяли первый paint. Это другой corrective layer,
-  чем overscan #1263 и keeper #1400: общий WebMainImage проверяет готовность
-  активного responsive-кандидата до paint/в microtask и отвергает чужие
-  завершения. Норматив — `docs/design/travel-catalog-warm-return.md`;
-  regression — реальные DOM layout-checkpoint, warm microtask, cold/offscreen,
-  late decode и version/signature/candidate mismatch tests.
+  чем overscan #1263 и keeper #1400: общий WebMainImage должен устранить
+  JS-deadline показа собственных пикселей, сохраняя владение источником.
+  Норматив — `docs/design/travel-catalog-warm-return.md`; regression — реальные
+  DOM ownership/layout, cold/offscreen, late decode, version/signature/candidate
+  mismatch и сохранение узла при optimization/srcSet/sizes.
   Первый выкат `7fd88a5b4` не прошёл mobile в обеих плотностях. Native decode
   вызывался заранее, но его Promise завершался позже собственного готового
-  currentSrc; IO recovery должен проверять готовность непосредственно перед
-  decode/poll, а не безусловно ждать их. Новый контроль — синхронное раскрытие
-  own-ready изображения в отложенном IO callback без decode и таймера.
+  currentSrc. Второй `86920374c` с ready-check перед IO recovery также FAIL;
+  на его потомке `765f2c331` с тем же media-кодом actual compositor seq3
+  показал заливки 672/664. Два контроля измерителя отличают late reveal в том
+  же rAF от reveal на следующем; 55 return seq без пропусков. Выбран source-owned
+  HTML img по media identity и обычный native display без JS opacity deadline;
+  полный tuple key и дополнительный rAF-опрос отвергнуты. Keeper/cold lazy и
+  явный reveal gate сохраняются. До новой production матрицы, byte/abort/DOM
+  проверки и bilateral slider gates задача остаётся открытой.
 - **Recurrence Log — 2026-08-11 (`/search`, `#1400`):** закрытый инвариант
   «виртуализированный скролл не создаёт отменённых image requests» снова
   нарушен на production. Независимый raw CDP-прогон без request interception и

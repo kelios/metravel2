@@ -322,15 +322,6 @@ function ImageCardMedia({
   const hasConfirmedDecode =
     decodedIdentityRef.current !== null &&
     decodedIdentityRef.current === currentImageIdentityKey;
-  /**
-   * Идентичность, ПИКСЕЛИ которой этот узел показал последними.
-   *
-   * В отличие от `decodedIdentityRef` сменой картинки не сбрасывается: чужой
-   * кадр не исчезает из `<img>` оттого, что мы поменяли `src`, — он остаётся на
-   * экране, пока не декодируется новый. Именно поэтому здесь нужна отдельная
-   * память, переживающая reset-эффект ниже.
-   */
-  const paintedIdentityRef = useRef<string | null>(null);
   // FlashList recycles a mounted card synchronously. Do not let the previous
   // item's `webLoaded=true` leak into the first paint of the next identity while
   // the reset effect is still pending.
@@ -622,49 +613,10 @@ function ImageCardMedia({
    * Оба недостающих числа берём из DOM: размер — из контейнера, пропорции — из
    * `naturalWidth/naturalHeight` уже загруженного резкого слоя.
    */
-  // When blur backdrop reuses the main image URL, both the CSS background-image
-  // and the <img> share one browser cache entry. The sharp image appears as soon
-  // as data arrives — no need for an opacity fade that creates a "blur first,
-  // image second" flash during scroll.
-  /**
-   * Решение владельца 2026-08-02: гейта раскрытия на web больше нет.
-   *
-   * Гейт держал `<img>` в `opacity: 0` до события `load` и показывал вместо фото
-   * подложку. Он и был причиной «сначала виден только размытый фон», а на
-   * квестах фото иногда так и не раскрывалось: событие `load` не приходило
-   * (кэш-хит по неизменному `src`), и слайд оставался размытым навсегда.
-   *
-   * Браузер и так рисует прогрессивно и не показывает пустой `<img>`, у которого
-   * есть предыдущий декодированный кадр, — то есть гейт не защищал ни от чего,
-   * что браузер не умеет сам.
-   */
+  // WebMainImage gives each photo identity its own native image. It cannot
+  // inherit another photo's pixels, so the browser can display its own pixels
+  // immediately without waiting for JavaScript load/decode callbacks (#2705).
   const shouldShowWebImageImmediately = Platform.OS !== 'web' ? showImmediately : true;
-
-  /**
-   * Рециклинг ячейки списка: узел остаётся смонтированным, меняется только `src`.
-   *
-   * Ровно это переиспользование и защищает от пустого кадра (см. ключ
-   * `webMediaInstanceKey` ниже), но у него есть обратная сторона: браузер держит
-   * ПРЕДЫДУЩИЙ декодированный кадр, пока не готов новый, поэтому карточка
-   * показывает фотографию чужого путешествия. Замер прода 2026-08-06,
-   * `/travelsby`, desktop 1280×900 при 1.6 Мбит: из 54 подмен `src` 51 пришлась
-   * на карточку, уже находящуюся во вьюпорте, чужой кадр держался p50 1041 мс,
-   * p90 1500 мс, max 1716 мс; 34 раза неподвижная карточка меняла картинку под
-   * курсором уже ПОСЛЕ остановки скролла.
-   *
-   * Гасим слой ровно на это окно — под ним остаётся заливка `placeholderColor`
-   * из манифеста, то есть нейтральный плейсхолдер вместо чужого фото.
-   *
-   * Гейт узкий и включается ТОЛЬКО когда узел уже показал другую картинку:
-   * первый показ, кэш-хит и неизменный `src` проходят как раньше (решение
-   * владельца 2026-08-02 — на первом кадре гейта раскрытия нет, иначе
-   * возвращается «сначала виден только фон», а на кэш-хите фото не раскрывается
-   * вовсе, потому что события `load` для неизменного `src` не будет).
-   */
-  const isWebRecycleSwap =
-    Platform.OS === 'web' &&
-    paintedIdentityRef.current !== null &&
-    paintedIdentityRef.current !== currentImageIdentityKey;
 
   const shouldRevealWebMedia = useMemo(() => {
     if (Platform.OS !== 'web') return true;
@@ -722,20 +674,8 @@ function ImageCardMedia({
     if (!webPlaceholderSrc) return false;
     return !shouldRevealWebMedia;
   }, [blurOnly, shouldRevealWebMedia, webPlaceholderSrc]);
-  /**
-   * Ключ web-узлов ПОЗИЦИОННЫЙ, а не по идентичности картинки.
-   *
-   * FlashList рециклит ряды: ячейка переиспользуется (`slot-${index}` в
-   * `RightColumn`), но если `<img>` внутри ключевать по URL/`recyclingKey`,
-   * React уничтожает узел и монтирует новый. Свежий `<img>` до декода пуст,
-   * поэтому при скролле кадр моргал, а браузер заводил новый запрос вместо
-   * смены `src`. Со стабильным ключом узел переиспользуется, меняется только
-   * `src`, и предыдущий декодированный кадр держится до появления нового.
-   *
-   * Так уже было сделано (`key="main-web-media"`), но `5dccae12` вернул ключ по
-   * идентичности, чтобы форсировать `load` на iPhone. Это больше не нужно: гейта
-   * раскрытия нет, ждать событие `load` некому.
-   */
+  // Keep the WebMainImage wrapper and retry state stable. Its native <img> is
+  // keyed by photo identity, preserving the decoded node across size changes.
   const webMediaInstanceKey = 'web-media';
 
   const webImageProps = useMemo(() => {
@@ -791,9 +731,6 @@ function ImageCardMedia({
     if (currentImageIdentityKey) {
       loadedWebImageBaseCache.add(currentImageIdentityKey);
       decodedIdentityRef.current = currentImageIdentityKey;
-      // Пиксели в кадре есть только когда пришёл настоящий размер: без него это
-      // догадка по общему кэшу (см. ниже), а не показанное изображение.
-      if (naturalSize) paintedIdentityRef.current = currentImageIdentityKey;
     }
     setWebLoaded(true);
     // Состояние сбоя снимают только НАСТОЯЩИЕ пиксели.
@@ -979,13 +916,11 @@ function ImageCardMedia({
               borderRadius={resolvedBorderRadius}
               loading={resolvedLoading}
               priority={priority}
-              // Пока в узле висит чужой кадр, «загружено» относится к прошлой
-              // картинке: и раскрытие, и признак загрузки обязаны ждать новую.
-              loaded={isWebRecycleSwap ? false : effectiveWebLoaded}
+              loaded={effectiveWebLoaded}
               onLoad={handleWebLoad}
               onDecoded={handleWebDecoded}
               onError={handleWebError}
-              showImmediately={isWebRecycleSwap ? false : shouldShowWebImageImmediately}
+              showImmediately={shouldShowWebImageImmediately}
               retainRequestOnSourceSwap={retainWebRequestOnRecycle}
             />
           ) : !blurOnly && (

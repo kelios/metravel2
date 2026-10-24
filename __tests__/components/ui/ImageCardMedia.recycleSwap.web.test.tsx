@@ -1,18 +1,9 @@
 /**
  * @jest-environment jsdom
  *
- * Рециклинг ячейки списка на web: узел `<img>` переиспользуется, меняется только
- * `src`. Браузер при этом продолжает рисовать ПРЕДЫДУЩИЙ декодированный кадр,
- * пока не готов новый, — карточка успевает показать фото чужого путешествия.
- *
- * Замер прода 2026-08-06 (`/travelsby`, desktop 1280×900, 1.6 Мбит): из 54 подмен
- * `src` 51 пришлась на карточку, уже видимую во вьюпорте, чужой кадр держался
- * p50 1041 мс.
- *
- * Здесь закреплён гейт: слой гасится ровно на окно между сменой картинки и
- * загрузкой новой — и только для узла, который уже показывал другую картинку
- * (первый показ и кэш-хит проходят без гейта, см.
- * `ImageCardMedia.singleLayer.web.test.tsx`).
+ * Ячейка FlashList остаётся смонтированной, но каждый новый источник получает
+ * собственный `<img>`. Он не наследует чужие пиксели и показывает свои готовые
+ * пиксели средствами браузера, без ожидания JS-гейта раскрытия (#2705).
  */
 const renderer = require('react-test-renderer');
 const { Platform } = require('react-native');
@@ -101,39 +92,32 @@ describe('ImageCardMedia: подмена картинки в рециклиру�
     return {
       tree,
       nodes,
-      /**
-       * Смена картинки в том же узле. Браузер на новый `src` сбрасывает
-       * `complete`/`naturalWidth` — без этого мок утверждал бы, что пиксели новой
-       * картинки уже готовы, и гейт снимался бы сразу.
-       */
       rerender: (src: string) => {
-        nodes.forEach((node) => {
-          node.complete = false;
-          node.naturalWidth = 0;
-          node.naturalHeight = 0;
-        });
         renderer.act(() => tree.update(element(src)));
       },
     };
   };
 
-  it('гасит слой на время подмены и возвращает после загрузки новой картинки', () => {
+  it('меняет native img при смене фото и оставляет показ собственных пикселей браузеру', () => {
     const { tree, nodes, rerender } = renderMedia();
 
     fireLoad(tree, nodes[0]);
     expect(findMainImage(tree).props.style.opacity).toBe(1);
 
-    // Рециклинг: тот же смонтированный узел получает другую картинку.
     rerender(SRC_B);
-    expect(nodes).toHaveLength(1); // узел переиспользован, а не пересоздан
+    expect(nodes).toHaveLength(2);
     expect(findMainImage(tree).props.src).toContain('bbb.webp');
-    expect(findMainImage(tree).props.style.opacity).toBe(0);
+    expect(nodes[1].currentSrc).toBe('');
+    expect(findMainImage(tree).props.style.opacity).toBe(1);
 
-    fireLoad(tree, nodes[0]);
+    fireLoad(tree, nodes[1]);
+    expect(findMainImage(tree).props.style.opacity).toBe(1);
+    rerender(SRC_A);
+    expect(nodes).toHaveLength(3);
     expect(findMainImage(tree).props.style.opacity).toBe(1);
   });
 
-  it('оставляет заливку из данных под погашенным слоем, а не пустой бокс', () => {
+  it('оставляет заливку из данных под ещё не загруженной картинкой', () => {
     const { tree, nodes, rerender } = renderMedia();
 
     fireLoad(tree, nodes[0]);

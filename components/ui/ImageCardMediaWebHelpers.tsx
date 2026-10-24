@@ -142,10 +142,6 @@ type RetainedWebImageRequest = {
 };
 
 const retainedWebImageRequests = new Map<string, RetainedWebImageRequest>();
-// Only a scheduling hint, never proof that the recycled DOM node owns pixels.
-// Keep strings rather than decoded images or DOM nodes, and bound long sessions.
-const completedWebImageSources = new Set<string>();
-const MAX_COMPLETED_WEB_IMAGE_SOURCES = 256;
 const RETAINED_WEB_IMAGE_TIMEOUT_MS = 60_000;
 // Chromium starts native-lazy image transfers up to roughly 1250 px outside
 // the viewport. Use the same bounded band for catalog request ownership: a
@@ -171,9 +167,9 @@ const isCurrentImageSourceComplete = (image: HTMLImageElement, src: string, srcS
 };
 
 /**
- * FlashList keeps one `<img>` mounted and swaps `src/srcSet` as a slot moves.
- * Chromium aborts the old request when that happens, even when the element is
- * still connected. A detached `Image` sharing the same responsive source keeps
+ * FlashList replaces a source-owned `<img>` as a slot moves to another photo.
+ * Chromium can abort the old request when its element is removed. A detached
+ * `Image` sharing the same responsive source keeps
  * the already-started request owned until load/error, after which normal HTTP
  * cache reuse takes over. This is deliberately called only inside Chromium's
  * bounded native-lazy band; calling it for every lazy row would turn the whole
@@ -261,11 +257,6 @@ export const WebMainImage = memo(function WebMainImage({
     const img = imgRef.current;
     if (!img || !isCurrentImageSourceComplete(img, src, srcSet)) return false;
     img.style.opacity = '1';
-    completedWebImageSources.delete(sourceKey);
-    completedWebImageSources.add(sourceKey);
-    if (completedWebImageSources.size > MAX_COMPLETED_WEB_IMAGE_SOURCES) {
-      completedWebImageSources.delete(completedWebImageSources.values().next().value!);
-    }
 
     // Responsive candidates can change their natural dimensions without a new
     // source set, so report dimensions independently of the once-per-source load.
@@ -278,14 +269,14 @@ export const WebMainImage = memo(function WebMainImage({
     const resolvedSrc = img?.currentSrc || src;
     onLoad?.(resolvedSrc, natural);
     return true;
-  }, [onLoad, onNaturalSize, sourceKey, src, srcSet]);
+  }, [onLoad, onNaturalSize, src, srcSet]);
 
   const handleLoadRef = useRef(handleLoad);
   handleLoadRef.current = handleLoad;
 
-  // A warm recycled source can become complete between commit and the first
-  // paint. Check before paint and again after responsive selection's microtask;
-  // the passive recovery effect is too late for that first returned frame.
+  // Report cache-hit pixels before paint, including explicit gated consumers.
+  // Ordinary source-owned images display their own pixels intrinsically; these
+  // checks also recover callbacks missed during responsive source selection.
   useWebLayoutEffect(() => {
     if (activeSourceKeyRef.current !== sourceKey || (previousLoadedRef.current && !loaded)) {
       activeSourceKeyRef.current = sourceKey;
@@ -298,20 +289,12 @@ export const WebMainImage = memo(function WebMainImage({
       const img = imgRef.current;
       if (img && !showImmediately) img.style.opacity = '0';
       void Promise.resolve().then(reportIfCurrent);
-      if (img && completedWebImageSources.has(sourceKey) && typeof img.decode === 'function') {
-        const rect = img.getBoundingClientRect();
-        if (rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth) {
-          // The exact source set was decoded before. Cold lazy candidates still
-          // wait for the existing near-viewport observer below.
-          void img.decode().then(reportIfCurrent).catch(() => undefined);
-        }
-      }
     }
     return () => { cancelled = true; };
   }, [loaded, showImmediately, sourceKey]);
 
-  // Start the keeper in the same commit that rewrites the recycled node's
-  // responsive source. Waiting for IntersectionObserver alone leaves a race:
+  // Start the keeper in the same commit that mounts the source-owned node.
+  // Waiting for IntersectionObserver alone leaves a race:
   // under CPU ×4 the next 50 ms recycle can arrive before its callback. The
   // geometry check follows Chromium's bounded native-lazy request band. The
   // narrower decode-recovery observer below remains at 300 px.
@@ -330,8 +313,8 @@ export const WebMainImage = memo(function WebMainImage({
         rect.left <= viewportWidth;
       // The initial row flips eager/high -> lazy/low after the first scroll.
       // That policy-only update must not create a detached owner for an image
-      // whose same identity is already decoded. During a real recycle swap the
-      // node still reports the previous currentSrc, so the keeper stays active.
+      // whose same candidate is already decoded. A new source-owned node is
+      // incomplete until its own candidate arrives, so the keeper stays active.
       if (isNearViewport && !isCurrentImageSourceComplete(img, src, srcSet)) {
         retainWebImageRequest({ src, srcSet, sizes, priority });
       }
@@ -469,6 +452,9 @@ export const WebMainImage = memo(function WebMainImage({
 
   return (
     <img
+      // One identity owns one native element: a recycled slot cannot carry a
+      // different photo's bitmap. Optimization/size updates keep the same node.
+      key={resolveImageIdentityKey(src) ?? src}
       ref={attachImgRef}
       // Reused DOM images select responsive candidates on each attribute write.
       // Set the slot and candidate set before src to avoid requesting the old image.

@@ -49,6 +49,14 @@ color fill alone MUST NOT count as a ready cover.
 - **THEN** only a complete currentSrc belonging to the active src/srcSet may reveal
 - **AND** versions, signatures and candidates outside the active set remain distinct
 
+#### Scenario: Native image ownership changes without a reveal deadline
+
+- **WHEN** a recycled card changes photograph identity, version or signature
+- **THEN** its native HTML image cannot retain another identity's previous bitmap
+- **AND** ordinary display of its own pixels does not wait for a JavaScript callback
+- **WHEN** only optimization parameters, srcSet or sizes change for the same identity
+- **THEN** the native image node remains mounted
+
 ### Requirement: Recycled cards never expose another travel's photo
 
 The result list MUST preserve source ownership while virtualized cells are
