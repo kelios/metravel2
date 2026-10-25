@@ -133,9 +133,8 @@ function loadPlan(filePath) {
       const address = item.address.replace(/\s+/g, ' ').trim()
       if (!address) throw new UsageError(`items[${index}].address is empty`)
       if (address.length > MAX_ADDRESS_LENGTH) throw new UsageError(`items[${index}].address is longer than ${MAX_ADDRESS_LENGTH} chars`)
-      if (out.expected_address !== undefined && address === out.expected_address.trim()) {
-        throw new UsageError(`items[${index}].address equals expected_address — nothing to rename`)
-      }
+      // Равенство с expected_address допустимо: для точек с каноническим Place бэкенд
+      // по такому элементу пересинхронизирует Place.address (его показывает каталог).
       out.address = address
     }
     const add = normalizeIdList(item.add_category_ids, 'add_category_ids', index)

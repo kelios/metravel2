@@ -37,6 +37,11 @@ describe('places-bulk-update plan validation', () => {
     }])
   })
 
+  it('accepts an address equal to expected_address (canonical Place.address resync)', () => {
+    const file = writePlan([{ id: 2986, expected_address: 'Дворец', address: 'Дворец' }])
+    expect(loadPlan(file)).toEqual([{ id: 2986, expected_address: 'Дворец', address: 'Дворец' }])
+  })
+
   it('accepts a bare array of items and category-only changes', () => {
     const file = writePlan([{ id: 421, add_category_ids: [43] }])
     expect(loadPlan(file)).toEqual([{ id: 421, add_category_ids: [43] }])
@@ -48,7 +53,6 @@ describe('places-bulk-update plan validation', () => {
     [{ items: [{ id: 1, address: 'a' }, { id: 1, address: 'b' }] }, 'listed twice'],
     [{ items: [{ id: 1, address: '   ' }] }, 'is empty'],
     [{ items: [{ id: 1, address: 'x'.repeat(256) }] }, 'longer than 255'],
-    [{ items: [{ id: 1, expected_address: 'Дворец', address: 'Дворец' }] }, 'nothing to rename'],
     [{ items: [{ id: 1 }] }, 'changes nothing'],
     [{ items: [{ id: 1, add_category_ids: [5], remove_category_ids: [5] }] }, 'adds and removes the same category'],
     [{ items: [{ id: 1, add_category_ids: ['5'] }] }, 'non-integer id'],
