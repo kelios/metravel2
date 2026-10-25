@@ -68,7 +68,8 @@ export function buildCriticalCSS(): string {
     'img[data-lcp]{min-height:300px;background:var(--color-backgroundSecondary,' + BSL + ');aspect-ratio:16/9}',
     'img[width][height]:not([data-lcp]){height:auto}',
     'img[fetchpriority="high"]{display:block}',
-    'img[loading="lazy"]{content-visibility:auto;contain-intrinsic-size:auto 300px}',
+    // Native lazy loading already defers transfers. Independently skipping an
+    // image's paint leaves a fill-only frame inside its visible card (#2705).
     '[data-testid="travel-details-hero"] [style*="height"]{contain:layout style paint;overflow:hidden}',
     '#root,#root>div,#root>div>div{min-height:100vh;width:100%}',
     '[data-testid="travel-details-page"]{min-height:100vh;contain:layout style}',

@@ -22,6 +22,16 @@ JS-deadline. Риски: cold request abort/bytes и gallery/LCP; проверя
 Откат: общий renderer, caller и его регрессии.
 Норматив и baseline: `docs/design/travel-catalog-warm-return.md`.
 Платформы текущего дополнения: desktop/mobile web, localization none.
+Дополнение 25.10: source-owned выкат `8f56c92ac` убрал opacity-задержку,
+но row2 ещё показывал заливку при opacity1. Контроли actual compositor на
+потомке `c96e21565` подтвердили: decoding=sync не помогает, а только
+content-visibility=visible у img устраняет image-only пустой кадр при том же
+row auto. Удаляется глобальное `img[loading="lazy"]` render-skipping правило
+из criticalCSSBuilder, включая условную intrinsic-высоту300px; native lazy
+fetching/keeper/row policy сохраняются. Локальный override отвергнут как
+сохранение причины у остальных изображений. Regression: generator запрещает
+img render skipping; actual paint проверяется для каждого видимого ряда.
+Проверки производительности и галереи обязательны из-за общей области CSS.
 Ревью ограничено static/unit; затем commit/push, testing, штатный prod deploy
 и повтор той же покадровой проверки на выкаченном SHA.
 
