@@ -1,0 +1,815 @@
+{
+ "version": 1,
+ "generated_at": "2026-10-25",
+ "source": "#2729 вторая волна: отложенные пункты REPORT.md (снятие ошибочных категорий, ландшафтные парки → Заповедник, дорешанные переименования)",
+ "items": [
+  {
+   "id": 2537,
+   "travel_id": 175,
+   "travel_url": "https://metravel.by/travels/velomarshrut-iz-minska-po-sarochanskim-ozeram-za-den",
+   "expected_address": "Тумское озеро",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Республиканский ландшафтный заказник Сарочанские озёра (high)"
+  },
+  {
+   "id": 2538,
+   "travel_id": 175,
+   "travel_url": "https://metravel.by/travels/velomarshrut-iz-minska-po-sarochanskim-ozeram-za-den",
+   "expected_address": "озеро Сорочье",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Республиканский ландшафтный заказник Сарочанские озёра (high)"
+  },
+  {
+   "id": 2539,
+   "travel_id": 175,
+   "travel_url": "https://metravel.by/travels/velomarshrut-iz-minska-po-sarochanskim-ozeram-za-den",
+   "expected_address": "Кайминское озеро",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Республиканский ландшафтный заказник Сарочанские озёра (high)"
+  },
+  {
+   "id": 2540,
+   "travel_id": 175,
+   "travel_url": "https://metravel.by/travels/velomarshrut-iz-minska-po-sarochanskim-ozeram-za-den",
+   "expected_address": "Золовское озеро",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Республиканский ландшафтный заказник Сарочанские озёра (high)"
+  },
+  {
+   "id": 4504,
+   "travel_id": 193,
+   "travel_url": "https://metravel.by/travels/albaniya-velomarshrut-vler-monastyr-zvernec",
+   "expected_address": "Kalaja e Treportit",
+   "remove_category_ids": [
+    101
+   ],
+   "reason": "remove ['Пляж']: Kalaja = крепость; Пляж ошибочен"
+  },
+  {
+   "id": 6463,
+   "travel_id": 172,
+   "travel_url": "https://metravel.by/travels/velomarshrut-no402-lisia-gora-liniia-molotova-i-kanal",
+   "expected_address": "Сопоцкинский сельский Совет",
+   "address": "Указатель веломаршрута №402 в поле у Радзивилок",
+   "reason": "rename[high]: Фото точки — деревянный столб с табличками AugustVelo 402 и «Нямнова 4,5 км» посреди кукурузного поля; в статье 172 после обеда у бровара Горских: «Все маршруты обозначены, заблудиться сложно». Категория «Поле», 500 м к СВ от бровара, в OSM объектов нет — это не дот."
+  },
+  {
+   "id": 12672,
+   "travel_id": 256,
+   "travel_url": "https://metravel.by/travels/partizanskaia-baza-shturmovaia-reka-udra-i-teplyi-stan",
+   "expected_address": "Шершунский сельский Совет",
+   "address": "Смотровая точка на реку Удра у базы «Штурмовая»",
+   "reason": "rename[high]: OSM (api/0.6/map): река Удранка/Удра (name:ru=Удра) проходит в 2 м от точки; по порядку точек статьи 256 это первая из двух точек на Удре — «открывается потрясающий вид на реку Удра»; фото — русло реки в лесу без переправы."
+  },
+  {
+   "id": 12673,
+   "travel_id": 256,
+   "travel_url": "https://metravel.by/travels/partizanskaia-baza-shturmovaia-reka-udra-i-teplyi-stan",
+   "expected_address": "Шершунский сельский Совет",
+   "address": "Мостик через реку Удра по дороге к ручью Тёплый Стан",
+   "reason": "rename[high]: Вторая точка на Удре (400 м восточнее, ближе к Тёплому Стану): статья — «Далее возвращаемся и переправляемся через мостик». OSM: в 23–31 м грунтовая дорога на насыпи (embankment) и culvert реки Удранка, natural=water в 4 м; на фото точки — переправа с бетонной плитой у воды."
+  },
+  {
+   "id": 13219,
+   "travel_id": 281,
+   "travel_url": "https://metravel.by/travels/peshchery-u-zamkov-miruv-i-bobolitse-marshrut",
+   "expected_address": "Jaskinia Kamiennego Gradu",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Park Krajobrazowy Orlich Gniazd (medium)"
+  },
+  {
+   "id": 13220,
+   "travel_id": 281,
+   "travel_url": "https://metravel.by/travels/peshchery-u-zamkov-miruv-i-bobolitse-marshrut",
+   "expected_address": "Piętrowa Szczelina",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Park Krajobrazowy Orlich Gniazd (medium)"
+  },
+  {
+   "id": 13221,
+   "travel_id": 281,
+   "travel_url": "https://metravel.by/travels/peshchery-u-zamkov-miruv-i-bobolitse-marshrut",
+   "expected_address": "Kocia Szczelina",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Park Krajobrazowy Orlich Gniazd (medium)"
+  },
+  {
+   "id": 13222,
+   "travel_id": 281,
+   "travel_url": "https://metravel.by/travels/peshchery-u-zamkov-miruv-i-bobolitse-marshrut",
+   "expected_address": "Jaskinia Księdza Borka",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Park Krajobrazowy Orlich Gniazd (medium)"
+  },
+  {
+   "id": 14110,
+   "travel_id": 414,
+   "travel_url": "https://metravel.by/travels/zapovednik-okamenelyy-gorod-i-chenzhkovickiy-vodopad",
+   "expected_address": "Wodospad Ciężkowicki",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Park Krajobrazowy Ciężkowicko-Rożnowski (medium)"
+  },
+  {
+   "id": 14112,
+   "travel_id": 414,
+   "travel_url": "https://metravel.by/travels/zapovednik-okamenelyy-gorod-i-chenzhkovickiy-vodopad",
+   "expected_address": "Skała z Krzyżem",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Park Krajobrazowy Ciężkowicko-Rożnowski (medium)"
+  },
+  {
+   "id": 14156,
+   "travel_id": 421,
+   "travel_url": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+   "expected_address": "Kolorowe Jeziorka",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Park Krajobrazowy Rudawy Janowickie (medium)"
+  },
+  {
+   "id": 14157,
+   "travel_id": 421,
+   "travel_url": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+   "expected_address": "Kolorowe jeziorka",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Park Krajobrazowy Rudawy Janowickie (medium)"
+  },
+  {
+   "id": 14190,
+   "travel_id": 424,
+   "travel_url": "https://metravel.by/travels/zamok-dunaets-i-gora-liuban-den-iz-krakova",
+   "expected_address": "Luban mountain lookout tower",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Gorczański Park Krajobrazowy (medium)"
+  },
+  {
+   "id": 14191,
+   "travel_id": 424,
+   "travel_url": "https://metravel.by/travels/zamok-dunaets-i-gora-liuban-den-iz-krakova",
+   "expected_address": "Samorody",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Gorczański Park Krajobrazowy (medium)"
+  },
+  {
+   "id": 14226,
+   "travel_id": 436,
+   "travel_url": "https://metravel.by/travels/barania-gora-istok-visly-v-beskidakh-polsha",
+   "expected_address": "Biała Wisełka",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Park Krajobrazowy Beskidu Śląskiego (medium)"
+  },
+  {
+   "id": 14227,
+   "travel_id": 436,
+   "travel_url": "https://metravel.by/travels/barania-gora-istok-visly-v-beskidakh-polsha",
+   "expected_address": "Pamięci Polskich Partyzantów",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Park Krajobrazowy Beskidu Śląskiego (medium)"
+  },
+  {
+   "id": 14230,
+   "travel_id": 437,
+   "travel_url": "https://metravel.by/travels/belsko-byala-smotrovaya-bashnya-i-podem-na-tri-kopce",
+   "expected_address": "Wieża widokowa przy Kolei Linowej Szyndzielnia",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Park Krajobrazowy Beskidu Śląskiego (medium)"
+  },
+  {
+   "id": 14354,
+   "travel_id": 443,
+   "travel_url": "https://metravel.by/travels/krakovskie-dolinki",
+   "expected_address": "Rezerwat Wąwóz Bolechowicki",
+   "remove_category_ids": [
+    184
+   ],
+   "reason": "remove ['Город']: Rezerwat = заповедник, Wąwóz = ущелье; Город - ошибочная категория"
+  },
+  {
+   "id": 14355,
+   "travel_id": 443,
+   "travel_url": "https://metravel.by/travels/krakovskie-dolinki",
+   "expected_address": "Rezerwat Wąwóz Bolechowicki",
+   "remove_category_ids": [
+    184
+   ],
+   "reason": "remove ['Город']: Rezerwat = заповедник, Wąwóz = ущелье; Город - ошибочная категория"
+  },
+  {
+   "id": 14374,
+   "travel_id": 443,
+   "travel_url": "https://metravel.by/travels/krakovskie-dolinki",
+   "expected_address": "Jaskinia Nietoperzowa",
+   "remove_category_ids": [
+    184
+   ],
+   "reason": "remove ['Город']: Jaskinia = пещера; Город ошибочна"
+  },
+  {
+   "id": 14375,
+   "travel_id": 443,
+   "travel_url": "https://metravel.by/travels/krakovskie-dolinki",
+   "expected_address": "Jaskinia Łabajowa",
+   "remove_category_ids": [
+    184
+   ],
+   "reason": "remove ['Город']: Jaskinia = пещера; Город ошибочна"
+  },
+  {
+   "id": 14400,
+   "travel_id": 457,
+   "travel_url": "https://metravel.by/travels/gora-liubomir-904-m-observatoriia-i-marshrut",
+   "expected_address": "Obserwatorium astronomiczne im. Tadeusza Banachiewicza",
+   "remove_category_ids": [
+    20
+   ],
+   "reason": "remove ['Водопад']: Obserwatorium = обсерватория; Водопад ошибочна"
+  },
+  {
+   "id": 14422,
+   "travel_id": 443,
+   "travel_url": "https://metravel.by/travels/krakovskie-dolinki",
+   "expected_address": "Klasztor Karmelitów Bosych w Czernej",
+   "remove_category_ids": [
+    184
+   ],
+   "reason": "remove ['Город']: Klasztor = монастырь; Город ошибочна"
+  },
+  {
+   "id": 14423,
+   "travel_id": 443,
+   "travel_url": "https://metravel.by/travels/krakovskie-dolinki",
+   "expected_address": "Rezerwat Dolina Eliaszówki",
+   "remove_category_ids": [
+    184
+   ],
+   "reason": "remove ['Город']: Rezerwat = заповедник, Dolina = долина; Город ошибочна"
+  },
+  {
+   "id": 14424,
+   "travel_id": 443,
+   "travel_url": "https://metravel.by/travels/krakovskie-dolinki",
+   "expected_address": "Rezerwat Dolina Eliaszówki",
+   "remove_category_ids": [
+    184
+   ],
+   "reason": "remove ['Город']: Rezerwat = заповедник, Dolina = долина; Город ошибочна"
+  },
+  {
+   "id": 14427,
+   "travel_id": 463,
+   "travel_url": "https://metravel.by/travels/pilsko-v-beskidakh-marshrut-k-granitse-slovakii",
+   "expected_address": "Pilsko",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Park Krajobrazowy Beskidu Żywieckiego / rezerwat Pilsko (medium)"
+  },
+  {
+   "id": 14428,
+   "travel_id": 463,
+   "travel_url": "https://metravel.by/travels/pilsko-v-beskidakh-marshrut-k-granitse-slovakii",
+   "expected_address": "Pilsko",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Park Krajobrazowy Beskidu Żywieckiego / rezerwat Pilsko (medium)"
+  },
+  {
+   "id": 14574,
+   "travel_id": 443,
+   "travel_url": "https://metravel.by/travels/krakovskie-dolinki",
+   "expected_address": "Pozostałości ruin zamku w Białym Kościele",
+   "remove_category_ids": [
+    184
+   ],
+   "reason": "remove ['Город']: Руины замка вместо Замок (замок в руинах); Город ошибочна"
+  },
+  {
+   "id": 14576,
+   "travel_id": 443,
+   "travel_url": "https://metravel.by/travels/krakovskie-dolinki",
+   "expected_address": "Jaskinia Wierzchowska Górna",
+   "remove_category_ids": [
+    184
+   ],
+   "reason": "remove ['Город']: Jaskinia = пещера; Город ошибочна"
+  },
+  {
+   "id": 14618,
+   "travel_id": 490,
+   "travel_url": "https://metravel.by/travels/mavrikii-port-lui-botanicheskii-sad-i-cherepakhi",
+   "expected_address": "Dias Pier Parking",
+   "remove_category_ids": [
+    184
+   ],
+   "reason": "remove ['Город']: Parking = парковка; Город ошибочна"
+  },
+  {
+   "id": 14620,
+   "travel_id": 490,
+   "travel_url": "https://metravel.by/travels/mavrikii-port-lui-botanicheskii-sad-i-cherepakhi",
+   "expected_address": "Sir Seewoosagur Ramgoolam Botanical Garden",
+   "remove_category_ids": [
+    91
+   ],
+   "reason": "remove ['Парковка']: Botanical Garden; Парк дублирует Ботанический сад; Парковка - ложное срабатывание от корня Парк"
+  },
+  {
+   "id": 14631,
+   "travel_id": 443,
+   "travel_url": "https://metravel.by/travels/krakovskie-dolinki",
+   "expected_address": "Parking w Dolinie Racławki",
+   "remove_category_ids": [
+    184
+   ],
+   "reason": "remove ['Город']: Parking = парковка; Город ошибочна"
+  },
+  {
+   "id": 14632,
+   "travel_id": 443,
+   "travel_url": "https://metravel.by/travels/krakovskie-dolinki",
+   "expected_address": "Źródło Bażana",
+   "remove_category_ids": [
+    184
+   ],
+   "reason": "remove ['Город']: Źródło = родник; Город ошибочна"
+  },
+  {
+   "id": 14642,
+   "travel_id": 495,
+   "travel_url": "https://metravel.by/travels/gora-bolshaya-sova-1015",
+   "expected_address": "Wieża widokowa na Wielkiej Sowie",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Park Krajobrazowy Gór Sowich (medium)"
+  },
+  {
+   "id": 14700,
+   "travel_id": 511,
+   "travel_url": "https://metravel.by/travels/ot-zamka-rytro-do-schronisko-cyrla-marshrut",
+   "expected_address": "Schronisko \"Cyrla\"",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Popradzki Park Krajobrazowy (medium)"
+  },
+  {
+   "id": 14731,
+   "travel_id": 540,
+   "travel_url": "https://metravel.by/travels/ozero-sorapis-krugovoi-marshrut-v-dolomitakh",
+   "expected_address": "Sentiero ferrata F. Berti",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Parco Naturale Dolomiti d'Ampezzo (medium)"
+  },
+  {
+   "id": 14732,
+   "travel_id": 540,
+   "travel_url": "https://metravel.by/travels/ozero-sorapis-krugovoi-marshrut-v-dolomitakh",
+   "expected_address": "Rifugio Vandelli",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Parco Naturale Dolomiti d'Ampezzo (medium)"
+  },
+  {
+   "id": 14740,
+   "travel_id": 536,
+   "travel_url": "https://metravel.by/travels/tre-cime-di-lavaredo-krugovoi-marshrut-10-km",
+   "expected_address": "Dreizinnenhütte - Rifugio Antonio Locatelli/Sepp Innerkofler",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Parco Naturale Tre Cime (high)"
+  },
+  {
+   "id": 14741,
+   "travel_id": 536,
+   "travel_url": "https://metravel.by/travels/tre-cime-di-lavaredo-krugovoi-marshrut-10-km",
+   "expected_address": "Langalm",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Parco Naturale Tre Cime (high)"
+  },
+  {
+   "id": 14759,
+   "travel_id": 535,
+   "travel_url": "https://metravel.by/travels/kortina-dampetstso-via-ferrata-cascate-di-fanes",
+   "expected_address": "Cascate Sbarco de Fanes",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Parco Naturale Dolomiti d'Ampezzo (medium)"
+  },
+  {
+   "id": 14761,
+   "travel_id": 535,
+   "travel_url": "https://metravel.by/travels/kortina-dampetstso-via-ferrata-cascate-di-fanes",
+   "expected_address": "Punto panoramico Cascate di Fanes",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Parco Naturale Dolomiti d'Ampezzo (medium)"
+  },
+  {
+   "id": 14844,
+   "travel_id": 543,
+   "travel_url": "https://metravel.by/travels/smotrovaia-bashnia-eliaszowka-marshrut-v-beskidakh",
+   "expected_address": "Tablica szczytu - Eliaszówka",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Popradzki Park Krajobrazowy (medium)"
+  },
+  {
+   "id": 14845,
+   "travel_id": 543,
+   "travel_url": "https://metravel.by/travels/smotrovaia-bashnia-eliaszowka-marshrut-v-beskidakh",
+   "expected_address": "Wieża widokowa na Eliaszówce",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Popradzki Park Krajobrazowy (medium)"
+  },
+  {
+   "id": 14996,
+   "travel_id": 556,
+   "travel_url": "https://metravel.by/travels/polskoe-kamino-malopolskaia-doroga-iakova",
+   "expected_address": "Szpital Uniwersytecki CM UJ",
+   "remove_category_ids": [
+    150
+   ],
+   "reason": "remove ['Костёл']: Szpital = больница; Костёл ошибочна"
+  },
+  {
+   "id": 15006,
+   "travel_id": 559,
+   "travel_url": "https://metravel.by/travels/dolina-mnikovskaia-1",
+   "expected_address": "Jaskinia na Łopiankach",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Park Krajobrazowy Dolinki Krakowskie (medium)"
+  },
+  {
+   "id": 15009,
+   "travel_id": 559,
+   "travel_url": "https://metravel.by/travels/dolina-mnikovskaia-1",
+   "expected_address": "Skałki",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Park Krajobrazowy Dolinki Krakowskie (medium)"
+  },
+  {
+   "id": 15012,
+   "travel_id": 560,
+   "travel_url": "https://metravel.by/travels/viazynka-puteshestvie-v-serdtse-belorusskoi-poezii-i-istorii",
+   "expected_address": "Центральная улица",
+   "address": "Канал Вилейско-Минской водной системы у усадьбы Купалы в Вязынке",
+   "reason": "rename[high]: OSM (api/0.6/map): в 35 м way «Галоўны канал Вілейска-Мінскай воднай сістэмы», natural=water water=canal в 27 м, пешеходный мостик через канал в 15 м; река Вязынка — в 196 м. Фото точки — прямой широкий канал с заснеженными берегами, подпись в галерее статьи 560 «Канал у Петришек»; статья: «рядом есть канал… Вдоль канала можно идти сколько угодно». Nominatim ранее не находил, потому что показывал только дюкерные сегменты."
+  },
+  {
+   "id": 15016,
+   "travel_id": 443,
+   "travel_url": "https://metravel.by/travels/krakovskie-dolinki",
+   "expected_address": "Skałki",
+   "remove_category_ids": [
+    184
+   ],
+   "reason": "remove ['Город']: Skałki = скалы; Город ошибочна"
+  },
+  {
+   "id": 15017,
+   "travel_id": 443,
+   "travel_url": "https://metravel.by/travels/krakovskie-dolinki",
+   "expected_address": "Jaskinia na Łopiankach",
+   "remove_category_ids": [
+    184
+   ],
+   "reason": "remove ['Город']: Jaskinia = пещера; Город ошибочна"
+  },
+  {
+   "id": 15050,
+   "travel_id": 566,
+   "travel_url": "https://metravel.by/travels/kuda-poekhat-v-belarusi-na-vykhodnye-4-marshruta",
+   "expected_address": "Опсовский сельский Совет",
+   "address": "Памятник-скульптура у ГЭС «Дружба народов» близ Дрисвят",
+   "reason": "rename[medium]: Фото точки — советская скульптура из трёх плоских фигур на бетонном постаменте у воды; следующая точка статьи 566 — ГЭС «Дружба народов» в 580 м западнее, ближайший хутор Голевщина (Опсовский с/с). В статье памятник не описан; OSM в 200 м пуст; три веб-поиска (budgawl, poshyk, vetliva) упоминают у ГЭС только снесённый памятник Сталину — что именно изображено, не подтверждено."
+  },
+  {
+   "id": 15065,
+   "travel_id": 564,
+   "travel_url": "https://metravel.by/travels/armeniia-samostoiatelno-erevan-sevan-dilizhan",
+   "expected_address": "2-я улица",
+   "address": "Ужин у местных жителей в селе Арени (домашний ресторан)",
+   "reason": "rename[high]: Статья 564, раздел «Ужин у местных после экскурсии»: место «между домов», не похожее на ресторан, куда привёз гид после Нораванка; OSM в 20 м — безымянный node amenity=restaurant, cuisine=regional (2-я улица, Арени); фото точки — хоровац на мангале. Первый проход ошибся с «обедом» — по статье ужин."
+  },
+  {
+   "id": 15557,
+   "travel_id": 636,
+   "travel_url": "https://metravel.by/travels/chto-posmotret-vokrug-krakova-18-marshrutov",
+   "expected_address": "ruiny fortu 53 \"Bodzów\"",
+   "remove_category_ids": [
+    184
+   ],
+   "reason": "remove ['Город']: ruiny fortu = руины форта (Руины + Форт); Город ошибочна"
+  },
+  {
+   "id": 15558,
+   "travel_id": 636,
+   "travel_url": "https://metravel.by/travels/chto-posmotret-vokrug-krakova-18-marshrutov",
+   "expected_address": "Fort 31 \"Święty Benedykt\"",
+   "remove_category_ids": [
+    184
+   ],
+   "reason": "remove ['Город']: Fort 31 - форт Краковской крепости, не Крепость; Город ошибочна"
+  },
+  {
+   "id": 15619,
+   "travel_id": 638,
+   "travel_url": "https://metravel.by/travels/otdykh-u-vody-v-belarusi-33-proverennykh-mesta",
+   "expected_address": "Тумское озеро (Сарочанские озёра)",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Республиканский ландшафтный заказник Сарочанские озёра (high)"
+  },
+  {
+   "id": 15620,
+   "travel_id": 638,
+   "travel_url": "https://metravel.by/travels/otdykh-u-vody-v-belarusi-33-proverennykh-mesta",
+   "expected_address": "Кайминское озеро",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Республиканский ландшафтный заказник Сарочанские озёра (high)"
+  },
+  {
+   "id": 15621,
+   "travel_id": 638,
+   "travel_url": "https://metravel.by/travels/otdykh-u-vody-v-belarusi-33-proverennykh-mesta",
+   "expected_address": "Золовское озеро",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Республиканский ландшафтный заказник Сарочанские озёра (high)"
+  },
+  {
+   "id": 15622,
+   "travel_id": 638,
+   "travel_url": "https://metravel.by/travels/otdykh-u-vody-v-belarusi-33-proverennykh-mesta",
+   "expected_address": "Озеро Сорочье",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Республиканский ландшафтный заказник Сарочанские озёра (high)"
+  },
+  {
+   "id": 15716,
+   "travel_id": 658,
+   "travel_url": "https://metravel.by/travels/gomel-chto-posmotret-za-odin-den",
+   "expected_address": "Гомельский областной драматический театр",
+   "remove_category_ids": [
+    85
+   ],
+   "reason": "remove ['Оперный театр']: Драматический театр, не оперный"
+  },
+  {
+   "id": 15717,
+   "travel_id": 658,
+   "travel_url": "https://metravel.by/travels/gomel-chto-posmotret-za-odin-den",
+   "expected_address": "Гомельский государственный театр кукол",
+   "remove_category_ids": [
+    85
+   ],
+   "reason": "remove ['Оперный театр']: Театр кукол, не оперный"
+  },
+  {
+   "id": 15802,
+   "travel_id": 664,
+   "travel_url": "https://metravel.by/travels/brest-putevoditel-po-kreposti-fonarshchiku-i-staromu-gorodu",
+   "expected_address": "Брестский академический театр драмы",
+   "remove_category_ids": [
+    85
+   ],
+   "reason": "remove ['Оперный театр']: Театр драмы, не оперный"
+  },
+  {
+   "id": 16054,
+   "travel_id": 584,
+   "travel_url": "https://metravel.by/travels/shchavnitsa-zimoi-marshrut-na-dzwonkowke-cherez-sewerynowke-i-bacowke-pod-beresnikiem",
+   "expected_address": "Świętego Krzyża 48",
+   "address": "Вид на вечернюю Щавницу с ul. Świętego Krzyża (Staszowa)",
+   "reason": "rename[medium]: Точка в 30 м от дома Świętego Krzyża 48 на склоне квартала Staszowa над центром Щавницы; фото точки — огни города в долине в сумерках, в галерее статьи 584 та же сцена «Щавница в сумерках: огни курорта в долине». Статья место не описывает (вероятно, у ночлега — рядом chalet/guest house Góralskie Domki), поэтому только medium."
+  },
+  {
+   "id": 16056,
+   "travel_id": 584,
+   "travel_url": "https://metravel.by/travels/shchavnitsa-zimoi-marshrut-na-dzwonkowke-cherez-sewerynowke-i-bacowke-pod-beresnikiem",
+   "expected_address": "Hotel \"Nawigator\"",
+   "remove_category_ids": [
+    184
+   ],
+   "reason": "remove ['Город']: Hotel; Город ошибочна"
+  },
+  {
+   "id": 16140,
+   "travel_id": 559,
+   "travel_url": "https://metravel.by/travels/dolina-mnikovskaia-1",
+   "expected_address": "Źródło w Zimnym Dole",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Park Krajobrazowy Dolinki Krakowskie (medium)"
+  },
+  {
+   "id": 16141,
+   "travel_id": 559,
+   "travel_url": "https://metravel.by/travels/dolina-mnikovskaia-1",
+   "expected_address": "Zimna Dolina",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Park Krajobrazowy Dolinki Krakowskie (medium)"
+  },
+  {
+   "id": 16156,
+   "travel_id": 594,
+   "travel_url": "https://metravel.by/travels/blatnia-blatnia-nash-pokhod-k-schronisko-pttk-na-blatniej-v-polskikh-beskidakh",
+   "expected_address": "Tron Błatnia Challenge",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Park Krajobrazowy Beskidu Śląskiego (high)"
+  },
+  {
+   "id": 16157,
+   "travel_id": 594,
+   "travel_url": "https://metravel.by/travels/blatnia-blatnia-nash-pokhod-k-schronisko-pttk-na-blatniej-v-polskikh-beskidakh",
+   "expected_address": "Schronisko PTTK na Błatniej",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Park Krajobrazowy Beskidu Śląskiego (high)"
+  },
+  {
+   "id": 16158,
+   "travel_id": 594,
+   "travel_url": "https://metravel.by/travels/blatnia-blatnia-nash-pokhod-k-schronisko-pttk-na-blatniej-v-polskikh-beskidakh",
+   "expected_address": "Błatnia",
+   "add_category_ids": [
+    42
+   ],
+   "reason": "+Заповедник: Park Krajobrazowy Beskidu Śląskiego (high)"
+  },
+  {
+   "id": 16173,
+   "travel_id": 593,
+   "travel_url": "https://metravel.by/travels/zapadnaia-polsha-na-mashine-ozera-ostrov-volin-i-zabroshennyi-dvorets",
+   "expected_address": "Дот",
+   "address": "Остатки немецкого бункера на пляже Виселки (остров Волин)",
+   "reason": "rename[high]: TracesOfWar «Remains German Bunker» на пляже Wisełka, координаты 53.977515, 14.560129 — 60 м от точки; OSM node ruins=yes ruins:man_made=tower в 57 м; фото точки — бетонный блок на краю дюны у пляжа. Ближайшее поселение — осада Grodno (Karczma na Wydmach в 350 м), пляж относят к Виселке."
+  },
+  {
+   "id": 16187,
+   "travel_id": 593,
+   "travel_url": "https://metravel.by/travels/zapadnaia-polsha-na-mashine-ozera-ostrov-volin-i-zabroshennyi-dvorets",
+   "expected_address": "2/4",
+   "address": "Руины у места отдыха на озере Wodnik (Chłodnickie) близ Bukowie",
+   "reason": "rename[medium]: «2/4» — ref пожарного водозабора (emergency=suction_point) в 9 м; вокруг в OSM: озеро Wodnik (alt Chłodnickie) в 31 м, picnic_site в 12 м, навес, кемпинг, слип; Nominatim zoom 14 — Bukowie, gmina Bierzwnik. Фото точки — кирпично-каменная стена с арочным проёмом на поляне у стола. Что это за постройка, по статье 593 и вебу установить не удалось (статья описывает только прогулки между озёрами)."
+  },
+  {
+   "id": 16189,
+   "travel_id": 593,
+   "travel_url": "https://metravel.by/travels/zapadnaia-polsha-na-mashine-ozera-ostrov-volin-i-zabroshennyi-dvorets",
+   "expected_address": "2/4",
+   "address": "Старый дуб у места отдыха на озере Wodnik близ Bukowie",
+   "reason": "rename[medium]: Те же координаты, что и 16187 (место отдыха на озере Wodnik/Chłodnickie у Bukowie); категория «Дерево», фото — раскидистый старый дуб с информационным щитом на двух столбах (похоже на знак памятника природы, но статус не подтверждён: в OSM natural=tree нет, в вебе не найден)."
+  },
+  {
+   "id": 16561,
+   "travel_id": 939,
+   "travel_url": "https://metravel.by/travels/kuda-poekhat-zimoi-iz-krakova-turbach-krynitsa-zakopane-drezden",
+   "expected_address": "Парковка в Хуциско (Hucisko), старт на Турбач",
+   "remove_category_ids": [
+    122,
+    187
+   ],
+   "reason": "remove ['Рынок', 'Площадь']: Парковка; Рынок/Площадь ошибочны"
+  },
+  {
+   "id": 16562,
+   "travel_id": 939,
+   "travel_url": "https://metravel.by/travels/kuda-poekhat-zimoi-iz-krakova-turbach-krynitsa-zakopane-drezden",
+   "expected_address": "Парковка в Завое Маркова (Zawoja Markowa), старт на перевал Брона",
+   "remove_category_ids": [
+    122,
+    187
+   ],
+   "reason": "remove ['Рынок', 'Площадь']: Парковка (Перевал - цель маршрута); Рынок/Площадь ошибочны"
+  },
+  {
+   "id": 16563,
+   "travel_id": 939,
+   "travel_url": "https://metravel.by/travels/kuda-poekhat-zimoi-iz-krakova-turbach-krynitsa-zakopane-drezden",
+   "expected_address": "Касса TPN в Кузнице (Kuźnice), старт на Czarny Staw Gąsienicowy",
+   "remove_category_ids": [
+    122,
+    187
+   ],
+   "reason": "remove ['Рынок', 'Площадь']: [только удаление] Касса TPN; Озеро - цель маршрута; Рынок/Площадь ошибочны"
+  },
+  {
+   "id": 16564,
+   "travel_id": 939,
+   "travel_url": "https://metravel.by/travels/kuda-poekhat-zimoi-iz-krakova-turbach-krynitsa-zakopane-drezden",
+   "expected_address": "Сивяньска Дзюра у Сивой Поляны (Siwiańska Dziura), Хохоловская долина",
+   "remove_category_ids": [
+    122,
+    187
+   ],
+   "reason": "remove ['Рынок', 'Площадь']: [только удаление] Рынок/Площадь ошибочны (парковка Сивая Поляна); добавлять нечего"
+  },
+  {
+   "id": 16565,
+   "travel_id": 939,
+   "travel_url": "https://metravel.by/travels/kuda-poekhat-zimoi-iz-krakova-turbach-krynitsa-zakopane-drezden",
+   "expected_address": "Приют Bacówka pod Bereśnikiem (Języki), Щавница",
+   "remove_category_ids": [
+    122,
+    187
+   ],
+   "reason": "remove ['Рынок', 'Площадь']: Bacówka = приют; Рынок/Площадь ошибочны"
+  },
+  {
+   "id": 16566,
+   "travel_id": 939,
+   "travel_url": "https://metravel.by/travels/kuda-poekhat-zimoi-iz-krakova-turbach-krynitsa-zakopane-drezden",
+   "expected_address": "Парковка в Sucha Dolina, старт на Радзеёву",
+   "remove_category_ids": [
+    122,
+    187
+   ],
+   "reason": "remove ['Рынок', 'Площадь']: Парковка; Долина - ориентир; Рынок/Площадь ошибочны"
+  },
+  {
+   "id": 16567,
+   "travel_id": 939,
+   "travel_url": "https://metravel.by/travels/kuda-poekhat-zimoi-iz-krakova-turbach-krynitsa-zakopane-drezden",
+   "expected_address": "Нижняя станция канатной дороги Яворжина, Крыница-Здруй",
+   "remove_category_ids": [
+    122,
+    187
+   ],
+   "reason": "remove ['Рынок', 'Площадь']: Канатная дорога; Рынок/Площадь ошибочны"
+  },
+  {
+   "id": 16568,
+   "travel_id": 939,
+   "travel_url": "https://metravel.by/travels/kuda-poekhat-zimoi-iz-krakova-turbach-krynitsa-zakopane-drezden",
+   "expected_address": "Скалы Бастай (Bastei), Саксонская Швейцария",
+   "remove_category_ids": [
+    122,
+    187
+   ],
+   "reason": "remove ['Рынок', 'Площадь']: Скалы Бастай; Рынок/Площадь ошибочны"
+  }
+ ]
+}
