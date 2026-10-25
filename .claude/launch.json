@@ -26,6 +26,50 @@
       "autoPort": false
     },
     {
+      "name": "Llama Server Base GPU 8080",
+      "runtimeExecutable": "llama-server",
+      "runtimeArgs": [
+        "-m",
+        "/Users/juliasavran/metravel-ai/gguf/Qwen3.5-4B-Q4_K_M.gguf",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8080",
+        "-c",
+        "8192",
+        "--parallel",
+        "2",
+        "-ngl",
+        "99",
+        "--jinja",
+        "--no-warmup"
+      ],
+      "port": 8080,
+      "autoPort": false
+    },
+    {
+      "name": "Llama Server v2 GPU 8081",
+      "runtimeExecutable": "llama-server",
+      "runtimeArgs": [
+        "-m",
+        "/Users/juliasavran/metravel-ai/gguf/metravel-llm-v2-Q4_K_M.gguf",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8081",
+        "-c",
+        "8192",
+        "--parallel",
+        "2",
+        "-ngl",
+        "99",
+        "--jinja",
+        "--no-warmup"
+      ],
+      "port": 8081,
+      "autoPort": false
+    },
+    {
       "name": "Assistant 2460 Web 8081",
       "runtimeExecutable": "sh",
       "runtimeArgs": [
