@@ -319,7 +319,7 @@ function QuestsContentPanel({
         >
             <Text
                 style={styles.contentTitle}
-                numberOfLines={2}
+                numberOfLines={isMobile ? 2 : 1}
                 accessibilityRole="header"
                 {...({ 'aria-level': 1 } as Record<string, unknown>)}
                 testID="quests-content-title"
@@ -355,7 +355,7 @@ function QuestsContentPanel({
     );
 
     const searchField = (
-    <View style={styles.searchRow}>
+    <View style={styles.searchRow} testID="quests-search-row">
         <Feather name="search" size={16} color={colors.textMuted} />
         <TextInput
             {...searchInputAccessibilityProps()}

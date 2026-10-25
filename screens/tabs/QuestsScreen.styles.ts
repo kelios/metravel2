@@ -30,6 +30,9 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
     const isMobileW = screenWidth < 768;
     const isSmallPhone = screenWidth < 360;
     const isTablet = screenWidth >= 768 && screenWidth < 1024;
+    // Шапка каталога в один ряд (заголовок | поиск) — от 1280: уже счётчик с
+    // чипом «Популярные» и поиском не помещаются в колонку контента.
+    const isWideDesktop = screenWidth >= DESIGN_TOKENS.breakpoints.xl;
     const SIDEBAR_WIDTH = isTablet ? 260 : 340;
     const headerPadding = isMobileW ? spacing.md : spacing.lg;
     const headerTopPadding = isMobileW ? spacing.lg : spacing.xl;
@@ -53,9 +56,9 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
         alignItems: 'center',
         gap: 4,
         // На телефоне чипы живут в ленте липкой шапки (`QuestsMobileToolbar`):
-        // пилюля 32px внутри зоны касания 44px (`mobileChipHit`).
-        marginTop: isMobileW ? 0 : 2,
-        paddingHorizontal: spacing.sm,
+        // пилюля 32px внутри зоны касания 44px (`mobileChipHit`); на desktop —
+        // в одном ряду с заголовком и поиском, выровнены по центру ряда.
+        paddingHorizontal: isMobileW ? spacing.sm : spacing.xs,
         paddingVertical: isMobileW ? 6 : 3,
         borderRadius: 999,
         borderWidth: 1,
@@ -69,8 +72,8 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
         color: colors.primary,
         fontSize: typography.sizes.sm,
         // Явная высота строки: ряд счётчика на desktop резервируется в
-        // `app/global.css` (28px = 18 + паддинги + рамка + marginTop), и
-        // «normal» системного шрифта не должен её расшатывать.
+        // `app/global.css` (28px ≥ 18 + паддинги + рамка), и «normal»
+        // системного шрифта не должен её расшатывать.
         lineHeight: 18,
         fontWeight: '600',
     };
@@ -502,16 +505,27 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             }),
         },
         contentHeader: {
-            flexDirection: 'column',
             // Мобильная шапка — два ряда (поиск+кнопки, лента чипов) и обязана
             // уложиться в ~20% вьюпорта вместе с глобальной шапкой, поэтому
             // вертикальные отступы минимальные.
             // Между рядами зазора нет: у чипов прозрачная зона касания 44px,
             // и видимый отступ до пилюли (6px) даёт она.
-            gap: isMobileW ? 0 : spacing.md,
+            // Desktop от 1280 — один ряд: заголовок со счётчиком и чипами слева,
+            // поиск справа; 768–1279 — поиск всегда вторым рядом во всю ширину
+            // (детерминированно, а не по длине счётчика). Геометрию первого
+            // кадра повторяет `app/global.css`.
+            flexDirection: isMobileW ? 'column' : 'row',
+            ...(isMobileW
+                ? { gap: 0 }
+                : {
+                      alignItems: 'center',
+                      flexWrap: isWideDesktop ? 'nowrap' : 'wrap',
+                      columnGap: spacing.md,
+                      rowGap: spacing.xs,
+                  }),
             paddingHorizontal: headerPadding,
-            paddingTop: isMobileW ? spacing.xs : spacing.xl,
-            paddingBottom: isMobileW ? spacing.xxs : spacing.md,
+            paddingTop: isMobileW ? spacing.xs : spacing.md,
+            paddingBottom: isMobileW ? spacing.xxs : spacing.sm,
             borderBottomWidth: 0,
             borderBottomColor: colors.borderLight,
             backgroundColor: colors.background,
@@ -541,17 +555,23 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
         },
         contentTitle: {
             color: colors.text,
-            fontSize: isMobileW ? 20 : 28,
+            fontSize: isMobileW ? 20 : 22,
             fontWeight: '800',
-            letterSpacing: -0.6,
-            lineHeight: isMobileW ? 26 : 34,
+            letterSpacing: isMobileW ? -0.6 : -0.4,
+            lineHeight: isMobileW ? 26 : 28,
+            flexShrink: 1,
+            minWidth: 0,
         },
         searchRow: {
             flexDirection: 'row',
             alignItems: 'center',
             gap: spacing.xs,
-            paddingHorizontal: spacing.md,
-            height: 44,
+            paddingHorizontal: isMobileW ? spacing.md : spacing.sm,
+            // Desktop: компактное поле фиксированной ширины у правого края ряда.
+            ...(isMobileW ? { height: 44 } : { height: 36 }),
+            ...(isWideDesktop
+                ? { flexGrow: 0, flexShrink: 1, flexBasis: 320, minWidth: 220, marginLeft: 'auto' }
+                : !isMobileW && { flexBasis: '100%' }),
             borderRadius: CONTROL_RADIUS,
             borderWidth: 1,
             borderColor: colors.borderLight,
@@ -561,7 +581,7 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             flex: 1,
             minWidth: 0,
             color: colors.text,
-            fontSize: typography.sizes.md,
+            fontSize: isMobileW ? typography.sizes.md : typography.sizes.sm,
             fontWeight: '500',
             paddingVertical: 0,
             ...Platform.select({
@@ -569,8 +589,8 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             }),
         },
         searchClearBtn: {
-            width: 44,
-            height: 44,
+            width: isMobileW ? 44 : 32,
+            height: isMobileW ? 44 : 32,
             alignItems: 'center',
             justifyContent: 'center',
             borderRadius: radii.full,
@@ -579,7 +599,10 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             }),
         },
         contentTitleBlock: {
-            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.sm,
+            flexShrink: 1,
             minWidth: 0,
         },
         mobileTitleRow: {
@@ -642,7 +665,7 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
         contentCount: {
             color: colors.textMuted,
             fontSize: typography.sizes.sm,
-            marginTop: 2,
+            marginTop: isMobileW ? 2 : 0,
             fontWeight: '500',
         },
         contentCountRow: {
