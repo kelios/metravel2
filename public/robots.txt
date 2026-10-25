@@ -24,4 +24,28 @@ Disallow: /*?gclid=*
 User-agent: meta-externalagent
 Disallow: /
 
+# Owner decision 2026-10-25 (#2720): seven crawlers with ~6.2k requests/week
+# to articles, quests and photos and no referrals. SEO analyzers and dataset
+# collectors, not search engines.
+User-agent: QlyzeBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: Amazonbot
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
 Sitemap: https://metravel.by/sitemap.xml

@@ -63,7 +63,17 @@ function isBlocked(userAgent: string, url: string): boolean {
 }
 
 const CONTENT_URLS = ['/', '/travels/nesvizh', '/quests/warsaw']
-const CLOSED_CRAWLERS = ['meta-externalagent']
+const CLOSED_CRAWLERS = [
+  'meta-externalagent',
+  // #2720: owner decision 2026-10-25, zero-return crawlers.
+  'QlyzeBot',
+  'Bytespider',
+  'Amazonbot',
+  'PetalBot',
+  'DotBot',
+  'AhrefsBot',
+  'SemrushBot',
+]
 const OPEN_CRAWLERS = ['facebookexternalhit', 'Googlebot', 'YandexBot', 'bingbot', 'SomeOtherBot']
 
 describe('public/robots.txt crawler policy', () => {
@@ -76,7 +86,7 @@ describe('public/robots.txt crawler policy', () => {
 
   it('names only the closed crawlers besides the "*" group', () => {
     const named = groups.flatMap((group) => group.agents).filter((agent) => agent !== '*')
-    expect(named.sort()).toEqual([...CLOSED_CRAWLERS].sort())
+    expect(named.sort()).toEqual(CLOSED_CRAWLERS.map((crawler) => crawler.toLowerCase()).sort())
   })
 
   it.each(OPEN_CRAWLERS)('keeps articles and quests crawlable for %s', (crawler) => {
