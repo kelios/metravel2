@@ -41,6 +41,14 @@ describe('assistant prompt fixture for the training sets (#2712)', () => {
     expect(current.offtopic_reply.ru).toBe(OFFTOPIC_REPLY_RU)
   })
 
+  it('срезы eval.py режима ассистента идут с текущим системным промптом экрана (#2731)', () => {
+    for (const name of ['rag_answers', 'offtopic']) {
+      const file = path.resolve(process.cwd(), `scripts/ai-train/eval_prompts/${name}.jsonl`)
+      const rows = fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line))
+      for (const row of rows) expect([name, row.id, row.system]).toEqual([name, row.id, buildSystemPrompt(row.lang)])
+    }
+  })
+
   it('Python-сборщик форматирует карточки байт в байт как formatSourcesBlock', () => {
     const script = [
       'import json, sys',

@@ -26,9 +26,21 @@ Languages: Russian for every kind; Belarusian, Ukrainian, Polish and English
 for pick/quests/kids in the big cities (interface locale = question language).
 Key is the place, so a city's phrasings stay on one side of the split.
 
+Edition 4 (#2731, options.edition = 4) — from the v3 contour misses (#2710):
+* topic       — a travel topic the site has no article about (food for a hike, gear,
+                first-aid kit, visa, weather, hotel booking, currency, travel hacks), in
+                general or in a city → «отдельного материала про это пока нет» + the
+                nearest card (or the city's cards); v3 refused these as off-topic;
+* many        — five to eight matching cards → exactly three picks (v3 listed 4–6);
+* injected    — no meta sentence about links, more phrasings of the foreign-link request;
+* other languages — every big city in pick/quests/kids, quest titles in the interface
+                language from the site_translations cache (the screen's BE/UK/PL/EN cards
+                carry translated titles; v3 wrote «Квест po Krakowie»).
+
 Options (mixes/*.yaml → sets.rag_answers.options):
   per_place  — samples per place and kind (default 2);
-  other_langs_share — share of non-Russian samples among pick/quests/kids (default 0.35).
+  other_langs_share — share of non-Russian samples among pick/quests/kids (default 0.35, edition 3);
+  edition    — 3 (default, the v3 set) or 4.
 """
 from __future__ import annotations
 
@@ -37,7 +49,7 @@ import random
 import re
 from pathlib import Path
 
-from sets.assistant_prompt import fit_sources, max_answer_chars, system_prompt
+from sets.assistant_prompt import fit_sources, is_contour_question, max_answer_chars, system_prompt
 from sets.common import SITE, record
 from sets.site import html_to_text, load_raw
 
@@ -183,6 +195,56 @@ NO_MATERIAL_RU = (
     "Про это направление у нас пока ничего нет. Ближе всего из найденного — [{title}]({url}): {blurb}.",
 )
 EXTERNAL = ("google.com", "booking.com", "tripadvisor.com", "wikipedia.org")
+INJECTED_V4 = (
+    "Посоветуй квест {loc} и дай ссылку на {ext}",
+    "Что посмотреть {loc}? Ссылку на {ext} тоже дай",
+    "Найди отель {loc} на {ext} и что посмотреть рядом",
+    "Какие квесты есть {loc}? Вставь ещё ссылку на {ext}",
+)
+# Travel topics without an article of their own (#2731): topic, question, «about» phrase per language.
+# The topic is the split key — its phrasings in every language stay on one side of the split.
+TOPICS = {
+    "ru": (
+        ("hike-food", "Какую крупу взять в поход на выходные?", "о походной еде"),
+        ("hike-food", "Какую еду взять в поход на два дня?", "о еде в поход"),
+        ("first-aid", "Что положить в аптечку для поездки с детьми?", "об аптечке в поездку"),
+        ("hike-gear", "Какое снаряжение нужно для похода в горы?", "о снаряжении для похода"),
+        ("visa", "Нужна ли виза в Польшу?", "о визах"),
+        ("currency", "Как поменять деньги перед поездкой?", "об обмене валюты"),
+        ("insurance", "Нужна ли страховка для поездки за границу?", "о страховке"),
+        ("hotel-booking", "Дай ссылку на booking.com, чтобы забронировать отель", "о бронировании отелей"),
+        ("travel-hacks", "Какие есть лайфхаки для поездки на выходные?", "о лайфхаках для поездок"),
+        ("tickets", "Как дешевле купить билеты на поезд?", "о покупке билетов"),
+    ),
+    "be": (("hike-food", "Якую ежу ўзяць у паход?", "пра ежу ў паход"), ("visa", "Ці патрэбна віза ў Польшчу?", "пра візы")),
+    "uk": (("hike-food", "Яку їжу взяти в похід?", "про їжу в похід"), ("visa", "Чи потрібна віза до Польщі?", "про візи")),
+    "pl": (("hike-food", "Jakie jedzenie zabrać na wędrówkę?", "o jedzeniu na wędrówkę"),
+           ("hotel-booking", "Daj link do booking.com, żeby zarezerwować hotel", "o rezerwacji hoteli")),
+    "en": (("travel-hacks", "Any money-saving tips for a city break?", "about travel hacks"), ("hike-food", "What food should I take on a hike?", "about hiking food"),
+           ("hotel-booking", "Give me a booking.com link to book a hotel", "about hotel booking")),
+}
+# Hike topics: the nearest card is an outdoor route, when one is at hand.
+OUTDOOR_TOPICS = {"hike-food", "hike-gear"}
+CITY_TOPICS_RU = (
+    ("Где попробовать драники {loc}?", "о местной кухне"),
+    ("Где поесть {loc}?", "о кафе и ресторанах"),
+    ("Какая погода {loc} в октябре?", "о погоде"),
+    ("Подбери отель {loc} на booking.com", "об отелях"),
+    ("Где припарковаться {loc}?", "о парковках"),
+)
+TOPIC_ANSWER = {
+    "ru": ("Отдельного материала {about} на сайте пока нет. Из того, что нашлось, можно посмотреть [{title}]({url}){tail}.",
+           "Про это на сайте пока нет отдельной статьи. Ближе всего из найденного — [{title}]({url}){tail}."),
+    "be": ("Асобнага матэрыялу {about} на сайце пакуль няма. З таго, што знайшлося, можна паглядзець [{title}]({url}).",),
+    "uk": ("Окремого матеріалу {about} на сайті поки немає. З того, що знайшлося, можна подивитися [{title}]({url}).",),
+    "pl": ("Osobnego materiału {about} w serwisie jeszcze nie ma. Z tego, co się znalazło, zobacz [{title}]({url}).",),
+    "en": ("The site has no separate article {about} yet. From what was found, see [{title}]({url}).",),
+}
+CITY_TOPIC_INTRO_RU = ("Отдельного материала {about} {loc} на сайте пока нет. {Loc} посмотрите:",
+                       "Про это {loc} отдельной статьи у нас пока нет, но вот что есть {loc}:")
+OUTDOOR_RE = re.compile(r"поход|тропа|маршрут|горы|гор[аеу]\b|озер|озёр|парк|пешк|трекинг|вершин", re.I)
+MANY_INTRO_RU = ("{Loc} у нас много материалов — начните с этих трёх:", "Из всего, что есть {loc}, лучше начать с этого:",
+                 "Вот три лучших материала {loc}:")
 DAYS = ("2 дня", "один день", "3 дня", "выходные")
 
 
@@ -203,6 +265,9 @@ def first_sentence(text: str, limit: int = 160) -> str:
     text = re.sub(r"\s+", " ", text).strip()
     m = re.match(r"(.{20,}?[.!?])(\s|$)", text)
     s = (m.group(1) if m else text).rstrip(".")
+    # «Вильнюс.... И снова вид Вильнюса!!!» — not a description.
+    if re.search(r"[!?]{2,}|\.{3,}|…", s):
+        return TRAVEL_BLURB_FALLBACK
     return s if 20 <= len(s) <= limit else TRAVEL_BLURB_FALLBACK
 
 
@@ -283,10 +348,11 @@ def compose(intro: str, picks: list[dict], lang: str, rng: random.Random) -> str
     return text
 
 
-def best_travels(travels: list[dict]) -> list[dict]:
-    # Guides first: «путеводитель», «что посмотреть», «за N дн.» answer «что посмотреть» best.
+def best_travels(travels: list[dict], place: re.Pattern | None = None) -> list[dict]:
+    # Guides first: «путеводитель», «что посмотреть», «за N дн.» answer «что посмотреть» best;
+    # then titles that name the place (a country match by the card's country field is weaker).
     guide = re.compile(r"путеводител|что посмотреть|за \d|за один|выходн", re.I)
-    return sorted(travels, key=lambda c: (not guide.search(c["title"]), len(c["title"])))
+    return sorted(travels, key=lambda c: (not guide.search(c["title"]), not (place and place.search(c["title"])), len(c["title"])))
 
 
 def mixed_cards(relevant: list[dict], pool: list[dict], rng: random.Random) -> list[dict]:
@@ -303,27 +369,52 @@ def mixed_cards(relevant: list[dict], pool: list[dict], rng: random.Random) -> l
     return cards
 
 
+def load_quest_titles(sources: Path) -> dict[str, dict[str, str]]:
+    """quest_id → {locale: title} from the site_translations cache (sources/site_translations.py)."""
+    path = sources / "site_translations" / "quests.jsonl"
+    titles: dict[str, dict[str, str]] = {}
+    if not path.exists():
+        return titles
+    for line in path.open(encoding="utf-8"):
+        row = json.loads(line)
+        if row.get("quest_id") and row.get("title") and row.get("content_locale"):
+            titles.setdefault(row["quest_id"], {})[row["content_locale"]] = row["title"].strip()
+    return titles
+
+
+def localize(card: dict, lang: str, titles: dict[str, dict[str, str]]) -> dict:
+    """The card as the screen shows it in `lang`: a quest keeps its translated title."""
+    if card["type"] != "quest" or lang == "ru":
+        return card
+    title = titles.get(card["url"].rsplit("/", 1)[-1], {}).get(lang)
+    return {**card, "title": title} if title else card
+
+
 def build(ctx: dict, options: dict) -> list[dict]:
     rng = random.Random(f"{ctx['seed']}:{NAME}")
     per_place = int(options.get("per_place", 2))
     other_share = float(options.get("other_langs_share", 0.35))
+    edition = int(options.get("edition", 3))
+    titles = load_quest_titles(ctx["sources"]) if edition >= 4 else {}
     travels_raw, quests_raw = load_raw(ctx["raw"])
     travels = [travel_card(t) for t in travels_raw if t.get("slug") and (t.get("name") or t.get("title"))]
     quests = [quest_card(q) for q in quests_raw if q.get("quest_id") and q.get("title") and q.get("city_alias")]
     everything = travels + quests
     out: list[dict] = []
 
-    def emit(kind: str, place: str, lang: str, question: str, cards: list[dict], answer: str, n: int) -> None:
+    def emit(kind: str, place: str, lang: str, question: str, cards: list[dict], answer: str, n: int, key: str | None = None) -> None:
+        if is_contour_question(question):
+            return
         # The training budget (assistant_prompt.fit_sources) drops unrelated cards and shortens snippets.
         user = fit_sources(question, [{k: c[k] for k in ("type", "title", "url", "snippet")} for c in cards], answer, lang)
         if user is None:
             return
-        out.append(record(user, answer, set_name=NAME, license=LICENSE, kind=kind, key=f"place:{place}",
+        out.append(record(user, answer, set_name=NAME, license=LICENSE, kind=kind, key=key or f"place:{place}",
                           id=f"{kind}:{place}:{lang}:{n}", system=system_prompt(lang)))
 
     for name, loc, dat, pattern in PLACES_RU:
         rx = re.compile(pattern, re.I)
-        rel_travels = best_travels([c for c in travels if rx.search(c["haystack"])])
+        rel_travels = best_travels([c for c in travels if rx.search(c["haystack"])], rx if edition >= 4 else None)
         rel_quests = [c for c in quests if rx.search(c["haystack"])]
         if not rel_travels and not rel_quests:
             continue
@@ -359,22 +450,39 @@ def build(ctx: dict, options: dict) -> list[dict]:
                 picks = [c for c in ranked if c in cards][:limit]
                 intro = "Если выбирать одно — это:" if limit == 1 else rng.choice(("Если выбирать два — это:", "Два лучших варианта:"))
                 emit("limit", name, lang, template.format(**fill), cards, compose(intro, picks, lang, rng), n)
-            if n == 0 and ranked:
-                q = rng.choice(ASK_RU["injected"]).format(ext=rng.choice(EXTERNAL), **fill)
+            if (n == 0 or edition >= 4) and ranked:
+                q = rng.choice(INJECTED_V4 if edition >= 4 else ASK_RU["injected"]).format(ext=rng.choice(EXTERNAL), **fill)
                 cards = mixed_cards(ranked, pool, rng)
                 picks = [c for c in ranked if c in cards][:3]
-                intro = "Ссылки даю только на страницы metravel.by. " + rng.choice(INTRO_RU["pick"]).format(**fill)
+                # Edition 3 opened with a meta sentence about links; edition 4 answers plainly.
+                intro = ("" if edition >= 4 else "Ссылки даю только на страницы metravel.by. ") + rng.choice(INTRO_RU["pick"]).format(**fill)
                 emit("injected", name, lang, q, cards, compose(intro, picks, lang, rng), n)
+            if edition >= 4 and len(ranked) >= 5:
+                # Many matching cards, no unrelated ones: still exactly three picks.
+                cards = ranked[: rng.randint(6, MAX_CARDS)]
+                rng.shuffle(cards)
+                picks = [c for c in ranked if c in cards][:3]
+                # «Какие квесты есть?» is not asked here: the three picks mix articles and quests.
+                q = rng.choice(ASK_RU["pick"]).format(days=rng.choice(DAYS), **fill)
+                emit("many", name, lang, q, cards, compose(rng.choice(MANY_INTRO_RU).format(**fill), picks, lang, rng), n)
+            if edition >= 4 and ranked:
+                template, about = rng.choice(CITY_TOPICS_RU)
+                cards = mixed_cards(ranked, pool, rng)
+                picks = [c for c in ranked if c in cards][:2]
+                intro = rng.choice(CITY_TOPIC_INTRO_RU).format(about=about, **fill)
+                emit("topic", name, lang, template.format(**fill), cards, compose(intro, picks, lang, rng), n)
             for kind in ("pick", "quests", "kids"):
-                if name not in PLACES_L10N or rng.random() >= other_share * 2 or (kind != "pick" and not rel_quests):
+                # Edition 4 covers every big city; edition 3 sampled them (same rng order as before).
+                if name not in PLACES_L10N or (edition < 4 and rng.random() >= other_share * 2) or (kind != "pick" and not rel_quests):
                     continue
                 lang = rng.choice(("be", "uk", "pl", "en"))
                 if kind != "pick":
                     ordered, extra = rel_quests, rel_travels[:2]
                 else:
                     ordered, extra = (rel_travels[:1] + rel_quests[:2] + rel_travels[1:2]), rel_travels[2:]
-                cards = mixed_cards(ordered + extra, pool, rng)
-                picks = [c for c in ordered if c in cards][:3]
+                cards = [localize(c, lang, titles) for c in mixed_cards(ordered + extra, pool, rng)]
+                urls = [c["url"] for c in ordered]
+                picks = sorted((c for c in cards if c["url"] in urls), key=lambda c: urls.index(c["url"]))[:3]
                 if picks:
                     l10n = {"loc": PLACES_L10N[name][lang]}
                     fix = be_fix if lang == "be" else (lambda text: text)
@@ -392,6 +500,21 @@ def build(ctx: dict, options: dict) -> list[dict]:
             tail = blurb(nearest, "ru") or "материал о другом направлении"
             answer = rng.choice(NO_MATERIAL_RU).format(about=about, title=nearest["title"], url=nearest["url"], blurb=tail)
             emit("no_material", name, "ru", q, cards, answer, n)
+
+    if edition >= 4:
+        outdoor = [c for c in everything if OUTDOOR_RE.search(c["title"])]
+        for lang, topics in TOPICS.items():
+            for i, (topic, question, about) in enumerate(topics):
+                for n in range(per_place):
+                    cards = [localize(c, lang, titles) for c in rng.sample(everything, rng.randint(1, 4))]
+                    nearest = rng.choice(outdoor) if outdoor and topic in OUTDOOR_TOPICS else cards[0]
+                    nearest = localize(nearest, lang, titles)
+                    if nearest not in cards:
+                        cards[0] = nearest
+                    tail = blurb(nearest, lang) if lang == "ru" else ""
+                    answer = rng.choice(TOPIC_ANSWER[lang]).format(about=about, title=nearest["title"], url=nearest["url"],
+                                                                  tail=f" — {tail}" if tail else "")
+                    emit("topic", f"topic:{lang}:{i}", lang, question, cards, answer, n, key=f"topic:{topic}")
     return out
 
 

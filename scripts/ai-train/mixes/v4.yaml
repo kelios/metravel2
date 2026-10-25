@@ -1,0 +1,22 @@
+# metravel-llm v4 (#2731): the v3 adapter continues on the same assistant-mode
+# stage with rag_answers edition 4 — travel topics without an article answered
+# instead of refused, «many matching → three», injected without a meta sentence,
+# BE/UK/PL/EN with translated quest titles — and the prompt snapshot narrowed
+# after v3 (#2711). Same 20 % replay of S1/S2; trains stage s3 alone, resuming
+# adapters/metravel-llm-v3 (lora-qwen3.5-4b-v4.yaml).
+name: v4
+seed: 20261017
+split: {by: key, valid_share: 0.03, test_share: 0.02}
+sets:
+  toponyms:     {weight: 1.0, cap_tokens: 400000}
+  translations: {weight: 1.0, cap_tokens: 500000, options: {kind_share: {quest_card_from_ru: 0.7, quest_card_l: 0.5, ui_strings: 0.12, quest_translate: 0.03}}}
+  wikivoyage:   {weight: 0.7, cap_tokens: 1500000}
+  osm_intents:  {weight: 1.0, cap_tokens: 300000}
+  site:         {weight: 1.0, cap_tokens: 4000000, options: {chunk_chars: 2600, structured: true}}
+  rag_answers:  {weight: 1.0, cap_tokens: 1200000, options: {per_place: 3, edition: 4}}
+  offtopic:     {weight: 1.0, cap_tokens: 250000}
+stages:
+  - {name: s1, sets: [toponyms, translations, wikivoyage, osm_intents]}
+  - {name: s2, sets: [site]}
+  - {name: s3, sets: [rag_answers, offtopic]}
+replay: 0.2

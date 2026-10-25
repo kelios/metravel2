@@ -1,0 +1,41 @@
+# metravel-llm v4, stage S3 "assistant" again (#2731): the v3 adapter continues on
+# rag_answers (edition 4) + offtopic with 20 % replay of S1/S2 (data/sft-v4/s3 from
+# build_mix.py --mix mixes/v4.yaml). The assistant's prompt with eight cards is
+# ~1800 tokens, but 1280/1536/2048 run out of Metal memory on the 24 GB Mac even
+# with the GPU free (probes 2026-10-25), and a prompt-masked sample cut inside
+# its prompt has no target tokens (loss NaN). So the sets fit every sample into
+# 1024 tokens (sets/assistant_prompt.fit_sources: fewer cards, shorter
+# snippets); llama-server must not hold the GPU while this trains (-ngl 0).
+# iters = one epoch of the S3 train split at batch 1 (data/sft-v4/s3/stats.json).
+#   cd ~/metravel-ai && nohup caffeinate -i env AI_HOME=$HOME/metravel-ai RUN=v4 \
+#     CONFIG=<repo>/scripts/ai-train/lora-qwen3.5-4b-v4.yaml <repo>/scripts/ai-train/train.sh &
+model: models/Qwen3.5-4B-MLX-4bit
+data: data/sft-v4/s3
+train: true
+fine_tune_type: lora
+optimizer: adamw
+mask_prompt: true
+num_layers: 6
+batch_size: 1
+grad_accumulation_steps: 1
+iters: 1391        # ≈ 1 epoch of the S3 train split (rag_answers ed. 4 + offtopic + 20 % replay) at batch 1
+resume_adapter_file: adapters/metravel-llm-v3/adapters.safetensors
+learning_rate: 2.0e-5      # half of S2: a short stage on top of a finished adapter
+max_seq_length: 1024
+grad_checkpoint: true
+steps_per_report: 20
+steps_per_eval: 200
+val_batches: 13
+save_every: 200
+adapter_path: adapters/metravel-llm-v4
+seed: 20261026
+lora_parameters:
+  rank: 16
+  scale: 20.0
+  dropout: 0.05
+  keys: ["self_attn.q_proj", "self_attn.k_proj", "self_attn.v_proj", "self_attn.o_proj", "mlp.gate_proj", "mlp.up_proj", "mlp.down_proj"]
+lr_schedule:
+  name: cosine_decay
+  warmup: 50
+  warmup_init: 1.0e-6
+  arguments: [2.0e-5, 1391, 1.0e-6]

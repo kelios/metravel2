@@ -16,6 +16,8 @@ import re
 from pathlib import Path
 
 FIXTURE = Path(__file__).resolve().parent.parent / "assistant_prompt.json"
+# Questions of the assistant eval contour (#2710): held out by construction (#2731).
+CONTOUR_CASES = Path(__file__).resolve().parents[2] / "ai-assistant-eval" / "cases.jsonl"
 LOCALES = ("ru", "be", "uk", "pl", "en")
 SOURCE_TYPE_RU = {"travel": "Статья", "quest": "Квест"}
 TITLE_MAX = 160
@@ -25,6 +27,25 @@ QUESTION_MAX = 500
 _HIDDEN_RE = re.compile(r"[\u0000-\u001f\u007f-\u009f­؀-؅؜۝܏࣢᠎​-‏‪-‮⁠-⁤⁦-⁯﻿￹-￻]")
 
 _fixture: dict | None = None
+_contour: set[str] | None = None
+
+
+def _norm_question(text: str) -> str:
+    return re.sub(r"\s+", " ", str(text).strip().lower().replace("ё", "е"))
+
+
+def is_contour_question(question: str) -> bool:
+    """True when the question (after {loc} substitution) is one the eval contour asks: a set must not
+    train on it, or the contour measures memorised strings (code review #2731 found bd01/bd02/bd07…)."""
+    global _contour
+    if _contour is None:
+        _contour = set()
+        if CONTOUR_CASES.exists():
+            for line in CONTOUR_CASES.read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    case = json.loads(line)
+                    _contour.update(_norm_question(q) for q in (case.get("turns") or [case.get("q", "")]))
+    return _norm_question(question) in _contour
 
 
 def fixture() -> dict:
