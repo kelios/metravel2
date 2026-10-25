@@ -296,4 +296,13 @@ batch 1, seq 1024, loss по ответу):
 раньше, закрывается RAG-режимом ассистента (#2460), где ссылки даёт индекс.
 Следующий S1 — после перекачки OSM с описаниями POI (#2479).
 
+Экспорт в GGUF (`RUN=v2 scripts/ai-train/export_gguf.sh`, 3 мин):
+`gguf/metravel-llm-v2-Q4_K_M.gguf` 2 783 446 880 байт, sha256
+`17a57569b4c191e62cdb60e2ddf23cd6319a130bf5bf022341406187f8d36611`. После
+квантизации (`eval.py --server`, llama-server Q4_K_M против базы Q4_K_M,
+`logs/eval-v2-gguf/report.md`): osm_intents 9/10, site 9/40, toponyms 9/15,
+translations 8/10, wikivoyage 5/10 — дрейф в пределах одного вопроса на срез,
+как у v1. Сервер: `llama-server -m gguf/metravel-llm-v2-Q4_K_M.gguf --port 8080
+-c 8192 --parallel 2 --jinja` (launch.json: «Llama Server v2 GPU 8081»).
+
 Данные и веса в репозиторий не попадают; секретов нет (API публичный).
