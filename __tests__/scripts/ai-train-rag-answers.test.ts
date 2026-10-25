@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import { spawnSync } from 'child_process';
 import { makeTempDir, removeDir, runCli } from './cli-test-utils';
 
 // #2712: наборы rag_answers и offtopic — режим ассистента /assistant. Промпт берётся из
@@ -125,7 +124,7 @@ describe('контур оценки не учится на своих вопро
       'from sets.assistant_prompt import is_contour_question',
       "print(is_contour_question('Какие квесты есть в Минске?'), is_contour_question('  где попробовать ДРАНИКИ в Минске? '), is_contour_question('Какие квесты есть в Пинске?'))",
     ].join('\n');
-    const run = spawnSync('python3', ['-I', '-c', script], { cwd: process.cwd(), encoding: 'utf8' });
+    const run = runCli('python3', ['-I', '-c', script], { cwd: process.cwd() });
     expect(run.stdout.trim()).toBe('True True False');
     expect(contour.has('какие квесты есть в минске?')).toBe(true);
   });

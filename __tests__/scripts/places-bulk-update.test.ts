@@ -1,13 +1,14 @@
 import fs from 'fs'
-import os from 'os'
 import path from 'path'
+
+import { makeTempDir, removeDir } from './cli-test-utils'
 
 const { CLI_SPEC, ENDPOINT, buildRequestBody, loadPlan, sendPlan, summarize, validateReport } = require('../../scripts/places-bulk-update')
 const { ExpectedFailureError, UsageError, parseCliTokens } = require('../../scripts/lib/cli-contract')
 
-const planDir = fs.mkdtempSync(path.join(os.tmpdir(), 'places-bulk-update-'))
+const planDir = makeTempDir('places-bulk-update-')
 let planCount = 0
-afterAll(() => fs.rmSync(planDir, { recursive: true, force: true }))
+afterAll(() => removeDir(planDir))
 
 const writePlan = (payload: unknown): string => {
   const file = path.join(planDir, `plan-${planCount++}.json`)

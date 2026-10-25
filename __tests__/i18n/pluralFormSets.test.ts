@@ -41,6 +41,7 @@ const SAME_FEW_MANY: Partial<Record<Locale, RegExp>> = {
 // Наборы, где совпадение форм верно для всей фразы, а не для слова.
 const SAME_FORM_SETS: Record<string, { locales: Locale[]; reason: string }> = {
   'travel:components.travel.ValidationFeedback.warningCount': { locales: ['uk'], reason: 'UK «1 попередження» / «2 попередження» — нормативна форма' },
+  'shared:screens.tabs.questsShared.completionsCount': { locales: ['uk'], reason: 'UK «1 проходження» / «2 проходження» — нормативна форма' },
   'tripsStatic:plan.card.goingSeats': {
     locales: ['en', 'pl'],
     reason: 'EN «1 of 4 going» / «5 of 8 going»; PL «Jedzie 1 z 4» / «Jedzie 5 z 8» — глагол в ед. ч. при 5+',

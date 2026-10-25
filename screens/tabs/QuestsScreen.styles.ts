@@ -589,9 +589,13 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
                 web: { outlineStyle: 'none' } as any,
             }),
         },
+        // Зона касания 44 и в компактном desktop-ряду (36): ряд фиксированной
+        // высоты её не растит, а отрицательный отступ оставляет крестик там, где
+        // он стоял при 32 (guard-touch-targets).
         searchClearBtn: {
-            width: isMobileW ? 44 : 32,
-            height: isMobileW ? 44 : 32,
+            width: 44,
+            height: 44,
+            ...(!isMobileW && { marginRight: -6 }),
             alignItems: 'center',
             justifyContent: 'center',
             borderRadius: radii.full,

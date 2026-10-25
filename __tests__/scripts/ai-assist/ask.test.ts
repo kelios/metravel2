@@ -1,10 +1,9 @@
 /**
  * @jest-environment node
  */
-import { mkdtempSync, readFileSync } from 'fs'
+import { readFileSync } from 'fs'
 import http from 'http'
 import type { AddressInfo } from 'net'
-import { tmpdir } from 'os'
 import { join } from 'path'
 
 import { AiGeneratorError, type GenerateRequest, type Generator } from '@/api/aiAssist/generator'
@@ -17,6 +16,7 @@ import { ResponseCache } from '@/scripts/ai-assist/cache'
 import { createDemandLog, type DemandEntry, type DemandReason } from '@/scripts/ai-assist/demandLog'
 import { AskLimits, createCounterStore, createDayClock, MemoryCounterStore } from '@/scripts/ai-assist/limits'
 
+import { makeTempDir } from '../cli-test-utils'
 import { fakeEmbedQuery, loadFixtureIndex, MODEL } from './fixture'
 
 /** 25.10.2026 21:30 UTC = 00:30 Minsk 26.10; 20:59:59 UTC = 23:59:59 Minsk 25.10. */
@@ -172,7 +172,7 @@ function fakeGenerator(script: (request: GenerateRequest) => Promise<string> | s
 }
 
 function makeServer(overrides: { generator?: Generator | null; dailyLimit?: number; now?: () => Date; queueTimeoutMs?: number } = {}) {
-  const logDir = mkdtempSync(join(tmpdir(), 'ai-demand-'))
+  const logDir = makeTempDir('ai-demand-')
   const demandPath = join(logDir, 'nested', 'ai-demand.jsonl')
   const limits = new AskLimits({
     store: new MemoryCounterStore(),
