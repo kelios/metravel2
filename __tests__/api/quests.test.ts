@@ -19,6 +19,7 @@ import {
   deleteProgress,
   fetchAllProgress,
   fetchQuestReviews,
+  sendQuestGuestHandoff,
 } from '@/api/quests';
 import type { ApiQuestMeta, ApiQuestBundle } from '@/api/quests';
 
@@ -33,6 +34,7 @@ jest.mock('@/api/client', () => ({
     get: jest.fn(),
     post: jest.fn(),
     patch: jest.fn(),
+    request: jest.fn(),
     delete: jest.fn(),
   },
   ApiError: class ApiError extends Error {
@@ -1140,5 +1142,42 @@ describe('api/quests', () => {
 
       await expect(fetchQuestReviews('minsk-cmok')).resolves.toEqual([]);
     });
+  });
+});
+
+// #2739: снимок шлёт гость, а до выката #2749 путь отвечает 401 из
+// `IsAuthenticated` detail-маршрута. Без `skipAuth` клиент принял бы его за
+// протухшую сессию: контрольная проба перед отправкой формы регистрации и
+// auth-invalidation у гостя.
+describe('sendQuestGuestHandoff', () => {
+  it('отправляет снимок анонимно с коротким таймаутом', async () => {
+    const mockedRequest = apiClient.request as jest.Mock;
+    mockedRequest.mockResolvedValueOnce(null);
+    const payload = {
+      session_key: '6a2955c0-0000-4000-8000-000000000001',
+      quest_id: 'grodno-royal',
+      redirect_path: '/quests/grodno/grodno-royal',
+      progress: {
+        current_index: 1,
+        unlocked_index: 1,
+        answers: { kalozha: 'борисоглебская' },
+        attempts: { kalozha: 1 },
+        hints: {},
+        show_map: false,
+        completed: false,
+        skipped: {},
+        early_finish: false,
+        answered_at: { kalozha: 1 },
+        updated_at: 1,
+      },
+    };
+
+    await sendQuestGuestHandoff(payload);
+
+    expect(mockedRequest).toHaveBeenCalledWith(
+      '/quest-progress/guest-handoff/',
+      { method: 'POST', body: JSON.stringify(payload), skipAuth: true },
+      5000,
+    );
   });
 });

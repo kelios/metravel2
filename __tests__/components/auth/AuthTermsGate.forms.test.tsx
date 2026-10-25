@@ -14,10 +14,15 @@ jest.mock('@/context/AuthContext');
 jest.mock('@/api/auth', () => ({
   registration: jest.fn().mockResolvedValue({ ok: true, message: 'ok' }),
 }));
+let mockSearchParams: Record<string, string> = {};
+const mockPrepareQuestGuestHandoff = jest.fn();
+jest.mock('@/utils/questGuestHandoff', () => ({
+  prepareQuestGuestHandoff: (...args: unknown[]) => mockPrepareQuestGuestHandoff(...args),
+}));
 jest.mock('expo-router', () => ({
   Link: ({ children }: any) => children,
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
-  useLocalSearchParams: () => ({}),
+  useLocalSearchParams: () => mockSearchParams,
   usePathname: () => '/login',
   useIsFocused: () => true,
 }));
@@ -110,6 +115,32 @@ it('RegistrationForm: регистрация по email уходит с terms_ve
   fireEvent.press(screen.getByRole('button', { name: 'Зарегистрироваться' }));
 
   await waitFor(() =>
-    expect(registration).toHaveBeenCalledWith(expect.objectContaining({ email: 'new@example.com' }), '1'),
+    expect(registration).toHaveBeenCalledWith(expect.objectContaining({ email: 'new@example.com' }), '1', null),
   );
+  expect(mockPrepareQuestGuestHandoff).not.toHaveBeenCalled();
+});
+
+// #2739: регистрация из гейта квеста несёт ключ серверного снимка гостевых
+// ответов — подтверждение в другом браузере перенесёт их в аккаунт.
+it('RegistrationForm: из гейта квеста регистрация уходит с ключом снимка гостевого прогресса', async () => {
+  mockSearchParams = { intent: 'quest', redirect: '/quests/grodno/grodno-royal' };
+  mockPrepareQuestGuestHandoff.mockResolvedValue('6a2955c0-0000-4000-8000-000000000001');
+  try {
+    const screen = render(<RegistrationForm />);
+    fireEvent.press(await screen.findByTestId('auth-terms-gate-checkbox'));
+    fireEvent.changeText(screen.getByPlaceholderText('Email'), 'new@example.com');
+    fireEvent.changeText(screen.getAllByPlaceholderText(/Пароль|пароль/)[0], 'Str0ngPass!word');
+    fireEvent.press(screen.getByRole('button', { name: 'Зарегистрироваться' }));
+
+    await waitFor(() =>
+      expect(registration).toHaveBeenCalledWith(
+        expect.objectContaining({ email: 'new@example.com' }),
+        '1',
+        '6a2955c0-0000-4000-8000-000000000001',
+      ),
+    );
+    expect(mockPrepareQuestGuestHandoff).toHaveBeenCalledWith('/quests/grodno/grodno-royal');
+  } finally {
+    mockSearchParams = {};
+  }
 });

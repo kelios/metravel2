@@ -184,6 +184,7 @@
     "quest:gates": "node scripts/quest-gates.js",
     "quest:translations:status": "node scripts/quest-translate.js status",
     "quest:audit-telemetry-loss": "bash scripts/audit-quest-telemetry-loss.sh",
+    "quest:audit-guest-progress-loss": "bash scripts/audit-quest-guest-progress-loss.sh",
     "quest:scan-hint-leak": "node scripts/scan-quest-hint-leak.js",
     "quest:scan-hint-leak:json": "node scripts/scan-quest-hint-leak.js --json",
     "quest:scan-hint-leak:baseline": "node scripts/scan-quest-hint-leak.js --update-baseline",

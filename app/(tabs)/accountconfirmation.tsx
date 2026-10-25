@@ -10,6 +10,8 @@ import { useIsFocused } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { translate as i18nT } from '@/i18n'
+import { queueAnalyticsEvent } from '@/utils/analytics'
+import { parseQuestHandoff } from '@/utils/questGuestHandoff'
 
 
 export default function AccountConfirmation() {
@@ -54,7 +56,20 @@ export default function AccountConfirmation() {
                         userId: confirmedUserId as string | number,
                         userName: response.userName,
                     });
-                    router.replace('/'); // ✅ переходим на главную
+                    // Гостевые ответы квеста сервер уже перенёс в аккаунт (#2739):
+                    // возвращаем игрока на маршрут, а не на главную — письмо часто
+                    // открывается в другом браузере, где квеста в истории нет.
+                    const questHandoff = parseQuestHandoff(response.quest_handoff);
+                    if (questHandoff) {
+                        queueAnalyticsEvent('quest_guest_progress_migrated', {
+                            quest_id: questHandoff.questId,
+                            answered: questHandoff.answered,
+                            source: 'server_handoff',
+                        });
+                        router.replace(questHandoff.redirectPath as never);
+                    } else {
+                        router.replace('/'); // ✅ переходим на главную
+                    }
                 } else {
                     setError(i18nT('authStatic:accountConfirmation.failed', { details: (response as any)?.non_field_errors?.[0] ?? '' }));
                 }

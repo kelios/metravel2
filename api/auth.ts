@@ -374,6 +374,9 @@ export const setNewPasswordApi = async (
 export const registration = async (
     values: FormValues,
     termsVersion?: string,
+    // Снимок гостевого прогресса квеста, принятый сервером (#2739/#2749):
+    // подтверждение по письму перенесёт его в аккаунт в любом браузере.
+    questHandoffSessionKey?: string | null,
 ): Promise<{ ok: boolean; message: string }> => {
     try {
         if (values.password) {
@@ -391,7 +394,10 @@ export const registration = async (
                     method: 'POST',
                     ...getApiRequestCredentials(),
                     headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
-                    body: JSON.stringify(withTermsVersion(values, termsVersion)),
+                    body: JSON.stringify({
+                        ...withTermsVersion(values, termsVersion),
+                        ...(questHandoffSessionKey ? { quest_handoff_session_key: questHandoffSessionKey } : {}),
+                    }),
                 }, DEFAULT_TIMEOUT);
             },
             {
@@ -455,6 +461,8 @@ export const confirmAccount = async (hash: string) => {
             userName?: string;
             userId?: string | number;
             refreshToken?: string;
+            /** Перенесённый гостевой прогресс квеста (#2749); разбирает `parseQuestHandoff`. */
+            quest_handoff?: unknown;
         }>(response, {});
 
         if (jsonResponse.userToken) {

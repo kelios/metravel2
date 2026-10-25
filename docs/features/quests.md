@@ -51,6 +51,20 @@ runtime-доказательствами под задачу, а не налич
   Лимит берётся из storage-free `utils/guestQuestLimits.js`; после него нужен
   вход или бесплатная регистрация. FAQ приложения (RU/BE/UK/PL/EN), статический
   HTML и FAQPage JSON-LD используют этот же лимит и шаблон перевода (#2404).
+- Перенос гостевого прогресса при регистрации по письму (#2739, бэк — #2749).
+  Ссылку подтверждения почтовое приложение открывает своим браузером, где
+  локальной гостевой копии нет. Поэтому форма регистрации с `intent=quest`
+  перед отправкой шлёт снимок (`utils/questGuestHandoff.ts` →
+  `POST /quest-progress/guest-handoff/`) под `session_key` телеметрии попыток и
+  передаёт тот же ключ в регистрацию (`quest_handoff_session_key`).
+  Подтверждение создаёт прохождение аккаунта и отвечает `quest_handoff`
+  (`quest_id`, `redirect_path`, `answered`): экран `accountconfirmation` ведёт в
+  квест, а не на главную; путь принимается только вида `/quests/<city>/<quest>`.
+  До выката бэка отказ снимка (401 detail-маршрута, гость шлёт его без
+  авторизации) и ответ без `quest_handoff` дают прежнее поведение.
+  Потерю видно в журнале попыток: `npm run quest:audit-guest-progress-loss`
+  (повтор принятого ответа на тот же шаг другой сессией в течение часа после
+  гостевого; сильный сигнал — 2+ шага).
 - Зачёт прохождения — не «дошёл до финала», а «отвечено ≥ ⌈2/3⌉ обязательных
   точек» (`utils/questCompletionPolicy.ts`, #1443).
 - Оценка ответа живёт ровно в одном модуле (`utils/questAnswerEvaluation.ts`),
@@ -1075,7 +1089,9 @@ mounted regression short/tall/width/interaction и исходные14cases/56row
   `quest_finish` (с `early`/`partial`/`passed_count`/`steps_count`),
   `quest_completion_credited`, `quest_guest_gate_view`,
   `quest_guest_gate_login_click`, `quest_guest_gate_register_click`,
-  `quest_guest_progress_migrated`, `quest_attempt_batch_rejected` (#1719:
+  `quest_guest_progress_migrated` (`source`: `local` — перенос в том же
+  браузере, `server_handoff` — серверный перенос при подтверждении, #2739),
+  `quest_attempt_batch_rejected` (#1719:
   `status`, `dropped`, `quest_id`, `platform`, имена полей-причин; на native
   аналитика намеренно no-op, поэтому там след даёт только карантин).
 - **Пошаговая воронка (#1498).** `quest_step_view` (`quest_id`, `step_index`) —

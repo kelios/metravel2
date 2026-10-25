@@ -11,7 +11,7 @@ import { retry } from '@/utils/retry';
 import { isUsableRouteSegment } from '@/utils/routePaths';
 import { resolveTotalPages } from '@/utils/fetchAllPages';
 import { QUEST_POPULARITY_SORT, selectPopularQuests } from '@/utils/questPopularity';
-import { QuestProgressLineageMismatch } from '@/utils/questProgressMerge';
+import { QuestProgressLineageMismatch, type QuestProgressServerPayload } from '@/utils/questProgressMerge';
 import {
     readCachedQuestBundle,
     writeCachedQuestBundle,
@@ -1098,5 +1098,39 @@ export async function sendQuestAnswerAttempts(
     return apiClient.post<QuestAnswerAttemptsBulkResult>(
         '/quest-answer-attempts/bulk/',
         payload,
+    );
+}
+
+export type QuestGuestHandoffPayload = {
+    /** `quest_attempts_session_v1` — тот же ключ, что у телеметрии попыток. */
+    session_key: string;
+    /** Строковый `quest.quest_id`, как в `/quest-progress/quest/<id>/`. */
+    quest_id: string;
+    /** Куда вернуть игрока после подтверждения: `/quests/<city>/<quest>`. */
+    redirect_path: string;
+    progress: QuestProgressServerPayload & {
+        answered_at: Record<string, number>;
+        updated_at: number;
+    };
+};
+
+/** Таймаут снимка: он стоит перед отправкой формы регистрации и не должен её тормозить. */
+const QUEST_GUEST_HANDOFF_TIMEOUT_MS = 5000;
+
+/**
+ * Снимок гостевого прогресса на сервер перед регистрацией по письму (#2739,
+ * бэк — #2749): подтверждение часто открывается в другом браузере, где
+ * локальной копии нет. Эндпоинт анонимный, ответ — 204.
+ *
+ * `skipAuth`: шлёт гость, а до выката #2749 путь попадает в detail-маршрут
+ * `QuestProgressViewSet` (`IsAuthenticated`) и отвечает 401. Без `skipAuth`
+ * клиент принял бы его за протухшую сессию — контрольная проба `/user/me/verifications/`
+ * (ещё до 10 с перед отправкой формы) и auth-invalidation у гостя.
+ */
+export async function sendQuestGuestHandoff(payload: QuestGuestHandoffPayload): Promise<void> {
+    await apiClient.request<null>(
+        '/quest-progress/guest-handoff/',
+        { method: 'POST', body: JSON.stringify(payload), skipAuth: true },
+        QUEST_GUEST_HANDOFF_TIMEOUT_MS,
     );
 }

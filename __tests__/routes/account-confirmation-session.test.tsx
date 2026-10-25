@@ -13,6 +13,11 @@ import { render, waitFor } from '@testing-library/react-native'
 
 const mockReplace = jest.fn()
 const mockConfirmAccount = jest.fn()
+const mockQueueAnalyticsEvent = jest.fn()
+
+jest.mock('@/utils/analytics', () => ({
+  queueAnalyticsEvent: (...args: unknown[]) => mockQueueAnalyticsEvent(...args),
+}))
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ replace: mockReplace }),
@@ -110,6 +115,40 @@ describe('accountconfirmation → auth state', () => {
     expect(buildQuestProgressStorageKey('minsk-cmok', { isAuthenticated, userId })).toBe(
       'minsk-cmok__u77',
     )
+  })
+
+  // #2739: письмо открылось в другом браузере, сервер перенёс гостевые ответы
+  // квеста в аккаунт — игрок возвращается на маршрут, а не на главную.
+  it('с перенесённым гостевым прогрессом ведёт в квест и пишет источник переноса', async () => {
+    mockConfirmAccount.mockResolvedValue({
+      userToken: 'tok',
+      userId: 307,
+      userName: '',
+      quest_handoff: { quest_id: 'grodno-royal', redirect_path: '/quests/grodno/grodno-royal', answered: 2 },
+    })
+
+    render(<AccountConfirmation />)
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/quests/grodno/grodno-royal'))
+    expect(mockQueueAnalyticsEvent).toHaveBeenCalledWith('quest_guest_progress_migrated', {
+      quest_id: 'grodno-royal',
+      answered: 2,
+      source: 'server_handoff',
+    })
+  })
+
+  it('путь переноса вне /quests/<city>/<quest> не уводит со своего маршрута', async () => {
+    mockConfirmAccount.mockResolvedValue({
+      userToken: 'tok',
+      userId: 307,
+      userName: '',
+      quest_handoff: { quest_id: 'x', redirect_path: '//evil.example/quests/a/b', answered: 2 },
+    })
+
+    render(<AccountConfirmation />)
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'))
+    expect(mockQueueAnalyticsEvent).not.toHaveBeenCalled()
   })
 
   it('не объявляет сессию, если сервер не вернул id', async () => {

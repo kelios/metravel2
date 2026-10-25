@@ -46,6 +46,7 @@ import { webTouchScrollStyle } from '@/utils';
 import { buildLoginHref, resolvePostAuthPath } from '@/utils/authNavigation';
 import { translate as i18nT } from '@/i18n'
 import { authFailureText } from '@/utils/authFailure';
+import { prepareQuestGuestHandoff } from '@/utils/questGuestHandoff';
 
 // INV2-07: streamlined form collects only email + password. Username is derived
 // from the email at submit time and the confirm-password field is removed.
@@ -117,7 +118,10 @@ export default function RegisterForm() {
                 password: values.password,
                 confirmPassword: values.password,
             };
-            const res = await registration(payload, terms.termsVersion);
+            // #2739: снимок гостевого квеста уходит до регистрации — ссылку из
+            // письма часто открывает другой браузер, где локальной копии нет.
+            const questHandoffSessionKey = intent === 'quest' ? await prepareQuestGuestHandoff(redirect) : null;
+            const res = await registration(payload, terms.termsVersion, questHandoffSessionKey);
             const ok = typeof res === 'object' && 'ok' in res ? res.ok : false;
             const message = typeof res === 'object' && 'message' in res ? res.message : String(res ?? '');
 

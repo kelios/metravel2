@@ -158,6 +158,8 @@ export function useGuestQuestFlow({ questId, cityId, isAuthenticated, enabled }:
             queueAnalyticsEvent('quest_guest_progress_migrated', {
               quest_id: questId,
               answered: countAnsweredSteps(merged.answers),
+              // `server_handoff` шлёт экран подтверждения регистрации (#2739).
+              source: 'local',
             })
             return updated
           }
