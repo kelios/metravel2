@@ -766,6 +766,15 @@ guard, падающий в CI на попытке обойти этот конт
   полный tuple key и дополнительный rAF-опрос отвергнуты. Keeper/cold lazy и
   явный reveal gate сохраняются. До новой production матрицы, byte/abort/DOM
   проверки и bilateral slider gates задача остаётся открытой.
+  Третий `8f56c92ac` исправил opacity-пару672/664, но row2 давал actual photo-only
+  заливку при own complete136/opacity1. На потомке `c96e21565` (Chrome149)
+  targeted sync decode не помог, а только contentVisibility=visible на img
+  исправил первый row2 paint, сохранив row auto. Подтверждённый второй слой:
+  `criticalCSSBuilder` глобально применял render skipping/intrinsic300px ко
+  всем lazy img поверх нативного lazy fetching. Удаляется источник правила;
+  guard генератора запрещает img render skip, compositor gate проверяет все
+  видимые ряды. Контроль whole-card window hole остаётся отдельным от фото;
+  новый runtime pass и bilateral gates всё ещё обязательны.
 - **Recurrence Log — 2026-08-11 (`/search`, `#1400`):** закрытый инвариант
   «виртуализированный скролл не создаёт отменённых image requests» снова
   нарушен на production. Независимый raw CDP-прогон без request interception и

@@ -57,6 +57,13 @@ color fill alone MUST NOT count as a ready cover.
 - **WHEN** only optimization parameters, srcSet or sizes change for the same identity
 - **THEN** the native image node remains mounted
 
+#### Scenario: Native lazy loading does not independently skip a visible photo
+
+- **WHEN** a lazy cover already has its own complete source and its card is painted
+- **THEN** global image CSS does not defer that image through render skipping
+- **AND** the first actual card paint includes the photograph, not an image-only fill
+- **AND** native lazy fetching and bounded list virtualization remain enabled
+
 ### Requirement: Recycled cards never expose another travel's photo
 
 The result list MUST preserve source ownership while virtualized cells are

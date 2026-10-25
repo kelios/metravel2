@@ -25,8 +25,17 @@
 выполнены, но visual gate каждой попытки остаётся FAIL.
 
 - [x] 8.1 Заменять HTML img по media identity, сохраняя узел при optimization/srcSet/sizes; убрать только cross-identity opacity deadline, сохранить явный reveal gate, keeper и cold lazy policy. Отдельные warm tuple cache/early decode удалены как ненужные. RED: 6 ownership/display regressions на старом source; GREEN: 15 suites/157 tests с соседними Slide/UnifiedCard/list media.
-- [ ] 8.2 Meaningful ownership/resize/version/callback regressions, targeted checks, независимые review, commit/push и штатный deploy.
+- [x] 8.2 Meaningful ownership/resize/version/callback regressions, targeted checks, независимые review, commit/push и штатный deploy `8f56c92ac`; итоговая visual приёмка ниже остаётся FAIL.
 - [ ] 8.3 Production first-return compositor pixels + raw timing, desktop/mobile обе плотности, /search, cold/bytes/abort/DOM; bilateral slider gates. Обновить фактические результаты только после pass.
+
+Третий выкат `8f56c92ac` прошёл независимые reviews, 157 unit tests,
+static/hooks и canonical deploy. Первая пара 672/664 исправлена, но 8.3 FAIL:
+первый фактический row2 paint658/646 — текст/кнопки + фото-заливка при own complete
+и opacity1. На потомке `c96e21565` сравнение decoding=sync не помогло, а
+target-only contentVisibility=visible устранило заливку; row auto сохранён.
+
+- [ ] 9.1 Удалить глобальный render skip/intrinsic300px у lazy img из criticalCSSBuilder; regression генератора, scoped static/unit и независимые reviews. RED1fail на прежнем правиле → GREEN49/49; strict scoped ESLint, image architecture, audit prompts quick, OpenSpec strict и diff check PASS.
+- [ ] 9.2 Commit/push/deploy; полный actual compositor по всем видимым рядам, матрица/сеть/cold/gallery и bilateral gates; только затем done.
 
 - [x] 1.1 Reproduce the fill-only scroll window in the local production-like `/search` build with the agreed 1280×900 and 390×844 throttled traces, recording visible image readiness, source ownership, requests, downloaded bytes, duplicate URLs, and response failures.
       Traced on the live production bundle instead of a local build: the production API answers CORS only for its own origin, so a locally served build never receives the list. The former lookahead is restored in-page by wrapping the Metro module registry and overriding `RVEngagedIndicesTrackerImpl.prototype.drawDistance`, which leaves the shipped bundle, the API and the HTTP cache untouched.

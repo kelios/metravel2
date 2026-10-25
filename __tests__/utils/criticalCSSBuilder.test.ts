@@ -5,6 +5,21 @@ import { createStyles } from '@/screens/tabs/PlacesScreen.styles'
 import { WEB_DESKTOP_FOOTER_LAYOUT, WEB_MOBILE_DOCK_LAYOUT } from '@/components/layout/webMobileDockLayout'
 import { buildCriticalCSS } from '@/utils/criticalCSSBuilder'
 
+// #2705: native lazy loading controls fetching, not whether an already loaded
+// photo may paint with its visible card. Global render skipping delayed only
+// the photo while its text/buttons were already on screen.
+describe('buildCriticalCSS: lazy photos paint with their visible content', () => {
+  it('never skips image rendering or invents a lazy-only intrinsic height', () => {
+    const imageRules = buildCriticalCSS()
+      .split('\n')
+      .filter(line => /(?:^|[\s,])img(?:\[|[\s,{])/.test(line))
+
+    expect(imageRules.length).toBeGreaterThan(0)
+    expect(imageRules.join('\n')).not.toMatch(/content-visibility\s*:\s*(?:auto|hidden)/)
+    expect(imageRules.join('\n')).not.toMatch(/contain-intrinsic-size/)
+  })
+})
+
 // Регресс #1: широкое правило `[data-testid="travel-details-hero"] img{max-width:720px}`
 // ловило каждый слой галереи. Резкий слой и blur-подложка обходят его инлайновым
 // `max-width:none`, а blurhash-слой рисует expo-image — своих стилей у него нет,

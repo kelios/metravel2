@@ -12,6 +12,9 @@ source-owned HTML img с сохранением узла при resize той ж
 и норматив состояний: `docs/design/travel-catalog-warm-return.md`.
 Исправляется общий web renderer; API, тексты, native и окно списка не меняются.
 Повторный cached 200 с нулём байт не считается доказательством отсутствия мигания.
+Дополнительный compositor-контроль 25.10 обнаружил вторую причину: общее CSS
+пропускало paint lazy img внутри уже видимой карточки. Удаляется глобальный
+render skip/intrinsic300px, а native lazy fetching/row virtualization сохраняются.
 
 On production `/search`, a fast 1160 px scroll leaves all six newly visible
 travel-card covers hidden behind their dominant-color fill for at least 100 ms;
