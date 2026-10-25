@@ -16,7 +16,28 @@ const IGNORED_ADVISORIES = new Map([
     'GHSA-5P2G-FCMC-QVQQ',
     'GHSA-W3RX-R6R6-PGPR',
   ])], // expo > @expo/metro > metro
+  // @expo/cli pins zod ^3.25.76; the fix for GHSA-mrhx-c7xc-m3w5 (memory
+  // exhaustion on oversized constrained collections) exists only in zod >=4.6.6
+  // and there is no patched 3.x release as of 2026-10-25. Our own zod and the
+  // MCP SDK already resolve to 4.6.7; IGNORED_ADVISORY_PATHS limits this
+  // exception to the CLI copy so a vulnerable zod on any other path still blocks.
+  ['zod', new Set([
+    'GHSA-MRHX-C7XC-M3W5',
+  ])], // expo > @expo/cli > zod
 ]);
+
+// Optional dependency-path scope for IGNORED_ADVISORIES, keyed by
+// `module/GHSA`. When present, the advisory is ignored only for these yarn
+// audit resolution paths; any other path that resolves the module stays blocking.
+const IGNORED_ADVISORY_PATHS = new Map([
+  ['zod/GHSA-MRHX-C7XC-M3W5', new Set(['expo>@expo/cli>zod'])],
+]);
+
+const isIgnoredAdvisory = (moduleName, githubAdvisoryId, resolutionPath) => {
+  if (!IGNORED_ADVISORIES.get(moduleName)?.has(githubAdvisoryId)) return false;
+  const allowedPaths = IGNORED_ADVISORY_PATHS.get(`${moduleName}/${githubAdvisoryId}`);
+  return !allowedPaths || allowedPaths.has(resolutionPath);
+};
 
 const createCounts = () => ({
   info: 0,
@@ -155,6 +176,9 @@ const evaluateSuccessfulAudit = (output) => {
     const githubAdvisoryId = typeof advisory?.github_advisory_id === 'string'
       ? advisory.github_advisory_id.trim().toUpperCase()
       : '';
+    const resolutionPath = typeof record?.data?.resolution?.path === 'string'
+      ? record.data.resolution.path.trim()
+      : '';
 
     if (!moduleName || !SEVERITIES.includes(severity)) {
       return failClosed('malformed audit advisory record');
@@ -163,7 +187,7 @@ const evaluateSuccessfulAudit = (output) => {
     advisoryCounts[severity] += 1;
     if (
       IGNORED_MODULES.has(moduleName)
-      || IGNORED_ADVISORIES.get(moduleName)?.has(githubAdvisoryId)
+      || isIgnoredAdvisory(moduleName, githubAdvisoryId, resolutionPath)
     ) {
       ignoredCounts[severity] += 1;
       ignoredCount += 1;

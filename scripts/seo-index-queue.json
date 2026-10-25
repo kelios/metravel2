@@ -2941,7 +2941,10 @@
       "note": "новая статья 816 (11.10.2026), публикация до прод-выката: 404 до выката, подавать после. Подана 19.10.2026 (#2674): гейт seo:queue --batch 12 → 200; URL Inspection ДО подачи: «URL нет в индексе Google», «Страница не проиндексирована: URL неизвестен Google», Файлы Sitemap «Нет ссылающихся файлов Sitemap», последнее сканирование отсутствует",
       "indexnowVia": "seo-index-queue-check.js --batch 12 --out .codex-temp/batch12.txt → indexnow-submit.js --urls-file",
       "indexnowSubmittedAt": "2026-10-19",
-      "indexnowCodes": {"api.indexnow.org": 200, "yandex.com": 200},
+      "indexnowCodes": {
+        "api.indexnow.org": 200,
+        "yandex.com": 200
+      },
       "gscRequestedAt": "2026-10-19",
       "gscRequests": [
         {
@@ -2995,6 +2998,27 @@
           "note": "URL Inspection до подачи: «URL есть в индексе Google» (контент обновлён 19.10.2026, запрошен перекраул). Диалог GSC: «Отправлен запрос на индексирование», URL добавлен в приоритетную очередь сканирования"
         }
       ]
+    },
+    {
+      "day": 14,
+      "submittedAt": null,
+      "urls": [
+        "https://metravel.by/travels/zimnii-pokhod-na-pereval-brona-przelecz-brona-1408-m-1",
+        "https://metravel.by/travels/kak-doiti-do-turbacha-zimoi-podrobnyi-trek-ot-khutsisko",
+        "https://metravel.by/travels/radzeeva-i-smotrovaia-bashnia-zimnii-marshrut-iz-sucha-dolina",
+        "https://metravel.by/travels/shchavnitsa-zimoi-marshrut-na-dzwonkowke-cherez-sewerynowke-i-bacowke-pod-beresnikiem",
+        "https://metravel.by/travels/krynitsa-zdrui-i-iavorzhina-krynitska-zimoi-korotkii-khaik-i-chto-posmotret-riadom",
+        "https://metravel.by/travels/czarny-staw-i-drugie-radosti-treki-termy-i-nochi-u-kamina",
+        "https://metravel.by/travels/gde-pokatatsia-na-lyzhakh-i-konkakh-v-krakove",
+        "https://metravel.by/travels/khokholovskaia-dolina-vesnoi-krokusy-i-marshrut",
+        "https://metravel.by/travels/zakopane-4-dnya-gevont-nosal-hoholovskie-termy",
+        "https://metravel.by/travels/karlovy-vary-i-loket-zimoi-chto-posmotret-i-gde-pogretsia",
+        "https://metravel.by/travels/galshtat-zimoi-solianaia-shakhta-panoramy-i-sneg-po-koleno",
+        "https://metravel.by/travels/zimnii-drezden-i-bastai-chto-posmotret",
+        "https://metravel.by/travels/zimnii-marshrut-polsha-germaniia-chekhiia-avstriia"
+      ],
+      "note": "#2675 backlinks 939: 13 статей-источников с новыми обратными ссылками на подборку «Куда поехать зимой из Кракова» (id 939). Только в очереди, в GSC НЕ поданы (25.10.2026). IndexNow по этим адресам отправлен 25.10.2026 общим списком из 14 URL (вместе с самой подборкой), повторно не слать.",
+      "gscRequests": []
     }
   ],
   "details": [
