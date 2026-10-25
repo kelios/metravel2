@@ -522,7 +522,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
           : null),
     },
     backgroundImage: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         width: '100%',
         height: '100%',
         // Мягкая текстура: заметна, но не кричащая

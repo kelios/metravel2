@@ -293,7 +293,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
         fontWeight: '500',
       },
       loadingOverlay: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         backgroundColor: colors.backgroundSecondary,
         justifyContent: 'center',
         alignItems: 'center',

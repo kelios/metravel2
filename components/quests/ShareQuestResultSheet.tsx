@@ -367,7 +367,7 @@ function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
               fit="contain"
               blurBackground
               blurRadius={18}
-              style={StyleSheet.absoluteFillObject}
+              style={StyleSheet.absoluteFill}
               alt={subject.questTitle}
             />
           </View>

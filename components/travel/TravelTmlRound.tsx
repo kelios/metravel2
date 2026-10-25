@@ -284,7 +284,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         }),
     },
     imageOverlay: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         backgroundColor: 'rgba(255,255,255,0.12)',
     },
     

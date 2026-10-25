@@ -113,11 +113,18 @@ export const patchWebShadowStyles = () => {
   const originalCreate = StyleSheet.create.bind(StyleSheet);
   const originalFlatten = StyleSheet.flatten.bind(StyleSheet);
 
-  StyleSheet.create = ((styles: Record<string, any>) => {
+  // RN 0.88 типизирует StyleSheet как readonly-объект; на web это обычный модуль RNW,
+  // и подмена методов остаётся допустимой — снимаем readonly локально.
+  const mutableStyleSheet = StyleSheet as unknown as {
+    create: typeof StyleSheet.create;
+    flatten: typeof StyleSheet.flatten;
+  };
+
+  mutableStyleSheet.create = ((styles: Record<string, any>) => {
     return originalCreate(sanitizeStylesMap(styles));
   }) as typeof StyleSheet.create;
 
-  StyleSheet.flatten = ((style: any) => {
+  mutableStyleSheet.flatten = ((style: any) => {
     const flattened = originalFlatten(style);
     if (Array.isArray(flattened)) return flattened.map((item) => sanitizeStyleObject(item));
     return sanitizeStyleObject(flattened as AnyStyle);

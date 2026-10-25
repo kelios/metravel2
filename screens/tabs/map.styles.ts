@@ -448,7 +448,7 @@ export const getStyles = (
             : null),
       },
       loadingOverlay: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: themedColors.overlay,

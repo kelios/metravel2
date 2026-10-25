@@ -274,7 +274,7 @@ const FullscreenImageViewer: React.FC<{
           image gives a reliable, large dismiss target; the image sits above it
           (pointerEvents none so a tap on the photo still falls through to close). */}
       <Pressable
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
         onPress={onClose}
         accessibilityRole="button"
         accessibilityLabel={i18nT('map:components.MapPage.Map.PlacePopupCard.FullscreenImageViewer.zakryt_foto_58834efa')}
@@ -291,7 +291,7 @@ const FullscreenImageViewer: React.FC<{
           transition={0}
           width={width}
           height={height}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
         />
       </Pressable>
       <View style={fullscreenStyles.centeredWrap} pointerEvents="none">

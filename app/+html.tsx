@@ -1,5 +1,5 @@
 // app/_document.tsx
-import { ScrollViewStyleReset } from 'expo-router/html';
+import { ScrollViewStyleReset, useServerDocumentContext } from 'expo-router/html';
 import React from 'react';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { getSeasonalThemeBootScript } from '@/utils/seasonalThemeBootScript';
@@ -437,6 +437,12 @@ const getCriticalHeadScript = () => {
 
 export default function Root({ children }: { children: React.ReactNode }) {
   const locale = getActiveLocaleDefinition();
+  // Expo SDK 58 (#2727): статический рендер больше не дописывает ассеты текстом в
+  // конец head и body — RNW-стили, шрифты, preload и `<script defer src>` чанков
+  // приходят узлами через контекст документа, и шаблон обязан их отрендерить сам.
+  // Атрибуты документа из метаданных маршрута накладываются поверх локали, как
+  // раньше делал helmet-слой.
+  const { headNodes, bodyNodes, htmlAttributes, bodyAttributes } = useServerDocumentContext();
   const isProduction = typeof process !== 'undefined' && 
     (process.env.EXPO_PUBLIC_SITE_URL === 'https://metravel.by' || 
      process.env.NODE_ENV === 'production');
@@ -448,7 +454,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
   if (!iconFontUrl) throw new Error('[+html] icon font asset has no URL: check @expo/vector-icons Feather.font');
   
   return (
-    <html lang={locale.htmlLang} dir={locale.direction} suppressHydrationWarning>
+    <html lang={locale.htmlLang} dir={locale.direction} suppressHydrationWarning {...htmlAttributes}>
     <head>
       <style dangerouslySetInnerHTML={{ __html: getLocaleBootCss() }} />
       <script dangerouslySetInnerHTML={{ __html: getLocaleBootScript() }} />
@@ -651,9 +657,10 @@ export default function Root({ children }: { children: React.ReactNode }) {
 	      />
 
       <ScrollViewStyleReset />
+      {headNodes}
     </head>
 
-    <body>
+    <body {...bodyAttributes}>
 
     {/* Travel hero preload — moved to body to avoid blocking head parsing on non-travel pages */}
     <script
@@ -705,6 +712,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
         </div>
       </noscript>
     )}
+    {bodyNodes}
     </body>
     </html>
   );

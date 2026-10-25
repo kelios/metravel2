@@ -1,3 +1,9 @@
+/**
+ * @jest-environment node
+ *
+ * Node-CLI скрипт приёмки статьи: ему нужен Node-овский AbortSignal.timeout и fetch,
+ * а не jsdom-окно (jsdom 20 из jest-environment-jsdom 29 не реализует AbortSignal.timeout).
+ */
 const {
   checkCreatedAt,
   checkGenreHeadings,

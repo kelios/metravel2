@@ -1,156 +1,17 @@
-import React, { useRef } from 'react';
-import { StyleSheet, Animated, Text, Platform } from 'react-native';
-import { Swipeable } from 'react-native-gesture-handler';
-import { useThemedColors } from '@/hooks/useTheme';
-import MapIcon from './MapIcon';
-import CardActionPressable from '@/components/ui/CardActionPressable';
-import { translate as i18nT } from '@/i18n'
+import React from 'react';
 
-
+/**
+ * Web-вариант: жесты свайпа не поддерживаются, список показывает только содержимое.
+ * Native-реализация (ReanimatedSwipeable) — в `SwipeableListItem.native.tsx`; раздельные
+ * файлы не тянут react-native-gesture-handler и reanimated в web-бандл (PERF-014).
+ */
 interface SwipeableListItemProps {
   children: React.ReactNode;
-  /** Callback для добавления в избранное */
   onFavorite?: () => void;
-  /** Callback для построения маршрута */
   onBuildRoute?: () => void;
-  /** Показывать ли кнопку избранного */
   showFavorite?: boolean;
-  /** Показывать ли кнопку маршрута */
   showRoute?: boolean;
-  /** Уже в избранном? */
   isFavorite?: boolean;
 }
 
-export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({
-  children,
-  onFavorite,
-  onBuildRoute,
-  showFavorite = true,
-  showRoute = true,
-  isFavorite = false,
-}) => {
-  const colors = useThemedColors();
-  const swipeableRef = useRef<Swipeable>(null);
-
-  // Web не поддерживает жесты, показываем просто children
-  if (Platform.OS === 'web') {
-    return <>{children}</>;
-  }
-
-  const handleFavorite = () => {
-    swipeableRef.current?.close();
-    onFavorite?.();
-  };
-
-  const handleBuildRoute = () => {
-    swipeableRef.current?.close();
-    onBuildRoute?.();
-  };
-
-  // Левый свайп → «Хочу поехать»
-  const renderLeftActions = (
-    progress: Animated.AnimatedInterpolation<number>,
-    dragX: Animated.AnimatedInterpolation<number>
-  ) => {
-    if (!showFavorite || !onFavorite) return null;
-
-    const scale = dragX.interpolate({
-      inputRange: [0, 80],
-      outputRange: [0, 1],
-      extrapolate: 'clamp',
-    });
-
-    return (
-      <Animated.View style={[styles.leftAction, { transform: [{ scale }] }]}>
-        <CardActionPressable
-          style={[
-            styles.actionButton,
-            { backgroundColor: isFavorite ? colors.warning : colors.accent },
-          ]}
-          onPress={handleFavorite}
-          accessibilityLabel={isFavorite ? i18nT('map:components.MapPage.SwipeableListItem.ubrat_iz_hochu_poehat_6b91534d') : i18nT('map:components.MapPage.SwipeableListItem.dobavit_v_hochu_poehat_76409f76')}
-        >
-          <MapIcon
-            name={isFavorite ? 'star' : 'star-border'}
-            size={24}
-            color={colors.textOnPrimary}
-          />
-          <Text style={[styles.actionText, { color: colors.textOnPrimary }]}>
-            {isFavorite ? i18nT('map:components.MapPage.SwipeableListItem.ubrat_45c6d419') : i18nT('map:components.MapPage.SwipeableListItem.zhelaniya_ed825f5b')}
-          </Text>
-        </CardActionPressable>
-      </Animated.View>
-    );
-  };
-
-  // Правый свайп → Маршрут
-  const renderRightActions = (
-    progress: Animated.AnimatedInterpolation<number>,
-    dragX: Animated.AnimatedInterpolation<number>
-  ) => {
-    if (!showRoute || !onBuildRoute) return null;
-
-    const scale = dragX.interpolate({
-      inputRange: [-80, 0],
-      outputRange: [1, 0],
-      extrapolate: 'clamp',
-    });
-
-    return (
-      <Animated.View style={[styles.rightAction, { transform: [{ scale }] }]}>
-        <CardActionPressable
-          style={[styles.actionButton, { backgroundColor: colors.primary }]}
-          onPress={handleBuildRoute}
-          accessibilityLabel={i18nT('map:components.MapPage.SwipeableListItem.postroit_marshrut_syuda_3db1b91e')}
-        >
-          <MapIcon name="directions" size={24} color={colors.textOnPrimary} />
-          <Text style={[styles.actionText, { color: colors.textOnPrimary }]}>
-            {i18nT('map:components.MapPage.SwipeableListItem.marshrut_43ca4e50')}</Text>
-        </CardActionPressable>
-      </Animated.View>
-    );
-  };
-
-  return (
-    <Swipeable
-      ref={swipeableRef}
-      renderLeftActions={renderLeftActions}
-      renderRightActions={renderRightActions}
-      leftThreshold={60}
-      rightThreshold={60}
-      friction={2}
-      overshootLeft={false}
-      overshootRight={false}
-    >
-      {children}
-    </Swipeable>
-  );
-};
-
-const styles = StyleSheet.create({
-  leftAction: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingLeft: 20,
-  },
-  rightAction: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-    paddingRight: 20,
-  },
-  actionButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderRadius: 12,
-    minWidth: 80,
-  },
-  actionText: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 4,
-    letterSpacing: 0.3,
-  },
-});
+export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({ children }) => <>{children}</>;

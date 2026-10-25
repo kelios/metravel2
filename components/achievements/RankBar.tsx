@@ -61,7 +61,7 @@ function RankBar({ rank, compact = false, titlePrefix = '', title, testID, style
           justifyContent: 'center',
           overflow: 'hidden',
         },
-        levelGradient: { ...StyleSheet.absoluteFillObject },
+        levelGradient: { ...StyleSheet.absoluteFill },
         levelText: {
           color: '#FFFFFF',
           fontWeight: '800',

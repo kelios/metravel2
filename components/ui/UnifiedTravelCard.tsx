@@ -1,6 +1,6 @@
 import { memo, useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import type { ComponentProps, ReactNode } from 'react';
-import type { StyleProp, ViewStyle } from 'react-native';
+import type { StyleProp, ViewProps, ViewStyle } from 'react-native';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 
 import Feather from '@expo/vector-icons/Feather';
@@ -339,7 +339,7 @@ function UnifiedTravelCard({
           marginBottom: DESIGN_TOKENS.spacing.sm,
         },
         imagePlaceholder: {
-          ...StyleSheet.absoluteFillObject,
+          ...StyleSheet.absoluteFill,
           justifyContent: 'center',
           alignItems: 'center',
           backgroundColor: colors.backgroundSecondary,
@@ -370,7 +370,7 @@ function UnifiedTravelCard({
           alignItems: 'stretch',
         },
         imageTitleOverlayBg: {
-          ...StyleSheet.absoluteFillObject,
+          ...StyleSheet.absoluteFill,
           ...(isWeb
             ? ({
                 backgroundImage: HERO_TITLE_OVERLAY_GRADIENT,
@@ -399,7 +399,7 @@ function UnifiedTravelCard({
         },
         imageVignetteOverlay: {},
         imageVignetteOverlayFeatured: {
-          ...StyleSheet.absoluteFillObject,
+          ...StyleSheet.absoluteFill,
           ...Platform.select({
             web: ({
               backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0) 42%, ${colors.overlay} 100%)`,
@@ -598,7 +598,9 @@ function UnifiedTravelCard({
 
   // AND-16: Wrap in Animated.View for native spring, plain View for web
   const shouldUseNativePressScale = !isWeb && nativePressScaleEnabled;
-  const CardWrapper = shouldUseNativePressScale ? Animated.View : View;
+  // Оба варианта принимают ViewProps; явный тип снимает несовместимость сигнатур
+  // Animated.View и View в RN 0.88 (JSX требует единую конструктор-сигнатуру).
+  const CardWrapper = (shouldUseNativePressScale ? Animated.View : View) as React.ComponentType<ViewProps>;
   const wrapperStyle = shouldUseNativePressScale
     ? [animatedCardStyle, typeof width === 'number' ? { width } : undefined]
     : (typeof width === 'number' ? { width } : undefined);
@@ -754,7 +756,7 @@ function UnifiedTravelCard({
       ) : null}
 
       {showHeroTitle ? (
-        <View style={StyleSheet.absoluteFillObject}>
+        <View style={StyleSheet.absoluteFill}>
           <View style={styles.imageVignetteOverlay} />
           {isFeatured ? <View style={styles.imageVignetteOverlayFeatured} /> : null}
           <View style={styles.imageTitleOverlay}>
@@ -769,7 +771,7 @@ function UnifiedTravelCard({
       {containerOverlaySlot ? (
         <View
           style={[
-            StyleSheet.absoluteFillObject,
+            StyleSheet.absoluteFill,
             isWeb ? ({ pointerEvents: 'none' } as any) : ({ pointerEvents: 'box-none' } as any),
           ]}
         >

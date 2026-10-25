@@ -510,7 +510,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.cre
     maxWidth: 168,
   },
   chipOpenArea: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     right: selectedChipControlSize,
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as const } : {}),
   },
@@ -548,7 +548,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.cre
     position: 'relative',
   },
   modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.overlay,
     zIndex: 0,
   },

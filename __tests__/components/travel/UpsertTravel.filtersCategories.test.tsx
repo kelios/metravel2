@@ -28,6 +28,7 @@ jest.mock('@/utils/analytics', () => ({
 }));
 
 jest.mock('expo-router', () => ({
+  usePreventRemove: () => jest.fn(),
   useRouter: () => ({
     push: mockPush,
     replace: mockReplace,

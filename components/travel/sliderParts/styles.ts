@@ -94,7 +94,7 @@ export const createSliderStyles = (colors: Record<string, any>) =>
         } as any)
       : {},
     blurBg: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
     },
     img: {
       width: '100%',

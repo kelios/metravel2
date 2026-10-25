@@ -134,7 +134,7 @@ describe('Native compatibility governance (docs/NATIVE_COMPAT_RULES.md)', () => 
       'utf8',
     );
     const reactNativePatch = fs.readFileSync(
-      path.join(ROOT, 'patches', 'react-native+0.86.3.patch'),
+      path.join(ROOT, 'patches', 'react-native+0.88.0.patch'),
       'utf8',
     );
     const layout = fs.readFileSync(path.join(ROOT, 'app', '_layout.tsx'), 'utf8');

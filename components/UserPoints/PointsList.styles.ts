@@ -214,7 +214,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
     padding: DESIGN_TOKENS.spacing.md,
   },
   actionsBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.overlay,
   },
   actionsModal: {
@@ -265,7 +265,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
     padding: DESIGN_TOKENS.spacing.md,
   },
   manualBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.overlay,
   },
   manualModal: {

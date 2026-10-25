@@ -9,8 +9,7 @@ import {
   Text,
   TextInput,
   View,
-  type NativeSyntheticEvent,
-  type TextInputSelectionChangeEventData,
+  type TextInputSelectionChangeEvent,
 } from 'react-native';
 
 import Button from '@/components/ui/Button';
@@ -130,13 +129,13 @@ export default function TripPlanDescriptionEditor({
   }, [value.length]);
 
   const handleInlineSelectionChange = useCallback((
-    event: NativeSyntheticEvent<TextInputSelectionChangeEventData>,
+    event: TextInputSelectionChangeEvent,
   ) => {
     handleSelectionChange('inline', event.nativeEvent.selection);
   }, [handleSelectionChange]);
 
   const handleFullscreenSelectionChange = useCallback((
-    event: NativeSyntheticEvent<TextInputSelectionChangeEventData>,
+    event: TextInputSelectionChangeEvent,
   ) => {
     handleSelectionChange('fullscreen', event.nativeEvent.selection);
   }, [handleSelectionChange]);

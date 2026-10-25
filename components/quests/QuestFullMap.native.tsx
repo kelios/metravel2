@@ -5,7 +5,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    InteractionManager,
     Modal,
     StyleSheet,
     Text,
@@ -14,6 +13,7 @@ import {
     View,
 } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
+import { runAfterInteractions } from '@/utils/runAfterInteractions';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -128,7 +128,7 @@ function QuestFullMap({
     // WebView, затем размонтируем Modal после завершения touch-каскада.
     const closeFullscreen = useCallback(() => {
         setFullscreenClosing(true);
-        InteractionManager.runAfterInteractions(() => {
+        runAfterInteractions(() => {
             setFullscreenVisible(false);
             setFullscreenClosing(false);
         });
@@ -698,7 +698,7 @@ const createStyles = (colors: ThemedColors) =>
             color: colors.text,
         },
         loader: {
-            ...StyleSheet.absoluteFillObject,
+            ...StyleSheet.absoluteFill,
             justifyContent: 'center',
             alignItems: 'center',
             gap: 8,
@@ -706,7 +706,7 @@ const createStyles = (colors: ThemedColors) =>
             backgroundColor: colors.surface,
         },
         pngOverlay: {
-            ...StyleSheet.absoluteFillObject,
+            ...StyleSheet.absoluteFill,
             justifyContent: 'center',
             alignItems: 'center',
             gap: 8,

@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Platform, BackHandler } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter, useNavigation, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, usePreventRemove } from 'expo-router';
 import { trackWizardEvent } from '@/utils/analytics';
 import { goBackOrReplace } from '@/utils/backNavigation';
 import type { ValidationError, ModerationIssue } from '@/utils/formValidation';
@@ -19,13 +19,6 @@ type WizardSaveResult = {
   publish?: boolean;
   moderation?: boolean;
 } | null | undefined;
-
-type BeforeRemoveEventLike = {
-  preventDefault: () => void;
-  data: {
-    action: unknown;
-  };
-};
 
 export interface StepMeta {
   id: number;
@@ -166,7 +159,6 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     stepStorageTtlMs = 7 * 24 * 60 * 60 * 1000,
   } = options;
   const router = useRouter();
-  const navigation = useNavigation();
   const searchParams = useLocalSearchParams<{
     returnTo?: string | string[];
     from?: string | string[];
@@ -432,25 +424,19 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     Platform.OS === 'web' && hasUnsavedChanges
   );
 
-  useEffect(() => {
-    if (Platform.OS === 'web') return;
-    if (!navigation?.addListener) return;
+  // expo-router 58 убрал событие `beforeRemove`; удержание экрана с несохранёнными
+  // правками идёт через usePreventRemove: `repeat` снимает защиту и повторяет
+  // заблокированный переход (та же семантика, что прежний dispatch(e.data.action)).
+  usePreventRemove(Platform.OS !== 'web' && hasUnsavedChanges, ({ repeat }) => {
+    if (isLeavingRef.current) return;
 
-    const unsubscribe = navigation.addListener('beforeRemove', (e: BeforeRemoveEventLike) => {
-      if (isLeavingRef.current) return;
-      if (!hasUnsavedChanges) return;
-      e.preventDefault();
+    const leave = () => {
+      isLeavingRef.current = true;
+      repeat();
+    };
 
-      const leave = () => {
-        isLeavingRef.current = true;
-        navigation.dispatch(e.data.action as Parameters<typeof navigation.dispatch>[0]);
-      };
-
-      void confirmLeaveWizard(leave, leave);
-    });
-
-    return unsubscribe;
-  }, [hasUnsavedChanges, confirmLeaveWizard, navigation]);
+    void confirmLeaveWizard(leave, leave);
+  });
 
   useEffect(() => {
     if (Platform.OS === 'web') return;

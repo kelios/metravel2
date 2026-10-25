@@ -783,7 +783,7 @@ const styles = StyleSheet.create({
     minHeight: 300,
   },
   loader: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,

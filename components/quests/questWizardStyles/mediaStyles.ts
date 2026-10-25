@@ -73,7 +73,7 @@ export const createMediaStyles = (colors: QuestColors, isMobile: boolean, screen
         lineHeight: isMobile ? 16 : 24, fontWeight: '600', textAlign: 'center',
     },
     videoFallbackOverlay: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: colors.overlay,

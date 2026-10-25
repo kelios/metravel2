@@ -4,23 +4,26 @@ const SEVERITIES = Object.freeze(['info', 'low', 'moderate', 'high', 'critical']
 
 // Modules whose vulnerabilities are in transitive Expo/RN SDK dependencies
 // and cannot be resolved without an upstream SDK update.
+// node-forge: @expo/cli 58.1.15 (Expo SDK 58, #2727) still depends on
+// node-forge ^1.4.0 directly and via @expo/code-signing-certificates;
+// GHSA-86w9-cpqp-85rv covers <=1.4.0 and npm has no patched release as of
+// 2026-10-25, so the module exception stays until Expo moves off node-forge.
 const IGNORED_MODULES = new Set([
-  'node-forge', // expo > @expo/cli > @expo/code-signing-certificates
+  'node-forge', // expo > @expo/cli > node-forge, expo > @expo/cli > @expo/code-signing-certificates > node-forge
 ]);
 
-// Temporary advisory-level exceptions. Metro only accepts image-size ^1.0.2,
-// while npm has no patched release for these advisories as of 2026-08-08.
-// Keep these scoped to exact GHSA IDs so new image-size advisories still block.
+// Temporary advisory-level exceptions, scoped to exact GHSA IDs so a new
+// advisory on the same module still blocks.
+// The image-size exceptions (GHSA-5p2g-fcmc-qvqq, GHSA-w3rx-r6r6-pgpr) were
+// removed on 2026-10-25 (#2727): Expo SDK 58 / Metro 0.87 no longer depend on
+// image-size and the project pins image-size 2.0.4 directly.
 const IGNORED_ADVISORIES = new Map([
-  ['image-size', new Set([
-    'GHSA-5P2G-FCMC-QVQQ',
-    'GHSA-W3RX-R6R6-PGPR',
-  ])], // expo > @expo/metro > metro
-  // @expo/cli pins zod ^3.25.76; the fix for GHSA-mrhx-c7xc-m3w5 (memory
-  // exhaustion on oversized constrained collections) exists only in zod >=4.6.6
-  // and there is no patched 3.x release as of 2026-10-25. Our own zod and the
-  // MCP SDK already resolve to 4.6.7; IGNORED_ADVISORY_PATHS limits this
-  // exception to the CLI copy so a vulnerable zod on any other path still blocks.
+  // @expo/cli pins zod ^3.25.76 (still true for @expo/cli 58.1.15, Expo SDK 58);
+  // the fix for GHSA-mrhx-c7xc-m3w5 (memory exhaustion on oversized constrained
+  // collections) exists only in zod >=4.6.6 and there is no patched 3.x release
+  // as of 2026-10-25. Our own zod and the MCP SDK already resolve to 4.6.7;
+  // IGNORED_ADVISORY_PATHS limits this exception to the CLI copy so a vulnerable
+  // zod on any other path still blocks.
   ['zod', new Set([
     'GHSA-MRHX-C7XC-M3W5',
   ])], // expo > @expo/cli > zod

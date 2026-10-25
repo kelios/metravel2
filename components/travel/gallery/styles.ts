@@ -352,7 +352,7 @@ export const createGalleryStyles = (
       opacity: 0.08,
     },
     errorOverlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       justifyContent: 'center',
       alignItems: 'center',
       gap: 6,

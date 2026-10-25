@@ -120,7 +120,7 @@ function SyncIndicatorNative() {
 
 const styles = StyleSheet.create({
   layer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: DESIGN_TOKENS.zIndex.overlay,
     elevation: DESIGN_TOKENS.zIndex.overlay,
   },

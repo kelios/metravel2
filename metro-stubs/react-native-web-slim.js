@@ -36,7 +36,6 @@ const LayoutAnimation = require('react-native-web/dist/exports/LayoutAnimation')
 const UIManager = require('react-native-web/dist/exports/UIManager').default;
 const AppState = require('react-native-web/dist/exports/AppState').default;
 const AccessibilityInfo = require('react-native-web/dist/exports/AccessibilityInfo').default;
-const InteractionManager = require('react-native-web/dist/exports/InteractionManager').default;
 const PixelRatio = require('react-native-web/dist/exports/PixelRatio').default;
 const Linking = require('react-native-web/dist/exports/Linking').default;
 const Share = require('react-native-web/dist/exports/Share').default;
@@ -72,7 +71,6 @@ module.exports = {
   UIManager,
   AppState,
   AccessibilityInfo,
-  InteractionManager,
   PixelRatio,
   Linking,
   Share,

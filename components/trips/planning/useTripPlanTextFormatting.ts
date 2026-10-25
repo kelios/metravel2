@@ -3,7 +3,7 @@
 // (`TripPlanFormatToolbar`). Поле с полноэкранным режимом —
 // `TripPlanDescriptionEditor` — ведёт выделение двух полей сам.
 import { useCallback, useRef, useState } from 'react';
-import type { NativeSyntheticEvent, TextInput, TextInputSelectionChangeEventData } from 'react-native';
+import type { TextInput, TextInputSelectionChangeEvent } from 'react-native';
 
 import {
   applyTripPlanFormat,
@@ -18,7 +18,7 @@ export function useTripPlanTextFormatting(value: string, onChangeText: (value: s
   // наборе курсор откатывался бы к позиции прошлого рендера.
   const [selection, setSelection] = useState<TripPlanTextSelection>();
 
-  const onSelectionChange = useCallback((event: NativeSyntheticEvent<TextInputSelectionChangeEventData>) => {
+  const onSelectionChange = useCallback((event: TextInputSelectionChangeEvent) => {
     selectionRef.current = event.nativeEvent.selection;
     setSelection((current) => (current === undefined ? current : undefined));
   }, []);

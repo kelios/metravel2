@@ -290,7 +290,7 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
       {(!isNearViewport || !imageLoaded) && !err && (
         <View
           style={[
-            StyleSheet.absoluteFillObject,
+            StyleSheet.absoluteFill,
             styles.skeleton,
             { backgroundColor: colors.mutedBackground },
             { pointerEvents: 'none' } as any,
@@ -316,7 +316,7 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
           priority={Platform.OS === 'web' ? 'low' : 'normal'}
           loading={Platform.OS === 'web' ? 'lazy' : 'lazy'}
           transition={Platform.OS === 'web' ? undefined : 120}
-          style={[StyleSheet.absoluteFillObject, styles.image]}
+          style={[StyleSheet.absoluteFill, styles.image]}
           // OptimizedImage сообщает onError и перед собственным retry. Успешная
           // попытка обязана снять внешний error-overlay, иначе загруженное фото
           // останется навсегда закрыто нейтральной заглушкой.
@@ -331,7 +331,7 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
       {err && (
         <View
           style={[
-            StyleSheet.absoluteFillObject,
+            StyleSheet.absoluteFill,
             styles.errorContainer,
             { backgroundColor: colors.backgroundSecondary },
           ]}

@@ -144,7 +144,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         left: 0,
     },
     backgroundScrim: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         backgroundColor: 'rgba(0,0,0,0.45)',
     },
     contentContainer: {

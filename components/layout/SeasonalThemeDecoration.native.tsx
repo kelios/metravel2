@@ -74,5 +74,5 @@ export default function SeasonalThemeDecoration() {
 }
 
 const styles = StyleSheet.create({
-  decoration: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
+  decoration: { ...StyleSheet.absoluteFill, overflow: 'hidden' },
 });

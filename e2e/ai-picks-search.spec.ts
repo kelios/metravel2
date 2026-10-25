@@ -8,7 +8,6 @@ import { preacceptCookies } from './helpers/navigation';
  * `EXPO_PUBLIC_AI_PICKS=1` (.env.e2e), иначе панели нет и тест пропускается явно.
  */
 const PANEL_TIMEOUT_MS = 30_000;
-const DEBOUNCE_MS = 700;
 
 /** Панель живёт в lazy-чанке каталога: ждём её появления, а не проверяем мгновенно. */
 const waitForPanel = (panel: Locator): Promise<boolean> =>
@@ -76,10 +75,13 @@ test.describe('AI picks on /search (#2459)', () => {
     expect((await page.getByTestId('cards-scroll-container').boundingBox())?.height ?? 0).toBeGreaterThan(0);
 
     await page.getByTestId('ai-search-clear').click();
-    await page.waitForTimeout(DEBOUNCE_MS);
     await expect(page.getByTestId('ai-search-results')).toHaveCount(0);
     await expect(input).toHaveValue('');
-    expect(aiRequests).toHaveLength(1);
+    // Очистка не должна порождать запрос с пустым q. Вместо сна на debounce ждём
+    // событие: новый ввод даёт ровно один новый запрос, а между ними ничего не было.
+    await input.fill('замки беларуси');
+    await expect(page.getByTestId('ai-search-results')).toBeVisible({ timeout: PANEL_TIMEOUT_MS });
+    expect(aiRequests).toEqual(['с детьми на выходные под Краковом', 'замки беларуси']);
   });
 
   test('keeps the input with an unavailable note when the service fails, catalog still works', async ({ page }) => {

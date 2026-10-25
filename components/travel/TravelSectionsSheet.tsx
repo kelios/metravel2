@@ -214,7 +214,7 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
           justifyContent: "flex-end",
         },
         backdrop: {
-          ...StyleSheet.absoluteFillObject,
+          ...StyleSheet.absoluteFill,
           zIndex: 0,
         },
         sheet: {

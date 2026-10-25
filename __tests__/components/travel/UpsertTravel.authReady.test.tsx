@@ -22,6 +22,7 @@ let mockAuthState = {
 };
 
 jest.mock('expo-router', () => ({
+  usePreventRemove: () => jest.fn(),
   useRouter: () => ({
     replace: mockReplace,
     push: jest.fn(),

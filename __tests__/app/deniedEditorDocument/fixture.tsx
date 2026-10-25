@@ -151,9 +151,13 @@ const suspenseComments = (container: Element) => {
   return comments
 }
 
+// expo-router 58 dropped the singleton router-store; route info is derived from
+// the container state the same way the package's own testing-library does.
 const navigationSnapshot = () => {
-  const { store } = require('expo-router/build/global-state/router-store')
-  return { url: window.location.href, routeInfo: store.getRouteInfo(), state: store.state }
+  const { navigationRef } = require('expo-router/build/global-state/navigationRef')
+  const { getRouteInfoFromState } = require('expo-router/build/global-state/getRouteInfoFromState')
+  const state = navigationRef.getRootState()
+  return { url: window.location.href, routeInfo: getRouteInfoFromState(state), state }
 }
 
 describe('intentional404 uses the actual root Stack before route SceneView (#2701)', () => {

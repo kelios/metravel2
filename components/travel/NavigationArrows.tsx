@@ -254,7 +254,7 @@ function NavigationArrows({
                   loading="lazy"
                   priority="low"
                   borderRadius={8}
-                  style={StyleSheet.absoluteFillObject}
+                  style={StyleSheet.absoluteFill}
                 />
               </View>
             )}
@@ -286,7 +286,7 @@ function NavigationArrows({
                   loading="lazy"
                   priority="low"
                   borderRadius={8}
-                  style={StyleSheet.absoluteFillObject}
+                  style={StyleSheet.absoluteFill}
                 />
               </View>
             )}

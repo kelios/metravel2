@@ -14,7 +14,12 @@ jest.mock('@/context/AuthContext', () => {
   const context = React.createContext(null)
   return { useAuth: () => React.useContext(context), TestAuthProvider: context.Provider }
 })
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }), useIsFocused: () => true }))
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: mockPush }),
+  useIsFocused: () => true,
+  // ContributionBanner рендерит `Link asChild`; вне ExpoRoot 58 достаточно прозрачной обёртки.
+  Link: ({ children }: { children: React.ReactNode }) => children,
+}))
 jest.mock('@/api/travelUserQueries', () => ({
   ...jest.requireActual('@/api/travelUserQueries'),
   fetchMyTravels: jest.fn(),

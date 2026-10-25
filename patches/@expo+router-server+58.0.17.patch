@@ -1,0 +1,36 @@
+diff --git a/node_modules/@expo/router-server/build/server/renderStreamingContent.js b/node_modules/@expo/router-server/build/server/renderStreamingContent.js
+index 5d2be29..bbfe294 100644
+--- a/node_modules/@expo/router-server/build/server/renderStreamingContent.js
++++ b/node_modules/@expo/router-server/build/server/renderStreamingContent.js
+@@ -100,6 +100,7 @@ function _server2() {
+ const _getRootComponent = require("../static/getRootComponent");
+ const _debug = require("../utils/debug");
+ const _react1 = require("../utils/react");
++const _html = require("../utils/html");
+ const _metadata = require("./metadata");
+ function _interop_require_default(obj) {
+     return obj && obj.__esModule ? obj : {
+@@ -250,7 +251,22 @@ async function getStreamingContent(location, options) {
+             if (renderErrors.length > 0) {
+                 throw renderErrors[0];
+             }
+-            return new Response(stream).text();
++            // metravel #2727: the SDK 57 static renderer (getStaticContent →
++            // mixHeadComponentsWithStaticResults) serialized the react-helmet-async
++            // output of `expo-router/head` into the exported HTML, and the project's
++            // SEO pipeline (LazyInstantSEO/TravelDetailsSeoBlock/BreadcrumbsJsonLd,
++            // scripts/generate-seo-pages.js, verify-static-*-seo.js) depends on that
++            // `<title data-rh>`/meta/canonical/JSON-LD being present before hydration.
++            // The SDK 58 streaming renderer still collects the helmet state in
++            // `headContext` but never writes it, so every exported route lost its
++            // <title>. Reapply the legacy merge until routes move to generateMetadata().
++            const html = await new Response(stream).text();
++            const { headTags, htmlAttributes, bodyAttributes } = (0, _html.serializeHelmetToHtml)(headContext.helmet);
++            let output = html;
++            if (headTags) output = output.replace('<head>', `<head>${headTags}`);
++            if (htmlAttributes) output = output.replace('<html ', `<html ${htmlAttributes} `);
++            if (bodyAttributes) output = output.replace('<body ', `<body ${bodyAttributes} `);
++            return output;
+         }
+         return stream;
+     });

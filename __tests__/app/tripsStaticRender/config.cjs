@@ -27,7 +27,8 @@ module.exports = {
   resolver: path.join(__dirname, 'resolver.cjs'),
   transform: Object.fromEntries(Object.entries(base.transform).map(([key, value]) => [
     key,
-    Array.isArray(value) && value[0] === 'babel-jest'
+    // jest-expo 58 resolves the transformer to an absolute path (its own babel-jest copy); SDK 57 emitted the bare 'babel-jest'.
+    Array.isArray(value) && /(?:^|\/)babel-jest(?:\/|$)/.test(String(value[0]))
       ? [value[0], { ...value[1], caller: { ...value[1].caller, platform: 'web' } }]
       : value,
   ])),

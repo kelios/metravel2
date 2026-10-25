@@ -341,7 +341,7 @@ const createStyles = (colors: ThemedColors) =>
       padding: 18,
     },
     modalBackdrop: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: colors.overlay,
     },
     modalSheet: {

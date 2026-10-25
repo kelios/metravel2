@@ -8,6 +8,7 @@ import { TravelFormData } from '@/types/types';
 
 const mockRouterReplace = jest.fn();
 jest.mock('expo-router', () => ({
+  usePreventRemove: () => jest.fn(),
   useRouter: () => ({ push: jest.fn(), replace: mockRouterReplace, back: jest.fn() }),
   useFocusEffect: require('react').useEffect,
 }));

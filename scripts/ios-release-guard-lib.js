@@ -25,7 +25,7 @@ const EXPECTED = Object.freeze({
   displayName: 'MeTravel',
   easCliVersion: '21.8.0',
   easImage: 'macos-tahoe-26.5-xcode-26.6',
-  expoRuntimeVersion: 'exposdk:57.0.0',
+  expoRuntimeVersion: 'exposdk:58.0.0',
   productionOrigin: 'https://metravel.by',
   productName: 'metravel',
   scheme: 'metravel',
@@ -616,37 +616,40 @@ function validateIosRelease(root = process.cwd(), options = {}) {
   // SDK 55+ always enables New Architecture; the removed app schema field
   // must stay absent. Native properties and compiled plist are checked below.
   if (Object.prototype.hasOwnProperty.call(app, 'newArchEnabled')) {
-    fail('IOS_NEW_ARCH_EXPO', 'newArchEnabled is obsolete in Expo SDK 57');
+    fail('IOS_NEW_ARCH_EXPO', 'newArchEnabled is obsolete since Expo SDK 55 (New Architecture is always on)');
   }
   const releaseDependencies = {
-    expo: '~57.0.30',
-    'react-native': '0.86.3',
-    react: '19.2.3',
-    'react-dom': '19.2.3',
-    'react-native-reanimated': '4.5.1',
-    'react-native-worklets': '0.10.1',
-    'react-native-screens': '~4.26.0',
+    expo: '~58.0.19',
+    'react-native': '0.88.0',
+    react: '19.3.0',
+    'react-dom': '19.3.0',
+    'react-native-reanimated': '4.7.1',
+    'react-native-worklets': '0.13.0',
+    'react-native-screens': '~4.30.0',
   };
   for (const [name, version] of Object.entries(releaseDependencies)) {
     if (packageJson.dependencies?.[name] !== version) {
       fail('IOS_SDK_DEPENDENCY_PARITY', `${name} must be ${version}`);
     }
   }
-  if (packageJson.resolutions?.['react-native'] !== '0.86.3' ||
-      packageJson.overrides?.['react-native'] !== '0.86.3' ||
-      packageJson.devDependencies?.['@react-native/jest-preset'] !== '0.86.3' ||
-      packageJson.devDependencies?.['jest-expo'] !== '~57.0.6' ||
+  if (packageJson.resolutions?.['react-native'] !== '0.88.0' ||
+      packageJson.overrides?.['react-native'] !== '0.88.0' ||
+      packageJson.devDependencies?.['@react-native/jest-preset'] !== '0.88.0' ||
+      packageJson.devDependencies?.['jest-expo'] !== '~58.0.12' ||
       packageJson.expo?.install?.exclude?.some(name => ['expo', 'react', 'react-dom', 'react-native'].includes(name))) {
     fail('IOS_SDK_DEPENDENCY_PARITY', 'runtime, Jest preset and install checks must agree');
   }
-  if (!/^react-native@0\.86\.3:\n {2}version "0\.86\.3"$/m.test(yarnLock) ||
-      !/^hermes-compiler@250829098\.0\.17:\n {2}version "250829098\.0\.17"$/m.test(yarnLock) ||
-      /^hermes-compiler@250829098\.0\.14:/m.test(yarnLock)) {
-    fail('IOS_SDK_DEPENDENCY_PARITY', 'lock must select corrected RN and transitive Hermes');
+  // Expo SDK 58 / RN 0.88.0 ship hermes-compiler 260318099.0.4 (#2727). The SDK 57
+  // Hermes V1 regression set (250829098.0.14 and earlier) must never come back
+  // through a stale lock entry.
+  if (!/^react-native@0\.88\.0:\n {2}version "0\.88\.0"$/m.test(yarnLock) ||
+      !/^hermes-compiler@260318099\.0\.4:\n {2}version "260318099\.0\.4"$/m.test(yarnLock) ||
+      /^hermes-compiler@250829098\.0\.1[0-6]:/m.test(yarnLock)) {
+    fail('IOS_SDK_DEPENDENCY_PARITY', 'lock must select RN 0.88.0 and its transitive Hermes 260318099.0.4');
   }
-  if (!/^ {2}- hermes-engine \(250829098\.0\.17\):/m.test(podfileLock) ||
-      !/^ {2}- React-Core \(0\.86\.3\):/m.test(podfileLock)) {
-    fail('IOS_SDK_NATIVE_PARITY', 'Pods must use RN 0.86.3 and corrected Hermes 250829098.0.17');
+  if (!/^ {2}- hermes-engine \(260318099\.0\.4\):/m.test(podfileLock) ||
+      !/^ {2}- React-Core \(0\.88\.0\):/m.test(podfileLock)) {
+    fail('IOS_SDK_NATIVE_PARITY', 'Pods must use RN 0.88.0 and Hermes 260318099.0.4');
   }
   if (app.ios?.supportsTablet !== true) fail('IOS_DEVICE_FAMILY_EXPO', String(app.ios?.supportsTablet));
   if (app.ios?.requireFullScreen !== false || app.orientation !== 'default') {
@@ -792,12 +795,11 @@ function validateIosRelease(root = process.cwd(), options = {}) {
   if (eas.submit?.production?.ios?.bundleIdentifier !== EXPECTED.bundleIdentifier) {
     fail('IOS_SUBMIT_BUNDLE_ID', String(eas.submit?.production?.ios?.bundleIdentifier));
   }
-  if (packageJson.dependencies?.['expo-build-properties'] !== '~57.0.22') {
+  if (packageJson.dependencies?.['expo-build-properties'] !== '~58.0.11') {
     fail('IOS_BUILD_PROPERTIES_PIN', String(packageJson.dependencies?.['expo-build-properties']));
   }
-  if (!yarnLock.includes('expo-build-properties@~57.0.22:') ||
-      !yarnLock.includes('version "57.0.22"')) {
-    fail('IOS_BUILD_PROPERTIES_LOCK', 'expo-build-properties 57.0.22 must be locked');
+  if (!/^expo-build-properties@~58\.0\.11:\n {2}version "58\.0\.1[1-9]"$/m.test(yarnLock)) {
+    fail('IOS_BUILD_PROPERTIES_LOCK', 'expo-build-properties ~58.0.11 must be locked');
   }
   const expectedScripts = {
     'ios:artifact:audit': 'node scripts/ios-artifact-audit.js',
@@ -885,18 +887,29 @@ function validateIosRelease(root = process.cwd(), options = {}) {
     'ios/metravel/main.m',
     'ios/metravel/noop-file.swift',
   ];
+  // Expo SDK 58 (#2727): the iOS 27 SDK requires the scene-based life cycle. The
+  // window and the React Native start belong to SceneDelegate (ExpoAppSceneDelegate);
+  // an AppDelegate that still calls startReactNative itself is the SDK 57 template
+  // and leaves a black screen under a scene manifest.
+  const sceneDelegatePath = path.join(root, 'ios/metravel/SceneDelegate.swift');
+  const sceneDelegate = fs.existsSync(sceneDelegatePath) ? fs.readFileSync(sceneDelegatePath, 'utf8') : '';
   if (count(project, /\/\* AppDelegate\.swift in Sources \*\//g) !== 2 ||
       count(project, /path = metravel\/AppDelegate\.swift;/g) !== 1 ||
+      count(project, /\/\* SceneDelegate\.swift in Sources \*\//g) !== 2 ||
+      count(project, /path = metravel\/SceneDelegate\.swift;/g) !== 1 ||
       /AppDelegate\.(?:h|mm)|main\.m|noop-file\.swift/.test(project) ||
       legacyAppDelegatePaths.some(relativePath => fs.existsSync(path.join(root, relativePath))) ||
-      !/@main\s+class AppDelegate:\s*ExpoAppDelegate/.test(appDelegate) ||
+      !/@main\s+class AppDelegate:\s*ExpoAppDelegate,\s*ExpoReactNativeFactoryProvider/.test(appDelegate) ||
       !appDelegate.includes('ExpoReactNativeFactory(delegate: delegate)') ||
-      !/#if os\(iOS\) \|\| os\(tvOS\)[\s\S]*factory\.startReactNative\([\s\S]*#endif/.test(appDelegate) ||
+      /startReactNative\(/.test(appDelegate) ||
       !appDelegate.includes('Bundle.main.url(forResource: "main", withExtension: "jsbundle")') ||
-      /EXAppDelegateWrapper|#import\s+<RCTAppDelegate\.h>/.test(appDelegate)) {
+      /EXAppDelegateWrapper|#import\s+<RCTAppDelegate\.h>/.test(appDelegate) ||
+      !/@objc\(SceneDelegate\)\s+class SceneDelegate:\s*ExpoAppSceneDelegate/.test(sceneDelegate) ||
+      !info.includes('<key>UIApplicationSceneManifest</key>') ||
+      !/<key>UISceneDelegateClassName<\/key>\s*<string>\$\(PRODUCT_MODULE_NAME\)\.SceneDelegate<\/string>/.test(info)) {
     fail(
       'IOS_APP_DELEGATE_TEMPLATE',
-      'native entrypoint must use the Expo SDK 57 Swift AppDelegate and embedded release bundle'
+      'native entrypoint must use the Expo SDK 58 scene-based Swift AppDelegate + SceneDelegate and embedded release bundle'
     );
   }
 
@@ -1218,9 +1231,12 @@ function validateIosRelease(root = process.cwd(), options = {}) {
   const accessedApisByType = Object.fromEntries(
     accessedApis.map(entry => [entry.NSPrivacyAccessedAPIType, entry.NSPrivacyAccessedAPITypeReasons])
   );
+  // CocoaPods privacy aggregation (SDK 58 / RN 0.88) rewrites the reason arrays in
+  // its own order; the audited inventory is a set, so compare sorted codes.
+  const sortedReasons = reasons => (Array.isArray(reasons) ? [...reasons].sort() : reasons);
   if (accessedApis.length !== Object.keys(IOS_REQUIRED_REASON_APIS).length ||
       Object.entries(IOS_REQUIRED_REASON_APIS).some(
-        ([type, reasons]) => !jsonEqual(accessedApisByType[type], reasons)
+        ([type, reasons]) => !jsonEqual(sortedReasons(accessedApisByType[type]), sortedReasons(reasons))
       )) {
     fail('IOS_PRIVACY_REQUIRED_REASONS', 'required-reason API declarations must match the audited native inventory');
   }
@@ -1231,8 +1247,10 @@ function validateIosRelease(root = process.cwd(), options = {}) {
     'ExpoLocalization_privacy.bundle',
     'ExpoMediaLibrary_privacy.bundle',
     'ExpoNotifications_privacy.bundle',
+    'ExpoSystemUI_privacy.bundle',
     'RNCAsyncStorage_resources.bundle',
-    'React-Core_privacy.bundle',
+    // React-Core_privacy.bundle is gone since RN 0.88: React-Core ships prebuilt
+    // (RCT_USE_PREBUILT_RNCORE) and carries its privacy manifest inside the xcframework.
     'React-cxxreact_privacy.bundle',
     'React-timing_privacy.bundle',
     'RNImagePickerPrivacyInfo.bundle',

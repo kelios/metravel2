@@ -698,17 +698,8 @@ describe('useTravelFilters', () => {
       expect(addListener.mock.calls.filter(([name]) => name === 'focus' || name === 'blur')).toEqual([]);
     });
 
-    it.each(['window', 'document'] as const)('does not require a browser %s', async (globalName) => {
-      const descriptor = Object.getOwnPropertyDescriptor(globalThis, globalName);
-      const addListener = jest.spyOn(window, 'addEventListener');
-      Object.defineProperty(globalThis, globalName, { configurable: true, value: undefined });
-      try {
-        await openPointStep();
-        expect(addListener.mock.calls.filter(([name]) => name === 'focus' || name === 'blur')).toEqual([]);
-      } finally {
-        if (descriptor) Object.defineProperty(globalThis, globalName, descriptor);
-      }
-    });
+    // Случай «без window/document» — в `useTravelFilters.ssr.test.ts` (node-среда):
+    // под jsdom 26 глобал `window` non-configurable и переопределению не поддаётся.
   });
 });
 

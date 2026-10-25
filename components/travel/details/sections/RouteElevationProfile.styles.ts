@@ -196,7 +196,7 @@ export const createRouteElevationProfileStyles = (colors: ThemedColors) =>
       color: colors.textMuted,
     },
     chartHitArea: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       zIndex: 4,
     },
     yAxisLabels: {

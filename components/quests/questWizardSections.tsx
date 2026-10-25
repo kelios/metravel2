@@ -543,7 +543,7 @@ export function QuestFinalePanel({
       blurBackground
       allowCriticalWebBlur
       blurRadius={18}
-      style={StyleSheet.absoluteFillObject as any}
+      style={StyleSheet.absoluteFill as any}
       alt={i18nT('quests:components.quests.questWizardSections.poster_video_kvesta_c8f64bd3')}
       testID="quest-finale-poster"
     />

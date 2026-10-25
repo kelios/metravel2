@@ -27,7 +27,7 @@ export const createStyles = (colors: ThemedColors) => StyleSheet.create({
     backgroundColor: colors.background,
   },
   rootBackgroundImage: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     width: '100%',
     height: '100%',
     opacity: 0.9,

@@ -9,6 +9,7 @@ const mockTrackWizardEvent = jest.fn();
 const mockPush = jest.fn();
 
 jest.mock('expo-router', () => ({
+  usePreventRemove: () => jest.fn(),
   useRouter: () => ({
     push: mockPush,
   }),

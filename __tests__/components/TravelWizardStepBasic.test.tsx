@@ -6,6 +6,7 @@ import { i18n } from '@/i18n';
 
 // Mock dependencies
 jest.mock('expo-router', () => ({
+  usePreventRemove: () => jest.fn(),
     useRouter: jest.fn(),
     useFocusEffect: require('react').useEffect,
 }));

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Animated, InteractionManager, Platform } from 'react-native'
+import { Animated, Platform } from 'react-native'
 
 import { useTdTrace } from '@/hooks/useTdTrace'
+import { runAfterInteractions } from '@/utils/runAfterInteractions'
 
 type IdleCapableWindow = Window & {
   requestIdleCallback?: (
@@ -245,7 +246,7 @@ export function useTravelDeferredSectionsModel({
 
   useEffect(() => {
     if (Platform.OS === 'web') return
-    const task = InteractionManager.runAfterInteractions(() => setCanRenderHeavy(true))
+    const task = runAfterInteractions(() => setCanRenderHeavy(true))
     return () => task.cancel()
   }, [])
 

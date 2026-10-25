@@ -118,6 +118,7 @@ guard, падающий в CI на попытке обойти этот конт
 - Финальная приёмка24.10.2026: reviewed/deployed `6b84b69156ec635be910eb4e48832c755b917aa8`; независимые review-auditor/code-review-gate PASS0, actual staged/prepush PASS без SKIPPED и source42PASS. Production06 strict5/5 PASS(31.705 с), local04 immutable6b84 existing semantics2/2 PASS(76.697 с со свежей стандартной сборкой); workers1/retries0/skip0/flaky0, production console/page/network/writes0. A/B/C, mobile header Back B→Forward C, cross-tab/search canonical, catalog/modifier controls и59 CDP checkpoints приняты; четыре prod и два local screenshots независимо просмотрены. Local watchdog16 HTTP200/0fail; after-provenance6718/6718 exact Git blobs, missing0/mismatch0 и шесть installed Expo/native hashes MATCH. Один штатный deploy exit0/exactSHA/readiness/health/SEO/media PASS за547 с: бюджет300 с превышен на247 с. Evidence: `.codex-temp/task-2703/acceptance-prod-06/{results.json,acceptance-notes.md}`, `.codex-temp/task-2703/acceptance-local-04/{results.json,source-provenance-after.json,watchdog-summary.json}`, `.codex-temp/deploy/prod-6b84b6915-20261023T225717Z.log`. RAW03/RAW04/RAW05 и отдельная #2702 hypothesis сохранены; editor double traversal этим pass не закрывается.
 - Ограничение final docs gate: Общая `openspec validate --all --strict` выполнена:71PASS/1FAIL — прежняя `persist-planned-trip-original-route-file` не содержит delta specs; оба её файла byte-identical принятому6b84. Собственная change и все main specs strict PASS; чужой незавершённый proposal не менялся. Следующий check владельца #1496: добавить intended delta (либо корректное intentional no-spec declaration, если scope действительно изменился), затем повторить --all. Raw global FAIL и diagnostic сохранены в `.codex-temp/2703/final-docs-prepared/` и не объявлены global PASS.
 - Решение новой жалобы: reuse #2703; после done — reopen при той же потере записи ДО Back. Второй traversal после восстановления — reuse #2702.
+- Expo SDK 58 (25.10.2026, #2727): ядро навигации expo-router переписано — fork `createMemoryHistory`/`useLinking` исчез, снимки состояния и курсор хранит `expo-router/build/global-state/browserHistory.js` (restoreTrackedEntry/RESET, прямой вход одной записью), поэтому `patches/expo-router+57.0.28.patch` снят и unit-контроли `ExpoWebMemoryHistory`/`ExpoWebLinkingHistory` заменены `__tests__/navigation/ExpoWebBrowserHistory.test.ts` и портированной `ExpoWebContainerHistory`. Upstream `TabRouter` 58 при `fullHistory` дедуплицирует визит только по key (`changeIndex`), и A→B того же `travels/[param]` снова заменял browser-запись; остаток закрыт минимальным `patches/expo-router+58.0.26.patch` (дедуп при deep-equal params + REPLACE заменяет последний визит), `TabLayout.travelHistory` переписан на `getStateForAction → {state, affectedRouteKey, browserHistory}` и проверяет push/pop/replace browser-истории.
 
 ### PERF-FIRST-SCREEN-PAINT-VISIBILITY-001 — геометрия невидимого элемента проходит DOM-бюджет
 
@@ -1070,9 +1071,9 @@ guard, падающий в CI на попытке обойти этот конт
   называются хешированным путём и входят в хеш имени самого чанка. Порядковый
   индекс в списке текущей сборки (`sharedIndex`) в отдаваемом браузеру файле не
   появляется.
-- **Surface/owner:** web-экспорт, `patches/@expo+metro-config+57.0.3.patch`
+- **Surface/owner:** web-экспорт, `patches/@expo+metro-config+58.0.17.patch`
   (`getAsyncChunkTargets`, `dependencyRegistration`) и
-  `patches/expo+57.0.4.patch` (`maybeLoadRegisteredDependencies`); деплой хранит
+  `patches/expo+58.0.19.patch` (`maybeLoadRegisteredDependencies`); деплой хранит
   прошлые поколения 14 дней в пределах бюджета по объёму
   (`scripts/deploy-expo-overlay.sh`, OPS-PROD-DISK-BUDGET-001).
 - **Симптомы:** после деплоя у вернувшихся посетителей главная (и любой маршрут)
@@ -1116,7 +1117,7 @@ guard, падающий в CI на попытке обойти этот конт
   манифест `__METRAVEL_CHUNK_DEPS__` с ТРАНЗИТИВНЫМ списком: рантайм читает
   манифест ровно одного запрошенного чанка и не обходит манифесты того, что
   только что загрузил.
-- **Surface/owner:** web-экспорт, `patches/@expo+metro-config+57.0.3.patch`
+- **Surface/owner:** web-экспорт, `patches/@expo+metro-config+58.0.17.patch`
   (`extractSharedChunks`, `linkSharedChunkDependencies`,
   `propagateOwnersThroughSyncEdges`), гейт `scripts/guard-chunk-closure.js`.
 - **Симптомы:** маршрут то падает в корневой ErrorBoundary с
@@ -4377,6 +4378,7 @@ guard, падающий в CI на попытке обойти этот конт
 - **Решение для новой жалобы:** сначала атрибуция по source maps базы и HEAD,
   потом рефакторинг владельца роста; Node-only код и мёртвые ключи стилей в
   route-чанке — первые кандидаты.
+- Recurrence 25.10.2026 (#2727, замер при апгрейде SDK 58): `guard-bundle-budget --fail` красный на main ДО апгрейда (dist 08:28 от 8c3351102): TOTAL gzip 3343.8 > 3284.9, EAGER brotli 784 > 775 (худший `(tabs)/profile.html`), TravelDetailsSidebarSection, index:trips/trips-plan/quests-city, `__shared:quests-catalog`, locale-be/uk raw. Перенос per-route чанкинга на Expo 58 (`patches/@expo+metro-config+58.0.17.patch`) сам по себе снял eager до 767.8 KB и оставил 3 breach (TOTAL gzip 3338.5, TravelDetailsSidebarSection gzip 4.2 > 3.9, index:trips-plan raw). Потолки не подняты; долг вынесен карточкой #2738 (рефакторинг, не raise).
 
 ### APP-SHELL-BOOT-001 — пол TBT задаёт общий каркас, а не код маршрута
 

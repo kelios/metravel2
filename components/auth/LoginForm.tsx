@@ -514,7 +514,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         ...Platform.select({ ios: { flex: 1 }, default: {} }),
     },
     mapBackground: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         width: '100%',
         height: '100%',
     },

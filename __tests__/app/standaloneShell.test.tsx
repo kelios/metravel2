@@ -68,7 +68,9 @@ it('never mounts a protected blocked-users query while auth loads or for a guest
 it('guards the complete StandaloneScreen family against raw back actions', () => {
   const routes = fs.readdirSync(path.join(process.cwd(), 'app')).filter((file) => file.endsWith('.tsx'))
   const sources = routes.map((file) => [file, fs.readFileSync(path.join(process.cwd(), 'app', file), 'utf8')] as const).filter(([, source]) => source.includes('StandaloneScreen'))
-  expect(sources.length).toBeGreaterThanOrEqual(5)
+  // 9fc967cb2 (#2460) вывел catch-all `app/[...missing].tsx` на NotFoundScreen — в корне app/
+  // семейство StandaloneScreen стало из четырёх маршрутов; порог держит их все.
+  expect(sources.length).toBeGreaterThanOrEqual(4)
   for (const [file, source] of sources) {
     expect({ file, rawBack: /\brouter\.back\(/.test(source) }).toEqual({ file, rawBack: false })
   }

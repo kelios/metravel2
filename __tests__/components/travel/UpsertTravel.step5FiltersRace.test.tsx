@@ -54,6 +54,7 @@ jest.mock('@/components/travel/ValidationFeedback', () => {
 });
 
 jest.mock('expo-router', () => ({
+  usePreventRemove: () => jest.fn(),
   useFocusEffect: (effect: () => void | (() => void)) => {
     require('react').useEffect(effect, [effect]);
   },

@@ -260,7 +260,9 @@ describe('locale compatibility transform (#2442)', () => {
   })
 
   it('covers the actual app-owned source without unsupported hook patterns', () => {
-    const files = execFileSync('rg', ['--files', ...plugin.ROOTS], { cwd: projectRoot, encoding: 'utf8' })
+    // Перечень файлов — из git-индекса, а не из внешнего `rg`: бинарь ripgrep есть не в каждом
+    // окружении (jest из харнесса/CI без него падал ENOENT), а git всегда под рукой.
+    const files = execFileSync('git', ['ls-files', '--', ...plugin.ROOTS], { cwd: projectRoot, encoding: 'utf8' })
       .trim().split('\n').filter(file => /\.[jt]sx?$/.test(file) && !file.endsWith('.d.ts'))
     const failures: string[] = []
     const localMemoInventory: Array<{ file: string; line: number; kind: string }> = []

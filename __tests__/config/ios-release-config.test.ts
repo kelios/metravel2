@@ -107,6 +107,7 @@ function fixture(changes: FixtureChanges): string {
     'ios/Podfile.properties.json',
     'ios/Podfile.lock',
     'ios/metravel/AppDelegate.swift',
+    'ios/metravel/SceneDelegate.swift',
     'ios/metravel.xcodeproj/project.pbxproj',
     'ios/metravel.xcodeproj/xcshareddata/xcschemes/metravel.xcscheme',
     'ios/metravel/Info.plist',
@@ -225,11 +226,11 @@ process.stdout.write(JSON.stringify({
   });
 
   it.each([
-    ['expo', '~57.0.4'],
-    ['react-native', '0.86.0'],
-    ['react-native-reanimated', '4.5.0'],
-    ['react-native-worklets', '0.10.0'],
-    ['react-native-screens', '4.25.2'],
+    ['expo', '~57.0.30'],
+    ['react-native', '0.86.3'],
+    ['react-native-reanimated', '4.5.1'],
+    ['react-native-worklets', '0.10.1'],
+    ['react-native-screens', '~4.26.0'],
   ])('rejects affected or mismatched %s', (name, version) => {
     const testRoot = fixture({
       'package.json': value => {
@@ -247,10 +248,10 @@ process.stdout.write(JSON.stringify({
     const testRoot = fixture({
       'package.json': value => {
         const config = JSON.parse(value);
-        if (drift === 'resolutions') config.resolutions['react-native'] = '0.86.0';
-        if (drift === 'overrides') config.overrides['react-native'] = '0.86.0';
+        if (drift === 'resolutions') config.resolutions['react-native'] = '0.86.3';
+        if (drift === 'overrides') config.overrides['react-native'] = '0.86.3';
         if (drift === 'install-exclusion') config.expo.install = { exclude: ['react-native'] };
-        if (drift === 'jest-preset') config.devDependencies['@react-native/jest-preset'] = '0.86.0';
+        if (drift === 'jest-preset') config.devDependencies['@react-native/jest-preset'] = '0.86.3';
         return JSON.stringify(config);
       },
     });
@@ -261,7 +262,7 @@ process.stdout.write(JSON.stringify({
 
   it('rejects affected Hermes in the JS lock', () => {
     const testRoot = fixture({
-      'yarn.lock': value => value.replace(/250829098\.0\.17/g, '250829098.0.14'),
+      'yarn.lock': value => value.replace(/260318099\.0\.4/g, '250829098.0.14'),
     });
     expect(validateIosRelease(testRoot)).toEqual(expect.arrayContaining([
       expect.objectContaining({ code: 'IOS_SDK_DEPENDENCY_PARITY' }),
@@ -270,7 +271,7 @@ process.stdout.write(JSON.stringify({
 
   it('rejects affected Hermes in the native lock', () => {
     const testRoot = fixture({
-      'ios/Podfile.lock': value => value.replace(/250829098\.0\.17/g, '250829098.0.14'),
+      'ios/Podfile.lock': value => value.replace(/260318099\.0\.4/g, '250829098.0.14'),
     });
     expect(validateIosRelease(testRoot)).toEqual(expect.arrayContaining([
       expect.objectContaining({ code: 'IOS_SDK_NATIVE_PARITY' }),
@@ -655,11 +656,29 @@ process.stdout.write(JSON.stringify({
     );
   });
 
-  it('fails closed when the official platform guard is removed', () => {
+  it('fails closed when the AppDelegate starts React Native itself (pre-scene SDK 57 template)', () => {
     const testRoot = fixture({
-      'ios/metravel/AppDelegate.swift': value => value
-        .replace('#if os(iOS) || os(tvOS)\n', '')
-        .replace('#endif\n\n    return super.application', '\n    return super.application'),
+      'ios/metravel/AppDelegate.swift': value => value.replace(
+        '    return super.application(application, didFinishLaunchingWithOptions: launchOptions)',
+        '    window = UIWindow(frame: UIScreen.main.bounds)\n    factory.startReactNative(withModuleName: "main", in: window, launchOptions: launchOptions)\n    return super.application(application, didFinishLaunchingWithOptions: launchOptions)'
+      ),
+    });
+    expect(validateIosRelease(testRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'IOS_APP_DELEGATE_TEMPLATE' })])
+    );
+  });
+
+  it('fails closed when the scene delegate is missing', () => {
+    const testRoot = fixture({});
+    fs.rmSync(path.join(testRoot, 'ios/metravel/SceneDelegate.swift'));
+    expect(validateIosRelease(testRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'IOS_APP_DELEGATE_TEMPLATE' })])
+    );
+  });
+
+  it('fails closed when Info.plist drops the scene manifest', () => {
+    const testRoot = fixture({
+      'ios/metravel/Info.plist': value => value.replace('<key>UISceneDelegateClassName</key>', '<key>UISceneDelegateClassNameRemoved</key>'),
     });
     expect(validateIosRelease(testRoot)).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: 'IOS_APP_DELEGATE_TEMPLATE' })])

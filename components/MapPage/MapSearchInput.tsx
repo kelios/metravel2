@@ -11,13 +11,13 @@ import {
   Pressable,
   StyleSheet,
   Platform,
-  InteractionManager,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useMapPanelStore } from '@/stores/mapPanelStore';
 import { translate as i18nT } from '@/i18n'
+import { runAfterInteractions } from '@/utils/runAfterInteractions'
 import { MapSearchInputContext } from './MapSearchInputContext'
 
 // Retry cadence after interactions settle: a couple of fast frames then a longer
@@ -98,7 +98,7 @@ const MapSearchInput: React.FC<MapSearchInputProps> = ({
       timers.push(handle);
     };
 
-    const interaction = InteractionManager.runAfterInteractions(() => {
+    const interaction = runAfterInteractions(() => {
       tryFocus(0);
     });
 

@@ -16,6 +16,7 @@ jest.mock('expo-router', () => {
   return {
     __esModule: true,
     useRouter: () => mockRouter,
+    usePreventRemove: () => jest.fn(),
     useNavigation: () => ({
       addListener: jest.fn(() => jest.fn()),
     }),

@@ -703,7 +703,7 @@ const createStyles = (
     backgroundColor: colors.overlay,
   },
   nativeModalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   nativeModalSheet: {
     backgroundColor: colors.surface,

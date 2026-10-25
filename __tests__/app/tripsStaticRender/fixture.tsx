@@ -43,7 +43,10 @@ it('preserves the cold route HTML, real catalog states and locale initialization
   const { usePublicTrips } = require('@/hooks/usePublicTripsApi') as typeof import('@/hooks/usePublicTripsApi')
   const { ThemeProvider } = require('@/hooks/useTheme') as typeof import('@/hooks/useTheme')
   const { LocaleProvider } = require('@/i18n/LocaleProvider.web') as typeof import('@/i18n/LocaleProvider.web')
-  const { NavigationContext } = require('expo-router/build/react-navigation/core/NavigationContext')
+  // expo-router 58's `useIsFocused()` reads a focus context instead of calling
+  // `navigation.isFocused()`; the real screen provider supplies route, navigation
+  // and focus together (a route without `key` is focused).
+  const { NavigationProvider } = require('expo-router/build/react-navigation/core/NavigationProvider')
   const Head = require('expo-router/head').default
   // Fresh original route payload; no await, preload, catalog replacement or
   // access to React.lazy private state occurs before the server render.
@@ -84,7 +87,7 @@ it('preserves the cold route HTML, real catalog states and locale initialization
   }
   const wrap = (client: QueryClient, head: object = {}) => React.createElement(
     Head.Provider, { context: head },
-    React.createElement(NavigationContext.Provider, { value: navigation },
+    React.createElement(NavigationProvider, { route: { name: 'trips/index', params: {} }, navigation },
       React.createElement(LocaleProvider, null,
         React.createElement(ThemeProvider, null,
           React.createElement(PersistQueryClientProvider, { client, persistOptions: queryPersistenceOptions },

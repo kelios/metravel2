@@ -113,7 +113,7 @@ export default function BiometricGate() {
 const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
     overlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       zIndex: 9999,
       elevation: 9999,
       alignItems: 'center',

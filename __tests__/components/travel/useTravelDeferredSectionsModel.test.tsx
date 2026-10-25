@@ -3,7 +3,8 @@
  */
 
 import { act, renderHook } from '@testing-library/react-native'
-import { Animated, InteractionManager, Platform } from 'react-native'
+import { Animated, Platform } from 'react-native'
+import * as afterInteractions from '@/utils/runAfterInteractions'
 
 import { useTravelDeferredSectionsModel } from '@/components/travel/details/hooks/useTravelDeferredSectionsModel'
 
@@ -196,7 +197,7 @@ describe('useTravelDeferredSectionsModel', () => {
   it('uses settled native offsets without subscribing JS to every scroll frame', () => {
     Platform.OS = 'android'
     const interactionSpy = jest
-      .spyOn(InteractionManager, 'runAfterInteractions')
+      .spyOn(afterInteractions, 'runAfterInteractions')
       .mockImplementation((callback: any) => {
         callback()
         return { cancel: jest.fn() } as any

@@ -10,6 +10,7 @@ import { i18n } from '@/i18n';
 const mockSetParams = jest.fn();
 
 jest.mock('expo-router', () => ({
+  usePreventRemove: () => jest.fn(),
   useLocalSearchParams: jest.fn(),
   useRouter: jest.fn(() => ({ setParams: mockSetParams })),
 }));

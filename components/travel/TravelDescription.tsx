@@ -5,13 +5,13 @@ import {
     Text,
     View,
     Platform,
-    InteractionManager,
     useWindowDimensions,
 } from "react-native";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
 import DeferredStableContent from '@/components/travel/DeferredStableContent';
+import { runAfterInteractions } from '@/utils/runAfterInteractions';
 import type { ArticleBodyMediaIndex } from '@/components/travel/stableContent/articleBodyMedia';
 import { translate as i18nT } from '@/i18n'
 
@@ -46,7 +46,7 @@ function resolveWebElement(node: unknown): Element | null {
  *   синхронный mount большого описания (десятки KB + Instagram-фасады) во время
  *   гидратации RN Web блокирует первый интерактив.
  *   Прероллится только скелет (в #root описания нет) → mismatch'а гидратации не будет.
- * - На native парсинг откладывается до конца взаимодействий (InteractionManager + 2s форсаж).
+ * - На native парсинг откладывается до простоя JS-потока (runAfterInteractions + 2s форсаж).
  */
 
 const TravelDescription: React.FC<TravelDescriptionProps> = ({
@@ -201,7 +201,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
             };
         }
 
-        const task = InteractionManager.runAfterInteractions(reveal);
+        const task = runAfterInteractions(reveal);
         // Форсаж: если что-то пойдёт не так — смонтировать через 2s
         const timeoutId = setTimeout(reveal, 2000);
 

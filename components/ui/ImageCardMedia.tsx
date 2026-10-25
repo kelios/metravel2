@@ -971,7 +971,7 @@ function ImageCardMedia({
           {!!overlayColor && (
             <View
               style={[
-                StyleSheet.absoluteFillObject,
+                StyleSheet.absoluteFill,
                 { backgroundColor: overlayColor, borderRadius, pointerEvents: 'none' },
               ]}
             />
@@ -1079,7 +1079,7 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     overflow: 'hidden',
   },
   placeholder: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
     borderColor: colors.borderLight,

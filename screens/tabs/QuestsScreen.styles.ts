@@ -914,7 +914,7 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
                 // left the overlay zero-sized on iOS/Android, so the drawer never
                 // appeared visually (F-20).
                 default: {
-                    ...StyleSheet.absoluteFillObject,
+                    ...StyleSheet.absoluteFill,
                     backgroundColor: colors.overlay,
                     zIndex: 999,
                     elevation: 8,

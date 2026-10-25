@@ -55,6 +55,7 @@ let mockWizardState: any = {
 };
 
 jest.mock('expo-router', () => ({
+  usePreventRemove: () => jest.fn(),
   useLocalSearchParams: () => mockLocalParams,
   usePathname: () => mockPathname,
   useRouter: () => ({

@@ -1,7 +1,7 @@
 // TabLayout.tsx — кастомный header + полный офф таббара
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import { Platform } from 'react-native';
-import { Tabs, usePathname } from 'expo-router';
+import { Tabs, useIsFocused, usePathname } from 'expo-router';
 import CustomHeader from '@/components/layout/CustomHeader';
 import { isQuestDetailHeaderPath, shouldShowBrandRow, shouldShowHeaderContextBar } from '@/components/layout/customHeaderModel';
 import {
@@ -93,7 +93,11 @@ const shouldHideHeaderForMap = (pathname: string): boolean => {
     return width < MAP_HEADER_MOBILE_BREAKPOINT;
 };
 
-const Header = React.memo(function Header({ isNavigationTarget }: { isNavigationTarget: boolean }) {
+const Header = React.memo(function Header() {
+    // The header element is rendered inside its screen's navigation/focus
+    // providers; expo-router 58 warns when `navigation.isFocused()` runs during
+    // render, so focus is read through the hook with the same semantics.
+    const isNavigationTarget = useIsFocused();
     const pathname = usePathname() || '/';
     const hydrationReady = useHydrationReady();
     // До гидратации всегда `false`: статический HTML один и тот же для `/search`
@@ -260,9 +264,7 @@ export default function TabLayout() {
                     // React Navigation keeps the previous screen header mounted during
                     // transitions. Only the focused header may own the skip-link target;
                     // otherwise redirect routes briefly duplicate `main-navigation`.
-                    header: ({ navigation }) => (
-                        <Header isNavigationTarget={navigation.isFocused()} />
-                    ),
+                    header: () => <Header />,
                     lazy: true,               // экраны создаются по первому фокусу
                     freezeOnBlur: false,      // не замораживаем экраны при потере фокуса
                 }}

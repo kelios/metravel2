@@ -10,7 +10,8 @@ import path from 'path'
 describe('+html: шрифт иконок и логотип', () => {
   const source = fs.readFileSync(path.resolve(process.cwd(), 'app/+html.tsx'), 'utf8')
   const head = source.slice(source.indexOf('<head>'), source.indexOf('</head>'))
-  const body = source.slice(source.indexOf('<body>'), source.indexOf('</body>'))
+  // SDK 58: `<body {...bodyAttributes}>` — тег с атрибутами из контекста документа.
+  const body = source.slice(source.search(/<body[^>]*>/), source.indexOf('</body>'))
 
   it('регистрирует шрифт иконок после разметки приложения', () => {
     expect(body).toContain('buildIconFontLoaderScript(iconFontUrl)')

@@ -544,13 +544,13 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     overlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       zIndex: 10000,
       justifyContent: 'center',
       alignItems: 'center',
     },
     backdrop: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: 'rgba(0, 0, 0, 0.45)',
     },
     spotlight: {

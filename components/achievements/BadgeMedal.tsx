@@ -90,7 +90,7 @@ function BadgeMedal({
         },
         locked: { opacity: 0.5 },
         lockedScrim: {
-          ...StyleSheet.absoluteFillObject,
+          ...StyleSheet.absoluteFill,
           borderRadius: size / 2,
           backgroundColor: colors.overlayLight,
         },

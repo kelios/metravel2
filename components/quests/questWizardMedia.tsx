@@ -69,7 +69,7 @@ export const NativeQuestVideoLazy = lazy(() =>
         <View style={props.style}>
           <VideoView
             player={player}
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
             contentFit="contain"
             nativeControls={props.useNativeControls !== false}
             onFirstFrameRender={() => {
@@ -77,12 +77,12 @@ export const NativeQuestVideoLazy = lazy(() =>
             }}
           />
           {props.usePoster && props.posterSource && firstFrameRevision !== sourceRevision ? (
-            <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+            <View pointerEvents="none" style={StyleSheet.absoluteFill}>
               <ImageCardMedia
                 source={props.posterSource}
                 fit="contain"
                 width="100%"
-                style={StyleSheet.absoluteFillObject}
+                style={StyleSheet.absoluteFill}
                 showImmediately
                 testID="quest-video-poster"
               />

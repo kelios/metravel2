@@ -19,7 +19,7 @@ describe('native seasonal header decoration', () => {
       accessibilityElementsHidden: true,
       importantForAccessibility: 'no-hide-descendants',
     });
-    expect(StyleSheet.flatten(layer.props.style)).toMatchObject({ ...StyleSheet.absoluteFillObject, overflow: 'hidden' });
+    expect(StyleSheet.flatten(layer.props.style)).toMatchObject({ ...StyleSheet.absoluteFill, overflow: 'hidden' });
     expect(view.getByTestId(`seasonal-motif-${season}`, { includeHiddenElements: true })).toBeTruthy();
     for (const other of SEASONAL_THEME_IDS.filter(value => value !== season)) {
       expect(view.queryByTestId(`seasonal-motif-${other}`, { includeHiddenElements: true })).toBeNull();

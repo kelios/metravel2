@@ -77,7 +77,7 @@ export const getMapMobileLayoutStyles = (
     // background is transparent so the map shows through, and there is no
     // overflow clipping that would hide the bottom sheet.
     overlayRoot: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: 'transparent',
       ...(Platform.OS === 'web'
         ? ({

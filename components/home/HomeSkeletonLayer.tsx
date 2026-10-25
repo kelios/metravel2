@@ -46,9 +46,9 @@ export function HomeSkeletonLayer({ colors }: { colors: ReturnType<typeof useThe
 }
 
 const styles = StyleSheet.create({
-  layer: { ...StyleSheet.absoluteFillObject, zIndex: 1 },
+  layer: { ...StyleSheet.absoluteFill, zIndex: 1 },
   hintWrap: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'flex-end',
     paddingBottom: 120,

@@ -710,7 +710,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     padding: 24,
   },
   paywallBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   paywallCard: {

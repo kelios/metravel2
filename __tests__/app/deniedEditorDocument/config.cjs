@@ -13,7 +13,8 @@ module.exports = {
   // Production Metro enables async routes. Babel compiles import-mode reads
   // from caller metadata, so setting an environment variable is insufficient.
   transform: Object.fromEntries(Object.entries(web.transform).map(([key, value]) => [key,
-    Array.isArray(value) && value[0] === 'babel-jest'
+    // Match the resolved babel-jest path (jest-expo 58), not only the bare 'babel-jest' string (SDK 57).
+    Array.isArray(value) && /(?:^|\/)babel-jest(?:\/|$)/.test(String(value[0]))
       ? [value[0], { ...value[1], caller: { ...value[1].caller, asyncRoutes: true } }]
       : value,
   ])),

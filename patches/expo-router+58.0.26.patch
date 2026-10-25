@@ -1,0 +1,41 @@
+diff --git a/node_modules/expo-router/build/react-navigation/routers/TabRouter.js b/node_modules/expo-router/build/react-navigation/routers/TabRouter.js
+index 0dedc7f..f8b2b45 100644
+--- a/node_modules/expo-router/build/react-navigation/routers/TabRouter.js
++++ b/node_modules/expo-router/build/react-navigation/routers/TabRouter.js
+@@ -211,7 +211,9 @@ const changeIndex = (state, index, backBehavior, initialRouteName)=>{
+             history = history.filter((it)=>it.type === 'route' ? it.key !== currentRoute.key : false);
+         } else if (backBehavior === 'fullHistory') {
+             const lastHistoryRouteItemIndex = history.findLastIndex((item)=>item.type === 'route');
+-            if (currentRoute.key === history[lastHistoryRouteItemIndex]?.key) {
++            const lastHistoryRouteItem = history[lastHistoryRouteItemIndex];
++            // Parameter changes are distinct visits even when the tab key stays the same (metravel #2703).
++            if (currentRoute.key === lastHistoryRouteItem?.key && (0, _reactfastcompare().default)(currentRoute.params ?? {}, lastHistoryRouteItem.params ?? {})) {
+                 // For full-history, only remove if it matches the last route
+                 // Useful for drawer, if current route was in history, then drawer state changed
+                 // Then we only need to move the route to the front
+@@ -431,7 +433,7 @@ function tabRouterExtension({ baseRouter, nextKey, options: { initialRouteName,
+                                 return (0, _attachRouteState.attachRouteState)(updatedRoute, action);
+                             })
+                         }, index, backBehavior, initialRouteName);
+-                        const result = action.type === 'REPLACE' ? removeReplacedRouteFromHistory(state, updatedState) : updatedState;
++                        const result = action.type === 'REPLACE' ? backBehavior === 'fullHistory' ? replaceLastHistoryVisit(state, updatedState) : removeReplacedRouteFromHistory(state, updatedState) : updatedState;
+                         return {
+                             state: result,
+                             affectedRouteKey: result.routes[result.index]?.key
+@@ -630,6 +632,16 @@ function tabRouterExtension({ baseRouter, nextKey, options: { initialRouteName,
+ const TabRouter = (0, _extendRouter.extendRouter)(_BaseRouter.BaseRouter, tabRouterExtension, {
+     type: 'tab'
+ });
++// `fullHistory` keeps every visit, so REPLACE swaps only the current visit regardless of the target tab (metravel #2703).
++function replaceLastHistoryVisit(previousState, nextState) {
++    return {
++        ...nextState,
++        history: [
++            ...previousState.history.slice(0, -1),
++            nextState.history[nextState.history.length - 1]
++        ]
++    };
++}
+ function removeReplacedRouteFromHistory(previousState, nextState) {
+     const replacedRouteKey = previousState.routes[previousState.index]?.key;
+     const focusedRouteKey = nextState.routes[nextState.index]?.key;

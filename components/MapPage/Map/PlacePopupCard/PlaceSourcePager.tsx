@@ -245,7 +245,7 @@ const createStyles = (compact: boolean) => {
   const size = PAGER_BUTTON_SIZE;
   return StyleSheet.create({
     root: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       zIndex: 8,
     },
     counterPill: {

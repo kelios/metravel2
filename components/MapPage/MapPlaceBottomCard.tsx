@@ -427,13 +427,13 @@ const getStyles = (colors: ThemedColors) =>
     },
     // Native bottom-anchored sheet over a soft backdrop.
     nativeRoot: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       justifyContent: 'flex-end',
       zIndex: NATIVE_CARD_OVERLAY_ELEVATION,
       elevation: NATIVE_CARD_OVERLAY_ELEVATION,
     },
     nativeBackdrop: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: 'rgba(15, 23, 42, 0.18)',
     },
     nativePanel: {

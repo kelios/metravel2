@@ -15,6 +15,7 @@ const mockRouter = { replace: jest.fn() }
 const mockEditorMount = jest.fn()
 
 jest.mock('expo-router', () => ({
+  usePreventRemove: () => jest.fn(),
   useRouter: () => mockRouter,
   usePathname: () => mockPath,
   useLocalSearchParams: () => mockParams,

@@ -51,9 +51,6 @@ console.warn = (message, ...args) => {
   if (text.startsWith('Global rate limit exceeded')) {
     return
   }
-  if (text.includes('InteractionManager has been deprecated')) {
-    return
-  }
   originalWarn(message, ...args);
 };
 
@@ -1123,6 +1120,14 @@ jest.mock('react-native', () => {
   return mockReactNative
 })
 
+// Expo SDK 58 / RN 0.88 (#2727): `expo-asset/build/Asset.fx` ставит кастомный source transformer
+// для Image при импорте `expo`; под jest-preset RN 0.88 импорт resolveAssetSource там undefined и
+// любой импорт `expo`/`expo-*` падал «reading 'setCustomSourceTransformer'». Побочный эффект нужен
+// только dev-ассетам на устройстве — в тестах модуль пустой, `Asset` остаётся настоящим.
+// Путь абсолютный: exports-карта expo-asset не отдаёт `build/*` как specifier, а внутренний
+// импорт `./Asset.fx` из index.js резолвится в этот же файл.
+jest.mock(require('path').join(__dirname, '..', 'node_modules', 'expo-asset', 'build', 'Asset.fx.js'), () => ({}))
+
 jest.mock('react-native-worklets', () => {
   const identity = <T>(value: T): T => value
   const noop = () => undefined
@@ -1132,6 +1137,24 @@ jest.mock('react-native-worklets', () => {
     RuntimeKind: { RN: 'rn', UI: 'ui' },
     callMicrotasks: noop,
     createSerializable: identity,
+    // worklets 0.13 / reanimated 4.7: makeMutable строит shared value через createShareable;
+    // мок отдаёт объект с контрактом Mutable (value/get/set/modify/listeners), без UI-рантайма.
+    createShareable: (_runtimeId: unknown, initial: unknown) => {
+      const mutable: Record<string, unknown> = {
+        value: initial,
+        get: () => mutable.value,
+        set: (next: unknown) => {
+          mutable.value = typeof next === 'function' ? (next as any)(mutable.value) : next
+        },
+        modify: (modifier?: unknown) => {
+          if (typeof modifier === 'function') mutable.value = (modifier as any)(mutable.value)
+        },
+        addListener: noop,
+        removeListener: noop,
+        _isReanimatedSharedValue: true,
+      }
+      return mutable
+    },
     createSynchronizable: identity,
     createWorkletRuntime: jest.fn(),
     executeOnUIRuntimeSync: (fn: (() => unknown) | undefined) => fn?.(),

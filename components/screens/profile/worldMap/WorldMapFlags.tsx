@@ -123,7 +123,7 @@ function WorldMapFlagsComponent({ visitedCodes, size = 16, zoom, cover = false }
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        overlayRoot: { ...StyleSheet.absoluteFillObject },
+        overlayRoot: { ...StyleSheet.absoluteFill },
         mapLayer: {
           position: 'absolute',
           transformOrigin: 'top left',

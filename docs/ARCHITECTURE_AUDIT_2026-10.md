@@ -880,9 +880,9 @@ compared with the ~944 style casts.
 ### 2.16 Dependencies, build, native config, upgrade readiness (DEP)
 
 **DEP-1 — Web chunk serializer fork.** Sev: critical (upgrade blocker).
-`patches/@expo+metro-config+57.0.3.patch` (475 lines, rewrites
+`patches/@expo+metro-config+58.0.17.patch` (475 lines, rewrites
 `serializeChunks.js`: per-route shared chunks, `__METRAVEL_SHARED_CHUNKS__`)
-+ `patches/expo+57.0.4.patch` (runtime half in `asyncRequireModule`). Fixes a
++ `patches/expo+58.0.19.patch` (runtime half in `asyncRequireModule`). Fixes a
 real production bug ("Requiring unknown module", `docs/PROBLEM_MEMORY.md:901-917`).
 Risk: must be re-ported on every SDK bump against compiled output. Fix:
 upstream the fix or isolate it as a custom serializer passed via

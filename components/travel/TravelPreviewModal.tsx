@@ -189,7 +189,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         position: 'relative',
     },
     backdrop: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         backgroundColor: 'transparent',
     },
     modalContent: {

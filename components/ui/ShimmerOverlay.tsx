@@ -51,10 +51,10 @@ function ShimmerOverlayInner({ style, testID }: ShimmerOverlayProps) {
 
 const shimmerStyles = StyleSheet.create({
   fill: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   overflow: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
   },
   nativeStatic: {
@@ -68,7 +68,7 @@ const shimmerStyles = StyleSheet.create({
   // работает до гидратации, без зависимости от app/global.css.
   webSweep: Platform.select<ViewStyle>({
     web: webViewStyle({
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundImage:
         'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 20%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.08) 80%, transparent 100%)',
       // Кадры RN-Web не раскрывают массив `transform` (выходит `[object Object]`),

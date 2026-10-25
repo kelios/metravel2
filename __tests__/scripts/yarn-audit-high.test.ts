@@ -139,7 +139,7 @@ describe('yarn audit high wrapper', () => {
         status: 8,
         stdout: highAdvisoryStream([
           { module: 'zod', ghsa: 'GHSA-MRHX-C7XC-M3W5', path: 'expo>@expo/cli>zod' },
-          { module: 'image-size', ghsa: 'GHSA-5P2G-FCMC-QVQQ', path: 'react-native>metro>image-size' },
+          { module: 'node-forge', ghsa: 'GHSA-86W9-CPQP-85RV', path: 'expo>@expo/cli>node-forge' },
         ]),
         stderr: '',
       })

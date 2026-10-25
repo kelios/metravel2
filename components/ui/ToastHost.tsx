@@ -84,7 +84,7 @@ export default function ToastHost({ overDock = true }: ToastHostProps) {
     <View ref={layerRef} collapsable={false} onLayout={measureLayer} pointerEvents="box-none" style={styles.layer} testID="toast-layer">
       {/* The library snapshots its offsets at show(); move this layer for live remeasurements.
           Its iOS keyboard animation already supplies keyboardLift, so reserve only the remainder. */}
-      <View pointerEvents="box-none" style={[StyleSheet.absoluteFillObject, { bottom: Math.max(0, bottomOffset - keyboardLift) }]} testID="toast-positioning">
+      <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, { bottom: Math.max(0, bottomOffset - keyboardLift) }]} testID="toast-positioning">
         <Toast config={toastConfig} position="bottom" bottomOffset={0} keyboardOffset={KEYBOARD_OFFSET} />
       </View>
     </View>
@@ -93,7 +93,7 @@ export default function ToastHost({ overDock = true }: ToastHostProps) {
 
 const styles = StyleSheet.create({
   layer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: DESIGN_TOKENS.zIndex.toast,
     elevation: DESIGN_TOKENS.zIndex.toast,
   },

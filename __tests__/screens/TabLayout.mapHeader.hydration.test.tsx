@@ -11,9 +11,11 @@ let mockHydrated = false
 let mockWidth: number | null = null
 const mockHydrationListeners = new Set<() => void>()
 jest.mock('expo-router', () => {
-  const Tabs = ({ screenOptions }: any) => screenOptions.header({ navigation: { isFocused: () => true } })
+  // The header element renders inside its screen's focus providers; the real
+  // Header reads focus through `useIsFocused()` (expo-router 58), not `navigation`.
+  const Tabs = ({ screenOptions }: any) => screenOptions.header({})
   Tabs.Screen = () => null
-  return { Tabs, usePathname: () => mockPath }
+  return { Tabs, usePathname: () => mockPath, useIsFocused: () => true }
 })
 jest.mock('@/hooks/useHydrationReady', () => ({
   useHydrationReady: () => require('react').useSyncExternalStore(

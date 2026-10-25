@@ -544,7 +544,7 @@ describe('guard-web-style-channels', () => {
           ROOT_LAYOUT,
           tsx(
             `import { View, StyleSheet } from 'react-native'\n` +
-              `export const A = () => <View style={{ ...StyleSheet.absoluteFillObject, animationKeyframes: 'slider-shimmer' }} />\n`,
+              `export const A = () => <View style={{ ...StyleSheet.absoluteFill, animationKeyframes: 'slider-shimmer' }} />\n`,
           ),
         ],
       })

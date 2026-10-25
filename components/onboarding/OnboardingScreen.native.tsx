@@ -153,7 +153,7 @@ export default function OnboardingScreen() {
 const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
     overlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       zIndex: 9998,
       elevation: 9998,
       alignItems: 'center',
