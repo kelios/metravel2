@@ -171,7 +171,8 @@ preview() {
 run_now() {
   [[ -x "$WRAPPER" ]] || fail "сначала установка: без аргументов"
   local rc=0
-  "$WRAPPER" || rc=$?
+  # Ручной прогон не сдвигает базу дельт «ко вчера» утреннего письма.
+  "$WRAPPER" --no-state || rc=$?
   echo "exit=$rc"
   tail -5 "$LOG_FILE"
   return "$rc"

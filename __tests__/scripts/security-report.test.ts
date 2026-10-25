@@ -166,6 +166,7 @@ describe('scripts/security-report.py', () => {
     ])
     expect(result.status).toBe(0)
     expect(result.stdout).toContain('OK (сбор неполный)')
+    expect(result.stdout).toContain('Отклонений по порогам отчёта нет.')
     expect(result.stdout).toContain('Примечания сбора: fail2ban.log не прочитан; auth.log не прочитан')
   })
 })

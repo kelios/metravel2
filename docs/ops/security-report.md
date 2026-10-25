@@ -40,7 +40,7 @@ Access-лог nginx разбирается потоком, не читается
 ```bash
 bash scripts/enable-prod-security-report.sh            # установить/обновить (идемпотентно)
 bash scripts/enable-prod-security-report.sh --preview  # собрать и показать, не отправляя
-bash scripts/enable-prod-security-report.sh --run-now  # собрать и отправить сейчас
+bash scripts/enable-prod-security-report.sh --run-now  # собрать и отправить сейчас (состояние дельт не трогает)
 bash scripts/enable-prod-security-report.sh --verify   # cron, файлы, последний прогон
 ```
 

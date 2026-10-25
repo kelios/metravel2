@@ -91,6 +91,7 @@ def parse_args(argv):
     p.add_argument('--no-host', action='store_true', help='не собирать df/free/docker (тесты)')
     p.add_argument('--dry-run', action='store_true', help='печатать письмо, не отправлять')
     p.add_argument('--write-state', action='store_true', help='при --dry-run всё же записать состояние (тесты); без --dry-run пишется всегда')
+    p.add_argument('--no-state', action='store_true', help='не записывать состояние (ручной --run-now не должен сдвигать базу дельт)')
     args = p.parse_args(argv)
     if args.ignore_ip is None:
         env_ips = os.environ.get('SECURITY_REPORT_IGNORE_IPS', '')
@@ -138,6 +139,11 @@ def docker_nginx_stats(hours, since, ignore):
     name = next((n for n in names.split() if NGINX_NAME_RE.match(n)), None)
     if not name:
         return analyze_nginx((), (), since, ignore), 'контейнер nginx не найден'
+    note = ''
+    _, started, _ = run(['docker', 'inspect', '-f', '{{.State.StartedAt}}', name])
+    started_at = parse_iso(started) if started.strip() else None
+    if started_at and started_at > since:
+        note = f'nginx перезапущен {started_at.astimezone(dt.timezone.utc):%d.%m %H:%M} UTC — web-окно короче'
     with tempfile.TemporaryFile() as err_file:
         try:
             proc = subprocess.Popen(['docker', 'logs', '--since', f'{max(1, int(hours * 3600))}s', name],
@@ -149,7 +155,9 @@ def docker_nginx_stats(hours, since, ignore):
         rc = proc.wait()
         err_file.seek(0)
         count_limit_req(ng, io.TextIOWrapper(err_file, encoding='utf-8', errors='replace'), ignore)
-    return ng, '' if rc == 0 else f'docker logs rc={rc}'
+    if rc != 0:
+        note = '; '.join(n for n in (note, f'docker logs rc={rc}') if n)
+    return ng, note
 
 
 def parse_iso(value):
@@ -472,7 +480,7 @@ def build_report(args, now, since, ng, f2b, auth, mod, relay, closed, facts, pre
     if warn:
         lines.extend(f'⚠ {w}' for w in warn)
     else:
-        lines.append('Отклонений нет: пароли по SSH выключены, баны работают, сканеры получают 404, почта уходит.')
+        lines.append('Отклонений по порогам отчёта нет.')
     lines.append('')
     lines.append('Что считается: SSH — auth.log и fail2ban.log за окно; web — docker logs nginx без адресов из SECURITY_REPORT_IGNORE_IPS; '
                  'роботы — по user_agent, закрытые группы берутся из robots.txt; почта — лог send_moderation_reminders и relay-queue; '
@@ -559,7 +567,7 @@ def main(argv=None):
     rc = 0
     if not args.dry_run:
         rc = send_mail(args, subject, body)
-    if args.dry_run and not args.write_state:
+    if args.no_state or (args.dry_run and not args.write_state):
         return rc
     try:
         Path(args.state).parent.mkdir(parents=True, exist_ok=True)
