@@ -141,7 +141,7 @@ export function useAssistantChat({ locale, generator: generatorOverride }: UseAs
     if (mountedRef.current) setRemaining(left)
   }, [])
 
-  /** Ход «не по теме»: отказ без источников, счётчик за день; на третьем — журнал и блок до завтра. */
+  /** Ход «не по теме» по фильтру тем: отказ без источников, счётчик за день; на третьем — журнал и блок до завтра. */
   const finishOffTopic = useCallback(
     async (id: string, question: string) => {
       const state = await registerOffTopicStrike()
@@ -243,9 +243,11 @@ export function useAssistantChat({ locale, generator: generatorOverride }: UseAs
         const guarded = enforceSourceLinks(result.text, sources)
         if (isModelOffTopicReply(guarded.text, countKeptSourceLinks(guarded.text, sources))) {
           // Второй рубеж: фильтр пропустил, модель узнала чужую тему по правилу промпта.
-          // Вопрос не по теме опорой уточнений не становится.
+          // Вопрос не по теме опорой уточнений не становится. В эскалацию такой отказ не идёт:
+          // модель ошибается и на вопросах о поездке («travel hacks», просьба о чужой ссылке —
+          // замер #2710), и блок до завтра за её ошибку получил бы посетитель.
           lastSearchQueryRef.current = previousAnchor
-          await finishOffTopic(id, question)
+          patchTurn(id, { status: 'off_topic', answer: '', sources: [], removedLinks: 0, offTopicStrikes: null })
           await finishQuota()
           return
         }
