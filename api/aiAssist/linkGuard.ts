@@ -119,3 +119,24 @@ export function enforceSourceLinks(rawText: string, sources: readonly AiSource[]
 
   return { text: tidyText(text), removed }
 }
+
+/** Сколько адресов карточек осталось в ответе после стража: отказ модели «не по теме» ссылок не даёт. */
+export const countKeptSourceLinks = (text: string, sources: readonly AiSource[]): number => {
+  const allowed = buildAllowedLinkKeys(sources)
+  const words = String(text ?? '').split(/[\s()[\]<>«»"']+/)
+  return words.filter((word) => word && allowed.has(normalizeLinkKey(word))).length
+}
+
+/**
+ * Текст для показа во время стрима: страж ссылок по готовой части, незаконченный
+ * «хвост», похожий на адрес, придерживается до следующего фрагмента — иначе
+ * допустимая ссылка мигает, пока модель её дописывает. Общий для экрана
+ * `/assistant` и сервера `/ai/ask` (#2713).
+ */
+export const guardStreamingText = (full: string, sources: readonly AiSource[]): LinkGuardResult => {
+  const cut = Math.max(full.lastIndexOf(' '), full.lastIndexOf('\n'))
+  const head = cut >= 0 ? full.slice(0, cut + 1) : ''
+  const tail = cut >= 0 ? full.slice(cut + 1) : full
+  const tailLooksLikeLink = /^(?:https?:|\/|www\.|metravel|\[|\()/i.test(tail)
+  return enforceSourceLinks(tailLooksLikeLink ? head : full, sources)
+}

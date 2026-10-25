@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { logDemand } from '@/api/aiAssist/demandLog'
 import { createGenerator, isAiGeneratorError, type Generator } from '@/api/aiAssist/generator'
 import { consumeQuestion, readOffTopicState, readRemainingQuestions, registerOffTopicStrike } from '@/api/aiAssist/limits'
-import { buildAllowedLinkKeys, enforceSourceLinks, normalizeLinkKey } from '@/api/aiAssist/linkGuard'
+import { countKeptSourceLinks, enforceSourceLinks, guardStreamingText } from '@/api/aiAssist/linkGuard'
 import { MAX_QUESTION_LENGTH, buildAssistantMessages } from '@/api/aiAssist/prompt'
 import { buildRetrievalQuery, searchSiteMaterials } from '@/api/aiAssist/retrieval'
 import { classifyQuestion, isModelOffTopicReply } from '@/api/aiAssist/topicGate'
@@ -56,12 +56,7 @@ const HISTORY_TURNS = 3
 
 const makeTurnId = (): string => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 
-/** Сколько адресов карточек осталось в ответе после стража: отказ модели «не по теме» ссылок не даёт. */
-export const countKeptSourceLinks = (text: string, sources: readonly AiSource[]): number => {
-  const allowed = buildAllowedLinkKeys(sources)
-  const words = String(text ?? '').split(/[\s()[\]<>«»"']+/)
-  return words.filter((word) => word && allowed.has(normalizeLinkKey(word))).length
-}
+export { guardStreamingText }
 
 /** История для промпта: только завершённые ответы, не длиннее трёх пар. */
 export const buildHistoryFromTurns = (turns: readonly AssistantTurn[]): AiHistoryItem[] =>
@@ -72,20 +67,6 @@ export const buildHistoryFromTurns = (turns: readonly AssistantTurn[]): AiHistor
       { role: 'user' as const, text: turn.question },
       { role: 'assistant' as const, text: turn.answer },
     ])
-
-/**
- * Текст для показа во время стрима: страж ссылок по готовой части, незаконченный
- * «хвост», похожий на адрес, придерживается до следующего фрагмента — иначе
- * допустимая ссылка мигает, пока модель её дописывает.
- */
-export const guardStreamingText = (full: string, sources: readonly AiSource[]): { text: string; removed: number } => {
-  const cut = Math.max(full.lastIndexOf(' '), full.lastIndexOf('\n'))
-  const head = cut >= 0 ? full.slice(0, cut + 1) : ''
-  const tail = cut >= 0 ? full.slice(cut + 1) : full
-  const tailLooksLikeLink = /^(?:https?:|\/|www\.|metravel|\[|\()/i.test(tail)
-  const guarded = enforceSourceLinks(tailLooksLikeLink ? head : full, sources)
-  return guarded
-}
 
 export function useAssistantChat({ locale, generator: generatorOverride }: UseAssistantChatOptions) {
   const [turns, setTurns] = useState<AssistantTurn[]>([])

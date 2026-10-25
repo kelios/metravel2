@@ -19,10 +19,11 @@ import type { Travel } from '@/types/types'
 import { buildQuestPath, buildTravelPathFromTravel } from '@/utils/routePaths'
 import { buildCanonicalUrl } from '@/utils/seo'
 
+import { AI_SOURCES_LIMIT } from './policy'
 import { mentionsPlace } from './topicGate'
 import type { AiSource } from './types'
 
-export const AI_SOURCES_LIMIT = 8
+export { AI_SOURCES_LIMIT }
 /**
  * Статей у бэкенда берётся вдвое больше лимита карточек: порядок бэкенда ставит
  * «Краков: путеводитель» пятым, «Что посмотреть вокруг Кракова» — восьмым, и

@@ -7,6 +7,7 @@ import type { AddressInfo } from 'net'
 import { createApp, MAX_BODY_BYTES } from '@/scripts/ai-assist/app'
 import { ResponseCache } from '@/scripts/ai-assist/cache'
 import type { LexicalHit, LexicalSearch } from '@/scripts/ai-assist/lexical'
+import { AskLimits, createDayClock, MemoryCounterStore } from '@/scripts/ai-assist/limits'
 
 import { fakeEmbedQuery, loadFixtureIndex, MODEL } from './fixture'
 
@@ -54,6 +55,13 @@ function makeServer(overrides: Partial<Parameters<typeof createApp>[0]> = {}) {
     lexical: lexicalOf([]),
     cache: new ResponseCache({ capacity: 10, ttlSeconds: 60 }),
     queueTimeoutMs: 200,
+    ask: {
+      generator: null,
+      limits: new AskLimits({ store: new MemoryCounterStore(), clock: createDayClock(), dailyLimit: 20, strikesToBlock: 3 }),
+      demandLog: { path: '/dev/null', append: async () => {} },
+      queueTimeoutMs: 200,
+      trustProxy: true,
+    },
     log: () => {},
     ...overrides,
   })

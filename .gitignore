@@ -123,6 +123,9 @@ build/
 nginx/ssl/
 /nginx/ssl/fullchain.pem
 
+# Журнал спроса ассистента (/ai/ask сервиса metravel-assist, #2713): данные, не код.
+logs/
+
 # Claude Code AI session artifacts
 .claude/settings.local.json
 # Общий project-конфиг с хуками (код-ревью гейт) должен быть в репозитории,

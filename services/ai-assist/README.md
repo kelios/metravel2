@@ -3,7 +3,9 @@
 HTTP-сервис (#2456) поверх артефакта смыслового индекса (#2454): превращает
 вопрос посетителя в вектор той же моделью, что строила индекс, находит ближайшие
 фрагменты статей и квестов и сливает их с лексическим поиском бэкенда. Он же
-отдаёт «похожие статьи» и «квесты рядом» без обращения к модели. Код — `scripts/ai-assist/`
+отдаёт «похожие статьи» и «квесты рядом» без обращения к модели, а `/ai/ask`
+(#2713) ведёт ответ ассистента: фильтр тем, лимиты на IP, подбор, `metravel-llm`,
+страж ссылок — одним SSE-потоком. Код — `scripts/ai-assist/`
 (исполняемые модули репозитория живут в `scripts/`; здесь — образ и описание, как у
 `services/metravel-llm`).
 
@@ -13,7 +15,8 @@ HTTP-сервис (#2456) поверх артефакта смыслового �
 | --- | --- |
 | `POST /ai/search` `{q, locale?: ru\|be\|uk\|pl\|en, type?: travel\|quest, limit?: 1..20}` | `{items, took_ms, index_built_at, degraded, cached}` |
 | `GET /ai/similar?type=travel&id=816&limit=6&locale=ru&result_type=quest` | `{items, took_ms, index_built_at}` — вектор источника берётся из индекса, модель не нужна |
-| `GET /ai/health` | `{ok, model, dim, count, index_built_at, rss_mb, heap_mb, uptime_s, queue, cache}` |
+| `POST /ai/ask` `{q, locale?, history?: [{role: user\|assistant, text}] ≤ 6}` | SSE `sources → text* → done`; отказы до потока — JSON (ниже) |
+| `GET /ai/health` | `{ok, model, dim, count, index_built_at, rss_mb, heap_mb, uptime_s, queue, cache, llm, ask_queue}` |
 
 `items[]`: `{type, source_id, title, url, snippet, score, city, country, lat, lng}`;
 `score` — косинус лучшего фрагмента (`null`, если источник пришёл только из
@@ -32,6 +35,39 @@ HTTP-сервис (#2456) поверх артефакта смыслового �
 
 Квест лежит в индексе на каждой локали; выдача отдаёт фрагмент локали `locale`,
 если квест на ней есть, иначе — любую. Статьи в индексе только на `ru`.
+
+## `/ai/ask` (#2713)
+
+Пайплайн — тот же, что у экрана `/assistant`, и из тех же модулей `api/aiAssist/*`
+(фильтр тем `topicGate.ts`, промпт `prompt.ts`, страж `linkGuard.ts`, клиент модели
+`generator.ts`): фильтр тем → лимиты на IP → подбор (гибрид `/ai/search`, ≤ 8
+карточек) → промпт → `AI_LLM_URL` (`llama-server` metravel-llm) → страж ссылок.
+
+События SSE (`content-type: text/event-stream`, `x-accel-buffering: no`):
+
+| событие | данные |
+| --- | --- |
+| `sources` | `{sources: AiSource[], degraded, remaining}` — карточки промпта `{type, source_id, title, url, path, snippet, score}`; для отказа — `[]` |
+| `text` | `{text}` — накопленный текст после стража ссылок (не дельта: страж может убрать уже показанный адрес) |
+| `done` | `{status: done, removed_links, usage, remaining}` · `{status: off_topic, reason: offtopic_warning, strikes, strikes_to_block}` · `{status: off_topic, reason: model_refusal}` · `{status: no_sources}` · `{status: unavailable}` · `{status: error}` |
+
+Отказы до потока — JSON `{error, detail, …}`: `400 bad_request`;
+`429 offtopic_blocked` (`retry_after_sec`, `strikes`, `Retry-After` до полуночи) —
+третий за календарный день вопрос не по теме с этого IP и любой вопрос до полуночи
+после него, строка `offtopic_blocked` в журнале; `429 limit` — дневной лимит;
+`429 busy` — очередь к модели (`Retry-After: 30`); `503 generator_unavailable` —
+`AI_LLM_URL` не задан или модель не ответила до первого токена; `503 busy` —
+очередь к эмбеддингу подбора.
+
+Лимиты считаются на IP (`X-Real-IP`, затем последний адрес `X-Forwarded-For` — его
+дописывает nginx, начало заголовка присылает сам посетитель; иначе сокет;
+`AI_ASSIST_TRUST_PROXY=0` — только сокет) за календарный день Europe/Minsk
+(`AI_ASSIST_DAY_TZ`) в redis: ключи `ai-ask:v1:{quota|offtopic}:<день>:<ip>` с TTL до
+полуночи; без `REDIS_URL` и при его ошибке — память процесса. Вопросы не по теме
+лимит не тратят; занятая/упавшая модель и уход посетителя до первого токена
+возвращают списанный вопрос, обрыв после начала ответа — нет. Журнал спроса `AI_DEMAND_LOG` (`logs/ai-demand.jsonl`,
+`{ts, q, locale, reason}` — та же форма, что у клиентского `api/aiAssist/demandLog.ts`;
+IP не пишется) — единственная запись на диск: compose (#2457) монтирует под него том.
 
 ## Контракт с индексом
 
@@ -76,7 +112,13 @@ HTTP-сервис (#2456) поверх артефакта смыслового �
 | `AI_ASSIST_THREADS` | `1` | потоки ONNX |
 | `AI_ASSIST_QUEUE_TIMEOUT_MS` / `AI_ASSIST_LEXICAL_TIMEOUT_MS` | `2000` / `1500` | очередь к модели / таймаут бэкенда |
 | `AI_ASSIST_CACHE_SIZE` / `AI_ASSIST_CACHE_TTL_SECONDS` | `500` / `3600` | LRU / TTL redis |
-| `REDIS_URL` | — | `redis://[:pass@]host:port[/db]` |
+| `REDIS_URL` | — | `redis://[:pass@]host:port[/db]` — кэш `/ai/search` и счётчики `/ai/ask` |
+| `AI_LLM_URL` | — | `llama-server` metravel-llm для `/ai/ask`; без него вопросы по теме → `503 generator_unavailable` |
+| `AI_ASSIST_LLM_TIMEOUT_MS` / `AI_ASSIST_ASK_QUEUE_TIMEOUT_MS` | `60000` / `2000` | таймаут ответа модели / ожидание очереди к модели до `429 busy` |
+| `AI_ASK_DAILY_LIMIT` | `20` (`api/aiAssist/policy.ts`) | вопросов в сутки на IP |
+| `AI_ASSIST_DAY_TZ` | `Europe/Minsk` | календарный день лимитов и блока «не по теме» |
+| `AI_DEMAND_LOG` | `logs/ai-demand.jsonl` (образ: `/app/logs/ai-demand.jsonl`) | журнал спроса |
+| `AI_ASSIST_TRUST_PROXY` | `1` | IP из `X-Real-IP`/последнего адреса `X-Forwarded-For`; `0` — только адрес сокета |
 
 ## Запуск на Mac
 
@@ -86,6 +128,10 @@ curl -s localhost:8787/ai/health
 curl -s -X POST localhost:8787/ai/search -H 'content-type: application/json' \
   -d '{"q":"замки под Краковом на день","locale":"ru"}'
 curl -s 'localhost:8787/ai/similar?type=travel&id=816&limit=6'
+# /ai/ask с живой моделью: AI_LLM_URL=http://127.0.0.1:8080 (llama-server, см. docs/features/ai-assistant.md)
+curl -sN -X POST localhost:8787/ai/ask -H 'content-type: application/json' \
+  -d '{"q":"куда поехать под Гродно с детьми","locale":"ru"}'
+curl -si -X POST localhost:8787/ai/ask -H 'content-type: application/json' -d '{"q":"как готовить кашу"}'  # ×3 → 429
 npm run ai:assist:bench -- --n 1000                 # p50/p95, RSS после 1000 запросов
 npm run ai:assist:bench -- --n 20 --concurrency 20  # очередь: часть ответов 503 busy
 ```

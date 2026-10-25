@@ -4,7 +4,8 @@
 #   docker build -f services/ai-assist/Dockerfile -t metravel-assist .
 #
 # В образ запекаются только рантайм-зависимость (@huggingface/transformers + onnxruntime-node),
-# код scripts/ai-index + scripts/ai-assist и веса модели EmbeddingGemma-300M q8
+# код scripts/ai-index + scripts/ai-assist, общие с экраном модули api/aiAssist (фильтр тем,
+# промпт, страж ссылок, клиент модели — #2713) и веса модели EmbeddingGemma-300M q8
 # (~330 МБ), чтобы прод не ходил в интернет. Индекс (#2454) в образ НЕ входит: он
 # доставляется выкатом фронта и монтируется в /index (compose — #2457).
 #
@@ -26,6 +27,9 @@ RUN npm init -y >/dev/null \
  && rm -rf node_modules/onnxruntime-node/bin/napi-v6/darwin node_modules/onnxruntime-node/bin/napi-v6/win32
 COPY scripts/ai-index/ scripts/ai-index/
 COPY scripts/ai-assist/ scripts/ai-assist/
+COPY api/aiAssist/ api/aiAssist/
+# Журнал спроса /ai/ask (logs/ai-demand.jsonl): единственная запись сервиса; compose монтирует том.
+RUN mkdir -p logs && chown 1000:1000 logs
 
 # Веса модели: отдельный stage, чтобы смена кода не перекачивала веса.
 # AI_ASSIST_MODEL — ключ из scripts/ai-index/models.ts; обязан совпадать с manifest.model индекса.
@@ -50,13 +54,14 @@ ENV NODE_ENV=production \
     AI_ASSIST_MODEL_CACHE=/models/transformers-cache \
     AI_INDEX_DIR=/index \
     BACKEND_URL=http://backend:8000 \
+    AI_DEMAND_LOG=/app/logs/ai-demand.jsonl \
     HOST=0.0.0.0 \
     PORT=8787
 COPY --from=deps /app /app
 COPY --from=model /models /models
 
 EXPOSE 8787
-# Модель и индекс — только чтение; root процессу не нужен.
+# Модель и индекс — только чтение, пишется только /app/logs; root процессу не нужен.
 USER 1000:1000
 
 # В node:22-slim нет curl: проба — тем же node.

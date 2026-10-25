@@ -1,17 +1,17 @@
 /**
  * Дневной лимит вопросов (#2460): 20 в сутки на устройство/браузер.
  *
- * Серверный лимит на IP (redis) появится вместе с `/ai/ask` (#2456); клиентский
- * счётчик — та же цифра, чтобы UI уже показывал «осталось вопросов» и не
- * гонял модель на Mac впустую. Хранилище — AsyncStorage (на web — localStorage).
+ * Серверный лимит на IP (redis) держит `/ai/ask` (#2713, `scripts/ai-assist/limits.ts`);
+ * клиентский счётчик — та же цифра из `policy.ts`, чтобы UI показывал «осталось
+ * вопросов» и не гонял модель впустую. Хранилище — AsyncStorage (на web — localStorage).
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-export const AI_ASK_DAILY_LIMIT = 20
+import { AI_ASK_DAILY_LIMIT, AI_OFFTOPIC_STRIKES_TO_BLOCK } from './policy'
+
+export { AI_ASK_DAILY_LIMIT, AI_OFFTOPIC_STRIKES_TO_BLOCK }
 const QUOTA_STORAGE_KEY = 'metravel.aiAssist.quota.v1'
-/** Третий вопрос не по теме за день закрывает ассистент до завтра (#2711, решение владельца 25.10.2026). */
-export const AI_OFFTOPIC_STRIKES_TO_BLOCK = 3
 export const OFFTOPIC_STORAGE_KEY = 'metravel.aiAssist.offtopic.v1'
 
 export type QuotaStorage = {

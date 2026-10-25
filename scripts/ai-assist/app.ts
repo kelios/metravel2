@@ -1,7 +1,8 @@
 /**
- * HTTP-слой metravel-assist (#2456) на встроенном `node:http`: три эндпоинта, без фреймворка.
+ * HTTP-слой metravel-assist (#2456, #2713) на встроенном `node:http`: четыре эндпоинта, без фреймворка.
  *
  *   POST /ai/search  {q, locale?, type?, limit?}  → {items, took_ms, index_built_at, degraded, cached}
+ *   POST /ai/ask     {q, locale?, history?}        → SSE `sources → text* → done` (ask.ts)
  *   GET  /ai/similar?type=&id=&limit=&locale=&result_type= → {items, took_ms, index_built_at}
  *   GET  /ai/health → {ok, model, dim, count, index_built_at, rss_mb, …}
  *
@@ -11,21 +12,20 @@
 import http from 'node:http'
 
 import type { ChunkType } from '../ai-index/format.ts'
+import { AI_SOURCES_LIMIT } from '../../api/aiAssist/policy.ts'
+import type { AiSource } from '../../api/aiAssist/types.ts'
+import { type AskDeps, createAskHandler, type RetrievalResult } from './ask.ts'
 import type { ResponseCache } from './cache.ts'
 import type { LoadedIndex } from './index.ts'
 import type { LexicalHit, LexicalSearch } from './lexical.ts'
+import { HttpError, MAX_LIMIT, MAX_QUERY_CHARS, parseLimit, parseLocale, parseQuery, parseType } from './params.ts'
 import { BusyError, SingleFlight } from './queue.ts'
-import {
-  LOCALES,
-  type Locale,
-  type ResultItem,
-  VECTOR_SOURCES,
-  itemForRow,
-  normalizeQuery,
-  rrfMerge,
-  sourceVector,
-  vectorSources,
-} from './search.ts'
+import { type Locale, type ResultItem, VECTOR_SOURCES, itemForRow, normalizeQuery, rrfMerge, sourceVector, vectorSources } from './search.ts'
+
+export { MAX_LIMIT, MAX_QUERY_CHARS }
+
+/** Зависимости `/ai/ask`; подбор и очередь к эмбеддингу — общие с `/ai/search`. */
+export type AskAppDeps = Omit<AskDeps, 'retrieve' | 'llmQueue' | 'log'>
 
 export interface AppDeps {
   index: LoadedIndex
@@ -34,6 +34,7 @@ export interface AppDeps {
   lexical: LexicalSearch
   cache: ResponseCache
   queueTimeoutMs: number
+  ask: AskAppDeps
   log?: (line: string) => void
 }
 
@@ -45,54 +46,10 @@ export interface SearchResponse {
   cached: boolean
 }
 
-export const MAX_QUERY_CHARS = 500
-export const MAX_LIMIT = 20
 export const DEFAULT_LIMIT = 10
 export const MAX_BODY_BYTES = 16 * 1024
 /** Сколько статей просим у лексики: с запасом относительно limit, но без лишней нагрузки на Django. */
 export const LEXICAL_LIMIT = 20
-
-class HttpError extends Error {
-  readonly status: number
-  readonly code: string
-
-  constructor(status: number, code: string, detail?: string) {
-    super(detail ?? code)
-    this.status = status
-    this.code = code
-  }
-}
-
-const TYPES: ReadonlySet<string> = new Set<ChunkType>(['travel', 'quest'])
-
-function parseLocale(value: unknown): Locale {
-  if (value === undefined || value === null || value === '') return 'ru'
-  if (typeof value === 'string' && (LOCALES as readonly string[]).includes(value)) return value as Locale
-  throw new HttpError(400, 'bad_request', `locale: ожидалось одно из ${LOCALES.join(', ')}`)
-}
-
-function parseType(value: unknown, field = 'type'): ChunkType | undefined {
-  if (value === undefined || value === null || value === '') return undefined
-  if (typeof value === 'string' && TYPES.has(value)) return value as ChunkType
-  throw new HttpError(400, 'bad_request', `${field}: ожидалось travel или quest`)
-}
-
-function parseLimit(value: unknown, fallback: number): number {
-  if (value === undefined || value === null || value === '') return fallback
-  const limit = typeof value === 'number' ? value : Number(value)
-  if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIMIT) {
-    throw new HttpError(400, 'bad_request', `limit: целое от 1 до ${MAX_LIMIT}`)
-  }
-  return limit
-}
-
-function parseQuery(value: unknown): string {
-  if (typeof value !== 'string') throw new HttpError(400, 'bad_request', 'q: обязательная строка')
-  const q = value.trim()
-  if (!q) throw new HttpError(400, 'bad_request', 'q: пустой запрос')
-  if (q.length > MAX_QUERY_CHARS) throw new HttpError(400, 'bad_request', `q: не длиннее ${MAX_QUERY_CHARS} символов`)
-  return q
-}
 
 function readJsonBody(request: http.IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
@@ -136,6 +93,7 @@ export function createApp(deps: AppDeps): http.Server {
   const { manifest } = index.artifact
   const log = deps.log ?? ((line: string) => console.error(line))
   const queue = new SingleFlight()
+  const llmQueue = new SingleFlight()
   const startedAt = Date.now()
   const cachePrefix = `ai-assist:v1:${deps.modelKey}:${manifest.source_sha256.slice(0, 16)}`
 
@@ -153,6 +111,8 @@ export function createApp(deps: AppDeps): http.Server {
   const health = () => {
     const memory = process.memoryUsage()
     return {
+      llm: deps.ask.generator ? 'configured' : 'unconfigured',
+      ask_queue: { busy: llmQueue.isBusy, waiting: llmQueue.waiting },
       ok: true,
       model: deps.modelKey,
       dim: manifest.dim,
@@ -166,21 +126,15 @@ export function createApp(deps: AppDeps): http.Server {
     }
   }
 
-  async function search(body: unknown): Promise<SearchResponse> {
-    const started = process.hrtime.bigint()
-    const input = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>
-    const q = parseQuery(input.q)
-    const locale = parseLocale(input.locale)
-    const type = parseType(input.type)
-    const limit = parseLimit(input.limit, DEFAULT_LIMIT)
-    const cacheKey = `${cachePrefix}:${locale}:${type ?? '*'}:${limit}:${normalizeQuery(q)}`
+  interface HybridQuery {
+    q: string
+    locale: Locale
+    type?: ChunkType
+    limit: number
+  }
 
-    const cached = await deps.cache.get(cacheKey)
-    if (cached) {
-      const parsed = JSON.parse(cached) as SearchResponse
-      return { ...parsed, took_ms: elapsedMs(started), cached: true }
-    }
-
+  /** Гибрид «вектор + лексика» без кэша: общий для `/ai/search` и подбора карточек `/ai/ask`. */
+  async function hybrid({ q, locale, type, limit }: HybridQuery): Promise<{ items: ResultItem[]; degraded: boolean }> {
     // Лексика — только для статей (бэкенд ищет travels) и стартует уже внутри слота очереди,
     // параллельно с эмбеддингом: запрос, который не дождётся слота (503 busy), не должен
     // запускать поиск в Django на том же vCPU. Отказ лексики → null (degraded) сразу, чтобы
@@ -198,13 +152,48 @@ export function createApp(deps: AppDeps): http.Server {
     }
     const vectorHits = vectorSources(index, { vector, locale, type, limit: VECTOR_SOURCES })
     const lexicalHits = await lexicalPromise
-    const degraded = lexicalHits === null
-    const items = rrfMerge(vectorHits, lexicalHits ?? [], index, limit)
+    return { items: rrfMerge(vectorHits, lexicalHits ?? [], index, limit), degraded: lexicalHits === null }
+  }
+
+  async function search(body: unknown): Promise<SearchResponse> {
+    const started = process.hrtime.bigint()
+    const input = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>
+    const q = parseQuery(input.q)
+    const locale = parseLocale(input.locale)
+    const type = parseType(input.type)
+    const limit = parseLimit(input.limit, DEFAULT_LIMIT)
+    const cacheKey = `${cachePrefix}:${locale}:${type ?? '*'}:${limit}:${normalizeQuery(q)}`
+
+    const cached = await deps.cache.get(cacheKey)
+    if (cached) {
+      const parsed = JSON.parse(cached) as SearchResponse
+      return { ...parsed, took_ms: elapsedMs(started), cached: true }
+    }
+
+    const { items, degraded } = await hybrid({ q, locale, type, limit })
     const result: SearchResponse = { items, took_ms: elapsedMs(started), index_built_at: manifest.built_at, degraded, cached: false }
     // Деградированный ответ не кэшируем: сбой бэкенда не должен жить в кэше час.
     if (!degraded) await deps.cache.set(cacheKey, JSON.stringify(result))
     return result
   }
+
+  /** Карточки для промпта ассистента: та же форма `AiSource`, что у клиентского подбора. */
+  const toSource = (item: ResultItem): AiSource => ({
+    type: item.type,
+    source_id: String(item.source_id),
+    title: item.title,
+    url: item.url,
+    path: new URL(item.url).pathname,
+    snippet: item.snippet,
+    score: item.score ?? 0,
+  })
+
+  async function retrieve(q: string, locale: Locale): Promise<RetrievalResult> {
+    const { items, degraded } = await hybrid({ q, locale, limit: AI_SOURCES_LIMIT })
+    return { sources: items.map(toSource), degraded }
+  }
+
+  const ask = createAskHandler({ ...deps.ask, retrieve, llmQueue, log })
 
   function similar(params: URLSearchParams) {
     const started = process.hrtime.bigint()
@@ -239,6 +228,11 @@ export function createApp(deps: AppDeps): http.Server {
         send(response, 200, await search(await readJsonBody(request)))
         return
       }
+      if (url.pathname === '/ai/ask') {
+        if (request.method !== 'POST') throw new HttpError(405, 'method_not_allowed', 'POST /ai/ask')
+        await ask(request, response, await readJsonBody(request))
+        return
+      }
       if (url.pathname === '/ai/similar') {
         if (request.method !== 'GET') throw new HttpError(405, 'method_not_allowed')
         // Ответ зависит только от индекса: его можно отдавать из HTTP-кэша до следующей сборки.
@@ -248,11 +242,19 @@ export function createApp(deps: AppDeps): http.Server {
       throw new HttpError(404, 'not_found')
     } catch (error) {
       if (error instanceof HttpError) {
-        send(response, error.status, { error: error.code, detail: error.message }, error.status === 413 ? { connection: 'close' } : {})
+        if (response.headersSent) {
+          // Поток /ai/ask уже открыт: закрыть честнее, чем дописать JSON в SSE.
+          response.destroy()
+          return
+        }
+        const headers: Record<string, string> = error.status === 413 ? { connection: 'close' } : {}
+        if (error.retryAfterSec !== null) headers['retry-after'] = String(error.retryAfterSec)
+        send(response, error.status, { error: error.code, detail: error.message, ...error.extra }, headers)
         return
       }
       log(`${request.method} ${url.pathname}: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}`)
-      send(response, 500, { error: 'internal' })
+      if (response.headersSent) response.destroy()
+      else send(response, 500, { error: 'internal' })
     }
   })
 }

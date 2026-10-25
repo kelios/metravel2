@@ -3,15 +3,19 @@
  *   AI_INDEX_DIR=.codex-temp/ai-index/dist npm run ai:assist:dev
  *
  * Порядок старта: конфиг → индекс (проверка count/length/sha и модели) → модель (прогрев) →
- * redis (опционально) → HTTP. Любая ошибка до listen — выход с кодом 1 и понятным сообщением.
+ * redis (опционально) → лимиты и журнал `/ai/ask` → HTTP. Любая ошибка до listen — выход с кодом 1 и понятным сообщением.
  */
+import { AI_OFFTOPIC_STRIKES_TO_BLOCK } from '../../api/aiAssist/policy.ts'
+import { createGenerator } from '../../api/aiAssist/generator.ts'
 import { createEmbedder } from '../ai-index/embed.ts'
 import { resolveModel } from '../ai-index/models.ts'
 import { createApp } from './app.ts'
 import { ResponseCache } from './cache.ts'
 import { loadConfig } from './config.ts'
+import { createDemandLog } from './demandLog.ts'
 import { IndexModelMismatch, loadIndex } from './index.ts'
 import { createLexicalSearch } from './lexical.ts'
+import { AskLimits, createCounterStore, createDayClock } from './limits.ts'
 import { createRedisClient } from './redis.ts'
 
 const log = (line: string) => console.error(`[${new Date().toISOString()}] ${line}`)
@@ -37,6 +41,20 @@ async function main(): Promise<void> {
   const cache = new ResponseCache({ capacity: config.cacheSize, ttlSeconds: config.cacheTtlSeconds, redis, log })
   const lexical = createLexicalSearch({ backendUrl: config.backendUrl, timeoutMs: config.lexicalTimeoutMs, log })
 
+  const limits = new AskLimits({
+    store: createCounterStore(redis, log),
+    clock: createDayClock(config.dayTimeZone),
+    dailyLimit: config.askDailyLimit,
+    strikesToBlock: AI_OFFTOPIC_STRIKES_TO_BLOCK,
+  })
+  const demandLog = createDemandLog({ path: config.demandLogPath, log })
+  const generator = config.llmUrl ? createGenerator(config.llmUrl, { timeoutMs: config.llmTimeoutMs }) : null
+  log(
+    `/ai/ask: модель ${config.llmUrl ?? 'не задана (AI_LLM_URL)'}, лимит ${config.askDailyLimit}/сутки на IP, ` +
+      `блок после ${AI_OFFTOPIC_STRIKES_TO_BLOCK} вопросов не по теме, день по ${config.dayTimeZone}, ` +
+      `счётчики ${redis ? 'redis' : 'в памяти'}, журнал ${config.demandLogPath}`,
+  )
+
   const server = createApp({
     index,
     modelKey: spec.key,
@@ -44,6 +62,7 @@ async function main(): Promise<void> {
     lexical,
     cache,
     queueTimeoutMs: config.queueTimeoutMs,
+    ask: { generator, limits, demandLog, queueTimeoutMs: config.askQueueTimeoutMs, trustProxy: config.trustProxy },
     log,
   })
   server.keepAliveTimeout = 5000

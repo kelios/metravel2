@@ -1,6 +1,6 @@
 /**
- * Минимальный клиент redis (RESP2) на `node:net`: GET и SET … EX — всё, что нужно кэшу ответов.
- * Отдельная зависимость ради двух команд не заводится; одно соединение на клиента, ответы
+ * Минимальный клиент redis (RESP2) на `node:net`: GET и SET … EX для кэша ответов, INCR/DECR/EXPIRE
+ * для счётчиков `/ai/ask` на IP (#2713). Отдельная зависимость ради пяти команд не заводится; одно соединение на клиента, ответы
  * сопоставляются с командами по порядку (очередь ожиданий сокета) и разбираются по спецификации
  * RESP (+, -, :, $).
  */
@@ -9,6 +9,10 @@ import net from 'node:net'
 export interface RedisClient {
   get: (key: string) => Promise<string | null>
   setEx: (key: string, value: string, ttlSeconds: number) => Promise<void>
+  /** Увеличивает счётчик на 1 (несуществующий ключ — с нуля); возвращает новое значение. */
+  incr: (key: string) => Promise<number>
+  decr: (key: string) => Promise<number>
+  expire: (key: string, ttlSeconds: number) => Promise<void>
   close: () => void
 }
 
@@ -177,6 +181,15 @@ export function createRedisClient(options: RedisOptions): RedisClient {
     },
     async setEx(key, value, ttlSeconds) {
       await command(['SET', key, value, 'EX', String(Math.max(1, Math.floor(ttlSeconds)))])
+    },
+    async incr(key) {
+      return Number(await command(['INCR', key]))
+    },
+    async decr(key) {
+      return Number(await command(['DECR', key]))
+    },
+    async expire(key, ttlSeconds) {
+      await command(['EXPIRE', key, String(Math.max(1, Math.floor(ttlSeconds)))])
     },
     close() {
       closed = true
