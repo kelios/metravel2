@@ -210,14 +210,13 @@ const readHelmetStructuredData = (screen: ReturnType<typeof render>) => {
   return { html, jsonLd: JSON.parse(scripts[0].textContent ?? '') }
 }
 
-// Check declarative social tags and Helmet's emitted JSON-LD before any timers.
+// Check the social tags LazyInstantSEO wrote to head (#2756: the head manager,
+// not helmet copies) and Helmet's emitted JSON-LD before any timers.
 const expectRenderedImage = (screen: ReturnType<typeof render>, image: string) => {
   for (const key of ['og:image', 'og:image:secure_url', 'twitter:image']) {
-    const nodes = screen.UNSAFE_root.findAll((node) =>
-      node.type === 'meta' && (node.props.property === key || node.props.name === key),
-    )
+    const nodes = document.head.querySelectorAll(`meta[property="${key}"], meta[name="${key}"]`)
     expect(nodes).toHaveLength(1)
-    expect(nodes[0].props.content).toBe(image)
+    expect(nodes[0].getAttribute('content')).toBe(image)
   }
   const { jsonLd } = readHelmetStructuredData(screen)
   expect(jsonLd['@graph']).toContainEqual(expect.objectContaining({

@@ -10,7 +10,7 @@
 | `export function generateMetadata()` в каждом web-листе `app/**` | базовый head каждого HTML экспорта: title, description, robots, canonical, og:*, twitter:* | `utils/seoRoutes/routeMetadata.ts` → `staticRouteMetadata(route)` (таблица `utils/seoRoutes/staticRoutes.js`), `routeMetadata(props)` (те же i18n-ключи, что у `InstantSEO` экрана), `shellRouteMetadata()` (шаблоны динамических маршрутов) |
 | `scripts/generate-seo-pages.js` | per-entity страницы (travels, quests, города, страны, статьи, locale-пакеты): head + тело; для статических маршрутов — только экстры (breadcrumb JSON-LD, скрытый H1, skeleton, hero preload) | та же таблица `staticRoutes.js` + прод-API |
 | `app/+html.tsx` | каркас документа: charset/viewport/theme-color/иконки/Organization-JSON-LD/critical-скрипт; `{headNodes}` экспорта стоят ДО critical-скрипта | — |
-| `components/seo/LazyInstantSEO.tsx` (клиент) | обновление head после гидрации и при SPA-навигации (helmet) + дедуп статических двойников один раз на документ: `claimStaticHeadTwins` снимает узлы экспорта при первом монтировании, `dedupeStaticHeadTwins(staticNodes)` чистит только их в окне асинхронного коммита helmet (теги SPA-навигации, #1613, не трогает) | props экрана |
+| `components/seo/LazyInstantSEO.tsx` → `utils/webHeadManager.ts` (клиент, #2756) | SEO-теги head после гидрации и при SPA-навигации: экран в фокусе пишет title/description/robots/canonical/og:*/twitter:* upsert'ом в единственный узел ключа (узлы экспорта перенимаются, копии снимаются), ключи прежнего владельца, не объявленные текущим, удаляются. Теги экспорта необъявленных ключей живут только на первом URL документа (снимок — `captureExportHead()` в `app/_layout.web.tsx`); первая же страница с другим путём их снимает. Helmet (`expo-router/head`) остался только для JSON-LD/`<script>` (`additionalTags`, `BreadcrumbsJsonLd`, `TravelDetailsSeoBlock`) | props экрана |
 
 Правила:
 
@@ -23,8 +23,11 @@
   требует отдельного «да» владельца.
 - JSON-LD, `<html lang>`, preload и `apple-itunes-app` через `Metadata` 58 не выражаются — они
   остаются в `+html.tsx`, компонентах (`jsonLdScript`) и генераторе.
-- `data-rh="true"` на тегах генератора — заявка helmet на владение тегом (адопция при гидрации,
-  #1929/#1930), не признак рендерера; build-owned `robots` без метки обязан пережить гидрацию.
+- `data-rh="true"` на тегах генератора — историческая заявка helmet на владение тегом (#1929/#1930);
+  менеджер head (#2756) ключи узнаёт по name/property/rel без оглядки на метку. Build-owned `robots`
+  без объявления экраном переживает гидрацию: на первом URL необъявленный ключ экспорта не трогается.
+- Точечные писатели head деталей статьи (`useTravelDetailsHeadSync`) и квеста (`patchQuestHead`)
+  работают по тому же правилу «один узел на ключ» и с менеджером совместимы.
 - Helmet-моста в `patches/@expo+router-server+58.0.17.patch` нет и быть не должно: потеря
   helmet-вывода в экспорте — штатное поведение SDK 58, а не дефект. Оставшийся хунк патча —
   полный RNW-стиль после рендера (#2727, `SSG-EXPORT-PARITY-001`), к head он не относится.

@@ -50,7 +50,8 @@ it('preserves the cold route HTML, real catalog states and locale initialization
   const Head = require('expo-router/head').default
   // Fresh original route payload; no await, preload, catalog replacement or
   // access to React.lazy private state occurs before the server render.
-  const Route = require('@/app/(tabs)/trips/index').default
+  const routeModule = require('@/app/(tabs)/trips/index') as typeof import('@/app/(tabs)/trips/index')
+  const Route = routeModule.default
   const navigation = { isFocused: () => true, addListener: () => () => {} }
   const report: Record<string, any> = {
     provenance: 'Actual web route/catalog/RNW/providers; standalone navigation; not ExpoRoot/Metro export',
@@ -110,7 +111,10 @@ it('preserves the cold route HTML, real catalog states and locale initialization
       report.loading = html.includes('data-testid="public-trips-loading"')
       report.empty = html.includes('data-testid="public-trips-empty"')
       report.restoreReads = storageRead.mock.calls.filter(([key]) => key === 'metravel-rq-cache').length
-      report.head = { title: head.helmet?.title?.toString(), link: head.helmet?.link?.toString() }
+      // #2740/#2756: head экспорта SDK 58 пишет generateMetadata маршрута, не helmet —
+      // экран (LazyInstantSEO) правит head только на клиенте.
+      const metadata = routeModule.generateMetadata()
+      report.head = { title: String(metadata.title ?? ''), canonical: String(metadata.alternates?.canonical ?? '') }
       fs.writeFileSync(path.join(output, 'cold.html'), html)
       expect(report.failedBoundaries).toBe(0)
       expect(report.catalog).toBe(true)
@@ -121,8 +125,7 @@ it('preserves the cold route HTML, real catalog states and locale initialization
       expect(report.empty).toBe(false)
       expect(report.restoreReads).toBe(0)
       expect(report.head.title).toContain('Metravel')
-      expect(report.head.link).toContain('rel="canonical"')
-      expect(report.head.link).toContain('/trips')
+      expect(report.head.canonical).toMatch(/^https:\/\/[^/]+\/trips$/)
       expect(report.serverFetches).toBe(0)
       return
     }

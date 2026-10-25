@@ -7,6 +7,8 @@ const mockUsePlannedTrip = jest.fn();
 
 jest.mock('expo-router', () => ({
   useFocusEffect: (cb: () => void | (() => void)) => require('react').useEffect(cb, [cb]),
+  // LazyInstantSEO пишет head только в фокусе (#2756).
+  useIsFocused: () => true,
   useLocalSearchParams: () => ({ id: '853' }),
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
 }));
