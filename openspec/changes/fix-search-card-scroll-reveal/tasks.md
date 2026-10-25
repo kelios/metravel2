@@ -8,7 +8,7 @@
 - [x] 6.2 Исправить общий WebMainImage: проверка активного кандидата до paint и после responsive microtask, ограниченный тёплый decode, защита от старых завершений.
 - [x] 6.3 Закрепить warm/cold/source mismatch/signature/size/async regression, выполнить targeted unit, lint, typecheck и image architecture. Первый targeted прогон: 10 suites/70 tests pass; дополнительные async-регрессии проходят отдельный итоговый прогон. Scoped lint, typecheck, image architecture, audit:prompts и OpenSpec strict pass.
 - [x] 6.4 Независимые review-auditor и code-review-gate pass; коммит явными путями, push main и штатный production deploy первой попытки (visual FAIL ниже).
-- [ ] 6.5 На выкаченном SHA повторить desktop/mobile first-return frame, консоль/байты/DOM bounds и соседнюю shared media surface; только затем done.
+- [x] 6.5 На выкаченном SHA повторить desktop/mobile first-return frame, консоль/байты/DOM bounds и соседнюю shared media surface; выполнено четвёртым выкатом8a43a92d5, предыдущие FAIL сохранены ниже.
 
 Первый выкат `7fd88a5b4` прошёл review/static/75 unit tests, но не mobile
 приёмку: compact и comfortable дали по одному readyHidden кадру при 0 байт.
@@ -16,7 +16,7 @@
 
 - [x] 7.1 Перед deferred recovery из IntersectionObserver повторно проверить actual own pixels; RED→GREEN DOM test на готовое фото к моменту callback. 10 media suites/76 tests, scoped lint, image architecture и diff check pass.
 - [x] 7.2 Повторить targeted checks, независимые review и штатный commit/push/deploy второй попытки (visual FAIL ниже).
-- [ ] 7.3 Выполнить новый production first-return и bilateral slider gates; предыдущий выкат не считать visual pass.
+- [x] 7.3 Выполнить новый production first-return и bilateral slider gates; четвёртая приёмка ниже, предыдущие выкаты не считаются visual pass.
 
 Второй выкат `86920374c` и его потомок `765f2c331` с тем же media-кодом
 не приняты: compositor exact seq3 действительно нарисовал заливки 672/664.
@@ -26,7 +26,7 @@
 
 - [x] 8.1 Заменять HTML img по media identity, сохраняя узел при optimization/srcSet/sizes; убрать только cross-identity opacity deadline, сохранить явный reveal gate, keeper и cold lazy policy. Отдельные warm tuple cache/early decode удалены как ненужные. RED: 6 ownership/display regressions на старом source; GREEN: 15 suites/157 tests с соседними Slide/UnifiedCard/list media.
 - [x] 8.2 Meaningful ownership/resize/version/callback regressions, targeted checks, независимые review, commit/push и штатный deploy `8f56c92ac`; итоговая visual приёмка ниже остаётся FAIL.
-- [ ] 8.3 Production first-return compositor pixels + raw timing, desktop/mobile обе плотности, /search, cold/bytes/abort/DOM; bilateral slider gates. Обновить фактические результаты только после pass.
+- [x] 8.3 Production first-return compositor pixels + raw timing, desktop/mobile обе плотности, /search, cold/bytes/abort/DOM; bilateral slider gates. Выполнено четвёртым выкатом вместе с удалением global image render skip; source-owned выкат отдельно остался FAIL.
 
 Третий выкат `8f56c92ac` прошёл независимые reviews, 157 unit tests,
 static/hooks и canonical deploy. Первая пара 672/664 исправлена, но 8.3 FAIL:
@@ -34,8 +34,22 @@ static/hooks и canonical deploy. Первая пара 672/664 исправле
 и opacity1. На потомке `c96e21565` сравнение decoding=sync не помогло, а
 target-only contentVisibility=visible устранило заливку; row auto сохранён.
 
-- [ ] 9.1 Удалить глобальный render skip/intrinsic300px у lazy img из criticalCSSBuilder; regression генератора, scoped static/unit и независимые reviews. RED1fail на прежнем правиле → GREEN49/49; strict scoped ESLint, image architecture, audit prompts quick, OpenSpec strict и diff check PASS.
-- [ ] 9.2 Commit/push/deploy; полный actual compositor по всем видимым рядам, матрица/сеть/cold/gallery и bilateral gates; только затем done.
+- [x] 9.1 Удалить глобальный render skip/intrinsic300px у lazy img из criticalCSSBuilder; regression генератора, scoped static/unit и независимые reviews. RED1fail на прежнем правиле → GREEN49/49; strict scoped ESLint, image architecture, audit prompts quick, OpenSpec strict и diff check PASS. Оба независимых review PASS, explicit commit/push `8a43a92d5`, canonical deploy exit0.
+- [x] 9.2 Commit/push/deploy; полный actual compositor по всем видимым рядам, матрица/сеть/cold/gallery и bilateral gates; фактические результаты ниже, board done после сохранения final evidence.
+
+Четвёртая приёмка: calibrated compositor все4полные карточки firstseq2/imageSeq2
+delta0; matrix9/9 (1004rAF) hidden/foreign/repeatbytes/errors0; cold8nearstarted,
+10loops и6native remounts, abort/repeatbytes0, DOMmax20. Bilateral commands exit0:
+touch5/5, slider2/2, perf36passed+1flaky automaticretry (TBT832→556ms).
+Isolated same TBT без retry563ms≤650ms. Пороги не менялись, backendwatch200.
+Live gallery672 (5photos) PASS наactual526be: ownhero, CDPtouch1→2→3→2,
+drag неfullscreen, tapfullscreen2/5+close, contain/ownready, resize390→414→390
+sameNativeNode, console/failedrequests0, media200. Отдельно проверен готовый
+own fullscreen img2/5: complete390×390, opacity1, видимые ancestors и финальный
+PNG; close PASS, прежний ранний снимок загрузки не считается pixel proof.
+Прежние media502 не
+воспроизвелись, их причина неизвестна; первый FAIL не скрыт. Полное normative
+evidence и пределы измерений — docs/design/travel-catalog-warm-return.md.
 
 - [x] 1.1 Reproduce the fill-only scroll window in the local production-like `/search` build with the agreed 1280×900 and 390×844 throttled traces, recording visible image readiness, source ownership, requests, downloaded bytes, duplicate URLs, and response failures.
       Traced on the live production bundle instead of a local build: the production API answers CORS only for its own origin, so a locally served build never receives the list. The former lookahead is restored in-page by wrapping the Metro module registry and overriding `RVEngagedIndicesTrackerImpl.prototype.drawDistance`, which leaves the shipped bundle, the API and the HTTP cache untouched.

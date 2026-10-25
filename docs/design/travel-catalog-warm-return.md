@@ -104,3 +104,62 @@ intrinsic-высоту на img; runtime gate проверяет первый ф
 видимого ряда, а не только первый ряд или opacity. До новой матрицы и bilateral
 gates задача не принята. Риск — дополнительная raster-работа: проверяется
 page/gallery performance budgets, откат — удалённое CSS-правило.
+
+## Результаты четвёртого выката, 25.10.2026
+
+Task source `8a43a92d584dfb8e8420026837812a546edd4392` прошёл оба независимых
+ревью и штатный deploy. Следующий production `526be853065c90b9e5675812659ec690f05e7c2c`
+содержит этот коммит; diff затрагивает только AI-assist API/tests, все media,
+CSS/list/slider файлы идентичны. Матрица сохранена с фактическим SHA каждой пробы.
+
+Calibrated compositor mobile390×844 DPR3 CPU×4: уже первый return seq2
+содержит все четыре полные карточки 672/664/658/646 вместе с фотографиями.
+First-card и first-image совпадают, каждая ROI побайтно равна stable (delta0),
+нет пропущенных seq. Две нижние частичные карточки закрыты fixed dock почти
+целиком; видимый bottom-band первого/stable кадров также равен побайтно,
+предел этого наблюдения сохранён отдельно от проверки полных карточек.
+
+| Production-сценарий | Кадров | Max mounted img |
+| --- | ---: | ---: |
+| travelsby compact mobile | 115 | 20 |
+| travelsby comfortable mobile | 127 | 11 |
+| travelsby compact desktop | 112 | 32 |
+| travelsby comfortable desktop | 117 | 21 |
+| search compact mobile | 112 | 20 |
+| search comfortable mobile | 125 | 6 |
+| search compact desktop | 93 | 32 |
+| search comfortable desktop | 105 | 18 |
+| travelsby compact desktop dark | 98 | 32 |
+
+Итого 1004 rAF: readyHidden/foreign/image failures/console errors — 0,
+повторно переданные image bytes — 0; dark theme подтверждена фактическим DOM.
+HTTP-кеш включён, page.route не используется. Post-runtime таймаут чтения
+необязательного API body в QA-инструменте исправлен ограниченным чтением
+successful list responses; завершённые сценарии не выдаются за непройденные.
+
+Cold stress: 1.6Mbps/150ms CPU×4, восемь реально начавшихся near-viewport
+transfers (geometry age1.7–2.5ms), десять быстрых down/return по50ms. У шести
+источников доказана смена native node id. Canceled/failed/pending/wrong/console
+и повторные warm bytes — 0; 20 initial requests и max20 mounted img при лимите32.
+52 уникальных cover URL, 796951 байт холодной загрузки.
+
+Обязательные gates: touch Jest5/5, verify:slider2/2 — PASS. verify:slider-perf
+exit0: 36 passed + 1 flaky (TBT median832ms при лимите650ms; штатный retry556ms).
+Отдельный тот же TBT test без параллельных cases прошёл без retry: пять cold runs
+770/591/542/563/552ms, median563ms≤650ms. Пороги и suite defaults не менялись.
+Backend watcher подтверждал HTTP200 весь прогон, SKIPPED не было.
+
+Live gallery PASS на той же статье672 (5 фотографий), actual build526be:
+готовый собственный hero до жеста, реальный top-node CDP touch1/5→2/5→3/5→2/5,
+drag не открывает fullscreen, tap открывает2/5, close работает. Own contain
+photos загружены; resize390→414→390 сохраняет тот же HTML img. Отдельный
+fullscreen-readiness контроль дождался именно текущей фотографии2/5:
+собственный currentSrc?w800, complete=true, natural390×390, opacity1/contain,
+rect390×844 и видимые ancestors; финальный PNG подтверждает растр, close PASS.
+Ранний снимок до этой проверки отражал загрузку и не использован как pixel proof.
+Console и image
+failures — 0, проверенные media responses200. В первой пробе были HTTP502 и
+пустой слайд; повтор этого не воспроизвёл. Первые логи не сохранили точных
+ошибочных URL, поэтому причина серверного сбоя не установлена и не приписана
+CSS-изменению. Нестабильность TBT первого параллельного прогона также сохранена,
+а не превращена в clean37/37. Все обязательные gates текущего scope пройдены.

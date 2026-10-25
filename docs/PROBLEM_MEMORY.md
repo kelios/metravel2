@@ -775,6 +775,13 @@ guard, падающий в CI на попытке обойти этот конт
   guard генератора запрещает img render skip, compositor gate проверяет все
   видимые ряды. Контроль whole-card window hole остаётся отдельным от фото;
   новый runtime pass и bilateral gates всё ещё обязательны.
+  **Verified control, 25.10.2026:** после source-owned img и удаления global
+  lazy-image render skip выкат8a43a92d5/эквивалентныйпотомок526be8530 прошёл
+  calibrated all-row compositor (4полные карточки first/image seq2, delta0),
+  9сценариев/1004rAF (hidden/foreign/bytes/errors0), cold8nearstarted/10loops,
+  realgallery5photos/resize и bilateral gates. Перф-прогон содержит1flaky TBT
+  832→556ms, isolated same test563ms≤650 без retry; пороги не менялись.
+  Полный evidence/history и предел partial/footer — design document выше.
 - **Recurrence Log — 2026-08-11 (`/search`, `#1400`):** закрытый инвариант
   «виртуализированный скролл не создаёт отменённых image requests» снова
   нарушен на production. Независимый raw CDP-прогон без request interception и
