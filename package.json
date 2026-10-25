@@ -377,7 +377,7 @@
     "react-native-web": "~0.21.2",
     "react-native-webview": "13.16.1",
     "react-native-worklets": "0.10.1",
-    "sanitize-html": "2.17.7",
+    "sanitize-html": "2.18.1",
     "semver": "^7.6.3",
     "tar": "^7.5.21",
     "yaml": "^2.8.3",
@@ -430,7 +430,7 @@
     "react-test-renderer": "19.2.3",
     "source-map-explorer": "^2.5.3",
     "typescript": "~6.0.3",
-    "zod": "^4.3.6"
+    "zod": "^4.6.7"
   },
   "resolutions": {
     "browserslist": "^4.28.7",
@@ -445,7 +445,7 @@
     "tar": "^7.5.21",
     "yaml": "^2.8.3",
     "follow-redirects": "^1.15.6",
-    "cookie": "^0.6.0",
+    "cookie": "^0.7.2",
     "@isaacs/brace-expansion": ">=5.0.1",
     "flatted": "^3.4.0",
     "picomatch": ">=2.3.2",
@@ -456,10 +456,15 @@
     "shell-quote": "1.12.0",
     "form-data": "4.0.6",
     "dompurify": "3.4.17",
-    "sanitize-html": "2.17.7",
+    "sanitize-html": "2.18.1",
     "tmp": "0.2.7",
     "expo-image-loader": "57.0.1",
-    "braces": "file:./vendor/braces"
+    "braces": "file:./vendor/braces",
+    "compression": "^1.8.2",
+    "body-parser": "^2.4.0",
+    "fast-uri": "^3.1.9",
+    "@humanfs/node": "^0.16.8",
+    "**/xcode/uuid": "^11.1.1"
   },
   "prettier": {
     "jsxBracketSameLine": true,
@@ -506,7 +511,7 @@
     "tar": "^7.5.21",
     "yaml": "^2.8.3",
     "follow-redirects": "^1.15.6",
-    "cookie": "^0.6.0",
+    "cookie": "^0.7.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
@@ -515,7 +520,7 @@
     "node-forge": "^1.4.0",
     "@tootallnate/once": "^3.0.1",
     "dompurify": "3.4.17",
-    "sanitize-html": "2.17.7",
+    "sanitize-html": "2.18.1",
     "tmp": "0.2.7",
     "expo-image-loader": "57.0.1"
   },

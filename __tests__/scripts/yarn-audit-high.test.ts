@@ -116,6 +116,56 @@ describe('yarn audit high wrapper', () => {
     expect(outcome.stderr).toContain('high/critical: 1')
   })
 
+  describe('GHSA-scoped advisory exceptions', () => {
+    const highAdvisoryStream = (advisories: Array<{ module: string; ghsa: string; path: string }>) => [
+      ...advisories.map(({ module, ghsa, path: resolutionPath }, index) => JSON.stringify({
+        type: 'auditAdvisory',
+        data: {
+          resolution: { id: 2000 + index, path: resolutionPath, dev: false },
+          advisory: { module_name: module, severity: 'high', github_advisory_id: ghsa.toLowerCase() },
+        },
+      })),
+      JSON.stringify({
+        type: 'auditSummary',
+        data: {
+          vulnerabilities: { info: 0, low: 0, moderate: 0, high: advisories.length, critical: 0 },
+          totalDependencies: 505,
+        },
+      }),
+    ].join('\n')
+
+    it('ignores the zod advisory only on the pinned @expo/cli path', () => {
+      const outcome = evaluateAuditResult({
+        status: 8,
+        stdout: highAdvisoryStream([
+          { module: 'zod', ghsa: 'GHSA-MRHX-C7XC-M3W5', path: 'expo>@expo/cli>zod' },
+          { module: 'image-size', ghsa: 'GHSA-5P2G-FCMC-QVQQ', path: 'react-native>metro>image-size' },
+        ]),
+        stderr: '',
+      })
+
+      expect(outcome).toMatchObject({ exitCode: 0, stderr: '' })
+      expect(outcome.stdout).toContain('high/critical: 0')
+      expect(outcome.stdout).toContain('ignored: 2')
+      expect(outcome.stdout).toContain('zod/GHSA-MRHX-C7XC-M3W5')
+    })
+
+    it.each([
+      ['the same zod advisory on another dependency path', 'GHSA-MRHX-C7XC-M3W5', 'zod'],
+      ['an unlisted zod advisory on the pinned path', 'GHSA-0000-0000-0000', 'expo>@expo/cli>zod'],
+    ])('keeps %s release-blocking', (_label, ghsa, resolutionPath) => {
+      const outcome = evaluateAuditResult({
+        status: 8,
+        stdout: highAdvisoryStream([{ module: 'zod', ghsa, path: resolutionPath }]),
+        stderr: '',
+      })
+
+      expect(outcome.exitCode).toBe(1)
+      expect(outcome.stdout).toBe('')
+      expect(outcome.stderr).toContain('high/critical: 1')
+    })
+  })
+
   it('rejects a child status that does not match the trustworthy summary bitmask', () => {
     const outcome = evaluateAuditResult({
       status: 0,
