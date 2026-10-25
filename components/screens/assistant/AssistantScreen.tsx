@@ -156,6 +156,7 @@ export default function AssistantScreen() {
             colors={colors}
             busy={chat.busy}
             remaining={chat.remaining}
+            offTopicBlocked={chat.offTopicBlocked}
             inputError={chat.inputError}
             draft={draft}
             onChangeDraft={onChangeDraft}

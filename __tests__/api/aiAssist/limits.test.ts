@@ -1,5 +1,14 @@
 import { DEMAND_LOG_MAX_ENTRIES, exportDemandLog, logDemand, readDemandLog } from '@/api/aiAssist/demandLog'
-import { AI_ASK_DAILY_LIMIT, consumeQuestion, quotaDayKey, readRemainingQuestions, type QuotaStorage } from '@/api/aiAssist/limits'
+import {
+  AI_ASK_DAILY_LIMIT,
+  AI_OFFTOPIC_STRIKES_TO_BLOCK,
+  consumeQuestion,
+  quotaDayKey,
+  readOffTopicState,
+  readRemainingQuestions,
+  registerOffTopicStrike,
+  type QuotaStorage,
+} from '@/api/aiAssist/limits'
 
 const memoryStorage = (): QuotaStorage & { data: Map<string, string> } => {
   const data = new Map<string, string>()
@@ -59,5 +68,30 @@ describe('aiAssist demand log (#2460)', () => {
     const capped = await readDemandLog({ storage })
     expect(capped).toHaveLength(DEMAND_LOG_MAX_ENTRIES)
     expect(capped[capped.length - 1].q).toBe(`q${DEMAND_LOG_MAX_ENTRIES + 4}`)
+  })
+})
+
+describe('aiAssist off-topic strikes (#2711)', () => {
+  const memory = () => {
+    const data = new Map<string, string>()
+    const storage: QuotaStorage = {
+      getItem: async (key) => data.get(key) ?? null,
+      setItem: async (key, value) => {
+        data.set(key, value)
+      },
+    }
+    return storage
+  }
+
+  it('1-й и 2-й — предупреждение, 3-й — блок до конца дня; дневной лимит не трогается', async () => {
+    const storage = memory()
+    const now = () => new Date(2026, 9, 25, 10, 0)
+    expect(await readOffTopicState({ storage, now })).toEqual({ strikes: 0, blocked: false })
+    expect(await registerOffTopicStrike({ storage, now })).toEqual({ strikes: 1, blocked: false })
+    expect(await registerOffTopicStrike({ storage, now })).toEqual({ strikes: 2, blocked: false })
+    expect(await registerOffTopicStrike({ storage, now })).toEqual({ strikes: AI_OFFTOPIC_STRIKES_TO_BLOCK, blocked: true })
+    expect(await registerOffTopicStrike({ storage, now })).toEqual({ strikes: AI_OFFTOPIC_STRIKES_TO_BLOCK, blocked: true })
+    expect(await readRemainingQuestions({ storage, now })).toBe(AI_ASK_DAILY_LIMIT)
+    expect(await readOffTopicState({ storage, now: () => new Date(2026, 9, 26, 0, 1) })).toEqual({ strikes: 0, blocked: false })
   })
 })

@@ -107,6 +107,8 @@ const TERMS: Term[] = [
   {
     name: '«тема» — тема оформления',
     ru: RU_THEME_WORD,
+    // «Вопрос не по теме» ассистента (#2711) — тема разговора, а не оформления.
+    except: { ru: /не\s+по\s+теме|на\s+другие\s+темы/i },
     minEntries: 8,
     locales: {
       en: { required: /\btheme/i, forbidden: /\b(topic|subject)/i },

@@ -1,17 +1,20 @@
 /**
  * Состояние диалога ассистента (#2460): один вопрос за раз, пайплайн
- * «подбор карточек → промпт → metravel-llm → страж ссылок», дневной лимит и
- * журнал спроса. Экран только рисует `turns` и зовёт `ask/stop/retry`.
+ * «фильтр тем → подбор карточек → промпт → metravel-llm → страж ссылок», дневной
+ * лимит и журнал спроса. Вопрос не по теме (#2711) получает отказ без подбора и
+ * модели; третий за день закрывает ассистент до завтра. Экран только рисует
+ * `turns` и зовёт `ask/stop/retry`.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { logDemand } from '@/api/aiAssist/demandLog'
 import { createGenerator, isAiGeneratorError, type Generator } from '@/api/aiAssist/generator'
-import { consumeQuestion, readRemainingQuestions } from '@/api/aiAssist/limits'
-import { enforceSourceLinks } from '@/api/aiAssist/linkGuard'
+import { consumeQuestion, readOffTopicState, readRemainingQuestions, registerOffTopicStrike } from '@/api/aiAssist/limits'
+import { buildAllowedLinkKeys, enforceSourceLinks, normalizeLinkKey } from '@/api/aiAssist/linkGuard'
 import { MAX_QUESTION_LENGTH, buildAssistantMessages } from '@/api/aiAssist/prompt'
-import { searchSiteMaterials } from '@/api/aiAssist/retrieval'
+import { buildRetrievalQuery, searchSiteMaterials } from '@/api/aiAssist/retrieval'
+import { classifyQuestion, isModelOffTopicReply } from '@/api/aiAssist/topicGate'
 import type { AiHistoryItem, AiSource, AiUsage } from '@/api/aiAssist/types'
 import { getAiAssistantBaseUrl } from '@/utils/aiAssistantConfig'
 
@@ -20,6 +23,7 @@ export type AssistantTurnStatus =
   | 'streaming'
   | 'done'
   | 'no_sources'
+  | 'off_topic'
   | 'unavailable'
   | 'busy'
   | 'error'
@@ -35,9 +39,11 @@ export type AssistantTurn = {
   removedLinks: number
   retryAfterSec: number | null
   usage: AiUsage | null
+  /** Какой по счёту за день вопрос не по теме (только у `off_topic`). */
+  offTopicStrikes: number | null
 }
 
-export type AssistantInputError = 'tooLong' | 'limit' | null
+export type AssistantInputError = 'tooLong' | 'limit' | 'offTopicBlocked' | null
 
 export type UseAssistantChatOptions = {
   locale: string
@@ -49,6 +55,13 @@ const STREAM_FLUSH_MS = 40
 const HISTORY_TURNS = 3
 
 const makeTurnId = (): string => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+
+/** Сколько адресов карточек осталось в ответе после стража: отказ модели «не по теме» ссылок не даёт. */
+export const countKeptSourceLinks = (text: string, sources: readonly AiSource[]): number => {
+  const allowed = buildAllowedLinkKeys(sources)
+  const words = String(text ?? '').split(/[\s()[\]<>«»"']+/)
+  return words.filter((word) => word && allowed.has(normalizeLinkKey(word))).length
+}
 
 /** История для промпта: только завершённые ответы, не длиннее трёх пар. */
 export const buildHistoryFromTurns = (turns: readonly AssistantTurn[]): AiHistoryItem[] =>
@@ -77,12 +90,19 @@ export const guardStreamingText = (full: string, sources: readonly AiSource[]): 
 export function useAssistantChat({ locale, generator: generatorOverride }: UseAssistantChatOptions) {
   const [turns, setTurns] = useState<AssistantTurn[]>([])
   const [remaining, setRemaining] = useState<number | null>(null)
+  const [offTopicBlocked, setOffTopicBlocked] = useState(false)
   const [inputError, setInputError] = useState<AssistantInputError>(null)
   const [activeTurnId, setActiveTurnId] = useState<string | null>(null)
   const turnsRef = useRef<AssistantTurn[]>([])
   const abortRef = useRef<AbortController | null>(null)
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mountedRef = useRef(true)
+  /**
+   * Последний самостоятельный вопрос по теме — опора уточнений (#2719). Склеенный запрос
+   * опорой не становится: цепочка уточнений иначе копила бы все прошлые вопросы, а бэкенд
+   * требует от статьи все слова запроса; повтор хода склеивал бы вопрос сам с собой.
+   */
+  const lastSearchQueryRef = useRef<string | null>(null)
 
   const generator = useMemo<Generator | null>(
     () => (generatorOverride !== undefined ? generatorOverride : createGenerator(getAiAssistantBaseUrl())),
@@ -93,6 +113,9 @@ export function useAssistantChat({ locale, generator: generatorOverride }: UseAs
     mountedRef.current = true
     void readRemainingQuestions().then((left) => {
       if (mountedRef.current) setRemaining(left)
+    })
+    void readOffTopicState().then((state) => {
+      if (mountedRef.current) setOffTopicBlocked(state.blocked)
     })
     return () => {
       mountedRef.current = false
@@ -118,6 +141,18 @@ export function useAssistantChat({ locale, generator: generatorOverride }: UseAs
     if (mountedRef.current) setRemaining(left)
   }, [])
 
+  /** Ход «не по теме»: отказ без источников, счётчик за день; на третьем — журнал и блок до завтра. */
+  const finishOffTopic = useCallback(
+    async (id: string, question: string) => {
+      const state = await registerOffTopicStrike()
+      patchTurn(id, { status: 'off_topic', answer: '', sources: [], removedLinks: 0, offTopicStrikes: state.strikes })
+      if (!state.blocked) return
+      void logDemand({ q: question, locale, reason: 'offtopic_blocked' })
+      if (mountedRef.current) setOffTopicBlocked(true)
+    },
+    [locale, patchTurn],
+  )
+
   const ask = useCallback(
     async (rawQuestion: string): Promise<void> => {
       const question = String(rawQuestion ?? '').replace(/\s+/g, ' ').trim()
@@ -131,6 +166,12 @@ export function useAssistantChat({ locale, generator: generatorOverride }: UseAs
       // перетёр бы `abortRef` (кнопка «Остановить» отменяла бы чужой запрос).
       const controller = new AbortController()
       abortRef.current = controller
+      if ((await readOffTopicState()).blocked) {
+        abortRef.current = null
+        setOffTopicBlocked(true)
+        setInputError('offTopicBlocked')
+        return
+      }
       const left = await readRemainingQuestions()
       if (left <= 0) {
         abortRef.current = null
@@ -145,13 +186,21 @@ export function useAssistantChat({ locale, generator: generatorOverride }: UseAs
       const history = buildHistoryFromTurns(turnsRef.current)
       commitTurns((prev) => [
         ...prev,
-        { id, question, answer: '', sources: [], status: 'searching', removedLinks: 0, retryAfterSec: null, usage: null },
+        { id, question, answer: '', sources: [], status: 'searching', removedLinks: 0, retryAfterSec: null, usage: null, offTopicStrikes: null },
       ])
 
       try {
+        // Чужая тема не тратит ни подбор, ни модель, ни дневной лимит.
+        if (classifyQuestion(question).offTopic) {
+          await finishOffTopic(id, question)
+          return
+        }
         let sources: AiSource[] = []
+        const previousAnchor = lastSearchQueryRef.current
+        const searchQuery = buildRetrievalQuery(question, previousAnchor)
+        if (searchQuery === question) lastSearchQueryRef.current = question
         try {
-          sources = await searchSiteMaterials({ query: question, locale, signal: controller.signal })
+          sources = await searchSiteMaterials({ query: searchQuery, locale, signal: controller.signal })
         } catch {
           sources = []
         }
@@ -192,6 +241,14 @@ export function useAssistantChat({ locale, generator: generatorOverride }: UseAs
           flushTimerRef.current = null
         }
         const guarded = enforceSourceLinks(result.text, sources)
+        if (isModelOffTopicReply(guarded.text, countKeptSourceLinks(guarded.text, sources))) {
+          // Второй рубеж: фильтр пропустил, модель узнала чужую тему по правилу промпта.
+          // Вопрос не по теме опорой уточнений не становится.
+          lastSearchQueryRef.current = previousAnchor
+          await finishOffTopic(id, question)
+          await finishQuota()
+          return
+        }
         patchTurn(id, { answer: guarded.text, removedLinks: guarded.removed, status: 'done', usage: result.usage })
         if (__DEV__) {
           console.info('[ai-assist] usage', { ...result.usage, removedLinks: guarded.removed, sources: sources.length })
@@ -221,7 +278,7 @@ export function useAssistantChat({ locale, generator: generatorOverride }: UseAs
         if (mountedRef.current) setActiveTurnId((current) => (current === id ? null : current))
       }
     },
-    [commitTurns, finishQuota, generator, locale, patchTurn],
+    [commitTurns, finishOffTopic, finishQuota, generator, locale, patchTurn],
   )
 
   const stop = useCallback(() => {
@@ -253,6 +310,7 @@ export function useAssistantChat({ locale, generator: generatorOverride }: UseAs
   return {
     turns,
     remaining,
+    offTopicBlocked,
     inputError,
     busy: activeTurnId !== null,
     generatorConfigured: generator !== null,

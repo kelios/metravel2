@@ -19,6 +19,7 @@ import type { Travel } from '@/types/types'
 import { buildQuestPath, buildTravelPathFromTravel } from '@/utils/routePaths'
 import { buildCanonicalUrl } from '@/utils/seo'
 
+import { mentionsPlace } from './topicGate'
 import type { AiSource } from './types'
 
 export const AI_SOURCES_LIMIT = 8
@@ -49,6 +50,8 @@ const QUERY_STOPWORDS = new Set([
   'день', 'дня', 'дней', 'дни', 'два', 'две', 'три', 'пару', 'очень', 'буду', 'будем', 'был', 'была', 'были',
   'подскажи', 'подскажите', 'посоветуй', 'посоветуйте', 'лучше', 'сейчас', 'нибудь', 'чтобы', 'если',
   'для', 'или', 'под', 'при', 'про', 'это', 'этот', 'эта', 'там', 'тут', 'ещё', 'еще',
+  // Маркеры уточнения (#2719): в склеенном запросе бэкенд требует все слова, «несвиж них» → 5 из 13.
+  'них', 'него', 'неё', 'нее', 'этих', 'этого', 'этой', 'этим', 'туда', 'оттуда', 'какую', 'каком',
   'квест', 'квесты', 'квеста', 'квестов', 'квесту', 'квестом', 'квестах',
   'маршрут', 'маршруты', 'маршрута', 'маршрутов', 'маршруту',
   'статья', 'статьи', 'статью', 'статей', 'материал', 'материалы', 'сайт', 'сайте', 'metravel',
@@ -83,6 +86,30 @@ export const detectIntent = (query: string): AiSourceIntent => {
   if (quest && !travel) return 'quest'
   if (travel && !quest) return 'travel'
   return null
+}
+
+// Уточнение в диалоге (#2719): начинается с «А/И/Ещё…» или ссылается на прошлый вопрос
+// («из них», «там», «туда», «этот»…) — на RU/BE/UK/PL/EN. Польское «I …» — уточнение,
+// английское местоимение «I want/I'm …» — нет; «there» в «is there / there are» — оборот, а не «там».
+const FOLLOW_UP_START_RE =
+  /^\s*(?:а|и|ещё|еще|і|ще|a(?=\s+co(?![\p{L}]))|i(?!['’]|\s+(?:am|was|want|need|would|will|wonder|have|had|plan|like|love|think|know|do|did|can|could|should|go|travel|visit)(?![\p{L}]))|and|also|what\s+about|how\s+about|a\s+co)(?![\p{L}])/iu
+const FOLLOW_UP_REFERENCE_RE =
+  /(?<![\p{L}])(?:из\s+(?:них|этих)|там|туда|оттуда|эт(?:от|а|о|и|ого|их|ой(?!\s+(?:зимой|весной|летом|осенью|ночью)))|него|неё|нее|них|з\s+(?:іх|них)|туды|туди|z\s+nich|tam|tego|tej|of\s+them|(?<!(?:is|are|was|were)\s+)there(?!\s+(?:is|are|was|were)(?![\p{L}])|['’]s)|those|these)(?![\p{L}])/iu
+
+export const isFollowUpQuestion = (question: string): boolean =>
+  FOLLOW_UP_START_RE.test(question) || FOLLOW_UP_REFERENCE_RE.test(question)
+
+/**
+ * Запрос подбора с учётом диалога (#2719): уточнение без своего места («А какой из
+ * них подойдёт детям?») ищется вместе с прошлым запросом, иначе подбор не знает,
+ * о каком городе речь, и отвечает «материалов нет». Своё место в уточнении («А в
+ * Бресте?») важнее прошлого — такой вопрос ищется сам по себе. Модель при этом
+ * получает исходный вопрос и историю.
+ */
+export const buildRetrievalQuery = (question: string, previousQuery?: string | null): string => {
+  const previous = String(previousQuery ?? '').trim()
+  if (!previous || mentionsPlace(question) || !isFollowUpQuestion(question)) return question
+  return `${previous} ${question}`
 }
 
 /** Слова вопроса длиной от трёх знаков, без повторов; порядок сохраняется. */

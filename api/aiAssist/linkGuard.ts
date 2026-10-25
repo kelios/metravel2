@@ -12,7 +12,9 @@ import type { AiSource } from './types'
 
 const MARKDOWN_LINK_RE = /\[([^\]]*)\]\(\s*(<?)([^\s)]+)\2(?:\s+"[^"]*")?\s*\)/g
 const ABSOLUTE_URL_RE = /\bhttps?:\/\/[^\s<>()[\]"'«»]+/gi
-const BARE_SITE_URL_RE = /(?<![\w/.])(?:www\.)?metravel\.by(?:\/[^\s<>()[\]"'«»]*)?/gi
+// Голое «metravel.by» без пути — название сайта, а не ссылка: оно стоит во фразе отказа «не по теме»
+// (#2711) и в обычной речи модели; режется только `metravel.by/<путь>`.
+const BARE_SITE_URL_RE = /(?<![\w/.])(?:www\.)?metravel\.by\/[^\s<>()[\]"'«»]+/gi
 const SITE_PATH_RE = /(?<![\w/:])\/(?:travels|quests|places|articles|map|search)(?:\/[^\s<>()[\]"'«»]*)?/gi
 const TRAILING_PUNCTUATION_RE = /[.,;:!?…»"')\]]+$/
 
@@ -50,9 +52,17 @@ export const stripThinking = (text: string): string =>
     .replace(/^\s*<think>[\s\S]*$/i, '')
     .replace(/^\s*<\/think>/i, '')
 
+/**
+ * Следы вырезания и служебный мусор модели (замер #2710): пустые скобки, тире перед
+ * вырезанной ссылкой в конце строки («Стартуйте с истории —»), заглушки обучения
+ * вида `__draft_placeholder__`.
+ */
 const tidyText = (text: string): string =>
   text
+    .replace(/__[a-z0-9]+(?:_[a-z0-9]+)+__/gi, '')
     .replace(/\(\s*\)/g, '')
+    .replace(/[ \t]*[—–][ \t]*(?=\n|$)/g, '')
+    .replace(/[ \t]+[—–][ \t]*([,.;:!?])/g, '$1')
     .replace(/[ \t]+([,.;:!?])/g, '$1')
     .replace(/(^|\n)\s*[-–—•]\s*(?=\n|$)/g, '$1')
     .replace(/[ \t]{2,}/g, ' ')

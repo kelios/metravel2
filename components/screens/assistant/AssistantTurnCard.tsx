@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router'
 import type { AiSource } from '@/api/aiAssist/types'
 import UIButton from '@/components/ui/Button'
 import type { ThemedColors } from '@/hooks/useTheme'
+import { AI_OFFTOPIC_STRIKES_TO_BLOCK } from '@/api/aiAssist/limits'
 import { translate as i18nT } from '@/i18n'
 
 import { AssistantAnswerText } from './AssistantAnswerText'
@@ -67,6 +68,12 @@ function AssistantTurnCardComponent({ turn, styles, colors, busy, onRetry, onOpe
       notice = i18nT('aiAssistStatic:ask.noSources')
       noticeAction = 'catalog'
       break
+    case 'off_topic':
+      notice =
+        (turn.offTopicStrikes ?? 0) >= AI_OFFTOPIC_STRIKES_TO_BLOCK
+          ? i18nT('aiAssistStatic:ask.offTopicBlocked')
+          : i18nT('aiAssistStatic:ask.offTopicWarning', { count: turn.offTopicStrikes ?? 1, max: AI_OFFTOPIC_STRIKES_TO_BLOCK })
+      break
     case 'unavailable':
     case 'error':
       notice = i18nT('aiAssistStatic:ask.unavailable')
@@ -101,6 +108,12 @@ function AssistantTurnCardComponent({ turn, styles, colors, busy, onRetry, onOpe
 
       <View style={styles.answerCard}>
         <Text style={styles.roleLabel}>{i18nT('aiAssistStatic:ask.assistant')}</Text>
+
+        {turn.status === 'off_topic' ? (
+          <Text style={styles.answerText} testID="assistant-offtopic">
+            {i18nT('aiAssistStatic:ask.offTopic')}
+          </Text>
+        ) : null}
 
         {turn.answer ? (
           <AssistantAnswerText

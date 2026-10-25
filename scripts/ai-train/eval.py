@@ -33,6 +33,14 @@ or external link and no degenerate loop. The v2 slices (#2477–#2479) add:
   * expect=json (osm_intents) — the first {…} in the answer parses and passes
     sets.osm_intents.validate_filter() (osm_filter_schema.json), `accept`
     regexes if given.
+The assistant-mode slices (#2712) carry the screen's own system prompt in the
+prompt's `system` field (assistant_prompt.json) and the cards in `prompt`:
+  * expect=rag (rag_answers) — at least one known URL, none unknown or
+    external, at most `max_urls` distinct URLs (default 3), the prompt's
+    language, no degenerate loop and none of the `reject` regexes (the site
+    set's article template «Страна: / Точки маршрута:»);
+  * expect=offtopic — the refusal of assistant_prompt.json (the model names
+    itself the metravel.by assistant) and no URL at all.
 Factual accuracy, tone and the quality of a translation (Russian words inside
 a Belarusian answer pass the letter check) are still read by a human — the
 report leaves a column for that.
@@ -54,6 +62,7 @@ from sets.common import SITE, SYSTEM  # noqa: E402
 from sets.osm_intents import extract_json, validate_filter  # noqa: E402
 
 URL_RE = re.compile(r"https?://[^\s)\]>»\"']+")
+OFFTOPIC_RE = re.compile(r"(?:ассистент|асістэнт|асистент|asystent\w*|assistant)\s+metravel\.by|metravel\.by\s+(?:travel\s+)?assistant", re.I)
 REFUSE_RE = re.compile(r"(пока\s+)?нет\s+(материал|стат|квест|ничего)|не\s+нашл|нет\s+информации|brak\s+materia|nie\s+ma(my)?\s+(materia|artyku)", re.I)
 THINK_RE = re.compile(r"<think>.*?</think>\s*", re.S)
 LETTER_RE = re.compile(r"[^\W\d_]")
@@ -77,6 +86,9 @@ def known_urls(raw: Path) -> set[str]:
             q = json.loads(line)
             if q.get("url"):
                 urls.add(q["url"].rstrip("/"))
+            if q.get("city_alias") and q.get("quest_id"):
+                # the assistant's cards carry buildQuestPath(city_alias, quest_id)
+                urls.add(f"{SITE}/quests/{q['city_alias']}/{q['quest_id']}")
     return urls
 
 
@@ -159,6 +171,11 @@ def verdict(p: dict, c: dict, answer: str) -> bool:
                 and (not lang or c["lang"] == lang) and matches(answer, p.get("accept")))
     if expect == "json":
         return c["json_ok"] and matches(answer, p.get("accept"))
+    if expect == "rag":
+        return (0 < c["urls_ok"] and len(set(c["urls"])) <= p.get("max_urls", 3) and not c["degenerate"]
+                and (not lang or c["lang"] == lang) and not any(re.search(r, answer, re.I | re.M) for r in p.get("reject") or []))
+    if expect == "offtopic":
+        return not c["urls"] and bool(OFFTOPIC_RE.search(answer))
     return c["urls_ok"] > 0
 
 
@@ -170,7 +187,7 @@ def generate_all(model_path: str, adapter: str | None, prompts: list[dict], max_
     sampler = make_sampler(temp=0.0)
     out, toks, secs = [], 0, 0.0
     for i, p in enumerate(prompts, 1):
-        msgs = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": p["prompt"]}]
+        msgs = [{"role": "system", "content": p.get("system", SYSTEM)}, {"role": "user", "content": p["prompt"]}]
         text = tokenizer.apply_chat_template(msgs, add_generation_prompt=True, tokenize=False, enable_thinking=False)
         t0 = time.time()
         ans = generate(model, tokenizer, prompt=text, max_tokens=max_tokens, sampler=sampler, verbose=False)
@@ -191,7 +208,7 @@ def generate_server(url: str, prompts: list[dict], max_tokens: int) -> tuple[lis
     out, toks, secs = [], 0, 0.0
     for i, p in enumerate(prompts, 1):
         body = {
-            "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": p["prompt"]}],
+            "messages": [{"role": "system", "content": p.get("system", SYSTEM)}, {"role": "user", "content": p["prompt"]}],
             "max_tokens": max_tokens,
             "temperature": 0.0,
             "top_k": 1,

@@ -8,7 +8,9 @@ import {
   htmlToSnippet,
   mergeSources,
   QUEST_RESERVED_SLOTS,
+  buildRetrievalQuery,
   buildTravelsSearchQuery,
+  isFollowUpQuestion,
   scoreText,
   searchSiteMaterials,
   searchStem,
@@ -132,6 +134,35 @@ describe('aiAssist retrieval (#2460)', () => {
     // С намерением «статья» места за квестами не держатся.
     const travelsOnly = await searchSiteMaterials({ query: 'статьи про Краков', locale: 'ru' })
     expect(travelsOnly.filter((s) => s.type === 'quest')).toHaveLength(0)
+  })
+
+  it('уточнение в диалоге ищется вместе с прошлым запросом, своё место — само по себе (#2719)', () => {
+    const previous = 'Какие квесты есть в Гродно?'
+    expect(isFollowUpQuestion('А какой из них подойдёт детям?')).toBe(true)
+    expect(isFollowUpQuestion('Што там паглядзець?')).toBe(true)
+    expect(isFollowUpQuestion('And which of them is for kids?')).toBe(true)
+    expect(isFollowUpQuestion('Какие квесты есть в Минске?')).toBe(false)
+    // Код-ревью #2719: английский артикль и «этой зимой» — не уточнения.
+    expect(isFollowUpQuestion('A good castle for kids?')).toBe(false)
+    expect(isFollowUpQuestion('A weekend with kids — where to go?')).toBe(false)
+    expect(isFollowUpQuestion('Куда поехать этой зимой с детьми?')).toBe(false)
+    expect(isFollowUpQuestion('A co w Gdańsku?')).toBe(true)
+    expect(tokenizeQuery('Что посмотреть в Несвиже? А какой из них подойдёт детям?')).not.toContain('них')
+    expect(buildRetrievalQuery('А какой из них подойдёт детям?', previous)).toBe('Какие квесты есть в Гродно? А какой из них подойдёт детям?')
+    expect(buildRetrievalQuery('А в Бресте?', previous)).toBe('А в Бресте?')
+    expect(buildRetrievalQuery('Что посмотреть в Риге?', previous)).toBe('Что посмотреть в Риге?')
+    expect(buildRetrievalQuery('А какой из них подойдёт детям?', null)).toBe('А какой из них подойдёт детям?')
+    // Своё место после «про/на» — тоже самостоятельный вопрос.
+    expect(buildRetrievalQuery('А про Брест?', previous)).toBe('А про Брест?')
+    expect(buildRetrievalQuery('А на Нарочи что есть?', previous)).toBe('А на Нарочи что есть?')
+    // Английское «I …» и оборот «is there / there are» — не уточнение; польское «A co…» и «there» как «там» — уточнение.
+    expect(isFollowUpQuestion('I want to see castles with kids')).toBe(false)
+    expect(isFollowUpQuestion("I'm looking for a quest")).toBe(false)
+    expect(isFollowUpQuestion('Is there a quest for kids?')).toBe(false)
+    expect(isFollowUpQuestion('There are castles nearby?')).toBe(false)
+    expect(isFollowUpQuestion('Are there cafes there?')).toBe(true)
+    expect(isFollowUpQuestion('A co z dziećmi?')).toBe(true)
+    expect(isFollowUpQuestion('I gdzie zaparkować?')).toBe(true)
   })
 
   it('HTML описания превращается в короткий абзац', () => {

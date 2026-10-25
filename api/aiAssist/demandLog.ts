@@ -1,6 +1,7 @@
 /**
  * Журнал спроса (#2460): вопросы, на которые у сайта не нашлось материалов, —
- * источник тем для владельца.
+ * источник тем для владельца. С #2711 сюда же попадает третий за день вопрос не
+ * по теме (`offtopic_blocked`), закрывший ассистент до завтра.
  *
  * До сервиса `/ai/ask` (#2456) с его `logs/ai-demand.jsonl` журнал ведётся на
  * устройстве: последние записи в AsyncStorage, в DEV — ещё и в консоль. Экспорт
@@ -16,7 +17,7 @@ export const DEMAND_LOG_STORAGE_KEY = 'metravel.aiAssist.demand.v1'
 export const DEMAND_LOG_MAX_ENTRIES = 200
 const DEMAND_QUESTION_MAX_LENGTH = 500
 
-export type DemandReason = 'no_sources' | 'generator_unavailable'
+export type DemandReason = 'no_sources' | 'generator_unavailable' | 'offtopic_blocked'
 
 export type DemandEntry = {
   ts: string

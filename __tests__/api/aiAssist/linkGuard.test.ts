@@ -63,6 +63,16 @@ describe('aiAssist linkGuard (#2460)', () => {
     expect(result.text).toBe('Вот: и')
   })
 
+  it('название сайта без пути остаётся текстом: фраза отказа «не по теме» не ломается (#2711)', () => {
+    const refusal = 'Я ассистент metravel.by по путешествиям, а www.metravel.by/travels/pridumano — нет.'
+    expect(enforceSourceLinks(refusal, sources)).toEqual({ text: 'Я ассистент metravel.by по путешествиям, а — нет.', removed: 1 })
+  })
+
+  it('после вырезания не остаётся висящего тире и заглушек модели (#2710)', () => {
+    const raw = 'Стартуйте с истории — https://evil.example/x\nОтель в Кракове — https://booking.com/h.\nСм. __draft_placeholder__ путеводитель.'
+    expect(enforceSourceLinks(raw, sources)).toEqual({ text: 'Стартуйте с истории\nОтель в Кракове\nСм. путеводитель.', removed: 2 })
+  })
+
   it('служебные <think> блоки снимаются, незакрытый — целиком', () => {
     expect(stripThinking('<think>размышляю</think>Ответ')).toBe('Ответ')
     expect(stripThinking('<think>ещё думаю')).toBe('')

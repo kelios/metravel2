@@ -826,6 +826,16 @@
       ],
       "port": 8155,
       "autoPort": false
+    },
+    {
+      "name": "Assistant Eval Base Web 8085",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd .codex-temp/wt-eval-base && mkdir -p \"$PWD/.codex-temp/metro-tmp-eval\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-eval\" PATH=/opt/homebrew/opt/node@22/bin:$PATH NODE_OPTIONS=--max-old-space-size=12288 EXPO_NO_DOTENV=1 EXPO_PUBLIC_API_URL=http://localhost:4622 EXPO_PUBLIC_IS_LOCAL_API=true EXPO_PUBLIC_AI_ASSISTANT=1 EXPO_PUBLIC_AI_ASSISTANT_URL=http://127.0.0.1:8080 npx expo start --web --port 8085"
+      ],
+      "port": 8085,
+      "autoPort": false
     }
   ]
 }

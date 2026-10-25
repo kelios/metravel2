@@ -15,6 +15,8 @@ type AssistantComposerProps = {
   colors: ThemedColors
   busy: boolean
   remaining: number | null
+  /** Третий вопрос не по теме за день (#2711): поле закрыто до завтра. */
+  offTopicBlocked: boolean
   inputError: AssistantInputError
   /** Текст, подставленный извне (пример вопроса); сбрасывается после отправки. */
   draft: string
@@ -28,6 +30,7 @@ function AssistantComposerComponent({
   colors,
   busy,
   remaining,
+  offTopicBlocked,
   inputError,
   draft,
   onChangeDraft,
@@ -36,7 +39,7 @@ function AssistantComposerComponent({
 }: AssistantComposerProps) {
   const [focused, setFocused] = useState(false)
   const limitReached = remaining !== null && remaining <= 0
-  const canSend = !busy && !limitReached && draft.trim().length > 0
+  const canSend = !busy && !limitReached && !offTopicBlocked && draft.trim().length > 0
 
   const send = useCallback(() => {
     if (!canSend) return
@@ -59,7 +62,10 @@ function AssistantComposerComponent({
 
   let metaText: string | null = null
   let metaIsError = false
-  if (inputError === 'tooLong') {
+  if (offTopicBlocked || inputError === 'offTopicBlocked') {
+    metaText = i18nT('aiAssistStatic:ask.blockedUntilTomorrow')
+    metaIsError = true
+  } else if (inputError === 'tooLong') {
     metaText = i18nT('aiAssistStatic:ask.tooLong', { max: MAX_QUESTION_LENGTH })
     metaIsError = true
   } else if (inputError === 'limit' || limitReached) {
@@ -85,7 +91,7 @@ function AssistantComposerComponent({
           placeholderTextColor={colors.textMuted}
           multiline
           maxLength={MAX_QUESTION_LENGTH}
-          editable={!busy}
+          editable={!busy && !offTopicBlocked}
           returnKeyType="default"
           accessibilityLabel={i18nT('aiAssistStatic:ask.inputLabel')}
           style={[styles.input, inputError ? styles.inputError : null, focused ? { borderColor: colors.primary } : null]}

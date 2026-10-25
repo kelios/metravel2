@@ -2,11 +2,14 @@ import {
   ASSISTANT_SYSTEM_PROMPT,
   MAX_HISTORY_ITEMS,
   MAX_QUESTION_LENGTH,
+  OFFTOPIC_REPLY_RU,
   buildAssistantMessages,
+  buildSystemPrompt,
   buildUserMessage,
   resolveAnswerLanguage,
   sanitizeFragment,
 } from '@/api/aiAssist/prompt'
+import { aiAssistStaticResources } from '@/i18n/locales/ru/static/ai_assist_static'
 import type { AiHistoryItem, AiSource } from '@/api/aiAssist/types'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -86,5 +89,10 @@ describe('aiAssist prompt (#2460)', () => {
 
   it('без карточек блок данных честно пуст', () => {
     expect(buildUserMessage('Исландия зимой', [])).toContain('Материалы сайта: ничего не найдено.')
+  })
+
+  it('правило «не по теме» (#2711): фраза отказа совпадает с RU-локалью и стоит в системном промпте', () => {
+    expect(OFFTOPIC_REPLY_RU).toBe(aiAssistStaticResources['ask.offTopic'])
+    expect(buildSystemPrompt('ru')).toContain(`ответь одной фразой: «${OFFTOPIC_REPLY_RU}»`)
   })
 })
