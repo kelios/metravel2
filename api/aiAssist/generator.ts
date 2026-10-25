@@ -3,7 +3,7 @@
  *
  * Единственная реализация — OpenAI-совместимый HTTP `llama-server`
  * (`metravel-llm`): `POST {base}/v1/chat/completions`, `stream: true`,
- * `max_tokens` 400, `temperature` 0.3, `enable_thinking: false`. Облачных SDK в
+ * `max_tokens` 400, `temperature` 0.3, `presence_penalty` 1.5, `enable_thinking: false`. Облачных SDK в
  * зависимостях нет и не будет: ответы посетителям даёт только своя модель
  * (решение владельца 17.10.2026).
  *
@@ -15,6 +15,14 @@ import type { AiChatMessage, AiGenerateResult, AiUsage } from './types'
 
 export const LLAMACPP_MAX_TOKENS = 400
 export const LLAMACPP_TEMPERATURE = 0.3
+/**
+ * Штраф за уже сказанное (замеры 25.10.2026, краковский вопрос, #2709). Старые карточки,
+ * 12 прогонов: без штрафа 1 цикл и 7 протечек шаблона карточки статьи, `repeat_penalty` 1.1 —
+ * 1 и 9, `frequency_penalty` 0.5 — 0 и 7, `presence_penalty` 1.0 — 0 и 5. Новые карточки
+ * (путеводитель + квесты): `presence_penalty` 1.0 — круг пунктов в 5 из 10, ссылки в 7;
+ * 1.5 — 3 из 8 и 8. Остаток циклов срезает `findRepetitionLoopCut`.
+ */
+export const LLAMACPP_PRESENCE_PENALTY = 1.5
 export const LLAMACPP_MODEL_NAME = 'metravel-llm'
 export const GENERATION_TIMEOUT_MS = 120_000
 const DEFAULT_RETRY_AFTER_SEC = 30
@@ -94,6 +102,60 @@ export const parseSseEvent = (event: string): ParsedSseEvent | null => {
   return { delta, done, usage: payload.usage ?? null }
 }
 
+/**
+ * Зацикливание модели (#2709), два вида:
+ * - один пункт три раза подряд через «;», «,» или перенос строки («Ratusz; Ratusz;
+ *   Ratusz…» до `max_tokens`); пункт начинается с буквы и не содержит разделителей,
+ *   смотрим только хвост — цикл растёт в конце;
+ * - круг из нескольких пунктов списка (A, B, C, A, B, C…): законченная строка
+ *   повторяет уже написанную, и следующая за ней — тоже ту, что шла после
+ *   оригинала. Одна повторённая строка — не цикл: подзаголовок «Что посмотреть:»
+ *   у каждого дня плана повторяется законно, а за ним идёт другое содержание.
+ */
+const REPETITION_LOOP_RE = /(\p{L}[^;\n]{2,199}?)(?:[ \t]*[;,\n][ \t\n]*\1){2,}/u
+const REPETITION_WINDOW = 1500
+const MIN_REPEATED_LINE_LENGTH = 12
+const LIST_MARKER_RE = /^[\s\-–—•*·\d.)]+/
+const TRAILING_SEPARATORS_RE = /[\s;,]+$/
+
+const repeatedItemCut = (text: string): number | null => {
+  const offset = Math.max(0, text.length - REPETITION_WINDOW)
+  const match = REPETITION_LOOP_RE.exec(text.slice(offset))
+  return match ? offset + match.index + match[1].length : null
+}
+
+/** Начало первой законченной строки, с которой повторяются две строки подряд. */
+const repeatedLineCut = (text: string): number | null => {
+  const lines = text.split('\n')
+  const keys: string[] = []
+  const starts: number[] = []
+  let position = 0
+  // Последняя строка ещё дописывается — сравниваются только законченные; пустые пропускаются.
+  for (let i = 0; i < lines.length - 1; i += 1) {
+    const key = lines[i].replace(LIST_MARKER_RE, '').trim().toLowerCase()
+    if (key) {
+      keys.push(key)
+      starts.push(position)
+    }
+    position += lines[i].length + 1
+  }
+  const firstIndex = new Map<string, number>()
+  for (let k = 0; k < keys.length; k += 1) {
+    if (keys[k].length < MIN_REPEATED_LINE_LENGTH) continue
+    const earlier = firstIndex.get(keys[k])
+    if (earlier === undefined) firstIndex.set(keys[k], k)
+    else if (k + 1 < keys.length && keys[k + 1] === keys[earlier + 1]) return starts[k]
+  }
+  return null
+}
+
+/** Длина текста без зацикленного хвоста (первое вхождение остаётся) или `null`, если цикла нет. */
+export const findRepetitionLoopCut = (text: string): number | null => {
+  const cuts = [repeatedItemCut(text), repeatedLineCut(text)].filter((cut): cut is number => cut !== null)
+  if (!cuts.length) return null
+  return text.slice(0, Math.min(...cuts)).replace(TRAILING_SEPARATORS_RE, '').length
+}
+
 const isAbortError = (error: unknown): boolean =>
   typeof error === 'object' && error !== null && (error as { name?: string }).name === 'AbortError'
 
@@ -153,14 +215,25 @@ export class LlamaCppGenerator implements Generator {
     let full = ''
     let usage: SseUsage | null = null
     let finished = false
+    let stoppedOnLoop = false
 
     const consumeEvent = (event: string) => {
+      if (stoppedOnLoop) return
       const parsed = parseSseEvent(event)
       if (!parsed) return
       if (parsed.usage) usage = parsed.usage
       if (parsed.delta) {
         if (firstTokenAt === null) firstTokenAt = this.now()
         full += parsed.delta
+        const loopCut = findRepetitionLoopCut(full)
+        if (loopCut !== null) {
+          // Цикл не дописывается до max_tokens: стрим закрывается, хвост не показывается.
+          full = full.slice(0, loopCut)
+          onDelta?.('', full)
+          stoppedOnLoop = true
+          finished = true
+          return
+        }
         onDelta?.(parsed.delta, full)
       }
       if (parsed.done) finished = true
@@ -179,6 +252,7 @@ export class LlamaCppGenerator implements Generator {
             stream_options: { include_usage: true },
             max_tokens: LLAMACPP_MAX_TOKENS,
             temperature: LLAMACPP_TEMPERATURE,
+            presence_penalty: LLAMACPP_PRESENCE_PENALTY,
             chat_template_kwargs: { enable_thinking: false },
           }),
           signal: controller.signal,

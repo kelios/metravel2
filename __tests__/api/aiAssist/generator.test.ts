@@ -3,9 +3,11 @@ import { TextDecoder as NodeTextDecoder, TextEncoder as NodeTextEncoder } from '
 import {
   AiGeneratorError,
   LLAMACPP_MAX_TOKENS,
+  LLAMACPP_PRESENCE_PENALTY,
   LLAMACPP_TEMPERATURE,
   LlamaCppGenerator,
   createGenerator,
+  findRepetitionLoopCut,
   parseSseEvent,
   splitSseEvents,
 } from '@/api/aiAssist/generator'
@@ -82,6 +84,7 @@ describe('aiAssist generator (#2460)', () => {
       stream: true,
       max_tokens: LLAMACPP_MAX_TOKENS,
       temperature: LLAMACPP_TEMPERATURE,
+      presence_penalty: LLAMACPP_PRESENCE_PENALTY,
       chat_template_kwargs: { enable_thinking: false },
       messages,
     })
@@ -90,6 +93,53 @@ describe('aiAssist generator (#2460)', () => {
     expect(result.usage.prompt_tokens).toBe(120)
     expect(result.usage.completion_tokens).toBe(12)
     expect(result.usage.ttft_ms).toBeGreaterThan(0)
+  })
+
+  it('зацикленный хвост обрезается: пункт по кругу (#2709), обычные перечисления не трогаются', () => {
+    const looped = 'Точки маршрута: Pałac w Krakowie; Rynek Główny; Ratusz; Ratusz; Ratusz; Ratus'
+    expect(looped.slice(0, findRepetitionLoopCut(looped) ?? looped.length)).toBe('Точки маршрута: Pałac w Krakowie; Rynek Główny; Ratusz')
+    const lines = 'Вот что есть:\nРынок Вавеля\nРынок Вавеля\nРынок Вавеля\nРынок'
+    expect(lines.slice(0, findRepetitionLoopCut(lines) ?? lines.length)).toBe('Вот что есть:\nРынок Вавеля')
+    expect(findRepetitionLoopCut('Краков, Вроцлав, Катовице, Гданьск и Познань')).toBeNull()
+    expect(findRepetitionLoopCut('• Маршрут по центру:\n• Веломаршрут:\n• Ойцовский парк:')).toBeNull()
+    expect(findRepetitionLoopCut('Kościół Wawelski; Kościół Wawelski; Katedra')).toBeNull()
+    // Круг из нескольких пунктов: обрезка с первой повторённой строки (живой ответ модели 25.10).
+    const cycle = [
+      'Вот что стоит посмотреть:',
+      '- Краков: путеводитель по местам — лучший старт.',
+      '- Квест по Кракову: Вавельский дракон — приключение.',
+      '- Краков: путеводитель по местам — лучший старт.',
+      '- Квест по Кракову: Вавельский дракон — приключение.',
+      '- Краков: путев',
+    ].join('\n')
+    expect(cycle.slice(0, findRepetitionLoopCut(cycle) ?? cycle.length)).toBe(
+      'Вот что стоит посмотреть:\n- Краков: путеводитель по местам — лучший старт.\n- Квест по Кракову: Вавельский дракон — приключение.',
+    )
+    // Короткие одинаковые строки («Подробнее:») и пустые — не цикл.
+    expect(findRepetitionLoopCut('Подробнее:\nА\n\nПодробнее:\nБ\n')).toBeNull()
+    // Подзаголовок у каждого дня плана — не цикл: за ним другое содержание.
+    expect(
+      findRepetitionLoopCut('День 1\n**Что посмотреть:**\n\n- Вавель\nДень 2\n**Что посмотреть:**\n\n- Казимеж\n'),
+    ).toBeNull()
+  })
+
+  it('на цикле стрим закрывается, а в ответ и последнюю дельту идёт текст без хвоста', async () => {
+    const cancel = jest.fn(async () => undefined)
+    const body = streamBody([sse(chunk('Точки: Ratusz'), chunk('; Ratusz'), chunk('; Ratusz'), chunk('; Ratusz; Ratusz'))])
+    const reader = body.getReader()
+    const fetchImpl = jest.fn(async () => makeResponse({ body: { getReader: () => ({ ...reader, cancel }) } }))
+    const generator = new LlamaCppGenerator('http://127.0.0.1:8080', { fetchImpl: fetchImpl as unknown as typeof fetch })
+    const fulls: string[] = []
+    const result = await generator.generate({ messages, onDelta: (_delta, full) => fulls.push(full) })
+    expect(result.text).toBe('Точки: Ratusz')
+    expect(fulls[fulls.length - 1]).toBe('Точки: Ratusz')
+    expect(fulls.some((full) => full.includes('Ratusz; Ratusz; Ratusz'))).toBe(false)
+    expect(cancel).toHaveBeenCalled()
+
+    // native fetch без стрима: события после цикла не дописываются.
+    const nativeFetch = jest.fn(async () => makeResponse({ text: sse(chunk('А; Рынок; Рынок; Рынок'), chunk(' и дальше'), finalChunk, '[DONE]') }))
+    const native = await new LlamaCppGenerator('http://127.0.0.1:8080', { fetchImpl: nativeFetch as unknown as typeof fetch }).generate({ messages })
+    expect(native.text).toBe('А; Рынок')
   })
 
   it('без стримящего тела (native fetch) читает SSE целиком из text()', async () => {

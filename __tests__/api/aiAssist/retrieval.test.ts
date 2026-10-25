@@ -7,8 +7,11 @@ import {
   detectIntent,
   htmlToSnippet,
   mergeSources,
+  QUEST_RESERVED_SLOTS,
+  buildTravelsSearchQuery,
   scoreText,
   searchSiteMaterials,
+  searchStem,
   tokenizeQuery,
 } from '@/api/aiAssist/retrieval'
 import type { AiSource } from '@/api/aiAssist/types'
@@ -81,6 +84,56 @@ describe('aiAssist retrieval (#2460)', () => {
     expect(iceland.filter((s) => s.type === 'quest')).toHaveLength(3)
   })
 
+  it('запрос бэкенду — основы слов без местоимений; «посмотреть» остаётся (#2709)', () => {
+    const tokens = tokenizeQuery('я в кракове у меня 2 дня что мне посмотреть ?')
+    expect(tokens).toEqual(['кракове', 'посмотреть'])
+    // «посмотреть» поднимает путеводители при ранжировании, но в запрос бэкенду не идёт:
+    // там оно сужает выдачу («несвиж посмотр»: 13 статей → 4).
+    expect(buildTravelsSearchQuery('я в кракове у меня 2 дня что мне посмотреть ?', tokens)).toBe('краков')
+    expect(buildTravelsSearchQuery('что посмотреть?', ['посмотреть'])).toBe('посмотреть')
+    expect(scoreText('Краков: путеводитель — что посмотреть в городе', tokens)).toBe(2)
+    expect(searchStem('польше')).toBe('польш')
+    expect(searchStem('беларуси')).toBe('беларус')
+    expect(searchStem('выходные')).toBe('выходн')
+    // Короткая основа не режется, латиница не трогается.
+    expect(searchStem('минск')).toBe('минск')
+    expect(searchStem('озеро')).toBe('озер')
+    expect(searchStem('гора')).toBe('гора')
+    expect(searchStem('krakowie')).toBe('krakowie')
+  })
+
+  it('без намерения квесты города не вытесняются статьями (#2709)', async () => {
+    const krakow = Array.from({ length: 8 }, (_, i) => travel(100 + i, `Краков: статья ${i}`, `krakow-${i}`))
+    mockedFetchTravels.mockResolvedValue({ data: krakow, total: 8 } as never)
+    mockedQuests.mockResolvedValue([
+      quest('wawel', 'Квест по Кракову: Вавельский дракон', 'krakow', 'Краков'),
+      quest('kazimierz', 'Квест по Казимежу: еврейский квартал Кракова', 'krakow', 'Краков'),
+      quest('nowa-huta', 'Квест по Нова-Хуте: соцгород Кракова', 'krakow', 'Краков'),
+      quest('podgorze', 'Квест по Подгуже', 'krakow', 'Краков'),
+      quest('grodno', 'Квест по Гродно', 'grodno', 'Гродно'),
+    ])
+    const sources = await searchSiteMaterials({ query: 'я в кракове у меня 2 дня что мне посмотреть ?', locale: 'ru' })
+    expect(sources).toHaveLength(8)
+    const quests = sources.filter((s) => s.type === 'quest').map((s) => s.source_id)
+    expect(quests).toEqual(['wawel', 'kazimierz', 'nowa-huta'].slice(0, QUEST_RESERVED_SLOTS))
+    // Статьи с бо́льшим баллом остаются первыми.
+    expect(sources[0].type).toBe('travel')
+
+    // Квесты, совпавшие только по стране, места в резерве не получают.
+    mockedFetchTravels.mockResolvedValue({ data: Array.from({ length: 8 }, (_, i) => travel(200 + i, `Замки Беларуси ${i}`, `zamki-${i}`)), total: 8 } as never)
+    mockedQuests.mockResolvedValue([
+      quest('mir', 'Квест по Миру: замок Ильиничей', 'mir', 'Мир', { country_name: 'Беларусь' }),
+      quest('lida', 'Квест по Лиде', 'lida', 'Лида', { country_name: 'Беларусь' }),
+    ])
+    const castles = await searchSiteMaterials({ query: 'замки беларуси', locale: 'ru' })
+    expect(castles).toHaveLength(8)
+    expect(castles.filter((s) => s.type === 'quest')).toHaveLength(0)
+
+    // С намерением «статья» места за квестами не держатся.
+    const travelsOnly = await searchSiteMaterials({ query: 'статьи про Краков', locale: 'ru' })
+    expect(travelsOnly.filter((s) => s.type === 'quest')).toHaveLength(0)
+  })
+
   it('HTML описания превращается в короткий абзац', () => {
     const snippet = htmlToSnippet('<p>Два дня <b>по замкам</b>&nbsp;и озёрам.</p><script>alert(1)</script>', 40)
     expect(snippet).toBe('Два дня по замкам и озёрам.')
@@ -97,8 +150,8 @@ describe('aiAssist retrieval (#2460)', () => {
     const sources = await searchSiteMaterials({ query: 'Куда поехать на выходные под Гродно', locale: 'ru' })
 
     // Страницы fetchTravels нумеруются с нуля: 0 → `page=1` в запросе.
-    // …и запрос к бэкенду идёт значимыми словами, а не полной фразой.
-    expect(mockedFetchTravels).toHaveBeenCalledWith(0, 8, 'выходные гродно', {}, undefined)
+    // …и запрос к бэкенду идёт основами значимых слов, а не полной фразой.
+    expect(mockedFetchTravels).toHaveBeenCalledWith(0, 16, 'выходн гродн', {}, undefined)
     expect(sources.map((s) => s.source_id)).toEqual(['1', '2', 'kvest-po-grodno'])
     expect(sources[0]).toMatchObject({ type: 'travel', path: '/travels/vyhodnye-pod-grodno', url: expect.stringContaining('/travels/vyhodnye-pod-grodno') })
     expect(sources[0].snippet).toContain('Замки')

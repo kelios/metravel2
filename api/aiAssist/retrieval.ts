@@ -22,7 +22,12 @@ import { buildCanonicalUrl } from '@/utils/seo'
 import type { AiSource } from './types'
 
 export const AI_SOURCES_LIMIT = 8
-const TRAVELS_PAGE_SIZE = 8
+/**
+ * Статей у бэкенда берётся вдвое больше лимита карточек: порядок бэкенда ставит
+ * «Краков: путеводитель» пятым, «Что посмотреть вокруг Кракова» — восьмым, и
+ * переранжирование по словам вопроса («посмотреть») поднимает их наверх (#2709).
+ */
+const TRAVELS_PAGE_SIZE = 16
 const SNIPPET_MAX_LENGTH = 320
 const MIN_TOKEN_LENGTH = 3
 /** `fetchTravels` считает страницы с нуля (`buildWhereQueryParams` шлёт `page + 1`). */
@@ -30,12 +35,19 @@ const TRAVELS_FIRST_PAGE = 0
 
 /**
  * Слова вопроса, которые есть почти в каждой карточке и не выбирают её: вопросительные,
- * «поехать/посмотреть» и сами слова «квест»/«маршрут»/«статья». Без этого «Какие
+ * «поехать/сходить» и сами слова «квест»/«маршрут»/«статья». Без этого «Какие
  * квесты есть в Минске?» подтягивал квест по Бресту — он тоже «квест».
  */
 const QUERY_STOPWORDS = new Set([
   'какие', 'какой', 'какая', 'какое', 'каких', 'что', 'где', 'куда', 'когда', 'как', 'есть', 'ли',
-  'можно', 'нужно', 'хочу', 'хотим', 'поехать', 'съездить', 'посмотреть', 'сходить', 'пройти',
+  'можно', 'нужно', 'хочу', 'хотим', 'поехать', 'съездить', 'сходить', 'пройти',
+  // Местоимения и слова о сроке поездки: бэкенд ищет подстрокой, «меня мне» находит 105 статей
+  // и выносит в топ Рысы и Бытом на вопрос про Краков (#2709). «посмотреть» не здесь: оно
+  // выделяет путеводители «что посмотреть» при ранжировании (см. RERANK_ONLY_WORDS).
+  'меня', 'мне', 'мной', 'нам', 'нас', 'нами', 'вам', 'вас', 'вами', 'тебе', 'тебя', 'себе', 'себя',
+  'мой', 'моя', 'мое', 'мои', 'наш', 'наша', 'наше', 'наши', 'ваш', 'ваша', 'ваше', 'ваши',
+  'день', 'дня', 'дней', 'дни', 'два', 'две', 'три', 'пару', 'очень', 'буду', 'будем', 'был', 'была', 'были',
+  'подскажи', 'подскажите', 'посоветуй', 'посоветуйте', 'лучше', 'сейчас', 'нибудь', 'чтобы', 'если',
   'для', 'или', 'под', 'при', 'про', 'это', 'этот', 'эта', 'там', 'тут', 'ещё', 'еще',
   'квест', 'квесты', 'квеста', 'квестов', 'квесту', 'квестом', 'квестах',
   'маршрут', 'маршруты', 'маршрута', 'маршрутов', 'маршруту',
@@ -109,13 +121,47 @@ export const scoreText = (haystack: string, tokens: readonly string[]): number =
   return score
 }
 
+/** Падежные окончания, длинные раньше коротких: срезается одно, основа — не короче четырёх букв. */
+const CASE_ENDINGS = [
+  'ыми', 'ими', 'ого', 'его', 'ому', 'ему', 'ами', 'ями',
+  'ые', 'ие', 'ая', 'яя', 'ую', 'юю', 'ой', 'ей', 'ий', 'ый', 'ом', 'ем', 'ам', 'ям', 'ах', 'ях', 'ов', 'ев', 'ых', 'их',
+  'а', 'я', 'е', 'и', 'ы', 'у', 'ю', 'о',
+]
+const MIN_SEARCH_STEM_LENGTH = 4
+
 /**
- * Строка поиска для бэкенда: значимые слова вопроса. Полная фраза «Куда поехать
- * на выходные под Гродно с детьми?» у `/api/travels/?query=` даёт ноль, слова
- * «выходные Гродно детьми» — статьи по Гродно (проба 18.10.2026).
+ * Основа слова для подстрочного поиска бэкенда: «кракове» → «краков» находит «Краков:
+ * путеводитель», которого «кракове» не находит (#2709). Мягче `stemToken`: тот режет
+ * две буквы, и «польше» → «поль» ловил бы «пользу». Латиница не трогается.
  */
-export const buildTravelsSearchQuery = (query: string, tokens: readonly string[]): string =>
-  tokens.length ? tokens.join(' ') : query.trim()
+export const searchStem = (token: string): string => {
+  if (!/^[а-я]+$/.test(token)) return token
+  for (const ending of CASE_ENDINGS) {
+    if (token.endsWith(ending) && token.length - ending.length >= MIN_SEARCH_STEM_LENGTH) {
+      return token.slice(0, -ending.length)
+    }
+  }
+  return token
+}
+
+/**
+ * Слова, которые поднимают карточку при ранжировании, но не уходят в запрос бэкенду:
+ * бэкенд требует от статьи все слова запроса, и «несвиж посмотр» терял «Несвижский
+ * замок Радзивиллов» (13 статей → 4, проба 25.10.2026).
+ */
+const RERANK_ONLY_WORDS = new Set(['посмотреть'])
+
+/**
+ * Строка поиска для бэкенда: основы значимых слов вопроса без `RERANK_ONLY_WORDS`. Полная фраза «Куда поехать
+ * на выходные под Гродно с детьми?» у `/api/travels/?query=` даёт ноль, слова
+ * «выходные Гродно детьми» — статьи по Гродно (проба 18.10.2026); падеж «в Кракове»
+ * — основой «краков» (#2709).
+ */
+export const buildTravelsSearchQuery = (query: string, tokens: readonly string[]): string => {
+  const searchable = tokens.filter((token) => !RERANK_ONLY_WORDS.has(token))
+  const words = searchable.length ? searchable : tokens
+  return words.length ? [...new Set(words.map(searchStem))].join(' ') : query.trim()
+}
 
 /**
  * Квесты, прошедшие только на бонусе намерения (без совпадений по словам),
@@ -214,22 +260,45 @@ export const questToSource = (quest: ApiQuestMeta, tokens: readonly string[], in
   }
 }
 
-/** Слияние: по убыванию балла, при равенстве статьи раньше квестов; без дублей URL. */
-export const mergeSources = (sources: readonly AiSource[], limit = AI_SOURCES_LIMIT): AiSource[] => {
+/**
+ * Мест для квестов с совпадением по словам, когда намерения нет: у статьи базовый
+ * балл за отбор бэкендом, и квест «по Кракову» (1) проигрывал каждой статье с
+ * «Кракове» (2+) — восемь мест уходили статьям, квесты города пропадали (#2709).
+ */
+export const QUEST_RESERVED_SLOTS = 3
+
+/**
+ * Слияние: по убыванию балла, при равенстве статьи раньше квестов; без дублей URL.
+ * `reserved` — сколько мест держать за типом среди карточек, прошедших `isReservable`;
+ * остальные места — по баллу. Порядок результата — по баллу.
+ */
+export const mergeSources = (
+  sources: readonly AiSource[],
+  limit = AI_SOURCES_LIMIT,
+  reserved: Partial<Record<AiSource['type'], number>> = {},
+  isReservable: (source: AiSource) => boolean = () => true,
+): AiSource[] => {
   const ranked = [...sources].sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score
     if (a.type !== b.type) return a.type === 'travel' ? -1 : 1
     return 0
   })
   const seen = new Set<string>()
-  const result: AiSource[] = []
-  for (const source of ranked) {
-    if (seen.has(source.url)) continue
+  const unique = ranked.filter((source) => {
+    if (seen.has(source.url)) return false
     seen.add(source.url)
-    result.push(source)
-    if (result.length >= limit) break
+    return true
+  })
+  const picked = new Set<AiSource>()
+  for (const [type, slots] of Object.entries(reserved)) {
+    const own = unique.filter((s) => s.type === type && isReservable(s))
+    for (const source of own.slice(0, Math.min(slots ?? 0, limit))) picked.add(source)
   }
-  return result
+  for (const source of unique) {
+    if (picked.size >= limit) break
+    picked.add(source)
+  }
+  return unique.filter((source) => picked.has(source)).slice(0, limit)
 }
 
 /**
@@ -283,6 +352,7 @@ export async function searchSiteMaterials({
   ])
 
   const candidates: AiSource[] = []
+  const localQuestUrls = new Set<string>()
   if (travelsResult.status === 'fulfilled') {
     for (const travel of travelsResult.value?.data ?? []) {
       const source = travelToSource(travel, tokens, intent)
@@ -293,9 +363,19 @@ export async function searchSiteMaterials({
     const questSources: AiSource[] = []
     for (const quest of questsResult.value ?? []) {
       const source = questToSource(quest, tokens, intent)
-      if (source) questSources.push(source)
+      if (!source) continue
+      questSources.push(source)
+      // Место в резерве — только квесту про город или объект вопроса: совпадение по одной
+      // стране («Замки Беларуси») отдавало бы три места квестам случайных городов.
+      const local = [quest.title, quest.city_name_localized, quest.city_name, quest.city_name_canonical].filter(Boolean).join(' ')
+      if (scoreText(local, tokens) > 0) localQuestUrls.add(source.url)
     }
     candidates.push(...dropRescuedQuestsWhenMatched(questSources, intent, tokens.length > 0))
   }
-  return mergeSources(candidates, limit)
+  return mergeSources(
+    candidates,
+    limit,
+    intent === null ? { quest: QUEST_RESERVED_SLOTS } : {},
+    (source) => source.type !== 'quest' || localQuestUrls.has(source.url),
+  )
 }
