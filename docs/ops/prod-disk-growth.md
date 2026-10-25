@@ -25,8 +25,8 @@ Platform impact: none. Localization impact: none.
 | --- | ---: | ---: | --- | --- |
 | ОС: `/usr` 2 338 (firmware 664, два ядра), `/boot` 185, доступная часть `/var` 591 | 3 114 | ≈ 3 200 | два ядра, apt без автоочистки архивов | хост, sudo |
 | `/swapfile` | 2 048 | 2 048 | фиксирован | хост |
-| docker-образы: app 1 385, postgis 637, nginx 401, redis 143 (на диске `overlay2` — 2 658) | 2 446 | + 1 300 на время отката | `deploy/prod/app_image_retention.sh` (бэк) | бэк |
-| образ PDF-worker книги `metravel_book_worker` (с 11.10, #2388; ≈ 0,86 ГБ сверх слоёв app, 2,25 ГБ всего) | — | ≈ 860 + 2 048 на время пересборки | `app_image_retention.sh worker-preflight`/`release-rollback`, `deploy/prod/README.md` → «Book PDF worker image» (#2390) | бэк |
+| docker-образы: app 571 (с 25.10, #2726: трёхстадийный образ без компиляторов; до того 1 385), postgis 637, nginx 401, redis 143 | ≈ 1 750 | + 571 на предыдущее поколение `deps-*` и время сборки ≤ 2 048 свободных (`release_app.sh`) | `deploy/prod/app_image_retention.sh`, `deploy/prod/release_app.sh` (бэк) | бэк |
+| образ PDF-worker книги `metravel_book_worker` (с 11.10, #2388; ≈ 0,87 ГБ сверх слоёв app, 1,44 ГБ всего с 25.10 — собирается от `metravel_app:deps-<hash>` и пересобирается выкатом только при смене зависимостей, #2726) | — | ≈ 860 + 2 048 на время пересборки | `app_image_retention.sh worker-preflight`/`release-rollback`, `deploy/prod/README.md` → «Book PDF worker image» (#2390) | бэк |
 | кэш nginx, том `metravel_nginx_tile_cache` (91 % — картинки `img:`) | 985 | 768 (до #2225 — 1 536) | `nginx.conf`: `max_size=768m inactive=24h` (#2225) | бэк |
 | json-логи контейнеров | 90 | ≈ 590 | compose: nginx и app `50m×5`, прочие `10m×3` | бэк |
 | PostGIS data, живая база `deploy/prod/postgis/data` (каталог внутри checkout, `du` хоста его не видит) | 505 | + WAL до 1 024 | `max_wal_size` | бэк |
