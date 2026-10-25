@@ -231,7 +231,11 @@ const Header = React.memo(function Header() {
 // - null      -> экран исключён из линкинга (скрыт полностью)
 // - undefined -> экран адресуем, но скрыт из таббара
 const HIDDEN = { title: '', href: undefined, lazy: true } as const;
-const HIDDEN_NOHREF = { title: '', href: null, lazy: true } as const;
+// expo-router 58 (#2727): `href: null` у Tabs.Screen больше не «спрятать кнопку таба», а
+// guarded-маршрут без назначения — прямой заход на /login, /registration, /profile (web)
+// редиректил на первый таб и ронял auth/favorite/subscribe-флоу. Таббар здесь скрыт целиком
+// (`tabBar={() => null}`), так что скрывать нечего: экраны остаются адресуемыми.
+const HIDDEN_NOHREF = HIDDEN;
 const registrationOnlyLayout = () => <></>;
 
 export default function TabLayout() {
@@ -241,11 +245,9 @@ export default function TabLayout() {
       Platform.OS === 'web'
         ? { title: '', href: undefined, lazy: true }
         : { ...HIDDEN, lazy: false, freezeOnBlur: false };
-    // На native нижний док (BottomDock) использует «Профиль» как ключевую вкладку
-    // → роут /profile должен быть адресуем (href: undefined), иначе router.push
-    // в доке не сработает. На web профиль остаётся вне линкинга таб-навигатора
-    // (href: null), как и было — поведение web не меняем.
-    const profileOptions = Platform.OS === 'web' ? HIDDEN_NOHREF : HIDDEN;
+    // Профиль адресуем на обеих платформах: нижний док (BottomDock) делает router.push,
+    // а на web с expo-router 58 `href: null` редиректил бы /profile на главную.
+    const profileOptions = HIDDEN;
 
     return (
         <>
@@ -299,6 +301,19 @@ export default function TabLayout() {
                 <Tabs.Screen name="trips/plan/create" options={HIDDEN} />
                 <Tabs.Screen name="trips/plan/[id]" options={HIDDEN} />
                 <Tabs.Screen name="user/[id]" options={HIDDEN} />
+                {/* expo-router 58 (#2727): маршрут, не объявленный здесь, становится placeholder-табом
+                    (appendMissingPlaceholderTabRoutes) и в статическом экспорте рендерится пустым —
+                    без шапки и контента (были пустыми /more, /articles, /article/[id], /cookies,
+                    /export, /quests/scenario, /quests/theme/*, /quests/country/*). Каждый файл-маршрут
+                    группы объявлен явно. */}
+                <Tabs.Screen name="more" options={HIDDEN} />
+                <Tabs.Screen name="articles" options={HIDDEN} />
+                <Tabs.Screen name="article/[id]" options={HIDDEN} />
+                <Tabs.Screen name="export" options={HIDDEN} />
+                <Tabs.Screen name="book-exports/[job_id]" options={HIDDEN} />
+                <Tabs.Screen name="quests/scenario" options={HIDDEN} />
+                <Tabs.Screen name="quests/theme/[theme]" options={HIDDEN} />
+                <Tabs.Screen name="quests/country/[country]/index" options={HIDDEN} />
 
                 {/* полностью скрытые из линкинга */}
                 <Tabs.Screen name="about" options={HIDDEN} />
@@ -308,6 +323,7 @@ export default function TabLayout() {
                 <Tabs.Screen name="terms" options={HIDDEN} />
                 <Tabs.Screen name="community-rules" options={HIDDEN} />
                 <Tabs.Screen name="trip-rules" options={HIDDEN} />
+                <Tabs.Screen name="cookies" options={HIDDEN} />
                 <Tabs.Screen name="login" options={HIDDEN_NOHREF} />
                 <Tabs.Screen name="registration" options={HIDDEN_NOHREF} />
                 <Tabs.Screen name="set-password" options={HIDDEN_NOHREF} />

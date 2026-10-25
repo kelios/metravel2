@@ -1,5 +1,5 @@
 diff --git a/node_modules/@expo/router-server/build/server/renderStreamingContent.js b/node_modules/@expo/router-server/build/server/renderStreamingContent.js
-index 5d2be29..bbfe294 100644
+index 5d2be29..24a166e 100644
 --- a/node_modules/@expo/router-server/build/server/renderStreamingContent.js
 +++ b/node_modules/@expo/router-server/build/server/renderStreamingContent.js
 @@ -100,6 +100,7 @@ function _server2() {
@@ -10,7 +10,7 @@ index 5d2be29..bbfe294 100644
  const _metadata = require("./metadata");
  function _interop_require_default(obj) {
      return obj && obj.__esModule ? obj : {
-@@ -250,7 +251,22 @@ async function getStreamingContent(location, options) {
+@@ -250,7 +251,34 @@ async function getStreamingContent(location, options) {
              if (renderErrors.length > 0) {
                  throw renderErrors[0];
              }
@@ -27,6 +27,18 @@ index 5d2be29..bbfe294 100644
 +            const html = await new Response(stream).text();
 +            const { headTags, htmlAttributes, bodyAttributes } = (0, _html.serializeHelmetToHtml)(headContext.helmet);
 +            let output = html;
++            // metravel #2727: `getStyleElement()` above snapshots the react-native-web
++            // sheet BEFORE the route renders, so the exported <style id="react-native-stylesheet">
++            // only held the ~340 module-level rules; every rule inserted while rendering
++            // the page (animations, absolute plates, breakpoint boxes — 22–77 classes per
++            // route) was missing until the client re-inserted it, and the first frame
++            // laid out without them (CLS 0.97 on /quests@390). SDK 57's renderToString path
++            // read the sheet after the render; do the same here.
++            const styleMarkup = _server2().default.renderToStaticMarkup(getStyleElement());
++            if (styleMarkup) {
++                const replaced = output.replace(/<style id="react-native-stylesheet">[\s\S]*?<\/style>/, () => styleMarkup);
++                output = replaced === output ? output.replace('</head>', `${styleMarkup}</head>`) : replaced;
++            }
 +            if (headTags) output = output.replace('<head>', `<head>${headTags}`);
 +            if (htmlAttributes) output = output.replace('<html ', `<html ${htmlAttributes} `);
 +            if (bodyAttributes) output = output.replace('<body ', `<body ${bodyAttributes} `);

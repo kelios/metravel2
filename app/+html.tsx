@@ -442,7 +442,17 @@ export default function Root({ children }: { children: React.ReactNode }) {
   // приходят узлами через контекст документа, и шаблон обязан их отрендерить сам.
   // Атрибуты документа из метаданных маршрута накладываются поверх локали, как
   // раньше делал helmet-слой.
-  const { headNodes, bodyNodes, htmlAttributes, bodyAttributes } = useServerDocumentContext();
+  const { headNodes: documentHeadNodes, bodyNodes, htmlAttributes, bodyAttributes } = useServerDocumentContext();
+  // SDK 58 добавляет к каждому чанку `<link rel="preload" as="script">`; React 19 поднимает
+  // такие ресурсы в самое начало head, и 10–20 preload'ов стартуют раньше критического CSS и
+  // LCP-картинки — ровно то, от чего #1479 прятал deferred-скрипты за hero. Сами `<script defer>`
+  // остаются в body; preload css (как в SDK 57) и остальные узлы не трогаем.
+  const headNodes = React.Children.toArray(documentHeadNodes).filter((node) => !(
+    React.isValidElement(node)
+    && node.type === 'link'
+    && (node.props as { rel?: string; as?: string }).rel === 'preload'
+    && (node.props as { rel?: string; as?: string }).as === 'script'
+  ));
   const isProduction = typeof process !== 'undefined' && 
     (process.env.EXPO_PUBLIC_SITE_URL === 'https://metravel.by' || 
      process.env.NODE_ENV === 'production');
