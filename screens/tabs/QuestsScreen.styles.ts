@@ -598,10 +598,14 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
                 web: { cursor: 'pointer' } as any,
             }),
         },
+        // Desktop: счётчик и чипы стоят справа от заголовка, а при длинном
+        // названии города переносятся под него — заголовок не обрезается.
         contentTitleBlock: {
             flexDirection: 'row',
+            flexWrap: 'wrap',
             alignItems: 'center',
-            gap: spacing.sm,
+            columnGap: spacing.sm,
+            rowGap: spacing.xxs,
             flexShrink: 1,
             minWidth: 0,
         },

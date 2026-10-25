@@ -319,7 +319,7 @@ function QuestsContentPanel({
         >
             <Text
                 style={styles.contentTitle}
-                numberOfLines={isMobile ? 2 : 1}
+                numberOfLines={2}
                 accessibilityRole="header"
                 {...({ 'aria-level': 1 } as Record<string, unknown>)}
                 testID="quests-content-title"
