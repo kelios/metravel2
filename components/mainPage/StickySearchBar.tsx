@@ -52,6 +52,8 @@ interface StickySearchBarProps {
     onPress: () => void;
     testID: string;
   };
+  /** Catalog controls (sort, density) placed in the same row as the search; the caller renders them only on desktop (#2755). */
+  inlineControls?: ReactNode;
 }
 
 function StickySearchBar({
@@ -70,6 +72,7 @@ function StickySearchBar({
   quickFilters,
   onQuickFilterPress,
   primaryAction,
+  inlineControls,
 }: StickySearchBarProps) {
   const colors = useThemedColors();
   const { isPhone, isLargePhone, width } = useResponsive();
@@ -347,6 +350,8 @@ function StickySearchBar({
               )}
             </View>
           )}
+
+          {inlineControls}
 
           {/* Рекомендации */}
           {onToggleRecommendations && (

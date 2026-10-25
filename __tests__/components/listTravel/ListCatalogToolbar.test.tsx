@@ -1,10 +1,18 @@
 import React from 'react'
-import { render } from '@testing-library/react-native'
+import { fireEvent, render } from '@testing-library/react-native'
 
 jest.mock('@expo/vector-icons/Feather', () => {
   const React = require('react')
   const { Text } = require('react-native')
   return ({ name }: { name: string }) => React.createElement(Text, null, name)
+})
+
+jest.mock('@/ui/paper', () => {
+  const React = require('react')
+  const { View } = require('react-native')
+  const DialogMenu = ({ children, anchor, visible }: any) =>
+    React.createElement(View, null, anchor, visible ? children : null)
+  return { DialogMenu }
 })
 
 jest.mock('@/hooks/useTheme', () => ({
@@ -17,6 +25,8 @@ jest.mock('@/hooks/useTheme', () => ({
     borderLight: '#e2e8f0',
     textMuted: '#64748b',
     textSecondary: '#475569',
+    text: '#0f172a',
+    border: '#cbd5e1',
   }),
 }))
 
@@ -60,24 +70,33 @@ describe('ListCatalogToolbar', () => {
     expect(getByTestId('toolbar-results-count')).toBeTruthy()
     expect(getByTestId('density-comfortable')).toBeTruthy()
     expect(queryByLabelText('Сортировка списка')).toBeNull()
-    expect(queryByTestId('sort-chip-newest')).toBeNull()
+    expect(queryByTestId('catalog-sort-trigger')).toBeNull()
   })
 
-  it('shows inline sorting once the docked desktop sidebar is available', () => {
-    const { getByTestId } = render(
+  it('shows a single sort menu on desktop and applies the picked option (#2755)', () => {
+    const onSortChange = jest.fn()
+    const { getByTestId, queryByTestId } = render(
       <ListCatalogToolbar
         sortOptions={[
           { id: 'newest', name: 'Новые' },
           { id: 'oldest', name: 'Старые' },
         ]}
         sortValue="newest"
-        onSortChange={jest.fn()}
+        onSortChange={onSortChange}
         density="comfortable"
         onDensityChange={jest.fn()}
         compactLayout={false}
+        inline
       />,
     )
 
-    expect(getByTestId('sort-chip-newest')).toBeTruthy()
+    expect(getByTestId('catalog-sort-trigger')).toHaveTextContent(/Новые/)
+    expect(queryByTestId('sort-option-oldest')).toBeNull()
+
+    fireEvent.press(getByTestId('catalog-sort-trigger'))
+    fireEvent.press(getByTestId('sort-option-oldest'))
+
+    expect(onSortChange).toHaveBeenCalledWith('oldest')
+    expect(queryByTestId('sort-option-oldest')).toBeNull()
   })
 })

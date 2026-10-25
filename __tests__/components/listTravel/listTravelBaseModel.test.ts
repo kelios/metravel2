@@ -3,6 +3,7 @@ import {
   buildListTravelFallbackSteps,
   getCatalogCardMediaLoading,
   getListTravelActiveFiltersCount,
+  shouldSidebarIncludeSort,
 } from '@/components/listTravel/listTravelBaseModel'
 import {
   getRightColumnVirtualizationConfig,
@@ -198,5 +199,26 @@ describe('buildListTravelFallbackSteps', () => {
     })
 
     expect(steps).toEqual([])
+  })
+})
+
+describe('shouldSidebarIncludeSort (#2755)', () => {
+  const ReactNative = require('react-native')
+  const originalOS = ReactNative.Platform.OS
+  const setOS = (os: string) =>
+    Object.defineProperty(ReactNative.Platform, 'OS', { value: os, configurable: true })
+
+  afterEach(() => setOS(originalOS))
+
+  it('drops sort from the docked desktop web sidebar, where the search row sorts', () => {
+    setOS('web')
+    expect(shouldSidebarIncludeSort({ usesOverlaySidebar: false, isExport: false })).toBe(false)
+    expect(shouldSidebarIncludeSort({ usesOverlaySidebar: true, isExport: false })).toBe(true)
+    expect(shouldSidebarIncludeSort({ usesOverlaySidebar: false, isExport: true })).toBe(true)
+  })
+
+  it.each(['android', 'ios'])('keeps sort in the docked %s sidebar (tablet / landscape)', (os) => {
+    setOS(os)
+    expect(shouldSidebarIncludeSort({ usesOverlaySidebar: false, isExport: false })).toBe(true)
   })
 })

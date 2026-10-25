@@ -278,6 +278,8 @@ const RightColumn: React.FC<RightColumnProps> = (
     // re-render the whole FlashList on every scroll frame (scroll jank).
     const isMobileViewport = isMobileViewportProp ?? isMobile
     const isCompactToolbar = isCompactToolbarProp ?? isMobileViewport
+    // Desktop web: search, sort and view controls share one row (#2755).
+    const isToolbarInline = isWeb && !isCompactToolbar
     const isWebMobile = isWeb && isMobileViewport
     const hasTextSearch = search.trim().length > 0
     const showRecommendations =
@@ -638,6 +640,28 @@ const RightColumn: React.FC<RightColumnProps> = (
       webScrollHandler,
     ])
 
+    const catalogToolbar =
+      !isExport && (sortOptions.length > 0 || (showDensityToggle && onDensityChange)) ? (
+        <ListCatalogToolbar
+          sortOptions={sortOptions}
+          sortValue={sortValue}
+          onSortChange={onSortChange ?? (() => {})}
+          density={density}
+          onDensityChange={onDensityChange ?? (() => {})}
+          showDensityToggle={showDensityToggle && !!onDensityChange}
+          statusMode={statusMode}
+          onStatusModeChange={onStatusModeChange}
+          showStatusModeToggle={showStatusModeToggle && !!onStatusModeChange}
+          contentPadding={contentPadding}
+          resultsCount={isError ? undefined : total}
+          showResultsCount={
+            isMobileViewport && !isSearchPending && !showInitialLoading && !isError
+          }
+          compactLayout={isCompactToolbar}
+          inline={isToolbarInline}
+        />
+      ) : null
+
     return (
       <View testID={testID} style={containerStyle}>
         {/* Search Header - Sticky */}
@@ -660,28 +684,11 @@ const RightColumn: React.FC<RightColumnProps> = (
             activeFiltersCount={activeFiltersCount}
             onClearAll={onClearAll ?? (() => setSearch(''))}
             primaryAction={primaryAction}
+            inlineControls={isToolbarInline ? catalogToolbar : undefined}
           />
         </View>
 
-        {!isExport && (sortOptions.length > 0 || (showDensityToggle && onDensityChange)) ? (
-          <ListCatalogToolbar
-            sortOptions={sortOptions}
-            sortValue={sortValue}
-            onSortChange={onSortChange ?? (() => {})}
-            density={density}
-            onDensityChange={onDensityChange ?? (() => {})}
-            showDensityToggle={showDensityToggle && !!onDensityChange}
-            statusMode={statusMode}
-            onStatusModeChange={onStatusModeChange}
-            showStatusModeToggle={showStatusModeToggle && !!onStatusModeChange}
-            contentPadding={contentPadding}
-            resultsCount={isError ? undefined : total}
-            showResultsCount={
-              isMobileViewport && !isSearchPending && !showInitialLoading && !isError
-            }
-            compactLayout={isCompactToolbar}
-          />
-        ) : null}
+        {catalogToolbar && !isToolbarInline ? catalogToolbar : null}
 
         {topContentNodes ? (
           <View style={paddingHorizontalStyle}>{topContentNodes}</View>

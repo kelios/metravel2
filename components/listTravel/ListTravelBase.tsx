@@ -45,6 +45,7 @@ import {
   getCatalogCardMediaLoading,
   getSearchCardImageHeight,
   getSearchCardWidth,
+  shouldSidebarIncludeSort,
 } from './listTravelBaseModel'
 import { useListTravelViewportState } from './hooks/useListTravelViewportState'
 import ListTravelOwnUserGate, {
@@ -502,10 +503,10 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
         options,
         facetCounts,
         selectedFilters: filter,
-        includeSort: true,
+        includeSort: shouldSidebarIncludeSort({ usesOverlaySidebar, isExport }),
         hideCountries: isTravelBy,
       }),
-      [options, filter, isTravelBy, facetCounts]
+      [options, filter, isTravelBy, facetCounts, usesOverlaySidebar, isExport]
     );
 
     const fallbackMatch = useMemo(() => selectListTravelFallbackMatch({

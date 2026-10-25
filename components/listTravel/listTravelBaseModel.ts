@@ -350,6 +350,15 @@ export function getListTravelViewportState(params: ResponsiveParams): ViewportSt
   }
 }
 
+/**
+ * The sidebar keeps the sort group only where the catalog toolbar does not sort (#2755):
+ * desktop web sorts from the search row, while native never renders the toolbar sort, so a
+ * docked native sidebar (tablet / landscape) must keep it, as do the overlay sheet and export.
+ */
+export function shouldSidebarIncludeSort(params: { usesOverlaySidebar: boolean; isExport: boolean }) {
+  return Platform.OS !== 'web' || params.usesOverlaySidebar || params.isExport
+}
+
 export function buildListTravelSearchPendingState({
   isInitialLoading,
   isUserIdLoading,

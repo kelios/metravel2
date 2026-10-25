@@ -5,7 +5,6 @@ export const travelGenerated1 = {
   "components.listTravel.hooks.useListTravelExport.moi_puteshestviya_ae41dad8": "Мои путешествия",
   "components.listTravel.hooks.useListTravelExport.puteshestviya_value1_0626d74c": "Путешествия {{value1}}",
   "components.listTravel.ListCatalogToolbar.plotnost_spiska_2c4c93c1": "Плотность списка",
-  "components.listTravel.ListCatalogToolbar.sortirovat_value1_36ec73e5": "Сортировать: {{value1}}",
   "components.listTravel.ListCatalogToolbar.sortirovka_spiska_f3306938": "Сортировка списка",
   "components.listTravel.ListCatalogToolbar.status_moih_puteshestviy_855a3491": "Статус моих путешествий",
   "components.listTravel.ListTravelBase_helpers.chernoviki_18f19ca2": "Черновики",
