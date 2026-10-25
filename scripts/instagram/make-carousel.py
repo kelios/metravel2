@@ -11,7 +11,10 @@
            притемнён целиком, текст по центру, "top"?: y начала текста, по умолчанию 430)}
   story — MeTravel C (раздел 17 ТЗ, владелец 23.10.2026; шаблон 18.1): {"type": "story", "image", "kicker", "title", "body",
            "role"?: "cover" (заголовок крупнее) | "scene" (по умолчанию) | "final",
-           "fit"?: "width" (по умолчанию: фото целиком по ширине, у верха; портрет — contain по высоте) | "cover" (на весь кадр, только для обложки),
+           "layout"?: "below" (по умолчанию для сцен, владелец 25.10.2026: фото НЕ перекрывается текстом — фото занимает верх до текстового блока,
+           текст на тёмном поле ниже; квадрат/портрет подрезаются по центру до нужной высоты, "focus": "top"|"center"|"bottom" двигает окно,
+           "fit": "contain" — без подрезки, с полями) | "overlay" (по умолчанию для обложки: фото на весь кадр, текст на затемнении у низа),
+           "fit"?: "width" (overlay: фото целиком по ширине, у верха; портрет — contain по высоте) | "cover" (на весь кадр, только для обложки),
            "crop"?: [x0, y0, x1, y1] — явный кроп исходника (пиксели после EXIF-поворота; записать в package.md),
            "protect"?: true — текст только ниже фото (лица/объект у низа кадра не затемняются)}
            Фото у верха, тёмное поле и мягкое затемнение под белым текстом у низа; кикер 25 px, заголовок 57 px (обложка 76), тело 40 px,
@@ -348,11 +351,26 @@ def footer_c(img, index, total):
     draw.line((1022 - lw - 52, 1285, 1022 - lw - 15, 1285), fill=C_LINE, width=3)
 
 
+def story_photo_below(spec, avail_h):
+    """Фото для layout "below": на всю ширину, высотой ровно avail_h; лишнее по вертикали срезается окном
+    ("focus": top|center|bottom), "fit": "contain" — целиком с полями. Апскейла нет: исходник уже ≥ 1080 px."""
+    img = ImageOps.exif_transpose(Image.open(fetch(spec["image"]))).convert("RGB")
+    if spec.get("crop"):
+        img = img.crop(tuple(spec["crop"]))
+    if spec.get("fit") == "contain":
+        return ImageOps.contain(img, (W, avail_h), Image.LANCZOS)
+    scaled = img.resize((W, round(img.height * W / img.width)), Image.LANCZOS)
+    if scaled.height <= avail_h:
+        return scaled
+    focus = spec.get("focus", "center")
+    y0 = {"top": 0, "bottom": scaled.height - avail_h}.get(focus, (scaled.height - avail_h) // 2)
+    return scaled.crop((0, y0, W, y0 + avail_h))
+
+
 def slide_story(spec):
-    """MeTravel C: фото у верха, тёмное поле, кикер + заголовок + один абзац у низа. Шаблон 18.1 ТЗ."""
+    """MeTravel C: фото у верха, тёмное поле, кикер + заголовок + один абзац. Шаблон 18.1 ТЗ.
+    Сцены по умолчанию — layout "below": текст не ложится на фото (владелец, 25.10.2026)."""
     img = Image.new("RGB", (W, H), C_BG)
-    photo_img = story_photo(spec)
-    img.paste(photo_img, ((W - photo_img.width) // 2, 0))
     draw = ImageDraw.Draw(img)
     title_size = 76 if spec.get("role") == "cover" else 57
     title_font, body_font, x, width = font("bold", title_size), font("sans", 40), 58, 964
@@ -360,6 +378,21 @@ def slide_story(spec):
     title_lines = wrap(draw, spec["title"], title_font, width)
     body_lines = wrap(draw, spec["body"], body_font, width)
     block_h = 45 + len(title_lines) * title_step + 20 + len(body_lines) * body_step
+    layout = spec.get("layout") or ("overlay" if spec.get("role") == "cover" else "below")
+    if layout == "below" and not spec.get("protect"):
+        top = 1235 - block_h
+        if top < 700:
+            raise SystemExit(f"story «{spec['title']}»: фото останется меньше 680 px ({top} < 700) — сократить тело или заголовок")
+        photo_img = story_photo_below(spec, top - 24)
+        img.paste(photo_img, ((W - photo_img.width) // 2, 0))
+        fade_c(img, photo_img.height - 6, photo_img.height + 6)
+        draw = ImageDraw.Draw(img)
+        draw.text((x, top), spec["kicker"].upper(), font=font("bold", 25), fill=C_SAGE)
+        y = block(draw, spec["title"], title_font, x, top + 45, width, WHITE, gap=1.10) + 20
+        block(draw, spec["body"], body_font, x, y, width, WHITE, gap=1.275)
+        return img, None
+    photo_img = story_photo(spec)
+    img.paste(photo_img, ((W - photo_img.width) // 2, 0))
     top = min(785, 1220 - block_h)
     if spec.get("protect"):
         top = max(top, photo_img.height + 8)
