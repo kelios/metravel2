@@ -9,6 +9,13 @@
   map   — {"type": "map", "title", "note", "points": [{"name", "lat", "lng"}], "line"?: false — без ломаной между точками, "map_h"?: высота карты (800), "row_h"?: шаг строки легенды (62), "zoom"?, "patches"?: [{"box","from"}], "tile_url"?, "credit"?, "inset_line"?: "auto"|"none", "inset"?: {"from","to","x","y","w","h"} — врезка крупным масштабом для тесного кластера точек (номера from..to, 1-based)}
   cta   — {"type": "cta", "image", "title", "text", "layout"?: "full" (по умолчанию: затемнение снизу, текст у низа) | "center" (прежняя: кадр
            притемнён целиком, текст по центру, "top"?: y начала текста, по умолчанию 430)}
+  story — MeTravel C (раздел 17 ТЗ, владелец 23.10.2026; шаблон 18.1): {"type": "story", "image", "kicker", "title", "body",
+           "role"?: "cover" (заголовок крупнее) | "scene" (по умолчанию) | "final",
+           "fit"?: "width" (по умолчанию: фото целиком по ширине, у верха; портрет — contain по высоте) | "cover" (на весь кадр, только для обложки),
+           "crop"?: [x0, y0, x1, y1] — явный кроп исходника (пиксели после EXIF-поворота; записать в package.md),
+           "protect"?: true — текст только ниже фото (лица/объект у низа кадра не затемняются)}
+           Фото у верха, тёмное поле и мягкое затемнение под белым текстом у низа; кикер 25 px, заголовок 57 px (обложка 76), тело 40 px,
+           подвал: птичка, @metravelby, «NN / TT». Текст слайда — только `body`: 2–4 предложения, до 50 слов (линт F2).
 
 Фото — локальный путь или URL (только свои фото автора 1). Карта — плитки OpenStreetMap,
 подпись об авторстве ставится на слайд. Тексты — только из статьи.
@@ -306,17 +313,84 @@ def slide_cta(spec):
     return img, WHITE
 
 
+C_BG, C_FADE, C_SAGE, C_LINE = (20, 34, 27), (10, 20, 16), (207, 223, 215), (122, 157, 143)
+
+
+def story_photo(spec):
+    """Фото для MeTravel C: целиком по ширине у верха (4:3 → 810 px, 1:1 → 1080 px); портрет не режется —
+    contain по высоте с полями; "cover" — на весь кадр (обложка); "crop" — явное окно исходника."""
+    img = ImageOps.exif_transpose(Image.open(fetch(spec["image"]))).convert("RGB")
+    if spec.get("crop"):
+        img = img.crop(tuple(spec["crop"]))
+    if spec.get("fit") == "cover":
+        return ImageOps.fit(img, (W, H), Image.LANCZOS)
+    scaled = img.resize((W, round(img.height * W / img.width)), Image.LANCZOS)
+    return scaled if scaled.height <= H else ImageOps.contain(img, (W, H), Image.LANCZOS)
+
+
+def fade_c(img, top, bottom, strength=220):
+    """Затемнение C: прозрачно выше top, плавно до bottom, ниже — ровно (под белый текст)."""
+    overlay = Image.new("L", (1, H), 0)
+    for y in range(max(0, top), H):
+        overlay.putpixel((0, y), strength if y >= bottom else int(strength * (y - top) / max(1, bottom - top)))
+    img.paste(Image.new("RGB", (W, H), C_FADE), (0, 0), overlay.resize((W, H)))
+
+
+def footer_c(img, index, total):
+    draw = ImageDraw.Draw(img)
+    bird = Image.open(BRAND_BIRD).convert("RGBA")
+    bird.thumbnail((40, 40))
+    img.paste(bird, (58, 1262), bird)
+    draw.text((112, 1265), "@metravelby", font=font("bold", 28), fill=WHITE)
+    label = f"{index:02d} / {total:02d}"
+    lw = draw.textlength(label, font=font("sans", 28))
+    draw.text((1022 - lw, 1266), label, font=font("sans", 28), fill=WHITE)
+    draw.line((1022 - lw - 52, 1285, 1022 - lw - 15, 1285), fill=C_LINE, width=3)
+
+
+def slide_story(spec):
+    """MeTravel C: фото у верха, тёмное поле, кикер + заголовок + один абзац у низа. Шаблон 18.1 ТЗ."""
+    img = Image.new("RGB", (W, H), C_BG)
+    photo_img = story_photo(spec)
+    img.paste(photo_img, ((W - photo_img.width) // 2, 0))
+    draw = ImageDraw.Draw(img)
+    title_size = 76 if spec.get("role") == "cover" else 57
+    title_font, body_font, x, width = font("bold", title_size), font("sans", 40), 58, 964
+    title_step, body_step = round(title_size * 1.10), 51
+    title_lines = wrap(draw, spec["title"], title_font, width)
+    body_lines = wrap(draw, spec["body"], body_font, width)
+    block_h = 45 + len(title_lines) * title_step + 20 + len(body_lines) * body_step
+    top = min(785, 1220 - block_h)
+    if spec.get("protect"):
+        top = max(top, photo_img.height + 8)
+        if top + block_h > 1235:
+            raise SystemExit(f"story «{spec['title']}»: текст под фото не помещается ({top + block_h} > 1235) — короче тело или без protect")
+        fade_c(img, photo_img.height, photo_img.height + 10)
+    else:
+        fade_c(img, max(460, top - 145), top + 60)
+    draw = ImageDraw.Draw(img)
+    draw.text((x, top), spec["kicker"].upper(), font=font("bold", 25), fill=C_SAGE)
+    y = block(draw, spec["title"], title_font, x, top + 45, width, WHITE, gap=1.10) + 20
+    end = block(draw, spec["body"], body_font, x, y, width, WHITE, gap=1.275)
+    if end > 1235:
+        raise SystemExit(f"story «{spec['title']}»: текст заходит на подвал ({end} > 1235) — сократить тело")
+    return img, None
+
+
 def main():
     if len(sys.argv) != 2:
         raise SystemExit(__doc__)
     spec = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
     out_dir = Path(spec["out_dir"])
     out_dir.mkdir(parents=True, exist_ok=True)
-    builders = {"cover": slide_cover, "list": slide_list, "map": slide_map, "cta": slide_cta}
+    builders = {"cover": slide_cover, "list": slide_list, "map": slide_map, "cta": slide_cta, "story": slide_story}
     total = len(spec["slides"])
     for index, slide in enumerate(spec["slides"], 1):
         img, footer_fill = builders[slide["type"]](slide)
-        footer(ImageDraw.Draw(img), index, total, footer_fill)
+        if footer_fill is None:
+            footer_c(img, index, total)
+        else:
+            footer(ImageDraw.Draw(img), index, total, footer_fill)
         img.save(out_dir / f"{index:02d}.jpg", quality=92)
     print(f"make-carousel: {total} слайдов в {out_dir}")
 

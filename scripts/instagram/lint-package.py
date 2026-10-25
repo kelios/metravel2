@@ -58,7 +58,7 @@ CAPTION_MAX = 1800
 EMOJI_MAX = 2
 HASHTAGS_MIN, HASHTAGS_MAX = 3, 5
 REEL_MIN_S, REEL_MAX_S = 15, 40
-SLIDE_TEXT_KEYS = ('kicker', 'title', 'subtitle', 'text', 'note', 'items', 'points')
+SLIDE_TEXT_KEYS = ('kicker', 'title', 'subtitle', 'text', 'body', 'note', 'items', 'points')
 SOURCE_FILES = ('brief.md', 'sources.md', 'package.md', 'article-edits.md')
 
 EMOJI_CHAR = ('[\U0001F300-\U0001FAFF\U00002600-\U000027BF\U0001F000-\U0001F2FF\U00002B00-\U00002BFF'
@@ -72,7 +72,7 @@ QUEST_ID_RE = re.compile(r'(?:quest_id\s*[=:]\s*[`"\']?|by-quest-id/)([a-z0-9][a
 # Адрес квеста по F7 — metravel.by/quests/<city_id>/<quest_id>: квест в пакете находится и без строки quest_id.
 QUEST_URL_RE = re.compile(r'\bquests/\d+/([a-z0-9][a-z0-9-]+)', re.I)
 ALLOW_RE = re.compile(r'^\s*lint-allow:\s*(F10|F11|V3)\s+(.+?)\s+—\s+\S', re.M)
-SLIDE_BODY_KEYS = ('subtitle', 'text', 'note', 'items', 'points')
+SLIDE_BODY_KEYS = ('subtitle', 'text', 'body', 'note', 'items', 'points')
 SLIDE_WORDS_MAX = 50
 SLIDE_SENTENCES_MAX = 4
 SENTENCE_END_RE = re.compile(r'[.!?…]+(?:\s+|$)')
@@ -298,7 +298,7 @@ def check_voice_party(package, lines):
 
 def check_slide_density(package):
     """F2 для карусели: слайд spec.json — не больше SLIDE_SENTENCES_MAX предложений и
-    SLIDE_WORDS_MAX слов тела (subtitle/text/note/items/points; кикер и заголовок не считаются)."""
+    SLIDE_WORDS_MAX слов тела (subtitle/text/body/note/items/points; кикер и заголовок не считаются)."""
     spec = os.path.join(package, 'spec.json')
     if not os.path.exists(spec):
         return []
