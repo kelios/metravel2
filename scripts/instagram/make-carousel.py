@@ -13,7 +13,7 @@
            "role"?: "cover" (заголовок крупнее) | "scene" (по умолчанию) | "final",
            "layout"?: "below" (по умолчанию для сцен, владелец 25.10.2026: фото НЕ перекрывается текстом — фото занимает верх до текстового блока,
            текст на тёмном поле ниже; квадрат/портрет подрезаются по центру до нужной высоты, "focus": "top"|"center"|"bottom" двигает окно,
-           "fit": "contain" — без подрезки, с полями) | "overlay" (по умолчанию для обложки: фото на весь кадр, текст на затемнении у низа),
+           "fit": "contain" — без подрезки: поля заполняет размытая подложка из того же кадра, края растушёваны) | "overlay" (по умолчанию для обложки: фото на весь кадр, текст на затемнении у низа),
            "fit"?: "width" (overlay: фото целиком по ширине, у верха; портрет — contain по высоте) | "cover" (на весь кадр, только для обложки),
            "crop"?: [x0, y0, x1, y1] — явный кроп исходника (пиксели после EXIF-поворота; записать в package.md),
            "protect"?: true — текст только ниже фото (лица/объект у низа кадра не затемняются)}
@@ -61,15 +61,20 @@ def photo(src, size):
 
 
 def wrap(draw, text, fnt, width):
-    lines, line = [], ""
-    for word in (w for w in text.split(" ") if w):  # \u00a0 не разрываем
-        probe = f"{line} {word}".strip()
-        if draw.textlength(probe, font=fnt) <= width or not line:
-            line = probe
-        else:
-            lines.append(line)
-            line = word
-    return lines + [line] if line else lines
+    """Перенос по словам; «\n» в тексте — принудительный разрыв строки, пустая строка — абзацный отступ
+    (форматирование слайда, владелец 25.10.2026: шаги и абзацы, а не стена текста)."""
+    lines = []
+    for paragraph in text.split("\n"):
+        line = ""
+        for word in (w for w in paragraph.split(" ") if w):  # \u00a0 не разрываем
+            probe = f"{line} {word}".strip()
+            if draw.textlength(probe, font=fnt) <= width or not line:
+                line = probe
+            else:
+                lines.append(line)
+                line = word
+        lines.append(line)
+    return lines
 
 
 def block(draw, text, fnt, x, y, width, fill, gap=1.22):
@@ -319,6 +324,23 @@ def slide_cta(spec):
 C_BG, C_FADE, C_SAGE, C_LINE = (20, 34, 27), (10, 20, 16), (207, 223, 215), (122, 157, 143)
 
 
+def soft_fit(img, size, darken=0.45, feather=48, blur=30):
+    """Фото в окно без голых полей (владелец, 25.10.2026): подложка — размытая и притемнённая копия того же
+    кадра на всё окно, сверху — кадр целиком (contain) с растушёванными краями."""
+    from PIL import ImageFilter
+    w, h = size
+    back = ImageOps.fit(img, (w, h), Image.LANCZOS).filter(ImageFilter.GaussianBlur(blur))
+    back = Image.blend(back, Image.new("RGB", (w, h), (0, 0, 0)), darken)
+    fit = ImageOps.contain(img, (w, h), Image.LANCZOS)
+    if fit.size == (w, h):
+        return fit
+    mask = Image.new("L", fit.size, 0)
+    ImageDraw.Draw(mask).rectangle((feather // 2, feather // 2, fit.width - feather // 2, fit.height - feather // 2), fill=255)
+    mask = mask.filter(ImageFilter.GaussianBlur(feather / 2))
+    back.paste(fit, ((w - fit.width) // 2, (h - fit.height) // 2), mask)
+    return back
+
+
 def story_photo(spec):
     """Фото для MeTravel C: целиком по ширине у верха (4:3 → 810 px, 1:1 → 1080 px); портрет не режется —
     contain по высоте с полями; "cover" — на весь кадр (обложка); "crop" — явное окно исходника."""
@@ -328,7 +350,7 @@ def story_photo(spec):
     if spec.get("fit") == "cover":
         return ImageOps.fit(img, (W, H), Image.LANCZOS)
     scaled = img.resize((W, round(img.height * W / img.width)), Image.LANCZOS)
-    return scaled if scaled.height <= H else ImageOps.contain(img, (W, H), Image.LANCZOS)
+    return scaled if scaled.height <= H else soft_fit(img, (W, H))
 
 
 def fade_c(img, top, bottom, strength=220):
@@ -358,7 +380,7 @@ def story_photo_below(spec, avail_h):
     if spec.get("crop"):
         img = img.crop(tuple(spec["crop"]))
     if spec.get("fit") == "contain":
-        return ImageOps.contain(img, (W, avail_h), Image.LANCZOS)
+        return soft_fit(img, (W, avail_h))
     scaled = img.resize((W, round(img.height * W / img.width)), Image.LANCZOS)
     if scaled.height <= avail_h:
         return scaled
