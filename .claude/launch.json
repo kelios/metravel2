@@ -858,6 +858,28 @@
       ],
       "port": 8090,
       "autoPort": false
+    },
+    {
+      "name": "Llama Server v3 GPU 8080",
+      "runtimeExecutable": "llama-server",
+      "runtimeArgs": [
+        "-m",
+        "/Users/juliasavran/metravel-ai/gguf/metravel-llm-v3-Q4_K_M.gguf",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8080",
+        "-c",
+        "8192",
+        "--parallel",
+        "2",
+        "-ngl",
+        "99",
+        "--jinja",
+        "--no-warmup"
+      ],
+      "port": 8080,
+      "autoPort": false
     }
   ]
 }
