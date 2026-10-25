@@ -7,7 +7,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import { createTravelListRowLayout } from './travelListRowLayout'
-import { getListTravelViewportState } from './listTravelBaseModel'
+import { getListTravelViewportState, resolveListTravelRawWidth } from './listTravelBaseModel'
 import { useStickySearchBarStyles } from '@/components/mainPage/StickySearchBar.styles'
 import { getRightColumnHeaderMinHeight } from './rightColumnModel'
 import { AiSearchPanelPlaceholder } from '@/components/aiPicks/AiSearchPanelFrame'
@@ -160,13 +160,20 @@ const SearchCardsSkeleton = memo(({ columns, count, isMobile, cardSpacing }: { c
 
 SearchCardsSkeleton.displayName = 'SearchCardsSkeleton'
 
-export const SearchPageSkeleton = memo(() => {
+type SearchPageSkeletonProps = {
+  /** Already-live width of the parent route; the Suspense fallback otherwise starts at width 0 (#2759). */
+  initialViewportWidth?: number
+}
+
+export const SearchPageSkeleton = memo(({ initialViewportWidth }: SearchPageSkeletonProps = {}) => {
   const colors = useThemedColors()
   // Берём ширину из useResponsive (hydration-safe: SSR и первый клиентский
   // рендер дают width=0, после гидрации — реальную). Прямое чтение window.innerWidth
-  // здесь ломало бы первый рендер и давало React #418 на /search.
+  // здесь ломало бы первый рендер и давало React #418 на /search. Fallback внутри
+  // Suspense монтируется уже после гидрации маршрута — ему отдаём ширину родителя,
+  // иначе он рисуется мобильным и перестраивается в desktop (CLS 0,62 на 1440, #2759).
   const responsive = useResponsive()
-  const viewportWidth = responsive.width
+  const viewportWidth = resolveListTravelRawWidth(responsive.width, initialViewportWidth)
 
   const isUnknownWebWidth = Platform.OS === 'web' && viewportWidth === 0
   const viewport = getListTravelViewportState({ rawWidth: viewportWidth, isPhone: responsive.isPhone, isLargePhone: responsive.isLargePhone, isTabletSize: responsive.isTablet, isDesktopSize: responsive.isDesktop, isPortrait: responsive.isPortrait })

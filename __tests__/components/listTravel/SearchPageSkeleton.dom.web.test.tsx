@@ -60,3 +60,11 @@ it('unknown SSR width is mobile and its responsive padding applies before hydrat
   expect(host.querySelector('style')?.textContent).toContain('padding-left:10px!important')
   expect(host.querySelector('style')?.textContent).toContain('max-width:359.98px')
 })
+
+it('Suspense fallback takes the parent route width while its own width is still 0 (#2759)', () => {
+  mockWidth = 0
+  const host = render(createElement(SearchPageSkeleton, { initialViewportWidth: 1440 }))
+  expect(host.querySelector('[data-testid="search-skeleton"]')).not.toBeNull()
+  expect(host.querySelector('[data-search-skeleton-unknown="true"]')).toBeNull()
+  expect(host.querySelector('style')).toBeNull()
+})

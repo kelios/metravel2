@@ -307,6 +307,18 @@ export function buildListTravelInitialFilter(params: SearchParams) {
   return Object.keys(filter).length > 0 ? filter : undefined
 }
 
+/**
+ * Lazy web catalog boundaries (the list and its Suspense skeleton) mount after the parent route
+ * has hydrated, yet their own hydration-safe responsive hook reports width=0 until they commit.
+ * Reusing the parent's live width for that render keeps the first frame in its final geometry
+ * instead of a mobile layout that jumps to desktop (#1298, #2759).
+ */
+export function resolveListTravelRawWidth(responsiveWidth: number, initialViewportWidth?: number) {
+  return Platform.OS === 'web' && responsiveWidth <= 0 && (initialViewportWidth ?? 0) > 0
+    ? initialViewportWidth!
+    : responsiveWidth
+}
+
 export function getListTravelViewportState(params: ResponsiveParams): ViewportState {
   // rawWidth уже из useResponsive (hydration-safe): SSR и первый клиентский рендер дают 0,
   // после гидрации — реальную ширину. Прямое чтение window.innerWidth здесь давало

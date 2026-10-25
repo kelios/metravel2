@@ -3,6 +3,7 @@ import {
   buildListTravelFallbackSteps,
   getCatalogCardMediaLoading,
   getListTravelActiveFiltersCount,
+  resolveListTravelRawWidth,
   shouldSidebarIncludeSort,
 } from '@/components/listTravel/listTravelBaseModel'
 import {
@@ -220,5 +221,27 @@ describe('shouldSidebarIncludeSort (#2755)', () => {
   it.each(['android', 'ios'])('keeps sort in the docked %s sidebar (tablet / landscape)', (os) => {
     setOS(os)
     expect(shouldSidebarIncludeSort({ usesOverlaySidebar: false, isExport: false })).toBe(true)
+  })
+})
+
+describe('resolveListTravelRawWidth (#2759)', () => {
+  const ReactNative = require('react-native')
+  const originalOS = ReactNative.Platform.OS
+  const setOS = (os: string) =>
+    Object.defineProperty(ReactNative.Platform, 'OS', { value: os, configurable: true })
+
+  afterEach(() => setOS(originalOS))
+
+  it('uses the parent route width on web until the lazy boundary reports its own', () => {
+    setOS('web')
+    expect(resolveListTravelRawWidth(0, 1440)).toBe(1440)
+    expect(resolveListTravelRawWidth(1280, 1440)).toBe(1280)
+    expect(resolveListTravelRawWidth(0, undefined)).toBe(0)
+    expect(resolveListTravelRawWidth(0, 0)).toBe(0)
+  })
+
+  it('ignores the parent width on native', () => {
+    setOS('ios')
+    expect(resolveListTravelRawWidth(0, 1440)).toBe(0)
   })
 })
