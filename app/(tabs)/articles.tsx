@@ -24,6 +24,7 @@ import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler'
 import { buildArticlesHrefFromSource, normalizeArticleListSourceHref } from '@/utils/articleNavigation'
 import { translate as i18nT } from '@/i18n'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { staticRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
 
 const getArticlesPageTitleStyle = (colors: ReturnType<typeof useThemedColors>) => ({
   fontSize: `${DESIGN_TOKENS.typography.scale.h1.fontSize}px`,
@@ -270,4 +271,11 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => {
       backgroundColor: colors.surface,
     },
   })
+}
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); значения — общая таблица
+// utils/seoRoutes/staticRoutes.js, та же, что у SSG-генератора.
+export function generateMetadata() {
+  return staticRouteMetadata('/articles')
 }

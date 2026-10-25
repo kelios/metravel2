@@ -17,6 +17,7 @@ import { webTouchScrollStyle } from '@/utils';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { translate as i18nT } from '@/i18n'
+import { staticRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
 
 
 export default function SubscriptionsScreen() {
@@ -133,3 +134,10 @@ const createPageStyles = (colors: ReturnType<typeof useThemedColors>) =>
     header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 6 },
     loadingWrap: { padding: 16, alignItems: 'center', justifyContent: 'center', flex: 1 },
   });
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); значения — общая таблица
+// utils/seoRoutes/staticRoutes.js, та же, что у SSG-генератора.
+export function generateMetadata() {
+  return staticRouteMetadata('/subscriptions')
+}

@@ -11,7 +11,7 @@ import InstantSEO from '@/components/seo/LazyInstantSEO';
 import UpsertTravelView from '@/components/travel/upsert/UpsertTravelView';
 import { useUpsertTravelController } from '@/components/travel/upsert/useUpsertTravelController';
 import { buildCanonicalUrl } from '@/utils/seo';
-import { translate as i18nT } from '@/i18n'
+import { UPSERT_TRAVEL_NEW_PATH, buildUpsertTravelSeoText } from '@/components/travel/upsert/upsertTravelSeo';
 
 
 export { initFilters, normalizeCategoryTravelAddress, normalizeTravelCategories };
@@ -21,18 +21,10 @@ export default function UpsertTravel() {
   const pathname = usePathname();
 
   const seo = useMemo(() => {
-    const normalizedPath = pathname || (controller.isNew ? '/travel/new' : `/travel/${controller.formData?.id ?? ''}`);
-    const titleBase = controller.isNew
-      ? i18nT('travel:components.travel.UpsertTravel.sozdat_puteshestvie_448e27bb')
-      : controller.formData?.name?.trim()
-        ? i18nT('travel:components.travel.UpsertTravel.redaktirovat_puteshestvie_value1_b7c802d8', { value1: controller.formData.name.trim() })
-        : i18nT('travel:components.travel.UpsertTravel.redaktirovat_puteshestvie_de5a1d0f');
+    const normalizedPath = pathname || (controller.isNew ? UPSERT_TRAVEL_NEW_PATH : `/travel/${controller.formData?.id ?? ''}`);
 
     return {
-      title: i18nT('travel:components.travel.UpsertTravel.value1_metravel_a966abc3', { value1: titleBase }),
-      description: controller.isNew
-        ? i18nT('travel:components.travel.UpsertTravel.sozdayte_novoe_puteshestvie_v_lichnom_kabine_ddbac667')
-        : i18nT('travel:components.travel.UpsertTravel.redaktirovanie_puteshestviya_v_lichnom_kabin_bcca604d'),
+      ...buildUpsertTravelSeoText(controller.isNew, controller.formData?.name),
       canonical: buildCanonicalUrl(normalizedPath),
       headKey: controller.isNew ? 'travel-upsert-new' : `travel-upsert-${controller.formData?.id ?? 'edit'}`,
     };

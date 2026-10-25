@@ -35,6 +35,7 @@ import {
 } from '@/utils/questCityAlias'
 
 import { useTranslation } from '@/i18n/LocaleProvider'
+import { shellRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
 
 const CITY_FOOTER_STYLE = { gap: 16, marginTop: 24 } as const
 
@@ -216,4 +217,10 @@ export default function QuestsByCityScreen() {
       <QuestsScreen route={route} />
     </Suspense>
   )
+}
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана
+export function generateMetadata() {
+  return shellRouteMetadata()
 }

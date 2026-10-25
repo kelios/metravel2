@@ -2,6 +2,7 @@ import { Platform } from 'react-native'
 
 import LegalPage from '@/components/legal/LegalPage'
 import { translate as i18nT } from '@/i18n'
+import { staticRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
 
 // Раздел 4 на native: в приложении нет cookies, cookie-баннера и страницы
 // настроек cookies (#2135, App Review 5.1.2(i)), поэтому текст сайта про
@@ -102,4 +103,11 @@ export default function PrivacyScreen() {
       ]}
     />
   )
+}
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); значения — общая таблица
+// utils/seoRoutes/staticRoutes.js, та же, что у SSG-генератора.
+export function generateMetadata() {
+  return staticRouteMetadata('/privacy')
 }

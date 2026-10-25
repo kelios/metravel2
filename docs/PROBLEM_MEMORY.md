@@ -2109,6 +2109,31 @@ guard, падающий в CI на попытке обойти этот конт
   маршрут), не новый «CLS страницы».
 - **Последняя проверка:** 2026-10-25, worktree SDK 58 перед переносом в main.
 
+### WEB-SEO-STATIC-METADATA-001 — head статического web объявляет маршрут, не helmet
+
+- **Инвариант:** каждый экспортированный HTML несёт ровно один непустой `<title>` и
+  одну `meta[name=description]` (noindex-страница может быть без них), canonical/og/twitter —
+  из `generateMetadata` файла маршрута; per-entity страницы и шаблоны динамических
+  маршрутов — из `scripts/generate-seo-pages.js` тем же набором тегов. Гейт —
+  `scripts/guard-html-meta-description.js`; владение — `docs/features/seo-static-metadata.md`.
+- **Surface/owner:** web static export: `app/**` (`generateMetadata`), `utils/seoRoutes/*`
+  (общая таблица и билдер), `app/+html.tsx` (узлы метаданных до critical-скрипта),
+  генератор. Platform impact: desktop + mobile web. Localization impact: none (ru на сборке,
+  hreflang квестов — пакет v1).
+- **Цепочка:** SDK 52–57 — helmet `<Head>` попадал в экспорт → #2727 (SDK 58, 25.10.2026):
+  `@expo/router-server` собирает helmet-состояние, но не пишет его; мост-патч
+  `serializeHelmetToHtml` → #2740: `generateMetadata` во всех web-листах, мост снят.
+- **Подтверждённая причина:** `generateMetadata` вызывается только для листового файла
+  маршрута (без слияния с `_layout`), а экспортный `+not-found.html` и служебный
+  `_sitemap.html` рендерятся вне `generateMetadata` `[...missing]` — им head даёт
+  `patchNoindexFallbackTemplate` генератора (вставка `<title>`, не только замена).
+  До миграции `more`, `offline`, `error`, `blocked-users`, `quests/[city]` уходили в
+  экспорт с пустым `<title>` от helmet-SSR — гейт title это закрывает.
+- **Не делать:** патчить `@expo/router-server` ради head; заводить STATIC_PAGES-литералы в
+  генераторе (только `utils/seoRoutes/staticRoutes.js`); `generateStaticParams` для
+  1 400+ статей без loader-пререндера тела (обоснование — OpenSpec
+  `seo-static-metadata-sdk58/design.md`).
+
 ### SEO-SNIPPET-001 — сниппет и разметка обязаны совпадать с тем, что видит читатель
 
 - **Инвариант:** то, что редактор добавил в тело статьи ради выдачи (структурированные

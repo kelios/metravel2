@@ -49,7 +49,8 @@ const generatorEntry = (source: string, route: string): string | null => {
 }
 
 describe('secret e-mail link routes', () => {
-  const generator = read('scripts/generate-seo-pages.js')
+  // #2740: STATIC_PAGES live in the shared table (routes' generateMetadata + SSG generator).
+  const generator = read('utils/seoRoutes/staticRoutes.js')
 
   it.each(SECRET_LINK_ROUTES.map((entry) => entry.route))('%s: screen exists and is noindex', (route) => {
     const files = routeFiles(route)

@@ -19,7 +19,15 @@ import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
 import SecurityJournalList from '@/components/settings/SecurityJournalList';
 import { translate as i18nT } from '@/i18n'
+import { routeMetadata } from '@/utils/seoRoutes/routeMetadata'
 
+
+// #2740: единый источник SEO маршрута — экран и generateMetadata()
+const SECURITY_JOURNAL_SEO = {
+    titleKey: 'profile:app.security_journal.zhurnal_bezopasnosti_metravel_5eeea6db',
+    descriptionKey: 'profile:app.security_journal.istoriya_sobytiy_bezopasnosti_vashego_akkaun_3c92b399',
+    path: '/security-journal',
+} as const;
 
 export default function SecurityJournalScreen() {
     useAndroidBackHandler();
@@ -53,9 +61,9 @@ export default function SecurityJournalScreen() {
             {isFocused && (
                 <InstantSEO
                     headKey="security-journal"
-                    title={i18nT('profile:app.security_journal.zhurnal_bezopasnosti_metravel_5eeea6db')}
-                    description={i18nT('profile:app.security_journal.istoriya_sobytiy_bezopasnosti_vashego_akkaun_3c92b399')}
-                    canonical={buildCanonicalUrl('/security-journal')}
+                    title={i18nT(SECURITY_JOURNAL_SEO.titleKey)}
+                    description={i18nT(SECURITY_JOURNAL_SEO.descriptionKey)}
+                    canonical={buildCanonicalUrl(SECURITY_JOURNAL_SEO.path)}
                     robots="noindex, nofollow"
                 />
             )}
@@ -87,4 +95,15 @@ export default function SecurityJournalScreen() {
             </ScrollView>
         </StandaloneScreen>
     );
+}
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана
+export function generateMetadata() {
+  return routeMetadata({
+    title: i18nT(SECURITY_JOURNAL_SEO.titleKey),
+    description: i18nT(SECURITY_JOURNAL_SEO.descriptionKey),
+    canonical: SECURITY_JOURNAL_SEO.path,
+    robots: 'noindex, nofollow',
+  })
 }

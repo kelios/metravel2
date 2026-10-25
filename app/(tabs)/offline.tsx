@@ -18,6 +18,8 @@ import type { OfflineContentType, OfflinePackageManifest } from '@/services/offl
 import { deleteMapRegionOffline } from '@/services/offline/mapOfflineAdapter';
 import { confirmAction } from '@/utils/confirmAction';
 import { webTouchScrollStyle } from '@/utils';
+import { translate as i18nT } from '@/i18n';
+import { routeMetadata } from '@/utils/seoRoutes/routeMetadata';
 
 type Filter = 'all' | OfflineContentType;
 
@@ -316,3 +318,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   cardMeta: { color: colors.textMuted, fontSize: 12 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
 });
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана.
+export function generateMetadata() {
+  return routeMetadata({
+    title: `${i18nT('offline:title')} | Metravel`,
+    description: i18nT('seoStatic:root.default.description'),
+    canonical: '/offline',
+    robots: 'noindex, nofollow',
+    ogType: 'website',
+  });
+}

@@ -20,6 +20,7 @@ import { getActiveLocale, translate as i18nT } from '@/i18n'
 import { isPhoneLayout } from '@/utils/phoneLayout'
 import { buildCanonicalUrl } from '@/utils/seo'
 
+import { ASSISTANT_SEO } from './assistantSeo'
 import { AssistantComposer } from './AssistantComposer'
 import { AssistantTurnCard } from './AssistantTurnCard'
 import { createAssistantStyles } from './assistantStyles'
@@ -93,9 +94,9 @@ export default function AssistantScreen() {
       {isFocused && Platform.OS === 'web' ? (
         <InstantSEO
           headKey="assistant"
-          title={i18nT('aiAssistStatic:ask.seoTitle')}
-          description={i18nT('aiAssistStatic:ask.seoDescription')}
-          canonical={buildCanonicalUrl(pathname || '/assistant')}
+          title={i18nT(ASSISTANT_SEO.titleKey)}
+          description={i18nT(ASSISTANT_SEO.descriptionKey)}
+          canonical={buildCanonicalUrl(pathname || ASSISTANT_SEO.path)}
           robots="noindex, nofollow"
         />
       ) : null}

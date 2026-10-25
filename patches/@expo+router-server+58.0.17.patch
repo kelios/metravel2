@@ -1,31 +1,15 @@
 diff --git a/node_modules/@expo/router-server/build/server/renderStreamingContent.js b/node_modules/@expo/router-server/build/server/renderStreamingContent.js
-index 5d2be29..24a166e 100644
+index 5d2be29..34d1e4b 100644
 --- a/node_modules/@expo/router-server/build/server/renderStreamingContent.js
 +++ b/node_modules/@expo/router-server/build/server/renderStreamingContent.js
-@@ -100,6 +100,7 @@ function _server2() {
- const _getRootComponent = require("../static/getRootComponent");
- const _debug = require("../utils/debug");
- const _react1 = require("../utils/react");
-+const _html = require("../utils/html");
- const _metadata = require("./metadata");
- function _interop_require_default(obj) {
-     return obj && obj.__esModule ? obj : {
-@@ -250,7 +251,34 @@ async function getStreamingContent(location, options) {
+@@ -250,7 +250,23 @@ async function getStreamingContent(location, options) {
              if (renderErrors.length > 0) {
                  throw renderErrors[0];
              }
 -            return new Response(stream).text();
-+            // metravel #2727: the SDK 57 static renderer (getStaticContent →
-+            // mixHeadComponentsWithStaticResults) serialized the react-helmet-async
-+            // output of `expo-router/head` into the exported HTML, and the project's
-+            // SEO pipeline (LazyInstantSEO/TravelDetailsSeoBlock/BreadcrumbsJsonLd,
-+            // scripts/generate-seo-pages.js, verify-static-*-seo.js) depends on that
-+            // `<title data-rh>`/meta/canonical/JSON-LD being present before hydration.
-+            // The SDK 58 streaming renderer still collects the helmet state in
-+            // `headContext` but never writes it, so every exported route lost its
-+            // <title>. Reapply the legacy merge until routes move to generateMetadata().
++            // metravel #2740: head (title/meta/canonical/og/twitter) comes from each
++            // route's generateMetadata — the SDK 57 helmet merge is gone for good.
 +            const html = await new Response(stream).text();
-+            const { headTags, htmlAttributes, bodyAttributes } = (0, _html.serializeHelmetToHtml)(headContext.helmet);
 +            let output = html;
 +            // metravel #2727: `getStyleElement()` above snapshots the react-native-web
 +            // sheet BEFORE the route renders, so the exported <style id="react-native-stylesheet">
@@ -39,9 +23,6 @@ index 5d2be29..24a166e 100644
 +                const replaced = output.replace(/<style id="react-native-stylesheet">[\s\S]*?<\/style>/, () => styleMarkup);
 +                output = replaced === output ? output.replace('</head>', `${styleMarkup}</head>`) : replaced;
 +            }
-+            if (headTags) output = output.replace('<head>', `<head>${headTags}`);
-+            if (htmlAttributes) output = output.replace('<html ', `<html ${htmlAttributes} `);
-+            if (bodyAttributes) output = output.replace('<body ', `<body ${bodyAttributes} `);
 +            return output;
          }
          return stream;

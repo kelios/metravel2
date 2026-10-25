@@ -8,6 +8,7 @@ import { ensureLeafletCss } from '@/utils/ensureLeafletCss'
 import { buildCanonicalUrl, buildOgImageUrl, MAP_OG_IMAGE_PATH } from '@/utils/seo'
 import { getMapSeoDescription, getMapSeoTitle } from '@/constants/mapSeo'
 import { useWebHydrationGate } from '@/hooks/useWebHydrationGate'
+import { staticRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
 
 const mapScreenImport = Promise.resolve(import('@/screens/tabs/MapScreen'))
 const MapScreenImpl = React.lazy(() => mapScreenImport)
@@ -182,4 +183,11 @@ export default function MapScreen() {
       )}
     </>
   )
+}
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); значения — общая таблица
+// utils/seoRoutes/staticRoutes.js, та же, что у SSG-генератора.
+export function generateMetadata() {
+  return staticRouteMetadata('/map')
 }

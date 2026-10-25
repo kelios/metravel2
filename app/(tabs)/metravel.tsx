@@ -9,6 +9,7 @@ import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/uti
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { translate as i18nT } from '@/i18n'
 import ListTravel from '@/components/listTravel/ListTravelRoute';
+import { staticRouteMetadata } from '@/utils/seoRoutes/routeMetadata';
 
 
 export default function MeTravelScreen() {
@@ -49,3 +50,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.mutedBackground,
     },
 });
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); значения — общая таблица
+// utils/seoRoutes/staticRoutes.js, та же, что у SSG-генератора.
+export function generateMetadata() {
+  return staticRouteMetadata('/metravel');
+}

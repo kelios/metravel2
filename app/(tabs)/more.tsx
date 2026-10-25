@@ -7,6 +7,7 @@ import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/b
 import { useScreenHeader } from '@/components/layout/ScreenHeaderContext'
 import { BOTTOM_DOCK_ITEM_DEFS } from '@/components/layout/bottomDockItemDefs'
 import { webAccessibilityProps } from '@/utils/webProps'
+import { routeMetadata } from '@/utils/seoRoutes/routeMetadata'
 
 // Real prerendered destination for More before the optional sheet controller loads.
 // Only ordinary existing public routes/labels; no role-specific actions/auth/menu model.
@@ -32,3 +33,15 @@ const styles = StyleSheet.create({
   content: { padding: DESIGN_TOKENS.spacing.lg }, links: { gap: DESIGN_TOKENS.spacing.sm },
   link: { padding: DESIGN_TOKENS.spacing.md, minHeight: DESIGN_TOKENS.touchTarget.minHeight, borderWidth: StyleSheet.hairlineWidth, borderRadius: DESIGN_TOKENS.radii.sm },
 })
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана.
+export function generateMetadata() {
+  return routeMetadata({
+    title: `${i18nT('navigationStatic:components.layout.bottomDockModel.esche_6ad6f662')} | Metravel`,
+    description: i18nT('seoStatic:root.default.description'),
+    canonical: '/more',
+    robots: 'noindex, follow',
+    ogType: 'website',
+  })
+}

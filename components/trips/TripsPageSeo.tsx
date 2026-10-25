@@ -14,34 +14,37 @@ export const buildTripsPageTitle = (label: string): string => {
 };
 
 interface TripsPageSeoProps {
-  canonicalPath: string;
+  /** Для статических страниц берётся из `TRIPS_ROUTE_SEO`; динамические (`/trips/:id`) передают свой путь. */
+  canonicalPath?: string;
   fallbackTitle: TripsPageFallbackTitle;
   label?: string | null;
 }
 
-type TripsPageFallbackTitle =
-  | 'catalog'
-  | 'community'
-  | 'create'
-  | 'myTrips'
-  | 'plan'
-  | 'publicTrip';
+/**
+ * Единый источник SEO страниц `trips`: ключ заголовка и canonical-путь статических
+ * страниц. Читают и экран (`TripsPageSeo`), и `generateMetadata()` маршрута (#2740).
+ */
+export const TRIPS_ROUTE_SEO = {
+  catalog: { titleKey: 'tripsStatic:seo.catalogTitle', canonicalPath: '/trips' },
+  community: { titleKey: 'tripsStatic:seo.communityTitle', canonicalPath: '/trips/community' },
+  create: { titleKey: 'tripsStatic:seo.createTitle', canonicalPath: '/trips/plan/create' },
+  myTrips: { titleKey: 'tripsStatic:seo.myTripsTitle', canonicalPath: '/trips/my' },
+  plan: { titleKey: 'tripsStatic:seo.planTitle' },
+  publicTrip: { titleKey: 'tripsStatic:seo.publicTripTitle' },
+} as const;
 
-const getFallbackTitle = (fallbackTitle: TripsPageFallbackTitle): string => {
-  switch (fallbackTitle) {
-    case 'catalog':
-      return i18nT('tripsStatic:seo.catalogTitle');
-    case 'community':
-      return i18nT('tripsStatic:seo.communityTitle');
-    case 'create':
-      return i18nT('tripsStatic:seo.createTitle');
-    case 'myTrips':
-      return i18nT('tripsStatic:seo.myTripsTitle');
-    case 'plan':
-      return i18nT('tripsStatic:seo.planTitle');
-    case 'publicTrip':
-      return i18nT('tripsStatic:seo.publicTripTitle');
-  }
+export type TripsPageFallbackTitle = keyof typeof TRIPS_ROUTE_SEO;
+
+/** Заголовок (с суффиксом бренда) и canonical-путь страницы `trips`; `label` — реальное имя сущности. */
+export const getTripsRouteSeo = (
+  kind: TripsPageFallbackTitle,
+  label?: string | null,
+): { title: string; canonicalPath: string | undefined } => {
+  const route: { titleKey: string; canonicalPath?: string } = TRIPS_ROUTE_SEO[kind];
+  return {
+    title: buildTripsPageTitle(label?.trim() || i18nT(route.titleKey)),
+    canonicalPath: route.canonicalPath,
+  };
 };
 
 // Several route tests replace expo-router with narrow mocks. Keep the production
@@ -60,11 +63,14 @@ export default function TripsPageSeo({
 
   if (!isFocused) return null;
 
+  const seo = getTripsRouteSeo(fallbackTitle, label);
+  const resolvedCanonicalPath = canonicalPath ?? seo.canonicalPath ?? '/';
+
   return (
     <InstantSEO
-      headKey={`trips-${canonicalPath}`}
-      title={buildTripsPageTitle(label?.trim() || getFallbackTitle(fallbackTitle))}
-      canonical={buildCanonicalUrl(canonicalPath)}
+      headKey={`trips-${resolvedCanonicalPath}`}
+      title={seo.title}
+      canonical={buildCanonicalUrl(resolvedCanonicalPath)}
       ogType="website"
     />
   );

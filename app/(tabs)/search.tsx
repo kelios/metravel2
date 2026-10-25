@@ -18,6 +18,7 @@ import { useResponsiveWidth } from '@/hooks/useResponsive'
 import { isAiAssistantEnabled } from '@/utils/aiAssistantConfig'
 import UIButton from '@/components/ui/Button'
 import Feather from '@expo/vector-icons/Feather'
+import { staticRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
 
 
 function SearchScreen() {
@@ -152,3 +153,10 @@ function SearchScreen() {
 
 
 export default memo(SearchScreen)
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); значения — общая таблица
+// utils/seoRoutes/staticRoutes.js, та же, что у SSG-генератора.
+export function generateMetadata() {
+  return staticRouteMetadata('/search')
+}

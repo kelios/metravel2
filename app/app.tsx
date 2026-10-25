@@ -14,6 +14,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
 import { webTouchScrollStyle } from '@/utils'
 import { translate as i18nT } from '@/i18n'
+import { routeMetadata } from '@/utils/seoRoutes/routeMetadata'
 
 // 320×320 WebP (3,6 КБ) вместо мастера иконки для сторов 1024×1024 PNG (303 КБ):
 // здесь она рисуется в 96 px. Мастер остаётся только для сборки приложения (app.json).
@@ -34,6 +35,13 @@ const STEPS: { title: string; text: string }[] = [
   { get title() { return i18nT('sharedStatic:app.app.ustanovite_prilozhenie_468f0c89') }, get text() { return i18nT('sharedStatic:app.app.posle_prisoedineniya_poyavitsya_knopka_ustan_0c176249') } },
 ]
 
+// #2740: единый источник SEO маршрута — экран и generateMetadata()
+const APP_DOWNLOAD_SEO = {
+  titleKey: 'sharedStatic:appDownload.page.seoTitle',
+  descriptionKey: 'sharedStatic:appDownload.page.seoDescription',
+  path: '/app',
+} as const
+
 function AppDownloadScreen() {
   const colors = useThemedColors()
   const { isDark } = useTheme()
@@ -42,10 +50,9 @@ function AppDownloadScreen() {
   const isWide = width >= APP_DOWNLOAD_WIDE_MIN_WIDTH
   const styles = useMemo(() => createStyles(colors), [colors])
 
-  const title = i18nT('sharedStatic:appDownload.page.seoTitle')
-  const description =
-    i18nT('sharedStatic:appDownload.page.seoDescription')
-  const canonical = buildCanonicalUrl('/app')
+  const title = i18nT(APP_DOWNLOAD_SEO.titleKey)
+  const description = i18nT(APP_DOWNLOAD_SEO.descriptionKey)
+  const canonical = buildCanonicalUrl(APP_DOWNLOAD_SEO.path)
 
   return (
     <>
@@ -253,3 +260,15 @@ const createStyles = (colors: ThemedColors) => {
 }
 
 export default memo(AppDownloadScreen)
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана
+export function generateMetadata() {
+  return routeMetadata({
+    title: i18nT(APP_DOWNLOAD_SEO.titleKey),
+    description: i18nT(APP_DOWNLOAD_SEO.descriptionKey),
+    canonical: APP_DOWNLOAD_SEO.path,
+    image: DEFAULT_OG_IMAGE_PATH,
+    ogType: 'website',
+  })
+}

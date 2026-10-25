@@ -32,6 +32,7 @@ import { buildQuestCountryLandingGroups } from '@/utils/questCountryLanding'
 
 import { buildBrandedSeoTitle } from '@/utils/questSeo'
 import { buildCanonicalUrl, buildOgImageUrl, QUESTS_OG_IMAGE_PATH } from '@/utils/seo'
+import { shellRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
 
 const COUNTRY_HEADER_BLOCK_STYLE = { gap: 8, width: '100%', maxWidth: 840 } as const
 
@@ -161,4 +162,10 @@ export default function QuestsByCountryScreen() {
       />
     </QuestLandingScroll>
   )
+}
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана
+export function generateMetadata() {
+  return shellRouteMetadata()
 }

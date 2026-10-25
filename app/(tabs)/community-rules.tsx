@@ -1,13 +1,22 @@
 import LegalPage from '@/components/legal/LegalPage'
 import { translate as i18nT } from '@/i18n'
+import { routeMetadata } from '@/utils/seoRoutes/routeMetadata'
+import { DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
 
+
+// #2740: единый источник SEO маршрута — экран (LegalPage) и generateMetadata()
+const COMMUNITY_RULES_SEO = {
+  titleKey: 'legal:app.tabs.community_rules.pravila_soobschestva_metravel_431ec805',
+  descriptionKey: 'legal:app.tabs.community_rules.pravila_soobschestva_metravel_kak_my_obschae_f024d655',
+  canonical: '/community-rules',
+} as const
 
 export default function CommunityRulesScreen() {
   return (
     <LegalPage
       headKey="legal-community-rules"
-      seoTitle={i18nT('legal:app.tabs.community_rules.pravila_soobschestva_metravel_431ec805')}
-      seoDescription={i18nT('legal:app.tabs.community_rules.pravila_soobschestva_metravel_kak_my_obschae_f024d655')}
+      seoTitle={i18nT(COMMUNITY_RULES_SEO.titleKey)}
+      seoDescription={i18nT(COMMUNITY_RULES_SEO.descriptionKey)}
       pageTitle={i18nT('legal:app.tabs.community_rules.pravila_soobschestva_24954009')}
       effectiveDate="04.10.2026"
       intro={[
@@ -55,4 +64,16 @@ export default function CommunityRulesScreen() {
       ]}
     />
   )
+}
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана
+export function generateMetadata() {
+  return routeMetadata({
+    title: i18nT(COMMUNITY_RULES_SEO.titleKey),
+    description: i18nT(COMMUNITY_RULES_SEO.descriptionKey),
+    canonical: COMMUNITY_RULES_SEO.canonical,
+    image: DEFAULT_OG_IMAGE_PATH,
+    ogType: 'website',
+  })
 }

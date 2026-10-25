@@ -13,12 +13,13 @@ import { useScreenHeader } from '@/components/layout/ScreenHeaderContext';
 import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { translate as i18nT } from '@/i18n'
+import { routeMetadata } from '@/utils/seoRoutes/routeMetadata'
+import { getTripsRouteSeo } from '@/components/trips/TripsPageSeo'
 
 export default function CreateTripScreen() {
   return (
     <>
       <TripsPageSeo
-        canonicalPath="/trips/plan/create"
         fallbackTitle="create"
       />
       <CreateTripScreenContent />
@@ -103,3 +104,15 @@ const createStyles = (colors: ThemedColors, scrollBottomReserve: number | string
     lead: { fontSize: 15, color: colors.textSecondary, lineHeight: 21 },
     loginLink: { color: colors.primaryText, fontWeight: '700', textDecorationLine: 'underline' },
   });
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана
+export function generateMetadata() {
+  const seo = getTripsRouteSeo('create')
+  return routeMetadata({
+    title: seo.title,
+    description: i18nT('seoStatic:root.default.description'),
+    canonical: seo.canonicalPath,
+    ogType: 'website',
+  })
+}

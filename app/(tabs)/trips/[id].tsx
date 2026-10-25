@@ -7,6 +7,8 @@ import TripsPageSeo from '@/components/trips/TripsPageSeo';
 import { useHydrationReady } from '@/hooks/useHydrationReady';
 import { useSoftKeyboardInset } from '@/hooks/useSoftKeyboardInset';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { shellRouteMetadata } from '@/utils/seoRoutes/routeMetadata';
+import { getTripsRouteSeo } from '@/components/trips/TripsPageSeo';
 
 // Мобильный BottomDock — fixed-оверлей, поэтому скролл резервирует его высоту
 // (`--mt-dock-h` = 0px на desktop). Иначе кнопка «Отправить заявку» формы
@@ -55,3 +57,9 @@ const createStyles = (colors: ThemedColors) =>
     inner: { width: '100%', maxWidth: 760 },
     center: { paddingVertical: 48, alignItems: 'center' },
   });
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана
+export function generateMetadata() {
+  return shellRouteMetadata({ title: getTripsRouteSeo('publicTrip').title });
+}

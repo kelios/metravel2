@@ -95,15 +95,34 @@ describe('guard-html-meta-description', () => {
       ok: false,
       total: 3,
       violations: [
-        { file: 'app.html', count: 2 },
-        { file: 'empty.html', count: 0 },
+        { file: 'app.html', count: 2, titles: 1 },
+        { file: 'empty.html', count: 0, titles: 1 },
       ],
     })
 
     const cli = runCli(process.execPath, [scriptPath, '--dist', distDir])
     expect(cli.status).toBe(1)
-    expect(cli.stderr).toContain('app.html: 2')
-    expect(cli.stderr).toContain('empty.html: 0')
+    expect(cli.stderr).toContain('app.html: description=2, title=1')
+    expect(cli.stderr).toContain('empty.html: description=0, title=1')
+  })
+
+  // #2740: the exported <title> comes from each route's generateMetadata; the
+  // router-server bridge patch that re-inserted helmet output is gone.
+  it('fails an indexable page that ships no, an empty or two <title> tags', () => {
+    writeTextFile(path.join(distDir, 'no-title.html'), `<html><head>${PAGE_DESCRIPTION}</head><body></body></html>`)
+    writeTextFile(path.join(distDir, 'empty-title.html'), `<html><head><title> </title>${PAGE_DESCRIPTION}</head><body></body></html>`)
+    writeTextFile(path.join(distDir, 'two-titles.html'), `<html><head><title>A</title><title data-rh="true">B</title>${PAGE_DESCRIPTION}</head><body></body></html>`)
+    writeTextFile(path.join(distDir, 'ok.html'), exportedPage(PAGE_DESCRIPTION))
+    writeTextFile(
+      path.join(distDir, 'noindex-stub.html'),
+      '<html><head><meta name="robots" content="noindex, follow"/><meta http-equiv="refresh" content="0; url=/x"/></head><body></body></html>',
+    )
+
+    expect(checkDist(distDir).violations).toEqual([
+      { file: 'empty-title.html', count: 1, titles: 1 },
+      { file: 'no-title.html', count: 1, titles: 0 },
+      { file: 'two-titles.html', count: 1, titles: 2 },
+    ])
   })
 
   it('passes the exported duplicate after the last full dist pass normalizes it', () => {
@@ -137,8 +156,8 @@ describe('guard-html-meta-description', () => {
     )
 
     expect(checkDist(distDir).violations).toEqual([
-      { file: 'indexable.html', count: 0 },
-      { file: 'travels/missing.html', count: 2 },
+      { file: 'indexable.html', count: 0, titles: 0 },
+      { file: 'travels/missing.html', count: 2, titles: 0 },
     ])
   })
 

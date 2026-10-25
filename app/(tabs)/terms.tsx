@@ -1,13 +1,22 @@
 import LegalPage from '@/components/legal/LegalPage'
 import { translate as i18nT } from '@/i18n'
+import { routeMetadata } from '@/utils/seoRoutes/routeMetadata'
+import { DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
 
+
+// #2740: единый источник SEO маршрута — экран (LegalPage) и generateMetadata()
+const TERMS_SEO = {
+  titleKey: 'legal:app.tabs.terms.polzovatelskoe_soglashenie_metravel_a107cf93',
+  descriptionKey: 'legal:app.tabs.terms.polzovatelskoe_soglashenie_metravel_usloviya_860ebcea',
+  canonical: '/terms',
+} as const
 
 export default function TermsScreen() {
   return (
     <LegalPage
       headKey="legal-terms"
-      seoTitle={i18nT('legal:app.tabs.terms.polzovatelskoe_soglashenie_metravel_a107cf93')}
-      seoDescription={i18nT('legal:app.tabs.terms.polzovatelskoe_soglashenie_metravel_usloviya_860ebcea')}
+      seoTitle={i18nT(TERMS_SEO.titleKey)}
+      seoDescription={i18nT(TERMS_SEO.descriptionKey)}
       pageTitle={i18nT('legal:app.tabs.terms.polzovatelskoe_soglashenie_13d561c9')}
       effectiveDate="04.10.2026"
       intro={[
@@ -75,4 +84,16 @@ export default function TermsScreen() {
       ]}
     />
   )
+}
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана
+export function generateMetadata() {
+  return routeMetadata({
+    title: i18nT(TERMS_SEO.titleKey),
+    description: i18nT(TERMS_SEO.descriptionKey),
+    canonical: TERMS_SEO.canonical,
+    image: DEFAULT_OG_IMAGE_PATH,
+    ogType: 'website',
+  })
 }

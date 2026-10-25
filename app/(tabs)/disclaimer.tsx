@@ -1,5 +1,15 @@
 import LegalPage from '@/components/legal/LegalPage'
 import { useTranslation } from '@/i18n/LocaleProvider'
+import { translate as i18nT } from '@/i18n'
+import { routeMetadata } from '@/utils/seoRoutes/routeMetadata'
+import { DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
+
+// #2740: единый источник SEO маршрута — экран (LegalPage) и generateMetadata()
+const DISCLAIMER_SEO = {
+  titleKey: 'legal:app.tabs.disclaimer.otkaz_ot_otvetstvennosti_metravel_afb39844',
+  descriptionKey: 'legal:app.tabs.disclaimer.otkaz_ot_otvetstvennosti_metravel_informatsi_5a2b8e74',
+  canonical: '/disclaimer',
+} as const
 
 export default function DisclaimerScreen() {
   const { t } = useTranslation()
@@ -7,8 +17,8 @@ export default function DisclaimerScreen() {
   return (
     <LegalPage
       headKey="legal-disclaimer"
-      seoTitle={t('legal:app.tabs.disclaimer.otkaz_ot_otvetstvennosti_metravel_afb39844')}
-      seoDescription={t('legal:app.tabs.disclaimer.otkaz_ot_otvetstvennosti_metravel_informatsi_5a2b8e74')}
+      seoTitle={t(DISCLAIMER_SEO.titleKey)}
+      seoDescription={t(DISCLAIMER_SEO.descriptionKey)}
       pageTitle={t('legal:app.tabs.disclaimer.otkaz_ot_otvetstvennosti_3706532b')}
       effectiveDate="21.07.2026"
       intro={[
@@ -60,4 +70,16 @@ export default function DisclaimerScreen() {
       ]}
     />
   )
+}
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана
+export function generateMetadata() {
+  return routeMetadata({
+    title: i18nT(DISCLAIMER_SEO.titleKey),
+    description: i18nT(DISCLAIMER_SEO.descriptionKey),
+    canonical: DISCLAIMER_SEO.canonical,
+    image: DEFAULT_OG_IMAGE_PATH,
+    ogType: 'website',
+  })
 }

@@ -18,6 +18,19 @@ const { isNoindex } = require('./htmlRobots')
 const META_DESCRIPTION_RE = /<meta\b[^>]*\bname\s*=\s*(?:"description"|'description')[^>]*>/gi
 const PAGE_OWNED_RE = /\bdata-rh\s*=/i
 
+// #2740: Expo SDK 58 writes <title> from each route's generateMetadata; the
+// router-server bridge patch that used to re-insert helmet output is gone, so
+// an exported page with no (or two) <title> is a regression of that contract.
+const TITLE_RE = /<title\b[^>]*>([\s\S]*?)<\/title>/gi
+
+function countTitles(html) {
+  const titles = [...String(html).matchAll(TITLE_RE)]
+  return {
+    total: titles.length,
+    nonEmpty: titles.filter((match) => match[1].replace(/<[^>]*>/g, '').trim() !== '').length,
+  }
+}
+
 function countMetaDescriptions(html) {
   return (String(html).match(META_DESCRIPTION_RE) || []).length
 }
@@ -34,4 +47,4 @@ function normalizeMetaDescription(html) {
   })
 }
 
-module.exports = { countMetaDescriptions, isNoindex, normalizeMetaDescription }
+module.exports = { countMetaDescriptions, countTitles, isNoindex, normalizeMetaDescription }

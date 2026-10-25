@@ -59,6 +59,9 @@ describe('LazyInstantSEO hydrated head ownership', () => {
   beforeEach(() => {
     window.history.replaceState(null, '', '/')
     document.head.innerHTML = ''
+    // #2740: these cases model post-hydration navigation (#1613); the one-time
+    // static-twin dedupe of the exported head has already run by then.
+    document.head.setAttribute('data-static-head-deduped', 'true')
     document.body.innerHTML = ''
     container = document.createElement('div')
     document.body.appendChild(container)

@@ -53,6 +53,7 @@ import { getFormatLocale, translate as i18nT, translatePlural } from '@/i18n'
 import { formatRatingValue } from '@/utils/ratingHelpers';
 import { hasPublicQuestRating } from '@/api/questRating';
 import { readSyncImport } from '@/utils/syncImport';
+import { shellRouteMetadata } from '@/utils/seoRoutes/routeMetadata';
 
 
 // #2484: same handover as the quest screen in `app/[...missing].web.tsx` (#2465).
@@ -1035,3 +1036,9 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     color: colors.text,
   },
 });
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана
+export function generateMetadata() {
+  return shellRouteMetadata();
+}

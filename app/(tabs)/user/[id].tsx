@@ -32,6 +32,7 @@ import type { Travel } from '@/types/types';
 import SubscriptionsTabContent from '@/components/subscriptions/SubscriptionsTabContent';
 import { useSubscriptionsData } from '@/hooks/useSubscriptionsData';
 import { translate as i18nT } from '@/i18n'
+import { shellRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
 
 const AUTHOR_TRAVELS_LIMIT = 12;
 
@@ -373,3 +374,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       marginTop: 6,
     },
   });
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана
+export function generateMetadata() {
+  return shellRouteMetadata()
+}

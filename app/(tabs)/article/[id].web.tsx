@@ -25,6 +25,7 @@ import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
 import { webTouchScrollStyle } from '@/utils'
 import { translate as i18nT } from '@/i18n'
 import { saveArticleOffline } from '@/services/offline/articleOfflineAdapter'
+import { shellRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
 
 
 export default function ArticleDetails() {
@@ -262,3 +263,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       borderColor: colors.border,
     },
   })
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана
+export function generateMetadata() {
+  return shellRouteMetadata()
+}

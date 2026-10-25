@@ -18,6 +18,7 @@
 const fs = require('fs');
 const path = require('path');
 const { getSmartAppBannerContent } = require('../utils/mobileAppHandoff');
+const { DEFAULT_OG_IMAGE_PATH, listStaticRouteSeo } = require('../utils/seoRoutes/staticRoutes');
 const { loadSsgCatalogs } = require('../i18n/babel-inline-plugin');
 const { fetchJson, fetchJsonOnce, withRetries } = require('./lib/fetchJson');
 const { readSeoInputs, writeSeoInputs, validateIdentity, materializeTravelDetails } = require('./lib/seoInputsCapture');
@@ -121,7 +122,7 @@ const QUEST_SEO_RECEIPT_COMMAND = getArg('quest-seo-receipt-command', process.en
 const QUEST_SEO_PUBLICATION_MODE = getArg('quest-seo-publication-mode', 'translations');
 if (!['ru-only', 'translations'].includes(QUEST_SEO_PUBLICATION_MODE)) throw new Error('Unknown quest SEO publication mode');
 const SITE_URL = 'https://metravel.by';
-const OG_IMAGE = `${SITE_URL}/assets/icons/logo_yellow_512x512.png`;
+const OG_IMAGE = `${SITE_URL}${DEFAULT_OG_IMAGE_PATH}`;
 const FALLBACK_DESC = 'Найди место для путешествия и поделись своим опытом.';
 const IMAGE_OPTIMIZATION_QUERY_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'blur', 'dpr'];
 
@@ -138,9 +139,6 @@ function readRequiredRuTranslation(key) {
   }
   return value;
 }
-
-const HOME_SEO_TITLE_RU = readRequiredRuTranslation('seoStatic:root.home.title');
-const HOME_SEO_DESCRIPTION_RU = readRequiredRuTranslation('seoStatic:root.home.description');
 
 // ---------------------------------------------------------------------------
 // #1394: build-time API pacing
@@ -1191,21 +1189,29 @@ function injectBuildOwnedRobots(baseHtml, robots) {
   );
 }
 
-function patchNoindexFallbackTemplate(baseHtml, { title, description } = {}) {
+function patchNoindexFallbackTemplate(baseHtml, { title, description, robots = 'noindex, follow' } = {}) {
   let html = baseHtml;
 
   // Template files like travels/[param].html and quests/[city]/[questId].html
   // are served only when there is no generated per-route HTML. Raw crawlers see
   // the template before React resolves the route, so do not leave indexable
   // generic titles or literal [param]/[questId] canonicals in place.
+  // #2740: the shell head now comes from the route's generateMetadata (brand
+  // defaults, no canonical) — og/twitter/og:url follow the same not-found text.
   html = html.replace(/<link[^>]*rel="canonical"[^>]*\/?>\n?/gi, '');
+  html = html.replace(/<meta[^>]*property="og:url"[^>]*\/?>\n?/gi, '');
 
   if (title) {
-    html = applyHtmlFragment(
-      html,
-      /<title[^>]*>.*?<\/title>/i,
-      `<title data-rh="true">${escapeAttr(title)}</title>`
-    );
+    // Export-level pages (+not-found, _sitemap) ship no <title> at all — insert one.
+    html = /<title[^>]*>/i.test(html)
+      ? applyHtmlFragment(html, /<title[^>]*>.*?<\/title>/i, `<title data-rh="true">${escapeAttr(title)}</title>`)
+      : applyHtmlFragment(html, /<head\b[^>]*>/i, `<title data-rh="true">${escapeAttr(title)}</title>\n`, 'after');
+    html = replaceOrInsert(html, /<meta[^>]*property="og:type"[^>]*\/?>/i, '<meta data-rh="true" property="og:type" content="website"/>');
+    html = replaceOrInsert(html, /<meta[^>]*property="og:site_name"[^>]*\/?>/i, '<meta data-rh="true" property="og:site_name" content="MeTravel"/>');
+    html = replaceOrInsert(html, /<meta[^>]*name="twitter:card"[^>]*\/?>/i, '<meta data-rh="true" name="twitter:card" content="summary"/>');
+    html = replaceOrInsert(html, /<meta[^>]*property="og:locale"[^>]*\/?>/i, '<meta data-rh="true" property="og:locale" content="ru_RU"/>');
+    html = replaceOrInsert(html, /<meta[^>]*property="og:title"[^>]*\/?>/i, `<meta data-rh="true" property="og:title" content="${escapeAttr(title)}"/>`);
+    html = replaceOrInsert(html, /<meta[^>]*name="twitter:title"[^>]*\/?>/i, `<meta data-rh="true" name="twitter:title" content="${escapeAttr(title)}"/>`);
   }
 
   if (description) {
@@ -1214,12 +1220,14 @@ function patchNoindexFallbackTemplate(baseHtml, { title, description } = {}) {
       /<meta[^>]*name="description"[^>]*\/?>/i,
       `<meta data-rh="true" name="description" content="${escapeAttr(description)}"/>`
     );
+    html = replaceOrInsert(html, /<meta[^>]*property="og:description"[^>]*\/?>/i, `<meta data-rh="true" property="og:description" content="${escapeAttr(description)}"/>`);
+    html = replaceOrInsert(html, /<meta[^>]*name="twitter:description"[^>]*\/?>/i, `<meta data-rh="true" name="twitter:description" content="${escapeAttr(description)}"/>`);
   }
 
   html = replaceOrInsert(
     html,
     /<meta[^>]*name="robots"[^>]*\/?>/i,
-    '<meta data-rh="true" name="robots" content="noindex, follow"/>'
+    `<meta data-rh="true" name="robots" content="${escapeAttr(robots)}"/>`
   );
 
   return html;
@@ -3585,232 +3593,20 @@ function pickRelatedTravels(travel, index, limit = 6) {
 // ---------------------------------------------------------------------------
 // Static pages definitions
 // ---------------------------------------------------------------------------
-const STATIC_PAGES = [
-  {
-    route: '/',
-    title: HOME_SEO_TITLE_RU,
-    description: HOME_SEO_DESCRIPTION_RU,
-    image: `${SITE_URL}/og-home.jpg`,
-    // `#root` is empty in the static export, so the runtime H1 from index.tsx
-    // never reaches the raw HTML — Googlebot saw a page with zero H1 (audit
-    // 2026-08-08). The shell title is a <div> on purpose (LCP candidate), so the
-    // semantic H1 is injected out of flow, exactly as travel pages do it.
-    h1: 'Идеи поездок на выходные и книга путешествий',
-  },
-  {
-    route: '/about',
-    title: 'О проекте MeTravel — сообщество путешественников | Metravel',
-    description:
-      'MeTravel объединяет путешественников: публикуйте маршруты, сохраняйте полезные места, читайте истории и собирайте собственную книгу поездок.',
-    breadcrumb: 'О проекте',
-  },
-  {
-    route: '/become-author',
-    title: readRequiredRuTranslation('seoStatic:root.becomeAuthor.title'),
-    description: readRequiredRuTranslation('seoStatic:root.becomeAuthor.description'),
-    breadcrumb: readRequiredRuTranslation('homeStatic:becomeAuthor.title'),
-  },
-  {
-    route: '/contact',
-    title: 'Контакты и обратная связь | Metravel',
-    description:
-      'Свяжитесь с командой Metravel: вопросы, предложения, идеи партнерства и обратная связь по маршрутам, статьям и сервису.',
-    breadcrumb: 'Контакты',
-  },
-  {
-    route: '/search',
-    title: 'Поиск маршрутов и идей путешествий по Беларуси | Metravel',
-    description:
-      'Ищите путешествия по странам, городам, категориям и датам, применяйте фильтры и быстро находите маршруты, вдохновение и советы для следующей поездки.',
-    breadcrumb: 'Поиск маршрутов',
-  },
-  {
-    route: '/map',
-    title: 'Карта маршрутов и достопримечательностей | MeTravel',
-    description:
-      'Изучайте интерактивную карту путешествий: находите маршруты, достопримечательности и точки интереса, включайте фильтры и стройте путь под свои планы.',
-    image: `${SITE_URL}/og-map.png`,
-    breadcrumb: 'Карта маршрутов',
-    h1: 'Карта маршрутов и достопримечательностей',
-  },
-  {
-    route: '/articles',
-    title: 'Статьи о путешествиях, маршрутах и советах | Metravel',
-    description: 'Читай статьи и заметки путешественников. Полезные советы, маршруты и лайфхаки.',
-    robots: 'noindex, nofollow',
-  },
-  {
-    // Filterable catalog with no per-place URLs: the static HTML carries ~600
-    // chars of text and not a single link to a place, yet the page was open to
-    // indexing and outside the sitemap — an indexable empty page Google did not
-    // know (audit 2026-08-08). Closed until it has crawlable content; turning it
-    // into a real hub (intro + place links + categories) is a separate feature.
-    route: '/places',
-    title: 'Места на карте: замки, музеи, парки и природа | Metravel',
-    description:
-      'Каталог мест MeTravel: замки, усадьбы, музеи, парки, водопады и другие точки из путешествий — с фильтрами по стране, категории и рейтингу.',
-    robots: 'noindex, follow',
-  },
-  {
-    // There is no `/article` screen — only `/article/[id]`. Without a file here
-    // nginx fell back to index.html, so the address answered 200 with the home
-    // title, description and `canonical: https://metravel.by/` — declaring itself
-    // a duplicate of the home page (audit 2026-08-08).
-    route: '/article',
-    title: 'Статьи о путешествиях, маршрутах и советах | Metravel',
-    description: 'Читай статьи и заметки путешественников. Полезные советы, маршруты и лайфхаки.',
-    robots: 'noindex, nofollow',
-  },
-  {
-    // #2375: один источник правды с клиентом (`+html.tsx` и `seo_static.ts`) —
-    // иначе статический HTML и гидратированная страница спорили о title/description.
-    route: '/roulette',
-    title: readRequiredRuTranslation('seoStatic:root.roulette.title'),
-    description: readRequiredRuTranslation('seoStatic:root.roulette.description'),
-    breadcrumb: 'Рулетка маршрутов',
-  },
-  {
-    route: '/favorites',
-    title: 'Избранные маршруты и места | Metravel',
-    description: 'Твои сохранённые путешествия и маршруты.',
-    robots: 'noindex, nofollow',
-  },
-  {
-    route: '/privacy',
-    title: 'Политика конфиденциальности и данных | Metravel',
-    description: 'Политика конфиденциальности и обработки персональных данных MeTravel.',
-    breadcrumb: 'Политика конфиденциальности',
-  },
-  {
-    route: '/cookies',
-    title: 'Настройки cookies и аналитики | Metravel',
-    description: 'Управление настройками cookies и аналитики на MeTravel.',
-    robots: 'noindex, nofollow',
-  },
-  {
-    route: '/login',
-    title: 'Вход в Metravel: аккаунт, маршруты и избранное | Metravel',
-    description:
-      'Войдите в аккаунт Metravel, чтобы сохранять маршруты, управлять избранным, публиковать поездки и собирать личную книгу путешествий.',
-    robots: 'noindex, nofollow',
-  },
-  {
-    route: '/registration',
-    title: 'Регистрация в Metravel: аккаунт и маршруты | Metravel',
-    description:
-      'Создайте аккаунт Metravel, чтобы публиковать маршруты, сохранять идеи поездок, подписываться на авторов и вести личную книгу путешествий.',
-    robots: 'noindex, nofollow',
-  },
-  {
-    route: '/register',
-    canonicalRoute: '/registration',
-    title: 'Регистрация в Metravel: аккаунт и маршруты | Metravel',
-    description:
-      'Создайте аккаунт Metravel, чтобы публиковать маршруты, сохранять идеи поездок, подписываться на авторов и вести личную книгу путешествий.',
-    robots: 'noindex, nofollow',
-  },
-  {
-    route: '/accountconfirmation',
-    title: 'Подтверждение аккаунта | Metravel',
-    description: 'Подтверждение учётной записи Metravel.',
-    robots: 'noindex, nofollow',
-  },
-  {
-    route: '/set-password',
-    title: 'Смена пароля | Metravel',
-    description: 'Смена пароля в аккаунте Metravel.',
-    robots: 'noindex, nofollow',
-  },
-  {
-    route: '/subscribe/confirm',
-    title: 'Подтверждение подписки | Metravel',
-    description: 'Подтверждение подписки на рассылку Metravel.',
-    robots: 'noindex, nofollow',
-  },
-  {
-    route: '/subscribe/unsubscribe',
-    title: 'Отписка от рассылки | Metravel',
-    description: 'Отписка от рассылки Metravel.',
-    robots: 'noindex, nofollow',
-  },
-  {
-    route: '/travelsby',
-    title: 'Что посмотреть в Беларуси: места и маршруты | Metravel',
-    description:
-      'Что посмотреть в Беларуси: замки, усадьбы, озёра, города и готовые маршруты на выходные. Фото, карта, координаты и советы путешественников.',
-    breadcrumb: 'Путешествия',
-  },
-  {
-    route: '/quests',
-    title: 'Городские квесты и маршруты с заданиями | Metravel',
-    description:
-      'Проходите городские квесты Metravel: маршруты с заданиями, точками на карте и идеями для прогулок и поездок.',
-    breadcrumb: 'Квесты',
-  },
-  {
-    route: '/quests/scenario',
-    // 68 chars did not fit the SERP budget (≤60); "по городу" survives in the H1
-    // and the description, so the keyword phrase is not lost. Description was 165.
-    title: 'Готовый сценарий квеста — распечатать бесплатно | Metravel',
-    description:
-      'Готовый сценарий квеста по городу: распечатайте бесплатный квест-бук с картой, заданиями, дипломом и страницей ведущего. Для дня рождения, семьи и класса.',
-    breadcrumb: 'Сценарий квеста',
-  },
-  {
-    route: '/history',
-    title: 'История просмотров маршрутов | Metravel',
-    description: 'Хронология твоих путешествий и поездок.',
-    robots: 'noindex, nofollow',
-  },
-  {
-    route: '/messages',
-    title: 'Сообщения | Metravel',
-    description: 'Личные сообщения Metravel.',
-    robots: 'noindex, nofollow',
-  },
-  {
-    route: '/export',
-    title: 'Экспорт | Metravel',
-    description: 'Экспорт данных и материалов Metravel.',
-    robots: 'noindex, nofollow',
-  },
-  {
-    route: '/metravel',
-    title: 'Мои путешествия | Metravel',
-    description: 'Раздел управления вашими путешествиями.',
-    robots: 'noindex, nofollow',
-  },
-  {
-    route: '/profile',
-    title: 'Профиль | Metravel',
-    description: 'Профиль пользователя Metravel.',
-    robots: 'noindex, nofollow',
-  },
-  {
-    route: '/settings',
-    title: 'Настройки | Metravel',
-    description: 'Настройки аккаунта Metravel.',
-    robots: 'noindex, nofollow',
-  },
-  {
-    route: '/subscriptions',
-    title: 'Подписки | Metravel',
-    description: 'Ваши подписки и подписчики в Metravel.',
-    robots: 'noindex, nofollow',
-  },
-  {
-    route: '/quests/map',
-    title: 'Карта квестов | Metravel',
-    description: 'Карта всех квестов Metravel.',
-    robots: 'noindex, nofollow',
-  },
-  {
-    route: '/userpoints',
-    title: 'Мои точки и сохраненные места | Metravel',
-    description: 'Управляй своими точками на карте.',
-    robots: 'noindex, nofollow',
-  },
-];
+// #2740: таблица статических маршрутов живёт в utils/seoRoutes/staticRoutes.js —
+// тот же источник читают файлы маршрутов через generateMetadata (Expo SDK 58),
+// поэтому head экспорта и head SSG совпадают по построению. Здесь остаются только
+// SSG-экстры поверх него: skeleton shell, hero preload, скрытый H1, breadcrumb.
+const STATIC_PAGES = listStaticRouteSeo(readRequiredRuTranslation).map((page) => ({
+  route: page.route,
+  canonicalRoute: page.canonicalRoute,
+  title: page.title,
+  description: page.description,
+  robots: page.robots,
+  image: `${SITE_URL}${page.imagePath}`,
+  breadcrumb: page.breadcrumb,
+  h1: page.h1,
+}));
 
 // ---------------------------------------------------------------------------
 // Main
@@ -4103,7 +3899,7 @@ async function main() {
       title: page.title,
       description: page.description,
       canonical,
-      image: page.image ?? OG_IMAGE,
+      image: page.image,
       robots: page.robots,
     });
 
@@ -4652,6 +4448,27 @@ async function main() {
       file: path.join(DIST_DIR, 'quests', 'country', '[country].html'),
       title: 'Страна с квестами не найдена | Metravel',
       description: 'Для этой страны нет опубликованной подборки квестов.',
+    },
+    // #2740: the city shell shipped an empty <title> and sat open to indexing.
+    {
+      file: path.join(DIST_DIR, 'quests', '[city].html'),
+      title: 'Город с квестами не найден | Metravel',
+      description: 'Для этого города нет опубликованной подборки квестов.',
+    },
+    // #2740: Expo renders the export-level 404 outside the [...missing] route's
+    // generateMetadata; give it the same head the 404 screen declares.
+    {
+      file: path.join(DIST_DIR, '+not-found.html'),
+      title: readRequiredRuTranslation('shared:app.missing.stranitsa_ne_naydena_metravel_a9673114'),
+      description: readRequiredRuTranslation('shared:app.missing.stranitsa_ne_naydena_pereydite_na_glavnuyu_i_0cfdec3b'),
+      robots: 'noindex, nofollow',
+    },
+    // #2740: expo-router's internal route list; never linked, never indexable.
+    {
+      file: path.join(DIST_DIR, '_sitemap.html'),
+      title: 'Metravel',
+      description: readRequiredRuTranslation('seoStatic:root.default.description'),
+      robots: 'noindex, nofollow',
     },
   ];
   for (const tmpl of fallbackTemplates) {

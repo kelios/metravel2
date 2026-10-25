@@ -287,3 +287,57 @@ export function removeOwnedWebSeoMetadata(
     }
   }
 }
+
+// #2740: с Expo SDK 58 базовый head статического HTML пишет `generateMetadata`
+// маршрута (теги без `data-rh`), а helmet на клиенте после гидрации добавляет
+// свои копии с `data-rh="true"` рядом — он сверяет только собственные теги.
+// Снимаем статический двойник каждого helmet-ключа, чтобы в живом DOM был один
+// description/canonical/og/twitter. `robots` намеренно не трогаем: build-owned
+// robots без `data-rh` обязан пережить гидрацию (#1929/#1930).
+const HEAD_TWIN_KEYS: Array<{ selector: string; attr: 'name' | 'property' | 'rel' }> = [
+  { selector: 'meta[data-rh="true"][name]', attr: 'name' },
+  { selector: 'meta[data-rh="true"][property]', attr: 'property' },
+  { selector: 'link[data-rh="true"][rel="canonical"]', attr: 'rel' },
+];
+
+const STATIC_HEAD_DEDUPED_ATTR = 'data-static-head-deduped';
+
+/**
+ * Снимает не-`data-rh` двойники helmet-ключей. С `staticNodes` трогает только эти
+ * узлы — снимок статического head экспорта (`claimStaticHeadTwins`), чтобы теги,
+ * появившиеся при SPA-навигации, остались за их владельцами (#1613).
+ */
+export function dedupeStaticHeadTwins(staticNodes?: ReadonlySet<Element>): number {
+  if (typeof document === 'undefined') return 0;
+  let removed = 0;
+  for (const { selector, attr } of HEAD_TWIN_KEYS) {
+    const owned = Array.from(document.head.querySelectorAll(selector));
+    const keys = new Set(owned.map((node) => node.getAttribute(attr)).filter((value): value is string => !!value && value !== 'robots'));
+    if (keys.size === 0) continue;
+    const tag = selector.startsWith('link') ? 'link' : 'meta';
+    for (const key of keys) {
+      const twins = document.head.querySelectorAll(`${tag}[${attr}="${key.replace(/"/g, '\\"')}"]:not([data-rh])`);
+      twins.forEach((node) => {
+        if (staticNodes && !staticNodes.has(node)) return;
+        node.parentNode?.removeChild(node);
+        removed += 1;
+      });
+    }
+  }
+  return removed;
+}
+
+/**
+ * Право на дедуп один раз на документ и его границы: статические двойники есть
+ * только в HTML экспорта, поэтому их снимает лишь первое монтирование после
+ * загрузки, и только узлы, которые стояли в head в этот момент. Сам проход
+ * вызывающий повторяет, пока helmet дописывает свои теги: helmet коммитит
+ * асинхронно, и ключи, которых нет в SSG-разметке (`og:locale`, `og:image:width`),
+ * появляются позже. `null` — документ уже обработан.
+ */
+export function claimStaticHeadTwins(): ReadonlySet<Element> | null {
+  if (typeof document === 'undefined') return null;
+  if (document.head.hasAttribute(STATIC_HEAD_DEDUPED_ATTR)) return null;
+  document.head.setAttribute(STATIC_HEAD_DEDUPED_ATTR, 'true');
+  return new Set(document.head.querySelectorAll('meta:not([data-rh]), link[rel="canonical"]:not([data-rh])'));
+}

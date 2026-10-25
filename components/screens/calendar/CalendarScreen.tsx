@@ -60,6 +60,13 @@ import { translate as i18nT } from '@/i18n'
 import { useScreenHeader } from '@/components/layout/ScreenHeaderContext'
 
 
+// #2740: единый источник SEO маршрута — экран и generateMetadata() в app/(tabs)/calendar.tsx
+export const CALENDAR_SEO = {
+  titleKey: 'calendar:app.tabs.calendar.moy_kalendar_metravel_1d39e960',
+  descriptionKey: 'calendar:app.tabs.calendar.moi_plany_i_puteshestviya_a3cff280',
+  path: '/calendar',
+} as const
+
 // #1556/#2127: один вопрос на обе платформы — `confirmAction` (web `ConfirmDialog`,
 // native системный Alert); текст — полный, с пояснением, что маршрут остаётся.
 async function confirmRemoveFromCalendar(title: string, onConfirm: () => void) {
@@ -99,12 +106,12 @@ export default function CalendarScreen() {
 
   const isWideLayout = Platform.OS === 'web' && width >= 900
   const styles = useMemo(() => createCalendarStyles(colors, isWideLayout), [colors, isWideLayout])
-  const canonical = useMemo(() => buildCanonicalUrl('/calendar'), [])
+  const canonical = useMemo(() => buildCanonicalUrl(CALENDAR_SEO.path), [])
   const seoBlock = useMemo(() => (
     <InstantSEO
       headKey="calendar"
-      title={i18nT('calendar:app.tabs.calendar.moy_kalendar_metravel_1d39e960')}
-      description={i18nT('calendar:app.tabs.calendar.moi_plany_i_puteshestviya_a3cff280')}
+      title={i18nT(CALENDAR_SEO.titleKey)}
+      description={i18nT(CALENDAR_SEO.descriptionKey)}
       canonical={canonical}
       robots="noindex, nofollow"
     />

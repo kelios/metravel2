@@ -181,6 +181,7 @@ Dated snapshots — использовать только с указанным 
 «текущими» без нового замера:
 
 - `docs/ANALYTICS_AUDIT_2026-07.md` — snapshot 2026-07-02;
+- `docs/features/seo-static-metadata.md` — владение head статического web после Expo SDK 58 (#2740): `generateMetadata` маршрутов, общая таблица `utils/seoRoutes/staticRoutes.js`, генератор, `+html.tsx`;
 - `docs/SEO_AUDIT_2026-07-11.md` — snapshot 2026-07-11;
 - `docs/SEO_AUDIT_2026-07-18.md` — snapshot 2026-07-18 (on-page зрелость: рычаги = индексация + off-site + title-redirects);
 - `docs/SEO_AUDIT_2026-07-27.md` — snapshot 2026-07-27 (P0: travel-URL отдают noindex-заглушку; индексация 291/306 закрыта; кластер «вторая страница»; 301-ремонт заголовков разблокирован);

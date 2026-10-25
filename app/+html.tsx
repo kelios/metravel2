@@ -453,6 +453,15 @@ export default function Root({ children }: { children: React.ReactNode }) {
     && (node.props as { rel?: string; as?: string }).rel === 'preload'
     && (node.props as { rel?: string; as?: string }).as === 'script'
   ));
+  // #2740: title/description/robots/canonical/og/twitter приходят из generateMetadata
+  // маршрута теми же узлами. Они обязаны стоять ДО critical-скрипта (он читает description
+  // при парсинге), а стили/шрифты/иконки остаются там, где были при #2727, чтобы каскад
+  // RNW-таблицы и ScrollViewStyleReset не менялся.
+  const isRouteMetadataNode = (node: React.ReactNode) => React.isValidElement(node)
+    && (node.type === 'title' || node.type === 'meta'
+      || (node.type === 'link' && ['canonical', 'alternate'].includes(String((node.props as { rel?: string }).rel))));
+  const routeMetadataNodes = headNodes.filter(isRouteMetadataNode);
+  const assetHeadNodes = headNodes.filter((node) => !isRouteMetadataNode(node));
   const isProduction = typeof process !== 'undefined' && 
     (process.env.EXPO_PUBLIC_SITE_URL === 'https://metravel.by' || 
      process.env.NODE_ENV === 'production');
@@ -474,11 +483,12 @@ export default function Root({ children }: { children: React.ReactNode }) {
 	      <meta id="app-theme-color" name="theme-color" content={DESIGN_COLORS.themeColorLight} />
       <meta name="color-scheme" content="light dark" />
       <meta name="apple-itunes-app" content={getSmartAppBannerContent()} />
-      {/* No static <title> here: React Helmet bakes a per-page title (data-rh="true")
-          into the exported HTML, and the inline critical script below sets document.title
-          for SPA-only routes. A static <title> would NOT be deduped by Expo export and
-          produced a duplicate <title> tag on every page. */}
-      <meta name="description" content={i18nT('seoStatic:root.default.description')} />
+      {/* #2740: per-route <title>, description, robots, canonical, og:* and twitter:* come
+          from each route file's generateMetadata (Expo SDK 58) — no static <title> or
+          default description here, scripts/guard-html-meta-description.js enforces exactly
+          one of each per exported page. The inline critical script below only patches
+          SPA-only transitions. */}
+      {routeMetadataNodes}
 
       {/* Recovery must run before Expo scripts and capture native sessionStorage
           before storage hardening can replace it with a per-document shim. */}
@@ -520,10 +530,10 @@ export default function Root({ children }: { children: React.ReactNode }) {
       />
       
       {/* Fallback SEO tags for static HTML (Googlebot sees these before React hydration).
-          NOTE: description and canonical are NOT duplicated here — React Helmet (data-rh="true")
-          injects them per-page at build time. The inline JS above fixes [param] canonical URLs.
-          Only tags that React Helmet does NOT inject on every page are kept as fallbacks. */}
-      <meta property="og:locale" content={locale.ogLocale} />
+          NOTE: description, canonical, og:* and twitter:* (incl. og:locale) are NOT duplicated
+          here — the route's generateMetadata emits them per page at export (#2740); export-level
+          pages without a route (+not-found, _sitemap) get them from the SSG fallback patch.
+          The inline JS above fixes [param] canonical URLs. */}
       <meta name="twitter:site" content="@metravel_by" />
 
       <meta
@@ -667,7 +677,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
 	      />
 
       <ScrollViewStyleReset />
-      {headNodes}
+      {assetHeadNodes}
     </head>
 
     <body {...bodyAttributes}>

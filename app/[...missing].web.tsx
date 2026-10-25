@@ -13,6 +13,7 @@ import { useDocumentRouteRegistration } from '@/components/layout/documentView'
 // Нативный catch-all остаётся в том же web-чанке — `scripts/lib/expoStaticShell.js`
 // (`onlyChunk`) ждёт ровно один чанк `[...missing]` для boot-скриптов переводной детали.
 import NotFoundScreen from './[...missing].tsx'
+import { notFoundRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
 
 // Lazy on purpose (#2389): a static import made the whole quest screen part of
 // this catch-all's module graph, and the shared-chunk split then shipped it as
@@ -81,3 +82,9 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   fallback: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 })
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана
+export function generateMetadata() {
+  return notFoundRouteMetadata()
+}

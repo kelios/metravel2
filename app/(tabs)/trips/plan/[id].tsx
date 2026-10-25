@@ -81,6 +81,8 @@ import {
   PLANNER_DESCRIPTION_FONT_SIZE,
   PLANNER_INNER_MAX_WIDTH,
 } from '@/components/trips/planning/plannedTripScreen.styles';
+import { shellRouteMetadata } from '@/utils/seoRoutes/routeMetadata';
+import { getTripsRouteSeo } from '@/components/trips/TripsPageSeo';
 
 const DESCRIPTION_LINE_LIMIT_DESKTOP = 8;
 const DESCRIPTION_LINE_LIMIT_MOBILE_COMPACT = 2;
@@ -1041,4 +1043,10 @@ export default function PlannedTripScreen() {
       </PlannerPageScrollView>
     </>
   );
+}
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана
+export function generateMetadata() {
+  return shellRouteMetadata({ title: getTripsRouteSeo('plan').title });
 }

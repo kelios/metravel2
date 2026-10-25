@@ -17,6 +17,7 @@ import { sendAnalyticsEvent } from '@/utils/analytics';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { translate as i18nT } from '@/i18n'
+import { staticRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
 
 
 const ListTravel = lazy(() => import('@/components/listTravel/ListTravelBase'));
@@ -155,4 +156,11 @@ export default function ExportScreen() {
             </View>
         </>
     );
+}
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); значения — общая таблица
+// utils/seoRoutes/staticRoutes.js, та же, что у SSG-генератора.
+export function generateMetadata() {
+  return staticRouteMetadata('/export')
 }

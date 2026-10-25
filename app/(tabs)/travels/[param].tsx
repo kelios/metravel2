@@ -1,5 +1,6 @@
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler'
 import TravelDetailsContainer from '@/components/travel/details/TravelDetailsContainer'
+import { shellRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
 
 export default function TravelDetailsScreen() {
   // Android: hardware Back должен возвращать на предыдущий экран (карта/список),
@@ -11,4 +12,10 @@ export default function TravelDetailsScreen() {
   // на счётчик кадров слайдера.
   useAndroidBackHandler()
   return <TravelDetailsContainer />
+}
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана
+export function generateMetadata() {
+  return shellRouteMetadata()
 }

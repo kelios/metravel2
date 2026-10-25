@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
 import Head from 'expo-router/head';
 import {
+  claimStaticHeadTwins,
+  dedupeStaticHeadTwins,
   normalizeOgImageUrl,
   removeOwnedWebSeoMetadata,
   syncWebSeoMetadata,
@@ -90,6 +92,28 @@ function StaticHead({
       }
     };
   }, [description, syncHydratedMetadataForPath, title]);
+
+  // #2740: статический head экспорта (generateMetadata, без data-rh) и теги helmet
+  // (data-rh) не должны жить парами после гидрации. Helmet пишет свои теги
+  // асинхронно — на SSG-страницах уже после того, как data-rh генератора есть в
+  // HTML, — поэтому первое монтирование документа снимает двойники сразу и после
+  // каждой правки head в том же 5-секундном окне, но только среди узлов экспорта:
+  // теги SPA-навигации (#1613) проход не трогает.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const staticNodes = claimStaticHeadTwins();
+    if (!staticNodes) return;
+    dedupeStaticHeadTwins(staticNodes);
+    const observer = new MutationObserver(() => {
+      dedupeStaticHeadTwins(staticNodes);
+    });
+    observer.observe(document.head, { childList: true });
+    const timeout = window.setTimeout(() => observer.disconnect(), 5000);
+    return () => {
+      window.clearTimeout(timeout);
+      observer.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof document === 'undefined' || !robots) return;

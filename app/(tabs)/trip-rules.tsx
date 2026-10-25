@@ -1,13 +1,22 @@
 import LegalPage from '@/components/legal/LegalPage'
 import { translate as i18nT } from '@/i18n'
+import { routeMetadata } from '@/utils/seoRoutes/routeMetadata'
+import { DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
 
+
+// #2740: единый источник SEO маршрута — экран (LegalPage) и generateMetadata()
+const TRIP_RULES_SEO = {
+  titleKey: 'trips:app.tabs.trip_rules.pravila_uchastiya_v_poezdkah_metravel_8cf61361',
+  descriptionKey: 'trips:app.tabs.trip_rules.pravila_uchastiya_v_sovmestnyh_poezdkah_metr_ab16b279',
+  canonical: '/trip-rules',
+} as const
 
 export default function TripRulesScreen() {
   return (
     <LegalPage
       headKey="legal-trip-rules"
-      seoTitle={i18nT('trips:app.tabs.trip_rules.pravila_uchastiya_v_poezdkah_metravel_8cf61361')}
-      seoDescription={i18nT('trips:app.tabs.trip_rules.pravila_uchastiya_v_sovmestnyh_poezdkah_metr_ab16b279')}
+      seoTitle={i18nT(TRIP_RULES_SEO.titleKey)}
+      seoDescription={i18nT(TRIP_RULES_SEO.descriptionKey)}
       pageTitle={i18nT('trips:app.tabs.trip_rules.pravila_uchastiya_v_poezdkah_30927e21')}
       effectiveDate="21.07.2026"
       intro={[
@@ -58,4 +67,16 @@ export default function TripRulesScreen() {
       ]}
     />
   )
+}
+
+// #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+// generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана
+export function generateMetadata() {
+  return routeMetadata({
+    title: i18nT(TRIP_RULES_SEO.titleKey),
+    description: i18nT(TRIP_RULES_SEO.descriptionKey),
+    canonical: TRIP_RULES_SEO.canonical,
+    image: DEFAULT_OG_IMAGE_PATH,
+    ogType: 'website',
+  })
 }
