@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import { fetchQuestStats } from '@/api/quests'
 import { queryKeys } from '@/api/queryKeys'
+import { readRetryOnce } from '@/utils/queryRetryPolicy'
 
 const STATS_STALE_TIME_MS = 10 * 60 * 1000
 
@@ -15,7 +16,7 @@ export function useQuestPlayersCount(enabled = true): number | null {
     queryFn: ({ signal }) => fetchQuestStats({ signal }),
     enabled,
     staleTime: STATS_STALE_TIME_MS,
-    retry: 1,
+    retry: readRetryOnce,
   })
   const playersCount = data?.players_count ?? 0
   return playersCount > 0 ? playersCount : null
