@@ -11,15 +11,18 @@ const mockRouter = {
   canGoBack: jest.fn(() => false),
 };
 let mockLocalSearchParams: Record<string, string | string[] | undefined> = {};
+type MockPreventRemoveCallback = (options: { data: { action: unknown }; repeat: () => void }) => void;
+const mockPreventRemove: { enabled: boolean; callback?: MockPreventRemoveCallback } = { enabled: false };
 
 jest.mock('expo-router', () => {
   return {
     __esModule: true,
     useRouter: () => mockRouter,
-    usePreventRemove: () => jest.fn(),
-    useNavigation: () => ({
-      addListener: jest.fn(() => jest.fn()),
-    }),
+    usePreventRemove: (enabled: boolean, callback?: MockPreventRemoveCallback) => {
+      mockPreventRemove.enabled = enabled;
+      mockPreventRemove.callback = callback;
+      return jest.fn();
+    },
     useLocalSearchParams: () => mockLocalSearchParams,
   };
 });
@@ -306,6 +309,63 @@ describe('useTravelWizard origin-aware exit', () => {
     jest.clearAllMocks();
     mockLocalSearchParams = {};
     mockRouter.canGoBack.mockReturnValue(false);
+    mockPreventRemove.enabled = false;
+    mockPreventRemove.callback = undefined;
+  });
+
+  it('blocks native removal with unsaved changes and asks before leaving', () => {
+    const { result } = renderHook(() =>
+      useTravelWizard({
+        totalSteps: 6,
+        hasUnsavedChanges: true,
+        canSave: true,
+        onSave: jest.fn(async () => ({ publish: false, moderation: false })),
+      }),
+    );
+
+    expect(Platform.OS).not.toBe('web');
+    expect(mockPreventRemove.enabled).toBe(true);
+    const repeat = jest.fn();
+    act(() => {
+      mockPreventRemove.callback?.({ data: { action: { type: 'GO_BACK' } }, repeat });
+    });
+
+    expect(repeat).not.toHaveBeenCalled();
+    expect(result.current.exitPrompt).not.toBeNull();
+
+    act(() => {
+      result.current.handleExitDiscard();
+    });
+
+    expect(repeat).toHaveBeenCalledTimes(1);
+  });
+
+  it('repeats the removal blocked while a confirmed exit is navigating away', () => {
+    mockLocalSearchParams = { returnTo: '/search' };
+    const { result } = renderHook(() =>
+      useTravelWizard({
+        totalSteps: 6,
+        hasUnsavedChanges: true,
+        canSave: true,
+        onSave: jest.fn(async () => ({ publish: false, moderation: false })),
+      }),
+    );
+
+    act(() => {
+      result.current.handleExit();
+    });
+    act(() => {
+      result.current.handleExitDiscard();
+    });
+    expect(mockRouter.replace).toHaveBeenCalledWith('/search');
+
+    // Prop hasUnsavedChanges is still true, so the router blocks the replace it just got.
+    const repeat = jest.fn();
+    act(() => {
+      mockPreventRemove.callback?.({ data: { action: { type: 'REPLACE' } }, repeat });
+    });
+
+    expect(repeat).toHaveBeenCalledTimes(1);
   });
 
   it('replaces to returnTo when leaving the first wizard step', () => {

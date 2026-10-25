@@ -2099,7 +2099,8 @@ guard, падающий в CI на попытке обойти этот конт
 - **Controls:** перед `review` обновления expo/expo-router/router-server —
   сверка `dist` с предыдущей сборкой по двум счётчикам (used−defined по RNW,
   пустой `#main-content`) на всех `dist/**/*.html`; при добавлении файла в
-  `app/(tabs)/` — явный `<Tabs.Screen>` в `_layout.tsx`. Базовая линия
+  `app/(tabs)/` — явный `<Tabs.Screen>` в `_layout.tsx` без `href: null` (держит
+  `__tests__/screens/TabLayout.declaredRoutes.test.tsx`). Базовая линия
   для «это регрессия или старое»: те же спеки против `dist` основного checkout
   тем же окружением (`E2E_BUILD_DIR` + `BASE_URL` + `E2E_NO_WEBSERVER=1`).
 - **Решение для новой жалобы:** «после обновления Expo/expo-router первый кадр

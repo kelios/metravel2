@@ -3,10 +3,9 @@
  *
  * SSR-контроль `useTravelFilters` для шага точек: слушатели возврата в окно
  * (focus/blur/visibilitychange/pageshow) не обязаны существовать вне браузера.
- * Под jsdom 26 (jest-environment-jsdom 30, Expo SDK 58) `window` стал
- * non-configurable, и прежний приём «переопределить globalThis.window = undefined»
- * внутри основного набора больше невозможен — поэтому случай живёт в node-среде,
- * где `document` отсутствует, а `window`-алиас RN jest-preset снимается штатно.
+ * Случай живёт в node-среде, где `document` отсутствует, а `window`-алиас RN
+ * jest-preset снимается штатно; в jsdom 26 (jest-environment-jsdom 30, #2735)
+ * `window` non-configurable, и подмена внутри основного набора там невозможна.
  */
 
 import { renderHook, act, waitFor } from '@testing-library/react-native';

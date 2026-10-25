@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
 import ReanimatedSwipeable, {
   type SwipeableMethods,
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -41,7 +41,7 @@ type ActionScaleProps = {
   translation: SharedValue<number>;
   /** Направление раскрытия: левая панель растёт при положительном смещении, правая — при отрицательном */
   side: 'left' | 'right';
-  style: object;
+  style: StyleProp<ViewStyle>;
   children: React.ReactNode;
 };
 

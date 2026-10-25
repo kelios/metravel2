@@ -698,8 +698,8 @@ describe('useTravelFilters', () => {
       expect(addListener.mock.calls.filter(([name]) => name === 'focus' || name === 'blur')).toEqual([]);
     });
 
-    // Случай «без window/document» — в `useTravelFilters.ssr.test.ts` (node-среда):
-    // под jsdom 26 глобал `window` non-configurable и переопределению не поддаётся.
+    // Случай «без window/document» — в `useTravelFilters.ssr.test.ts`: настоящая
+    // node-среда без браузерных глобалов, а не jsdom с подменёнными свойствами.
   });
 });
 

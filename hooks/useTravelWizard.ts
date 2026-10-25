@@ -427,8 +427,14 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
   // expo-router 58 убрал событие `beforeRemove`; удержание экрана с несохранёнными
   // правками идёт через usePreventRemove: `repeat` снимает защиту и повторяет
   // заблокированный переход (та же семантика, что прежний dispatch(e.data.action)).
+  // Переход уже подтверждён (handleExit, «сохранить и выйти») — блокировка всё равно
+  // срабатывает, пока проп hasUnsavedChanges не обновился, поэтому его надо повторить,
+  // а не проглотить: иначе экран остаётся на месте.
   usePreventRemove(Platform.OS !== 'web' && hasUnsavedChanges, ({ repeat }) => {
-    if (isLeavingRef.current) return;
+    if (isLeavingRef.current) {
+      repeat();
+      return;
+    }
 
     const leave = () => {
       isLeavingRef.current = true;
