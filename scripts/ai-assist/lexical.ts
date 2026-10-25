@@ -7,6 +7,8 @@
  * `degraded: true`, а не ждёт и не падает.
  */
 
+import { coverUrl } from '../ai-index/chunk.ts'
+
 export interface LexicalHit {
   source_id: number
   title: string
@@ -14,6 +16,7 @@ export interface LexicalHit {
   url: string
   city: string | null
   country: string | null
+  cover: string | null
 }
 
 export type LexicalSearch = (q: string, limit: number) => Promise<LexicalHit[] | null>
@@ -26,6 +29,7 @@ interface CardRow {
   slug?: unknown
   cityName?: unknown
   countryName?: unknown
+  travel_image_thumb_url?: unknown
 }
 
 const BROKEN_SEGMENT = /\/(?:null|undefined|0)(?:\/|$)/
@@ -60,6 +64,7 @@ export function parseCards(payload: unknown, siteUrlInput: string): LexicalHit[]
       url: /^https?:\/\//.test(path) ? path : `${siteUrl}${path.startsWith('/') ? '' : '/'}${path}`,
       city: typeof row.cityName === 'string' && row.cityName ? row.cityName : null,
       country: typeof row.countryName === 'string' && row.countryName ? row.countryName : null,
+      cover: coverUrl(row.travel_image_thumb_url),
     })
   }
   return out

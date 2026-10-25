@@ -51,6 +51,11 @@ import ListTravelOwnUserGate, {
   getListTravelOwnUserGateMode,
 } from './parts/ListTravelOwnUserGate'
 import type { ListTravelBaseProps } from './ListTravelBase.types'
+import AiSearchPanel from '@/components/aiPicks/AiSearchPanel';
+import { isAiPicksEnabled } from '@/utils/aiPicksConfig';
+
+const isSearchPathname = (value: string | null | undefined): boolean =>
+  /(^|\/)search\/?$/.test(String(value ?? ''));
 
 
 const EMPTY_FALLBACK_STEPS: ReturnType<typeof buildListTravelFallbackSteps> = [];
@@ -573,6 +578,18 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
         displayedHandleEndReached();
     }, [displayedHandleEndReached, hasDisplayedItems]);
 
+    // #2459: строка смыслового подбора только на /search (не «мои», не экспорт) и под флагом.
+    const showAiSearchPanel =
+      isAiPicksEnabled() && !isExport && !isMeTravel && !isTravelBy && !user_id && isSearchPathname(pathname);
+
+    // Панель живёт в заголовке FlashList (`listIntroContent`), а не в `topContent`:
+    // колонка результатов — единственный скролл, и блок снаружи неё съедал бы высоту
+    // каталога и обрезал карточки подбора (code-review-gate #2459).
+    const listIntroContent = useMemo(
+      () => (showAiSearchPanel ? (<>{catalogIntro}<AiSearchPanel /></>) : catalogIntro),
+      [catalogIntro, showAiSearchPanel],
+    );
+
     const topContent = useMemo(() => {
       if (!displayedStaleContentMeta && !isExport && !activeFallbackMatch?.step) return null;
       return (
@@ -678,7 +695,7 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
       }}
       rightColumn={{
         contributionBannerVariant: isTravelBy ? 'author-catalog' : 'search',
-        listIntroContent: catalogIntro,
+        listIntroContent,
         search,
         setSearch,
         onClearAll: handleClearAll,

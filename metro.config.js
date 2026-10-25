@@ -41,6 +41,8 @@ const previousEnhanceMiddleware = config.server && config.server.enhanceMiddlewa
 // Фолбэк CORS-прокси, когда EXPO_PUBLIC_API_URL не задан: локальный бэкенд.
 // Дев-стенд (http://192.168.50.36) подключается только явным EXPO_PUBLIC_API_URL.
 const DEFAULT_DEV_API_HOST = 'http://localhost:8000'
+// metravel-assist (`npm run ai:assist:dev`, PORT 8787) для блоков смыслового подбора (#2459).
+const DEFAULT_DEV_AI_ASSIST_HOST = 'http://127.0.0.1:8787'
 
 if (process.env.METRAVEL_QUIET_METRO === '1') {
   config.reporter = { update: () => {} }
@@ -371,11 +373,17 @@ config.resolver.resolveRequest = ((orig) => {
 	        // Important: do not proxy Metro async chunks like /api/*.bundle,
 	        // otherwise dynamic imports from "@/api/*" break with 404.
 	        const isMetroModuleAsset = /\.bundle$|\.map$/i.test(pathname)
-	        if (pathname.startsWith('/api/') && !isMetroModuleAsset) {
-          const configuredApiHost = String(process.env.EXPO_PUBLIC_API_URL || '').trim()
-          const apiHost = isSameLocalOrigin(configuredApiHost, req.headers.host)
-            ? DEFAULT_DEV_API_HOST
-            : configuredApiHost || DEFAULT_DEV_API_HOST
+	        // `/ai/*` — служба metravel-assist (#2459): same-origin, как на проде за nginx.
+	        const isAiAssistRequest = pathname.startsWith('/ai/')
+	        if ((pathname.startsWith('/api/') || isAiAssistRequest) && !isMetroModuleAsset) {
+          const configuredApiHost = isAiAssistRequest
+            ? String(process.env.AI_PICKS_DEV_PROXY_TARGET || DEFAULT_DEV_AI_ASSIST_HOST).trim()
+            : String(process.env.EXPO_PUBLIC_API_URL || '').trim()
+          const apiHost = isAiAssistRequest
+            ? configuredApiHost
+            : isSameLocalOrigin(configuredApiHost, req.headers.host)
+              ? DEFAULT_DEV_API_HOST
+              : configuredApiHost || DEFAULT_DEV_API_HOST
           if (configuredApiHost && apiHost !== configuredApiHost) {
             console.warn(
               `[Metro CORS Proxy] Ignoring self-proxy EXPO_PUBLIC_API_URL=${configuredApiHost}; using ${apiHost} instead.`

@@ -34,6 +34,8 @@ export interface ChunkRecord {
   /** Язык текста фрагмента: ru для статей, content_locale квеста. */
   locale: string
   text: string
+  /** Обложка источника (thumb статьи или cover квеста) для карточек подбора (#2459); null — нет. */
+  cover: string | null
 }
 
 export interface IndexManifest {

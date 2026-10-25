@@ -231,6 +231,9 @@ const allowInsecureProxy = String(process.env.E2E_API_PROXY_INSECURE || '').toLo
 // По той же причине в наборе есть `/travel-description-image/`: `/travel-image/`
 // его префиксом НЕ является, а с #1204 conversion-ключи этого семейства перестали
 // уходить на проксируемый `/media-resize/legacy/` и остаются на своём роуте.
+// `/ai/` — служба metravel-assist (#2459); отдельный target, по умолчанию локальный `npm run ai:assist:dev`.
+const aiProxyTarget = String(process.env.E2E_AI_PROXY_TARGET || 'http://127.0.0.1:8787').replace(/\/+$/, '')
+const aiProxyPaths = ['/ai/']
 const proxyPaths = ['/api/', '/api', '/travel-image/', '/travel-description-image/', '/address-image/', '/quest-cover/', '/avatar/', '/gallery/', '/uploads/', '/media/', '/media-resize/']
 // Default timeout is intentionally generous: in CI/local E2E the upstream can be slow,
 // and we prefer test stability over aggressively failing long requests.
@@ -503,6 +506,11 @@ const proxyRequest = (req, res, target) => {
 
 const server = http.createServer((req, res) => {
   try {
+    const shouldProxyAi = aiProxyPaths.some((prefix) => req.url && req.url.startsWith(prefix))
+    if (shouldProxyAi) {
+      proxyRequest(req, res, aiProxyTarget)
+      return
+    }
     const shouldProxy = proxyPaths.some((prefix) => req.url && req.url.startsWith(prefix))
     if (shouldProxy) {
       proxyRequest(req, res, apiProxyTarget)

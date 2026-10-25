@@ -82,9 +82,9 @@ describe('metravel-assist: лексика бэкенда', () => {
     const hits = parseCards(
       {
         results: [
-          { id: 556, title: 'Камино', url: '/travels/kamino', slug: 'kamino', cityName: 'Краков', countryName: 'Польша' },
+          { id: 556, title: 'Камино', url: '/travels/kamino', slug: 'kamino', cityName: 'Краков', countryName: 'Польша', travel_image_thumb_url: 'https://metravel.by/travel-image/556/thumb.webp' },
           { id: 'x' },
-          { id: 7, name: 'Без url', slug: 's7' },
+          { id: 7, name: 'Без url', slug: 's7', travel_image_thumb_url: '/travel-image/7/thumb.webp' },
           { id: 8, title: 'Только url', url: '/travels/from-url' },
           { id: 9, title: 'Битый url (#1438)', url: '/travels/null' },
           { id: 10, title: 'slug битый, url цел', slug: 'undefined', url: '/travels/ok' },
@@ -93,10 +93,11 @@ describe('metravel-assist: лексика бэкенда', () => {
       'https://metravel.by/',
     )
     expect(hits).toEqual([
-      { source_id: 556, title: 'Камино', url: 'https://metravel.by/travels/kamino', city: 'Краков', country: 'Польша' },
-      { source_id: 7, title: 'Без url', url: 'https://metravel.by/travels/s7', city: null, country: null },
-      { source_id: 8, title: 'Только url', url: 'https://metravel.by/travels/from-url', city: null, country: null },
-      { source_id: 10, title: 'slug битый, url цел', url: 'https://metravel.by/travels/ok', city: null, country: null },
+      { source_id: 556, title: 'Камино', url: 'https://metravel.by/travels/kamino', city: 'Краков', country: 'Польша', cover: 'https://metravel.by/travel-image/556/thumb.webp' },
+      // #2459: относительная обложка не уходит в карточку подбора битой ссылкой.
+      { source_id: 7, title: 'Без url', url: 'https://metravel.by/travels/s7', city: null, country: null, cover: null },
+      { source_id: 8, title: 'Только url', url: 'https://metravel.by/travels/from-url', city: null, country: null, cover: null },
+      { source_id: 10, title: 'slug битый, url цел', url: 'https://metravel.by/travels/ok', city: null, country: null, cover: null },
     ])
     expect(parseCards([{ id: 1, title: 't', url: 'https://x.test/a' }], 'https://metravel.by')[0].url).toBe('https://x.test/a')
     expect(parseCards({ detail: 'Not found.' }, 'https://metravel.by')).toEqual([])
@@ -112,7 +113,7 @@ describe('metravel-assist: лексика бэкенда', () => {
         return new Response(JSON.stringify({ results: [{ id: 1, title: 'a', url: '/travels/a' }] }), { status: 200 })
       }) as unknown as typeof fetch,
     })
-    expect(await ok('замки под Краковом', 20)).toEqual([{ source_id: 1, title: 'a', url: 'https://metravel.by/travels/a', city: null, country: null }])
+    expect(await ok('замки под Краковом', 20)).toEqual([{ source_id: 1, title: 'a', url: 'https://metravel.by/travels/a', city: null, country: null, cover: null }])
     expect(urls[0]).toBe('http://backend:8000/api/travels/?query=%D0%B7%D0%B0%D0%BC%D0%BA%D0%B8%20%D0%BF%D0%BE%D0%B4%20%D0%9A%D1%80%D0%B0%D0%BA%D0%BE%D0%B2%D0%BE%D0%BC&page_size=20')
 
     const lines: string[] = []

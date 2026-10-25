@@ -10,6 +10,8 @@ import { createTravelListRowLayout } from './travelListRowLayout'
 import { getListTravelViewportState } from './listTravelBaseModel'
 import { useStickySearchBarStyles } from '@/components/mainPage/StickySearchBar.styles'
 import { getRightColumnHeaderMinHeight } from './rightColumnModel'
+import { AiSearchPanelPlaceholder } from '@/components/aiPicks/AiSearchPanelFrame'
+import { isAiPicksEnabled } from '@/utils/aiPicksConfig'
 
 export const SEARCH_SKELETON_FIRST_FRAME_CSS = `
 [data-search-skeleton-unknown="true"] [data-search-skeleton-padding="true"]{padding-left:10px!important;padding-right:10px!important}
@@ -197,6 +199,8 @@ export const SearchPageSkeleton = memo(() => {
         <SearchHeaderSkeleton isCompact={viewport.usesOverlaySidebar} isMobileViewport={isMobile} contentPadding={viewport.contentPadding} />
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={{ paddingHorizontal: viewport.contentPadding, paddingTop: 8 }} {...{ dataSet: { searchSkeletonPadding: 'true' } }}>
+          {/* #2459: панель подбора живёт в заголовке списка — её idle-геометрия есть уже в первом кадре. */}
+          {isAiPicksEnabled() ? <AiSearchPanelPlaceholder /> : null}
           <SearchCardsSkeleton columns={columns} count={cardCount} isMobile={isMobile} cardSpacing={viewport.gapSize} />
           </View>
         </ScrollView>

@@ -25,6 +25,12 @@ export const queryKeys = {
   ] as const,
   randomTravels: () => ['random-travels'] as const,
   travelsNear: (travelId: number) => ['travels-near', travelId] as const,
+  /** Смысловой подбор (#2459): похожие материалы и поиск по описанию через metravel-assist. */
+  /** Префикс всех подборов одного источника: по нему сайдбар статьи ждёт ответа (#2459). */
+  aiSimilarSource: (type: 'travel' | 'quest', id: number) => ['ai-similar', type, id] as const,
+  aiSimilar: (type: 'travel' | 'quest', id: number, locale: string, resultType: string) =>
+    ['ai-similar', type, id, locale, resultType] as const,
+  aiSearch: (q: string, locale: string) => ['ai-search', q, locale] as const,
   travelsNearMap: (
     travelId: number,
     origin: { lat: number; lng: number },

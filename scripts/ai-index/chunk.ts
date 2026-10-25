@@ -40,6 +40,7 @@ export interface RawTravel {
   publish?: boolean | null
   moderation?: boolean | null
   updated_at?: string | null
+  travel_image_thumb_url?: string | null
 }
 
 export interface RawQuestStep {
@@ -62,6 +63,7 @@ export interface RawQuest {
   lat?: number | string | null
   lng?: number | string | null
   tags?: Record<string, boolean> | string[] | null
+  cover_url?: string | null
   intro?: { title?: string | null; story?: string | null; task?: string | null } | null
   steps?: RawQuestStep[] | null
   finale_text?: string | null
@@ -258,8 +260,16 @@ export function buildTravelChunks(
     tags,
     locale: 'ru',
     text,
+    cover: coverUrl(raw.travel_image_thumb_url),
   }))
   return uniqueByText(records)
+}
+
+/** Абсолютный http(s)-адрес обложки или null: карточки подбора не рисуют битые ссылки. */
+export function coverUrl(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return /^https?:\/\//.test(trimmed) ? trimmed : null
 }
 
 export function questText(raw: RawQuest): string {
@@ -309,6 +319,7 @@ export function buildQuestChunks(raw: RawQuest, options: ChunkOptions = {}): Chu
     tags: questTags(raw),
     locale,
     text,
+    cover: coverUrl(raw.cover_url),
   }))
   return uniqueByText(records)
 }

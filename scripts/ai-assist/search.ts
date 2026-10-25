@@ -22,6 +22,8 @@ export interface ResultItem {
   country: string | null
   lat: number | null
   lng: number | null
+  /** Обложка для карточки подбора; null — показывать плейсхолдер. */
+  cover: string | null
 }
 
 export const SNIPPET_CHARS = 200
@@ -51,6 +53,7 @@ export function itemForRow(index: LoadedIndex, row: number, score: number | null
     country: chunk.country,
     lat: chunk.lat,
     lng: chunk.lng,
+    cover: chunk.cover ?? null,
   }
 }
 
@@ -149,6 +152,7 @@ export function rrfMerge(vector: Hit[], lexical: LexicalHit[], index: LoadedInde
             country: hit.country,
             lat: null,
             lng: null,
+            cover: hit.cover,
           }
         : itemForRow(index, row, null),
     )

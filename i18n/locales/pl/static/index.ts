@@ -1,4 +1,5 @@
 import { aiAssistStaticResources } from './ai_assist_static'
+import { aiPicksStaticResources } from './ai_picks_static'
 import { authStaticResources } from './auth_static'
 import { calendarStaticResources } from './calendar_static'
 import { errorsStaticResources } from './errors_static'
@@ -12,6 +13,7 @@ import { tripsStaticResources } from './trips_static'
 
 export const staticResources = {
   aiAssistStatic: aiAssistStaticResources,
+  aiPicksStatic: aiPicksStaticResources,
   authStatic: authStaticResources,
   calendarStatic: calendarStaticResources,
   errorsStatic: errorsStaticResources,

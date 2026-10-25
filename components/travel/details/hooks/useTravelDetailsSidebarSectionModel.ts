@@ -53,11 +53,17 @@ export function useTravelDetailsSidebarSectionModel({
     queryKey: queryKeys.travelsNear(Number(travel.id)),
   })
   const popularFetching = useIsFetching({ queryKey: queryKeys.travelsPopular() })
+  // #2459: «Похожие статьи» грузятся в тот же кадр сайдбара (до 4 с); пока запрос
+  // в полёте, резерв не отпускается, иначе каркас блока потом вырос бы в карточки
+  // или схлопнулся уже под освобождённой высотой.
+  const aiSimilarFetching = useIsFetching({
+    queryKey: queryKeys.aiSimilarSource('travel', Number(travel.id)),
+  })
 
   return {
     handleTravelsLoaded,
     hasValidTravelId,
-    listsFetching: nearFetching + popularFetching > 0,
+    listsFetching: nearFetching + popularFetching + aiSimilarFetching > 0,
     nearInViewport,
     relatedTravels,
     setNearRef,

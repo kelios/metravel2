@@ -15,9 +15,19 @@ import { translate as i18nT } from '@/i18n'
 import { TravelDetailsDeferredTransition } from '@/components/travel/details/TravelDetailsDeferredTransition'
 import { METRICS } from '@/constants/layout'
 import { NearTravelListSkeleton, PopularTravelListSkeleton } from '@/components/travel/NearTravelListSkeleton'
+import { isAiPicksEnabled } from '@/utils/aiPicksConfig'
 
 
 const SIDEBAR_CONTENT_MARGIN_STYLE = { marginTop: 8 } as const
+// #2459: блок смыслового подбора живёт в своём чанке и грузится только под флагом —
+// сайдбар без флага не тянет карточку подбора (и reanimated за ней) в свой бандл.
+// Под флагом импорт стартует при загрузке модуля, а не при монтировании секции:
+// чанк успевает раньше ответа «Рядом», и резерв сайдбара не отпускается до того,
+// как запрос блока (учтён в `listsFetching`) появится в кэше.
+const aiSimilarSectionImport = isAiPicksEnabled() ? import('@/components/aiPicks/AiSimilarSection') : null
+const AiSimilarSectionLazy = React.lazy(
+  () => aiSimilarSectionImport ?? import('@/components/aiPicks/AiSimilarSection'),
+)
 const LIST_FALLBACK_STYLE = { minHeight: 220 } as const
 
 export const TravelDetailsSidebarSection: React.FC<{
@@ -48,7 +58,6 @@ export const TravelDetailsSidebarSection: React.FC<{
     canRenderHeavy,
     travel,
   })
-
   // Every resize of the settled sidebar frame is reported: `Рядом` may resolve
   // empty or fail, and `Популярные` settles independently, so the section
   // cannot key its reserve on a single "data arrived" event. It must not report
@@ -158,6 +167,18 @@ export const TravelDetailsSidebarSection: React.FC<{
         runtimeFrameReady
         allowEmptyRuntime
       >
+        {/*
+          #2459: «Похожие статьи» по смыслу текста делят с стрелками один переход с
+          нулевым резервом: растут только в резерв сайдбара, пустой ответ или отказ
+          службы ничего не резервируют. Запрос уходит вместе с «Рядом»
+          (`nearInViewport`), нового наблюдателя видимости нет; чанк блока грузится
+          только под флагом.
+        */}
+        {hasValidTravelId && isAiPicksEnabled() ? (
+          <Suspense fallback={null}>
+            <AiSimilarSectionLazy type="travel" id={Number(travel.id)} limit={6} enabled={nearInViewport} />
+          </Suspense>
+        ) : null}
         {shouldShowNavigationArrows && (
           <View
             style={[styles.sectionContainer, styles.navigationArrowsContainer]}

@@ -7,6 +7,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { QuestWizard as QuestWizardDirect } from '@/components/quests/QuestWizard';
 import QuestConsentGate from '@/components/quests/QuestConsentGate';
 import TravelsForQuestSection from '@/components/quests/TravelsForQuestSection';
+import AiSimilarSection from '@/components/aiPicks/AiSimilarSection';
 import QuestCompletionBadge from '@/components/quests/QuestCompletionBadge';
 import QuestProgressPendingNotice, { useQuestProgressPending } from '@/components/quests/QuestProgressPendingNotice';
 import QuestContentLocaleNotice, { useQuestForeignContentLocale } from '@/components/quests/QuestContentLocaleNotice';
@@ -688,11 +689,15 @@ export default function QuestByIdScreen({ route }: { route?: QuestLocaleRoute } 
       coords.push({ lat: bundle.city.lat, lng: bundle.city.lng });
     }
     return (
-      <TravelsForQuestSection
-        cityName={bundle.city?.name}
-        countryCode={bundle.city?.countryCode}
-        coords={coords}
-      />
+      <>
+        <TravelsForQuestSection
+          cityName={bundle.city?.name}
+          countryCode={bundle.city?.countryCode}
+          coords={coords}
+        />
+        {/* #2459: статьи по смыслу текста квеста — поверх гео-блока, без дубля квестов. */}
+        <AiSimilarSection type="quest" id={Number(bundle.id)} limit={3} />
+      </>
     );
   }, [bundle]);
 

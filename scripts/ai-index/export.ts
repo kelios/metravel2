@@ -33,6 +33,7 @@ const TRAVEL_FIELDS: Array<keyof RawTravel> = [
   'month',
   'year',
   'publish',
+  'travel_image_thumb_url',
   'moderation',
   'updated_at',
 ]
@@ -296,6 +297,7 @@ export async function runExport(options: ExportOptions): Promise<ExportSummary> 
         lat: (meta.lat ?? null) as number | null,
         lng: (meta.lng ?? null) as number | null,
         tags: (meta.tags ?? null) as RawQuest['tags'],
+        cover_url: (detail.cover_url ?? meta.cover_url ?? null) as string | null,
         intro: pick(intro, ['title', 'story', 'task'] as never[]) as RawQuest['intro'],
         steps: steps as RawQuest['steps'],
         finale_text: (((detail.finale ?? {}) as Record<string, unknown>).text ?? null) as string | null,

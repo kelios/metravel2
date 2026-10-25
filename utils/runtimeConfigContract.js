@@ -17,6 +17,8 @@ const MOCK_FLAG_NAMES = [
 // локальный адрес модели в production-сборке — ошибка конфигурации.
 const AI_ASSISTANT_FLAG_NAME = 'EXPO_PUBLIC_AI_ASSISTANT'
 const AI_ASSISTANT_URL_NAME = 'EXPO_PUBLIC_AI_ASSISTANT_URL'
+const AI_PICKS_FLAG_NAME = 'EXPO_PUBLIC_AI_PICKS'
+const AI_PICKS_URL_NAME = 'EXPO_PUBLIC_AI_PICKS_URL'
 
 const LEGACY_ROUTING_API_KEY_SOURCES = new Set([
   'EXPO_PUBLIC_ROUTE_SERVICE',
@@ -75,6 +77,38 @@ const getAiAssistantDiagnosticsCore = (env = process.env, { isProduction = false
     })
   }
   return diagnostics
+}
+
+/**
+ * Смысловой подбор (#2459): флаг без адреса допустим (same-origin `/ai/`), но
+ * явный `EXPO_PUBLIC_AI_PICKS_URL` обязан быть абсолютным http(s)-адресом и не
+ * может указывать на локальный хост в production-сборке.
+ */
+const getAiPicksDiagnosticsCore = (env = process.env, { isProduction = false } = {}) => {
+  if (!isTruthyFlag(env[AI_PICKS_FLAG_NAME])) return []
+  const rawUrl = String(env[AI_PICKS_URL_NAME] || '').trim()
+  if (!rawUrl) return []
+  let parsed = null
+  try {
+    parsed = new URL(rawUrl)
+  } catch {
+    parsed = null
+  }
+  if (!parsed || (parsed.protocol !== 'http:' && parsed.protocol !== 'https:')) {
+    return [{
+      code: 'AI_PICKS_URL_INVALID',
+      severity: 'error',
+      message: `${AI_PICKS_URL_NAME} must be an absolute http/https origin of metravel-assist, or empty for same-origin /ai/.`,
+    }]
+  }
+  if (isProduction && isLocalHost(parsed.hostname)) {
+    return [{
+      code: 'AI_PICKS_LOCAL_URL_IN_PRODUCTION',
+      severity: 'error',
+      message: `${AI_PICKS_URL_NAME} points to a local host in a production build; recommendation blocks would call a server that does not exist for visitors.`,
+    }]
+  }
+  return []
 }
 
 const isLocalApiEnabled = (env = process.env) =>
@@ -191,6 +225,7 @@ const getRuntimeConfigDiagnosticsCore = (env = process.env, options = {}) => {
   }
 
   diagnostics.push(...getAiAssistantDiagnosticsCore(env, { isProduction }))
+  diagnostics.push(...getAiPicksDiagnosticsCore(env, { isProduction }))
 
   const routingDiagnostics = getRoutingConfigDiagnosticsCore(env).map((diagnostic) => ({
     ...diagnostic,
@@ -203,8 +238,11 @@ const getRuntimeConfigDiagnosticsCore = (env = process.env, options = {}) => {
 module.exports = {
   AI_ASSISTANT_FLAG_NAME,
   AI_ASSISTANT_URL_NAME,
+  AI_PICKS_FLAG_NAME,
+  AI_PICKS_URL_NAME,
   MOCK_FLAG_NAMES,
   getAiAssistantDiagnosticsCore,
+  getAiPicksDiagnosticsCore,
   ROUTING_API_KEY_CANDIDATES,
   resolveRoutingApiKeyWithSourceCore,
   getRoutingConfigDiagnosticsCore,

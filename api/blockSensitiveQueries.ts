@@ -95,6 +95,8 @@ export const BLOCK_SENSITIVE_QUERIES: readonly QueryKey[] = BLOCK_SENSITIVE_ENTR
 
 /** Корни кэша без чужого авторского контента — с причиной, почему блок их не касается. */
 export const BLOCK_EXEMPT_ROOTS: Readonly<Record<string, string>> = {
+  'ai-similar': 'смысловой подбор: опубликованные статьи и квесты из индекса metravel-assist (#2456), без личных данных; блок автора к выдаче службы не применяется — это публичные материалы каталога',
+  'ai-search': 'смысловой поиск по описанию из того же индекса; публичные материалы',
   'travel-route-files': 'файлы трека открытого путешествия; сама деталь перезапрашивается',
   'email-subscription-status': 'подписка email своего аккаунта на рассылку; чужого контента нет',
   filters: 'справочник',
