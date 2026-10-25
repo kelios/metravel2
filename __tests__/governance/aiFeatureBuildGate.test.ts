@@ -39,6 +39,7 @@ const KNOWN_STATIC_IMPORTS = new Set([
 ])
 // Ветка условия: от литерального флага до `?` и дальше без `;`/`:` до самого вызова.
 const FLAG_BRANCH = /process\.env\.EXPO_PUBLIC_AI_(?:PICKS|ASSISTANT)\b[^;]*\?[^;:]*$/
+const STATEMENT_START = /[\n;]\s*(?:export\s+)?(?:const|let|var|function|return|if|import)\b/g
 
 const listSources = (dir: string): string[] => {
   const abs = path.join(repoRoot, dir)
@@ -67,9 +68,15 @@ const collectReferences = (): Reference[] => {
     for (const match of source.matchAll(/(typeof\s+)?\b(require|import)\(\s*['"]([^'"]+)['"]\s*\)/g)) {
       if (match[1] || !FEATURE_SPECIFIER.test(match[3])) continue
       const index = match.index ?? 0
-      const before = source.slice(Math.max(0, index - 200), index)
+      // Только текущий оператор: от последнего начала объявления/оператора до вызова,
+      // иначе `?` соседнего выражения засчитал бы незащищённый import() (code-review-gate #2738).
+      const window = source.slice(Math.max(0, index - 400), index)
+      const statementStart = Math.max(
+        0,
+        ...[...window.matchAll(STATEMENT_START)].map((start) => (start.index ?? 0) + 1),
+      )
       // `cond ? import(a) : null` и `React.lazy(() => cached ?? import(a))` внутри той же ветки.
-      const gated = FLAG_BRANCH.test(before)
+      const gated = FLAG_BRANCH.test(window.slice(statementStart))
       references.push({
         file: posix,
         line: lineOf(source, index),
