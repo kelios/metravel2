@@ -1,0 +1,1267 @@
+{
+ "version": 1,
+ "generated_at": "2026-10-25",
+ "source": "#2750 третья волна: категории для точек без категории, однословные заглушки, населённый пункт к фамильным названиям",
+ "items": [
+  {
+   "id": 498,
+   "travel_id": 142,
+   "travel_url": "https://metravel.by/travels/usadba-reitana-v-grushevke-kak-doekhat",
+   "expected_address": "М1",
+   "address": "Дот на трассе М1 у Крошина",
+   "reason": "rename[medium]: OSM: «Польский ДОТ» на М1, Крошинский с/с; статья: доты на трассе М1, блиндаж 1917 г. переделан в ДОТ; ближайшая деревня Крошин — из общих знаний (osm)"
+  },
+  {
+   "id": 1045,
+   "travel_id": 157,
+   "travel_url": "https://metravel.by/travels/zimnii-drezden-i-bastai-chto-posmotret",
+   "expected_address": "Фрауэнкирхе",
+   "address": "Фрауэнкирхе в Дрездене",
+   "reason": "rename[high]: OSM locality Дрезден; знаменитая церковь (osm)"
+  },
+  {
+   "id": 1050,
+   "travel_id": 156,
+   "travel_url": "https://metravel.by/travels/galshtat-zimoi-solianaia-shakhta-panoramy-i-sneg-po-koleno",
+   "expected_address": "Hallstatt",
+   "add_category_ids": [
+    171
+   ],
+   "reason": "+['Деревня'] [medium]: Гальштат — деревня на озере; точка-деревня маршрута"
+  },
+  {
+   "id": 1084,
+   "travel_id": 161,
+   "travel_url": "https://metravel.by/travels/vykhodnye-v-stambule-marshrut-sovety-tseny-i-vpechatleniia",
+   "expected_address": "Rahmi M. Koç Müzesi",
+   "add_category_ids": [
+    76
+   ],
+   "reason": "+['Музей'] [high]: Музей Рахми Коча в Стамбуле"
+  },
+  {
+   "id": 1087,
+   "travel_id": 161,
+   "travel_url": "https://metravel.by/travels/vykhodnye-v-stambule-marshrut-sovety-tseny-i-vpechatleniia",
+   "expected_address": "Цистерна Базилика",
+   "add_category_ids": [
+    6,
+    39
+   ],
+   "reason": "+['Археологическая достопримечательность', 'Достопримечательность'] [medium]: Цистерна Базилика — древний подземный резервуар, достопримечательность"
+  },
+  {
+   "id": 1769,
+   "travel_id": 167,
+   "travel_url": "https://metravel.by/travels/po-norvegii-na-mashine-oslo-bergen-larvik-sandeford",
+   "expected_address": "Верингсфоссен",
+   "address": "Водопад Вёрингсфоссен (Vøringfossen)",
+   "reason": "rename[high]: статья: водопад Вёрингфоссен (Vøringfossen) в нацпарке Хардангервидда (article)"
+  },
+  {
+   "id": 2623,
+   "travel_id": 176,
+   "travel_url": "https://metravel.by/travels/logoisk-dvorets-tyshkevichei-i-rodnik-sviatogo-iuriia",
+   "expected_address": "Замчища",
+   "address": "Замчище в Логойске",
+   "reason": "rename[high]: категория Замчище, OSM locality Логойск; городище, на котором стоял замок/дворец Тышкевичей (osm)"
+  },
+  {
+   "id": 3011,
+   "travel_id": 147,
+   "travel_url": "https://metravel.by/travels/baranovichi-kossovo-i-ruzhany-marshrut-na-2-dnia",
+   "expected_address": "Дворец Пусловских",
+   "address": "Дворец Пусловских в Коссово",
+   "reason": "rename[high]: статья «Барановичи, Коссово и Ружаны»; Коссово, Ивацевичский р-н (article)"
+  },
+  {
+   "id": 3078,
+   "travel_id": 181,
+   "travel_url": "https://metravel.by/travels/ukraina-lvov-mukachevo-uzhgorod",
+   "expected_address": "Львов",
+   "add_category_ids": [
+    184
+   ],
+   "reason": "+['Город'] [high]: Город маршрута"
+  },
+  {
+   "id": 3079,
+   "travel_id": 181,
+   "travel_url": "https://metravel.by/travels/ukraina-lvov-mukachevo-uzhgorod",
+   "expected_address": "Мукачево",
+   "add_category_ids": [
+    184
+   ],
+   "reason": "+['Город'] [high]: Город маршрута"
+  },
+  {
+   "id": 3080,
+   "travel_id": 181,
+   "travel_url": "https://metravel.by/travels/ukraina-lvov-mukachevo-uzhgorod",
+   "expected_address": "Ужгород",
+   "add_category_ids": [
+    184
+   ],
+   "reason": "+['Город'] [high]: Город маршрута"
+  },
+  {
+   "id": 3081,
+   "travel_id": 181,
+   "travel_url": "https://metravel.by/travels/ukraina-lvov-mukachevo-uzhgorod",
+   "expected_address": "Паланок",
+   "address": "Замок Паланок в Мукачево",
+   "reason": "rename[high]: статья: «Замок Паланок, Мукачево» (article)"
+  },
+  {
+   "id": 3083,
+   "travel_id": 181,
+   "travel_url": "https://metravel.by/travels/ukraina-lvov-mukachevo-uzhgorod",
+   "expected_address": "Церковь святых Ольги и Елизаветы",
+   "address": "Церковь святых Ольги и Елизаветы во Львове",
+   "reason": "rename[high]: nom16 Львов (osm)"
+  },
+  {
+   "id": 3176,
+   "travel_id": 183,
+   "travel_url": "https://metravel.by/travels/niderlandy-amstredam-volendam",
+   "expected_address": "Prinsengracht",
+   "add_category_ids": [
+    51
+   ],
+   "reason": "+['Канал'] [medium]: Принсенграхт — канал Амстердама"
+  },
+  {
+   "id": 3179,
+   "travel_id": 183,
+   "travel_url": "https://metravel.by/travels/niderlandy-amstredam-volendam",
+   "expected_address": "Monnickendam",
+   "add_category_ids": [
+    184
+   ],
+   "reason": "+['Город'] [medium]: Моннекендам — город (городок) в Нидерландах"
+  },
+  {
+   "id": 3205,
+   "travel_id": 186,
+   "travel_url": "https://metravel.by/travels/smolevud-naturnaia-ploshchadka-belarusfilma-pod-minskom",
+   "expected_address": "СМОЛЕВУД",
+   "address": "Киноплощадка «Смолевуд» у Каменского озера",
+   "reason": "rename[high]: статья: натурная площадка «Беларусьфильма» у Каменского озера; OSM — д. Каменка; убран КАПС (article)"
+  },
+  {
+   "id": 3468,
+   "travel_id": 188,
+   "travel_url": "https://metravel.by/travels/zheludok-i-usadby-grodnenshchiny-kak-dobratsia",
+   "expected_address": "Усадьба Святополк-Четвертинских",
+   "address": "Усадьба Святополк-Четвертинских в Желудке",
+   "reason": "rename[high]: статья 635: «усадьбы Святополк-Четвертинских в Желудке»; OSM-локалити Заря Коммунизма — усадебная часть Желудка (article)"
+  },
+  {
+   "id": 3471,
+   "travel_id": 188,
+   "travel_url": "https://metravel.by/travels/zheludok-i-usadby-grodnenshchiny-kak-dobratsia",
+   "expected_address": "Усадьба Гробовских",
+   "address": "Усадьба Грабовских в Дикушках",
+   "reason": "rename[high]: nom16 Дикушки, Лидский р-н; my-places.by «Дикушки, руины усадьбы Грабовских». Исправлено написание Гробовских → Грабовских (web)"
+  },
+  {
+   "id": 3479,
+   "travel_id": 188,
+   "travel_url": "https://metravel.by/travels/zheludok-i-usadby-grodnenshchiny-kak-dobratsia",
+   "expected_address": "Лямус",
+   "address": "Лямус усадьбы Ходкевичей в Большом Можейково",
+   "reason": "rename[high]: статья: лямус усадьбы Ходкевичей; OSM locality Большое Можейково; сосед «Амбар усадьбы Ходкевичей в Большом Можейково» (article)"
+  },
+  {
+   "id": 3485,
+   "travel_id": 188,
+   "travel_url": "https://metravel.by/travels/zheludok-i-usadby-grodnenshchiny-kak-dobratsia",
+   "expected_address": "Сторожка",
+   "add_category_ids": [
+    36
+   ],
+   "address": "Сторожка усадьбы Ходкевичей в Большом Можейково",
+   "reason": "+['Дом'] [medium]: Сторожка — хозяйственная постройка усадьбы Ходкевичей, небольшой дом | rename[high]: статья: «…конюшня, сторожка и дом для рабочих» в Большом Можейково; координаты рядом с лямусом (article)"
+  },
+  {
+   "id": 3840,
+   "travel_id": 189,
+   "travel_url": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei",
+   "expected_address": "Столовая",
+   "address": "Парк усадьбы Бохвицей в Павлиново",
+   "reason": "rename[medium]: категория Парк, OSM locality Павлиново; статья: дворец отдали под профилакторий и столовую; в OSM в точке — родник «Павлиново-2» (article)"
+  },
+  {
+   "id": 3848,
+   "travel_id": 189,
+   "travel_url": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei",
+   "expected_address": "Нетчин",
+   "address": "Дот Первой мировой войны у Нетчина",
+   "reason": "rename[medium]: статья: «в деревню Нетчин к целому полю с дотами, капонирами и полукапонирами» Первой мировой; какой из трёх — дот/капонир — неизвестно; три точки получат одинаковое имя (article)"
+  },
+  {
+   "id": 3849,
+   "travel_id": 189,
+   "travel_url": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei",
+   "expected_address": "Нетчин",
+   "address": "Дот Первой мировой войны у Нетчина",
+   "reason": "rename[medium]: статья: «в деревню Нетчин к целому полю с дотами, капонирами и полукапонирами» Первой мировой; какой из трёх — дот/капонир — неизвестно; три точки получат одинаковое имя (article)"
+  },
+  {
+   "id": 3851,
+   "travel_id": 189,
+   "travel_url": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei",
+   "expected_address": "Нетчин",
+   "address": "Дот Первой мировой войны у Нетчина",
+   "reason": "rename[medium]: статья: «в деревню Нетчин к целому полю с дотами, капонирами и полукапонирами» Первой мировой; какой из трёх — дот/капонир — неизвестно; три точки получат одинаковое имя (article)"
+  },
+  {
+   "id": 4806,
+   "travel_id": 196,
+   "travel_url": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
+   "expected_address": "Монастырь францисканцев",
+   "address": "Монастырь францисканцев в Гольшанах",
+   "reason": "rename[high]: nom16 Гольшаны, Ошмянский р-н (osm)"
+  },
+  {
+   "id": 5085,
+   "travel_id": 198,
+   "travel_url": "https://metravel.by/travels/vitebsk-za-1-den-chto-posmotret-i-kuda-skhodit",
+   "expected_address": "причал",
+   "add_category_ids": [
+    104
+   ],
+   "reason": "+['Порт'] [medium]: Причал на Западной Двине, ближайшая категория — Порт"
+  },
+  {
+   "id": 5087,
+   "travel_id": 198,
+   "travel_url": "https://metravel.by/travels/vitebsk-za-1-den-chto-posmotret-i-kuda-skhodit",
+   "expected_address": "Зоопарк",
+   "address": "Витебский зоопарк",
+   "reason": "rename[high]: статья: Витебский зоопарк (улица Путна) (article)"
+  },
+  {
+   "id": 5104,
+   "travel_id": 199,
+   "travel_url": "https://metravel.by/travels/pochtovaia-stantsiia-1840-goda-pod-vitebskom",
+   "expected_address": "Р87",
+   "address": "Почтовая станция в Погребенке (1840)",
+   "reason": "rename[high]: статья: почтовая станция 1840 г. в д. Погребенка на дороге Р87 (article)"
+  },
+  {
+   "id": 5300,
+   "travel_id": 202,
+   "travel_url": "https://metravel.by/travels/chto-posmotret-v-polotske-1",
+   "expected_address": "Кирха",
+   "address": "Лютеранская кирха в Полоцке (1888)",
+   "reason": "rename[high]: статья: лютеранская кирха 1888 г., отдел краеведческого музея (article)"
+  },
+  {
+   "id": 5486,
+   "travel_id": 203,
+   "travel_url": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
+   "expected_address": "Ельня",
+   "address": "Экотропа «Озеравки» в заказнике «Ельня»",
+   "reason": "rename[high]: статья: экотропа «Озёравки» в заказнике «Ельня»; категория Экологическая тропа (article)"
+  },
+  {
+   "id": 5799,
+   "travel_id": 206,
+   "travel_url": "https://metravel.by/travels/khampi-indiia-chto-posmotret-v-drevnem-gorode",
+   "expected_address": "Hampi",
+   "add_category_ids": [
+    156
+   ],
+   "reason": "+['Древний город'] [high]: Хампи — древний город"
+  },
+  {
+   "id": 5821,
+   "travel_id": 205,
+   "travel_url": "https://metravel.by/travels/indiya-puteshestvie-v-drugoy-mir",
+   "expected_address": "Москва",
+   "add_category_ids": [
+    184
+   ],
+   "reason": "+['Город'] [high]: Москва — город"
+  },
+  {
+   "id": 5825,
+   "travel_id": 205,
+   "travel_url": "https://metravel.by/travels/indiya-puteshestvie-v-drugoy-mir",
+   "expected_address": "Малый Николопесковский переулок",
+   "add_category_ids": [
+    76
+   ],
+   "reason": "+['Музей'] [medium]: Адрес Музея оптических иллюзий из текста статьи, название точки — переулок"
+  },
+  {
+   "id": 5826,
+   "travel_id": 205,
+   "travel_url": "https://metravel.by/travels/indiya-puteshestvie-v-drugoy-mir",
+   "expected_address": "Beverly Hills Diner (Сретенка, 1) в Москве",
+   "add_category_ids": [
+    50
+   ],
+   "reason": "+['Кафе'] [high]: Beverly Hills Diner — кафе/дайнер"
+  },
+  {
+   "id": 5827,
+   "travel_id": 205,
+   "travel_url": "https://metravel.by/travels/indiya-puteshestvie-v-drugoy-mir",
+   "expected_address": "Стена Цоя на Арбате в Москве",
+   "add_category_ids": [
+    89,
+    223
+   ],
+   "reason": "+['Граффити', 'Памятник'] [medium]: Стена Цоя — граффити-мемориал на Арбате"
+  },
+  {
+   "id": 5832,
+   "travel_id": 205,
+   "travel_url": "https://metravel.by/travels/indiya-puteshestvie-v-drugoy-mir",
+   "expected_address": "Virupapura Gadde",
+   "add_category_ids": [
+    171
+   ],
+   "reason": "+['Деревня'] [high]: Virupapura Gadde — деревня-остров у Хампи"
+  },
+  {
+   "id": 5833,
+   "travel_id": 205,
+   "travel_url": "https://metravel.by/travels/indiya-puteshestvie-v-drugoy-mir",
+   "expected_address": "Veerabhadra Temple",
+   "add_category_ids": [
+    141
+   ],
+   "reason": "+['Храм'] [high]: Индуистский храм Вирабхадры в Хампи"
+  },
+  {
+   "id": 5875,
+   "travel_id": 210,
+   "travel_url": "https://metravel.by/travels/egipet-puteshestvie-po-pustyne-i-ne-tolko",
+   "expected_address": "Мединет-Абу",
+   "address": "Храм Мединет-Абу в Луксоре",
+   "reason": "rename[high]: погребальный храм Рамсеса III на западном берегу Луксора; OSM Al-Qarnah (knowledge)"
+  },
+  {
+   "id": 6011,
+   "travel_id": 218,
+   "travel_url": "https://metravel.by/travels/usadba-makshitskikh-tserkov-sviatogo-ili-i-osintorf",
+   "expected_address": "Усадебный дом Макшицких",
+   "address": "Усадебный дом Макшицких в Высоком",
+   "reason": "rename[high]: статья «Усадьба Макшицких … в посёлке Высокое»; nom16 Высокое, Оршанский р-н (article)"
+  },
+  {
+   "id": 6015,
+   "travel_id": 218,
+   "travel_url": "https://metravel.by/travels/usadba-makshitskikh-tserkov-sviatogo-ili-i-osintorf",
+   "expected_address": "Усадебный дом Хлюстиных нач.20в.",
+   "address": "Усадебный дом Хлюстиных в Ореховске (нач. XX в.)",
+   "reason": "rename[high]: nom16 Ореховск, Оршанский р-н; дата перенесена в конец (osm)"
+  },
+  {
+   "id": 6173,
+   "travel_id": 219,
+   "travel_url": "https://metravel.by/travels/velomarshrut-k-usadbe-novitskikh-v-soveikakh",
+   "expected_address": "Усадьба Черноцких",
+   "address": "Усадьба Черноцких в Карацке",
+   "reason": "rename[high]: статья 219: «усадьбу Черноцких в Карацке»; Карацк — Голынковский с/с Клецкого р-на (совпадает с OSM) (article)"
+  },
+  {
+   "id": 6337,
+   "travel_id": 213,
+   "travel_url": "https://metravel.by/travels/tbilisi-i-batumi-marshrut-po-gruzii-chto-posmotret",
+   "expected_address": "Рике",
+   "address": "Канатная дорога Рике — Нарикала в Тбилиси",
+   "reason": "rename[high]: категория Канатная дорога; нижняя станция в парке Рике, OSM Авлабари/Тбилиси (knowledge)"
+  },
+  {
+   "id": 6353,
+   "travel_id": 213,
+   "travel_url": "https://metravel.by/travels/tbilisi-i-batumi-marshrut-po-gruzii-chto-posmotret",
+   "expected_address": "Сатаплия",
+   "address": "Пещера Сатаплия под Кутаиси",
+   "reason": "rename[high]: категория Пещера; заповедник Сатаплия в Цхалтубском муниципалитете у Кутаиси (knowledge)"
+  },
+  {
+   "id": 6360,
+   "travel_id": 216,
+   "travel_url": "https://metravel.by/travels/chto-posmotret-v-kutaisi-peshchery-i-kanony",
+   "expected_address": "Сатаплия",
+   "add_category_ids": [
+    42,
+    97
+   ],
+   "address": "Заповедник Сатаплия под Кутаиси",
+   "reason": "+['Пещера', 'Заповедник'] [medium]: Пещера Сатаплия в заповеднике Sataplia Managed Reserve | rename[high]: сосед OSM «Sataplia Managed Reserve»; категорий нет (osm)"
+  },
+  {
+   "id": 6439,
+   "travel_id": 220,
+   "travel_url": "https://metravel.by/travels/italiya-rimskie-kanikuly",
+   "expected_address": "Колизей",
+   "address": "Колизей в Риме",
+   "reason": "rename[high]: OSM locality Рим (osm)"
+  },
+  {
+   "id": 6450,
+   "travel_id": 220,
+   "travel_url": "https://metravel.by/travels/italiya-rimskie-kanikuly",
+   "expected_address": "Пантеон",
+   "address": "Пантеон в Риме",
+   "reason": "rename[high]: OSM locality Рим (osm)"
+  },
+  {
+   "id": 6506,
+   "travel_id": 223,
+   "travel_url": "https://metravel.by/travels/pohod-na-lesnoe-ozero-gremyachee-10km-i-rodnik-kipyachka",
+   "expected_address": "Кипячка",
+   "address": "Родник Кипячка на Свислочи у Орешковичей",
+   "reason": "rename[high]: статья: «Минск — Орешковичи… родник Кипячка на берегу Свислочи»; OSM spring «Кипячка», nom16 Орешковичи (article)"
+  },
+  {
+   "id": 6543,
+   "travel_id": 224,
+   "travel_url": "https://metravel.by/travels/latviya-riga-i-yurmala-v-oktyabre",
+   "expected_address": "Rīga",
+   "add_category_ids": [
+    184
+   ],
+   "reason": "+['Город'] [high]: Рига — город"
+  },
+  {
+   "id": 6544,
+   "travel_id": 224,
+   "travel_url": "https://metravel.by/travels/latviya-riga-i-yurmala-v-oktyabre",
+   "expected_address": "Jūrmala",
+   "add_category_ids": [
+    184
+   ],
+   "reason": "+['Город'] [high]: Юрмала — город-курорт"
+  },
+  {
+   "id": 6546,
+   "travel_id": 224,
+   "travel_url": "https://metravel.by/travels/latviya-riga-i-yurmala-v-oktyabre",
+   "expected_address": "Дом с котами",
+   "add_category_ids": [
+    36,
+    39
+   ],
+   "reason": "+['Дом', 'Достопримечательность'] [high]: Дом с котами в Риге — достопримечательное здание"
+  },
+  {
+   "id": 6547,
+   "travel_id": 224,
+   "travel_url": "https://metravel.by/travels/latviya-riga-i-yurmala-v-oktyabre",
+   "expected_address": "Латвийская Художественная академия",
+   "add_category_ids": [
+    134
+   ],
+   "reason": "+['Университет'] [medium]: Художественная академия — вуз"
+  },
+  {
+   "id": 6548,
+   "travel_id": 224,
+   "travel_url": "https://metravel.by/travels/latviya-riga-i-yurmala-v-oktyabre",
+   "expected_address": "Kardamons",
+   "add_category_ids": [
+    50
+   ],
+   "reason": "+['Кафе'] [high]: Кафе Kardamons по статье"
+  },
+  {
+   "id": 6651,
+   "travel_id": 226,
+   "travel_url": "https://metravel.by/travels/ozera-lepelshchiny-za-den-vechele-dolzhina-barkovshchina",
+   "expected_address": "Замчища",
+   "address": "Замчище в Старом Лепеле",
+   "reason": "rename[high]: статья: «Старый Лепель — Замчище (16 век)», городище на полуострове Лепельского озера (article)"
+  },
+  {
+   "id": 6652,
+   "travel_id": 226,
+   "travel_url": "https://metravel.by/travels/ozera-lepelshchiny-za-den-vechele-dolzhina-barkovshchina",
+   "expected_address": "Фольварк",
+   "address": "Фольварк в Ворони",
+   "reason": "rename[high]: статья: «Фольварк в Ворани»; OSM деревня Воронь (в точке — конюшня фольварка) (article)"
+  },
+  {
+   "id": 6653,
+   "travel_id": 226,
+   "travel_url": "https://metravel.by/travels/ozera-lepelshchiny-za-den-vechele-dolzhina-barkovshchina",
+   "expected_address": "Барковщина",
+   "address": "Родник Барковщина у Вашково",
+   "reason": "rename[high]: статья: «Родник и озеро Барковщина… в деревне Вашково была построена лечебница»; OSM spring Барковщина, Вашково (article)"
+  },
+  {
+   "id": 6992,
+   "travel_id": 230,
+   "travel_url": "https://metravel.by/travels/bonifatsevskii-les-mertvoe-chernoe-goluboe-ozera",
+   "expected_address": "Дубатовка",
+   "address": "Немецкий дот Первой мировой в Дубатовке",
+   "reason": "rename[high]: статья: немецкие ДОТы у Дубатовки и Войниденят; категория Дот, деревня Дубатовка (точка названа по деревне, но это ДОТ) (article)"
+  },
+  {
+   "id": 6994,
+   "travel_id": 230,
+   "travel_url": "https://metravel.by/travels/bonifatsevskii-les-mertvoe-chernoe-goluboe-ozera",
+   "expected_address": "Р95",
+   "address": "Немецкий дот Первой мировой у трассы Р95 (Дубатовка)",
+   "reason": "rename[high]: статья: немецкие ДОТы Первой мировой у Дубатовки; OSM Р95, Дубатовка; в 400 м от точки 6992 (article)"
+  },
+  {
+   "id": 6995,
+   "travel_id": 230,
+   "travel_url": "https://metravel.by/travels/bonifatsevskii-les-mertvoe-chernoe-goluboe-ozera",
+   "expected_address": "Войниденяты",
+   "add_category_ids": [
+    171
+   ],
+   "reason": "+['Деревня'] [medium]: Войниденяты — деревня Беларуси"
+  },
+  {
+   "id": 6996,
+   "travel_id": 230,
+   "travel_url": "https://metravel.by/travels/bonifatsevskii-les-mertvoe-chernoe-goluboe-ozera",
+   "expected_address": "Р95",
+   "address": "Парковка у трассы Р95 у деревни Войниденяты",
+   "reason": "rename[high]: категория Парковка; OSM amenity=shelter на Р95, Жодишковский с/с; в 500 м точка 6995 «Войниденяты» (osm)"
+  },
+  {
+   "id": 6999,
+   "travel_id": 230,
+   "travel_url": "https://metravel.by/travels/bonifatsevskii-les-mertvoe-chernoe-goluboe-ozera",
+   "expected_address": "Девятни - Черный Бор - Смолярня - Подзеленая",
+   "add_category_ids": [
+    206
+   ],
+   "reason": "+['Велодорожка'] [medium]: Точка — старт веломаршрута по линии укреплений ПМВ, у д. Девятни"
+  },
+  {
+   "id": 7179,
+   "travel_id": 231,
+   "travel_url": "https://metravel.by/travels/usadby-vavzhetskikh-i-pliaterov-rodnik-lazenki-i-ges",
+   "expected_address": "Усадебный дом Вавжецких нач.19в.",
+   "address": "Усадебный дом Вавжецких в Видзах-Ловчинских (нач. XIX в.)",
+   "reason": "rename[high]: статья 231/566; nom16 Видзы Ловчинские (article)"
+  },
+  {
+   "id": 7180,
+   "travel_id": 231,
+   "travel_url": "https://metravel.by/travels/usadby-vavzhetskikh-i-pliaterov-rodnik-lazenki-i-ges",
+   "expected_address": "Лазёнки",
+   "address": "Родник Лазёнки в Видзах-Ловчинских",
+   "reason": "rename[high]: статья: сероводородный родник Лазёнки; OSM locality Видзы Ловчинские (article)"
+  },
+  {
+   "id": 7188,
+   "travel_id": 231,
+   "travel_url": "https://metravel.by/travels/usadby-vavzhetskikh-i-pliaterov-rodnik-lazenki-i-ges",
+   "expected_address": "Усадьба Пеликанов",
+   "address": "Усадьба Пеликанов «Пеликаны» в Милюнцах",
+   "reason": "rename[high]: статья 231: «5) Милюнцы … Усадьба Пеликанов «Пеликаны». Сама усадьба не сохранилась»; nom16 Милюнцы (article)"
+  },
+  {
+   "id": 7940,
+   "travel_id": 233,
+   "travel_url": "https://metravel.by/travels/usadba-linovo-dvorets-pototskikh-i-usadba-puzynov",
+   "expected_address": "Серебряный",
+   "address": "Родник Серебряный у Волчина",
+   "reason": "rename[high]: OSM spring «Серебряный», Волчин (Р9); статья: «Родник Серебряный… запах сероводорода» (osm)"
+  },
+  {
+   "id": 8297,
+   "travel_id": 238,
+   "travel_url": "https://metravel.by/travels/grodno-avgustovskiy-kanal-1",
+   "expected_address": "Гродно",
+   "add_category_ids": [
+    184
+   ],
+   "reason": "+['Город'] [high]: Гродно — город"
+  },
+  {
+   "id": 8561,
+   "travel_id": 243,
+   "travel_url": "https://metravel.by/travels/dvorets-slotvinskikh-i-usadba-pototskikh-za-den",
+   "expected_address": "Винодельня",
+   "address": "Винодельня в Володуте (XX в.)",
+   "reason": "rename[high]: статья: «Минск — Володута… Винодельня (20 век)»; OSM locality Новый Путь (соседняя), координаты в Володуте (article)"
+  },
+  {
+   "id": 8567,
+   "travel_id": 243,
+   "travel_url": "https://metravel.by/travels/dvorets-slotvinskikh-i-usadba-pototskikh-za-den",
+   "expected_address": "Землянка",
+   "address": "Землянка мемориала партизанской бригады «Разгром»",
+   "reason": "rename[high]: статья: мемориал бригады «Разгром» в лесу у д. Рованичская Слобода, землянка завалена балками (article)"
+  },
+  {
+   "id": 8569,
+   "travel_id": 243,
+   "travel_url": "https://metravel.by/travels/dvorets-slotvinskikh-i-usadba-pototskikh-za-den",
+   "expected_address": "Усадебный дом Потоцких",
+   "address": "Усадебный дом Потоцких в Березино",
+   "reason": "rename[high]: nom16 Березино, Березинский р-н; статья «усадьба Потоцких» (osm)"
+  },
+  {
+   "id": 8651,
+   "travel_id": 244,
+   "travel_url": "https://metravel.by/travels/marshrut-na-odin-den-k-ozeram-kozemu-i-myastro",
+   "expected_address": "Р28",
+   "address": "Парковка у трассы Р28 для прогулки к озеру Козьему",
+   "reason": "rename[high]: статья: «Сосенка — Р28… Съезжаем с трассы в лес, оставляем машину и идём к Козьему озеру (2 км)»; координаты совпадают (article)"
+  },
+  {
+   "id": 9019,
+   "travel_id": 247,
+   "travel_url": "https://metravel.by/travels/usadby-radzivillov-elenskikh-i-labetskikh-za-odin-den",
+   "expected_address": "Тесновка",
+   "address": "Руины усадьбы Лабецких «Пласковичи» в Тесновке (XIX в.)",
+   "reason": "rename[high]: статья: «д. Тесновка — Руины усадьбы Лабецких «Пласковичи» (XIX век)»; my-places.by: Тесновка, усадьба Лабецких; OSM locality — Нагорное (article)"
+  },
+  {
+   "id": 9444,
+   "travel_id": 245,
+   "travel_url": "https://metravel.by/travels/kaliningrad-zimoi-chto-posmotret-i-lichnyi-opyt",
+   "expected_address": "Витязь",
+   "add_category_ids": [
+    76,
+    221
+   ],
+   "address": "Судно «Витязь» Музея Мирового океана в Калининграде",
+   "reason": "+['Корабль', 'Музей'] [high]: Судно-музей «Витязь» (Музей Мирового океана) | rename[high]: статья: Музей Мирового океана — «Витязь», «Пацаев», Б-413 (article)"
+  },
+  {
+   "id": 9446,
+   "travel_id": 245,
+   "travel_url": "https://metravel.by/travels/kaliningrad-zimoi-chto-posmotret-i-lichnyi-opyt",
+   "expected_address": "Космонавт Виктор Пацаев",
+   "add_category_ids": [
+    76,
+    221
+   ],
+   "reason": "+['Корабль', 'Музей'] [medium]: Судно-музей «Космонавт Виктор Пацаев» (Музей Мирового океана)"
+  },
+  {
+   "id": 9450,
+   "travel_id": 245,
+   "travel_url": "https://metravel.by/travels/kaliningrad-zimoi-chto-posmotret-i-lichnyi-opyt",
+   "expected_address": "Санаторий Янтарный Берег",
+   "add_category_ids": [
+    162
+   ],
+   "reason": "+['Санаторий'] [high]: Санаторий Янтарный Берег, Светлогорск"
+  },
+  {
+   "id": 9452,
+   "travel_id": 250,
+   "travel_url": "https://metravel.by/travels/peshii-marshrut-vdol-reki-bobr-pod-krupkami",
+   "expected_address": "Дубы",
+   "address": "Родник Дубы у Ольхомовичей",
+   "reason": "rename[high]: статья: «Родник Дубы — первая точка»; OSM locality Ольхомовичи; сосед «Место отдыха на реке Бобр у Ольхомовичей» (article)"
+  },
+  {
+   "id": 9453,
+   "travel_id": 250,
+   "travel_url": "https://metravel.by/travels/peshii-marshrut-vdol-reki-bobr-pod-krupkami",
+   "expected_address": "Дуб",
+   "address": "Дуб у родника Дубы близ Ольхомовичей",
+   "reason": "rename[medium]: категории Место отдыха, Дуб; в 60 м от точки родника Дубы; в статье отдельный дуб не описан (osm)"
+  },
+  {
+   "id": 11483,
+   "travel_id": 177,
+   "travel_url": "https://metravel.by/travels/polsha-varshava-zakopane-morskoe-oko-krakov",
+   "expected_address": "Warszawa",
+   "add_category_ids": [
+    184
+   ],
+   "reason": "+['Город'] [high]: Варшава — город"
+  },
+  {
+   "id": 11484,
+   "travel_id": 177,
+   "travel_url": "https://metravel.by/travels/polsha-varshava-zakopane-morskoe-oko-krakov",
+   "expected_address": "Zakopane",
+   "add_category_ids": [
+    184
+   ],
+   "reason": "+['Город'] [high]: Закопане — город"
+  },
+  {
+   "id": 11485,
+   "travel_id": 177,
+   "travel_url": "https://metravel.by/travels/polsha-varshava-zakopane-morskoe-oko-krakov",
+   "expected_address": "Kraków",
+   "add_category_ids": [
+    184
+   ],
+   "reason": "+['Город'] [high]: Краков — город"
+  },
+  {
+   "id": 11488,
+   "travel_id": 177,
+   "travel_url": "https://metravel.by/travels/polsha-varshava-zakopane-morskoe-oko-krakov",
+   "expected_address": "Дворец культуры и науки",
+   "add_category_ids": [
+    39
+   ],
+   "reason": "+['Достопримечательность'] [medium]: Дворец культуры и науки — знаковое здание Варшавы (по смыслу не дворец)"
+  },
+  {
+   "id": 11489,
+   "travel_id": 177,
+   "travel_url": "https://metravel.by/travels/polsha-varshava-zakopane-morskoe-oko-krakov",
+   "expected_address": "Morskie Oko",
+   "add_category_ids": [
+    79,
+    84
+   ],
+   "reason": "+['Озеро', 'Национальный парк'] [high]: Морское Око — горное озеро в Татранском нацпарке"
+  },
+  {
+   "id": 12653,
+   "travel_id": 252,
+   "travel_url": "https://metravel.by/travels/chto-posmotret-v-oshmianakh-kostely-sinagoga-usadba",
+   "expected_address": "М7",
+   "address": "Родник у Невестиного камня близ Ошмян",
+   "reason": "rename[high]: статья: «12) Родник и Невестин камень — недалеко от Ошмян (6 км)»; точка на М7 в 6 км восточнее Ошмян (article)"
+  },
+  {
+   "id": 12670,
+   "travel_id": 256,
+   "travel_url": "https://metravel.by/travels/partizanskaia-baza-shturmovaia-reka-udra-i-teplyi-stan",
+   "expected_address": "Партизанский",
+   "address": "Родник Партизанский у базы «Штурмовая»",
+   "reason": "rename[high]: статья: родник Партизанский, рядом партизанская база «Штурмовая»; сосед «Парковка… у родника Партизанский (база «Штурмовая»)» (article)"
+  },
+  {
+   "id": 12675,
+   "travel_id": 256,
+   "travel_url": "https://metravel.by/travels/partizanskaia-baza-shturmovaia-reka-udra-i-teplyi-stan",
+   "expected_address": "Пляцовки",
+   "address": "Родник в урочище Пляцовки у Нового Млынка",
+   "reason": "rename[medium]: OSM: name:prefix «урочище» Пляцовки, locality Новый Млынок; в статье родник не описан, веб-поиск пуст (osm)"
+  },
+  {
+   "id": 12687,
+   "travel_id": 254,
+   "travel_url": "https://metravel.by/travels/osipovichskaia-ges-i-svisloch-marshrut-na-den",
+   "expected_address": "Замчище",
+   "address": "Замчище в Свислочи",
+   "reason": "rename[high]: статья: «Замчище над слиянием Свислочи и Березины»; OSM locality Свислочь (article)"
+  },
+  {
+   "id": 12696,
+   "travel_id": 249,
+   "travel_url": "https://metravel.by/travels/usadebno-parkovyy-kompleks-gerardov",
+   "expected_address": "Пустырь",
+   "address": "Руины усадьбы Герардов в Демьянках",
+   "reason": "rename[medium]: OSM historic=castle «Пустка»/«Пустырь» в Демьянках — место усадьбы Герардов (туристап); категории Руины усадьбы, Усадьба; возможен дубль соседа «Усадебно-парковый комплекс Герардов» (osm)"
+  },
+  {
+   "id": 13504,
+   "travel_id": 135,
+   "travel_url": "https://metravel.by/travels/zhemyslavl-dvorets-umiastovskikh-i-marshrut-iz-minska",
+   "expected_address": "Дворец Уместовских",
+   "address": "Дворец Умястовских в Жемыславле",
+   "reason": "rename[high]: статья «Жемыславль: дворец Умястовских»; nom16 Жемыславль. Написание Уместовских → Умястовских как в заголовке статьи (article)"
+  },
+  {
+   "id": 13510,
+   "travel_id": 135,
+   "travel_url": "https://metravel.by/travels/zhemyslavl-dvorets-umiastovskikh-i-marshrut-iz-minska",
+   "expected_address": "Спиртохранилище",
+   "address": "Спиртохранилище усадьбы Умястовских в Жемыславле",
+   "reason": "rename[high]: статья: «…амбар XIX века, ледовня и спиртохранилище» в Жемыславле; соседи в том же формате (article)"
+  },
+  {
+   "id": 13511,
+   "travel_id": 219,
+   "travel_url": "https://metravel.by/travels/velomarshrut-k-usadbe-novitskikh-v-soveikakh",
+   "expected_address": "Усадебный дом Новицких",
+   "address": "Усадебный дом Новицких в Совейках",
+   "reason": "rename[high]: статья «Веломаршрут к усадьбе Новицких в Совейках» (article)"
+  },
+  {
+   "id": 13527,
+   "travel_id": 305,
+   "travel_url": "https://metravel.by/travels/usadba-panskogo-roda-mokrickih-makshickih-v-poselke-vysokoe",
+   "expected_address": "Усадебный дом Макшицких",
+   "address": "Усадебный дом Макшицких в Высоком",
+   "reason": "rename[high]: статья 13527 «в посёлке Высокое» (article)"
+  },
+  {
+   "id": 13594,
+   "travel_id": 317,
+   "travel_url": "https://metravel.by/travels/usadba-stralkov",
+   "expected_address": "Усадьба Стралков",
+   "address": "Усадьба Стралко в Яновичах",
+   "reason": "rename[high]: статья 317: усадьба дворянина Стралко Доминика Викентьевича, дом 1909 г.; nom16 Яновичи, Клецкий р-н. Фамилия Стралко не склоняется — «Стралков» исправлено (article)"
+  },
+  {
+   "id": 13732,
+   "travel_id": 187,
+   "travel_url": "https://metravel.by/travels/mogilev-usadba-tolstykh-i-bykhovskii-zamok",
+   "expected_address": "Захаренка",
+   "address": "Криницы Захаренка у Гамарни",
+   "reason": "rename[high]: статья: «Быхов → деревня Гамарня… знаменитые Криницы Захаренка»; OSM spring Захаренка, Гамарня (article)"
+  },
+  {
+   "id": 13734,
+   "travel_id": 134,
+   "travel_url": "https://metravel.by/travels/golubye-ozera-rasstoianie-ot-minska-i-ekotropa-naroch",
+   "expected_address": "Усадебный дом Бишевских",
+   "address": "Усадебный дом Бишевских в Лынтупах",
+   "reason": "rename[high]: nom16 Лынтупы, Поставский р-н (osm)"
+  },
+  {
+   "id": 13746,
+   "travel_id": 134,
+   "travel_url": "https://metravel.by/travels/golubye-ozera-rasstoianie-ot-minska-i-ekotropa-naroch",
+   "expected_address": "Колокольня",
+   "address": "Колокольня костёла Божией Матери в Шеметово",
+   "reason": "rename[high]: статья: д. Шеметово, костёл Божией Матери, рядом отдельно стоящая колокольня; OSM place_of_worship «Колокольня» на Н9261 (article)"
+  },
+  {
+   "id": 13818,
+   "travel_id": 332,
+   "travel_url": "https://metravel.by/travels/dvorec-puslovskih-v-kossovo-usadba-tadeusha-kostyushko",
+   "expected_address": "Дворец Пусловских",
+   "address": "Дворец Пусловских в Коссово",
+   "reason": "rename[high]: статья «Дворец Пусловских в Коссово» (article)"
+  },
+  {
+   "id": 13819,
+   "travel_id": 332,
+   "travel_url": "https://metravel.by/travels/dvorec-puslovskih-v-kossovo-usadba-tadeusha-kostyushko",
+   "expected_address": "Усадьба Костюшко",
+   "address": "Усадьба Тадеуша Костюшко в Коссово (Меречёвщина)",
+   "reason": "rename[high]: музей-усадьба Костюшко в урочище Меречёвщина рядом с дворцом Пусловских; статья 13818 (article)"
+  },
+  {
+   "id": 13848,
+   "travel_id": 350,
+   "travel_url": "https://metravel.by/travels/usadba-bohvicev-podorosk",
+   "expected_address": "Подороск",
+   "address": "Усадьба Бохвицев в Подороске",
+   "reason": "rename[high]: точка названа по агрогородку, категория Усадьба; статья «Усадьба Бохвицев. Подороск» (article)"
+  },
+  {
+   "id": 13849,
+   "travel_id": 350,
+   "travel_url": "https://metravel.by/travels/usadba-bohvicev-podorosk",
+   "expected_address": "Подороск",
+   "address": "Брама усадьбы Бохвицев в Подороске",
+   "reason": "rename[high]: точка названа по агрогородку, категория Брама; статья «Усадьба Бохвицев. Подороск» (article)"
+  },
+  {
+   "id": 13850,
+   "travel_id": 351,
+   "travel_url": "https://metravel.by/travels/usadba-umestovskih-v-zhemyslavle",
+   "expected_address": "Дворец Уместовских",
+   "address": "Дворец Умястовских в Жемыславле",
+   "reason": "rename[high]: nom16 Жемыславль; написание унифицировано с 13504 (osm)"
+  },
+  {
+   "id": 13855,
+   "travel_id": 352,
+   "travel_url": "https://metravel.by/travels/usadba-charnockih-derevnya-nacha",
+   "expected_address": "Нача-Брындзовская",
+   "address": "Усадебный парк Чарноцких «Нача-Брындзовская» в Наче",
+   "reason": "rename[high]: OSM: «Усадебно-парковый комплекс Черноцких «Нача Брындзовская»», д. Нача; написание рода — как у соседа «Усадебный дом Чарноцких в Наче» (osm)"
+  },
+  {
+   "id": 13860,
+   "travel_id": 355,
+   "travel_url": "https://metravel.by/travels/brestskaya-krepost",
+   "expected_address": "Мужество",
+   "address": "Монумент «Мужество» в Брестской крепости",
+   "reason": "rename[high]: главный монумент мемориала; OSM Крепостной проезд, Брест (knowledge)"
+  },
+  {
+   "id": 13861,
+   "travel_id": 355,
+   "travel_url": "https://metravel.by/travels/brestskaya-krepost",
+   "expected_address": "Жажда",
+   "address": "Скульптура «Жажда» в Брестской крепости",
+   "reason": "rename[high]: скульптурная композиция мемориала у Мухавца (knowledge)"
+  },
+  {
+   "id": 13866,
+   "travel_id": 355,
+   "travel_url": "https://metravel.by/travels/brestskaya-krepost",
+   "expected_address": "Цитадель",
+   "address": "Цитадель Брестской крепости",
+   "reason": "rename[high]: статья: «Главный и самый большой — Цитадель»; категории Брама, Крепость (article)"
+  },
+  {
+   "id": 13908,
+   "travel_id": 377,
+   "travel_url": "https://metravel.by/travels/borisovshchina",
+   "expected_address": "Усадебный дом Ястржембских 19в",
+   "address": "Усадебный дом Ястржембских в Борисовщине (XIX в.)",
+   "reason": "rename[high]: статья «Борисовщина. Усадебный дом Ястржембских 19в.»; век перенесён в конец (article)"
+  },
+  {
+   "id": 13911,
+   "travel_id": 380,
+   "travel_url": "https://metravel.by/travels/krakov-park-opytov-stanislava-lema-i-park-svetovykh-figur",
+   "expected_address": "Парк опытов им. Станислава Лема",
+   "address": "Парк опытов им. Станислава Лема в Кракове",
+   "reason": "rename[high]: nom16 Краков (osm)"
+  },
+  {
+   "id": 14012,
+   "travel_id": 389,
+   "travel_url": "https://metravel.by/travels/iz-mozyrya-v-mikashevichi-cherez-minsk",
+   "expected_address": "Экотехнопарк SkyWay у Марьиной Горки",
+   "add_category_ids": [
+    39
+   ],
+   "reason": "+['Достопримечательность'] [medium]: Экотехнопарк SkyWay — туристическая достопримечательность, внутрь не пустили"
+  },
+  {
+   "id": 14015,
+   "travel_id": 389,
+   "travel_url": "https://metravel.by/travels/iz-mozyrya-v-mikashevichi-cherez-minsk",
+   "expected_address": "Отель-шар Bubble Hotel у Ракова",
+   "add_category_ids": [
+    29
+   ],
+   "reason": "+['Гостиница'] [high]: Bubble Hotel — отель"
+  },
+  {
+   "id": 14017,
+   "travel_id": 389,
+   "travel_url": "https://metravel.by/travels/iz-mozyrya-v-mikashevichi-cherez-minsk",
+   "expected_address": "Мильковичи",
+   "add_category_ids": [
+    171
+   ],
+   "reason": "+['Деревня'] [medium]: Мильковичи — деревня (Новогрудский р-н)"
+  },
+  {
+   "id": 14024,
+   "travel_id": 389,
+   "travel_url": "https://metravel.by/travels/iz-mozyrya-v-mikashevichi-cherez-minsk",
+   "expected_address": "Перевёрнутый дом",
+   "add_category_ids": [
+    36,
+    39
+   ],
+   "reason": "+['Дом', 'Достопримечательность'] [medium]: Перевёрнутый дом — аттракцион-здание"
+  },
+  {
+   "id": 14025,
+   "travel_id": 389,
+   "travel_url": "https://metravel.by/travels/iz-mozyrya-v-mikashevichi-cherez-minsk",
+   "expected_address": "Гранитный карьер РУПП «Гранит» в Микашевичах",
+   "add_category_ids": [
+    163
+   ],
+   "reason": "+['Карьер'] [high]: Гранитный карьер"
+  },
+  {
+   "id": 14028,
+   "travel_id": 389,
+   "travel_url": "https://metravel.by/travels/iz-mozyrya-v-mikashevichi-cherez-minsk",
+   "expected_address": "@Litovka.by",
+   "add_category_ids": [
+    136
+   ],
+   "reason": "+['Усадьба'] [medium]: Литовка — усадьба по тексту статьи"
+  },
+  {
+   "id": 14029,
+   "travel_id": 389,
+   "travel_url": "https://metravel.by/travels/iz-mozyrya-v-mikashevichi-cherez-minsk",
+   "expected_address": "Национальная библиотека Беларуси в Минске",
+   "add_category_ids": [
+    12,
+    82
+   ],
+   "reason": "+['Библиотека', 'Обзорная точка'] [high]: Национальная библиотека с обзорной площадкой"
+  },
+  {
+   "id": 14116,
+   "travel_id": 415,
+   "travel_url": "https://metravel.by/travels/dvorec-kotlubaev",
+   "expected_address": "Усадебный дом Котлубаев",
+   "address": "Усадебный дом Котлубаев в Ястрембеле",
+   "reason": "rename[high]: nom16 Ястрембель, Барановичский р-н (osm)"
+  },
+  {
+   "id": 14140,
+   "travel_id": 418,
+   "travel_url": "https://metravel.by/travels/usadby-elskikh-i-chapskikh-priluki-i-park-muzei-sula",
+   "expected_address": "Пивоварня",
+   "address": "Пивоварня усадьбы Чапских в Прилуках",
+   "reason": "rename[high]: OSM: «Пивоварня», ул. Графа Чапского, Прилуки; соседи «Винокурня/Конюшня усадьбы Чапских в Прилуках» (osm)"
+  },
+  {
+   "id": 14196,
+   "travel_id": 428,
+   "travel_url": "https://metravel.by/travels/yurcevo",
+   "expected_address": "Усадьба Любомирских",
+   "address": "Усадьба Любомирских в Юрцево",
+   "reason": "rename[high]: статья «Юрцево. Усадьба Любомирских» (article)"
+  },
+  {
+   "id": 14200,
+   "travel_id": 432,
+   "travel_url": "https://metravel.by/travels/krasnyy-bereg",
+   "expected_address": "Усадьба Козел-Поклевских",
+   "address": "Усадьба Козел-Поклевских в Красном Береге",
+   "reason": "rename[high]: статья «Красный Берег. Усадьба Козел-Поклевских» (article)"
+  },
+  {
+   "id": 14222,
+   "travel_id": 435,
+   "travel_url": "https://metravel.by/travels/forty-krakova-avstriiskie-ukrepleniia-xix-veka",
+   "expected_address": "Каверна форта Бодзув (Kawerna Bodzów)",
+   "add_category_ids": [
+    138
+   ],
+   "reason": "+['Форт'] [high]: Каверна форта Бодзув — форт Краковской крепости"
+  },
+  {
+   "id": 14248,
+   "travel_id": 438,
+   "travel_url": "https://metravel.by/travels/nizhniaia-sileziia-za-nedeliu-stolovye-gory-vrotslav-klodzko",
+   "expected_address": "Клодзко",
+   "address": "Крепость Клодзко",
+   "reason": "rename[high]: категория Форт; Twierdza Kłodzko над городом Клодзко (knowledge)"
+  },
+  {
+   "id": 14269,
+   "travel_id": 438,
+   "travel_url": "https://metravel.by/travels/nizhniaia-sileziia-za-nedeliu-stolovye-gory-vrotslav-klodzko",
+   "expected_address": "Centennial Hall",
+   "add_category_ids": [
+    39
+   ],
+   "reason": "+['Достопримечательность'] [high]: Зал Столетия (Hala Stulecia) во Вроцлаве, ЮНЕСКО"
+  },
+  {
+   "id": 14281,
+   "travel_id": 439,
+   "travel_url": "https://metravel.by/travels/akkaunty-v-instagram-o-puteshestviyah-po-belarusi",
+   "expected_address": "Усадьба Сеглицев",
+   "address": "Усадьба Сеглицев в Красках",
+   "reason": "rename[high]: статья 439: «усадьбы … Сеглицев в Красках»; nom16 Краски, Волковысский р-н (article)"
+  },
+  {
+   "id": 14297,
+   "travel_id": 439,
+   "travel_url": "https://metravel.by/travels/akkaunty-v-instagram-o-puteshestviyah-po-belarusi",
+   "expected_address": "Усадьба Дьяконских",
+   "address": "Усадьба Дьяконских в Каштановке",
+   "reason": "rename[high]: статья 439: «усадьбы (Дьяконских в Каштановке…»; nom16 Каштановка, Пружанский р-н. Написание владельцев оставлено как в статье (в литературе встречается «Дзеконских») (article)"
+  },
+  {
+   "id": 14313,
+   "travel_id": 439,
+   "travel_url": "https://metravel.by/travels/akkaunty-v-instagram-o-puteshestviyah-po-belarusi",
+   "expected_address": "Средний",
+   "address": "Меловой карьер «Средний» под Кричевом",
+   "reason": "rename[medium]: статья 439: «Кричевский район. Меловые карьеры»; Краснобудский с/с Кричевского района по OSM. Имя «Средний» в источниках не подтверждено — оставлено как имя карьера из текущего названия (article)"
+  },
+  {
+   "id": 14547,
+   "travel_id": 480,
+   "travel_url": "https://metravel.by/travels/rodniki-yuckovskie",
+   "expected_address": "Усадебный дом Костровицких",
+   "address": "Усадебный дом Костровицких в Больших Новосёлках",
+   "reason": "rename[high]: sibling-точка «Усадебный дом Костровицких (Большие Новосёлки)»; nom16 Большие Новосёлки (article)"
+  },
+  {
+   "id": 14704,
+   "travel_id": 512,
+   "travel_url": "https://metravel.by/travels/parizh-iz-krakova-kak-dobratsia-i-chto-posmotret",
+   "expected_address": "Эйфелеву",
+   "address": "Эйфелева башня в Париже",
+   "reason": "rename[high]: заглушка с ошибкой падежа; координата 48.8583, 2.2946 — Эйфелева башня, nom16 Париж (osm)"
+  },
+  {
+   "id": 14794,
+   "travel_id": 539,
+   "travel_url": "https://metravel.by/travels/zamok-khokhostervits-zaltsburg-i-brno-marshrut",
+   "expected_address": "Mozarts Wohnhaus",
+   "add_category_ids": [
+    36,
+    76
+   ],
+   "reason": "+['Музей', 'Дом'] [high]: Дом Моцарта в Зальцбурге — музей"
+  },
+  {
+   "id": 14827,
+   "travel_id": 526,
+   "travel_url": "https://metravel.by/travels/park-paklenitsa-marshruty-i-kak-dobratsia",
+   "expected_address": "Ramića Dvori",
+   "add_category_ids": [
+    109
+   ],
+   "reason": "+['Ресторан'] [medium]: Ramića Dvori — семейная усадьба с домашней кухней (ресторан)"
+  },
+  {
+   "id": 14858,
+   "travel_id": 544,
+   "travel_url": "https://metravel.by/travels/tropa-vedm-v-gartse-kak-proiti-hexenstieg",
+   "expected_address": "China-Thai Restaurant A PaO",
+   "add_category_ids": [
+    109
+   ],
+   "reason": "+['Ресторан'] [high]: China-Thai ресторан"
+  },
+  {
+   "id": 14966,
+   "travel_id": 553,
+   "travel_url": "https://metravel.by/travels/zakopane-legkaia-tropa-sciezka-nad-reglami",
+   "expected_address": "Закопане",
+   "add_category_ids": [
+    184
+   ],
+   "reason": "+['Город'] [high]: Закопане — город"
+  },
+  {
+   "id": 14979,
+   "travel_id": 555,
+   "travel_url": "https://metravel.by/travels/chto-posmotret-v-oliudenize-pamukkale-i-efes",
+   "expected_address": "Фетхие",
+   "add_category_ids": [
+    184
+   ],
+   "reason": "+['Город'] [medium]: Фетхие — город (координата точки у Олюдениза)"
+  },
+  {
+   "id": 14983,
+   "travel_id": 555,
+   "travel_url": "https://metravel.by/travels/chto-posmotret-v-oliudenize-pamukkale-i-efes",
+   "expected_address": "Curetes Street in Ephesus (Selçuk)",
+   "add_category_ids": [
+    6,
+    156
+   ],
+   "reason": "+['Археологическая достопримечательность', 'Древний город'] [high]: Улица Куретов в Эфесе — античный город, археологический объект"
+  },
+  {
+   "id": 15048,
+   "travel_id": 566,
+   "travel_url": "https://metravel.by/travels/kuda-poekhat-v-belarusi-na-vykhodnye-4-marshruta",
+   "expected_address": "Лазёнки",
+   "address": "Родник Лазёнки в Видзах-Ловчинских",
+   "reason": "rename[high]: статья 566: «родник Лазёнки с сероводородной водой» в нескольких сотнях метров от усадьбы Вавжецких; nom16 Видзы Ловчинские (article)"
+  },
+  {
+   "id": 15055,
+   "travel_id": 566,
+   "travel_url": "https://metravel.by/travels/kuda-poekhat-v-belarusi-na-vykhodnye-4-marshruta",
+   "expected_address": "Усадьба Черноцких",
+   "address": "Усадьба Черноцких в Карацке",
+   "reason": "rename[high]: та же точка, статья 219 (article)"
+  },
+  {
+   "id": 15057,
+   "travel_id": 566,
+   "travel_url": "https://metravel.by/travels/kuda-poekhat-v-belarusi-na-vykhodnye-4-marshruta",
+   "expected_address": "Дворец Новицких",
+   "address": "Дворец Новицких в Совейках",
+   "reason": "rename[high]: nom16 Совейки; та же усадьба, что 13511 (osm)"
+  },
+  {
+   "id": 15086,
+   "travel_id": 564,
+   "travel_url": "https://metravel.by/travels/armeniia-samostoiatelno-erevan-sevan-dilizhan",
+   "expected_address": "Дерево желаний",
+   "add_category_ids": [
+    34
+   ],
+   "reason": "+['Дерево'] [high]: Дерево желаний у Гошаванка"
+  },
+  {
+   "id": 15518,
+   "travel_id": 635,
+   "travel_url": "https://metravel.by/travels/zamki-i-usadby-belarusi-19-marshrutov-iz-minska",
+   "expected_address": "Столовая",
+   "address": "Парк усадьбы Бохвицев в Павлиново",
+   "reason": "rename[medium]: категория Парк, nom16 Павлиново (Барановичский р-н) — дворцово-парковый комплекс Бохвицев 1906–1909 (ruwiki, barsu.by). «Столовая» — постройка на территории парка, в источниках не описана (web)"
+  },
+  {
+   "id": 15599,
+   "travel_id": 635,
+   "travel_url": "https://metravel.by/travels/zamki-i-usadby-belarusi-19-marshrutov-iz-minska",
+   "expected_address": "Сторожка",
+   "address": "Сторожка усадьбы в Большом Можейково",
+   "reason": "rename[medium]: категория у точки ошибочна (Город); nom16 Большое Можейково, Щучинский р-н — усадебный комплекс с лямусом. Владельцы в источниках не подтверждены, в название не внесены (osm)"
+  },
+  {
+   "id": 15600,
+   "travel_id": 635,
+   "travel_url": "https://metravel.by/travels/zamki-i-usadby-belarusi-19-marshrutov-iz-minska",
+   "expected_address": "Усадьба Святополк-Четвертинских",
+   "address": "Усадьба Святополк-Четвертинских в Желудке",
+   "reason": "rename[high]: статья 635: «Желудок (дворец Святополк-Четвертинских)» (article)"
+  },
+  {
+   "id": 15601,
+   "travel_id": 635,
+   "travel_url": "https://metravel.by/travels/zamki-i-usadby-belarusi-19-marshrutov-iz-minska",
+   "expected_address": "Склеп",
+   "address": "Склеп в усадебном парке Святополк-Четвертинских в Желудке",
+   "reason": "rename[medium]: 130 м от точки «Усадьба Святополк-Четвертинских» (3468); nom16 Заря Коммунизма = усадебная часть Желудка. Что именно за склеп — источниками не подтверждено (osm)"
+  },
+  {
+   "id": 15607,
+   "travel_id": 635,
+   "travel_url": "https://metravel.by/travels/zamki-i-usadby-belarusi-19-marshrutov-iz-minska",
+   "expected_address": "Усадьба Гробовских",
+   "address": "Усадьба Грабовских в Дикушках",
+   "reason": "rename[high]: то же, что 3471; написание исправлено на Грабовских (web)"
+  },
+  {
+   "id": 15610,
+   "travel_id": 635,
+   "travel_url": "https://metravel.by/travels/zamki-i-usadby-belarusi-19-marshrutov-iz-minska",
+   "expected_address": "Лямус",
+   "address": "Лямус усадьбы в Большом Можейково",
+   "reason": "rename[medium]: лямус — деревянная двухъярусная хозпостройка-амбар, в Большом Можейково известный памятник XVIII в.; nom16 Большое Можейково. Владельцы не внесены (knowledge)"
+  },
+  {
+   "id": 15700,
+   "travel_id": 646,
+   "travel_url": "https://metravel.by/travels/minsk-za-vykhodnye-putevoditel-po-stolitse-belarusi",
+   "expected_address": "Минск",
+   "add_category_ids": [
+    184
+   ],
+   "reason": "+['Город'] [high]: Минск — город"
+  },
+  {
+   "id": 15745,
+   "travel_id": 225,
+   "travel_url": "https://metravel.by/travels/lyublyu-moy-gorod",
+   "expected_address": "Лодочник",
+   "address": "Скульптура «Лодочник» в Гомеле",
+   "reason": "rename[medium]: памятник «Лодочник» на набережной Сожа в Гомеле (2006); координата 52.4244, 31.0191 — набережная, рядом sibling «Граф Паскевич с собаками» (knowledge)"
+  },
+  {
+   "id": 16048,
+   "travel_id": 583,
+   "travel_url": "https://metravel.by/travels/olomouts-zamok-bouzov-i-peshchery-moravskogo-krasa-tri-dnia-po-moravii",
+   "expected_address": "Замок Боузов/Hrad Bouzov",
+   "address": "Замок Боузов (Hrad Bouzov)",
+   "reason": "rename[high]: замок стоит в одноимённой деревне Боузов — населённый пункт уже в названии; убран слэш (osm)"
+  },
+  {
+   "id": 16388,
+   "travel_id": 791,
+   "travel_url": "https://metravel.by/travels/liuksemburg-za-odin-den-kvest-kazematy-bok-i-legenda-o-meliuzine",
+   "expected_address": "Дворец Великих герцогов",
+   "address": "Дворец Великих герцогов в Люксембурге",
+   "reason": "rename[high]: nom16 Люксембург (osm)"
+  }
+ ]
+}
