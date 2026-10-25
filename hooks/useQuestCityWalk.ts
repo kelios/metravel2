@@ -1,5 +1,5 @@
 import { readRetryOnce } from '@/utils/queryRetryPolicy';
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Platform } from 'react-native'
 import { useQueries } from '@tanstack/react-query'
 
@@ -58,8 +58,9 @@ function loadQuestCityWalkRuntime(): Promise<QuestCityWalkRuntime> {
   return questCityWalkRuntimePromise
 }
 
-function useQuestCityWalkRuntime(enabled: boolean): QuestCityWalkRuntime | null {
+function useQuestCityWalkRuntime(enabled: boolean): { runtime: QuestCityWalkRuntime | null; failed: boolean } {
   const [runtime, setRuntime] = useState<QuestCityWalkRuntime | null>(null)
+  const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     if (!enabled || runtime) return undefined
@@ -71,13 +72,14 @@ function useQuestCityWalkRuntime(enabled: boolean): QuestCityWalkRuntime | null 
       .catch(() => {
         // Чанк не догрузился — секции заметок нет, как при недоступных бандлах;
         // статический блок SSG остаётся на странице.
+        if (active) setFailed(true)
       })
     return () => {
       active = false
     }
   }, [enabled, runtime])
 
-  return runtime
+  return { runtime, failed }
 }
 
 type IdleWindow = Window & {
@@ -110,13 +112,24 @@ function useDeferredUntilIdle(enabled: boolean): boolean {
   return ready
 }
 
+/**
+ * `settled` — набор заметок окончательный: каждый бандл ответил или отказал
+ * (либо разбор не догрузился). До этого момента посадочная не рисует секции
+ * города: заметки встают ВЫШЕ маршрутов и соседних городов, и поздняя вставка
+ * сдвигала уже видимый блок на сотни пикселей (CLS до 0,33, #2754).
+ */
+export type QuestCityWalkState = {
+  walk: QuestCityWalkModel | null
+  settled: boolean
+}
+
 export function useQuestCityWalk(
   quests: QuestMeta[],
   opts?: { enabled?: boolean },
-): QuestCityWalkModel | null {
+): QuestCityWalkState {
   const enabled = opts?.enabled !== false
   const ready = useDeferredUntilIdle(enabled)
-  const runtime = useQuestCityWalkRuntime(enabled)
+  const { runtime, failed } = useQuestCityWalkRuntime(enabled)
   const locale = useQuestContentLocale()
 
   const walkQuestIds = useMemo(
@@ -125,20 +138,22 @@ export function useQuestCityWalk(
   )
 
   const combine = useCallback(
-    (results: { data?: ApiQuestBundle }[]): QuestCityWalkModel | null => {
-      if (!runtime) return null
+    (results: { data?: ApiQuestBundle; isPending: boolean }[]): QuestCityWalkState => {
+      if (!enabled || failed) return { walk: null, settled: true }
+      if (!runtime) return { walk: null, settled: false }
+      const settled = walkQuestIds.length === 0 || (ready && results.every((result) => !result.isPending))
       const bundles = new Map<string, ApiQuestBundle>()
       results.forEach((result, index) => {
         const questId = walkQuestIds[index]
         if (questId && result.data) bundles.set(questId, result.data)
       })
-      if (bundles.size === 0) return null
-      return runtime.buildQuestCityWalkModel(quests, bundles)
+      if (bundles.size === 0) return { walk: null, settled }
+      return { walk: runtime.buildQuestCityWalkModel(quests, bundles), settled }
     },
-    [quests, runtime, walkQuestIds],
+    [enabled, failed, quests, ready, runtime, walkQuestIds],
   )
 
-  return useQueries({
+  const state = useQueries({
     queries: walkQuestIds.map((questId) => ({
       // Определение запроса у ключа ОДНО (`questBundleQueryOptions`), своей
       // копии здесь нет: с #1992 ключ `['quest-bundle', slug, locale]` переживает смену
@@ -154,4 +169,14 @@ export function useQuestCityWalk(
     })),
     combine,
   })
+
+  // Набор, однажды ставший окончательным, остаётся таким для тех же квестов:
+  // смена языка меняет ключи бандлов, и без этого подвал города целиком
+  // пропадал бы до ответа на новом языке. Другой город — другой набор id.
+  const settledIdsRef = useRef<string | null>(null)
+  const idsKey = runtime ? walkQuestIds.join('|') : null
+  if (state.settled && idsKey !== null) settledIdsRef.current = idsKey
+  return !state.settled && idsKey !== null && settledIdsRef.current === idsKey
+    ? { ...state, settled: true }
+    : state
 }

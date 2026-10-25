@@ -96,7 +96,7 @@ export default function QuestsByCityScreen() {
   // Заметки о местах города приходят из бандлов его квестов и дописывают
   // страницу до самостоятельного содержания (#1569). Секции города рисуются
   // только на вебе, поэтому и запросы бандлов живут там же.
-  const walk = useQuestCityWalk(cityQuests, {
+  const { walk, settled: walkSettled } = useQuestCityWalk(cityQuests, {
     enabled: Platform.OS === 'web' && Boolean(cityGroup),
   })
 
@@ -191,7 +191,9 @@ export default function QuestsByCityScreen() {
     />
   ), [canonical, canonicalSegment, seoDescription, seoTitle, structuredData])
 
-  const footer = useMemo(() => (cityGroup && Platform.OS === 'web' ? (
+  // Подвал города встаёт одним блоком, когда набор заметок окончателен: заметки
+  // идут первыми, и секции, нарисованные до них, уезжали бы вниз (#2754).
+  const footer = useMemo(() => (cityGroup && Platform.OS === 'web' && walkSettled ? (
     <View style={CITY_FOOTER_STYLE}>
       <QuestCityLandingSections city={cityGroup} nearbyCities={nearbyCities} walk={walk} />
       <TravelsForQuestSection
@@ -201,7 +203,7 @@ export default function QuestsByCityScreen() {
         coords={cityCoords}
       />
     </View>
-  ) : null), [cityCoords, cityGroup, nearbyCities, walk])
+  ) : null), [cityCoords, cityGroup, nearbyCities, walk, walkSettled])
 
   const route = useMemo<QuestsCatalogRoute>(
     () => ({ selectionId, onLeave: handleLeave, seo, footer }),

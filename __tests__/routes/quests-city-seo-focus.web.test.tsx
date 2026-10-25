@@ -110,7 +110,7 @@ jest.mock('@/hooks/useQuestReturnVisit', () => ({
 // #1569: заметки о местах приходят из бандлов квестов. Здесь проверяется
 // жизненный цикл меты и заголовка, поэтому загрузка бандлов заменена её
 // результатом — и её отсутствием в отдельном кейсе ниже.
-const mockUseQuestCityWalk = jest.fn(() => WALK_MODEL as unknown)
+const mockUseQuestCityWalk = jest.fn(() => ({ walk: WALK_MODEL, settled: true }) as unknown)
 
 jest.mock('@/hooks/useQuestCityWalk', () => ({
   useQuestCityWalk: (...args: unknown[]) => mockUseQuestCityWalk(...(args as [])),
@@ -187,7 +187,7 @@ describe('quest city SEO focus lifecycle', () => {
     mockReplace.mockClear()
     mockPush.mockClear()
     mockCatalogRoute = null
-    mockUseQuestCityWalk.mockReturnValue(WALK_MODEL)
+    mockUseQuestCityWalk.mockReturnValue({ walk: WALK_MODEL, settled: true })
     document.body.innerHTML = ''
     document.head.innerHTML = [
       `<meta name="description" content="${GENERIC_DESCRIPTION}">`,
@@ -284,13 +284,25 @@ describe('quest city SEO focus lifecycle', () => {
    * переписана (#1569).
    */
   it('keeps the static city section until the runtime notes are loaded', () => {
-    mockUseQuestCityWalk.mockReturnValueOnce(null)
+    mockUseQuestCityWalk.mockReturnValueOnce({ walk: null, settled: false })
     document.body.innerHTML =
       '<section data-ssg-quest-city="true"><h1>Static city heading</h1></section>'
 
     render(<QuestsByCityScreen />)
 
     expect(document.querySelector('section[data-ssg-quest-city="true"]')).not.toBeNull()
+  })
+
+  // #2754: заметки встают над маршрутами и соседями; подвал, нарисованный до
+  // окончательного набора заметок, уезжал бы вниз под ними.
+  it('holds the city footer until the walk notes are settled', () => {
+    mockUseQuestCityWalk.mockReturnValue({ walk: null, settled: false })
+    render(<QuestsByCityScreen />)
+    expect(mockCatalogRoute?.footer).toBeNull()
+
+    mockUseQuestCityWalk.mockReturnValue({ walk: WALK_MODEL, settled: true })
+    render(<QuestsByCityScreen />)
+    expect(mockCatalogRoute?.footer).toBeTruthy()
   })
 
   it('removes only the stale shared SSG section once the runtime notes are loaded', () => {

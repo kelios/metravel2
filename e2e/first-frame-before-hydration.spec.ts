@@ -509,6 +509,86 @@ test.describe('каталог квестов с сохранённым срез�
   }
 })
 
+/**
+ * #2754: на посадочной города заметки о местах (бандлы квестов, грузятся после
+ * простоя) стоят ВЫШЕ «Маршрутов» и «Соседних городов». Секции, нарисованные до
+ * бандлов, уезжали вниз на сотни пикселей (CLS 0,33 на 390). Подвал города
+ * встаёт одним блоком, когда набор заметок окончателен.
+ */
+test.describe('посадочная города квестов (#2754)', () => {
+  const CITY_QUEST = { ...QUEST, quest_id: 'minsk-e2e-walk', city_alias: 'minsk' }
+  const NEIGHBOUR_QUEST = {
+    ...QUEST,
+    id: 990_172,
+    quest_id: 'grodno-e2e-walk',
+    city_id: '990172',
+    city_name: 'Гродно',
+    city_alias: 'grodno',
+    lat: 53.68,
+    lng: 23.83,
+  }
+  const bundle = (questId: string) => ({
+    quest_id: questId,
+    title: `Квест ${questId}`,
+    steps: [1, 2, 3].map((index) => ({
+      step_id: `${questId}-${index}`,
+      title: `Ратуша ${index}`,
+      location: 'Площадь Свободы',
+      story: [
+        'Первое предложение о ратуше уходит на страницу квеста целиком.',
+        'Второе предложение о ратуше тоже достаётся странице квеста.',
+        `Внутри работает городской музей ${index} с коллекцией старых печатей и карт.`,
+        `Под сводами по выходным играет духовой оркестр, а летом двор открыт до ночи ${index}.`,
+      ].join(' '),
+      answer_pattern: { type: 'any_text' },
+    })),
+  })
+
+  for (const viewport of [PHONE, { width: 1280, height: 800 }]) {
+    test(`${viewport.width}: заметки о местах не сдвигают маршруты и соседние города`, async ({ page }) => {
+      await page.setViewportSize(viewport)
+      await preacceptCookies(page)
+      await page.addInitScript(() => {
+        ;(window as any).__firstFrameCls = 0
+        new PerformanceObserver((list) => {
+          for (const entry of list.getEntries() as any[]) {
+            if (!entry.hadRecentInput) (window as any).__firstFrameCls += entry.value
+          }
+        }).observe({ type: 'layout-shift', buffered: true })
+      })
+
+      await page.route(
+        (url) => url.pathname === '/api/quests/',
+        (route) => fulfillJson(route, [CITY_QUEST, NEIGHBOUR_QUEST]),
+      )
+      let releaseBundles: () => void = () => {}
+      const bundlesGate = new Promise<void>((resolve) => {
+        releaseBundles = resolve
+      })
+      await page.route(
+        (url) => url.pathname.startsWith('/api/quests/by-quest-id/'),
+        async (route) => {
+          await bundlesGate
+          const questId = new URL(route.request().url()).pathname.split('/').filter(Boolean).pop() ?? ''
+          await fulfillJson(route, bundle(questId))
+        },
+      )
+
+      await page.goto('/quests/minsk', { waitUntil: 'domcontentloaded' })
+      await page.waitForFunction(APP_HYDRATED, null, { timeout: 60_000 })
+      await expect(page.getByTestId('quests-grid')).toBeVisible({ timeout: 30_000 })
+      // Каталог отрисован, бандлов ещё нет: подвала города нет целиком, а не
+      // «соседи без заметок над ними».
+      await expect(page.getByTestId('quest-city-nearby')).toHaveCount(0)
+
+      releaseBundles()
+      await expect(page.getByTestId('quest-city-walk')).toBeVisible({ timeout: 30_000 })
+      await expect(page.getByTestId('quest-city-nearby')).toBeVisible()
+      expect(await page.evaluate(() => (window as any).__firstFrameCls)).toBeLessThanOrEqual(0.01)
+    })
+  }
+})
+
 // #2216: inspect real static hrefs while application chunks never execute.
 test.describe('eager mobile navigation without application JS', () => {
   for (const route of ['/quests', '/']) {

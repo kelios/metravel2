@@ -22,6 +22,11 @@ jest.mock('@/api/quests', () => ({
   fetchQuestByQuestId: jest.fn(),
 }))
 
+let mockLocale = 'ru'
+jest.mock('@/hooks/useQuestContentLocale', () => ({
+  useQuestContentLocale: () => mockLocale,
+}))
+
 const mockedFetch = fetchQuestByQuestId as jest.MockedFunction<typeof fetchQuestByQuestId>
 
 const quest = (id: string) => ({
@@ -101,7 +106,8 @@ describe('useQuestCityWalk', () => {
     const { result } = renderHook(() => useQuestCityWalk(quests as never), { wrapper })
 
     expect(mockedFetch).not.toHaveBeenCalled()
-    expect(result.current).toBeNull()
+    expect(result.current.walk).toBeNull()
+    expect(result.current.settled).toBe(false)
 
     await act(async () => {
       jest.runOnlyPendingTimers()
@@ -180,8 +186,74 @@ describe('useQuestCityWalk', () => {
       jest.runOnlyPendingTimers()
     })
 
-    expect(result.current?.routes.map((route) => route.questId)).toEqual(['minsk-b'])
-    expect(result.current?.places.map((place) => place.questId)).toEqual(['minsk-b'])
+    expect(result.current.walk?.routes.map((route) => route.questId)).toEqual(['minsk-b'])
+    expect(result.current.walk?.places.map((place) => place.questId)).toEqual(['minsk-b'])
+  })
+
+  it('объявляет набор окончательным только после ответа всех бандлов (#2754)', async () => {
+    let release: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => { release = resolve })
+    mockedFetch.mockImplementation(async (questId: string) => {
+      await gate
+      return bundleFor(questId) as never
+    })
+
+    const { result } = renderHook(() => useQuestCityWalk([quest('minsk-a'), quest('minsk-b')] as never), {
+      wrapper,
+    })
+
+    await act(async () => {
+      jest.runOnlyPendingTimers()
+    })
+    // Запросы ушли, ответов нет: посадочная ещё не рисует секции города,
+    // иначе заметки встали бы над ними позже и сдвинули страницу.
+    expect(mockedFetch).toHaveBeenCalled()
+    expect(result.current.settled).toBe(false)
+
+    await act(async () => {
+      release()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    await act(async () => {
+      jest.runOnlyPendingTimers()
+    })
+
+    expect(result.current.settled).toBe(true)
+    expect(result.current.walk?.places.map((place) => place.questId)).toEqual(['minsk-a', 'minsk-b'])
+  })
+
+  it('смена языка не снимает окончательность набора тех же квестов', async () => {
+    mockLocale = 'ru'
+    mockedFetch.mockImplementation(async (questId: string) => bundleFor(questId) as never)
+    const quests = [quest('minsk-a')]
+    const { result, rerender } = renderHook(() => useQuestCityWalk(quests as never), { wrapper })
+
+    await act(async () => {
+      jest.runOnlyPendingTimers()
+    })
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    await act(async () => {
+      jest.runOnlyPendingTimers()
+    })
+    expect(result.current.settled).toBe(true)
+
+    // Новые ключи бандлов, ответов на новом языке ещё нет: подвал города не
+    // должен пропадать целиком (маршруты и соседние города остаются).
+    mockedFetch.mockClear()
+    mockedFetch.mockImplementation(() => new Promise(() => undefined) as never)
+    mockLocale = 'en'
+    rerender({})
+    await act(async () => {
+      jest.runOnlyPendingTimers()
+    })
+
+    expect(mockedFetch).toHaveBeenCalledWith('minsk-a', expect.anything())
+    expect(result.current.settled).toBe(true)
+    mockLocale = 'ru'
   })
 
   it('не ходит в сеть, пока город не разрешён', () => {
