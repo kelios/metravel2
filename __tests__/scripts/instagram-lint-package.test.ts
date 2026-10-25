@@ -279,11 +279,13 @@ describe('instagram lint-package', () => {
         { type: 'list', title: 'Лес', text: 'Раз. Два. Три. Четыре. Пять.' },
         { type: 'list', title: 'Норма', text: 'Раз. Два. Три. Четыре.' },
         { type: 'map', title: 'Карта', points: [{ name: 'Kolonia' }, { name: 'Приют PTTK, 1290 м' }] },
+        { type: 'story', kicker: 'Сцена', title: 'Гродно', body: long },
       ] }),
     })
     const { rules, hits } = lint(dir)
-    expect(rules).toEqual(['F2', 'F2'])
-    expect(hits.map((h: { source: string }) => h.source)).toEqual(['spec.json слайд 01', 'spec.json слайд 02'])
+    expect(rules).toEqual(['F2', 'F2', 'F2'])
+    expect(hits.map((h: { source: string }) => h.source))
+      .toEqual(['spec.json слайд 01', 'spec.json слайд 02', 'spec.json слайд 05'])
     expect(hits[0].message).toMatch(/51 слов на слайде, предел 50/)
     expect(hits[1].message).toMatch(/5 предложений на слайде, предел 4/)
   })

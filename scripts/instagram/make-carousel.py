@@ -367,6 +367,8 @@ def slide_story(spec):
             raise SystemExit(f"story «{spec['title']}»: текст под фото не помещается ({top + block_h} > 1235) — короче тело или без protect")
         fade_c(img, photo_img.height, photo_img.height + 10)
     else:
+        if top < 520:  # затемнение начинается не выше 460: выше текст ложится на незатемнённое фото
+            raise SystemExit(f"story «{spec['title']}»: текст поднимается на фото ({top} < 520) — сократить тело или заголовок")
         fade_c(img, max(460, top - 145), top + 60)
     draw = ImageDraw.Draw(img)
     draw.text((x, top), spec["kicker"].upper(), font=font("bold", 25), fill=C_SAGE)
