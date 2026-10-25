@@ -18,11 +18,11 @@ import { useQuestGridCardWidth } from '@/hooks/useQuestCatalogResponsiveModel';
 
 import QuestCard from './QuestCard';
 import { QuestsCountPlaceholder, QuestsGridSkeleton } from './QuestsCatalogPlaceholders';
-import { ALL_QUESTS_ID, COMPLETED_BY_OTHERS_FILTER_ID, COMPLETED_FILTER_ID, REVIEWED_FILTER_ID, UNCOMPLETED_FILTER_ID, parseThemeSelectionId } from './QuestsScreen.helpers';
+import { ALL_QUESTS_ID, COMPLETED_BY_OTHERS_FILTER_ID, COMPLETED_FILTER_ID, REVIEWED_FILTER_ID, UNCOMPLETED_FILTER_ID, countQuestCompletions, parseThemeSelectionId } from './QuestsScreen.helpers';
 import { getQuestThemeById } from '@/utils/questThemes';
 import QuestsMobileToolbar from './QuestsMobileToolbar';
 import QuestsSeoIntroFaq from './QuestsSeoIntroFaq';
-import { pluralizeQuest, type QuestMeta, type QuestSortOrder, type QuestThemeEntry } from './questsShared';
+import { pluralizeCompletions, pluralizeQuest, type QuestMeta, type QuestSortOrder, type QuestThemeEntry } from './questsShared';
 import QuestsSortChips, { EMPTY_SORT_ORDERS } from './QuestsSortChips';
 
 import { translate as i18nT } from '@/i18n'
@@ -286,6 +286,18 @@ function QuestsContentPanel({
                                                 ? i18nT('quests:screens.tabs.QuestsContentPanel.locationTitle', { value1: selectedCityName })
                                                 : i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd');
 
+    // Рядом с числом квестов — число прохождений: оно растёт с каждым новым
+    // прохождением, тогда как число квестов среза повторное прохождение уже
+    // пройденного квеста не меняет. В срезе «Пройдено другими» свои прохождения
+    // в сумму не входят.
+    const completionsTotal = useMemo(
+        () => countQuestCompletions(questsAll, { excludeMine: selectedCityId === COMPLETED_BY_OTHERS_FILTER_ID }),
+        [questsAll, selectedCityId],
+    );
+    const countText = completionsTotal > 0
+        ? `${pluralizeQuest(questsAll.length)} · ${pluralizeCompletions(completionsTotal)}`
+        : pluralizeQuest(questsAll.length);
+
     const sortChips = dataLoaded ? (
         <QuestsSortChips
             styles={styles}
@@ -323,7 +335,7 @@ function QuestsContentPanel({
                         withSortChip={!isMobile && selectedCityId === ALL_QUESTS_ID && !isMapAreaActive}
                     />
                 )}
-                {dataLoaded && <Text style={styles.contentCount}>{pluralizeQuest(questsAll.length)}</Text>}
+                {dataLoaded && <Text style={styles.contentCount}>{countText}</Text>}
                 {!isMobile && showResetChip && (
                     <Pressable
                         style={styles.resetFiltersChip}

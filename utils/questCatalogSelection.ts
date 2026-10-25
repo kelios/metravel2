@@ -123,6 +123,28 @@ export function filterQuestsCompletedByOthers<T extends {
 }
 
 /**
+ * Сколько прохождений набрали квесты среза. Карточка считает людей по одному
+ * квесту («Пройдено N раз»); здесь те же числа складываются по списку, и сумма
+ * растёт с каждым новым прохождением — в отличие от числа квестов, которое
+ * повторное прохождение уже пройденного квеста не меняет. В срезе «Пройдено
+ * другими» своё прохождение из суммы вычитается: заголовок там — про других.
+ */
+export function countQuestCompletions<T extends {
+    isCompletedByMe?: boolean;
+    completionsCount?: number;
+}>(
+    quests: T[],
+    options: { excludeMine?: boolean } = {},
+): number {
+    let total = 0;
+    for (const quest of quests) {
+        const count = quest.completionsCount ?? 0;
+        total += options.excludeMine && quest.isCompletedByMe ? Math.max(0, count - 1) : count;
+    }
+    return total;
+}
+
+/**
  * Разовая передача среза другому экрану (#1794): профиль кладёт сюда id, а
  * каталог на фокусе забирает его и удаляет.
  *

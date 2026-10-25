@@ -102,6 +102,7 @@ export {
     // профиль (#1794) и лежит рядом со своими id.
     filterQuestsByCompletion,
     filterQuestsCompletedByOthers,
+    countQuestCompletions,
     resolveStoredQuestCatalogSelection,
 } from '@/utils/questCatalogSelection';
 // «Поблизости» остаётся единым продуктовым порогом, без пользовательского
