@@ -15,6 +15,7 @@ import Feather from '@expo/vector-icons/Feather';
 
 import EmptyState from '@/components/ui/EmptyState';
 import { useQuestGridCardWidth } from '@/hooks/useQuestCatalogResponsiveModel';
+import { useQuestPlayersCount } from '@/hooks/useQuestPlayersCount';
 
 import QuestCard from './QuestCard';
 import { QuestsCountPlaceholder, QuestsGridSkeleton } from './QuestsCatalogPlaceholders';
@@ -22,7 +23,7 @@ import { ALL_QUESTS_ID, COMPLETED_BY_OTHERS_FILTER_ID, COMPLETED_FILTER_ID, REVI
 import { getQuestThemeById } from '@/utils/questThemes';
 import QuestsMobileToolbar from './QuestsMobileToolbar';
 import QuestsSeoIntroFaq from './QuestsSeoIntroFaq';
-import { pluralizeCompletions, pluralizeQuest, type QuestMeta, type QuestSortOrder, type QuestThemeEntry } from './questsShared';
+import { pluralizeCompletions, pluralizePlayers, pluralizeQuest, type QuestMeta, type QuestSortOrder, type QuestThemeEntry } from './questsShared';
 import QuestsSortChips, { EMPTY_SORT_ORDERS } from './QuestsSortChips';
 
 import { translate as i18nT } from '@/i18n'
@@ -294,9 +295,16 @@ function QuestsContentPanel({
         () => countQuestCompletions(questsAll, { excludeMine: selectedCityId === COMPLETED_BY_OTHERS_FILTER_ID }),
         [questsAll, selectedCityId],
     );
-    const countText = completionsTotal > 0
-        ? `${pluralizeQuest(questsAll.length)} · ${pluralizeCompletions(completionsTotal)}`
-        : pluralizeQuest(questsAll.length);
+    // Число игроков — одно на весь каталог (#2761), поэтому оно стоит только
+    // в полном срезе: рядом с числом квестов города оно читалось бы как игроки
+    // этого города. Запрос идёт после каталога и не спорит с ним за сеть.
+    const isFullCatalog = selectedCityId === ALL_QUESTS_ID && !searchActive && !isMapAreaActive;
+    const playersCount = useQuestPlayersCount(dataLoaded && isFullCatalog);
+    const countText = [
+        pluralizeQuest(questsAll.length),
+        completionsTotal > 0 ? pluralizeCompletions(completionsTotal) : null,
+        isFullCatalog && playersCount ? pluralizePlayers(playersCount) : null,
+    ].filter(Boolean).join(' · ');
 
     const sortChips = dataLoaded ? (
         <QuestsSortChips

@@ -156,6 +156,9 @@ export const queryKeys = {
   // карточек не тянула весь список квестов. Префикс общий с quests(), поэтому
   // инвалидация каталога подхватывает и его.
   questsPreview: (limit: number, locale: string) => ['quests', 'preview', limit, locale] as const,
+  // Число разных людей, прошедших хотя бы один квест (#2760/#2761). Без локали:
+  // это одно число на всех языках; префикс quests() обновляет его вместе с каталогом.
+  questsStats: () => ['quests', 'stats'] as const,
   questReviews: (questId: string | undefined) => ['quest', questId, 'reviews'] as const,
   travelsForQuest: (searchTerm: string) => ['travels-for-quest', searchTerm] as const,
   questsNearLocation: (loc: string, locale: string) => ['quests-near-location', loc, locale] as const,

@@ -58,9 +58,10 @@ const CONTENT_READS: Record<string, (locale?: string) => Promise<unknown>> = {
   fetchQuestById: (locale) => questsApi.fetchQuestById(1, locale),
 }
 
-/** Не контент квеста: отзывы игроков, личный прогресс, ответы. `lang` им не нужен. */
+/** Не контент квеста: отзывы игроков, личный прогресс, ответы, общая статистика. `lang` им не нужен. */
 const NON_CONTENT_FETCHERS = new Set([
   'fetchQuestReviews',
+  'fetchQuestStats',
   'fetchAllProgress',
   'fetchQuestProgress',
   'fetchOrCreateProgress',
@@ -109,6 +110,8 @@ describe('quest content reads carry lang', () => {
       .filter(({ line }) => /['`]\/quests\//.test(line))
       // Отзывы — пользовательский текст, не контент квеста.
       .filter(({ line }) => !line.includes('/reviews/'))
+      // Статистика игроков (#2761) — одно число без текста, одинаковое на всех языках.
+      .filter(({ line }) => !line.includes("'/quests/stats/'"))
       .filter(({ line }) => !line.includes('withQuestLang('))
     expect(offenders).toEqual([])
   })
@@ -138,6 +141,7 @@ describe('quest content query keys end with the locale', () => {
     'questReviews',
     'questUserReview',
     'questProgressAll',
+    'questsStats',
   ])
 
   it('classifies every quest key factory', () => {

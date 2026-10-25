@@ -735,6 +735,31 @@ export async function fetchQuestsCompactCatalog(
     }
 }
 
+/** Публичная статистика квестов (`GET /api/quests/stats/`, #2760). */
+export type ApiQuestStats = {
+    /** Сколько разных людей прошли хотя бы один квест; сотрудники не считаются. */
+    players_count: number;
+};
+
+/**
+ * Число игроков считает только бэкенд: `completions_count` — прохождения по
+ * квесту, и их сумма учитывает человека столько раз, сколько квестов он
+ * прошёл. Неожиданная форма ответа — `null`, чтобы UI просто не показал число.
+ */
+export async function fetchQuestStats(
+    options?: { signal?: AbortSignal },
+): Promise<ApiQuestStats | null> {
+    const res = await apiClient.get<Partial<ApiQuestStats> | null>(
+        '/quests/stats/',
+        undefined,
+        options?.signal ? { signal: options.signal } : undefined,
+    );
+    const playersCount = res?.players_count;
+    return typeof playersCount === 'number' && Number.isInteger(playersCount) && playersCount >= 0
+        ? { players_count: playersCount }
+        : null;
+}
+
 /** Параметры гео-рекомендаций (город/страна и/или координаты). */
 export type NearLocationParams = {
     city?: string | null;

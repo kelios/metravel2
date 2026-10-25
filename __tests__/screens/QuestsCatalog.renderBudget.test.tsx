@@ -26,6 +26,7 @@ jest.mock('@/hooks/useResponsive', () => ({
 }));
 
 jest.mock('@expo/vector-icons/Feather', () => 'Feather');
+jest.mock('@/hooks/useQuestPlayersCount', () => ({ useQuestPlayersCount: () => null }));
 
 // Карточка подменяется, чтобы замер считал именно смонтированные карточки, а не
 // стоимость их содержимого. Мемоизация настоящей карточки проверяется отдельно,

@@ -37,3 +37,7 @@ export const pluralizePoints = (n: number): string => {
 export const pluralizeCompletions = (n: number): string => {
     return translatePlural('shared:screens.tabs.questsShared.completionsCount', n, { value1: n });
 };
+
+export const pluralizePlayers = (n: number): string => {
+    return translatePlural('shared:screens.tabs.questsShared.playersCount', n, { value1: n });
+};

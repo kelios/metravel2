@@ -5,6 +5,12 @@ import QuestsContentPanel from '@/screens/tabs/QuestsContentPanel';
 import type { QuestMeta } from '@/utils/questAdapters';
 
 let mockIsMobile = false;
+let mockPlayersCount: number | null = null;
+const mockUseQuestPlayersCount = jest.fn((enabled?: boolean) => (enabled ? mockPlayersCount : null));
+
+jest.mock('@/hooks/useQuestPlayersCount', () => ({
+    useQuestPlayersCount: (enabled?: boolean) => mockUseQuestPlayersCount(enabled),
+}));
 
 jest.mock('@/hooks/useResponsive', () => ({
     useResponsive: () => ({ isMobile: mockIsMobile }),
@@ -87,6 +93,8 @@ describe('QuestsContentPanel', () => {
 
     beforeEach(() => {
         mockIsMobile = false;
+        mockPlayersCount = null;
+        mockUseQuestPlayersCount.mockClear();
         document.body.innerHTML = '';
         document.head.querySelectorAll('style[data-ssg-quests-listing-style="true"]').forEach((node) => node.remove());
     });
@@ -993,6 +1001,82 @@ describe('QuestsContentPanel', () => {
         expect(getByText('Квесты в этой области')).toBeTruthy();
         expect(getByTestId('quest-card-quest-0').props.accessibilityState?.selected).toBe(false);
         expect(queryAllByTestId('quests-seo-intro-faq')).toHaveLength(0);
+    });
+
+    it('adds the catalog-wide player count only to the full catalog header (#2761)', () => {
+        (Platform as { OS: string }).OS = 'web';
+        mockPlayersCount = 26;
+        const baseProps = {
+            styles,
+            colors,
+            dataLoaded: true,
+            viewMode: 'list' as const,
+            selectedCityName: null,
+            nearbyId: '__nearby__',
+            questsAll: [{ ...makeQuest(0), completionsCount: 3 }, makeQuest(1)],
+            questCardWidth: 320,
+            userLoc: null,
+            geoMessage: null,
+            geoRequesting: false,
+            radiiLg: 24,
+            isMobile: false,
+            isMapAreaActive: false,
+            onResetFilters: () => {},
+            onShowNearby: () => {},
+            onOpenFilterDrawer: () => {},
+            onToggleViewMode: () => {},
+        };
+
+        const { getByText, queryByText, rerender } = render(
+            <QuestsContentPanel {...baseProps} selectedCityId="__all__" filtersActive={false} />,
+        );
+        expect(getByText('2 квеста · 3 прохождения · 26 игроков')).toBeTruthy();
+
+        rerender(
+            <QuestsContentPanel
+                {...baseProps}
+                selectedCityId="warsaw"
+                selectedCityName="Warsaw"
+                filtersActive
+            />,
+        );
+        expect(getByText('2 квеста · 3 прохождения')).toBeTruthy();
+        expect(queryByText(/игрок/)).toBeNull();
+        expect(mockUseQuestPlayersCount).toHaveBeenLastCalledWith(false);
+
+        // Нет числа (ошибка, офлайн, старый бэкенд) — шапка как раньше.
+        mockPlayersCount = null;
+        rerender(<QuestsContentPanel {...baseProps} selectedCityId="__all__" filtersActive={false} />);
+        expect(getByText('2 квеста · 3 прохождения')).toBeTruthy();
+    });
+
+    it('waits for the catalog before asking for the player count', () => {
+        (Platform as { OS: string }).OS = 'web';
+        render(
+            <QuestsContentPanel
+                styles={styles}
+                colors={colors}
+                dataLoaded={false}
+                viewMode="list"
+                selectedCityId="__all__"
+                selectedCityName={null}
+                nearbyId="__nearby__"
+                questsAll={[]}
+                questCardWidth={320}
+                userLoc={null}
+                geoMessage={null}
+                geoRequesting={false}
+                radiiLg={24}
+                isMobile={false}
+                isMapAreaActive={false}
+                filtersActive={false}
+                onResetFilters={() => {}}
+                onShowNearby={() => {}}
+                onOpenFilterDrawer={() => {}}
+                onToggleViewMode={() => {}}
+            />,
+        );
+        expect(mockUseQuestPlayersCount).toHaveBeenLastCalledWith(false);
     });
 
     it('shows a geolocation failure message on desktop while falling back to all quests', () => {
