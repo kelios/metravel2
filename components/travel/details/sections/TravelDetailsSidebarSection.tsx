@@ -24,10 +24,13 @@ const SIDEBAR_CONTENT_MARGIN_STYLE = { marginTop: 8 } as const
 // Под флагом импорт стартует при загрузке модуля, а не при монтировании секции:
 // чанк успевает раньше ответа «Рядом», и резерв сайдбара не отпускается до того,
 // как запрос блока (учтён в `listsFetching`) появится в кэше.
-const aiSimilarSectionImport = isAiPicksEnabled() ? import('@/components/aiPicks/AiSimilarSection') : null
-const AiSimilarSectionLazy = React.lazy(
-  () => aiSimilarSectionImport ?? import('@/components/aiPicks/AiSimilarSection'),
-)
+// #2738: сборка без флага не выпускает и сам чанк — условие литералом `process.env`
+// (см. aiPicksConfig).
+const aiSimilarSectionImport =
+  process.env.EXPO_PUBLIC_AI_PICKS && isAiPicksEnabled() ? import('@/components/aiPicks/AiSimilarSection') : null
+const AiSimilarSectionLazy = process.env.EXPO_PUBLIC_AI_PICKS
+  ? React.lazy(() => aiSimilarSectionImport ?? import('@/components/aiPicks/AiSimilarSection'))
+  : null
 const LIST_FALLBACK_STYLE = { minHeight: 220 } as const
 
 export const TravelDetailsSidebarSection: React.FC<{
@@ -174,7 +177,7 @@ export const TravelDetailsSidebarSection: React.FC<{
           (`nearInViewport`), нового наблюдателя видимости нет; чанк блока грузится
           только под флагом.
         */}
-        {hasValidTravelId && isAiPicksEnabled() ? (
+        {AiSimilarSectionLazy && hasValidTravelId && isAiPicksEnabled() ? (
           <Suspense fallback={null}>
             <AiSimilarSectionLazy type="travel" id={Number(travel.id)} limit={6} enabled={nearInViewport} />
           </Suspense>

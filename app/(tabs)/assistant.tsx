@@ -10,7 +10,12 @@ import { notFoundRouteMetadata, routeMetadata } from '@/utils/seoRoutes/routeMet
 
 // #2460: экран грузится отложенным чанком и только под флагом — в сборке с
 // выключенным ассистентом (прод) его код на страницу не попадает.
-const AssistantScreen = React.lazy(() => import('@/components/screens/assistant/AssistantScreen'))
+// #2738: и в сборку тоже — условие литералом `process.env` (см. aiAssistantConfig).
+const AssistantScreen = React.lazy(() =>
+  process.env.EXPO_PUBLIC_AI_ASSISTANT
+    ? import('@/components/screens/assistant/AssistantScreen')
+    : Promise.resolve({ default: NotFoundContent }),
+)
 
 function AssistantFallback() {
   const colors = useThemedColors()

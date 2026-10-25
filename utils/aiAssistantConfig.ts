@@ -12,6 +12,10 @@
  * Значения читаются литеральным `process.env.EXPO_PUBLIC_*`: только так Expo
  * подставляет их в бандл. Проверка конфигурации — `utils/runtimeConfigContract.js`
  * (`AI_ASSISTANT_*` диагностики).
+ *
+ * Сборочный контракт (#2738) тот же, что у `aiPicksConfig`: экран подключается
+ * только литеральным `process.env.EXPO_PUBLIC_AI_ASSISTANT ? import(...) : …`,
+ * чтобы сборка без флага не содержала ни экрана, ни `api/aiAssist`.
  */
 
 // Имена переменных объявлены один раз — в `utils/runtimeConfigContract.js`
