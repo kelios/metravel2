@@ -12,10 +12,8 @@ relevant e2e/auth/operation sections from `docs/TESTING.md` and
 ## Runtime entry
 
 For a changed-code acceptance pass, require reviewed code in `testing` before
-runtime probes. Default to the local stack and perform the session's backend
-refresh/readiness procedure from `docs/WORKFLOW_OPERATIONS.md` →
-`3.0 Локальный стек и обновление бэкенда перед тестированием` before the first
-probe. Use the target assigned by the Task Contract and inherited acceptance pipeline;
+runtime probes. Refresh/readiness of the local backend (WORKFLOW_OPERATIONS §3.0)
+is required only for local runtime probes. Use the Task Contract's target and inherited acceptance pipeline;
 record the actual API target. Dev remains an explicit owner choice. This skill does not grant permission to message other people.
 
 ## When to use
@@ -27,6 +25,9 @@ record the actual API target. Dev remains an explicit owner choice. This skill d
 
 ## Execution rules
 
+- Choose scenarios, platforms and reusable results with `docs/TESTING.md` →
+  `Risk-based validation and evidence reuse`; a deploy alone does not require
+  replaying the full passing local suite.
 - Before Playwright/e2e/browser-smoke runs, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`. If an e2e/full/preflight quality gate is active, stop your duplicate launch without waiting, polling, bypassing, or retrying. `validation delegated/skipped: active gate pid/name` is coordination only. Request the owner result and resume acceptance; do not close from delegation or park the task in `testing`.
 - Use `.env.e2e` credentials when present and never print secrets.
 - Prefer the narrowest Playwright spec or `--grep` scope that proves the scenario.

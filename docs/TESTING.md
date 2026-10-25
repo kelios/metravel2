@@ -2,6 +2,49 @@
 
 Canonical policy reference: see [docs/RULES.md](./RULES.md) for mandatory project-wide development and governance rules.
 
+## Risk-based validation and evidence reuse
+
+Choose checks for the changed observable contract, not for every platform that
+imports a file. Before a run, record the changed behavior and expected assertion,
+the smallest reliable test layer, relevant prior evidence, required targets and
+locales, and why each additional run can reveal a different failure.
+
+| Changed contract | Required verification |
+| --- | --- |
+| New or changed shared business logic | A focused behavior/regression test at the nearest reliable layer; one representative runtime flow when integration needs proof |
+| Responsive layout, geometry, visual states, touch or keyboard behavior that differs by viewport | Mobile web first, then desktop web, with assertions, screenshots and console/network evidence for the changed states |
+| Shared behavior or copy/content with unchanged rendering and platform boundaries | One representative web flow when runtime evidence is needed; no duplicate mobile-web, Android or iOS run of the same contract |
+| Separate Android/iOS implementation, native integration or platform-specific behavior | The affected platform's emulator/simulator; add the other OS only if its implementation or boundary also changed |
+| Hardware, OS/provider integration or a failure that a simulator cannot establish | The relevant physical device and capability; do not expand to unrelated devices or flows |
+| Explicit full QA, store/release candidate or exact TestFlight gate | The assigned release matrix and exact evidence layer; a narrow task does not silently acquire this matrix |
+
+Source ownership alone (`shared`, `.native`, an import or a dependency) does not
+prove an additional runtime is needed: name the affected boundary. Preserve
+cross-platform product parity even when only one representative test is needed.
+For localization/content, validate all affected resources, structure and answer
+contracts at the data/code layer. Add runtime locales for distinct risks such as
+long text, plurals, formatting, fallback, RTL or platform-specific persistence;
+do not replay the whole flow on five locales and every OS by default.
+
+Reuse a passing result when its assertions still cover the requirement and the
+relevant source/data, dependencies, backend contract, flags, environment and
+evidence layer remain compatible. Record the original result and this comparison;
+an unrelated commit or deploy alone does not invalidate it. A relevant change,
+failed assertion, new risk or explicitly assigned release gate requires the
+affected retest, not an automatic restart of every passing suite.
+
+After a deploy, verify the actual source/release identity and a narrow smoke of
+the changed published surface, assets and required API. Reuse compatible local
+behavior evidence instead of replaying the full local suite on production.
+Production-only SSR/SSG, cache, embedded configuration, media, performance and
+production incidents still require their exact live-URL probes and before/after
+measurements. Local evidence never proves those production-specific claims.
+
+The handoff lists checks run, evidence reused, deliberate omissions with reasons,
+and what change would invalidate the result. An omitted redundant check is not a
+disabled test or an unproved required gate. `SKIPPED`, zero tests and unavailable
+evidence remain neither `PASS` nor a reason to bypass operation locks.
+
 ## Default verification target and local-stack preflight
 
 - Before review, source checks and development use this machine's **local
@@ -11,7 +54,8 @@ Canonical policy reference: see [docs/RULES.md](./RULES.md) for mandatory projec
   closure». Native runs declare the API actually used by the installed app;
   editing `.env` does not retarget an installed release. The dev stand
   `192.168.50.36` still requires an explicit owner request.
-- **Update the backend before the first probe of every testing session.** The
+- **Update the backend before the first local runtime probe of a testing session.**
+  Production-only smoke does not require starting or refreshing a local stack. The
   local checkout drifts silently while the API keeps answering `200` (measured
   2026-08-29: 26 commits behind `origin/master`, six unapplied migrations), and
   a stale backend produces false frontend defects that end up on the board.
@@ -47,17 +91,12 @@ Canonical policy reference: see [docs/RULES.md](./RULES.md) for mandatory projec
   simulator, physical-device, and TestFlight evidence is collected only after
   the reviewed commit enters `testing`.
 
-- Common/shared UI, layout and interaction changes are verified in a real
-  browser on desktop web and mobile web during `testing`. Mobile parity with
-  Android/iPhone/iPad is a product/design invariant, not an automatic device
-  gate.
-- Android build/install/device evidence is required only for Android-specific
-  behavior: platform files, native modules, permissions, intents, system Back,
-  WebView/map engine, storage/lifecycle, build/runtime or Android release work.
-- iPhone/iPad simulator, physical-device, or TestFlight evidence is required
-  only for iOS/iPadOS-specific behavior or an explicitly assigned Apple mobile
-  release gate. Choose simulator vs physical device vs TestFlight by the
-  capability being tested.
+- Select platforms, viewports, locales and reusable evidence through
+  `Risk-based validation and evidence reuse` above. Responsive UI changes need
+  mobile-web then desktop-web evidence; unchanged shared behavior does not.
+  Android/iPhone/iPad parity remains a product/design invariant, not an automatic
+  device gate. Native-specific cases use the affected emulator/simulator first;
+  hardware and exact release requirements select physical/TestFlight evidence.
 - Backend/API/server tasks are accepted through the strongest available
   backend evidence: source/config inspection, tests already supplied by the
   backend owner, HTTP/API probes, payload/mutation checks, logs and temporal

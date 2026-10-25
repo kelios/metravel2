@@ -13,6 +13,8 @@ Use this skill when the user asks to run the migrated source command `preflight`
 `docs/WORKFLOW_OPERATIONS.md` → «3.4 Координация долгих операций».
 
 1. Проверь `main`, `git status --short` и task-owned paths; сохрани чужие изменения.
+   Выбери минимальный meaningful scope и reused evidence по `docs/TESTING.md` →
+   «Risk-based validation and evidence reuse», а не полный gate по умолчанию.
 2. До завершения code review выполняй только static/unit/guard checks. При push
    в рамках перехода `review → testing` используй `PREFLIGHT_SKIP_E2E=1` по
    `docs/TASK_BOARD_MCP.md` → «Коммит и пуш — часть перехода `review → testing`».

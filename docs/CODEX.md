@@ -131,11 +131,15 @@ Output/validation: <artifact and checks>.
 | Medium code scope before/during review | relevant static/unit tests, lint, typecheck, and guards; no e2e |
 | Large/cross-cutting code | `npm run lint` + `npm run test:run` |
 | Testing after review | `npm run check:preflight` or scoped runtime/e2e gate |
-| Visible common UI in testing | desktop and mobile-web browser/screenshots/console |
-| Android/iOS-specific in testing | correct device/simulator/physical layer |
-| Localization | `npm run test:i18n` + affected platform/locale evidence |
+| Responsive/visual UI change in testing | mobile web first, then desktop web; changed states/screenshots/console |
+| Identical shared behavior/content | nearest reliable behavior/data check and one representative web flow if needed |
+| Android/iOS-specific in testing | affected emulator/simulator; physical/processed candidate only for the required capability/release gate |
+| Localization | `npm run test:i18n` for app resources; distinct runtime locale risks only |
 | External links | `npm run guard:external-links` or governance verification |
 | Release/performance in testing/authorized release stage | production build and target-specific real-URL evidence |
+
+Выбор минимального scope, переиспользование evidence и узкий production smoke —
+`docs/TESTING.md` → «Risk-based validation and evidence reuse».
 
 Перед long/shared command примени operation gate. Чужой `SKIPPED` — не зелёная
 проверка. После code changes полный task diff проходит `$metravel-code-reviewer`

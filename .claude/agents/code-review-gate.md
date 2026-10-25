@@ -121,5 +121,6 @@ PREFLIGHT_SKIP_E2E=1 git push origin main  # Playwright запускается �
 }
 ```
 
-Shared/common visible UI requires desktop + mobile-web QA. Android/iPhone QA is
-listed only for corresponding platform-specific observable scope.
+Testing handoff follows `docs/TESTING.md` → `Risk-based validation and evidence
+reuse`: identify the changed assertion, justified platforms, compatible reused
+results and invalidation conditions; do not add duplicate shared-flow QA.

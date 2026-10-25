@@ -36,6 +36,10 @@ contract, and only the acceptance/status/evidence headings from
    - unresolved blocking dependency
    - `needs_human=true` without the human step completed
 4. Run or inspect the exact validation required by the Done gate. Reject evidence that
+   violates `docs/TESTING.md` → `Risk-based validation and evidence reuse`:
+   require a reason for each additional platform/run, reuse compatible passing
+   results, and keep ordinary post-deploy verification to a narrow smoke.
+   Reject evidence that
    violates `docs/TASK_BOARD_MCP.md` → `#### Качество evidence`:
    - a `200`/no-crash result offered for a task about size, count, duration or order,
      with no before/after number

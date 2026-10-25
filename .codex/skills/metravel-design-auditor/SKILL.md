@@ -25,9 +25,9 @@ browser, simulator, or physical device.
 
 ## Workflow
 
-1. Define the route set and common/shared responsive scenarios at desktop-web
-   and mobile-web sizes. Add Android/iPhone scenarios only for matching
-   platform-specific scope.
+1. Define the changed route/states and select evidence through `docs/TESTING.md` →
+   `Risk-based validation and evidence reuse`. Responsive geometry uses mobile web
+   first and desktop; do not repeat unrelated passing flows or add native scope.
 2. Before testing, build the expected consistency matrix from source/contracts.
    In `testing`, capture screenshot/DOM evidence for each observable deviation.
 3. Classify P1 blocking/broken layout, P2 visible system drift or friction, P3 polish.

@@ -26,8 +26,9 @@ Select checks by change scope instead of defaulting to the heaviest run every ti
 Use the project-specific command map:
 
 - External-link or governance-sensitive changes: run `npm run guard:external-links` or `npm run governance:verify`.
-- Localization, app-owned UI copy, locale provider/storage, formatting, or SEO
-  locale changes: run `npm run test:i18n` plus the affected feature checks.
+- App-owned locale resources, UI copy, providers/storage, formatting or SEO locale
+  contracts: run `npm run test:i18n` plus affected feature checks. Editorial/API
+  translations use the relevant content/data validators instead.
 - Before code review, run static/unit/guard checks only. Run
   `npm run check:preflight` after review in `testing`, where its e2e portion is
   allowed.
@@ -39,14 +40,13 @@ Use the project-specific command map:
 Keep release and performance validation aligned with repo policy:
 
 - Build web for production checks with `npm run build:web:prod`.
-- Android EAS/cloud builds and submits are disabled. Android QA uses local
-  build/install on USB; an active Android production release uses the local
+- Android EAS/cloud builds and submits are disabled. Android QA uses the assigned
+  local emulator/device build; an active Android production release uses the local
   Gradle/production-only Play path from `$metravel-google-play-operator`.
-- Common/shared responsive app changes need desktop-web and mobile-web browser
-  evidence in `testing`. Require local USB Android evidence only there for Android-specific
-  observable behavior/configuration/runtime and the appropriate
-  simulator/physical-iPhone/TestFlight layer only for iOS-specific scope. Do not
-  infer native readiness from a web viewport.
+- Select targets, scope and reusable results with `docs/TESTING.md` →
+  `Risk-based validation and evidence reuse`. A deploy adds a narrow smoke;
+  repeat a complete flow only for a relevant change or explicit release gate.
+  Do not infer native readiness from a web viewport.
 - Route explicit signed iPhone build, App Store Connect upload, TestFlight
   mutation, App Review submit, or storefront release to
   `$metravel-ios-release-operator`; each stage needs its own authorization.
@@ -63,11 +63,9 @@ Keep release and performance validation aligned with repo policy:
 
 Account for UI-specific completion rules:
 
-- If a task changes visible common/shared UI, hand desktop/mobile browser
-  scenarios to `testing`. Run local USB Android or iPhone flow there only when
-  that platform has specific observable scope.
-- In `testing`, confirm the desktop/mobile-web states with screenshots and no
-  new console errors.
+- For responsive/visual changes, hand mobile-web then desktop-web scenarios to
+  `testing`, with screenshots and console checks for changed states. Shared
+  behavior without a viewport difference needs one representative flow.
 
 Stay within repo workflow boundaries:
 

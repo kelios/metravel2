@@ -31,8 +31,8 @@ created or reviewed.
   cause/owner. Append a dated Recurrence Log for repeated families.
 - Use only `area=front` or `area=back` in the active workflow. Android app bugs
   use `area=front` + `[AND-...]`; iOS app bugs use `area=front` + `[IOS-...]`;
-  shared responsive UI tasks name desktop-web and mobile-web validation, while
-  Android/iOS validation is added only for platform-specific observable scope.
+  validation targets/reused evidence follow `docs/TESTING.md` → `Risk-based
+  validation and evidence reuse`, with a reason for each additional platform.
   Backend/API/server tasks are `area=back`.
 - Every new `area=front` or `area=back` task needs active sprint, Problem History,
   Task Contract, `Platform impact`, `Localization impact`, dependencies/blockers,

@@ -26,9 +26,10 @@
   safe areas, storage, or native APIs, but must not silently fork product behavior.
 - Mobile web, Android, iPhone, and iPad implement one responsive mobile UX. The same hierarchy,
   action order, key geometry, states, and touch semantics are an architectural
-  invariant. Common/shared responsive UI is validated on desktop web and mobile
-  web; Android/iPhone/iPad device checks are added only for platform-specific
-  observable behavior, configuration, or runtime. OS APIs, permissions, safe
+  invariant. Choose runtime targets by `docs/TESTING.md` → «Risk-based validation
+  and evidence reuse»: responsive changes use mobile web first and desktop web;
+  identical shared behavior is checked once, and native-specific behavior uses
+  its relevant simulator/device layer. OS APIs, permissions, safe
   areas/insets, and rendering engines may differ without changing product meaning.
 - The production locale registry is defined by `i18n/config.ts`; it currently
   contains RU/BE/UK/PL/EN with RU as default/fallback. `i18n/resources.ts` and the
@@ -163,14 +164,16 @@ npm run test:run
   - if a test is broken, fix it, replace it with stable coverage at the correct level, or remove the obsolete test in the same task;
   - the green baseline is `0` skipped tests unless a documented project-level exception is explicitly added to `docs/`.
 
-- If a task changes UI, layout, styling, visual states, or interaction behavior visible on web:
-  - verify the changed scenario on desktop web and mobile web during `testing` before considering the task complete;
-  - take screenshots of the desktop and mobile-web result to confirm visual correctness;
-  - check the browser console for errors (no new errors should appear after the change).
+- Select the smallest meaningful verification and reuse compatible passing
+  evidence according to `docs/TESTING.md` → «Risk-based validation and evidence
+  reuse». Responsive/visual changes require mobile web first and desktop web,
+  screenshots and console evidence; identical shared logic or content does not
+  require the same flow on every viewport/OS. A deploy adds a narrow production
+  smoke, not an automatic repeat of the full locally passed suite.
 - A shared file, component, hook, or service does not by itself create a device
-  gate. Run Android device QA only when the task changes Android-specific
-  observable behavior, configuration, or runtime. Run Apple mobile QA only when it
-  changes iOS/iPadOS-specific observable behavior, configuration, or runtime. Preserve
+  gate. Android/iOS-specific observable behavior uses the relevant emulator or
+  simulator; physical devices are required for capabilities they alone can prove
+  or an assigned release gate. Preserve
   mobile parity in implementation even when no native device gate is applicable.
 - Always self-verify at the assigned stage (mandatory):
   - QA that creates complaints or moderation requests must complete the cleanup
@@ -181,7 +184,7 @@ npm run test:run
   - **never offload browser verification to the user.** Asking the user to scroll, hard-refresh, open devtools, run a console snippet, take a screenshot, or "tell me what you see" is NOT verification — it is offloading, and it is forbidden as a substitute for doing it yourself. The user reporting a bug is the input; confirming the fix in a browser is your job, not theirs;
   - if the preview/dev server is flaky (crashes, slow bundling, route redirects, transient API timeouts), restart it, wait, re-navigate, or retry until verification actually completes — instability is not an acceptable reason to skip verification;
   - during `testing`, if the default preview cannot reach or lay out the target (headless viewport reports `0`, RN-Web scrolls an inner container so `window.scrollTo`/IntersectionObserver never fire, the route is production-only, dev-SSR crashes on the page), exhaust an alternate self-verification path BEFORE declaring a blocker — e.g. build a local prod web export and serve it statically with a prod-API proxy (`Prod Static` / `Dist Prod` launch), drive it with Playwright/e2e, or device-verify on the real Android build. "The preview couldn't show it" is only a real blocker once every available path has actually been tried and reported;
-  - when Android verification is relevant in `testing`, assume a USB Android phone is connected to this workstation: run `adb devices -l` before marking Android unavailable; if a device is listed with status `device`, build Android locally, install that build to the phone, and test the needed scenario on it using `docs/MANUAL_TEST_CASES.md` `AND-USB-*` instead of asking the user to verify;
+  - when a physical Android capability or explicit USB/release gate is relevant in `testing`, run `adb devices -l` before marking the phone unavailable, install the local build and execute only the relevant `AND-USB-*` cases; ordinary Android-specific UI uses the selected emulator and does not add a phone pass;
   - inability to start a required check is not a completed QA verdict. If an
     exact access, login, unlock/connect action, Android phone or iPhone is
     required, stop the acceptance turn and ask the owner for that concrete
@@ -201,9 +204,10 @@ npm run test:run
     published only through the production-only Google Play API script; the active
     closed-testing surfaces (`alpha`, `internal`, `beta`, testers, countries and their
     releases) must not be touched by the production release automation;
-  - Android device QA requires a locally built app installed over USB on the connected
-    phone. Mobile web viewport evidence, Expo web export, EAS preview/development/production
-    builds and dev-client/export flows are not substitutes without explicit user approval;
+  - Android-specific QA uses a locally built app on the assigned emulator or physical
+    device. USB phone evidence is required for physical capabilities or an explicit
+    device/release gate; identical shared behavior does not add it automatically.
+    Mobile web viewport evidence and Expo web export do not prove native behavior;
     a blocked build/install is reported with the exact command, result and next safe step,
     never as a passed verification.
 - iOS validation policy (mandatory). Full procedure — `docs/WORKFLOW_OPERATIONS.md` →
@@ -213,8 +217,8 @@ npm run test:run
     iPhone/iPad gate;
   - simulator evidence never covers hardware, signing, TestFlight, APNs delivery, Universal
     Links, HEIC, biometrics or production embedded configuration; physical iPhone evidence
-    is required for device capabilities and lifecycle, physical iPad/TestFlight evidence for
-    tablet window and rotation acceptance, and the exact processed TestFlight build is the
+    is required for device capabilities and lifecycle; physical iPad/TestFlight evidence is
+    required when assigned by the tablet release matrix. The exact processed TestFlight build is the
     App Store acceptance boundary;
   - signed distribution build, App Store Connect/TestFlight upload, App Review submission
     and storefront release are four separate operations, each requiring an explicit current
@@ -658,9 +662,11 @@ not by the fastest patch that makes the symptom disappear.
 - Mobile layout parity is mandatory: mobile web, Android, and iPhone must use the same
   visual and interaction contract for the same user-facing flow. This is an
   implementation/architecture invariant, not an automatic all-device QA gate.
-  Common responsive UI is checked on desktop web and mobile web; a native device
-  is required only for that platform's specific observable behavior,
-  configuration, or runtime. Platform files may adapt technical map engines,
+  Responsive changes use mobile web first and desktop web by `docs/TESTING.md` →
+  «Risk-based validation and evidence reuse»; identical shared behavior is checked
+  once. Native runtime evidence is required only for that platform's specific
+  observable behavior, configuration or runtime; choose emulator/simulator first,
+  physical evidence only for its capability/release gate. Platform files may adapt technical map engines,
   safe areas, or native APIs, but must not introduce different UX, block order,
   primary actions, hero proportions, or tap behavior.
 - **No web-only visual branching inside the mobile viewport.** Serif faces and

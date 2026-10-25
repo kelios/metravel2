@@ -26,16 +26,18 @@ uncovered separately and do not repeat unchanged passing scope.
 ## Runtime entry
 
 For a changed-code acceptance pass, require reviewed code in `testing` before
-runtime probes. Default to the local stack and perform the session's backend
-refresh/readiness procedure from `docs/WORKFLOW_OPERATIONS.md` →
-`3.0 Локальный стек и обновление бэкенда перед тестированием` before the first
-probe. Use the target assigned by the Task Contract and inherited acceptance pipeline;
+runtime probes. Refresh/readiness of the local backend (WORKFLOW_OPERATIONS §3.0)
+is required only for local runtime probes. Use the Task Contract's target and inherited acceptance pipeline;
 record the actual API target. Dev remains an explicit owner choice. This skill does not grant permission to message other people.
 
 ## Test Layers
 
+Choose only the affected cases/layers through `docs/TESTING.md` →
+`Risk-based validation and evidence reuse`. The lists below describe capability,
+not a mandatory full sweep for every task. Reuse compatible passing evidence.
+
 1. **Simulator:** clean launch without Metro when applicable, guest/auth shell,
-   navigation, five locales, safe areas, keyboard, loading/error/offline states,
+   navigation, affected locale risks, safe areas, keyboard, loading/error/offline states,
    basic links, and fatal/runtime log scan.
    On iPad also cover full-screen and resized windows in portrait and landscape.
 2. **Physical iPhone:** camera/photo/HEIC, location, sharing, Keychain cold

@@ -55,9 +55,9 @@ worktree changes outside every role's ownership.
 - Board work uses Problem Memory → Task Contract → Ticket Board. `blocked_by` is
   only a hard implementation dependency; `testing` is active QA or an exact
   recheck, never parking.
-- Visible common UI requires desktop and mobile-web evidence in `testing`.
-  Android/iPhone evidence is added there only for corresponding
-  platform-specific behavior/runtime.
+- Select testing roles and reuse evidence by `docs/TESTING.md` → `Risk-based
+  validation and evidence reuse`; do not assign several testers to prove the
+  same unchanged shared contract.
 - Reviewer gets the original task, complete task diff, task-owned paths, and raw
   code-level checks. It fixes confirmed in-scope findings and re-reviews without
   browser/API/device runtime QA.

@@ -48,8 +48,10 @@ Use this skill when the user asks to run the migrated source command `auto-dev`.
 5. Передай полный task diff независимому `review-auditor` для обязательного
    code-only review-and-fix по `$metravel-code-reviewer`; повтори затронутые
    static/unit/guard checks после исправлений.
-6. Затронул web UI → после review и перехода в `testing` передай browser QA
-   профильному tester: desktop/mobile screenshots и console без новых ошибок.
+6. Затронул web UI → после review и перехода в `testing` передай профильному
+   tester минимальный сценарий по `docs/TESTING.md` → «Risk-based validation and
+   evidence reuse»: responsive — mobile first + desktop; shared-логика — один
+   обоснованный target, с reused evidence и console без новых ошибок.
    Переход и commit/push — `docs/TASK_BOARD_MCP.md`; запуск проверок и локальный
    QA-таргет с обновлением бэкенда — `docs/WORKFLOW_OPERATIONS.md`.
 

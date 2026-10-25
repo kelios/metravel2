@@ -89,12 +89,12 @@ handoff и выполняются только после code-review pass в `t
 **Чем доказывается результат по стадиям**
 
 - targeted Jest + `npm run check:fast`; правка `api/` или типов — `npm run typecheck`;
-- в `testing`: скрины mobile web ≤560px/desktop и console/network; для маршрута
+- в `testing`: обоснованные targets по risk-based матрице; для responsive UI
+  mobile web ≤560px first + desktop со скринами/console/network; для маршрута
   фактический provider/geometry response; для Android-specific renderer/bridge
   локальная Android-сборка;
-- common/shared карточка места получает desktop/mobile web evidence в
-  `testing`; Android/iPhone screenshots нужны только для соответствующего
-  platform-specific scope.
+- одинаковая shared-логика карточки проверяется один раз; native-specific
+  renderer/bridge получает соответствующий эмулятор/симулятор.
 
 ## Зона ответственности
 
@@ -115,7 +115,7 @@ handoff и выполняются только после code-review pass в `t
 
 - **Не форкать структуру.** Расхождение web↔native лечится общим компонентом; платформенный `.web`/`.native`-файл или `Platform.OS`-гейт — только для технического расхождения (движок Leaflet DOM vs WebView, safe-area инсеты, тени), НЕ для другой вёрстки/порядка кнопок/пропорций/поведения.
 - **При правке любого из:** `MapPlaceBottomCard`, `PlacePopupCard`, `createMapPopupComponent`, `MapMobileLayout`, `MapMobileTopOverlay`, `MapBottomSheet` — свери архитектурный parity contract и отсутствие нового продуктового `.web`/`.native`-форка; это не создаёт автоматический device gate.
-- **Testing handoff:** common/shared UI — desktop web + mobile web ≤560px (light+dark). Android device flow нужен только для Android-specific renderer/bridge/runtime, iPhone через `ios-tester` — только для iOS-specific scope; до review эти сценарии не запускаются.
+- **Testing handoff:** минимальные targets/состояния и reused evidence по `docs/TESTING.md` → «Risk-based validation and evidence reuse»; responsive UI — mobile first + desktop, отдельный renderer/bridge/runtime — нужный native-слой. До review эти сценарии не запускаются.
 
 ## Крупные файлы (нужен split)
 
@@ -163,8 +163,8 @@ handoff и выполняются только после code-review pass в `t
   pane z-index, hit-testing и атомарность render→commit→center.
 - **Маршруты** — при правках routing фактический `provider` / `is_optimal` /
   геометрия из ответа, а не «линия появилась».
-- **Доказательства по поверхностям** — common/shared: desktop web + mobile web ≤560px;
-  Android/iPhone только для соответствующего platform-specific scope.
+- **Доказательства по поверхностям** — назови отдельный риск каждого target по
+  risk-based матрице; shared-файл сам по себе не добавляет повторный прогон.
 
 ## Статус на борде (WIP-видимость) — load-bearing
 
@@ -185,6 +185,6 @@ handoff и выполняются только после code-review pass в `t
 темизация, контракт карточки точки) и «Development workflow» (стадии device QA).
 Без открытия документа:
 
-- Общий файл или компонент сам по себе не создаёт device gate: shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`).
-- Native device QA живёт в стадии `testing` и только для Android/iOS-specific поверхности; evidence по shared UI — desktop web + mobile web.
+- Матрица проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»: shared-логику проверяй один раз, responsive/UI-изменения — mobile web first + desktop.
+- Native QA в `testing` нужен для отличающейся реализации/поведения; выбери релевантный эмулятор/симулятор, physical/release слой — по capabilities.
 - В мобильном вьюпорте нет web-only визуальных ветвлений; темизация тематических поверхностей — через `useThemedColors()`, не `DESIGN_TOKENS.colors.*`.

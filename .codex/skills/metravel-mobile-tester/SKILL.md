@@ -1,6 +1,6 @@
 ---
 name: metravel-mobile-tester
-description: Test target-specific metravel behavior on mobile web and/or Android. Use for responsive browser layouts, touch/navigation checks, Android-specific USB local-build QA, Maestro flows, deliberate cross-platform comparisons, or regression reports before a target-specific handoff.
+description: Test target-specific metravel behavior on mobile web or Android. Use for responsive layouts, touch/navigation checks, Android emulator/device QA, Maestro flows, cross-platform regressions, or a target-specific handoff.
 ---
 
 # Metravel Mobile Tester
@@ -28,10 +28,8 @@ uncovered separately and do not repeat unchanged passing scope.
 ## Runtime entry
 
 For a changed-code acceptance pass, require reviewed code in `testing` before
-runtime probes. Default to the local stack and perform the session's backend
-refresh/readiness procedure from `docs/WORKFLOW_OPERATIONS.md` →
-`3.0 Локальный стек и обновление бэкенда перед тестированием` before the first
-probe. Use the target assigned by the Task Contract and inherited acceptance pipeline;
+runtime probes. Refresh/readiness of the local backend (WORKFLOW_OPERATIONS §3.0)
+is required only for local runtime probes. Use the Task Contract's target and inherited acceptance pipeline;
 record the actual API target. Dev remains an explicit owner choice. This skill does not grant permission to message other people.
 
 ## What To Test
@@ -46,19 +44,18 @@ record the actual API target. Dev remains an explicit owner choice. This skill d
 
 ## Target Selection And Parity
 
-- Select the QA target from observable scope before testing:
-  - common/shared responsive UI: desktop web plus mobile web; no automatic
-    Android or iPhone run
-  - Android-specific behavior/configuration/runtime: locally built Android app
-  - explicit cross-platform regression or parity investigation: mobile web and
-    Android comparison
+- Select targets and reusable evidence through `docs/TESTING.md` →
+  `Risk-based validation and evidence reuse`: responsive changes use mobile web
+  first and desktop web; identical shared behavior is checked once. Android-only
+  implementation uses a local emulator build, with physical evidence only for
+  capabilities or an assigned device/release gate.
 - Mobile web, Android, and iPhone preserve the same intended mobile UX as a
   product invariant. Differences in safe area or native map engine are
   acceptable; different visual hierarchy, action order, card proportions, or
   tap behavior remain defects when observed. The invariant does not create an
   automatic all-device Done gate.
-- Compare the same locale on all affected platforms. A translated web pass does
-  not prove native resource loading, storage, formatting, or accessibility behavior.
+- Compare locales/platforms only for distinct affected risks. A translated web
+  pass does not prove a changed native locale-storage or lifecycle boundary.
 - For map/place/travel-point checks, verify the shared point/place card:
   fullscreen within visible app chrome, hero image about 70%, title/meta,
   coordinates + copy, article/page action, expandable navigation choices, and
@@ -73,9 +70,9 @@ record the actual API target. Dev remains an explicit owner choice. This skill d
 ## Evidence
 
 - Use Playwright mobile viewport or browser preview for mobile-web scope.
-- Use local-build device evidence for Android-specific observable scope. A web
-  viewport is not proof of Android behavior.
-- If Android is in scope, check `adb devices -l`, then reuse the prepared
+- Use local-build emulator evidence for Android-specific UI/logic. A web viewport
+  is not proof of native behavior. For a required physical/USB case, check
+  `adb devices -l`, then reuse the prepared
   installed candidate when app/source/backend identity matches the assignment.
   Build/install locally once per required binary only when that identity is
   missing or mismatched; an exact store candidate is handled by its release
@@ -87,6 +84,9 @@ record the actual API target. Dev remains an explicit owner choice. This skill d
 - Never print `.env.e2e` credentials, auth tokens, EAS secrets, or Google Play keys.
 
 ## Android USB Device Flow
+
+Use this flow only for a required physical capability or an assigned USB/release
+gate; ordinary Android-specific UI/logic uses the affected emulator.
 
 1. Resolve `adb` with `which adb` on macOS or `where.exe adb` on Windows.
 2. Verify the device with `adb devices -l`; when absent/locked/`unauthorized`,

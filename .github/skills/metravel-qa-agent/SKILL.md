@@ -17,11 +17,10 @@ the owner/runtime gate instead of silently starting a paid render.
 ## Runtime entry
 
 For a changed-code acceptance pass, require reviewed code in `testing` before
-runtime probes. Default to the local stack and perform the session's backend
-refresh/readiness procedure from `docs/WORKFLOW_OPERATIONS.md` →
-`3.0 Локальный стек и обновление бэкенда перед тестированием` before the first
-probe. Use dev or production only when explicitly requested; record the actual
-API target. This skill does not grant permission to message other people.
+runtime probes. Use the Task Contract's target and inherited acceptance pipeline;
+record the actual API target. Refresh the local backend only for a local runtime
+probe (WORKFLOW_OPERATIONS §3.0). Dev remains an explicit owner choice.
+This skill does not grant permission to message other people.
 
 ## Test Discipline
 
@@ -31,14 +30,9 @@ API target. This skill does not grant permission to message other people.
 - Do not treat missing production-hosted media in local dev as a frontend bug by itself.
 - Do not infer production performance from Expo dev bundles.
 - Confirm that each reported bug is reproducible and user-visible or validation-relevant.
-- Record platform impact and localization impact before testing. For visible
-  common/shared responsive flows, cover desktop web and mobile web. Hand
-  Android-specific observable behavior to `$metravel-mobile-tester` and
-  iOS-specific behavior to `$metravel-ios-tester`; do not create automatic
-  native gates for a responsive-web change.
-- When UI copy or locale behavior is affected, exercise the changed flow in the
-  relevant RU/BE/UK/PL/EN locales, including long-label layout, accessibility,
-  formatting/plurals, persisted language, and web reload/native cold restart.
+- Select platforms, locales and reusable evidence through `docs/TESTING.md` →
+  `Risk-based validation and evidence reuse`. Hand distinct Android/iOS behavior
+  to the relevant tester; shared copy or logic does not require duplicate OS flows.
 
 ## Bug Report Contract
 

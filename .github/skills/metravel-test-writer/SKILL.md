@@ -14,6 +14,9 @@ Use this skill when the task is to add or update tests for a bug fix, refactor, 
 
 - Prefer the nearest existing test suite and assertion style instead of inventing a new harness.
 - Test the real contract at the closest reliable level: unit first, integration when boundaries matter, governance when repo rules are the contract.
+- Apply `docs/TESTING.md` → `Risk-based validation and evidence reuse`: cover new
+  behavior once at the reliable layer; duplicate platform tests only for a
+  changed platform boundary, not to mirror the same implementation.
 - Keep tests deterministic: avoid timing hacks, broad sleeps, and assertions that depend on unstable incidental markup.
 - Do not add `.skip` or leave flaky coverage behind.
 - If the code path is browser-only or interaction-heavy, author the Playwright
@@ -24,9 +27,9 @@ Use this skill when the task is to add or update tests for a bug fix, refactor, 
   differences explicit; add Android or iPhone runtime scenarios only when the
   task changes that platform's observable behavior/configuration/runtime, and
   execute them only in `testing`.
-- For localization, follow `$metravel-i18n-guardrails`: assert RU/BE/UK/PL/EN
-  resource parity, locale persistence, formatting/plurals, SSR/hydration, and
-  native lifecycle at the nearest reliable level without snapshotting whole catalogs.
+- For localization, follow `$metravel-i18n-guardrails`: validate affected resource
+  parity and add persistence, formatting/plural, hydration or native-lifecycle
+  assertions only when those contracts change; do not snapshot whole catalogs.
 
 ## Native regression ownership
 

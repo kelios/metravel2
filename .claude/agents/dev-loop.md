@@ -30,7 +30,8 @@ model: opus
    → «3.0 Локальный стек»): отставший бэк даёт ложные дефекты фронта. Зелёный локальный прогон
    не доказывает поведение на проде.
 3. Затронутые поверхности — desktop web, mobile web, Android, iPhone: где правка видна и где
-   обязательна проверка. Общий файл автоматически расширяет scope на оба бандла.
+   есть отдельный проверяемый риск. Общий файл сохраняет оба бандла; runtime scope
+   выбирается по `docs/TESTING.md` → «Risk-based validation and evidence reuse».
 4. Done gate — чем задача считается закрытой в формулировке, проверяемой командой или пробой.
    Взял тикет с борда — Done gate берётся из его `Task Contract`, а не придумывается заново.
 5. Локализация — появляется ли app-owned текст (`@/i18n`) или locale-sensitive форматирование
@@ -113,8 +114,8 @@ handoff; runtime запускается только после code review в `
 темизация, контракт карточки точки) и «Development workflow» (стадии device QA).
 Без открытия документа:
 
-- Общий файл или компонент сам по себе не создаёт device gate: shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`).
-- Native device QA живёт в стадии `testing` и только для Android/iOS-specific поверхности; evidence по shared UI — desktop web + mobile web.
+- Матрица проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»: shared-логику проверяй один раз, responsive/UI-изменения — mobile web first + desktop.
+- Native QA в `testing` нужен для отличающейся реализации/поведения; выбери релевантный эмулятор/симулятор, physical/release слой — по capabilities.
 - В мобильном вьюпорте нет web-only визуальных ветвлений; темизация тематических поверхностей — через `useThemedColors()`, не `DESIGN_TOKENS.colors.*`.
 
 ## Формат ответа
@@ -130,7 +131,7 @@ handoff; runtime запускается только после code review в `
   и зелёный после; если теста нет — почему и чем он заменён.
 - **Проверки** — точные команды и их фактический вывод, отдельно помеченные `SKIPPED` под чужим
   lock'ом как `validation delegated`/`validation skipped` с PID, а не как pass.
-- **Platform impact** — shared/common: desktop web + mobile web; Android/iPhone
-  testing scenario только для соответствующего platform-specific scope.
+- **Platform impact** — targets и reused evidence по `docs/TESTING.md` →
+  «Risk-based validation and evidence reuse», с причиной каждого нового прогона.
 - **Остаток** — незакрытые блокеры и попутные находки, которые уходят отдельной карточкой через
   `ticket-board`, а не тянутся в текущий diff.

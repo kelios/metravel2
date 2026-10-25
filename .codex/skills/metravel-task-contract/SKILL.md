@@ -104,13 +104,12 @@ Done gate:
   `$metravel-system-architect` or ask one clarifying question.
 - `Platform impact` must name
   `desktop web | mobile web | Android | iOS | shared | none` and the required
-  evidence. Common/shared responsive UI requires desktop-web and mobile-web
-  browser evidence. Add Android device evidence only for Android-specific
-  observable behavior/configuration/runtime, and iPhone evidence only for
-  iOS-specific scope at the appropriate simulator, physical-device, or
-  TestFlight layer. Mobile parity remains a product invariant, not an automatic
-  all-device Done gate. `Localization impact` must name affected
-  locales or `none`; localization work includes namespaces/keys and `npm run test:i18n`.
+  evidence selected by `docs/TESTING.md` → `Risk-based validation and evidence
+  reuse`: name the changed contract, why each platform/check is needed, reusable
+  passing results, deliberate omissions and invalidation conditions. Shared
+  behavior alone does not add duplicate viewport/OS flows. `Localization impact`
+  names affected locales or `none`: app-owned resources/providers need namespaces
+  and `npm run test:i18n`; editorial/API translations use their content/data validators.
 - Do not move a task to `todo` for implementation until the contract has concrete, testable acceptance.
 - `blocked_by` is valid only while a concrete hard dependency prevents implementation from
   starting or continuing. Missing access/QA/runtime/production evidence is not

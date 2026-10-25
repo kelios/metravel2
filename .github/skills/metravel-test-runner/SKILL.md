@@ -13,7 +13,9 @@ Use this skill when the main job is to run tests rather than write product code.
 ## Command selection
 
 - Before running tests, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`. If a live quality gate already exists, stop your duplicate launch immediately: do not wait, poll, monitor it, retry after release, or run a narrower bypass check. `validation delegated/skipped: active gate pid/name` is coordination only. If the result is required for acceptance, request it from the owner and resume; do not close from delegation or park the task in `testing`.
-- Start with the narrowest reliable command for the touched scope.
+- Select the narrowest reliable command and reusable evidence by
+  `docs/TESTING.md` → `Risk-based validation and evidence reuse`. State the
+  changed assertion and why each additional platform/run can fail differently.
 - Prefer targeted `npm run test:run -- <path-or-pattern>` when a single area already has focused coverage.
 - Use `npm run check:fast` for a finished small logical block.
 - Use `npm run check:preflight` only after code-review pass in `testing` when
@@ -45,12 +47,9 @@ uncovered separately and do not repeat unchanged passing scope.
 
 - Run commands from the repo root.
 - Use feature docs from `docs/features/` when you need scope-specific test context.
-- Map platform and localization impact before choosing commands. Desktop web,
-  mobile web, Android, and iPhone runtime evidence are distinct; unit tests do
-  not replace required Android/iPhone device or TestFlight evidence when that
-  platform has specific observable scope. Common/shared responsive UI uses
-  desktop-web and mobile-web evidence collected in `testing`. RU/BE/UK/PL/EN
-  parity is part of i18n scope.
+- Map platform and localization impact before choosing commands. Use the
+  canonical risk-based matrix; shared imports do not create extra runtime gates.
+  Keep required native/capability/release evidence distinct from web evidence.
 - For performance or browser behavior, hand off to
   `$metravel-performance-analyst` or `$metravel-e2e-runner` after review in
   `testing` instead of inferring from unit-test output.

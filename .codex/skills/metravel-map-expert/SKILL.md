@@ -25,8 +25,8 @@ implicated by the task; add the affected native section for native map changes.
 - Keep `/places` point-level: render places/coordinates first, travel links second.
 - Preserve parity across mobile web, Android, and iPhone as an invariant: the same
   point/place card layout, action order, hero proportions, and marker/card tap
-  semantics. Common/shared responsive UI is validated on desktop/mobile web;
-  add native QA only for platform-specific map behavior.
+  semantics. Select checks and reused evidence by `docs/TESTING.md` →
+  `Risk-based validation and evidence reuse`; native QA needs a distinct map boundary.
 - Map marker popups/cards on mobile must use the shared fullscreen point/place
   template inside visible app chrome: header/footer remain visible, hero image is
   about 70%, then title/meta, coordinates + copy, article/page action, expandable

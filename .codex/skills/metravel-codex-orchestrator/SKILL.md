@@ -61,8 +61,9 @@ Output/validation: <artifact and checks>.
 - Apply the operation gate before build/deploy/full tests/e2e/Lighthouse/device
   install; runtime QA starts only after review in `testing` and never duplicates
   a live target process.
-- Visible common UI: desktop + mobile-web browser evidence in `testing`. Native
-  evidence only there for the corresponding platform-specific observable scope.
+- Testing targets and reused evidence follow `docs/TESTING.md` → `Risk-based
+  validation and evidence reuse`; each additional tester/platform needs a distinct
+  changed contract or assigned release requirement.
 - Board mutation: Problem Memory → Task Contract → Ticket Board.
 - After code changes, send the complete task diff and code-level validation to an
   independent `$metravel-code-reviewer`; reviewer fixes/rechecks code only, then

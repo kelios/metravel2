@@ -43,9 +43,9 @@ Build UI by extending existing primitives first:
 For a new page or redesign:
 
 - Define the route goal and section hierarchy before implementation; reuse `ResponsiveContainer`, `ResponsiveStack`, typography, SEO helpers, and feature components.
-- Define testing scenarios for common/shared responsive screens on desktop web
-  and mobile web, including light/dark, loading/empty/error, keyboard/focus, and
-  parity. Add device scenarios only for platform-specific scope.
+- Select changed states and reusable evidence by `docs/TESTING.md` → `Risk-based
+  validation and evidence reuse`. Responsive geometry is checked mobile web
+  first, then desktop; add theme/state/native cases only for their affected risks.
 - Use `$metravel-design-auditor` for a cross-screen consistency matrix; use this
   skill for implementation and `$metravel-browser-reviewer` only as the
   read-only browser QA gate after review in `testing`.
@@ -85,10 +85,11 @@ Respect web interaction constraints:
 
 Prepare visual testing before code-review handoff:
 
-- Record the changed browser scenario, desktop/mobile viewports, required
+- Record the changed browser scenario, justified viewports, required
   screenshots, console/network expectations, and target environment.
-- For Android/iOS-specific observable behavior, record the required local USB
-  or simulator/physical/TestFlight case. Browser/device execution happens only
+- For Android/iOS-specific observable behavior, record the relevant emulator/
+  simulator case, adding physical/TestFlight only for its capability/release gate.
+  Browser/device execution happens only
   after code review in `testing`.
 - Run `npm run guard:external-links` or `npm run governance:verify` whenever link handling or policy-sensitive UI changed.
 - Run `npm run test:i18n` and verify affected locales whenever UI copy or

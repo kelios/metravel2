@@ -12,11 +12,11 @@ model: opus
 работа — чтобы код, написанный под web, корректно жил на Android и тот же flow
 оставался идентичным на mobile web. iPhone — активная отдельная поверхность:
 не подменяй `ios-expert`/`ios-tester`, но учитывай shared iOS impact
-и передавай им тот же flow/state/locale для проверки.
+и передавай им flow/state/locale для проверки только при отдельном iOS-риске.
 
 На стадиях implementation и `review` не подключай устройство и не запускай
 Gradle install/adb/runtime QA. Работай с кодом и code-level checks, затем передай
-точные `AND-USB-*` сценарии tester'у; device QA начинается только после
+точные emulator/device-сценарии tester'у; native QA начинается только после
 code-review pass и статуса `testing`.
 
 ## Разбор задачи (обязательно до правок)
@@ -26,18 +26,18 @@ code-review pass и статуса `testing`.
 по §4 с `path:line`, решение по §5, отчёт по §6, формулировки §7 запрещены.
 Главный источник ложных выводов здесь — подмена уровня доказательства: `grep`
 вместо чтения эффекта, зелёный typecheck вместо запуска, mobile web вместо
-установленной на телефон сборки.
+локально установленной native-сборки нужного слоя.
 
 **Что уточнить в постановке**
 
 - платформенный это файл (`*.android.tsx` / `*.native.tsx`) или общий
-  компонент: общий обязывает к desktop-web и mobile-web регрессии; Android
-  device gate нужен только для Android-specific scope, iPhone — только для
-  iOS-specific scope и уходит `ios-expert`/`ios-tester`;
+  компонент: testing handoff выбирается по `docs/TESTING.md` → «Risk-based
+  validation and evidence reuse»; общий код не требует повторять одну логику
+  на web и обоих OS. Native-specific scope передай соответствующему tester;
 - какой слой evidence закрывает задачу: mobile web ~390px закрывает вёрстку
-  web-поверхности, но **не** native; Android-вердикт даёт только локально
-  собранная и установленная USB-сборка; сценарии и порог смотри в
-  `docs/MANUAL_TEST_CASES.md` (`AND-USB-01..31`, гейты G0–G4);
+  web-поверхности, но **не** native; Android-вердикт ограничен проверенной
+  локальной сборкой на выбранном эмуляторе/устройстве. Физический слой и
+  `AND-USB-*` нужны только для соответствующей capability/release gate;
 - нужен ли бэкенд (регистрация push-токена, routing, эндпоинт фичи) — это
   тикет `area=back` через `ticket-board`, код бэка не правится;
 - задеты ли protected paths `app.json`, `eas.json`, `plugins/**`, `scripts/**`
@@ -143,12 +143,11 @@ code-review pass и статуса `testing`.
   governance guards доказывают только source-level containment;
 - сборка web/native bundles и runtime evidence выполняются после review в
   `testing` и не входят в developer/reviewer verdict;
-- mobile web ~390px доказывает web-поверхность; shared/common UI вместе с desktop
-  web не создаёт Android/iPhone device gate, но Android-specific native-поведение
-  web-проверкой не закрывается;
-- Android-вердикт даёт только локально собранная и установленная на USB-телефон
-  сборка: скрин `adb exec-out screencap -p` на затронутый экран плюс чистый
-  `adb logcat` без `FATAL`/`ReactNativeJS`-исключений;
+- web не доказывает Android-specific native-поведение; выбор дополнительного
+  слоя определяется risk-based матрицей, а не общим импортом;
+- Android-вердикт ограничен локальной сборкой и реально проверенными кейсами
+  эмулятора/устройства; physical capabilities требуют физического телефона и
+  релевантного `adb logcat` без `FATAL`/`ReactNativeJS`-исключений;
 - device-verify обязателен для Android-specific scope только в `testing`; его
   результат принадлежит tester, не developer/reviewer;
 - iPhone evidence запрашивается у `ios-tester` только для iOS-specific scope;
@@ -183,7 +182,7 @@ code-review pass и статуса `testing`.
 ## Правила
 
 - **Конфиги сборки не трогаешь**: `app.json`, `eas.json`, `plugins/**`, `scripts/**` — в списке «не трогать без явного запроса». Нужна правка пермишена/плагина/versionCode — опиши её и передай `android-builder` (или владельцу), сам не редактируй.
-- **EAS/dev-client не дефолт для проверки**: Android production/dev/preview EAS-сборки, submit, Expo export и dev-client/Metro route запускаются только по явному разрешению владельца. Обычный Android test = локальная сборка и установка на USB-телефон.
+- **EAS/dev-client не дефолт для проверки**: Android production/dev/preview EAS-сборки, submit, Expo export и dev-client/Metro route запускаются только по явному разрешению владельца. Обычный Android UI test = локальная сборка на выбранном эмуляторе; USB — только для физической capability или явно заданного device/release gate.
 - Внешние ссылки — только `@/utils/externalLinks.openExternalUrl`, не `Linking.openURL`.
 - Токен — через `utils/secureStorage.ts` (на native = `expo-secure-store`), не лезь в localStorage напрямую.
 - expo-image не импортировать напрямую — только через `ImageCardMedia`.
@@ -206,13 +205,13 @@ trailing-summary.
 Структура — §6 `docs/AGENT_ANALYSIS_PROTOCOL.md` (Задача / Что нашёл / Что
 сделал / Доказательства / Риски и что не проверено). Дополнительно обязательны:
 
-- **Platform impact** — shared/common: desktop web + mobile web; Android/iPhone
-  testing scenario только для соответствующего platform-specific scope. На
+- **Platform impact** — обоснованные targets/reused evidence по canonical
+  risk-based матрице, без повторения одной shared-логики на каждом OS. На
   implementation/review отсутствие runtime gate не блокирует source verdict:
   передай exact owner/unblock condition тестеру.
 - **Слой evidence** — source/static evidence у developer/reviewer; web browser,
-  mobile web 390px и локально установленная USB-сборка перечисляются как exact
-  testing handoff. Подмена слоя не допускается.
+  выбранный web/native-слой перечисляется в exact testing handoff с причиной
+  выбора и границей утверждений. Подмена слоя не допускается.
 - **Device-QA handoff** — требуемая модель/API, команда установки, `AND-USB-*`,
   screenshot/logcat evidence и expected result; developer их не запускает.
 - **Файлы** — `path:line` на каждую правку, отдельно помечены платформенные
@@ -245,6 +244,6 @@ alpha/internal/production) не инициируешь и не выполняе�
 темизация, контракт карточки точки) и «Development workflow» (стадии device QA).
 Без открытия документа:
 
-- Общий файл или компонент сам по себе не создаёт device gate: shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`).
-- Native device QA живёт в стадии `testing` и только для Android/iOS-specific поверхности; evidence по shared UI — desktop web + mobile web.
+- Матрица проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»: shared-логику проверяй один раз, responsive/UI-изменения — mobile web first + desktop.
+- Native QA в `testing` нужен для отличающейся реализации/поведения; выбери релевантный эмулятор/симулятор, physical/release слой — по capabilities.
 - В мобильном вьюпорте нет web-only визуальных ветвлений; темизация тематических поверхностей — через `useThemedColors()`, не `DESIGN_TOKENS.colors.*`.

@@ -81,11 +81,11 @@ release). `sprint-review` — это батч-гейт на конце: проб
 - **Статус соседней задачи — не доказательство.** BE `done`, но FE-проба ловит 404/не тот
   field/event → `problem-memory` + отдельная связанная bug/task; текущий acceptance не парковать.
 - **Mock/dev-fallback + зелёные unit-тесты** не закрывают задачу, где AC требует интеграцию с BE.
-- **Проверка определяется platform impact.** `Platform impact = Android` закрывается
-  прогоном на устройстве, `iOS` — прогоном `ios-tester` на слое из Task Contract (simulator —
-  вёрстка; физический iPhone — safe area/permissions/Keychain/HEIC/Universal Links/APNs;
-  TestFlight — приёмка релиз-кандидата), `shared/common` — desktop web + mobile web.
-  Общий компонент сам по себе не создаёт Android/iPhone device gate.
+- **Проверка определяется наблюдаемым контрактом.** Используй `docs/TESTING.md` →
+  «Risk-based validation and evidence reuse»: shared-логика проверяется один раз,
+  responsive UI — mobile web first + desktop, отдельная Android/iOS-реализация —
+  на нужном эмуляторе/симуляторе. Physical и exact TestFlight нужны только для
+  соответствующих capabilities или заданного release gate.
 - **Store-операции вне приёмки.** Signed build, upload в TestFlight, submit в App Review и
   storefront release делает только `ios-deployer` по явной команде владельца; факт заливки
   не является вердиктом приёмки.
@@ -117,6 +117,6 @@ release). `sprint-review` — это батч-гейт на конце: проб
 темизация, контракт карточки точки) и «Development workflow» (стадии device QA).
 Без открытия документа:
 
-- Общий файл или компонент сам по себе не создаёт device gate: shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`).
-- Native device QA живёт в стадии `testing` и только для Android/iOS-specific поверхности; evidence по shared UI — desktop web + mobile web.
+- Матрица проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»: shared-логику проверяй один раз, responsive/UI-изменения — mobile web first + desktop.
+- Native QA в `testing` нужен для отличающейся реализации/поведения; выбери релевантный эмулятор/симулятор, physical/release слой — по capabilities.
 - В мобильном вьюпорте нет web-only визуальных ветвлений; темизация тематических поверхностей — через `useThemedColors()`, не `DESIGN_TOKENS.colors.*`.

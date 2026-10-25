@@ -17,6 +17,12 @@ Playwright для web user-flow, Maestro для Android/iOS simulator UI, XCTest
 bounded condition waits, deterministic fixtures и cleanup; secrets не попадают
 в сценарий, логи или snapshots. Не обещай покрытие hardware по simulator pass.
 
+Выбирай scope по `docs/TESTING.md` → «Risk-based validation and evidence reuse»:
+фокусные business assertions, достаточные для shared-контракта, на ближайшем
+надёжном слое; дополнительные OS/viewport cases — только для отличающейся
+реализации или наблюдаемого риска. В handoff укажи
+переиспользуемые результаты и условие, при котором нужен повторный прогон.
+
 До review выполняй static/unit/guard checks и валидацию сценариев; runtime
 red/green для native/Playwright запускает назначенный тестер в `testing`.
 Передай exact command, app/source/backend/locale/account/driver prerequisites,

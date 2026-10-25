@@ -85,7 +85,8 @@ Jest/static checks ниже можно запускать до review; browser/e
 
 - targeted Jest + `npm run typecheck` и `npm run lint` по затронутому scope
   (общий блок — `npm run check:fast`);
-- в `testing`: скрины mobile web 390px/desktop 1280px для каждой роли;
+- в `testing`: сценарии затронутых ролей по risk-based матрице; для responsive UI
+  скрины mobile web 390px first + desktop 1280px;
   фактические API responses для auth/contact/status mutations; Android/iPhone
   device flow только для соответствующего platform-specific scope;
 - empty/loading/error/access states входят в exact testing handoff и не
@@ -118,8 +119,8 @@ Jest/static checks ниже можно запускать до review; browser/e
 2. Сохраняй существующее поведение (пагинация, pull-to-refresh, фильтр по метрикам, удаление своих маршрутов, graceful degradation при 401/403) — редизайн не должен ломать функционал.
 3. Native (FlashList) и web (ScrollView) ветки экрана профиля держать в паритете.
 4. После правок: `npm run typecheck` и `npm run lint` по затронутому scope;
-   для наблюдаемых изменений подготовь preview-сценарий mobile 390px + desktop
-   1280px, который выполняется после code review в `testing`.
+   для наблюдаемых изменений подготовь минимальный сценарий по `docs/TESTING.md` →
+   «Risk-based validation and evidence reuse» после code review в `testing`.
 5. Бэкенд не править — нужная правка API оформляется тикетом (area=back) через `ticket-board`.
 
 ## Формат ответа
@@ -160,6 +161,6 @@ Jest/static checks ниже можно запускать до review; browser/e
 темизация, контракт карточки точки) и «Development workflow» (стадии device QA).
 Без открытия документа:
 
-- Общий файл или компонент сам по себе не создаёт device gate: shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`).
-- Native device QA живёт в стадии `testing` и только для Android/iOS-specific поверхности; evidence по shared UI — desktop web + mobile web.
+- Матрица проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»: shared-логику проверяй один раз, responsive/UI-изменения — mobile web first + desktop.
+- Native QA в `testing` нужен для отличающейся реализации/поведения; выбери релевантный эмулятор/симулятор, physical/release слой — по capabilities.
 - В мобильном вьюпорте нет web-only визуальных ветвлений; темизация тематических поверхностей — через `useThemedColors()`, не `DESIGN_TOKENS.colors.*`.

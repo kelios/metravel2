@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Mobile Tester"
   short_description: "Test mobile web or Android by target"
-  default_prompt: "Use $metravel-mobile-tester to select mobile web and/or Android from observable scope, use USB device evidence only for Android-specific behavior, and preserve parity without an automatic paired gate."
+  default_prompt: "Use $metravel-mobile-tester to verify the affected mobile-web or Android contract on the smallest appropriate layer and reuse compatible evidence."

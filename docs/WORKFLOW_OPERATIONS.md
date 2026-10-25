@@ -26,12 +26,13 @@ quality-gate lock — в §5 «Validation и handoff».
 
 ### 3.0 Локальный стек и обновление бэкенда перед тестированием
 
-Проверочный таргет по умолчанию — локальный стек этой машины (`AGENTS.md` §4,
-«Условные контракты»). Дев `192.168.50.36` и прод `metravel.by` подключаются
-точечной переменной окружения перед конкретной командой и только по явному
-запросу владельца; правка дефолтов ради них запрещена.
+Локальные development/runtime-пробы используют стек этой машины (`AGENTS.md` §4,
+«Условные контракты»). Приёмка после review/push/deploy использует production по
+§3.3.1; ради production-only smoke локальный стек не запускается и не обновляется.
+Дев `192.168.50.36` подключается только по явному запросу владельца точечной
+переменной окружения; правка дефолтов ради dev/prod запрещена.
 
-**Обновление бэкенда обязательно ДО первой пробы в каждой сессии тестирования.**
+**Обновление бэкенда обязательно ДО первой локальной runtime-пробы сессии тестирования.**
 Локальный checkout отстаёт молча и API при этом отвечает `200`: замер 29.08.2026 —
 26 коммитов позади `origin/master`, шесть неприменённых миграций. Такой бэк
 выдаёт ложные дефекты фронта («поле не сохраняется», «404 на новом эндпоинте»),
@@ -337,11 +338,13 @@ frontend-тикета в `testing`. Implementation и `review` передают 
   already given in the conversation; one stage does not authorize the next.
   This never authorizes changing `alpha`, `internal`, `beta`, tester lists,
   countries, or the active closed-testing release.
-- Если задача затрагивает Android-specific наблюдаемое поведение, конфигурацию
-  или runtime, считай, что Android-телефон подключён к этому компьютеру по
-  USB-кабелю: сначала проверь `adb devices -l`. Общий файл или common responsive
-  UI сам по себе Android device gate не создаёт.
-- Если `adb` показывает устройство со статусом `device`, сначала собери Android локально и установи сборку на телефон (`cd android && ./gradlew :app:installDebug` или `:app:assembleDebug` + `adb install -r ...`), затем самостоятельно тестируй нужный Android-сценарий по `docs/MANUAL_TEST_CASES.md` `AND-USB-*`.
+- Android-specific сценарий проверяется локальной сборкой на нужном эмуляторе;
+  выбор слоя и повторное использование evidence — `docs/TESTING.md` →
+  «Risk-based validation and evidence reuse». Shared-код не создаёт native gate.
+- Для физических capabilities или явно заданного USB/release gate сначала
+  проверь `adb devices -l`, затем установи локальную сборку на телефон
+  (`cd android && ./gradlew :app:installDebug` или `:app:assembleDebug` +
+  `adb install -r ...`) и прогони только релевантные `AND-USB-*`.
 - Перед любой native-пробой (эмулятор, USB, dev-client с Metro) — `npm run
   native:stamp:check` (#2469). Локальная сборка (`npm run android:build:dev`,
   `android:build:prod`) пишет рядом с артефактом `*.native-stamp.json`: версии
@@ -447,6 +450,10 @@ deny → allow → Settings → retry снимают на свежепостав
 
 ### 3.3.1 Production-target validation and task closure
 
+- Объём повторной приёмки выбирается по `docs/TESTING.md` → «Risk-based validation
+  and evidence reuse»: обычный выкат получает узкий production smoke и повторно
+  использует совместимые локальные результаты. Полный flow повторяется только
+  для изменившегося контракта, production-specific риска или заданного release gate.
 - Если проблема воспроизводится на production, Task Contract называет production
   target или задача оптимизирует запросы, изображения, LCP, bundle, cache либо
   API fan-out, до правки сними baseline на живом production URL. Минимальный

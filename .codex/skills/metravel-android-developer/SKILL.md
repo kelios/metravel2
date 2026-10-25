@@ -1,6 +1,6 @@
 ---
 name: metravel-android-developer
-description: Implement and debug Android/native compatibility in the metravel Expo React Native app, then hand reviewed changes to testing for local Gradle/USB device QA. Never use Android EAS/cloud builds or submits.
+description: Implement and debug Android/native compatibility in the metravel Expo React Native app, then hand reviewed changes to targeted emulator/device QA. Never use Android EAS/cloud builds or submits.
 ---
 
 # Metravel Android Developer
@@ -43,11 +43,10 @@ guidance only when the task needs it.
 - Android EAS/cloud builds and submits are disabled. Never run an EAS Android or
   `--platform all` command. Local Android production/store work belongs to
   `$metravel-google-play-operator`.
-- During implementation and review, do not build/install on or inspect a USB
-  device. Record the exact `AND-USB-*` handoff. Android verification in
-  `testing` requires a locally built app installed on the USB-connected phone;
-  do not substitute mobile web viewport, Expo web export, EAS builds, or
-  dev-client/export flow without explicit user approval.
+- During implementation and review, do not execute native runtime QA. Select
+  the testing layer by `docs/TESTING.md` → `Risk-based validation and evidence
+  reuse`: a local emulator for Android-specific UI/logic, physical USB for its
+  capabilities or an assigned release gate. Web evidence cannot prove a native boundary.
 
 ## Bug Intake
 
@@ -56,12 +55,16 @@ guidance only when the task needs it.
 - Use `area=front`, `status=todo`, `reporter=Codex Android QA`, and `assignee=metravel-android-developer` for newly confirmed Android app/frontend bugs. Do not use `area=android`; keep Android context in the title, description, validation, and assignee. Create `area=back` only when evidence shows a backend/API/server defect.
 - Include device model, Android/API version, exact route, reproduction steps, `adb logcat`/Metro evidence, acceptance criteria, likely files, validation, and blockers.
 
-## Testing Handoff: USB Local Build Smoke
+## Testing Handoff: Targeted Local Build Smoke
 
 Do not execute this flow during implementation or review. Hand it to
 `$metravel-mobile-tester` only after the reviewed commit is in `testing`. The
 project is worked on from both Windows and macOS, so keep commands portable when
 documenting the handoff.
+
+Reuse a compatible installed candidate. The USB commands below apply only when
+the selected case needs a physical phone; use the emulator for ordinary native
+UI/logic and do not replay identical shared behavior on both targets.
 For QA coverage, pair this launch flow with `docs/MANUAL_TEST_CASES.md` `AND-USB-*` cases and `e2e/maestro/` flows when available.
 
 1. Find `adb`.
@@ -119,12 +122,12 @@ npx jest __tests__/config/native-compat-governance.test.ts --runInBand
 - For code changes, run the relevant targeted tests plus `npm run check:fast` when the logical block is finished.
 - For locale or UI-copy changes, run `npm run test:i18n` and hand language
   persistence plus the changed cold-restart flow to device testing.
-- If a shared file changed for native reasons, run the narrowest relevant web
-  regression control when its web path is affected. Common responsive UI is
-  verified on desktop and mobile web without an automatic Android device gate.
+- If a shared file changed for native reasons, select the affected web control
+  through the canonical risk-based matrix; do not duplicate an unchanged shared
+  behavior across viewports or platforms.
 - Do not claim "works on Android" from implementation or code review. The
-  testing agent may make that claim only after a local build was installed on
-  the USB phone and the relevant `AND-USB-*` cases passed.
+  testing agent may make that claim only for the local emulator/device build
+  and relevant cases actually tested; physical claims require physical evidence.
 
 ## Output Contract
 

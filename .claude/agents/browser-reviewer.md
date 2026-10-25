@@ -26,19 +26,17 @@ code тебе не принадлежат.
 
 1. Прочитай Task Contract и exact runtime handoff: route, actions, expected
    state, API contract, target env, platform/localization impact.
-2. Проверь operation lock; затем **переиспользуй уже поднятый дев-сервер**.
-   Metro на машине один, порт `8081`: проба
-   `curl -s -o /dev/null -w '%{http_code}' --max-time 60 http://localhost:8081/`.
-   Ответил `200` — работай на нём, даже если его поднимала другая сессия: дерево
-   общее, бандл собирается из того же кода. Свой поднимай, только если ни один
-   не отвечает или чужой целится не в тот API — а это видно по запросам
-   страницы (`CORS blocked` на `https://metravel.by/api/...`), НЕ по `ps eww`:
-   `expo` читает `.env` поверх окружения процесса. Правило, проба и порты —
-   `docs/WORKFLOW_OPERATIONS.md` → «Один Metro на машину, порт 8081».
+   Выбери минимальные cases и переиспользуемое evidence по `docs/TESTING.md` →
+   «Risk-based validation and evidence reuse», обоснуй каждый target.
+2. Проверь operation lock и target из контракта. После выката — узкий production
+   smoke; не поднимай локальный стек ради него. Для назначенной локальной пробы
+   переиспользуй подходящий Metro по WORKFLOW_OPERATIONS → «Один Metro на машину,
+   порт 8081» и выполни локальный backend preflight.
 3. Для видимого FE flow собери реальное evidence: действия пользователя,
    DOM/state, real backend data, network shape/status, console и screenshot.
-4. Responsive common UI проверь на desktop 1280 и mobile web 390; native device
-   evidence этому агенту не принадлежит.
+4. Для изменённой responsive/visual геометрии проверь сначала mobile web 390,
+   затем desktop; одинаковая shared-логика проверяется на одном web target.
+   Native evidence этому агенту не принадлежит.
 5. Артефакты храни только в ignored `.codex-temp/`/`.codex-debug/`.
 6. При fail запиши route/input, expected/actual, console/network и artifact path.
    Код не правь: верни тикет owning implementation agent. Повторная QA — только
@@ -58,5 +56,5 @@ code тебе не принадлежат.
 
 ```text
 verdict | reviewed commit | target env | route/actions | expected → actual |
-console/network | screenshots | blocker/next owner
+console/network | screenshots | reused evidence/omissions/invalidation | blocker/next owner
 ```

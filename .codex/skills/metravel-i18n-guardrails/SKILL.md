@@ -54,12 +54,14 @@ the diff touches their contract.
    locale resources in the same change.
 3. Check web SSR/hydration behavior and native cold-start/persisted-locale impact
    for shared provider, storage, or configuration changes.
-4. Run `npm run test:i18n` for any localization or user-facing copy change, then
-   run the normal checks required by the touched feature.
-5. Verify the changed user flow in every affected locale and observable target.
-   Common/shared responsive copy uses desktop-web and mobile-web evidence.
-   Verify Android or iPhone cold restart only for that platform's locale
-   lifecycle/storage/runtime scope at the appropriate native evidence layer.
+4. Run `npm run test:i18n` for affected app resources/providers/locale contracts.
+   Editorial/API content translations use their structural/content validators;
+   they do not by themselves require the whole app-resource suite.
+5. Select runtime locales/platforms through `docs/TESTING.md` → `Risk-based
+   validation and evidence reuse`. Validate all changed resources/data, but
+   replay UI only for distinct long-text, formatting, fallback, persistence or
+   rendering risks. Native cold restart belongs only to a changed native locale
+   lifecycle/storage/runtime boundary.
 
 ## Handoff
 

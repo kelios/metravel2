@@ -30,8 +30,8 @@ build, запиши testing handoff, но не запускай этот сло�
 **Что уточнить в постановке**
 
 - платформенный это файл (`*.ios.tsx` / `*.native.tsx`) или общий: для общего
-  подготовь desktop web + mobile web testing handoff; iPhone scenario требуется
-  только для iOS-specific scope, Android — только для Android-specific;
+  выбери минимальный handoff по `docs/TESTING.md` → «Risk-based validation and
+  evidence reuse»; отдельный native-сценарий нужен для изменённой OS-границы;
 - какой слой evidence требует каждый затронутый сценарий — колонка Layer в
   таблице назначенных кейсов `IOS-*` (`docs/MANUAL_TEST_CASES.md`); «готово к TestFlight» без
   прогона нужного слоя невозможно вывести из diff'а;
@@ -132,7 +132,7 @@ privacy manifest и required-reason API; production-origins, placeholder'ы и
 утёкшие секреты; серверную границу Apple-логина, жизненный цикл Keychain,
 валидацию host/route для Universal Links, permission/token/removal для APNs;
 локали RU/BE/UK/PL/EN; VoiceOver, Dynamic Type, 44pt-таргеты. Для каждого общего
-файла — containment: desktop web + mobile web.
+файла — static containment и только затронутые runtime-сценарии по risk-based матрице.
 
 Конфигурацию проверяй командой, а не глазами: `npm run ios:release:guard`
 (read-only, стор не мутирует).

@@ -24,7 +24,9 @@ Check only what is safe to read:
 
 ## Process
 
-1. State target URL and reason for the smoke.
+1. State the changed target URL and deploy-specific risk. Use `docs/TESTING.md` →
+   `Risk-based validation and evidence reuse`; reuse compatible local behavior
+   evidence and keep this smoke narrow instead of replaying the full suite.
 2. Check operation gate before launching long browser/e2e/Lighthouse work. Simple `curl` GET probes are read-only and do not need a lock.
 3. Use `curl -I`/`curl -s` or browser probes; never send mutating requests. A
    server-side `git status --short`, `git diff`, or `git ls-files` check may be

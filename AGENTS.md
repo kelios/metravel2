@@ -47,9 +47,10 @@ Validation:
   --short` по целевым файлам. Чужие несохранённые правки в них означают, что
   карточку уже ведут. Механическая страховка — хук `.claude/hooks/task-claim.mjs`,
   но он видит только сессии этой машины и разговора не заменяет.
-- Platform `shared` не создаёт автоматический Android/iPhone gate. Видимый
-  common responsive UI проверяется на desktop web и mobile web; device gate
-  нужен только для соответствующего platform-specific behavior/config/runtime.
+- Выбор проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»:
+  одинаковую shared-логику проверяй один раз; responsive/UI-изменения — сначала
+  mobile web, затем desktop web; отдельный Android/iOS-код — на нужном
+  эмуляторе/симуляторе. Физический слой нужен для его capabilities/release gate.
 - Production locales: RU/BE/UK/PL/EN, fallback RU. Новый app-owned UI text и
   locale formatting проходят через `i18n`; editorial/API content не переводится
   на клиенте.
@@ -177,7 +178,7 @@ Validation:
   старых прод-статей картинки не грузятся: это ожидаемо, для медиа-проверок
   создаётся своя тестовая статья. Устройство целится на тот же бэкенд по LAN-IP.
   Полное описание стека — `/Users/juliasavran/Sites/metravel/README-local.md`.
-- Перед ПЕРВОЙ пробой в каждой сессии тестирования бэкенд обновляется до
+- Перед ПЕРВОЙ локальной runtime-пробой сессии тестирования бэкенд обновляется до
   `origin/master`: `git -C ../metravel-backend fetch origin master && git -C
   ../metravel-backend reset --hard origin/master`, затем `migrate` при новых
   миграциях, `uv sync` при изменении зависимостей и рестарт `run-backend.sh`.
@@ -207,8 +208,9 @@ Validation:
   свободный ответ, правя task/hint шага без вопроса владельцу. Подтверждение
   остаётся для правки опубликованного текста по своей инициативе, снятия квеста
   и нового города с alias-риском — скилл `metravel-quest` → «Полномочия».
-- Android-specific scope: после зелёного review и перехода в `testing` — сначала
-  `adb devices -l`, затем local build/install и device QA. iOS-specific scope в
+- Android-specific scope: после зелёного review и перехода в `testing` — local
+  build/install и QA на нужном эмуляторе; для physical/release gate сначала
+  `adb devices -l` и USB device QA. iOS-specific scope в
   `testing` выбирает simulator/physical/TestFlight layer по затронутому
   контракту; hardware capabilities не доказываются simulator.
 
@@ -229,12 +231,14 @@ Validation:
   правке под задачу не подлежат; внутренний цикл — `E2E_SUITE=smoke npm run e2e`
   или `npm run check:e2e:changed`, а не полный набор. Условия и ручки —
   `docs/TESTING.md` → «Run budget».
-- Перед первой e2e/browser-пробой локальный бэкенд поднимается долгоживущим
+- Перед первой локальной e2e/browser-пробой локальный бэкенд поднимается долгоживущим
   процессом и проверяется сторожем на весь прогон: мёртвый `localhost:8000` не
   красит набор честно — спеки на моках проходят, а зависящие от живого каталога
   падают как «регрессия вёрстки».
-- Localization: `npm run test:i18n`; external links: соответствующий governance
-  guard; release/performance: только production build/real URL по профильному doc.
+- Localization: app-owned ресурсы/locale contracts — `npm run test:i18n`,
+  editorial/API переводы — профильные data/content validators. External links:
+  соответствующий governance guard; release/performance — production build/real URL
+  по профильному doc.
 - `SKIPPED` из-за чужого quality gate — coordination evidence, не pass. Если
   результат обязателен, запроси его и продолжи тот же acceptance pass.
 - Карточки ведутся ПОЕЗДАМИ (правило владельца 05.10.2026): 3–6 карточек одной

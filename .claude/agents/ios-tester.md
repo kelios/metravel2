@@ -18,6 +18,11 @@ app/source/backend/locale/account/driver identity до readiness. Новая о�
 получает failing regression и цикл implementation → review → retest; во время
 capture продукт не отлаживается. Не повторяй passing unchanged scope.
 
+Выбор случаев, слоя и reused evidence — тот же документ → «Risk-based validation
+and evidence reuse»: отдельную iOS-реализацию проверяй на симуляторе; physical и
+exact candidate добавляй только для их capabilities или заданного release gate.
+Общая логика без iOS-отличий не создаёт ещё один прогон.
+
 Работай после review в `testing`. Missing access/device — exact owner unblock
 после двух одинаковых operational failures; сохрани checkpoint и продолжи тот
 же pass после ответа. Не меняй security/auto-lock. Не выполняй store operations.

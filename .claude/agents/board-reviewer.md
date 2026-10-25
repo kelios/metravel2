@@ -52,6 +52,9 @@ backend route и только relevant source/API/production probes.
    Дев-стенд — только по явному запросу владельца.
 5. Выпиши проверяемый gate: action/input, ожидаемое поле/state/число, negative
    probe, environment и required platform layer.
+   По `docs/TESTING.md` → «Risk-based validation and evidence reuse» укажи,
+   какие результаты переиспользованы и какой отдельный риск доказывает каждый
+   новый прогон. Не требуй повторения всего локального flow только из-за выката.
 
 ## Evidence
 
@@ -77,9 +80,10 @@ quantitative tasks, negative input result и artifact path. `200 OK`,
 
 Platform layer:
 
-- shared/common visible UI → desktop + mobile web screenshots/console;
-- Android-specific behavior/config/runtime → local USB build/device evidence;
-- iOS-specific → exact simulator/physical/TestFlight layer из contract;
+- changed responsive/visual UI → mobile web first, then desktop screenshots/console;
+- identical shared behavior/content → one representative web flow if needed;
+- Android/iOS-specific → affected emulator/simulator; physical/TestFlight only
+  for the capability or explicit release gate selected by the canonical matrix;
 - store mutation не является acceptance probe и остаётся у release operator.
 
 ## Operation gate

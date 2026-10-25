@@ -48,10 +48,10 @@ Residual risk:
 - Prefer reuse of existing components, hooks, services, and utilities.
 - Design against one Expo/React Native architecture. Separate technical platform
   adapters from shared product behavior and name validation per affected active
-  platform. Common/shared responsive UI uses desktop-web and mobile-web
-  evidence. Android and iOS evidence is required only for target-specific
-  observable behavior/configuration/runtime, at the appropriate native layer.
-  Treat mobile parity as an invariant rather than an automatic device matrix.
+  platform. Choose minimal checks and compatible reused evidence through
+  `docs/TESTING.md` → `Risk-based validation and evidence reuse`; each additional
+  OS/viewport needs a distinct changed boundary. Mobile parity is an invariant,
+  not an automatic device matrix.
 - For app-owned UI copy or locale-sensitive behavior, define translation
   namespaces/keys, formatting, accessibility/SEO impact, RU/BE/UK/PL/EN coverage,
   and `npm run test:i18n`. Require a separate API contract for localized server content.

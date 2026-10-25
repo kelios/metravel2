@@ -25,9 +25,9 @@ visual matrix для `ios-tester` после code-review pass в `testing`.
 **Что уточнить в постановке**
 
 - правится платформенный файл (`*.ios.tsx` / `*.native.tsx`) или общий
-  компонент: общий обязывает к desktop web + mobile web ~390px; iPhone device
-  evidence нужно только для iOS-specific поверхности, Android — только для
-  Android-specific поверхности;
+  компонент: для responsive/visual-правки mobile web first + desktop, для
+  отличающейся native-реализации — нужный симулятор по `docs/TESTING.md` →
+  «Risk-based validation and evidence reuse»;
 - какой слой evidence закрывает задачу: simulator (вёрстка, иерархия, локали,
   тёмная тема), физический iPhone (реальные safe area под Dynamic Island и home
   indicator, клавиатура, системные диалоги permissions, Dynamic Type на

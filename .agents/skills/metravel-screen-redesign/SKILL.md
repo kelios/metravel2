@@ -1,6 +1,6 @@
 ---
 name: metravel-screen-redesign
-description: "Редизайн одного экрана по правилам проекта (фото-доминанта, шапка ≤20%, токены) с проверкой в браузере mobile + desktop. Триггеры: «переделай дизайн <экрана>», «сделай экран красивее»."
+description: "Редизайн одного экрана по правилам проекта (фото-доминанта, шапка ≤20%, токены) с проверкой в браузере mobile + desktop. Триггеры: «переделай дизайн экрана», «сделай экран красивее»."
 ---
 
 # metravel-screen-redesign
@@ -71,15 +71,17 @@ load-bearing правил проекта. Перед работой прочит
 - Не переделывать дизайн-систему — это `/metravel-design-system`.
 - Сквозной аудит многих экранов — `/metravel-design-audit`.
 
-## Паритет с устройством (обязательный шаг верификации)
+## Паритет и выбор проверочного слоя
 
-Редизайн экрана верифицируется на ТРЁХ вьюпортах: mobile web 390, desktop 1280 и
-native-устройство/эмулятор (`adb exec-out screencap -p`; dev-client на том же Metro —
-HMR подтянет правки). Эталон при расхождении — устройство. Не вводить в редизайн web-only
+Responsive-редизайн проверяется сначала на mobile web 390, затем desktop 1280.
+Native-эмулятор/симулятор добавляется только для изменённой отдельной реализации
+или platform-specific поведения; physical — для его capabilities/release gate.
+Матрица и reuse evidence — `docs/TESTING.md` → «Risk-based validation and evidence
+reuse». Не вводить в редизайн web-only
 визуальные ветвления для мобильного: serif — только desktop (`!isMobile`), hover-reveal —
 только desktop, контент (чипы/кнопки/бейджи) не скрывать `Platform.OS === 'web'`,
 тематические поверхности — только `useThemedColors()`, не `DESIGN_TOKENS.colors.*`
-(`docs/RULES.md` → «UI rules»). Скрины всех трёх вьюпортов — в отчёт.
+(`docs/RULES.md` → «UI rules»). В отчёт входят только назначенные слои и причины их выбора.
 
 ## Проверка по platform impact (обязательное правило)
 
@@ -87,6 +89,6 @@ HMR подтянет правки). Эталон при расхождении �
 темизация, контракт карточки точки) и «Development workflow» (стадии device QA).
 Без открытия документа:
 
-- Общий файл или компонент сам по себе не создаёт device gate: shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`).
-- Native device QA живёт в стадии `testing` и только для Android/iOS-specific поверхности; evidence по shared UI — desktop web + mobile web.
+- Матрица проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»: shared-логику проверяй один раз, responsive/UI-изменения — mobile web first + desktop.
+- Native QA в `testing` нужен для отличающейся реализации/поведения; выбери релевантный эмулятор/симулятор, physical/release слой — по capabilities.
 - В мобильном вьюпорте нет web-only визуальных ветвлений; темизация тематических поверхностей — через `useThemedColors()`, не `DESIGN_TOKENS.colors.*`.

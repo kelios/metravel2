@@ -17,16 +17,17 @@ section needed from `docs/TESTING.md` or `docs/WORKFLOW_OPERATIONS.md`.
 ## Runtime entry
 
 For a changed-code acceptance pass, require reviewed code in `testing` before
-runtime probes. Default to the local stack and perform the session's backend
-refresh/readiness procedure from `docs/WORKFLOW_OPERATIONS.md` →
-`3.0 Локальный стек и обновление бэкенда перед тестированием` before the first
-probe. Use dev or production only when explicitly requested; record the actual
-API target. This skill does not grant permission to message other people.
+runtime probes. Use the Task Contract's target and inherited acceptance pipeline;
+record the actual API target. Refresh the local backend only for a local runtime
+probe, using WORKFLOW_OPERATIONS §3.0. Dev remains an explicit owner choice.
+This skill does not grant permission to message other people.
 
 ## Testing Loop
 
 1. Confirm the board ticket is in `testing` and identify the reviewed commit,
    target environment, and exact user-visible scenarios from the handoff.
+   Select checks and reusable evidence through `docs/TESTING.md` →
+   `Risk-based validation and evidence reuse`; explain each target's distinct risk.
 2. If the ticket is still in `review`, stop and route it to
    `$metravel-code-reviewer`; do not open a browser.
 3. Start or reuse a local preview only after checking the operation gate for
@@ -36,7 +37,7 @@ API target. This skill does not grant permission to message other people.
    - screenshot in `.codex-temp/` or `.codex-debug/`
    - browser console errors
    - network failures when data/media changed
-   - desktop and mobile widths when layout is responsive
+   - mobile web first, then desktop only when responsive/visual behavior changed
 5. If the runtime behavior fails, capture the route, input, actual result,
    console/network evidence, and screenshot. Return the ticket to the owning
    implementation flow; do not patch source while acting as tester.

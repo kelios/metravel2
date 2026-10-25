@@ -24,8 +24,10 @@ description: "UI/UX-ревью web-фронтенда в браузере: юз�
 
 ## Шаги
 
-1. **Запусти preview** (`npm run web`, preview_start) и проверяй каждую страницу в двух
-   вьюпортах: **390×844 (mobile)** и **1280×800 (desktop)** (`resize_window`). На каждую —
+1. **Выбери scope и target** по `docs/TESTING.md` → «Risk-based validation and evidence
+   reuse». Для responsive/visual-аудита проверяй сначала **390×844 (mobile)**,
+   затем **1280×800 (desktop)**; для одинаковой shared-логики достаточно одной
+   обоснованной web-пробы. Переиспользуй совместимое passing evidence. На проверку —
    `read_page` (структура и текст), `read_console_messages`, и скриншот только там, где нужен
    пиксельный вид или доказательство владельцу.
 2. **Визуальные эвристики** (на каждую страницу):

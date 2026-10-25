@@ -681,12 +681,11 @@ id зависимостей, конкретные команды/URL валид�
   операция, исследование); для bug и для консолидации `none` запрещён.
   Это поле — прямое следствие замера в `docs/PROBLEM_MEMORY.md`: семейства, у которых
   после фикса не осталось постоянного контроля, воспроизводились неограниченно.
-- Для common/shared responsive UI `Validation` включает desktop web и mobile
-  web. Android device evidence добавляется только для Android-specific
-  behavior/config/runtime, iPhone evidence нужного
-  simulator/physical/TestFlight layer — только для iOS-specific scope. Сам общий
-  файл device gate не создаёт. Localization evidence указывает проверенные
-  locales, formatting/plural/SEO/accessibility scope и i18n tests.
+- `Validation` выбирается по `docs/TESTING.md` → «Risk-based validation and evidence
+  reuse»: назови изменённый контракт, distinct risk каждого target, reused evidence,
+  deliberate omissions и условие retest. Shared-файл не создаёт дублирующие
+  web/native-прогоны; responsive/UI-геометрия требует mobile web first + desktop.
+  Localization evidence различает resource/data checks и отдельные runtime-риски.
 - `Done gate` — условия закрытия: код + тесты + runtime evidence. Для BE, который разблокирует
   FE, `done` требует доступную релевантную smoke-пробу deploy target (`dev`/`prod`)
   по контрактным endpoints; client/device evidence остаётся в связанной FE-задаче. Для FE,

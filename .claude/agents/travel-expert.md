@@ -92,9 +92,10 @@ Jest/static checks ниже можно запускать до review; browser/e
 
 - targeted Jest по затронутому surface + `npm run check:fast`; правка `api/`
   или типов — `npm run typecheck`;
-- в `testing`: скрины mobile web 390px/desktop 1280px, console/network,
-  bilateral `verify:slider` + `verify:slider-perf`, target raw HTML и реальный
-  upsert/publish/moderation API response;
+- в `testing`: минимальные targets и reused evidence по risk-based матрице;
+  responsive UI — mobile web first + desktop screenshots/console/network;
+  `verify:slider` + `verify:slider-perf` — при изменении slider/media/performance,
+  raw HTML и upsert/publish/moderation response — для затронутого контракта;
 - НЕ доказывают: зелёный unit-тест — вёрстку; локальный дев — прод;
   `SKIPPED` с кодом `0` под quality-gate lock — это ноль проверок, а не pass.
 
@@ -182,6 +183,6 @@ LOC сверяй перед работой: `npm run guard:file-complexity` (п�
 темизация, контракт карточки точки) и «Development workflow» (стадии device QA).
 Без открытия документа:
 
-- Общий файл или компонент сам по себе не создаёт device gate: shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`).
-- Native device QA живёт в стадии `testing` и только для Android/iOS-specific поверхности; evidence по shared UI — desktop web + mobile web.
+- Матрица проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»: shared-логику проверяй один раз, responsive/UI-изменения — mobile web first + desktop.
+- Native QA в `testing` нужен для отличающейся реализации/поведения; выбери релевантный эмулятор/симулятор, physical/release слой — по capabilities.
 - В мобильном вьюпорте нет web-only визуальных ветвлений; темизация тематических поверхностей — через `useThemedColors()`, не `DESIGN_TOKENS.colors.*`.

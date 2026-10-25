@@ -25,8 +25,8 @@ code-review pass и перехода тикета в `testing`.
 **Что уточнить в постановке**
 
 - платформенный файл (`*.ios.tsx` / `*.native.tsx`) или общий компонент —
-  общий обязывает к desktop-web и mobile-web регрессии; iPhone device gate
-  возникает только для iOS-specific scope;
+  общий требует обоснованного testing handoff по `docs/TESTING.md` → «Risk-based
+  validation and evidence reuse»; iOS-слой добавляется для отличающейся реализации;
 - какой слой evidence закрывает задачу: simulator, физический iPhone или exact
   processed TestFlight build (слой на каждый сценарий уже задан таблицей
   назначенные `IOS-*` в `docs/MANUAL_TEST_CASES.md`);

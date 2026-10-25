@@ -77,10 +77,10 @@ before code review:
 - If the change affects visible web UI, write the exact browser flow, screenshot
   viewport, and console/network expectations for the `testing` handoff; do not
   open a browser during implementation or review.
-- If the change affects visible common/shared responsive UI, hand desktop web
-  and mobile web scenarios to `testing`. Add a local Android or iPhone scenario
-  only for corresponding platform-specific scope; the tester runs it after
-  code-review pass.
+- Select testing targets and reusable evidence with `docs/TESTING.md` →
+  `Risk-based validation and evidence reuse`; responsive changes use mobile web
+  first and desktop, identical shared logic is checked once, and a separate
+  native implementation uses the affected emulator/simulator after review.
 - If localization is affected, run `npm run test:i18n` and verify the changed
   locale resources statically. Hand affected observable locale and native
   cold-restart/lifecycle scenarios to `testing` only when that platform's
