@@ -165,3 +165,14 @@ export function ensureSingleTitleTag(title: string): HTMLTitleElement | null {
 
   return titleElement;
 }
+
+/**
+ * `robots` документа по умолчанию: его ставит каждому HTML экспорта `app/+html.tsx`,
+ * и его же менеджер head (`utils/webHeadManager`) пишет после SPA-перехода странице
+ * без своего robots — вместо robots прежней страницы или пустоты (#2756).
+ */
+export function siteDefaultRobots(): string {
+  const isProduction = typeof process !== 'undefined'
+    && (process.env.EXPO_PUBLIC_SITE_URL === 'https://metravel.by' || process.env.NODE_ENV === 'production')
+  return isProduction ? 'max-image-preview:large' : 'noindex,nofollow'
+}

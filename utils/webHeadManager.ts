@@ -18,12 +18,16 @@
  * JSON-LD и прочие `<script>` по-прежнему рендерит helmet: менеджер их не трогает.
  */
 
+import { siteDefaultRobots } from '@/utils/seo'
+
 export type HeadTag =
   | { kind: 'title'; content: string }
   | { kind: 'meta'; attr: 'name' | 'property'; key: string; content: string }
   | { kind: 'link'; rel: 'canonical'; href: string }
 
 const SEO_META_NAME = /^(?:description|robots|twitter:.+)$/
+const ROBOTS_KEY = 'meta:name:robots'
+
 const SEO_META_PROPERTY = /^og:.+$/
 
 const tagKey = (tag: HeadTag): string =>
@@ -137,13 +141,16 @@ export function applyHeadTags(owner: symbol, tags: readonly HeadTag[]): void {
   current.ownedKeys = nextKeys
   if (!onInitialPath) dropExportKeys(current)
   for (const tag of tags) writeTag(tag)
+  if (current.exportKeys.size === 0) ensureDefaultRobots(current)
 
   // Эффект новой страницы может опередить запись history роутером: путь
   // перепроверяется после текущей задачи, иначе теги экспорта первого URL
   // пережили бы переход.
   if (onInitialPath && current.exportKeys.size > 0) {
     window.setTimeout(() => {
-      if (state === current && normalizePath(window.location.pathname) !== current.initialPath) dropExportKeys(current)
+      if (state !== current || normalizePath(window.location.pathname) === current.initialPath) return
+      dropExportKeys(current)
+      ensureDefaultRobots(current)
     }, 0)
   }
 }
@@ -152,6 +159,12 @@ export function applyHeadTags(owner: symbol, tags: readonly HeadTag[]): void {
 function dropExportKeys(current: State): void {
   for (const key of current.exportKeys) if (!current.ownedKeys.has(key)) removeKey(key)
   current.exportKeys.clear()
+}
+
+/** После снятия тегов экспорта страница без своего robots получает robots документа. */
+function ensureDefaultRobots(current: State): void {
+  if (current.ownedKeys.has(ROBOTS_KEY)) return
+  writeTag({ kind: 'meta', attr: 'name', key: 'robots', content: siteDefaultRobots() })
 }
 
 /**

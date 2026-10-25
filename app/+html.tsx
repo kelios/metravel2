@@ -34,6 +34,7 @@ import { ICON_FONT_FAMILY, buildFontDisplayPolicyScript, buildIconFontLoaderScri
 import { HEADER_LOGO_WEB_SRC } from '@/components/layout/headerLayoutContract'
 import { getLocaleBootCss, getLocaleBootScript } from '@/i18n/localeBootShell'
 import { getSmartAppBannerContent } from '@/utils/mobileAppHandoff';
+import { siteDefaultRobots } from '@/utils/seo';
 
 export { getAnalyticsInlineScript };
 
@@ -538,7 +539,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
 
       <meta
         name="robots"
-        content={isProduction ? 'max-image-preview:large' : 'noindex,nofollow'}
+        content={siteDefaultRobots()}
       />
 
       {/* Schema.org structured data */}

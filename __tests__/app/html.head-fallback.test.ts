@@ -184,7 +184,18 @@ describe('critical head fallback', () => {
     const filePath = path.resolve(process.cwd(), 'app/+html.tsx')
     const source = fs.readFileSync(filePath, 'utf8')
 
-    expect(source).toContain("isProduction ? 'max-image-preview:large' : 'noindex,nofollow'")
+    // #2756: один источник с клиентским менеджером head (`utils/webHeadManager`).
+    expect(source).toContain('content={siteDefaultRobots()}')
+
+    const { siteDefaultRobots } = require('@/utils/seo') as typeof import('@/utils/seo')
+    const originalSiteUrl = process.env.EXPO_PUBLIC_SITE_URL
+    try {
+      process.env.EXPO_PUBLIC_SITE_URL = 'https://metravel.by'
+      expect(siteDefaultRobots()).toBe('max-image-preview:large')
+    } finally {
+      if (originalSiteUrl === undefined) delete process.env.EXPO_PUBLIC_SITE_URL
+      else process.env.EXPO_PUBLIC_SITE_URL = originalSiteUrl
+    }
   })
 
   it('keeps browser zoom available in the web viewport contract', () => {

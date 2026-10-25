@@ -7,6 +7,7 @@
  * страницы — после прямого захода, SPA-перехода A→B→A и перехода со страницы,
  * чей SEO смонтировался поздно.
  */
+import { siteDefaultRobots } from '@/utils/seo'
 import { applyHeadTags, captureExportHead, releaseHeadTags, resetHeadManagerForTests, type HeadTag } from '@/utils/webHeadManager'
 
 const STATIC_TERMS = [
@@ -85,7 +86,9 @@ describe('webHeadManager (#2756)', () => {
     // og:image / twitter:image объявляла только страница экспорта.
     expect(count('meta[property="og:image"]')).toBe(0)
     expect(count('meta[name="twitter:image"]')).toBe(0)
-    expect(count('meta[name="robots"]')).toBe(0)
+    // robots экспорта /terms снят, на его месте robots документа.
+    expect(count('meta[name="robots"]')).toBe(1)
+    expect(content('meta[name="robots"]')).toBe(siteDefaultRobots())
     expect(count('meta[name="viewport"]')).toBe(1)
 
     window.history.pushState(null, '', '/terms')
@@ -141,7 +144,9 @@ describe('webHeadManager (#2756)', () => {
 
     expectSingleHead()
     expect(count('meta[property="og:image"]')).toBe(0)
-    expect(count('meta[name="robots"]')).toBe(0)
+    // robots экспорта /terms снят, на его месте robots документа.
+    expect(count('meta[name="robots"]')).toBe(1)
+    expect(content('meta[name="robots"]')).toBe(siteDefaultRobots())
   })
 
   it('эффект новой страницы раньше записи history: теги экспорта снимаются после текущей задачи', () => {
@@ -162,6 +167,17 @@ describe('webHeadManager (#2756)', () => {
     } finally {
       jest.useRealTimers()
     }
+  })
+
+  it('после noindex-страницы страница без robots получает robots документа, а не noindex', () => {
+    window.history.pushState(null, '', '/cookies')
+    applyHeadTags(Symbol('cookies'), page('cookies', [{ kind: 'meta', attr: 'name', key: 'robots', content: 'noindex, nofollow' }]))
+    expect(content('meta[name="robots"]')).toBe('noindex, nofollow')
+
+    window.history.pushState(null, '', '/quests')
+    applyHeadTags(Symbol('quests'), page('quests'))
+    expect(count('meta[name="robots"]')).toBe(1)
+    expect(content('meta[name="robots"]')).toBe(siteDefaultRobots())
   })
 
   it('ключ, который новая страница не объявляет, снимается', () => {
