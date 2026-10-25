@@ -201,11 +201,11 @@ seed; `stages` — этапы (каждый набор ровно в одном)
    база 0/10, v1 0/10 — база рассуждает прозой, v1 отвечает карточкой статьи.
 6. #2480 Прогон S1 → S2 (смесь `v2`), таблица по срезам, GGUF для #2463. Запущено
    24.10.2026 в 20:27 CEST: смесь `v2` — S1 6258 примеров ≈2,13 млн токенов
-   (toponyms 2035 + translations 1016 + wikivoyage 3102 + osm_intents 1046 без
+   (toponyms 2035 + translations 978 + wikivoyage 2199 + osm_intents 1046 без
    описаний POI: Overpass лежал), S2 9926 ≈4,3 млн (site 8437 + replay 1489);
    конфиги `lora-qwen3.5-4b-v2-s1.yaml` (6258 шагов) и `-s2.yaml` (resume с S1,
    9926 шагов, lr 4e-5); цепочка S1 → S2 → `eval.py --out logs/eval-v2` одним
-   скриптом под `caffeinate`. Итог 25.10: S1 2 ч 52 мин, S2 4 ч 52 мин; срезы
+   скриптом под `caffeinate`. Итог 25.10: S1 2 ч 52 мин, S2 5 ч 52 мин (≈2,1 с/шаг); срезы
    (база / v1 / v2): site 3 / 9 / 8, translations 8 / 7 / 10, toponyms 1 / 0 / 9,
    wikivoyage 2 / 1 / 6, osm_intents 0 / 0 / 10 — порог для GGUF пройден,
    адаптер `adapters/metravel-llm-v2` уходит в экспорт #2463. Факты топонимов

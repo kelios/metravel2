@@ -261,7 +261,7 @@ Test loss выше посчитан на сплите по ключу приме
 Смесь `mixes/v2.yaml`: S1 — 6258 примеров ≈2,13 млн токенов (wikivoyage 2199,
 toponyms 2035, osm_intents 1046 — только интенты, Overpass лежал, translations
 978), 2 ч 52 мин, val 2.12 → 0.92; S2 — продолжение того же адаптера на `site`
-8437 + replay 1489 из S1 (≈4,3 млн), 4 ч 52 мин, val 2.04 на сплите по
+8437 + replay 1489 из S1 (≈4,3 млн), 5 ч 52 мин (≈2,1 с/шаг), val 2.04 на сплите по
 сущностям (с v1 напрямую не сравнивается: там сплит по id примера с утечкой
 перефраз). Оценка `eval.py` по всем срезам (`logs/eval-v2/report.md`):
 
@@ -301,8 +301,9 @@ batch 1, seq 1024, loss по ответу):
 `17a57569b4c191e62cdb60e2ddf23cd6319a130bf5bf022341406187f8d36611`. После
 квантизации (`eval.py --server`, llama-server Q4_K_M против базы Q4_K_M,
 `logs/eval-v2-gguf/report.md`): osm_intents 9/10, site 9/40, toponyms 9/15,
-translations 8/10, wikivoyage 5/10 — дрейф в пределах одного вопроса на срез,
-как у v1. Сервер: `llama-server -m gguf/metravel-llm-v2-Q4_K_M.gguf --port 8080
--c 8192 --parallel 2 --jinja` (launch.json: «Llama Server v2 GPU 8081»).
+translations 8/10, wikivoyage 5/10 — дрейф до двух вопросов (translations
+10 → 8, article_card 4/4 → 2/4), остальные срезы ±1, как у v1. Сервер: `llama-server -m gguf/metravel-llm-v2-Q4_K_M.gguf --port 8081
+-c 8192 --parallel 2 -ngl 99 --jinja` (launch.json: «Llama Server v2 GPU 8081»;
+на 8080 — база и v1 CPU).
 
 Данные и веса в репозиторий не попадают; секретов нет (API публичный).
