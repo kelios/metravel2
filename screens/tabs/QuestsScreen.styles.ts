@@ -567,10 +567,11 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             alignItems: 'center',
             gap: spacing.xs,
             paddingHorizontal: isMobileW ? spacing.md : spacing.sm,
-            // Desktop: компактное поле фиксированной ширины у правого края ряда.
+            // Desktop: компактное поле фиксированной ширины у правого края ряда;
+            // 352 — самая длинная подсказка (RU, ~280px при 14px) без обрезки.
             ...(isMobileW ? { height: 44 } : { height: 36 }),
             ...(isWideDesktop
-                ? { flexGrow: 0, flexShrink: 1, flexBasis: 320, minWidth: 220, marginLeft: 'auto' }
+                ? { flexGrow: 0, flexShrink: 1, flexBasis: 352, minWidth: 220, marginLeft: 'auto' }
                 : !isMobileW && { flexBasis: '100%' }),
             borderRadius: CONTROL_RADIUS,
             borderWidth: 1,

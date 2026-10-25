@@ -919,7 +919,7 @@ select:focus-visible {
 }
 
 /* От 1280: один ряд 64px — шапка с поиском справа от заголовка, её ширина =
-   поиск 320 + зазор 16 + паддинг 24. */
+   поиск 352 + зазор 16 + паддинг 24. */
 @media (min-width: 1280px) {
   [data-testid="quests-mobile-title"] {
     flex: 0 1 auto !important;
@@ -927,7 +927,7 @@ select:focus-visible {
   }
 
   [data-testid="quests-content-header"]:has([data-testid="quests-mobile-chips"]) {
-    flex: 0 1 360px !important;
+    flex: 0 1 392px !important;
     justify-content: center !important;
     min-width: 260px;
     margin-left: auto;
