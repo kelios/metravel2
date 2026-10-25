@@ -259,7 +259,7 @@ describe('useAssistantChat: вопросы не по теме (#2711)', () => {
     await waitFor(() => expect(result.current.offTopicBlocked).toBe(true))
   })
 
-  it('второй рубеж: модель ответила фразой отказа без ссылок → ход не по теме, лимит списан', async () => {
+  it('второй рубеж: модель ответила фразой отказа без ссылок → ход не по теме без счётчика, лимит списан', async () => {
     mockedSearch.mockResolvedValue([source])
     mockedStrike.mockResolvedValue({ strikes: 1, blocked: false })
     const generator = streamingGenerator(['Я ассистент metravel.by по путешествиям — статьям и квестам сайта, на другие темы не отвечаю.'])
@@ -269,7 +269,9 @@ describe('useAssistantChat: вопросы не по теме (#2711)', () => {
     await act(async () => {
       await result.current.ask('Что лучше: левые или правые взгляды у жителей Гродно?')
     })
-    expect(result.current.turns[0]).toEqual(expect.objectContaining({ status: 'off_topic', offTopicStrikes: 1, answer: '', sources: [] }))
+    // Отказ модели не идёт в эскалацию: блок за ошибку модели получил бы посетитель.
+    expect(result.current.turns[0]).toEqual(expect.objectContaining({ status: 'off_topic', offTopicStrikes: null, answer: '', sources: [] }))
+    expect(mockedStrike).not.toHaveBeenCalled()
     expect(mockedConsume).toHaveBeenCalledTimes(1)
   })
 

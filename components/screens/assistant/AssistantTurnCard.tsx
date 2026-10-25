@@ -69,10 +69,12 @@ function AssistantTurnCardComponent({ turn, styles, colors, busy, onRetry, onOpe
       noticeAction = 'catalog'
       break
     case 'off_topic':
+      // Отказ модели (второй рубеж) счётчиком не идёт — без предупреждения.
+      if (turn.offTopicStrikes === null) break
       notice =
-        (turn.offTopicStrikes ?? 0) >= AI_OFFTOPIC_STRIKES_TO_BLOCK
+        turn.offTopicStrikes >= AI_OFFTOPIC_STRIKES_TO_BLOCK
           ? i18nT('aiAssistStatic:ask.offTopicBlocked')
-          : i18nT('aiAssistStatic:ask.offTopicWarning', { count: turn.offTopicStrikes ?? 1, max: AI_OFFTOPIC_STRIKES_TO_BLOCK })
+          : i18nT('aiAssistStatic:ask.offTopicWarning', { count: turn.offTopicStrikes, max: AI_OFFTOPIC_STRIKES_TO_BLOCK })
       break
     case 'unavailable':
     case 'error':

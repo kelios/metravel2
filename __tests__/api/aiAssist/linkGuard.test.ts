@@ -73,6 +73,12 @@ describe('aiAssist linkGuard (#2460)', () => {
     expect(enforceSourceLinks(raw, sources)).toEqual({ text: 'Стартуйте с истории\nОтель в Кракове\nСм. путеводитель.', removed: 2 })
   })
 
+  it('ссылка с искажённым адресом, но точным названием карточки получает адрес карточки (#2710)', () => {
+    const title = sources[0].title
+    const raw = `Начните с [${title}](https://metravel.by/travels/iskazhennyi-adres) и [чужого](https://metravel.by/travels/net)`
+    expect(enforceSourceLinks(raw, sources)).toEqual({ text: `Начните с [${title}](${sources[0].url}) и чужого`, removed: 1 })
+  })
+
   it('служебные <think> блоки снимаются, незакрытый — целиком', () => {
     expect(stripThinking('<think>размышляю</think>Ответ')).toBe('Ответ')
     expect(stripThinking('<think>ещё думаю')).toBe('')

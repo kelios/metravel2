@@ -69,6 +69,14 @@ const tidyText = (text: string): string =>
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 
+const normalizeTitleKey = (value: string): string =>
+  String(value ?? '')
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/[«»"'„“”]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
 export type LinkGuardResult = {
   text: string
   /** Сколько адресов вырезано как не из карточек. */
@@ -77,7 +85,10 @@ export type LinkGuardResult = {
 
 /**
  * Оставляет в тексте только адреса найденных карточек. Markdown-ссылка с чужим
- * адресом превращается в свою подпись; голый адрес исчезает.
+ * адресом превращается в свою подпись; голый адрес исчезает. Исключение —
+ * подпись ровно с названием карточки: модель переписывает транслит адреса
+ * («doehat» вместо «doekhat», замер #2710), а название копирует точно, поэтому
+ * такая ссылка получает адрес своей карточки и не считается вырезанной.
  */
 export function enforceSourceLinks(rawText: string, sources: readonly AiSource[]): LinkGuardResult {
   const allowed = buildAllowedLinkKeys(sources)
@@ -87,9 +98,13 @@ export function enforceSourceLinks(rawText: string, sources: readonly AiSource[]
     return key.length > 0 && allowed.has(key)
   }
 
+  const urlByTitle = new Map(sources.map((source) => [normalizeTitleKey(source.title), source.url]))
+
   let text = stripThinking(rawText)
   text = text.replace(MARKDOWN_LINK_RE, (match, label: string, _bracket: string, url: string) => {
     if (isAllowed(url)) return match
+    const cardUrl = urlByTitle.get(normalizeTitleKey(label))
+    if (cardUrl) return `[${label}](${cardUrl})`
     removed += 1
     return label
   })

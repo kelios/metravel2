@@ -202,8 +202,17 @@ const openFreshScreen = async (page, baseUrl, locale) => {
     },
     [LOCALE_PREFERENCE_STORAGE_KEY, JSON.stringify({ version: 1, mode: 'explicit', locale })],
   )
-  await page.reload({ waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
-  await page.locator('[data-testid="assistant-input"]').waitFor({ state: 'visible', timeout: PAGE_LOAD_TIMEOUT_MS })
+  // Пока Metro пересобирает бандл, роутер на миг уводит /assistant на главную и обратно, а
+  // переход может оборваться (ERR_ABORTED): если экран не появился, переход повторяется.
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      await page.goto(`${baseUrl}/assistant`, { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
+      await page.locator('[data-testid="assistant-input"]').waitFor({ state: 'visible', timeout: PAGE_LOAD_TIMEOUT_MS / 3 })
+      return
+    } catch (error) {
+      if (attempt >= 3) throw error
+    }
+  }
 }
 
 /** Ожидание хода; нужные карточки проверяются на последнем ходе диалога (первые — подводка). */
