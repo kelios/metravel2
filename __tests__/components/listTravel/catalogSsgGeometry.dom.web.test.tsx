@@ -89,3 +89,11 @@ it('first-frame chrome matches canonical header bands and actual search/list pro
   expect(c.compactSearchHeight).toBe(searchStyles!.actionButtonMobileWeb.height + searchStyles!.containerMobileWeb.paddingVertical * 2 + searchStyles!.container.borderWidth * 2)
   expect(c.wideSearchHeight).toBe(searchStyles!.actionButton.height + searchStyles!.container.paddingVertical * 2 + searchStyles!.container.borderWidth * 2)
 })
+
+it('first frame drops the separate toolbar band where the runtime puts the toolbar into the search row (#2755)', () => {
+  const css: string = buildCatalogSkeletonCSS()
+  expect(css).toContain(`@media(min-width:${geometry.BREAKPOINTS.DESKTOP}px){`)
+  const desktopBlock = css.slice(css.indexOf(`@media(min-width:${geometry.BREAKPOINTS.DESKTOP}px){`))
+  expect(desktopBlock).toContain('.ssg-search-toolbar{display:none}')
+  expect(css).toContain(`.ssg-search-toolbar{height:${geometry.CATALOG_CHROME_GEOMETRY.toolbarHeight}px`)
+})
