@@ -65,6 +65,9 @@ const OFFTOPIC_REFUSAL_RE = new RegExp(
 /** «На сайте такого нет» — честный отказ по теме. */
 const NO_MATERIAL_RE =
   /(?:пока\s+)?нет\s+(?:материал|стат|квест|ничего|информац)|не\s+нашл|не\s+найден|няма\s+(?:матэрыял|артыкул)|немає\s+(?:матеріал|стат)|nie\s+ma(?:my)?\s+(?:materia|artyku|questów)|brak\s+materia|(?:no|don't\s+have\s+(?:any\s+)?)\s*(?:materials?|articles?)\s+(?:about|on)/iu
+/** Reverse Russian order: the material itself is missing, within one bounded clause. */
+const NO_MATERIAL_REVERSE_RE = /(?<![\p{L}\p{N}])(?:материал|стат(?:ь|е)|квест)\p{L}*\s+[^.!?;,\n]{0,120}?(?<!\p{L})(?:нет|не\s+найден\p{L}*)(?!\p{L})/giu
+const MATERIAL_AFFIRMED_RE = /(?<!\p{L})(?:есть|имеется|имеются|но)(?!\p{L})/iu
 
 export const normalizeUrl = (value) =>
   String(value ?? '')
@@ -143,7 +146,10 @@ export const hasTemplate = (text) => {
 
 export const leaksPrompt = (text) => PROMPT_LEAK_RE.test(String(text ?? ''))
 export const isOfftopicRefusal = (text) => OFFTOPIC_REFUSAL_RE.test(String(text ?? ''))
-export const isNoMaterial = (text) => NO_MATERIAL_RE.test(String(text ?? ''))
+export const isNoMaterial = (text) => {
+  const value = String(text ?? '')
+  return NO_MATERIAL_RE.test(value) || [...value.matchAll(NO_MATERIAL_REVERSE_RE)].some((match) => !MATERIAL_AFFIRMED_RE.test(match[0]))
+}
 
 /**
  * Рекомендации в сыром ответе: сколько разных карточек названо адресом, сколько

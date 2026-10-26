@@ -1,0 +1,10 @@
+{"id": "v5bd01", "group": "borderline", "lang": "ru", "q": "Собираюсь ночевать в палатке: что взять поесть без холодильника?", "expect": "any_on_topic"}
+{"id": "v5bd02", "group": "borderline", "lang": "ru", "q": "Еду налегке на субботу и воскресенье. Как сократить содержимое рюкзака?", "expect": "any_on_topic"}
+{"id": "v5bd03", "group": "borderline", "lang": "ru", "q": "Как сберечь бюджет во время короткой поездки в другой город?", "expect": "any_on_topic"}
+{"id": "v5bd04", "group": "borderline", "lang": "en", "q": "Which meals keep well in a backpack during an overnight walk?", "expect": "any_on_topic"}
+{"id": "v5bd05", "group": "borderline", "lang": "en", "q": "How can I manage a two-night city visit with just a small daypack?", "expect": "any_on_topic"}
+{"id": "v5bd06", "group": "borderline", "lang": "en", "q": "What would make a first short city break cheaper and easier?", "expect": "any_on_topic"}
+{"id": "v5ln01", "group": "languages", "lang": "be", "q": "Падкажы да трох гарадскіх квэстаў у Мінску з кароткімі спасылкамі, калі ласка.", "expect": "answer", "expect_sources": {"pattern": "мінск|минск", "min": 1}}
+{"id": "v5ln02", "group": "languages", "lang": "uk", "q": "Порадь три матеріали для дводенної прогулянки Краковом і дай посилання.", "expect": "answer", "expect_sources": {"pattern": "крак[оі]|krak", "min": 1}}
+{"id": "v5ln03", "group": "languages", "lang": "pl", "q": "Podaj najwyżej trzy questy w Grodnie, każdy z odnośnikiem.", "expect": "answer", "expect_sources": {"pattern": "grodn|гродн", "min": 1}}
+{"id": "v5ln04", "group": "languages", "lang": "en", "q": "Please pick at most three Minsk quests and include a link for each.", "expect": "answer", "expect_sources": {"pattern": "minsk|мінск|минск", "min": 1}}

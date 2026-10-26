@@ -165,6 +165,7 @@ def main() -> int:
         target.mkdir(parents=True, exist_ok=True)
         for p in PARTS:
             write_jsonl(target / f"{p}.jsonl", st["parts"][p], messages_only=True)
+            write_jsonl(target / f"{p}.records.jsonl", st["parts"][p], messages_only=False)
         by_set: dict[str, int] = {}
         for r in st["parts"]["train"]:
             by_set[r["set"]] = by_set.get(r["set"], 0) + 1

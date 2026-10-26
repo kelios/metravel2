@@ -208,3 +208,131 @@ describe('ai-train rag_answers edition 4 (#2731)', () => {
   });
 });
 
+
+describe('ai-train rag_answers edition 5 (#2751)', () => {
+  let home: string;
+  let rows: Record<string, any>[];
+
+  beforeAll(() => {
+    home = makeTempDir('ai-train-rag5-');
+    const raw = path.join(home, 'data', 'raw');
+    fs.mkdirSync(raw, { recursive: true });
+    writeJsonl(path.join(raw, 'travels.jsonl'), [
+      { ...travel(1, 'Краков: прогулки по центру', 'Краков', 'Польша'), description: '<p>Вход на маршрут бесплатный, указана стоимость поездки 10 евро.</p>' },
+      travel(2, 'Татры: тропа через горные озёра', 'Закопане', 'Польша'),
+      { ...travel(3, 'Исторический памятник', 'Лида', 'Беларусь'), description: '<p>Крупный памятник сельскому Совету. В советские времена здесь был храм. Поездка к руинам замка в Крупе.</p>' },
+    ]);
+    const quests = Array.from({ length: 8 }, (_, i) => quest(
+      `krakow-long-${i}`, `Квест по Кракову: длинное название маршрута номер ${i} для прогулки по историческому центру`,
+      'Краков', 'krakow', 30 + i * 10,
+    ));
+    writeJsonl(path.join(raw, 'quests.jsonl'), quests);
+    const translations = path.join(home, 'data', 'sources', 'site_translations');
+    fs.mkdirSync(translations, { recursive: true });
+    writeJsonl(path.join(translations, 'quests.jsonl'), quests.flatMap((q, i) => [
+      { quest_id: q.quest_id, content_locale: 'be', title: `Квэст ${i}: гісторыі старога горада і незвычайныя падарожжы па вуліцах Кракава` },
+      { quest_id: q.quest_id, content_locale: 'uk', title: `Квест ${i}: історії старого міста та незвичайні мандрівки вулицями Кракова` },
+      { quest_id: q.quest_id, content_locale: 'pl', title: `Quest ${i}: historie starego miasta oraz niezwykłe wyprawy ulicami Krakowa` },
+      { quest_id: q.quest_id, content_locale: 'en', title: `Quest ${i}: stories of the old town and unusual journeys through the streets of Krakow` },
+    ]));
+    const mixFile = path.join(home, 'rag5.json');
+    fs.writeFileSync(mixFile, JSON.stringify({
+      name: 'rag5', split: { by: 'key', valid_share: 0, test_share: 0 },
+      sets: { rag_answers: { options: { edition: 5, per_place: 1 } } },
+    }));
+    const run = runCli('python3', ['-I', SCRIPT, '--ai-home', home, '--mix', mixFile, '--out', path.join(home, 'out')]);
+    expect(run.status).toBe(0);
+    rows = readJsonl(path.join(home, 'data', 'sets', 'rag_answers', 'train.jsonl'));
+  });
+  afterAll(() => removeDir(home));
+
+  it('длинные списки покрывают каждую локаль и останавливаются на трёх ссылках', () => {
+    const many = rows.filter((r) => r.kind === 'many' && r.key === 'place:Краков');
+    expect(new Set(many.map((r) => r.id.split(':')[2]))).toEqual(new Set(['ru', 'be', 'uk', 'pl', 'en']));
+    for (const row of many) {
+      const user = row.messages[1].content;
+      const answer = row.messages[2].content;
+      expect(user.match(/— https:\/\//g)!.length).toBeGreaterThan(3);
+      expect(answer.match(URL_RE)).toHaveLength(3);
+      expect(answer).not.toMatch(/около|about|каля|близько|джерел|sources list/);
+      expect(answer.length).toBeLessThan(700);
+      for (const url of answer.match(URL_RE) ?? []) expect(user).toContain(`— ${url}`);
+    }
+  });
+
+  it('еда, багаж и бюджет поездки получают ответ по карточкам, включая позитивный выбор маршрута', () => {
+    const boundary = rows.filter((r) => r.kind.startsWith('boundary_'));
+    expect(new Set(boundary.map((r) => r.kind))).toEqual(new Set(['boundary_missing', 'boundary_pick', 'boundary_evidence']));
+    expect(new Set(boundary.map((r) => r.id.split(':')[2]))).toEqual(new Set(['ru', 'en']));
+    expect(new Set(boundary.filter((r) => r.key === 'topic:packing').map((r) => r.kind))).toEqual(new Set(['boundary_missing', 'boundary_pick']));
+    for (const row of boundary) {
+      const answer = row.messages[2].content;
+      expect(answer).not.toBe(PROMPT.offtopic_reply[row.id.split(':')[2]]);
+      expect(answer.match(URL_RE)).toHaveLength(1);
+      expect(answer).not.toMatch(/Страна:|Точки маршрута:/);
+      for (const url of answer.match(URL_RE) ?? []) expect(row.messages[1].content).toContain(`— ${url}`);
+      if (row.kind === 'boundary_evidence') {
+        const excerpt = answer.match(/«(.+)» \[/)![1];
+        expect(row.messages[1].content).toContain(excerpt);
+        expect(answer).not.toContain('/travels/travel-3');
+        expect(excerpt).not.toMatch(/Крупный|Совету|советские/);
+      }
+      if (row.kind === 'boundary_pick') {
+        const duration = answer.match(/(\d+) (?:мин|minutes)/)![1];
+        expect(row.messages[1].content).toContain(`Длительность: ${duration} мин`);
+      }
+    }
+  });
+
+  it('не учит цитате или длительности, если сокращение карточки скрыло доказательство', () => {
+    const script = [
+      'import json, sys',
+      'from pathlib import Path',
+      `sys.path.insert(0, ${JSON.stringify(DIR)})`,
+      'from sets import rag_answers as r',
+      'from sets.assistant_prompt import build_user_message',
+      'r.fit_sources = lambda question, cards, answer, lang, **kwargs: build_user_message(question, [{**c, "snippet":"Сведения сокращены."} for c in cards], lang)',
+      `ctx = {'seed':20261017, 'raw':Path(${JSON.stringify(path.join(home, 'data/raw'))}), 'sources':Path(${JSON.stringify(path.join(home, 'data/sources'))})}`,
+      'rows = r.build(ctx, {"edition":5, "per_place":1})',
+      'assert any(row["kind"] == "boundary_missing" for row in rows)',
+      'assert not any(row["kind"] in ("boundary_evidence", "boundary_pick") for row in rows)',
+    ].join('\n');
+    const run = runCli('python3', ['-I', '-c', script]);
+    expect(run.stderr).toBe('');
+    expect(run.status).toBe(0);
+  });
+
+  it('детский ответ и уточнение не выводят возрастную пригодность из лёгкости и сохраняют ссылку', () => {
+    const kids = rows.filter((r) => r.kind === 'kids');
+    expect(kids.length).toBeGreaterThan(0);
+    for (const row of kids) {
+      const answer = row.messages[2].content;
+      expect(answer).not.toMatch(/подойдут|па[дй]дуць|підійдуть|sprawdzą się|try:/);
+      expect(answer).toMatch(/Возрастные|ўзроставыя|вікові|wiekowych|age suitability/);
+    }
+    const followup = rows.find((r) => r.kind === 'followup' && r.key === 'place:Краков');
+    expect(followup).toBeDefined();
+    expect(followup!.messages.map((m: { role: string }) => m.role)).toEqual(['system', 'user', 'assistant', 'user', 'assistant']);
+    expect(followup!.messages[2].content).not.toContain('\n');
+    const answer = followup!.messages.at(-1).content;
+    expect(answer).toContain('Сколько лет ребёнку?');
+    expect(answer.match(URL_RE)).toHaveLength(1);
+    expect(followup!.messages[3].content).toContain(answer.match(URL_RE)![0]);
+  });
+
+  it('из компактных целей не попадает невидимая в карточке метаинформация и отложенные вопросы', () => {
+    const contour = fs.readdirSync(path.resolve(process.cwd(), 'scripts/ai-assistant-eval'))
+      .filter((name) => /^cases.*\.jsonl$/.test(name))
+      .flatMap((name) => readJsonl(path.resolve(process.cwd(), 'scripts/ai-assistant-eval', name)))
+      .flatMap((c: { q?: string; turns?: string[] }) => c.turns ?? [c.q as string]);
+    const normalize = (text: string) => text.normalize('NFKC').toLowerCase().replace(/ё/g, 'е').replace(/[^\p{L}\p{N}_]+/gu, ' ').trim();
+    const heldout = new Set(contour.map(normalize));
+    for (const row of rows) {
+      for (const message of row.messages.filter((m: { role: string }) => m.role === 'user')) {
+        expect(heldout.has(normalize(message.content.split('Вопрос посетителя: ').at(-1)))).toBe(false);
+      }
+      expect(row.messages.at(-1).content).not.toContain('советы по парковке');
+      expect(row.messages.at(-1).content.match(URL_RE)!.length).toBeLessThanOrEqual(3);
+    }
+  });
+});

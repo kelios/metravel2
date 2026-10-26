@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel LLM Training"
+  short_description: "Prepare data and train local LLM candidates"
+  default_prompt: "Use $metravel-llm-training to prepare a reproducible local model candidate and hand frozen evidence to independent evaluation."

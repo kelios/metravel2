@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel LLM Evaluation"
+  short_description: "Compare models and judge held-out answers"
+  default_prompt: "Use $metravel-llm-evaluation to compare frozen model answers against the task criteria and report regressions independently."

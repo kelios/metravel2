@@ -8,6 +8,7 @@
 # base model in $AI_HOME/models, dataset from build_mix.py (config `data:`).
 set -euo pipefail
 AI_HOME="${AI_HOME:-$HOME/metravel-ai}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG="${CONFIG:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lora-qwen3.5-4b.yaml}"
 # absolute before cd "$AI_HOME", so CONFIG=scripts/ai-train/… works from the repo root
 CONFIG="$(cd "$(dirname "$CONFIG")" && pwd)/$(basename "$CONFIG")"
@@ -17,16 +18,8 @@ RUN="${RUN:-$(date +%Y%m%d-%H%M)}"
 # vs 15.4 GB uncompiled for one 1024-token sample, and 3× slower (measured
 # 2026-10-18, mlx 0.32.4). Uncompiled fits the 18 GB Metal working set.
 export MLX_DISABLE_COMPILE="${MLX_DISABLE_COMPILE:-1}"
-cd "$AI_HOME"
-mkdir -p logs adapters
-cp "$CONFIG" "logs/train-$RUN.config.yaml"
-# regression control: what the run was trained on (build_mix.py stats and manifest)
-DATA_DIR="$(awk '$1 == "data:" { print $2; exit }' "$CONFIG")"
-# (a stage of a multi-stage mix, data/sft-<mix>/<stage>, keeps manifest.json one level up)
-for f in stats manifest; do
-  for src in "$DATA_DIR/$f.json" "$DATA_DIR/../$f.json"; do
-    if [[ -n "$DATA_DIR" && -f "$src" ]]; then cp "$src" "logs/train-$RUN.$f.json"; break; fi
-  done
-done
-echo "run=$RUN config=$CONFIG log=$AI_HOME/logs/train-$RUN.log"
-exec venv/bin/python -m mlx_lm lora -c "$CONFIG" "$@" > "logs/train-$RUN.log" 2>&1
+# Exact validation, provenance snapshots and a cross-worktree training lock are
+# acquired before loading model weights. The lock descriptor survives exec and
+# is released by the OS when the trainer exits, including after a signal.
+exec "$AI_HOME/venv/bin/python" "$SCRIPT_DIR/prepare_training_data.py" \
+  --config "$CONFIG" --ai-home "$AI_HOME" --launch-run "$RUN" -- "$@"

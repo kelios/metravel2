@@ -1,0 +1,34 @@
+# #2751 isolated candidate, resumed from v4 rather than failed constraints v5.
+# Train only after exact-token preparation and finite-loss probe. The 900-step
+# budget is bounded; evaluate its final checkpoint without selecting on
+# evaluation cases or the held-out acceptance answers.
+model: models/Qwen3.5-4B-MLX-4bit
+data: data/sft-v5-rag-reviewed/s3-fit
+train: true
+fine_tune_type: lora
+optimizer: adamw
+mask_prompt: true
+num_layers: 6
+batch_size: 1
+grad_accumulation_steps: 1
+iters: 900
+resume_adapter_file: adapters/metravel-llm-v4/adapters.safetensors
+learning_rate: 1.0e-5
+max_seq_length: 1024
+grad_checkpoint: true
+steps_per_report: 20
+steps_per_eval: 100
+val_batches: 10
+save_every: 100
+adapter_path: adapters/metravel-llm-v5-rag
+seed: 20261029
+lora_parameters:
+  rank: 16
+  scale: 20.0
+  dropout: 0.05
+  keys: ["self_attn.q_proj", "self_attn.k_proj", "self_attn.v_proj", "self_attn.o_proj", "mlp.gate_proj", "mlp.up_proj", "mlp.down_proj"]
+lr_schedule:
+  name: cosine_decay
+  warmup: 50
+  warmup_init: 1.0e-6
+  arguments: [1.0e-5, 900, 1.0e-6]

@@ -8,6 +8,7 @@ import {
   detectLoop,
   evaluateTurn,
   hasTemplate,
+  isNoMaterial,
   isOfftopicRefusal,
   parseCards,
   parseSse,
@@ -17,6 +18,62 @@ import { parseJudgeLines, renderJudgeTask, renderReport, summarize } from '../..
 import { loadCases } from '../../scripts/ai-assistant-eval/run.mjs'
 import { formatSourcesBlock } from '@/api/aiAssist/prompt'
 import type { AiSource } from '@/api/aiAssist/types'
+
+describe('fixed-context quality report', () => {
+  const results = [{ id: 'q01', group: 'on_topic', lang: 'ru', turns: [{
+    question: 'Один семейный квест', expect: 'answer', reference_answer: 'Прокоцим, 90 минут',
+    criteria: { required: [] }, history: [{ role: 'user', text: 'Только в Кракове' }],
+    observed: { answerText: 'Прокоцим, полтора часа', modelCall: { cards: [] } },
+    eval: { pass: true, failures: [], warnings: [], metrics: {}, primaryLayer: null },
+  }] }]
+
+  it('keeps semantic coverage pending until all three scores exist and never claims UI coverage', () => {
+    const meta = { mode: 'fixed_context', startedAt: 't', modelUrl: 'http://localhost:8080' }
+    const pending = renderReport(meta, results)
+    expect(pending).toContain('Смысловая оценка не завершена')
+    expect(pending).not.toContain('undefined/assistant')
+    expect(pending).toContain('Прокоцим, 90 минут')
+    const judges = new Map([['q01#0', { verdict: 'pass', instruction: 2, usefulness: 2, language: 1 }]])
+    const complete = renderReport(meta, results, judges)
+    expect(complete).not.toContain('Смысловая оценка не завершена')
+    expect(complete).toContain('| 1 | Следование запросу | 2 / 2 | 1/1 |')
+    expect(complete).toContain('| 3 | Язык и естественность | 1 / 2 | 1/1 |')
+    const task = renderJudgeTask('# Судья', results, 'out')
+    expect(task).toContain('Только в Кракове')
+    expect(task).toContain('instruction=2, usefulness=2')
+  })
+
+  it('separates a false automatic failure from the independent semantic pass', () => {
+    const automaticFailure = results.map((result) => ({ ...result, turns: result.turns.map((turn) => ({ ...turn,
+      eval: { ...turn.eval, pass: false, failures: [{ check: 'no_admission', layer: 'model', detail: 'paraphrase' }], primaryLayer: 'model' },
+    })) }))
+    const judges = new Map([['q01#0', { verdict: 'pass', instruction: 2, usefulness: 2, language: 2 }]])
+    const report = renderReport({ mode: 'fixed_context' }, automaticFailure, judges)
+    expect(report).toContain('Автопроверки: 0/1; независимая смысловая оценка: 1/1')
+    expect(report).toContain('ложных автопровалов 1, ложных автопрохождений 0')
+    expect(report).toContain('Строгий итог (автопроверки и судья): 0/1')
+  })
+
+  it('reveals automatic false positives without changing the semantic verdict', () => {
+    const judges = new Map([['q01#0', { verdict: 'fail', layer: 'model', instruction: 1, usefulness: 2, language: 2 }]])
+    const report = renderReport({ mode: 'fixed_context' }, results, judges)
+    expect(report).toContain('Автопроверки: 1/1; независимая смысловая оценка: 0/1')
+    expect(report).toContain('ложных автопровалов 0, ложных автопрохождений 1')
+    expect(report).toContain('Строгий итог (автопроверки и судья): 0/1')
+  })
+
+  it.each([
+    { instruction: 0, usefulness: 2, language: 2 },
+    { instruction: 2, usefulness: 1, language: 2 },
+    { instruction: 2, usefulness: 2, language: 0 },
+    { instruction: 2 },
+    { instruction: 3, usefulness: 2, language: 2 },
+  ])('rejects a semantic pass that contradicts its scores: %j', (scores) => {
+    const parsed = parseJudgeLines(JSON.stringify({ key: 'q01#0', verdict: 'pass', ...scores }))
+    expect(parsed.errors).toHaveLength(1)
+    expect(parsed.judges.size).toBe(0)
+  })
+})
 
 // #2710: контур оценки ассистента — проверки и отчёт без браузера.
 
@@ -38,6 +95,32 @@ const observedDone = (raw: string, answerText: string, extra: Record<string, unk
 })
 
 describe('ai-assistant-eval checks', () => {
+  it.each([
+    'Отдельного материала про Гданьск на сайте пока нет. В Кракове есть квесты.',
+    'Статьи про Гданьск пока нет.',
+    'Квестов по Гданьску у нас нет.',
+    'Материал про Вильнюс пока не найден.',
+    'Нет материалов про Гданьск.',
+  ])('recognizes a missing material regardless of subject order: %s', (answer) => {
+    expect(isNoMaterial(answer)).toBe(true)
+  })
+
+  it.each([
+    'Материал про Гданьск есть, но цены нет.',
+    'Материал про Гданьск есть но цены нет.',
+    'Материал опубликован. Цены пока нет.',
+    'Квест по Гданьску найден. Билетов нет.',
+    'Квест по Гданьску есть. Нет свободного времени.',
+  ])('does not confuse another missing fact with a missing material: %s', (answer) => {
+    expect(isNoMaterial(answer)).toBe(false)
+  })
+
+  it('still requires a real admission for no_material and accepts a valid reverse-order paraphrase', () => {
+    const accepted = 'Отдельного материала про Гданьск на сайте пока нет.'
+    expect(evaluateTurn({ expect: 'no_material', lang: 'ru' }, observedDone(accepted, accepted, { linkLabels: [] })).pass).toBe(true)
+    const affirmative = 'Материал про Гданьск есть, но цены нет.'
+    expect(evaluateTurn({ expect: 'no_material', lang: 'ru' }, observedDone(affirmative, affirmative)).failures).toContainEqual(expect.objectContaining({ check: 'no_admission' }))
+  })
   it('keeps the answer limit in step with prompt.ts (assistant_prompt.json)', () => {
     const fixture = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'scripts/ai-train/assistant_prompt.json'), 'utf8'))
     expect(MAX_ANSWER_CHARS).toBe(fixture.max_answer_chars)

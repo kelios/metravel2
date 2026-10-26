@@ -1,0 +1,101 @@
+[
+  {
+    "type": "quest",
+    "source_id": "krakow-dragon",
+    "title": "Квест по Кракову: Вавельский дракон",
+    "url": "https://metravel.by/quests/krakow/krakow-dragon",
+    "path": "/quests/krakow/krakow-dragon",
+    "snippet": "Городской квест по городу Краков (Польша). Точек: 9. Длительность: 120 мин. Сложность: Лёгкий",
+    "score": 3
+  },
+  {
+    "type": "quest",
+    "source_id": "pakocim-voices",
+    "title": "Парк Прокоцим: семейный квест в Кракове",
+    "url": "https://metravel.by/quests/krakow/pakocim-voices",
+    "path": "/quests/krakow/pakocim-voices",
+    "snippet": "Городской квест по городу Краков (Польша). Точек: 8. Длительность: 90 мин. Сложность: Лёгкий",
+    "score": 3
+  },
+  {
+    "type": "quest",
+    "source_id": "minsk-cmok",
+    "title": "Квест по центру Минска: в поисках цмока",
+    "url": "https://metravel.by/quests/minsk/minsk-cmok",
+    "path": "/quests/minsk/minsk-cmok",
+    "snippet": "Городской квест по городу Минск (Беларусь). Точек: 10. Длительность: 45 мин. Сложность: Лёгкий",
+    "score": 3
+  },
+  {
+    "type": "travel",
+    "source_id": "939",
+    "title": "Куда поехать зимой из Кракова: Турбач, Крыница, Закопане, Дрезден",
+    "url": "https://metravel.by/travels/kuda-poekhat-zimoi-iz-krakova-turbach-krynitsa-zakopane-drezden",
+    "path": "/travels/kuda-poekhat-zimoi-iz-krakova-turbach-krynitsa-zakopane-drezden",
+    "snippet": "Зимние поездки из Кракова: Турбач, Крыница, Закопане, Дрезден.",
+    "score": 3
+  },
+  {
+    "type": "travel",
+    "source_id": "568",
+    "title": "Краков: путеводитель по местам — что посмотреть в городе и где гулять",
+    "url": "https://metravel.by/travels/krakov-putevoditel-po-mestam-chto-posmotret-v-gorode-i-gde-guliat",
+    "path": "/travels/krakov-putevoditel-po-mestam-chto-posmotret-v-gorode-i-gde-guliat",
+    "snippet": "Путеводитель по местам Кракова: что посмотреть в городе и где гулять.",
+    "score": 3
+  },
+  {
+    "type": "travel",
+    "source_id": "eval-a",
+    "title": "Учебная галерея А — вымышленный объект в Кракове",
+    "url": "https://metravel.by/travels/eval-fixture-a",
+    "path": "/travels/eval-fixture-a",
+    "snippet": "Учебные вымышленные данные. Краков. В помещении; визит 45 мин. 25.10.2026 открыто 10:00–16:00; 26.10.2026 закрыто. Весь путь без ступеней, вход 95 см, ровный пол. Есть аудиомаршрут и тактильный план; слабовидящим разрешено самостоятельное посещение.",
+    "score": 3
+  },
+  {
+    "type": "travel",
+    "source_id": "eval-b",
+    "title": "Учебный музей Б — вымышленный объект в Кракове",
+    "url": "https://metravel.by/travels/eval-fixture-b",
+    "path": "/travels/eval-fixture-b",
+    "snippet": "Учебные вымышленные данные. Краков. В помещении; визит 30 мин. 25.10.2026 закрыто; 26.10.2026 открыто 10:00–18:00. Вход по 12 ступеням, лифта нет; дверь 80 см. Экспозиция требует чтения мелкого текста; аудио и тактильного формата нет.",
+    "score": 3
+  },
+  {
+    "type": "travel",
+    "source_id": "eval-c",
+    "title": "Учебная прогулка В — вымышленный маршрут в Кракове",
+    "url": "https://metravel.by/travels/eval-fixture-c",
+    "path": "/travels/eval-fixture-c",
+    "snippet": "Учебные вымышленные данные. Краков. Полностью под открытым небом, навесов нет; маршрут 30 мин. 25 и 26.10.2026 доступен 09:00–18:00. На пути лестницы и брусчатка. Задания требуют чтения мелких надписей; аудио нет.",
+    "score": 3
+  },
+  {
+    "type": "travel",
+    "source_id": "eval-d",
+    "title": "Учебная семейная мастерская Г — вымышленный объект в Кракове",
+    "url": "https://metravel.by/travels/eval-fixture-d",
+    "path": "/travels/eval-fixture-d",
+    "snippet": "Учебные вымышленные данные. Краков. Семейная мастерская рисования в помещении; занятие 35 мин. 25.10.2026 открыто 11:00–17:00; 26.10.2026 закрыто. Пандус, весь путь без ступеней, вход 100 см. Задания визуальные с мелким текстом; аудио и тактильной адаптации нет.",
+    "score": 3
+  },
+  {
+    "type": "travel",
+    "source_id": "eval-e",
+    "title": "Учебный аудиозал Д — вымышленный объект в Кракове",
+    "url": "https://metravel.by/travels/eval-fixture-e",
+    "path": "/travels/eval-fixture-e",
+    "snippet": "Учебные вымышленные данные. Краков. В помещении; визит 25 мин. 25.10.2026 открыто 10:00–16:00; 26.10.2026 закрыто. Аудиоописание и тактильные макеты есть; для слабовидящего обязателен сопровождающий. Путь без ступеней, дверь 80 см. Данных о каталках нет.",
+    "score": 3
+  },
+  {
+    "type": "travel",
+    "source_id": "eval-f",
+    "title": "Учебный зал Е — вымышленный объект в Кракове",
+    "url": "https://metravel.by/travels/eval-fixture-f",
+    "path": "/travels/eval-fixture-f",
+    "snippet": "Учебные вымышленные данные. Краков. В помещении; визит 20 мин. 25.10.2026 открыто 10:00–17:00; 26.10.2026 закрыто. Весь путь без ступеней, ровный пол, вход 95 см. Аудиоописания и тактильных материалов нет; информация только в мелких печатных подписях. Данных о каталках нет.",
+    "score": 3
+  }
+]

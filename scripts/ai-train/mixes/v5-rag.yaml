@@ -1,0 +1,20 @@
+# #2751: continue v4 independently; never overwrite the constraints-only v5.
+# Earlier stages supply replay only. Preserve the existing entity partition.
+name: v5-rag
+seed: 20261017
+split: {by: key, valid_share: 0.03, test_share: 0.02}
+sets:
+  toponyms:     {weight: 1.0, cap_tokens: 400000}
+  translations: {weight: 1.0, cap_tokens: 500000, options: {kind_share: {quest_card_from_ru: 0.7, quest_card_l: 0.5, ui_strings: 0.12, quest_translate: 0.03}}}
+  wikivoyage:   {weight: 0.7, cap_tokens: 1500000}
+  osm_intents:  {weight: 1.0, cap_tokens: 600000}
+  site:         {weight: 1.0, cap_tokens: 600000, options: {chunk_chars: 2600, structured: true}}
+  rag_answers:  {weight: 1.0, options: {per_place: 1, edition: 5}}
+  offtopic:     {weight: 1.0, cap_tokens: 18000, options: {variants: 1}}
+stages:
+  - {name: s1, sets: [toponyms, translations, wikivoyage, osm_intents]}
+  - {name: s2, sets: [site]}
+  - {name: s3, sets: [rag_answers, offtopic]}
+# The prior pool is S1-heavy: reduced site cap and doubled osm cap avoid
+# spending most of the 40% replay on site examples. Verify actual by_set counts.
+replay: 0.4

@@ -27,6 +27,7 @@
 | Видимый web UI | domain/feature skill | `$metravel-ui-guardrails`; browser QA только после code review в `testing` |
 | Tests/e2e/quality | `$metravel-test-runner`, `$metravel-test-writer` или `$metravel-e2e-runner` | `$metravel-quality-fixer` только для полного цикла |
 | Docs/skills/prompts | `$metravel-docs-maintainer` | `$metravel-prompt-maintainer` только для prompt/metadata |
+| Наборы/обучение/GGUF metravel-llm | `$metravel-llm-training` / `llm-trainer` | независимая оценка — `$metravel-llm-evaluation` / `llm-judge`; app/retrieval changes — feature owner |
 | Task board | `$metravel-problem-memory` → `$metravel-task-contract` → `$metravel-ticket-board` | sprint reviewer только для acceptance |
 | Backend/API diagnosis | `$metravel-backend-diagnostician` | read-only; board route для owner handoff |
 | Android-specific | `$metravel-android-developer` | mobile tester/local builder/operator по точному stage |

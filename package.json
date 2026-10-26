@@ -28,6 +28,7 @@
     "ai:index": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-index/build.ts",
     "ai:assist:dev": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-assist/main.ts",
     "ai:assistant:eval": "node scripts/ai-assistant-eval/run.mjs",
+    "ai:assistant:quality": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-assistant-eval/quality.mjs",
     "ai:assist:bench": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-assist/bench.ts",
     "test:run": "node scripts/run-with-quality-gate-lock.js test:run -- jest --passWithNoTests --runInBand",
     "test:i18n": "node scripts/run-with-quality-gate-lock.js test:i18n -- jest --runInBand --watchAll=false __tests__/i18n",

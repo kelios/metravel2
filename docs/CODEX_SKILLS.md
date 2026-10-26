@@ -29,6 +29,7 @@ catalog по frontmatter `description`.
 - Board/backend/docs: `problem-memory`, `task-contract`, `ticket-board`,
   `sprint-reviewer`, `backend-diagnostician`, `docs-maintainer`,
   `prompt-maintainer`.
+- Local LLM: `llm-training`, `llm-evaluation`.
 
 Все имена имеют prefix `$metravel-`, кроме vendor OpenSpec skills. Точные
 triggers и ограничения принадлежат frontmatter/`SKILL.md`; не копируй их сюда.
@@ -55,6 +56,7 @@ triggers и ограничения принадлежат frontmatter/`SKILL.md`
 `$metravel-ios-architect`, `$metravel-ios-designer`,
 `$metravel-ios-developer`, `$metravel-ios-release-operator`,
 `$metravel-ios-reviewer`, `$metravel-ios-tester`, `$metravel-map-expert`,
+`$metravel-llm-training`, `$metravel-llm-evaluation`,
 `$metravel-mobile-tester`, `$metravel-performance-analyst`,
 `$metravel-play-campaign-tester`, `$metravel-problem-memory`,
 `$metravel-production-smoke`, `$metravel-profile-expert`,

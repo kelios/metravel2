@@ -40,7 +40,7 @@ Edition 4 (#2731, options.edition = 4) — from the v3 contour misses (#2710):
 Options (mixes/*.yaml → sets.rag_answers.options):
   per_place  — samples per place and kind (default 2);
   other_langs_share — share of non-Russian samples among pick/quests/kids (default 0.35, edition 3);
-  edition    — 3 (default, the v3 set) or 4.
+  edition    — 3 (default), 4, or 5 (compact locale-balanced #2751 continuation).
 """
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ import random
 import re
 from pathlib import Path
 
-from sets.assistant_prompt import fit_sources, is_contour_question, max_answer_chars, system_prompt
+from sets.assistant_prompt import SAMPLE_CHARS_BUDGET, fit_sources, is_contour_question, max_answer_chars, sanitize_fragment, system_prompt
 from sets.common import SITE, record
 from sets.site import html_to_text, load_raw
 
@@ -247,6 +247,56 @@ MANY_INTRO_RU = ("{Loc} у нас много материалов — начни
                  "Вот три лучших материала {loc}:")
 DAYS = ("2 дня", "один день", "3 дня", "выходные")
 
+# Edition 5 separates trip intent from standalone cooking/finance requests.
+# These are independently authored training templates, never evaluation inputs.
+BOUNDARY = {
+    "ru": (
+        ("hike-food", "Собираюсь на тропу с ночёвкой: что известно о продуктах из этих материалов?", "о продуктах для тропы"),
+        ("hike-food", "Нужно спланировать питание в пешем путешествии. Что есть в подборке?", "о питании в пешем путешествии"),
+        ("hike-gear", "Готовлю вещи для пешего маршрута: что советуют материалы?", "о вещах для пешего маршрута"),
+        ("packing", "Хочу ехать налегке, только с небольшой сумкой. Есть советы в карточках?", "о сборах с небольшой сумкой"),
+        ("packing", "Как сократить багаж в короткой поездке по этим материалам?", "о сокращении багажа в поездке"),
+        ("travel-hacks", "Готовлю недорогую поездку на пару суток. Что полезного есть в материалах?", "о недорогой поездке"),
+        ("travel-hacks", "Ищу практичные хитрости для короткого путешествия. Что нашлось на сайте?", "о практичных хитростях в путешествии"),
+        ("trip-budget", "Как по этим карточкам спланировать расходы в путешествии?", "о расходах в путешествии"),
+    ),
+    "en": (
+        ("hike-food", "I'm arranging meals for an overnight walking trip. What do the cards say?", "about meals for a walking trip"),
+        ("hike-food", "Does the supplied material discuss provisions for a trail holiday?", "about trail provisions"),
+        ("hike-gear", "I'm choosing equipment for a walking holiday. What is in these materials?", "about equipment for a walking holiday"),
+        ("packing", "I want to travel with a small daypack. What advice do these cards contain?", "about travelling with a small daypack"),
+        ("packing", "Can these materials help me reduce luggage on a short holiday?", "about reducing holiday luggage"),
+        ("travel-hacks", "I'm after practical shortcuts for a brief holiday. What is in the supplied material?", "about practical shortcuts for a holiday"),
+        ("travel-hacks", "How can I make a two-night city break simpler using these materials?", "about simplifying a city break"),
+        ("trip-budget", "What do these cards tell me about planning a travel budget?", "about planning a travel budget"),
+    ),
+}
+# Whole words and topic phrases, rather than stems such as «совет»/«круп»:
+# a village council, Soviet history or a large building is not travel advice.
+BOUNDARY_EVIDENCE = {
+    "hike-food": r"\b(?:еда|еду|еды|едой|питани[еяюи]|продукт(?:ы|ов|ами|а|у)?|каша|кашу|каши|кашей|food|meals?|provisions?)\b",
+    "hike-gear": r"\b(?:снаряжени[еяюи]|экипировк\w*|equipment|gear)\b",
+    "packing": r"\b(?:багаж\w*|рюкзак\w*|чемодан\w*|сумк[ауие]|сумкой|luggage|backpacks?|daypacks?|bags?)\b",
+    "travel-hacks": r"\b(?:полезн\w*\s+совет\w*|совет(?:уем|ую|уют)|советы\s+(?:по|для)|лайфхак\w*|хитрост[ьи]\w*|tips?|hacks?|shortcuts?)\b",
+    "trip-budget": r"\b(?:цен[аыуе]|ценой|ценам[и]?|стоимост[ьи]|бюджет\w*|евро|рубл\w*|prices?|costs?|budget|euros?)\b|(?<!\w)руб\.(?!\w)",
+}
+KIDS_UNKNOWN = {
+    "ru": "Возрастные ограничения в карточках не указаны. Сколько лет ребёнку?",
+    "be": "У картках не пазначаны ўзроставыя абмежаванні. Колькі гадоў дзіцяці?",
+    "uk": "У картках не вказано вікові обмеження. Скільки років дитині?",
+    "pl": "Karty nie podają ograniczeń wiekowych. Ile lat ma dziecko?",
+    "en": "The cards do not state age suitability. How old is the child?",
+}
+KIDS_INTRO = {"ru": "Для выбора маршрута с ребёнком:", "be": "Для выбару маршруту з дзіцем:",
+              "uk": "Для вибору маршруту з дитиною:", "pl": "Do wyboru trasy z dzieckiem:", "en": "For choosing a route with a child:"}
+
+COMPACT_ASK = {
+    "be": {"pick": "Прапануй некалькі матэрыялаў для наведвання {loc}.", "quests": "Выберы да трох гарадскіх квэстаў {loc}.", "kids": "Выбіраем прагулку з дзіцем {loc}. Якія ёсць матэрыялы?"},
+    "uk": {"pick": "Запропонуй кілька матеріалів для відвідування {loc}.", "quests": "Вибери до трьох міських квестів {loc}.", "kids": "Обираємо прогулянку з дитиною {loc}. Які є матеріали?"},
+    "pl": {"pick": "Zaproponuj kilka materiałów na zwiedzanie {loc}.", "quests": "Wybierz do trzech questów miejskich {loc}.", "kids": "Wybieramy spacer z dzieckiem {loc}. Jakie materiały są dostępne?"},
+    "en": {"pick": "Suggest a few materials for a visit {loc}.", "quests": "Choose up to three city quests {loc}.", "kids": "We are choosing a walk with a child {loc}. Which materials are available?"},
+}
+
 
 def ru_plural(n: int, one: str, few: str, many: str) -> str:
     if n % 10 == 1 and n % 100 != 11:
@@ -339,9 +389,17 @@ def be_fix(text: str) -> str:
     return re.sub(r"([аеёіоуыэюяАЕЁІОУЫЭЮЯ]) у ([А-ЯЁІЎ])", r"\1 ў \2", text)
 
 
-def compose(intro: str, picks: list[dict], lang: str, rng: random.Random) -> str:
-    lines = [intro] + [item_line(c, lang) for c in picks]
-    outro = rng.choice(OUTRO[lang])
+def short_title(title: str) -> str:
+    return title if len(title) <= 64 else title[:61].rsplit(" ", 1)[0] + "…"
+
+
+def compose(intro: str, picks: list[dict], lang: str, rng: random.Random, compact: bool = False) -> str:
+    def compact_line(card: dict) -> str:
+        # Keep the source identity and URL; stop long translated titles from
+        # consuming the app's 400-token generation budget. No unobserved meta text.
+        return f"- [{short_title(card['title'])}]({card['url']})"
+    lines = [intro] + [(compact_line(c) if compact else item_line(c, lang)) for c in picks[:3]]
+    outro = "" if compact else rng.choice(OUTRO[lang])
     text = "\n".join(lines) + (f"\n\n{outro}" if outro else "")
     if len(text) > max_answer_chars():
         raise ValueError("answer longer than the prompt allows")
@@ -395,6 +453,8 @@ def build(ctx: dict, options: dict) -> list[dict]:
     per_place = int(options.get("per_place", 2))
     other_share = float(options.get("other_langs_share", 0.35))
     edition = int(options.get("edition", 3))
+    if edition not in (3, 4, 5):
+        raise ValueError("rag_answers edition must be 3, 4, or 5")
     titles = load_quest_titles(ctx["sources"]) if edition >= 4 else {}
     travels_raw, quests_raw = load_raw(ctx["raw"])
     travels = [travel_card(t) for t in travels_raw if t.get("slug") and (t.get("name") or t.get("title"))]
@@ -402,15 +462,27 @@ def build(ctx: dict, options: dict) -> list[dict]:
     everything = travels + quests
     out: list[dict] = []
 
-    def emit(kind: str, place: str, lang: str, question: str, cards: list[dict], answer: str, n: int, key: str | None = None) -> None:
+    def emit(kind: str, place: str, lang: str, question: str, cards: list[dict], answer: str, n: int,
+             key: str | None = None, history: list[dict] | None = None, required_evidence: str | None = None) -> None:
         if is_contour_question(question):
             return
+        # buildAssistantMessages sanitizes historical text, including newlines.
+        history = [{**message, "content": sanitize_fragment(message["content"], 1200)} for message in history or []]
         # The training budget (assistant_prompt.fit_sources) drops unrelated cards and shortens snippets.
-        user = fit_sources(question, [{k: c[k] for k in ("type", "title", "url", "snippet")} for c in cards], answer, lang)
-        if user is None:
+        budget = SAMPLE_CHARS_BUDGET - sum(len(m["content"]) for m in history or [])
+        user = fit_sources(question, [{k: c[k] for k in ("type", "title", "url", "snippet")} for c in cards], answer, lang, budget=budget)
+        if user is None or (required_evidence and sanitize_fragment(required_evidence) not in user):
             return
-        out.append(record(user, answer, set_name=NAME, license=LICENSE, kind=kind, key=key or f"place:{place}",
-                          id=f"{kind}:{place}:{lang}:{n}", system=system_prompt(lang)))
+        item = record(user, answer, set_name=NAME, license=LICENSE, kind=kind, key=key or f"place:{place}",
+                      id=f"{kind}:{place}:{lang}:{n}", system=system_prompt(lang))
+        if history:
+            item["messages"] = [item["messages"][0], *history, *item["messages"][1:]]
+        out.append(item)
+
+    def render(intro: str, picks: list[dict], lang: str, kind: str = "") -> str:
+        if edition >= 5 and kind == "kids":
+            return compose(KIDS_INTRO[lang], picks[:2], lang, rng, compact=True) + "\n" + KIDS_UNKNOWN[lang]
+        return compose(intro, picks, lang, rng, compact=edition >= 5)
 
     for name, loc, dat, pattern in PLACES_RU:
         rx = re.compile(pattern, re.I)
@@ -428,7 +500,7 @@ def build(ctx: dict, options: dict) -> list[dict]:
             picks = [c for c in picks if c in cards][:3]
             if picks:
                 q = rng.choice(ASK_RU["pick"]).format(days=rng.choice(DAYS), **fill)
-                emit("pick", name, lang, q, cards, compose(rng.choice(INTRO_RU["pick"]).format(**fill), picks, lang, rng), n)
+                emit("pick", name, lang, q, cards, render(rng.choice(INTRO_RU["pick"]).format(**fill), picks, lang), n)
             if rel_quests:
                 template = rng.choice(ASK_RU["quests"])
                 shortest = "коротк" in template
@@ -436,12 +508,20 @@ def build(ctx: dict, options: dict) -> list[dict]:
                 cards = mixed_cards(ordered + rel_travels[:2], pool, rng)
                 picks = [c for c in ordered if c in cards][:3]
                 intro = rng.choice(INTRO_RU["shortest" if shortest else "quests"]).format(**fill)
-                emit("quests", name, lang, template.format(**fill), cards, compose(intro, picks, lang, rng), n)
-                kid = [c for c in rel_quests if c["difficulty"] == "лёгкий"] or rel_quests
+                emit("quests", name, lang, template.format(**fill), cards, render(intro, picks, lang), n)
+                kid = rel_quests if edition >= 5 else ([c for c in rel_quests if c["difficulty"] == "лёгкий"] or rel_quests)
                 cards = mixed_cards(kid + rel_travels[:2], pool, rng)
                 picks = ([c for c in kid if c in cards][:2] + [c for c in rel_travels[:1] if c in cards])[:3]
                 emit("kids", name, lang, rng.choice(ASK_RU["kids"]).format(**fill), cards,
-                     compose(rng.choice(INTRO_RU["kids"]).format(**fill), picks, lang, rng), n)
+                     render(rng.choice(INTRO_RU["kids"]).format(**fill), picks, lang, "kids"), n)
+                if edition >= 5 and n == 0:
+                    # A follow-up must retain the selected source link while
+                    # keeping child suitability separate from easy difficulty.
+                    follow_picks = kid[:1]
+                    history = [{"role": "user", "content": f"Какие материалы собраны для поездки {loc}?"},
+                               {"role": "assistant", "content": render("Можно начать здесь:", follow_picks, lang)}]
+                    emit("followup", name, lang, "Если едем с ребёнком, на что обратить внимание в этой подборке?",
+                         follow_picks, render("", follow_picks, lang, "kids"), n, history=history)
             ranked = rel_travels[:1] + rel_quests[:1] + rel_travels[1:] + rel_quests[1:]
             if len(ranked) >= 2:
                 template = rng.choice(ASK_RU["limit"])
@@ -449,14 +529,14 @@ def build(ctx: dict, options: dict) -> list[dict]:
                 cards = mixed_cards(ranked, pool, rng)
                 picks = [c for c in ranked if c in cards][:limit]
                 intro = "Если выбирать одно — это:" if limit == 1 else rng.choice(("Если выбирать два — это:", "Два лучших варианта:"))
-                emit("limit", name, lang, template.format(**fill), cards, compose(intro, picks, lang, rng), n)
+                emit("limit", name, lang, template.format(**fill), cards, render(intro, picks, lang), n)
             if (n == 0 or edition >= 4) and ranked:
                 q = rng.choice(INJECTED_V4 if edition >= 4 else ASK_RU["injected"]).format(ext=rng.choice(EXTERNAL), **fill)
                 cards = mixed_cards(ranked, pool, rng)
                 picks = [c for c in ranked if c in cards][:3]
                 # Edition 3 opened with a meta sentence about links; edition 4 answers plainly.
                 intro = ("" if edition >= 4 else "Ссылки даю только на страницы metravel.by. ") + rng.choice(INTRO_RU["pick"]).format(**fill)
-                emit("injected", name, lang, q, cards, compose(intro, picks, lang, rng), n)
+                emit("injected", name, lang, q, cards, render(intro, picks, lang), n)
             if edition >= 4 and len(ranked) >= 5:
                 # Many matching cards, no unrelated ones: still exactly three picks.
                 cards = ranked[: rng.randint(6, MAX_CARDS)]
@@ -464,30 +544,37 @@ def build(ctx: dict, options: dict) -> list[dict]:
                 picks = [c for c in ranked if c in cards][:3]
                 # «Какие квесты есть?» is not asked here: the three picks mix articles and quests.
                 q = rng.choice(ASK_RU["pick"]).format(days=rng.choice(DAYS), **fill)
-                emit("many", name, lang, q, cards, compose(rng.choice(MANY_INTRO_RU).format(**fill), picks, lang, rng), n)
-            if edition >= 4 and ranked:
+                emit("many", name, lang, q, cards, render(rng.choice(MANY_INTRO_RU).format(**fill), picks, lang), n)
+            if edition == 4 and ranked:
                 template, about = rng.choice(CITY_TOPICS_RU)
                 cards = mixed_cards(ranked, pool, rng)
                 picks = [c for c in ranked if c in cards][:2]
                 intro = rng.choice(CITY_TOPIC_INTRO_RU).format(about=about, **fill)
-                emit("topic", name, lang, template.format(**fill), cards, compose(intro, picks, lang, rng), n)
+                emit("topic", name, lang, template.format(**fill), cards, render(intro, picks, lang), n)
             for kind in ("pick", "quests", "kids"):
                 # Edition 4 covers every big city; edition 3 sampled them (same rng order as before).
                 if name not in PLACES_L10N or (edition < 4 and rng.random() >= other_share * 2) or (kind != "pick" and not rel_quests):
                     continue
-                lang = rng.choice(("be", "uk", "pl", "en"))
-                if kind != "pick":
-                    ordered, extra = rel_quests, rel_travels[:2]
-                else:
-                    ordered, extra = (rel_travels[:1] + rel_quests[:2] + rel_travels[1:2]), rel_travels[2:]
-                cards = [localize(c, lang, titles) for c in mixed_cards(ordered + extra, pool, rng)]
-                urls = [c["url"] for c in ordered]
-                picks = sorted((c for c in cards if c["url"] in urls), key=lambda c: urls.index(c["url"]))[:3]
-                if picks:
-                    l10n = {"loc": PLACES_L10N[name][lang]}
-                    fix = be_fix if lang == "be" else (lambda text: text)
-                    intro = fix(cap(INTRO_L10N[lang][kind].format(**l10n)))
-                    emit(kind, name, lang, fix(rng.choice(ASK_L10N[lang][kind]).format(**l10n)), cards, compose(intro, picks, lang, rng), n)
+                languages = ("be", "uk", "pl", "en") if edition >= 5 else (rng.choice(("be", "uk", "pl", "en")),)
+                for lang in languages:
+                    if kind != "pick":
+                        ordered, extra = rel_quests, rel_travels[:2]
+                    else:
+                        ordered, extra = (rel_travels[:1] + rel_quests[:2] + rel_travels[1:2]), rel_travels[2:]
+                    cards = [localize(c, lang, titles) for c in mixed_cards(ordered + extra, pool, rng)]
+                    urls = [c["url"] for c in ordered]
+                    picks = sorted((c for c in cards if c["url"] in urls), key=lambda c: urls.index(c["url"]))[:3]
+                    if picks:
+                        l10n = {"loc": PLACES_L10N[name][lang]}
+                        fix = be_fix if lang == "be" else (lambda text: text)
+                        intro = fix(cap(INTRO_L10N[lang][kind].format(**l10n)))
+                        question = (COMPACT_ASK[lang][kind] if edition >= 5 else rng.choice(ASK_L10N[lang][kind])).format(**l10n)
+                        emit(kind, name, lang, fix(question), cards, render(intro, picks, lang, kind), n)
+                        if edition >= 5 and kind == "quests" and len(rel_quests) >= 5:
+                            many_cards = [localize(c, lang, titles) for c in rel_quests[:MAX_CARDS]]
+                            rng.shuffle(many_cards)
+                            emit("many", name, lang, fix(COMPACT_ASK[lang][kind].format(**l10n)),
+                                 many_cards, render(intro, many_cards[:3], lang), n)
 
     covered = " ".join(c["haystack"] for c in everything)
     for name, loc, about, pattern in ABSENT_RU:
@@ -498,10 +585,13 @@ def build(ctx: dict, options: dict) -> list[dict]:
             nearest = cards[0]
             q = rng.choice(ASK_RU["no_material"]).format(loc=loc, about=about)
             tail = blurb(nearest, "ru") or "материал о другом направлении"
-            answer = rng.choice(NO_MATERIAL_RU).format(about=about, title=nearest["title"], url=nearest["url"], blurb=tail)
+            if edition >= 5:
+                answer = f"Материалов {about} в карточках нет. Ближайшее из найденного:\n" + compose("", [nearest], "ru", rng, compact=True).lstrip()
+            else:
+                answer = rng.choice(NO_MATERIAL_RU).format(about=about, title=nearest["title"], url=nearest["url"], blurb=tail)
             emit("no_material", name, "ru", q, cards, answer, n)
 
-    if edition >= 4:
+    if edition == 4:
         outdoor = [c for c in everything if OUTDOOR_RE.search(c["title"])]
         for lang, topics in TOPICS.items():
             for i, (topic, question, about) in enumerate(topics):
@@ -515,7 +605,69 @@ def build(ctx: dict, options: dict) -> list[dict]:
                     answer = rng.choice(TOPIC_ANSWER[lang]).format(about=about, title=nearest["title"], url=nearest["url"],
                                                                   tail=f" — {tail}" if tail else "")
                     emit("topic", f"topic:{lang}:{i}", lang, question, cards, answer, n, key=f"topic:{topic}")
+    if edition >= 5:
+        _emit_boundary(emit, everything, titles, rng, per_place)
     return out
+
+
+def _emit_boundary(emit, everything: list[dict], titles: dict, rng: random.Random, per_place: int) -> None:
+    """Trip context can mention food, equipment or money without being off-topic.
+
+    Missing-topic targets never invent practical advice. Positive partners ask
+    for a concrete travel choice, answered only with supplied quest facts.
+    All phrasings/partners of a topic share its split key across both languages.
+    """
+    outdoor = [c for c in everything if c["type"] == "travel" and OUTDOOR_RE.search(c["title"])]
+    quests = [c for c in everything if c["type"] == "quest" and c["duration"]]
+    for lang, topics in BOUNDARY.items():
+        for i, (topic, question, about) in enumerate(topics):
+            for n in range(per_place):
+                # The source is explicitly a nearby travel material, not purported
+                # evidence for meals, luggage size or prices that the card lacks.
+                candidates = outdoor if topic in OUTDOOR_TOPICS and outdoor else everything
+                # Do not claim a topic is missing if the actual snippet names it.
+                evidence = BOUNDARY_EVIDENCE[topic]
+                if lang == "ru":
+                    supported = [c for c in everything if c["type"] == "travel" and re.search(evidence, c["snippet"], re.I)]
+                    if supported:
+                        card = rng.choice(supported)
+                        sentences = re.split(r"(?<=[.!?])\s+", card["snippet"])
+                        excerpt = next(sentence for sentence in sentences if re.search(evidence, sentence, re.I))
+                        # Copy a complete short source sentence; no guessed
+                        # translation or paraphrase can add unsupported advice.
+                        if len(excerpt) <= 220 and not excerpt.endswith("…"):
+                            answer = (f"В материале есть такая информация: «{excerpt}» "
+                                      f"[{short_title(card['title'])}]({card['url']}). "
+                                      "Это сведения из карточки; отдельного совета сверх них здесь нет.")
+                            emit("boundary_evidence", f"boundary-{i}", lang, question,
+                                 [{**card, "snippet": excerpt}], answer, n, key=f"topic:{topic}", required_evidence=excerpt)
+                pool = [c for c in candidates if not re.search(evidence, c["title"] + " " + c["snippet"], re.I)]
+                if not pool:
+                    continue
+                nearest = localize(rng.choice(pool), lang, titles)
+                cards = [nearest]
+                if lang == "ru":
+                    answer = (f"В этих карточках нет сведений {about}, поэтому конкретный совет из них не получить. "
+                              f"Ближайший материал о поездке — [{short_title(nearest['title'])}]({nearest['url']}). "
+                              "Он поможет с маршрутом; сведения по вашему вопросу нужно уточнить отдельно.")
+                else:
+                    answer = (f"These cards contain no details {about}, so I cannot derive that advice from them. "
+                              f"The nearest travel material is [{short_title(nearest['title'])}]({nearest['url']}). "
+                              "It can help with the itinerary; details for your specific question are not supplied.")
+                emit("boundary_missing", f"boundary-{i}", lang, question, cards, answer, n, key=f"topic:{topic}")
+                if not quests:
+                    continue
+                card = localize(rng.choice(quests), lang, titles)
+                if lang == "ru":
+                    positive = question + " Начну с маршрута: предложи один квест и укажи длительность."
+                    answer = (f"Сведений {about} в этой карточке нет. Для маршрута можно начать с "
+                              f"[{short_title(card['title'])}]({card['url']}): в карточке указано {card['duration']} мин.")
+                else:
+                    positive = question + " For the itinerary, suggest one quest and state its duration."
+                    answer = (f"The card does not provide details {about}. For the itinerary, try "
+                              f"[{short_title(card['title'])}]({card['url']}): the card states {card['duration']} minutes.")
+                emit("boundary_pick", f"boundary-{i}", lang, positive, [card], answer, n, key=f"topic:{topic}",
+                     required_evidence=f"Длительность: {card['duration']} мин")
 
 
 def source_info(ctx: dict) -> dict:

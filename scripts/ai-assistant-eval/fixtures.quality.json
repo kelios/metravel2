@@ -1,0 +1,32 @@
+[
+  {
+    "type": "quest", "source_id": "krakow-dragon",
+    "title": "Квест по Кракову: Вавельский дракон",
+    "url": "https://metravel.by/quests/krakow/krakow-dragon", "path": "/quests/krakow/krakow-dragon",
+    "snippet": "Городской квест по городу Краков (Польша). Точек: 9. Длительность: 120 мин. Сложность: Лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "pakocim-voices",
+    "title": "Парк Прокоцим: семейный квест в Кракове",
+    "url": "https://metravel.by/quests/krakow/pakocim-voices", "path": "/quests/krakow/pakocim-voices",
+    "snippet": "Городской квест по городу Краков (Польша). Точек: 8. Длительность: 90 мин. Сложность: Лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "minsk-cmok",
+    "title": "Квест по центру Минска: в поисках цмока",
+    "url": "https://metravel.by/quests/minsk/minsk-cmok", "path": "/quests/minsk/minsk-cmok",
+    "snippet": "Городской квест по городу Минск (Беларусь). Точек: 10. Длительность: 45 мин. Сложность: Лёгкий", "score": 3
+  },
+  {
+    "type": "travel", "source_id": "939",
+    "title": "Куда поехать зимой из Кракова: Турбач, Крыница, Закопане, Дрезден",
+    "url": "https://metravel.by/travels/kuda-poekhat-zimoi-iz-krakova-turbach-krynitsa-zakopane-drezden", "path": "/travels/kuda-poekhat-zimoi-iz-krakova-turbach-krynitsa-zakopane-drezden",
+    "snippet": "Зимние поездки из Кракова: Турбач, Крыница, Закопане, Дрезден.", "score": 3
+  },
+  {
+    "type": "travel", "source_id": "568",
+    "title": "Краков: путеводитель по местам — что посмотреть в городе и где гулять",
+    "url": "https://metravel.by/travels/krakov-putevoditel-po-mestam-chto-posmotret-v-gorode-i-gde-guliat", "path": "/travels/krakov-putevoditel-po-mestam-chto-posmotret-v-gorode-i-gde-guliat",
+    "snippet": "Путеводитель по местам Кракова: что посмотреть в городе и где гулять.", "score": 3
+  }
+]
