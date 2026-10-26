@@ -17,6 +17,7 @@ const {
   getFacebookBuildConfig,
   readAndroidManifestMetaData,
   readAndroidResource,
+  usesReactNativeSourceBuild,
 } = require('../../scripts/android-gradle-build');
 const {
   loadAndroidReleaseEnvironment,
@@ -357,5 +358,31 @@ describe('release optimisations reach android/ (#1110)', () => {
     // mode makes `npm run android:prebuild` fail with "Permission denied".
     expect(fs.statSync(scriptPath).mode & 0o111).not.toBe(0);
     expect(fs.readFileSync(scriptPath, 'utf8')).toMatch(/npx expo prebuild -p android/);
+  });
+});
+
+// #2743: React Native and Hermes are prebuilt Maven artifacts. An android/ from
+// before the change keeps the source-build includeBuild across a non-clean
+// prebuild; the build must refuse it instead of silently compiling RN again.
+describe('React Native comes from prebuilt artifacts (#2743)', () => {
+  it('rejects the legacy react-native source build in settings.gradle', () => {
+    expect(
+      usesReactNativeSourceBuild(
+        "include ':app'\nincludeBuild('../node_modules/react-native') {\n  dependencySubstitution {}\n}"
+      )
+    ).toBe(true);
+  });
+
+  it('accepts the stock Expo settings.gradle includeBuild entries', () => {
+    expect(
+      usesReactNativeSourceBuild(
+        [
+          'includeBuild(reactNativeGradlePlugin)',
+          'includeBuild(expoPluginsPath)',
+          'includeBuild(expoAutolinking.reactNativeGradlePlugin)',
+          "include ':app'",
+        ].join('\n')
+      )
+    ).toBe(false);
   });
 });

@@ -112,6 +112,16 @@ resizable-window, portrait и landscape режимах.
   `package.json → postinstall` и каждый патч-скрипт: для какой связки версий он
   писался и что делает с native. Патчи обязаны быть минимальными и
   самодокументированными (комментарий: зачем, для какой версии, когда удалять).
+- **Патч исходников `react-native` для Android не делаем (#2743).** Он
+  применяется только при сборке ReactAndroid и Hermes из исходников
+  (`includeBuild('../node_modules/react-native')`), а это десятки минут CPU на
+  каждую сборку и ручной перенос на каждом RN-мажоре. Android и Hermes берутся
+  prebuilt-артефактами Maven; поведение меняется на уровне приложения
+  (config plugin, тема, `MainActivity`). Прежний патч WindowUtil (Android 15+
+  без `setStatusBarColor`/`setNavigationBarColor`) снят: на API 35+ эти сеттеры
+  — no-op, а их вызовы, которые перечисляет Play, всё равно остаются в androidx,
+  material и expo-navigation-bar. `native-compat-governance` запрещает
+  `patches/react-native+*.patch` и `includeBuild` RN.
 
 ## 6. Web-API только под guard (классика)
 

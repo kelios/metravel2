@@ -25,6 +25,12 @@ const PORTABLE_PROD_ENV_PATH = path.join(
 const GRADLE_PROPERTIES_PATH = path.join(ANDROID_DIR, 'gradle.properties')
 const APP_BUILD_GRADLE_PATH = path.join(ANDROID_DIR, 'app', 'build.gradle')
 const PROJECT_BUILD_GRADLE_PATH = path.join(ANDROID_DIR, 'build.gradle')
+const SETTINGS_GRADLE_PATH = path.join(ANDROID_DIR, 'settings.gradle')
+// #2743: React Native and Hermes are consumed as prebuilt Maven artifacts. An
+// android/ generated before that still carries the includeBuild block, and a
+// prebuild without --clean keeps it, so every build recompiles RN from source.
+const REACT_NATIVE_SOURCE_BUILD_PATTERN =
+  /includeBuild\(\s*['"]\.\.\/node_modules\/react-native['"]\s*\)/
 const COPIED_GOOGLE_SERVICES_PATH = path.join(
   ANDROID_DIR,
   'app',
@@ -317,6 +323,23 @@ function assertReleaseConfigApplied() {
   )
 }
 
+function usesReactNativeSourceBuild(settingsGradle) {
+  return REACT_NATIVE_SOURCE_BUILD_PATTERN.test(settingsGradle)
+}
+
+function assertPrebuiltReactNative() {
+  const settingsGradle = fs.existsSync(SETTINGS_GRADLE_PATH)
+    ? fs.readFileSync(SETTINGS_GRADLE_PATH, 'utf8')
+    : ''
+  if (!usesReactNativeSourceBuild(settingsGradle)) return
+  throw new Error(
+    'android/settings.gradle still builds React Native and Hermes from source ' +
+      "(includeBuild('../node_modules/react-native')), removed in #2743.\n" +
+      'Regenerate android/ with `npx expo prebuild -p android --clean --no-install`, ' +
+      'then rebuild.',
+  )
+}
+
 // R8 writes mapping.txt for every minified release. A missing mapping means the
 // minify task never ran, which Gradle still reports as BUILD SUCCESSFUL.
 function assertR8Ran() {
@@ -339,6 +362,7 @@ function main() {
     buildEnvironment = createBuildEnvironment(mode)
     getFacebookBuildConfig(buildEnvironment)
     assertFirebaseConfigApplied()
+    assertPrebuiltReactNative()
     if (mode === 'production') assertReleaseConfigApplied()
   } catch (error) {
     process.stderr.write(`[android-gradle] ${error.message}\n`)
@@ -392,6 +416,7 @@ module.exports = {
   parseEnvFile,
   readAndroidManifestMetaData,
   readAndroidResource,
+  usesReactNativeSourceBuild,
   verifyFacebookAndroidResources,
   verifyFirebaseAndroidResources,
 }

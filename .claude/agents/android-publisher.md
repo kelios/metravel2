@@ -94,8 +94,8 @@ Publisher API** через штатные npm-обёртки. Ниже — пр�
   файла, Keychain на новой машине не нужен.
 - **Конфликт подписи при установке поверх сторовой сборки** → `adb uninstall by.metravel.app`
   и поставить заново.
-- **`$ANDROID_HOME` без `cmdline-tools`** → `Could not find sdkmanager executable` (Hermes
-  собирается из исходников); путь к SDK задаётся инлайн в команде, см. `docs/RELEASE.md`.
+- **`$ANDROID_HOME` без `cmdline-tools`** → `Could not find sdkmanager executable` (Gradle
+  доустанавливает NDK/CMake нативных модулей); путь к SDK задаётся инлайн в команде, см. `docs/RELEASE.md`.
 
 **Чем доказывается результат**
 

@@ -327,9 +327,14 @@ Gradle metaspace — lives in `plugins/withAndroidReleaseSafety.js` and reaches
 stale `android/` used to produce a release with R8 silently disabled while Gradle
 still reported `BUILD SUCCESSFUL` (#1110). `android:build:prod` now refuses to
 start in that state and fails afterwards if `mapping.txt` was not produced.
+`android:prebuild` does not pass `--clean`, so an `android/` generated before
+#2743 keeps the React Native source build in `settings.gradle`;
+`android:build:*` refuses it until `npx expo prebuild -p android --clean --no-install`
+regenerates the project.
 
-SDK requirement: the generated project builds Hermes from source, so
-`$ANDROID_HOME` must contain `cmdline-tools` (`sdkmanager`). A plain
+SDK requirement: React Native and Hermes come as prebuilt Maven artifacts
+(#2743), but Gradle still installs the NDK/CMake versions the native modules
+request, so `$ANDROID_HOME` must contain `cmdline-tools` (`sdkmanager`). A plain
 `~/Library/Android/sdk` without them fails with
 `Could not find sdkmanager executable`. If the tools live in a separate SDK (for
 example the Homebrew `android-commandlinetools` cask), point the build at it:

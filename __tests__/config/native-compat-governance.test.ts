@@ -133,10 +133,9 @@ describe('Native compatibility governance (docs/NATIVE_COMPAT_RULES.md)', () => 
       path.join(ROOT, 'android', 'app', 'src', 'main', 'res', 'values', 'styles.xml'),
       'utf8',
     );
-    const reactNativePatch = fs.readFileSync(
-      path.join(ROOT, 'patches', 'react-native+0.88.0.patch'),
-      'utf8',
-    );
+    const reactNativePatches = fs
+      .readdirSync(path.join(ROOT, 'patches'))
+      .filter((name) => name.startsWith('react-native+'));
     const layout = fs.readFileSync(path.join(ROOT, 'app', '_layout.tsx'), 'utf8');
     const nativeRuntime = fs.readFileSync(
       path.join(ROOT, 'components', 'layout', 'NativeAppRuntime.native.tsx'),
@@ -161,17 +160,14 @@ describe('Native compatibility governance (docs/NATIVE_COMPAT_RULES.md)', () => 
     expect(androidProperties).toMatch(/^android\.enableMinifyInReleaseBuilds=true$/m);
     expect(androidProperties).toMatch(/^android\.enableShrinkResourcesInReleaseBuilds=true$/m);
     expect(androidProperties).toMatch(/^android\.r8\.optimizedResourceShrinking=true$/m);
-    expect(settingsGradle).toContain("includeBuild('../node_modules/react-native')");
-    expect(settingsGradle).toContain(
-      "substitute(module('com.facebook.react:react-android'))",
-    );
-    expect(releaseSafetyPlugin).toContain('withSettingsGradle');
-    expect(reactNativePatch).toContain(
-      'Build.VERSION.SDK_INT < AndroidVersion.VERSION_CODE_VANILLA_ICE_CREAM',
-    );
-    expect(reactNativePatch).toContain(
-      'Build.VERSION.SDK_INT >= AndroidVersion.VERSION_CODE_VANILLA_ICE_CREAM',
-    );
+    // #2743: React Native и Hermes берутся prebuilt-артефактами. Патч WindowUtil
+    // (Android 15+ без deprecated color-сеттеров) снят: вызовы этих API остаются
+    // в androidx/material/expo-navigation-bar, а на API 35+ сеттеры — no-op.
+    // Сборка RN из исходников ради патча стоила десятки минут на каждую сборку.
+    expect(reactNativePatches).toEqual([]);
+    expect(settingsGradle).not.toContain("includeBuild('../node_modules/react-native')");
+    expect(settingsGradle).not.toContain('com.facebook.react:react-android');
+    expect(releaseSafetyPlugin).not.toContain('includeBuild');
     expect(releaseSafetyPlugin).toContain("name: 'android:statusBarColor'");
     expect(releaseSafetyPlugin).toContain("name: 'android:navigationBarColor'");
     expect(androidStyles).not.toContain('android:statusBarColor');
