@@ -1,0 +1,222 @@
+diff --git a/app.config.js b/app.config.js
+index a1ccb8cd8..dcd00a3bb 100644
+--- a/app.config.js
++++ b/app.config.js
+@@ -80,5 +80,7 @@ module.exports = ({ config }) => {
+     ...config,
+     plugins,
+     android: { ...config.android, ...androidGoogleServices() },
++    // #2766 spike: модель A (`output: "server"`) включается переменной окружения.
++    web: { ...config.web, ...(process.env.SPIKE_WEB_OUTPUT ? { output: process.env.SPIKE_WEB_OUTPUT } : {}) },
+   }
+ }
+diff --git a/app/(tabs)/travels/[param].tsx b/app/(tabs)/travels/[param].tsx
+index 20d5f1f50..31d2e8e75 100644
+--- a/app/(tabs)/travels/[param].tsx
++++ b/app/(tabs)/travels/[param].tsx
+@@ -1,21 +1,60 @@
+-import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler'
+-import TravelDetailsContainer from '@/components/travel/details/TravelDetailsContainer'
+-import { shellRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
++import { lazy } from 'react'
++
++// #2766 spike: никаких статических импортов экрана — бандл loader остаётся крошечным.
++const SPIKE_API = process.env.SPIKE_LOADER_API || 'http://localhost:8000'
++// Синтетические пути `<slug>--sN` дают объём ~1 400 страниц из ~450 реальных статей.
++const toRealSegment = (segment: string) => segment.replace(/--s\d+$/, '')
++
++const TravelRouteScreen = lazy(() => import('@/components/travel/details/TravelRouteScreen'))
+ 
+ export default function TravelDetailsScreen() {
+-  // Android: hardware Back должен возвращать на предыдущий экран (карта/список),
+-  // а не сбрасывать Tab-навигатор на главную. useAndroidBackHandler сам гейтит
+-  // по Platform.OS === 'android' и зовёт router.back() при canGoBack().
+-  // Видимая кнопка «Назад» на этом экране даётся HeaderContextBar (mobile-ветка:
+-  // ← + заголовок + секции) на всех платформах, включая iOS, поэтому отдельная
+-  // floating-кнопка поверх hero-слайдера не нужна — она дублировала back и налезала
+-  // на счётчик кадров слайдера.
+-  useAndroidBackHandler()
+-  return <TravelDetailsContainer />
++  return <TravelRouteScreen />
++}
++
++let spikeFetchCount = 0
++async function fetchTravelForParams(params: Record<string, string | string[]>) {
++  const raw = Array.isArray(params.param) ? params.param[0] : params.param
++  const segment = toRealSegment(decodeURIComponent(String(raw ?? '')))
++  const isId = /^[1-9][0-9]*$/.test(segment)
++  const url = isId
++    ? `${SPIKE_API}/api/travels/${segment}/`
++    : `${SPIKE_API}/api/travels/by-slug/${encodeURIComponent(segment)}/`
++  const t0 = Date.now()
++  const res = await fetch(url, { headers: { Accept: 'application/json' } })
++  spikeFetchCount += 1
++  if (process.env.SPIKE_LOADER_LOG) console.log(`[spike-loader] #${spikeFetchCount} ${segment} ${res.status} ${Date.now() - t0}ms`)
++  if (!res.ok) return { travel: null, status: res.status }
++  return { travel: await res.json() }
++}
++
++export async function loader(_request: unknown, params: Record<string, string | string[]>) {
++  return fetchTravelForParams(params)
++}
++
++export async function generateStaticParams(): Promise<{ param: string }[]> {
++  const limit = Number(process.env.SPIKE_TRAVEL_LIMIT || 0)
++  if (!limit) return []
++  const variants = Math.max(1, Number(process.env.SPIKE_TRAVEL_VARIANTS || 1))
++  const where = encodeURIComponent(JSON.stringify({ publish: 1, moderation: 1 }))
++  const slugs: string[] = []
++  for (let page = 1; slugs.length < limit && page < 50; page += 1) {
++    const res = await fetch(`${SPIKE_API}/api/travels/?page=${page}&perPage=100&where=${where}`)
++    const data = (await res.json()) as { results?: { slug?: string }[]; next?: string | null }
++    for (const item of data.results ?? []) if (item.slug && !item.slug.startsWith('local-qa')) slugs.push(item.slug)
++    if (!data.next) break
++  }
++  const first = process.env.SPIKE_TRAVEL_FIRST ? process.env.SPIKE_TRAVEL_FIRST.split(',') : []
++  const base = [...first, ...slugs.filter((s) => !first.includes(s))].slice(0, limit)
++  const out: { param: string }[] = []
++  for (let v = 0; v < variants; v += 1) for (const s of base) out.push({ param: v === 0 ? s : `${s}--s${v}` })
++  return out
+ }
+ 
+ // #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
+ // generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана
+-export function generateMetadata() {
+-  return shellRouteMetadata()
++export async function generateMetadata(_request: unknown, params: Record<string, string | string[]>) {
++  const { buildTravelRouteMetadata, shellRouteMetadata } = await import('@/components/travel/details/travelRouteMetadata')
++  if (!params?.param || String(params.param).startsWith('[')) return shellRouteMetadata()
++  const { travel } = await fetchTravelForParams(params)
++  return buildTravelRouteMetadata(travel)
+ }
+diff --git a/components/travel/TravelDescription.tsx b/components/travel/TravelDescription.tsx
+index 7054b01b8..142a5608f 100644
+--- a/components/travel/TravelDescription.tsx
++++ b/components/travel/TravelDescription.tsx
+@@ -1,4 +1,5 @@
+ import React, { memo, useEffect, useMemo, useRef, useState } from "react";
++import { useTravelLoaderPayload } from "@/components/travel/details/travelLoaderData";
+ import {
+     ScrollView,
+     StyleSheet,
+@@ -98,6 +99,8 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
+     // первый интерактив (web: гидратация шелла/hero; native: взаимодействия).
+     const [revealedHtml, setRevealedHtml] = useState<string | null>(null);
+     const canParseHtml = revealedHtml === htmlContent;
++    const hasLoaderTravel = Boolean(useTravelLoaderPayload()?.travel);
++    const ssrHtmlIsland = Platform.OS === 'web' && serverSanitized && hasLoaderTravel;
+ 
+     useEffect(() => {
+         let cancelled = false;
+@@ -320,6 +323,10 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
+               articleBodyMedia={articleBodyMedia}
+               fallback={contentFallback}
+             />
++          ) : ssrHtmlIsland ? (
++            // #2766 spike: серверно-санитизированный HTML как остров — тот же узел на
++            // сервере и на первом клиентском проходе; богатый рендер подменяет его после idle.
++            <div data-ssr-html-island="description" dangerouslySetInnerHTML={{ __html: htmlContent }} />
+           ) : (
+             contentFallback
+           )}
+diff --git a/components/travel/details/TravelRouteScreen.tsx b/components/travel/details/TravelRouteScreen.tsx
+new file mode 100644
+index 000000000..e5a344012
+--- /dev/null
++++ b/components/travel/details/TravelRouteScreen.tsx
+@@ -0,0 +1,25 @@
++// #2766 spike: экран маршрута путешествия; файл маршрута грузит его динамически,
++// чтобы бандл loader (исполняется на каждый путь при экспорте) оставался крошечным.
++import { useLoaderData } from 'expo-router'
++import { Platform } from 'react-native'
++import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler'
++import TravelDetailsContainer from '@/components/travel/details/TravelDetailsContainer'
++import { TravelLoaderDataContext, type TravelLoaderPayload } from '@/components/travel/details/travelLoaderData'
++import { normalizeTravelItem } from '@/api/travelsNormalize'
++import { getTravelDetailsSeoViewModel } from '@/components/travel/details/hooks/travelDetailsContainerViewModel'
++import { stringifyJsonLd } from '@/utils/jsonLd'
++
++export default function TravelRouteScreen() {
++  useAndroidBackHandler()
++  const payload = useLoaderData() as TravelLoaderPayload
++  const travel = payload?.travel ? normalizeTravelItem(payload.travel) : null
++  const jsonLd = travel ? getTravelDetailsSeoViewModel(travel, String(travel.slug ?? '')).jsonLd : null
++  return (
++    <TravelLoaderDataContext.Provider value={payload}>
++      {Platform.OS === 'web' && jsonLd ? (
++        <script type="application/ld+json" data-seo-jsonld="travel-article" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(jsonLd) }} />
++      ) : null}
++      <TravelDetailsContainer />
++    </TravelLoaderDataContext.Provider>
++  )
++}
+diff --git a/components/travel/details/travelLoaderData.ts b/components/travel/details/travelLoaderData.ts
+new file mode 100644
+index 000000000..7491ce496
+--- /dev/null
++++ b/components/travel/details/travelLoaderData.ts
+@@ -0,0 +1,10 @@
++// #2766 spike: данные статьи из штатного loader маршрута (Expo Router 58).
++import { createContext, useContext } from 'react'
++
++export type TravelLoaderPayload = { travel: unknown | null; status?: number } | undefined
++
++export const TravelLoaderDataContext = createContext<TravelLoaderPayload>(undefined)
++
++export function useTravelLoaderPayload(): TravelLoaderPayload {
++  return useContext(TravelLoaderDataContext)
++}
+diff --git a/components/travel/details/travelRouteMetadata.ts b/components/travel/details/travelRouteMetadata.ts
+new file mode 100644
+index 000000000..69df519c1
+--- /dev/null
++++ b/components/travel/details/travelRouteMetadata.ts
+@@ -0,0 +1,19 @@
++// #2766 spike: head статьи для generateMetadata (грузится динамически из файла маршрута).
++import { normalizeTravelItem } from '@/api/travelsNormalize'
++import { getTravelDetailsSeoViewModel } from '@/components/travel/details/hooks/travelDetailsContainerViewModel'
++import { routeMetadata, shellRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
++
++export function buildTravelRouteMetadata(raw: unknown) {
++  if (!raw) return shellRouteMetadata()
++  const travel = normalizeTravelItem(raw)
++  const seo = getTravelDetailsSeoViewModel(travel, String(travel.slug ?? ''))
++  return routeMetadata({
++    title: seo.readyTitle ?? 'Metravel',
++    description: seo.readyDesc ?? undefined,
++    canonical: seo.canonicalUrl,
++    image: seo.readyImage,
++    ogType: 'article',
++  })
++}
++
++export { shellRouteMetadata }
+diff --git a/hooks/useTravelDetails.ts b/hooks/useTravelDetails.ts
+index 506df4689..62cd5d2b6 100644
+--- a/hooks/useTravelDetails.ts
++++ b/hooks/useTravelDetails.ts
+@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo } from 'react';
+ import { onlineManager, useQuery } from '@tanstack/react-query';
+ import { useLocalSearchParams } from 'expo-router';
+ import { normalizeTravelItem } from '@/api/travelsNormalize';
++import { useTravelLoaderPayload } from '@/components/travel/details/travelLoaderData';
+ import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
+ 
+ import type { Travel } from '@/types/types';
+@@ -310,10 +311,12 @@ export function useTravelDetails(): UseTravelDetailsReturn {
+   const normalizedSlug = normalizeTravelRouteSegment(slug);
+   const isMissingParam = normalizedSlug.length === 0;
+   const cacheKey = isId ? idNum : normalizedSlug;
+-  const initialPreloadedTravel = useMemo(
+-    () => consumePreloadedTravel(normalizedSlug, isId, idNum, { consume: false }),
+-    [normalizedSlug, isId, idNum]
+-  );
++  // #2766 spike: данные штатного loader маршрута важнее inline-preload генератора.
++  const loaderPayload = useTravelLoaderPayload();
++  const initialPreloadedTravel = useMemo(() => {
++    if (loaderPayload?.travel) return normalizeTravelItem(loaderPayload.travel);
++    return consumePreloadedTravel(normalizedSlug, isId, idNum, { consume: false });
++  }, [loaderPayload, normalizedSlug, isId, idNum]);
+   // #1479: The SSG inline preload for this slug carries only `media.cover`; the
+   // full manifest is fetched in the background. Detect that partial state here
+   // (during the initial render, before the consume effect deletes the global)
