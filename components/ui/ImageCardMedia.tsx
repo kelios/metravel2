@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { PixelRatio, Platform, StyleSheet, View } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import type { ImageContentFit } from 'expo-image';
@@ -66,6 +66,11 @@ type WebLoadFailure = {
  */
 const WEB_RETRY_BASE_DELAY_MS = 600;
 const WEB_RETRY_JITTER_MS = 600;
+
+// Индекс заливок не оповещает о записях: смонтированный кадр, как и раньше,
+// читает его при рендере. Подписка нужна лишь для серверного снимка гидрации.
+const subscribeToStaticIndex = () => () => {};
+const getNoIndexedColor = () => '';
 
 type NativeSharpSourceArgs = {
   uri: string;
@@ -250,11 +255,25 @@ function ImageCardMedia({
    * по умолчанию включён), он работает на всех экранах и подменять его данными из
    * индекса незачем. Дырка после #1208 — ровно web-сторона контракта.
    */
-  const indexedPlaceholderColor = useMemo(() => {
-    if (Platform.OS !== 'web') return '';
-    if (typeof placeholderColor === 'string' && placeholderColor.trim()) return '';
-    return lookupMediaPlaceholder(sourceUri)?.dominantColor ?? sampledPlaceholderColor;
-  }, [placeholderColor, sampledPlaceholderColor, sourceUri]);
+  const skipIndexLookup =
+    Platform.OS !== 'web' || (typeof placeholderColor === 'string' && !!placeholderColor.trim());
+  const getIndexedDominantColor = useCallback(
+    () => (skipIndexLookup ? '' : lookupMediaPlaceholder(sourceUri)?.dominantColor ?? ''),
+    [skipIndexLookup, sourceUri],
+  );
+  // Индекс — модульный Map: на сервере его наполняют все запросы процесса, а на
+  // клиенте гидрация идёт по данным loader'а без нормализации, которая его пишет.
+  // Серверный снимок '' держит SSR и гидрационный проход независимыми от индекса
+  // (иначе слой заливки есть только в одном из них — React #418); после
+  // гидрации React сам перечитывает клиентский снимок, обычный mount берёт его сразу.
+  const indexedDominantColor = useSyncExternalStore(
+    subscribeToStaticIndex,
+    getIndexedDominantColor,
+    getNoIndexedColor,
+  );
+  const indexedPlaceholderColor = skipIndexLookup
+    ? ''
+    : indexedDominantColor || sampledPlaceholderColor;
   const normalizedPlaceholderColor = useMemo(() => {
     const candidate =
       typeof placeholderColor === 'string' && placeholderColor.trim()

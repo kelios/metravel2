@@ -2,6 +2,8 @@ import React from 'react'
 import { createPortal } from 'react-dom'
 import { useIsFocused } from 'expo-router'
 
+import { useHydrationReady } from '@/hooks/useHydrationReady'
+
 import type TravelStickyActionsComponent from './TravelStickyActions'
 
 // #1499: см. шапку `TravelHeroSlots.web.tsx`. В `TravelDetailsScrollRuntime.tsx`
@@ -30,7 +32,10 @@ const viewportAnchorStyle: React.CSSProperties = {
 
 export default function TravelStickyActionsSlot(props: TravelStickyActionsProps) {
   const isFocused = useIsFocused()
-  if (!isFocused || typeof document === 'undefined') return null
+  // Портала нет в серверном HTML: открываем его только после собственного
+  // commit, иначе гидрация серверной статьи на телефоне ловит React #418 (#2768).
+  const hydrationReady = useHydrationReady()
+  if (!isFocused || !hydrationReady || typeof document === 'undefined') return null
   return createPortal(
     <div style={viewportAnchorStyle}>
       <TravelStickyActionsLazy {...props} />
