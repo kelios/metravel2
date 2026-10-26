@@ -472,6 +472,10 @@ def lint_package(package, spec_path=SPEC_PATH, denylist_path=DENYLIST_PATH, data
     story_path = os.path.join(package, 'story.md')
     story = [('story.md', n, line) for n, line in enumerate(read(story_path).splitlines(), 1)] if os.path.exists(story_path) else []
     hits = check_caption(caption)
+    if not os.path.exists(story_path):
+        # Шаблон 18.1, проверка 4 (владелец 26.10.2026 о слайде катка: «что даёт эта информация
+        # пользователю, где наша история?»): пост без story.md собран из описаний кадров.
+        hits.append(finding('story.md', 0, 'S1', 'нет story.md: пост собран без нашей истории (шаблон 18.1, проверка 4)'))
     hits += scan(public, voice)
     hits += check_voice_party(package, public + story)
     hits += check_slide_density(package)

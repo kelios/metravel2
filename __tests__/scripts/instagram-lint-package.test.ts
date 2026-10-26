@@ -26,10 +26,12 @@ describe('instagram lint-package', () => {
   const root = makeTempDir('ig-lint-')
   afterAll(() => fs.rmSync(root, { recursive: true, force: true }))
 
+  const CLEAN_STORY = 'Мы с Сергеем прошли этот круг вдвоём. Рассказываю по порядку, что мы увидели и почему вернулись.'
+
   const makePackage = (name: string, files: Record<string, string>) => {
     const dir = path.join(root, name)
     fs.mkdirSync(dir, { recursive: true })
-    for (const [file, text] of Object.entries({ 'package.md': CHECKLIST, ...files })) {
+    for (const [file, text] of Object.entries({ 'package.md': CHECKLIST, 'story.md': CLEAN_STORY, ...files })) {
       fs.writeFileSync(path.join(dir, file), text)
     }
     const day = new Date().toISOString().slice(0, 10)
@@ -294,6 +296,12 @@ describe('instagram lint-package', () => {
     const dir = makePackage('no-rights', { 'caption.txt': CLEAN_CAPTION })
     fs.rmSync(path.join(dir, 'rights.json'))
     expect(lint(dir)).toMatchObject({ status: 1, rules: ['R27'] })
+  })
+
+  it('flags a package built without story.md (template 18.1, check 4)', () => {
+    const dir = makePackage('no-story', { 'caption.txt': CLEAN_CAPTION })
+    fs.rmSync(path.join(dir, 'story.md'))
+    expect(lint(dir)).toMatchObject({ status: 1, rules: ['S1'] })
   })
 
   it('rejects a call without a package folder', () => {
