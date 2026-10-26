@@ -160,12 +160,15 @@ describe('HomeHeroBookLayout compact quick ideas', () => {
     expect(compact(utils)).toBeTruthy()
   })
 
-  it('drops the compact row too when it overflows and reports the hidden ideas', () => {
+  // The approved book spec (#2405) keeps the subtitle: when the compact row does
+  // not fit, the quick ideas go to the rail below the book instead.
+  it('drops the compact row on the lowest book but keeps the subtitle', () => {
     const onPageNotesVisibilityChange = jest.fn()
-    const utils = renderBook({ bookHeight: 588, onPageNotesVisibilityChange })
-    measure(utils, 359, 420)
+    const utils = renderBook({ bookHeight: 477, onPageNotesVisibilityChange })
+    measure(utils, 291, 354)
     expect(compact(utils)).toBeNull()
     expect(utils.queryByText('У воды')).toBeNull()
+    expect(utils.getByTestId('home-hero-subtitle')).toBeTruthy()
     expect(onPageNotesVisibilityChange).toHaveBeenLastCalledWith(false)
   })
 })

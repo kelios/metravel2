@@ -215,7 +215,7 @@ function HeroPageNote({
         />
       </View>
       <View style={styles.pageNoteTextWrap}>
-        <Text style={[styles.pageNoteText, active && styles.pageNoteTextActive]}>
+        <Text style={[styles.pageNoteText, compact && styles.pageNoteTextCompact, active && styles.pageNoteTextActive]}>
           {card.title}
         </Text>
         {(active || (card.meta && !compact)) && (

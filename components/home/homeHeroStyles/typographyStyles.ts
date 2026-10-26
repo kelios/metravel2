@@ -193,6 +193,11 @@ export const createTypographyStyles = (ctx: HeroStyleContext) => {
       fontWeight: '600',
       ...Platform.select({ web: { fontFamily: sansSerif } as any }),
     },
+    // The compact row has no meta line, so its single label stays readable.
+    pageNoteTextCompact: {
+      fontSize: 13,
+      lineHeight: 16,
+    },
     pageNoteTextActive: {
       color: DESIGN_TOKENS.colors.textOnPrimary,
     },
