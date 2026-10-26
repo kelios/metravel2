@@ -853,6 +853,12 @@ done
 
 node scripts/add-cache-bust-meta.js "dist/$ENV"
 
+# #2762: одинаковые на всех страницах <style> (RNW, critical CSS, скелет) —
+# в общие /_expo/static/css/*.css, иначе каждое поколение quest v1 несёт
+# ~250 МБ копий и пик выката упирается в бюджет. До guard'ов HTML и до
+# предсжатия: новые .css получают .br.
+node scripts/externalize-head-styles.js "dist/$ENV"
+
 # #2088: add-cache-bust-meta.js carries the charset-position fix
 # (scripts/lib/htmlCharset.js); guard it right after.
 node scripts/guard-html-charset.js --dist "dist/$ENV"

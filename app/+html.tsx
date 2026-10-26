@@ -640,8 +640,8 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
       <link rel="manifest" href="/manifest.json" />
 
-      {/* Critical CSS */}
-      <style dangerouslySetInnerHTML={{ __html: buildCriticalCSS() }} />
+      {/* Critical CSS; id — для выноса в общий файл при сборке (#2762) */}
+      <style id="metravel-critical-css" dangerouslySetInnerHTML={{ __html: buildCriticalCSS() }} />
       <style dangerouslySetInnerHTML={{ __html: '[data-testid="filter-scrollview"]::-webkit-scrollbar{display:none}' }} />
       <script
         dangerouslySetInnerHTML={{ __html: getTravelRouteClassScript() }}

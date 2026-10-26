@@ -49,8 +49,12 @@ function checkReceipt(raw, expected, result, previous) {
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, { encoding: 'utf8', timeout: 120000,
     maxBuffer: 8 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'], env: process.env, ...options })
+  // The remote transport reports its refusal (e.g. "Physical managed peak
+  // exceeds owner budget") on stderr; without its tail a failed publication
+  // read only as "ssh failed (1)" (#2762).
+  const stderrTail = typeof result.stderr === 'string' ? result.stderr.trim().split('\n').slice(-3).join(' | ').slice(-600) : ''
   require_(!result.error && result.status === 0 && !result.signal,
-    `${command} failed${result.error ? `: ${result.error.message}` : ` (${result.signal || result.status})`}`)
+    `${command} failed${result.error ? `: ${result.error.message}` : ` (${result.signal || result.status})`}${stderrTail ? `: ${stderrTail}` : ''}`)
   return result.stdout || ''
 }
 

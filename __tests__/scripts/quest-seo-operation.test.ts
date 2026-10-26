@@ -57,6 +57,18 @@ describe('private activation receipt', () => {
     // Niced work gets its own bound; cover keeps the readiness deadline.
     expect(calls.map((call) => call.timeout)).toEqual([300000, 300000, 1234])
   })
+  it('names the remote refusal instead of a bare "ssh failed (1)" (#2762)', () => {
+    let error: Error | undefined
+    jest.isolateModules(() => {
+      jest.doMock('child_process', () => ({ ...jest.requireActual('child_process'),
+        spawnSync: () => ({ status: 1, stdout: '', stderr: 'Traceback (most recent call last):\n  File "<quest-seo-transport>", line 345\nValueError: Physical managed peak exceeds owner budget\n' }) }))
+      const t = require('@/scripts/quest-seo-operation').transport({ PROD_SSH_TARGET: 'target', PROD_REMOTE_DIR: '/remote',
+        QUEST_SEO_APP_CONTAINER: 'app', QUEST_SEO_NGINX_CONTAINER: 'nginx' })
+      try { t.operation('transfer-plan-v3', ['x']) } catch (caught) { error = caught as Error }
+    })
+    jest.dontMock('child_process')
+    expect(error?.message).toMatch(/^ssh failed \(1\): .*ValueError: Physical managed peak exceeds owner budget$/)
+  })
   it('quotes transport arguments as literal shell data', () => {
     const value = "space ' $(touch unwanted) `command`"
     expect(runCli('sh', ['-c', `printf %s ${quote(value)}`]).stdout).toBe(value)
