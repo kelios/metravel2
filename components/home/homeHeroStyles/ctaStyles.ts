@@ -143,11 +143,12 @@ export const createCtaStyles = (ctx: HeroStyleContext) => {
       flexDirection: 'row',
       gap: 12,
       paddingHorizontal: 0,
-      justifyContent: 'flex-start',
+      // Below the centred desktop book the rail is centred too (#2773).
+      justifyContent: showSideSlider ? 'center' : 'flex-start',
       flexWrap: 'nowrap' as const,
       ...Platform.select({
         web: {
-          minWidth: 'max-content',
+          minWidth: showSideSlider ? '100%' : 'max-content',
           paddingBottom: 4,
         } as any,
       }),

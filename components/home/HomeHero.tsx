@@ -35,7 +35,6 @@ const IS_WEB = Platform.OS === 'web'
 const WIDTH_STABILIZE_THRESHOLD = 50
 const BOOK_WIDTH_STABILIZE_THRESHOLD = 20
 const TABLET_LAYOUT_MIN_WIDTH = 770
-const INLINE_BOOKMARK_MIN_WIDTH = 1280
 const STACKED_CTA_MAX_WIDTH = 1180
 const COMPACT_BOOK_MAX_HEIGHT = HOME_BOOK_GEOMETRY.compactHeight
 const SLIDER_MEDIA_WIDTH_NARROW = 480
@@ -156,8 +155,10 @@ const HomeHero = memo(function HomeHero({
   }, [resolvedBookWrapperWidth, viewportHeight, width])
 
   const isCompactBookLayout = showSideSlider && bookHeight > 0 && bookHeight <= COMPACT_BOOK_MAX_HEIGHT
-  const useInlineBookmarkRail =
-    showSideSlider && !isNarrowLayout && !isCompactBookLayout && width >= INLINE_BOOKMARK_MIN_WIDTH
+  // The book draws the quick ideas as full or compact page notes while they
+  // fit; when neither fits, the ordinary rail below the book keeps them (#2773).
+  const [reportedPageNotes, setReportedPageNotes] = useState<boolean | null>(null)
+  const bookShowsPageNotes = showSideSlider && (reportedPageNotes ?? !isNarrowLayout)
   const useStackedCtas =
     isMobile || isCompactBookLayout || (showSideSlider && width < STACKED_CTA_MAX_WIDTH)
 
@@ -334,8 +335,9 @@ const HomeHero = memo(function HomeHero({
             onPrevSlide={handlePrevSlide}
             onNextSlide={handleNextSlide}
             onMarkSlideLoaded={markSlideAsLoaded}
+            onPageNotesVisibilityChange={setReportedPageNotes}
           />
-          {!showSideSlider && !useInlineBookmarkRail && (
+          {!bookShowsPageNotes && (
             <HomeHeroMoodRail
               colors={colors}
               styles={styles}

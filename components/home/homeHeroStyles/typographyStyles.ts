@@ -129,6 +129,11 @@ export const createTypographyStyles = (ctx: HeroStyleContext) => {
           : {},
       }),
     },
+    // One row under the CTA when the book is too low for the full notes (#2773).
+    pageNotesGridCompact: {
+      marginTop: 14,
+      marginBottom: 0,
+    },
     pageNote: {
       flexDirection: 'row',
       alignItems: 'center',

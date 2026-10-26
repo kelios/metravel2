@@ -14,7 +14,7 @@ jest.mock('@/components/home/HomeHeroSearchBar', () => ({
 const styles = new Proxy({}, { get: () => ({}) })
 const slide = { source: { uri: 'https://example.test/a.jpg' }, alt: 'a', title: 'Озеро', subtitle: 'Италия' }
 const moodCards = [
-  { title: 'У воды', icon: 'droplet', filters: {}, route: '/search' },
+  { title: 'У воды', icon: 'droplet', meta: 'Озёра и реки', filters: {}, route: '/search' },
   { title: 'Замки', icon: 'flag', filters: {}, route: '/search' },
 ]
 
@@ -67,31 +67,34 @@ const measure = (utils: ReturnType<typeof renderBook>, frame: number, content: n
   })
 }
 
+const full = (utils: ReturnType<typeof renderBook>) => utils.queryByTestId('home-hero-page-notes')
+const compact = (utils: ReturnType<typeof renderBook>) => utils.queryByTestId('home-hero-page-notes-compact')
+
 describe('HomeHeroBookLayout page notes fit the left page', () => {
   it('keeps the notes while the page content fits its frame', () => {
     const utils = renderBook()
     measure(utils, 500, 480)
-    expect(utils.queryByText('У воды')).toBeTruthy()
+    expect(full(utils)).toBeTruthy()
   })
 
   it('drops the notes when the measured content overflows the frame', () => {
     const utils = renderBook()
     measure(utils, 500, 526)
-    expect(utils.queryByText('У воды')).toBeNull()
+    expect(full(utils)).toBeNull()
     // Without the notes the content shrinks; they must not come back for the same layout.
     measure(utils, 500, 380)
-    expect(utils.queryByText('У воды')).toBeNull()
+    expect(full(utils)).toBeNull()
   })
 
   it('retries the notes after the book size changes', () => {
     const utils = renderBook()
     measure(utils, 500, 526)
-    expect(utils.queryByText('У воды')).toBeNull()
+    expect(full(utils)).toBeNull()
     utils.rerender(<HomeHeroBookLayout {...utils.props} bookHeight={1000} />)
-    expect(utils.queryByText('У воды')).toBeTruthy()
+    expect(full(utils)).toBeTruthy()
     // The taller book fits them: a fresh measurement keeps them.
     measure(utils, 640, 600)
-    expect(utils.queryByText('У воды')).toBeTruthy()
+    expect(full(utils)).toBeTruthy()
   })
 
   it('waits for the resized frame when content is measured first', () => {
@@ -101,9 +104,9 @@ describe('HomeHeroBookLayout page notes fit the left page', () => {
 
     const frame = utils.getByTestId('home-hero-left-frame')
     fireEvent(frame.children[0] as any, 'layout', layout(600))
-    expect(utils.queryByText('У воды')).toBeTruthy()
+    expect(full(utils)).toBeTruthy()
     fireEvent(frame, 'layout', layout(640))
-    expect(utils.queryByText('У воды')).toBeTruthy()
+    expect(full(utils)).toBeTruthy()
   })
 
   it.each([
@@ -113,11 +116,11 @@ describe('HomeHeroBookLayout page notes fit the left page', () => {
     const utils = renderBook()
     measure(utils, 500, 526)
     utils.rerender(<HomeHeroBookLayout {...utils.props} {...overrides} />)
-    expect(utils.queryByText('У воды')).toBeTruthy()
+    expect(full(utils)).toBeTruthy()
     measure(utils, 500, 480)
-    expect(utils.queryByText('У воды')).toBeTruthy()
+    expect(full(utils)).toBeTruthy()
     measure(utils, 500, 526)
-    expect(utils.queryByText('У воды')).toBeNull()
+    expect(full(utils)).toBeNull()
   })
 
   it('keeps layout observers attached before the notes become enabled', () => {
@@ -127,11 +130,42 @@ describe('HomeHeroBookLayout page notes fit the left page', () => {
     expect((frame.children[0] as any).props.onLayout).toEqual(expect.any(Function))
     utils.rerender(<HomeHeroBookLayout {...utils.props} bookHeight={820} />)
     measure(utils, 500, 526)
-    expect(utils.queryByText('У воды')).toBeNull()
+    expect(full(utils)).toBeNull()
   })
 
-  it('never shows the notes on a book shorter than the notes threshold', () => {
+  it('never shows the full notes on a book shorter than the notes threshold', () => {
     const utils = renderBook({ bookHeight: 720 })
+    expect(full(utils)).toBeNull()
+  })
+})
+
+// #2773: a laptop book is too low for the full notes; the quick ideas stay on
+// the first screen as one compact row under the CTA while that row fits.
+describe('HomeHeroBookLayout compact quick ideas', () => {
+  it('shows a compact row without meta lines on a book below the notes threshold', () => {
+    const onPageNotesVisibilityChange = jest.fn()
+    const utils = renderBook({ bookHeight: 720, onPageNotesVisibilityChange })
+    measure(utils, 440, 400)
+    expect(full(utils)).toBeNull()
+    expect(compact(utils)).toBeTruthy()
+    expect(utils.getByText('У воды')).toBeTruthy()
+    expect(utils.queryByText('Озёра и реки')).toBeNull()
+    expect(onPageNotesVisibilityChange).toHaveBeenLastCalledWith(true)
+  })
+
+  it('falls back to the compact row when the full notes overflow', () => {
+    const utils = renderBook()
+    measure(utils, 500, 526)
+    expect(full(utils)).toBeNull()
+    expect(compact(utils)).toBeTruthy()
+  })
+
+  it('drops the compact row too when it overflows and reports the hidden ideas', () => {
+    const onPageNotesVisibilityChange = jest.fn()
+    const utils = renderBook({ bookHeight: 588, onPageNotesVisibilityChange })
+    measure(utils, 359, 420)
+    expect(compact(utils)).toBeNull()
     expect(utils.queryByText('У воды')).toBeNull()
+    expect(onPageNotesVisibilityChange).toHaveBeenLastCalledWith(false)
   })
 })

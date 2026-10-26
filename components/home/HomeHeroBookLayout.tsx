@@ -71,7 +71,11 @@ type HomeHeroBookLayoutProps = {
   onPrevSlide: () => void
   onNextSlide: () => void
   onMarkSlideLoaded: (slideIndex: number) => void
+  /** The quick ideas must stay reachable: HomeHero shows its rail whenever the book drops its notes (#2773). */
+  onPageNotesVisibilityChange?: (visible: boolean) => void
 }
+
+const HOME_BOOK_PAGE_NOTES_MIN_HEIGHT = 780
 
 // Page notes are optional decoration: a fixed height threshold cannot know how
 // many lines the title and subtitle wrap into (viewport, locale), so the notes
@@ -137,24 +141,30 @@ function HeroWeekEyebrow({
 function HeroPageNotes({
   activeKey,
   colors,
+  compact = false,
   moodCards,
   onQuickFilterPress,
   styles,
 }: {
   activeKey: string | null
   colors: ThemedColors
+  compact?: boolean
   moodCards: readonly MoodCard[]
   onQuickFilterPress: (label: string, filters?: QuickFilterParams, route?: string) => void
   styles: Styles
 }) {
   return (
-    <View style={styles.pageNotesGrid}>
+    <View
+      testID={compact ? 'home-hero-page-notes-compact' : 'home-hero-page-notes'}
+      style={[styles.pageNotesGrid, compact && styles.pageNotesGridCompact]}
+    >
       {moodCards.map((card) => (
         <HeroPageNote
           key={`page-note-${card.title}`}
           active={activeKey === `filter:${card.title}`}
           card={card}
           colors={colors}
+          compact={compact}
           onQuickFilterPress={onQuickFilterPress}
           styles={styles}
         />
@@ -167,12 +177,14 @@ function HeroPageNote({
   active,
   card,
   colors,
+  compact,
   onQuickFilterPress,
   styles,
 }: {
   active: boolean
   card: MoodCard
   colors: ThemedColors
+  compact: boolean
   onQuickFilterPress: (label: string, filters?: QuickFilterParams, route?: string) => void
   styles: Styles
 }) {
@@ -206,7 +218,7 @@ function HeroPageNote({
         <Text style={[styles.pageNoteText, active && styles.pageNoteTextActive]}>
           {card.title}
         </Text>
-        {(active || card.meta) && (
+        {(active || (card.meta && !compact)) && (
           <Text style={[styles.pageNoteMeta, active && styles.pageNoteMetaActive]}>
             {active ? i18nT('home:components.home.HomeHeroBookLayout.otkryvaem_0d829dc9') : card.meta}
           </Text>
@@ -536,12 +548,32 @@ export default function HomeHeroBookLayout({
   onPrevSlide,
   onNextSlide,
   onMarkSlideLoaded,
+  onPageNotesVisibilityChange,
 }: HomeHeroBookLayoutProps) {
   const withBookFrame = isWeb && showSideSlider
   const showChapterHeader = showSideSlider && !isNarrowLayout
-  const pageNotesEnabled = showSideSlider && !isNarrowLayout && bookHeight >= 780
+  const pageNotesEnabled = showSideSlider && !isNarrowLayout && bookHeight >= HOME_BOOK_PAGE_NOTES_MIN_HEIGHT
   const pageNotesFit = usePageNotesFit(pageNotesEnabled, bookHeight, `${bookHeight}:${width}:${heroSubtitle}`)
   const showPageNotes = pageNotesEnabled && pageNotesFit.fits
+  // A book too low for the full notes still has room under its CTA on common
+  // laptops: one compact row keeps the quick ideas on the first screen (#2773).
+  const compactNotesEnabled = showSideSlider && !isNarrowLayout && !showPageNotes
+  const compactNotesFit = usePageNotesFit(compactNotesEnabled, bookHeight, `${bookHeight}:${width}:${heroSubtitle}:compact`)
+  const showCompactNotes = compactNotesEnabled && compactNotesFit.fits
+  const handleFrameLayout = (e: LayoutChangeEvent) => {
+    pageNotesFit.onFrameLayout(e)
+    compactNotesFit.onFrameLayout(e)
+  }
+  const handleContentLayout = (e: LayoutChangeEvent) => {
+    pageNotesFit.onContentLayout(e)
+    // Content measured with the full notes in the page says nothing about the
+    // compact row; it gets its own measurement once the full notes are gone.
+    if (compactNotesEnabled) compactNotesFit.onContentLayout(e)
+  }
+
+  useEffect(() => {
+    onPageNotesVisibilityChange?.(showPageNotes || showCompactNotes)
+  }, [onPageNotesVisibilityChange, showCompactNotes, showPageNotes])
 
   return (
     <View style={styles.heroShell}>
@@ -560,11 +592,11 @@ export default function HomeHeroBookLayout({
             <View
               testID="home-hero-left-frame"
               style={styles.leftPageFrame}
-              onLayout={pageNotesFit.onFrameLayout}
+              onLayout={handleFrameLayout}
             >
               <View
                 style={styles.leftPageContent}
-                onLayout={pageNotesFit.onContentLayout}
+                onLayout={handleContentLayout}
               >
                 <View>
                   {showChapterHeader && (
@@ -636,6 +668,17 @@ export default function HomeHeroBookLayout({
                     />
                   </View>
                 </View>
+
+                {showCompactNotes && (
+                  <HeroPageNotes
+                    activeKey={pendingAction}
+                    colors={colors}
+                    compact
+                    moodCards={moodCards}
+                    onQuickFilterPress={onQuickFilterPress}
+                    styles={styles}
+                  />
+                )}
               </View>
             </View>
 
