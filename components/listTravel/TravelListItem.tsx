@@ -21,7 +21,7 @@ import HiddenContentGate from '@/components/safety/HiddenContentGate'
 import { makeContentRef } from '@/types/contentSafety'
 import { useThemedColors } from '@/hooks/useTheme'
 import { globalFocusStyles } from '@/styles/globalFocus'
-import { formatViewCount } from '@/components/travel/utils/travelHelpers'
+import { formatViewCount, shouldShowViewCount } from '@/components/travel/utils/travelHelpers'
 import { hasAnyTravelEngagementStats } from '@/utils/travelEngagementStats'
 import { appendReturnToParam } from '@/utils/navigationReturnPath'
 import { isTravelDraft } from '@/utils/travelPublicationStatus'
@@ -196,6 +196,7 @@ function TravelListItem({
   const title = name?.trim() || i18nT('travel:common.untitled')
   const views = Number(countUnicIpView) || 0
   const viewsFormatted = formatViewCount(views)
+  const showViews = shouldShowViewCount(views, { isOwner: Boolean(renderAuthorFeedback) })
   const travelKey = slug?.trim() || String(id)
   const isDraft = isTravelDraft(travel)
   const cardTestId = selectable
@@ -440,7 +441,7 @@ function TravelListItem({
     (isDraft && !renderAuthorFeedback ? i18nT('travel:components.listTravel.TravelListItem.status_chernovik_a0df151f') : '') +
     (countries.length ? i18nT('travel:components.listTravel.TravelListItem.strany_value1_755975ff', { value1: countries.join(', ') }) : '') +
     (displayYear ? i18nT('travel:components.listTravel.TravelListItem.god_value1_e70dda0d', { value1: displayYear }) : '') +
-    (views > 0 ? i18nT('travel:components.listTravel.TravelListItem.prosmotrov_value1_aadc926b', { value1: viewsFormatted }) : '')
+    (showViews ? i18nT('travel:components.listTravel.TravelListItem.prosmotrov_value1_aadc926b', { value1: viewsFormatted }) : '')
 
   const hasAuthorMeta = !hideAuthor && authorDisplayName !== ''
   const hasRating = travel.rating != null && travel.rating > 0
@@ -641,7 +642,7 @@ function TravelListItem({
     )
   }
   // Views are shown directly on the media for both web and native cards.
-  const showViewsOverlay = views > 0 && !selectable
+  const showViewsOverlay = showViews && !selectable
   const viewsOverlaySlot = showViewsOverlay ? (
     <View style={styles.viewsOverlayBadge} testID="views-overlay" pointerEvents="none">
       <Feather name="eye" size={VIEW_ICON_SIZE + 2} color={colors.textOnDark} />

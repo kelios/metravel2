@@ -6,7 +6,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
-import { formatViewCount } from '@/components/travel/utils/travelHelpers';
+import { formatViewCount, shouldShowViewCount } from '@/components/travel/utils/travelHelpers';
 import { resolveTravelCityName } from '@/utils/travelDisplayLocation';
 import { translate as i18nT } from '@/i18n';
 
@@ -84,7 +84,7 @@ function TabTravelCard({
 
   const views = Number(item?.views) || 0;
   const viewsBadge = useMemo(() => {
-    if (views <= 0) return null;
+    if (!shouldShowViewCount(views)) return null;
     return (
       <View style={styles.viewsBadge} testID={`${resolvedTestID}-views`} pointerEvents="none">
         <Feather name="eye" size={VIEW_ICON_SIZE} color={colors.textOnDark} />

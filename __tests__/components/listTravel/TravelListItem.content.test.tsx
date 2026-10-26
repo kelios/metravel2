@@ -171,17 +171,26 @@ describe('TravelListItem content & metadata', () => {
     expect(queryByText('0')).toBeNull();
   });
 
-  it('renders views on the media overlay when views are greater than zero', () => {
-    const { getByTestId, queryByTestId } = renderItem({ countUnicIpView: '10' } as any);
+  it('renders views on the media overlay from the public threshold', () => {
+    const { getByTestId, queryByTestId } = renderItem({ countUnicIpView: '50' } as any);
     expect(queryByTestId('views-meta')).toBeNull();
     expect(getByTestId('views-overlay')).toBeTruthy();
+  });
+
+  // #2780: «Просмотров: 1» на свежей статье отталкивает читателя.
+  it('hides a small view count from readers but keeps it for the author', () => {
+    const reader = renderItem({ countUnicIpView: '8' } as any);
+    expect(reader.queryByTestId('views-overlay')).toBeNull();
+    reader.unmount();
+    const author = renderItem({ countUnicIpView: '8' } as any, { renderAuthorFeedback: () => null });
+    expect(author.getByTestId('views-overlay')).toBeTruthy();
   });
 
   it('keeps views and author on media overlays on narrow desktop grid cards', () => {
     const { getByTestId, queryByTestId, getByText } = renderItem(
       {
         countryName: 'Беларусь',
-        countUnicIpView: '43',
+        countUnicIpView: '430',
         userName: 'Long Author Name',
         year: '2024',
         rating: 5,
@@ -285,7 +294,7 @@ describe('TravelListItem content & metadata', () => {
     });
 
     it('renders content area when views exist', () => {
-      const { getByTestId } = renderItem({ countUnicIpView: '10' } as any);
+      const { getByTestId } = renderItem({ countUnicIpView: '120' } as any);
       expect(getByTestId('views-overlay')).toBeTruthy();
     });
 

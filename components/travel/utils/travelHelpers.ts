@@ -216,6 +216,17 @@ export function formatViewCount(count: number): string {
   return formatCompactNumber(count);
 }
 
+/** С этого числа счётчик просмотров на карточке виден читателю (#2780). */
+export const MIN_PUBLIC_VIEW_COUNT = 50;
+
+/**
+ * «Просмотров: 1» у свежей статьи читается как «это никто не читал» (#2780):
+ * читателю счётчик показывается с порога, автору на своих карточках — всегда.
+ */
+export function shouldShowViewCount(views: number, options: { isOwner?: boolean } = {}): boolean {
+  return views > 0 && (views >= MIN_PUBLIC_VIEW_COUNT || Boolean(options.isOwner));
+}
+
 // ✅ ОПТИМИЗАЦИЯ: Форматирование даты
 export function formatDate(date: string | Date): string {
   const d = typeof date === 'string' ? new Date(date) : date;
