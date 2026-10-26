@@ -452,113 +452,12 @@ function QuestsContentPanel({
         </View>
     ) : null;
 
-    const inner = (
-        <>
-            {contentHeader}
-
-            {mobileTitleBlock}
-
-            {noticeSlot}
-
-            <View
-                style={[styles.contentBody, viewMode === 'map' && isMobile && styles.contentBodyMap]}
-                testID="quests-content-body"
-                {...SCREEN_CONTENT_FIRST_PROPS}
-            >
-                {geoMessageBlock}
-
-                {viewMode === 'map' ? (
-                    <View style={styles.mapSection}>
-                        <Suspense fallback={<View style={styles.mapLoading}><ActivityIndicator color={colors.primary} /></View>}>
-                            {mapSlot}
-                        </Suspense>
-                    </View>
-                ) : (
-                    <>
-                        {seoIntroSlot}
-
-                        {searchActive && questsAll.length === 0 && dataLoaded && (
-                            <EmptyState
-                                density="compact"
-                                icon="search"
-                                title={i18nT('quests:screens.tabs.QuestsContentPanel.nichego_ne_naydeno_21857ccf')}
-                                description={i18nT('quests:screens.tabs.QuestsContentPanel.poprobuyte_drugoe_nazvanie_ili_gorod_980ce716')}
-                                variant="empty"
-                            />
-                        )}
-
-                        {!searchActive && isMapAreaActive && questsAll.length === 0 && dataLoaded && (
-                            <EmptyState
-                                density="compact"
-                                icon="map-pin"
-                                title={i18nT('quests:screens.tabs.QuestsContentPanel.ryadom_nichego_ne_naydeno_271dd8e7')}
-                                description={i18nT('quests:screens.tabs.QuestsContentPanel.posmotrite_kvesty_v_drugih_gorodah_ili_vyber_720d6ffd')}
-                                variant="empty"
-                            />
-                        )}
-
-                        {!searchActive && !isMapAreaActive && selectedCityId === nearbyId && userLoc && questsAll.length === 0 && dataLoaded && (
-                            <EmptyState
-                                density="compact"
-                                icon="map-pin"
-                                title={i18nT('quests:screens.tabs.QuestsContentPanel.ryadom_nichego_ne_naydeno_271dd8e7')}
-                                description={i18nT('quests:screens.tabs.QuestsContentPanel.posmotrite_kvesty_v_drugih_gorodah_ili_vyber_720d6ffd')}
-                                variant="empty"
-                            />
-                        )}
-
-                        {!searchActive && !isMapAreaActive && selectedCityId === nearbyId && !userLoc && geoRequesting && dataLoaded && (
-                            <View style={styles.mapLoading} testID="quests-nearby-loading">
-                                <ActivityIndicator color={colors.primary} />
-                            </View>
-                        )}
-
-                        {!searchActive && !selectedCityId && dataLoaded && (
-                            <EmptyState
-                                density="compact"
-                                icon="compass"
-                                title={i18nT('quests:screens.tabs.QuestsContentPanel.vyberite_gorod_023bdfab')}
-                                description={isMobile ? i18nT('quests:screens.tabs.QuestsContentPanel.nazhmite_gorod_chtoby_vybrat_bdb9cf3e') : i18nT('quests:screens.tabs.QuestsContentPanel.vyberite_gorod_iz_spiska_sleva_3a187f1e')}
-                                variant="empty"
-                            />
-                        )}
-
-                        {questsAll.length === 0 && completedEmptyState}
-
-                        {!dataLoaded && <QuestsGridSkeleton styles={styles} radius={radiiLg} />}
-
-                        {dataLoaded && questsAll.length > 0 && (
-                            <View ref={questsGridRef} style={styles.questsGrid} onLayout={handleQuestsGridLayout} testID="quests-grid">
-                                {visibleQuests.map((quest, index) => (
-                                    <QuestCard
-                                        key={quest.id}
-                                        styles={styles}
-                                        cityId={getQuestCityId(quest)}
-                                        quest={quest}
-                                        nearby={selectedCityId === nearbyId && !!userLoc && !isMapAreaActive}
-                                        cardWidth={gridCardWidth}
-                                        index={index}
-                                    />
-                                ))}
-                            </View>
-                        )}
-
-                        {seoFaqSlot}
-
-                        {searchActive ? null : footerSlot}
-                    </>
-                )}
-            </View>
-        </>
-    );
-
-    // Пустые/загрузочные состояния списка для нативного FlatList. Держим их в
-    // ListEmptyComponent, чтобы корневой узел (и шапка с TextInput) не менялся
-    // между «есть результаты» и «0 результатов» — иначе поддерево с полем поиска
-    // перемонтируется, поле теряет фокус и клавиатура закрывается при наборе.
+    // Сетка web и native FlatList используют одни пустые/загрузочные состояния.
+    // На native они остаются в ListEmptyComponent: корень списка и поле поиска
+    // не перемонтируются, когда поиск сужает выдачу до нуля.
     const listEmptyContent = (
         <>
-            {searchActive && dataLoaded && (
+            {searchActive && questsAll.length === 0 && dataLoaded && (
                 <EmptyState
                     density="compact"
                     icon="search"
@@ -568,17 +467,8 @@ function QuestsContentPanel({
                 />
             )}
 
-            {!searchActive && isMapAreaActive && dataLoaded && (
-                <EmptyState
-                    density="compact"
-                    icon="map-pin"
-                    title={i18nT('quests:screens.tabs.QuestsContentPanel.ryadom_nichego_ne_naydeno_271dd8e7')}
-                    description={i18nT('quests:screens.tabs.QuestsContentPanel.posmotrite_kvesty_v_drugih_gorodah_ili_vyber_720d6ffd')}
-                    variant="empty"
-                />
-            )}
-
-            {!searchActive && !isMapAreaActive && selectedCityId === nearbyId && userLoc && dataLoaded && (
+            {!searchActive && questsAll.length === 0 && dataLoaded
+                && (isMapAreaActive || (selectedCityId === nearbyId && userLoc)) && (
                 <EmptyState
                     density="compact"
                     icon="map-pin"
@@ -604,9 +494,61 @@ function QuestsContentPanel({
                 />
             )}
 
-            {completedEmptyState}
+            {questsAll.length === 0 && completedEmptyState}
 
             {!dataLoaded && <QuestsGridSkeleton styles={styles} radius={radiiLg} />}
+        </>
+    );
+
+    const inner = (
+        <>
+            {contentHeader}
+
+            {mobileTitleBlock}
+
+            {noticeSlot}
+
+            <View
+                style={[styles.contentBody, viewMode === 'map' && isMobile && styles.contentBodyMap]}
+                testID="quests-content-body"
+                {...SCREEN_CONTENT_FIRST_PROPS}
+            >
+                {geoMessageBlock}
+
+                {viewMode === 'map' ? (
+                    <View style={styles.mapSection}>
+                        <Suspense fallback={<View style={styles.mapLoading}><ActivityIndicator color={colors.primary} /></View>}>
+                            {mapSlot}
+                        </Suspense>
+                    </View>
+                ) : (
+                    <>
+                        {seoIntroSlot}
+
+                        {listEmptyContent}
+
+                        {dataLoaded && questsAll.length > 0 && (
+                            <View ref={questsGridRef} style={styles.questsGrid} onLayout={handleQuestsGridLayout} testID="quests-grid">
+                                {visibleQuests.map((quest, index) => (
+                                    <QuestCard
+                                        key={quest.id}
+                                        styles={styles}
+                                        cityId={getQuestCityId(quest)}
+                                        quest={quest}
+                                        nearby={selectedCityId === nearbyId && !!userLoc && !isMapAreaActive}
+                                        cardWidth={gridCardWidth}
+                                        index={index}
+                                    />
+                                ))}
+                            </View>
+                        )}
+
+                        {seoFaqSlot}
+
+                        {searchActive ? null : footerSlot}
+                    </>
+                )}
+            </View>
         </>
     );
 

@@ -328,6 +328,68 @@ describe('QuestsContentPanel', () => {
         expect(queryByText('Вы ещё не прошли ни одного квеста')).toBeNull();
     });
 
+    it.each(['web', 'android'])('keeps empty-state precedence and clears it when results arrive on %s', (platform) => {
+        (Platform as { OS: string }).OS = platform;
+        mockIsMobile = true;
+        const props = { ...makeBaseProps(), isMobile: true, isMapAreaActive: true };
+        const { getAllByText, queryByText, rerender } = render(
+            <QuestsContentPanel {...props} searchQuery="missing" questsAll={[]} />,
+        );
+
+        expect(getAllByText('Ничего не найдено')).toHaveLength(1);
+        expect(queryByText('Рядом ничего не найдено')).toBeNull();
+
+        rerender(<QuestsContentPanel {...props} questsAll={[]} />);
+        expect(getAllByText('Рядом ничего не найдено')).toHaveLength(1);
+        expect(queryByText('Ничего не найдено')).toBeNull();
+
+        rerender(
+            <QuestsContentPanel
+                {...props}
+                isMapAreaActive={false}
+                selectedCityId="__nearby__"
+                userLoc={{ lat: 53.9, lng: 27.56 }}
+                questsAll={[]}
+            />,
+        );
+        expect(getAllByText('Рядом ничего не найдено')).toHaveLength(1);
+
+        rerender(<QuestsContentPanel {...props} searchQuery="quest" />);
+        expect(queryByText('Ничего не найдено')).toBeNull();
+        expect(queryByText('Рядом ничего не найдено')).toBeNull();
+    });
+
+    it.each(['web', 'android'])('distinguishes location lookup from catalog loading on %s', (platform) => {
+        (Platform as { OS: string }).OS = platform;
+        mockIsMobile = true;
+        const props = {
+            ...makeBaseProps(),
+            isMobile: true,
+            selectedCityId: '__nearby__',
+            geoRequesting: true,
+        };
+        const { getByTestId, queryByTestId, queryByText, rerender } = render(
+            <QuestsContentPanel {...props} questsAll={[]} />,
+        );
+
+        expect(getByTestId('quests-nearby-loading')).toBeTruthy();
+        expect(queryByText('Рядом ничего не найдено')).toBeNull();
+
+        rerender(<QuestsContentPanel {...props} dataLoaded={false} questsAll={[]} />);
+        expect(getByTestId('quests-grid-skeleton')).toBeTruthy();
+        expect(queryByTestId('quests-nearby-loading')).toBeNull();
+        expect(queryByText('Рядом ничего не найдено')).toBeNull();
+    });
+
+    it('keeps the city-selection prompt alongside an empty map-area result on web', () => {
+        (Platform as { OS: string }).OS = 'web';
+        const { getByText } = render(
+            <QuestsContentPanel {...makeBaseProps()} selectedCityId={null} isMapAreaActive questsAll={[]} />,
+        );
+        expect(getByText('Рядом ничего не найдено')).toBeTruthy();
+        expect(getByText('Выберите город')).toBeTruthy();
+    });
+
     it.each([false, true])('names other players explicitly in the completion slice (mobile=%s)', (mobile) => {
         mockIsMobile = mobile;
         const { getByTestId, queryByText } = render(
