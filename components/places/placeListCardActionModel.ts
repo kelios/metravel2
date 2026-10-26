@@ -30,8 +30,11 @@ type ActionModelInput = {
   showTitleInContent: boolean
 }
 
-/** Подписанных действий в ряду при `actionBudget`, не считая «⋯» и «Сохранить». */
-export const PLACE_CARD_VISIBLE_PRIMARY_ACTIONS = 2
+/**
+ * Плиток в ряду при `actionBudget` ВСЕГО — вместе с «Сохранить» и входом в лист
+ * «Навигация и действия» (#2778, приёмка: четыре плитки на 320 резали подписи).
+ */
+export const PLACE_CARD_ROW_TILE_BUDGET = 3
 
 export function buildPlaceListCardActionModel({
   actionBudget = false,
@@ -86,12 +89,6 @@ export function buildPlaceListCardActionModel({
       : null
   const visibleMapActions = isCompactActionCard ? [] : mapActions
   const primaryActions = budgeted ? [...inlineActions, ...quickActions] : []
-  const primarySlots = PLACE_CARD_VISIBLE_PRIMARY_ACTIONS
-  const visibleInlineActions = budgeted
-    ? primaryActions.slice(0, primarySlots)
-    : isCompactActionCard
-      ? popupAligned ? inlineActions : []
-      : inlineActions
   const copyOverflowAction: ActionChip | null =
     budgeted && hasCoord && onCopyCoord
       ? {
@@ -101,6 +98,18 @@ export function buildPlaceListCardActionModel({
           onPress: onCopyCoord,
         }
       : null
+  // Всё, что живёт только в листе, — навигаторы, координаты, Telegram, правка.
+  const sheetOnlyCount =
+    mapActions.length + (copyOverflowAction ? 1 : 0) + (shareOverflowAction ? 1 : 0) + menuActions.length
+  const slotsBesideSave = PLACE_CARD_ROW_TILE_BUDGET - (showSaveTile ? 1 : 0)
+  // Плитка листа нужна, если в нём что-то есть или основные не влезают целиком.
+  const needsSheet = sheetOnlyCount > 0 || primaryActions.length > slotsBesideSave
+  const primarySlots = Math.max(0, slotsBesideSave - (needsSheet ? 1 : 0))
+  const visibleInlineActions = budgeted
+    ? primaryActions.slice(0, primarySlots)
+    : isCompactActionCard
+      ? popupAligned ? inlineActions : []
+      : inlineActions
   // Бюджет: сначала то, что не влезло в ряд, потом навигаторы и служебное.
   const budgetOverflow = budgeted
     ? [

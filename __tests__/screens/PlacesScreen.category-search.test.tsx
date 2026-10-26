@@ -221,7 +221,7 @@ describe('PlacesScreen category search', () => {
   })
 
   it('opens selected place on map and exposes navigator actions on the card', async () => {
-    const { findAllByLabelText, findByTestId } = render(<PlacesScreen />, {
+    const { findAllByLabelText, findByLabelText, findByTestId } = render(<PlacesScreen />, {
       wrapper: createQueryWrapper().Wrapper,
     })
 
@@ -251,8 +251,13 @@ describe('PlacesScreen category search', () => {
     // точка пришла: иначе все точки одного путешествия выглядят одинаково.
     expect(within(placeCard).getByText('Минск')).toBeTruthy()
     expect(within(placeCard).queryByText('Парковка у озера')).toBeNull()
-    expect(within(placeCard).getByText('На карте')).toBeTruthy()
-    fireEvent.press(within(placeCard).getByLabelText('Открыть место на карте'))
+    // #2778: в ряду три плитки — «Прочитать», «Сохранить», «Навигация»; «На
+    // карте» (то же, что тап по карточке) — пункт листа «Навигация и действия».
+    expect(within(placeCard).getByText('Прочитать')).toBeTruthy()
+    expect(within(placeCard).getByText('Сохранить')).toBeTruthy()
+    expect(within(placeCard).queryByText('На карте')).toBeNull()
+    fireEvent.press(within(placeCard).getByLabelText('Навигация и действия'))
+    fireEvent.press(await findByLabelText('Открыть место на карте'))
 
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/map',

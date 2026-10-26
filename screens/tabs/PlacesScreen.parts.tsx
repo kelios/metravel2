@@ -296,8 +296,22 @@ export const PlaceCard = React.memo(function PlaceCard({
         relatedTravelCountry={place.country}
         onCardPress={() => onOpenMap(place)}
         mapActions={mapActions}
+        // #2778: в ряду ≤3 плиток — одна основная, «Сохранить», «Навигация». Тап по
+        // карточке и фото уже открывает карту, поэтому видимой остаётся
+        // «Прочитать» (единственный путь к статье), а «На карте» — пункт листа.
         inlineActions={
           [
+            ...(place.urlTravel
+              ? [
+                  {
+                    key: 'article',
+                    label: i18nT('map:screens.tabs.PlacesScreen_parts.statya_28264f10'),
+                    icon: 'book-open' as const,
+                    onPress: () => onOpenTravel(place),
+                    title: i18nT('map:screens.tabs.PlacesScreen_parts.otkryt_statyu_6f4d1411'),
+                  },
+                ]
+              : []),
             ...(normalizedCoord
               ? [
                   {
@@ -307,17 +321,6 @@ export const PlaceCard = React.memo(function PlaceCard({
                     onPress: () => onOpenMap(place),
                     accessibilityLabel: i18nT('map:screens.tabs.PlacesScreen_parts.otkryt_mesto_na_karte_abcb0a9d'),
                     title: i18nT('map:screens.tabs.PlacesScreen_parts.otkryt_na_karte_6b6df4a9'),
-                  },
-                ]
-              : []),
-            ...(place.urlTravel
-              ? [
-                  {
-                    key: 'article',
-                    label: i18nT('map:screens.tabs.PlacesScreen_parts.statya_28264f10'),
-                    icon: 'book-open' as const,
-                    onPress: () => onOpenTravel(place),
-                    title: i18nT('map:screens.tabs.PlacesScreen_parts.otkryt_statyu_6f4d1411'),
                   },
                 ]
               : []),
