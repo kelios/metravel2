@@ -48,6 +48,7 @@ import {
   shouldSidebarIncludeSort,
 } from './listTravelBaseModel'
 import { useListTravelViewportState } from './hooks/useListTravelViewportState'
+import { useSearchAlsoFound } from './hooks/useSearchAlsoFound'
 import ListTravelOwnUserGate, {
   getListTravelOwnUserGateMode,
 } from './parts/ListTravelOwnUserGate'
@@ -579,16 +580,24 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
         displayedHandleEndReached();
     }, [displayedHandleEndReached, hasDisplayedItems]);
 
+    const isSiteSearch = !isExport && !isMeTravel && !isTravelBy && !user_id && isSearchPathname(pathname);
     // #2459: строка смыслового подбора только на /search (не «мои», не экспорт) и под флагом.
-    const showAiSearchPanel =
-      isAiPicksEnabled() && !isExport && !isMeTravel && !isTravelBy && !user_id && isSearchPathname(pathname);
+    const showAiSearchPanel = isAiPicksEnabled() && isSiteSearch;
+    // #2775: строка «Ещё по запросу» (квесты и места) — над карточками, фиксированной высоты.
+    const searchAlsoFoundHeader = useSearchAlsoFound({
+      query: debSearch,
+      enabled: isSiteSearch,
+      userId: userId ?? null,
+    });
 
     // Панель живёт в заголовке FlashList (`listIntroContent`), а не в `topContent`:
     // колонка результатов — единственный скролл, и блок снаружи неё съедал бы высоту
     // каталога и обрезал карточки подбора (code-review-gate #2459).
     const listIntroContent = useMemo(
-      () => (showAiSearchPanel ? (<>{catalogIntro}<AiSearchPanel /></>) : catalogIntro),
-      [catalogIntro, showAiSearchPanel],
+      () => (showAiSearchPanel || searchAlsoFoundHeader
+        ? (<>{catalogIntro}{showAiSearchPanel ? <AiSearchPanel /> : null}{searchAlsoFoundHeader}</>)
+        : catalogIntro),
+      [catalogIntro, searchAlsoFoundHeader, showAiSearchPanel],
     );
 
     const topContent = useMemo(() => {

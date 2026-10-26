@@ -162,6 +162,14 @@ export const queryKeys = {
   questReviews: (questId: string | undefined) => ['quest', questId, 'reviews'] as const,
   travelsForQuest: (searchTerm: string) => ['travels-for-quest', searchTerm] as const,
   questsNearLocation: (loc: string, locale: string) => ['quests-near-location', loc, locale] as const,
+  // #2775: поиск по сайту. Справочник городов квестов — сотни записей и редко
+  // меняется; квесты города привязаны к пользователю, как компактный каталог:
+  // карточка показывает личное «пройден».
+  questCitiesDirectory: (locale: string) => ['quest-cities', locale] as const,
+  siteSearchCityQuests: (cityId: number | undefined, userId: string | null, locale: string) =>
+    ['quests', 'site-search-city', cityId, userId, locale] as const,
+  // Под корнем каталога мест: его инвалидация чистит и эту выборку.
+  siteSearchPlaces: (query: string) => ['places-catalog', 'site-search', query] as const,
   // #1484: компактный каталог для коллекции города и блока «следующий квест».
   // Префикс общий с quests(), чтобы инвалидация каталога чистила и его.
   questsCompactCatalogAllLocales: (userId: string | null) => ['quests', 'compact-catalog', userId] as const,
