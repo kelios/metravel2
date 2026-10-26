@@ -304,6 +304,17 @@ describe('instagram lint-package', () => {
     expect(lint(dir)).toMatchObject({ status: 1, rules: ['S1'] })
   })
 
+  it('flags «мы с Сергеем» repeated on several slides (V12)', () => {
+    const dir = makePackage('sergei-repeat', {
+      'caption.txt': CLEAN_CAPTION,
+      'spec.json': JSON.stringify({ slides: [
+        { type: 'e', title: 'Перевал', body: 'Мы с Сергеем вышли после обеда.' },
+        { type: 'f', title: 'Спуск', body: 'Нам с Сергеем пришлось идти с фонарём.' },
+      ] }),
+    })
+    expect(lint(dir)).toMatchObject({ status: 1, rules: ['V12'] })
+  })
+
   it('rejects a call without a package folder', () => {
     expect(runCli('python3', [SCRIPT]).status).toBe(2)
   })

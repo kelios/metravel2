@@ -296,6 +296,26 @@ def check_voice_party(package, lines):
     return hits
 
 
+SERGEI_RE = re.compile(r'(?:мы|нам|нас|нами)\s+с\s+Серге', re.IGNORECASE)
+
+
+def check_sergei_repeat(package, caption):
+    """V12 (владелец 26.10.2026): «мы с Сергеем» — не больше одного слайда и одного раза в подписи."""
+    hits = []
+    spec = os.path.join(package, 'spec.json')
+    if os.path.exists(spec):
+        data = json.loads(read(spec))
+        slides = [i for i, slide in enumerate(data.get('slides', []) if isinstance(data, dict) else [], 1)
+                  if SERGEI_RE.search(' '.join(str(slide.get(k, '')) for k in SLIDE_TEXT_KEYS))]
+        if len(slides) > 1:
+            hits.append(finding('spec.json', 0, 'V12', '«мы с Сергеем» на слайдах %s — оставить один раз, '
+                                'дальше «мы», «я», «Сергей» в действии' % ', '.join(map(str, slides))))
+    count = len(SERGEI_RE.findall(caption))
+    if count > 1:
+        hits.append(finding('caption.txt', 0, 'V12', '«мы с Сергеем» в подписи %d раза — оставить один' % count))
+    return hits
+
+
 def check_slide_density(package):
     """F2 для карусели: слайд spec.json — не больше SLIDE_SENTENCES_MAX предложений и
     SLIDE_WORDS_MAX слов тела (subtitle/text/body/note/items/points; кикер и заголовок не считаются)."""
@@ -479,6 +499,7 @@ def lint_package(package, spec_path=SPEC_PATH, denylist_path=DENYLIST_PATH, data
     hits += scan(public, voice)
     hits += check_voice_party(package, public + story)
     hits += check_slide_density(package)
+    hits += check_sergei_repeat(package, caption)
     hits += scan(public + sources, belarus)
     hits += check_quest_answers(package, public, data_glob)
     hits += check_reel(package)

@@ -183,67 +183,102 @@ def stat_cells(draw, x, y, width, stats, cols, cell_h, value_size=48, label_size
     return y + rows * cell_h + (rows - 1) * gap
 
 
-def slide_e(spec):
-    im = Image.new("RGB", (W, H), DARK)
+TEXT_BOTTOM = H - 118   # низ текстового блока: над подвалом (птичка, @metravelby, номер)
+
+
+def e_text(im, d, spec, y, dry):
+    """Текст слайда E от y; возвращает низ. dry — только измерить (карту не рисовать)."""
     cover = spec.get("role") == "cover"
     stats, route = spec.get("stats") or [], spec.get("route")
-    ph = 400 if route else 560 if stats else 860 if cover else 760
-    top = ImageOps.fit(source(spec), (W, ph), Image.LANCZOS, centering=(0.5, spec.get("focus", 0.45)))
-    im.paste(fade_bottom(top, ph - (150 if route else 220), 150 if route else 220), (0, 0))
-    d = ImageDraw.Draw(im)
     x, width = 84, W - 168
-    y = ph - (24 if route else 40)
-    d.text((x, y), spec["kicker"].upper(), font=font("bold", 28 if route or stats else 30), fill=AMBER)
+    measure = (lambda text, fnt, gap: y + len(wrap(d, text, fnt, width)) * int(fnt.size * gap))
+    d.text((x, y), spec["kicker"].upper(), font=font("bold", 28 if route or stats else 30), fill=AMBER) if not dry else None
     y += 50
     tsize = 54 if route else 56 if stats else 70 if cover else 62
-    y = block(d, (x, y), spec["title"], font("serif_b", tsize), INK, width, 1.12)
+    y = measure(spec["title"], font("serif_b", tsize), 1.12) if dry else block(d, (x, y), spec["title"], font("serif_b", tsize), INK, width, 1.12)
     if route:
         y += 20
         ms = 480
-        view, mask = route_map(route, ms)
-        im.paste(view, (x, y), mask)
-        cx = x + ms + 18
-        cell_h = (ms - 12 * (len(stats) - 1)) // max(1, len(stats)) if stats else 0
-        for k, (val, lab) in enumerate(stats):
-            cy = y + k * (cell_h + 12)
-            d.rounded_rectangle((cx, cy, W - x, cy + cell_h), 16, fill=CELL)
-            vf = font("bold", 42 if d.textlength(val, font=font("bold", 42)) <= W - x - cx - 40 else 32)
-            d.text((cx + 20, cy + 10), val, font=vf, fill=AMBER)
-            d.text((cx + 20, cy + cell_h - 46), lab, font=font("sans", 26), fill=MUTED)
+        if not dry:
+            view, mask = route_map(route, ms)
+            im.paste(view, (x, y), mask)
+            cx = x + ms + 18
+            cell_h = (ms - 12 * (len(stats) - 1)) // max(1, len(stats)) if stats else 0
+            for k, (val, lab) in enumerate(stats):
+                cy = y + k * (cell_h + 12)
+                d.rounded_rectangle((cx, cy, W - x, cy + cell_h), 16, fill=CELL)
+                vf = font("bold", 42 if d.textlength(val, font=font("bold", 42)) <= W - x - cx - 40 else 32)
+                d.text((cx + 20, cy + 10), val, font=vf, fill=AMBER)
+                d.text((cx + 20, cy + cell_h - 46), lab, font=font("sans", 26), fill=MUTED)
         y += ms + 26
         body_size = 34
     elif stats:
         y += 22
-        y = stat_cells(d, x, y, width, stats, 2 if len(stats) == 4 else len(stats), 124) + 28
+        cols = 2 if len(stats) == 4 else len(stats)
+        if dry:
+            rows = (len(stats) + cols - 1) // cols
+            y += rows * 124 + (rows - 1) * 14 + 28
+        else:
+            y = stat_cells(d, x, y, width, stats, cols, 124) + 28
         body_size = 36
     else:
-        d.line((x, y + 18, x + 120, y + 18), fill=AMBER, width=4)
+        if not dry:
+            d.line((x, y + 18, x + 120, y + 18), fill=AMBER, width=4)
         y += 50
         body_size = 40 if cover else 38
     if spec.get("body"):
-        block(d, (x, y), spec["body"], font("sans", body_size), MUTED, width, 1.36)
+        fnt = font("sans", body_size)
+        y = measure(spec["body"], fnt, 1.36) if dry else block(d, (x, y), spec["body"], fnt, MUTED, width, 1.36)
+    return y
+
+
+def slide_e(spec):
+    """Фото — главное (владелец 26.10.2026: «снизу куча чёрного, а фотография почти не видна»):
+    текст прижат к подвалу, фото занимает всё место над ним."""
+    im = Image.new("RGB", (W, H), DARK)
+    d = ImageDraw.Draw(im)
+    route = spec.get("route")
+    lead = 24 if route else 40           # насколько кикер заходит на растушёвку фото
+    text_h = e_text(im, d, spec, 0, dry=True)
+    text_top = TEXT_BOTTOM - text_h
+    ph = max(380, min(1120, text_top + lead))
+    fade = 150 if route else 220
+    top = ImageOps.fit(source(spec), (W, ph), Image.LANCZOS, centering=(0.5, spec.get("focus", 0.45)))
+    im.paste(fade_bottom(top, ph - fade, fade), (0, 0))
+    d = ImageDraw.Draw(im)
+    e_text(im, d, spec, ph - lead, dry=False)
     return im, None
 
 
 def slide_f(spec):
+    """Снимок в рамке занимает всё место над текстом, текст прижат к подвалу."""
     src = source(spec)
     im = Image.blend(Image.new("RGB", (W, H), DARK), ImageOps.fit(src, (W, H)).filter(ImageFilter.GaussianBlur(80)), 0.28)
-    pic = ImageOps.fit(src, (820, 680), Image.LANCZOS, centering=(0.5, spec.get("focus", 0.45)))
+    d = ImageDraw.Draw(im)
+    x, width = 84, W - 168
+    title_f, body_f = font("serif_b", 54), font("serif", 37)
+    text_h = 48 + len(wrap(d, spec["title"], title_f, width)) * int(54 * 1.12) + 14 + len(wrap(d, spec["body"], body_f, width)) * int(37 * 1.36)
+    text_top = TEXT_BOTTOM - text_h
+    avail = text_top - 36 - 40          # верхнее поле и зазор до кикера
+    pic_w = 900
+    pic_h = max(520, min(980, avail - 22 * 2 - 64 - 30))
+    pic = ImageOps.fit(src, (pic_w, pic_h), Image.LANCZOS, centering=(0.5, spec.get("focus", 0.45)))
     fr = ImageOps.expand(ImageOps.expand(pic, border=22, fill=(251, 249, 245)), border=(0, 0, 0, 64), fill=(251, 249, 245))
     rot = fr.convert("RGBA").rotate(spec.get("angle", -1.4), expand=True, resample=Image.BICUBIC)
     shadow = Image.new("RGBA", rot.size, (0, 0, 0, 0))
     shadow.paste(Image.new("RGBA", rot.size, (0, 0, 0, 110)), (0, 0), rot)
     shadow = shadow.filter(ImageFilter.GaussianBlur(16))
     x0 = (W - rot.width) // 2
-    im.paste(shadow, (x0 + 10, 52), shadow)
-    im.paste(rot, (x0, 40), rot)
+    y0 = max(24, (text_top - 40 - rot.height) // 2 + 10)
+    im.paste(shadow, (x0 + 10, y0 + 12), shadow)
+    im.paste(rot, (x0, y0), rot)
     d = ImageDraw.Draw(im)
-    d.text((x0 + 44, 40 + rot.height - 78), spec["date"], font=font("serif_i", 32), fill=DATE)
-    y = 40 + rot.height + 40
-    d.text((84, y), spec["kicker"].upper(), font=font("bold", 28), fill=AMBER)
+    d.text((x0 + 44, y0 + rot.height - 78), spec["date"], font=font("serif_i", 32), fill=DATE)
+    y = text_top
+    d.text((x, y), spec["kicker"].upper(), font=font("bold", 28), fill=AMBER)
     y += 48
-    y = block(d, (84, y), spec["title"], font("serif_b", 54), INK, W - 168, 1.12)
-    block(d, (84, y + 14), spec["body"], font("serif", 37), MUTED, W - 168, 1.36)
+    y = block(d, (x, y), spec["title"], title_f, INK, width, 1.12)
+    block(d, (x, y + 14), spec["body"], body_f, MUTED, width, 1.36)
     return im, None
 
 
