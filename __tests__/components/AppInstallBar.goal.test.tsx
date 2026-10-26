@@ -44,7 +44,9 @@ jest.mock('@/hooks/useWebKeyboardInset', () => ({
     )
   },
 }))
-jest.mock('@/utils/consent', () => ({ readConsent: () => null, writeConsent: jest.fn() }))
+const DECIDED_CONSENT = { necessary: true, analytics: false, date: '2026-10-26T00:00:00.000Z' }
+let mockConsent: typeof DECIDED_CONSENT | null = DECIDED_CONSENT
+jest.mock('@/utils/consent', () => ({ readConsent: () => mockConsent, writeConsent: jest.fn() }))
 jest.mock('@/components/layout/bottomChromeInset', () => ({
   ...jest.requireActual('@/components/layout/bottomChromeInset'),
   useDockReservePx: () => 56,
@@ -80,6 +82,7 @@ describe('AppInstallBar', () => {
     mockViewportWidth = 320
     mockIsConnected = false
     mockKeyboardInset = 0
+    mockConsent = DECIDED_CONSENT
   })
   afterEach(() => {
     resetBottomChromeReserve()
@@ -141,6 +144,7 @@ describe('AppInstallBar', () => {
   it('keeps initially offline navigation clear at 600×320, yields for More, then restores pending optional notices after exit', async () => {
     jest.useFakeTimers()
     mockViewportWidth = 600
+    mockConsent = null
     const AppInstallBar = require('@/components/layout/AppInstallBar').default
     const ConsentBanner = require('@/components/layout/ConsentBanner').default
     const { NetworkStatus } = require('@/components/ui/NetworkStatus.web')
@@ -173,11 +177,10 @@ describe('AppInstallBar', () => {
     await act(async () => { jest.advanceTimersByTime(300) })
     expect(getCriticalBottomChromeOwner()).toBeNull()
     expect(view.getByTestId('consent-banner')).toBeTruthy()
-    expect(view.getByTestId('app-install-bar')).toBeTruthy()
+    // #2782: the undecided visitor gets only the consent banner on this page.
+    expect(view.queryByTestId('app-install-bar')).toBeNull()
     fireEvent(view.getByTestId('consent-banner'), 'layout', { nativeEvent: { layout: { height: 100 } } })
-    fireEvent(view.getByTestId('app-install-bar'), 'layout', { nativeEvent: { layout: { height: 112 } } })
-    expect(getBottomChromeReserve()).toBe(300)
-    expect(StyleSheet.flatten(view.getByTestId('app-install-bar').props.style).bottom).toContain('172px')
+    expect(getBottomChromeReserve()).toBe(172)
     expect(writeConsent).not.toHaveBeenCalled()
     expect(markAppInstallHintDismissed).not.toHaveBeenCalled()
     view.unmount()
@@ -185,6 +188,7 @@ describe('AppInstallBar', () => {
   })
 
   it('suspends physical notices for the existing keyboard overlap without releasing network priority', () => {
+    mockConsent = null
     const AppInstallBar = require('@/components/layout/AppInstallBar').default
     const ConsentBanner = require('@/components/layout/ConsentBanner').default
     const { NetworkStatus } = require('@/components/ui/NetworkStatus.web')
@@ -204,16 +208,37 @@ describe('AppInstallBar', () => {
     mockIsConnected = true
     const online = render(<><ConsentBanner /><AppInstallBar /></>)
     expect(online.getByTestId('consent-banner')).toBeTruthy()
-    expect(online.getByTestId('app-install-bar')).toBeTruthy()
+    expect(online.queryByTestId('app-install-bar')).toBeNull()
     setKeyboardInset(240)
     expect(getBottomChromeReserve()).toBe(0)
     expect(online.queryByTestId('consent-banner')).toBeNull()
-    expect(online.queryByTestId('app-install-bar')).toBeNull()
     setKeyboardInset(0)
     expect(online.getByTestId('consent-banner')).toBeTruthy()
-    expect(online.getByTestId('app-install-bar')).toBeTruthy()
+    expect(online.queryByTestId('app-install-bar')).toBeNull()
     expect(writeConsent).not.toHaveBeenCalled()
     expect(markAppInstallHintDismissed).not.toHaveBeenCalled()
+  })
+
+  // #2782: two stacked bottom offers covered ~40% of a phone map on a first visit.
+  it('waits for the consent answer and a later page before offering the app', () => {
+    mockConsent = null
+    mockIsConnected = true
+    const AppInstallBar = require('@/components/layout/AppInstallBar').default
+    const ConsentBanner = require('@/components/layout/ConsentBanner').default
+    const tree = (pathname: string) => (
+      <MockRouterContext.Provider value={{ pathname, searchParams: {} }}>
+        <ConsentBanner />
+        <AppInstallBar />
+      </MockRouterContext.Provider>
+    )
+    const view = render(tree('/map'))
+    expect(view.getByTestId('consent-banner')).toBeTruthy()
+    expect(view.queryByTestId('app-install-bar')).toBeNull()
+    mockConsent = DECIDED_CONSENT
+    view.rerender(tree('/map'))
+    expect(view.queryByTestId('app-install-bar')).toBeNull()
+    view.rerender(tree('/places'))
+    expect(view.getByTestId('app-install-bar')).toBeTruthy()
   })
 
   it('refreshes the native banner destination after a query-only navigation', () => {

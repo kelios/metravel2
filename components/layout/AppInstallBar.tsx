@@ -28,6 +28,7 @@ import {
   setBottomChromeReserve,
   subscribeBottomChromeReserve,
 } from '@/utils/bottomChromeReserve'
+import { readConsent } from '@/utils/consent'
 import { openExternalUrl } from '@/utils/externalLinks'
 import { getMobileAppOpenUrl, getSmartAppBannerContent } from '@/utils/mobileAppHandoff'
 import { openAppStoreListing } from '@/utils/openAppStoreListing'
@@ -63,6 +64,10 @@ function AppInstallBar() {
 
   useEffect(() => {
     if (!IS_WEB || typeof window === 'undefined') return
+    // #2782: an undecided visitor already sees the consent banner at the bottom.
+    // Two stacked offers covered ~40% of a phone map, so the app offer waits for
+    // a later page once the consent answer exists.
+    if (!readConsent()) return
     const userAgent = String(window.navigator?.userAgent || '')
     if (!shouldOfferAppInstall({
       userAgent,
@@ -73,7 +78,7 @@ function AppInstallBar() {
       now: Date.now(),
     })) return
     setStorePlatform(getPhoneStorePlatform(userAgent))
-  }, [isMobile])
+  }, [isMobile, pathname])
 
   useEffect(() => {
     if (!IS_WEB || typeof document === 'undefined') return
