@@ -605,6 +605,29 @@ it.each([false, true])('uses the existing real owner correction for optional gro
   f.cleanup()
 })
 
+// #2772: on a fresh article the reader sits at the very top. Growth of an early
+// deferred section must push the following frame down, not scroll the reader
+// past the title and hero to keep that frame in place.
+it.each([224, 1084])('keeps the reader at the owner top when an optional frame grows by %ipx', height => {
+  const f = fixture({ optional: true, initialTop: 0, anchorTop: 379 })
+  const before = f.anchor.getBoundingClientRect().top
+  f.render(true, false, createElement('div', { style: { height } }))
+  expect(f.transition().style.height).toBe(`${height}px`)
+  expect(f.owner.scrollTop).toBe(0)
+  expect(f.writes).toHaveLength(0)
+  expect(f.anchor.getBoundingClientRect().top).toBe(before + height)
+  f.cleanup()
+})
+
+it('still preserves the reading frame once the reader has left the owner top', () => {
+  const f = fixture({ optional: true, initialTop: 1, anchorTop: 379 })
+  const before = f.anchor.getBoundingClientRect().top
+  f.render(true, false, createElement('div', { style: { height: 224 } }))
+  expect(f.anchor.getBoundingClientRect().top).toBe(before)
+  expect(f.writes).toEqual([225])
+  f.cleanup()
+})
+
 it.each([{ anchorTop: 900 }, { differentOwner: true }, { noScrollOwner: true }])('does not scroll for an optional frame without a visible same-owner anchor: %j', options => {
   const f = fixture({ optional: true, initialTop: 600, ...options })
   f.render(true, false, createElement('div', { style: { height: 256 } }))

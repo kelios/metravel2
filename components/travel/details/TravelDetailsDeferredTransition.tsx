@@ -253,6 +253,10 @@ function correctMeasuredAnchor(capture: ReserveReleaseAnchor | null, node: HTMLE
   const { anchor, owner, beforeTop } = capture
   const delta = anchor.getBoundingClientRect().top - beforeTop
   const currentTop = owner.scrollTop
+  // At the owner top the reader is looking at the page start (title, hero).
+  // Growth there must push the following frame down; preserving that frame
+  // would scroll the reader past the start of a freshly opened article (#2772).
+  if (currentTop <= 0 && delta > 0) return null
   const targetTop = Math.max(0, Math.min(owner.scrollHeight - owner.clientHeight, currentTop + delta))
   if (targetTop !== currentTop) owner.scrollTop = targetTop
   return Math.abs(anchor.getBoundingClientRect().top - beforeTop) <= RUNTIME_SETTLE_HEIGHT_EPSILON_PX ? 'anchored' : 'clamped'
