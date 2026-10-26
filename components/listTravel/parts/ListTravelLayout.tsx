@@ -17,6 +17,7 @@ type ListTravelLayoutProps = {
   sidebar: Pick<
     SidebarFiltersProps,
     | 'isMobile'
+    | 'initialViewportWidth'
     | 'filterGroups'
     | 'filter'
     | 'onSelect'

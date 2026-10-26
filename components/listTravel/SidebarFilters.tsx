@@ -9,6 +9,7 @@ import { translate as i18nT } from '@/i18n'
 
 
 interface SidebarFiltersProps {
+  initialViewportWidth?: number
   isMobile: boolean
   filterGroups: TravelFilterGroup[]
   filter: FilterState
@@ -34,6 +35,7 @@ interface SidebarFiltersProps {
 
 const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
   ({
+    initialViewportWidth,
     isMobile,
     filterGroups,
     filter,
@@ -115,6 +117,7 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
       />
     ) : (
       <ModernFilters
+        initialViewportWidth={initialViewportWidth}
         filterGroups={filterGroups}
         selectedFilters={filter as unknown as ModernFilterState}
         onFilterChange={handleFilterChange}

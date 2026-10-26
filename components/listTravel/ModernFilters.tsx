@@ -15,6 +15,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { getTravelLabel } from '@/utils/pluralize';
 import { BREAKPOINTS } from './utils/listTravelConstants';
 import { useResponsiveWidth } from '@/hooks/useResponsive';
+import { resolveListTravelRawWidth } from './listTravelBaseModel';
+import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 
 // Подкомпоненты из filters/
 import {
@@ -119,6 +121,7 @@ function getOrderedModernFilterOptions(group: FilterGroup, selectedFilters: Filt
 }
 
 interface ModernFiltersProps {
+  initialViewportWidth?: number;
   filterGroups: FilterGroup[];
   selectedFilters: FilterState;
   /** Выбор по умолчанию экрана: совпадающие с ним группы не считаются активными. */
@@ -152,6 +155,7 @@ interface ModernFiltersProps {
 }
 
 const ModernFilters: React.FC<ModernFiltersProps> = memo(({
+  initialViewportWidth,
   filterGroups,
   selectedFilters,
   defaultSelectedFilters,
@@ -185,7 +189,9 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   const { t } = useTranslation();
   const colors = useThemedColors();
   const styles = useMemo(() => createModernFiltersStyles(colors), [colors]);
-  const viewportWidth = useResponsiveWidth();
+  const responsiveWidth = useResponsiveWidth();
+  // The sidebar mounts after the catalog knows its width; do not replay a narrow frame.
+  const viewportWidth = resolveListTravelRawWidth(responsiveWidth, initialViewportWidth);
 
   const { isNarrowWeb, showsStickyFooter } = getModernFiltersViewportState(viewportWidth);
   const useOverlayChrome = !embeddedSidebar && isNarrowWeb;
@@ -611,6 +617,22 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                           <Text style={styles.selectedSummaryText} numberOfLines={1}>
                             {name}
                           </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                  {isLoading && orderedOptions.length === 0 && (
+                    <View
+                      testID={`filter-options-loading-${group.key}`}
+                      style={styles.groupLoadingContent}
+                      accessibilityElementsHidden
+                      importantForAccessibility="no-hide-descendants"
+                      pointerEvents="none"
+                    >
+                      {Array.from({ length: 16 }, (_, row) => (
+                        <View key={row} style={styles.filterOption}>
+                          <SkeletonLoader width={20} height={20} />
+                          <SkeletonLoader width="65%" height={16} style={styles.filterOptionText} />
                         </View>
                       ))}
                     </View>

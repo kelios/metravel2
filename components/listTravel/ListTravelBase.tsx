@@ -674,6 +674,7 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
       onConfirmDelete={confirmDelete}
       onCloseDelete={cancelDelete}
       sidebar={{
+        initialViewportWidth: viewportState.width,
         isMobile: usesOverlaySidebar,
         filterGroups,
         filter,

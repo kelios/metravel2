@@ -6,6 +6,12 @@ import ModernFilters from '@/components/listTravel/ModernFilters';
 import type { FilterState } from '@/components/listTravel/ModernFilters';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+let mockResponsiveWidth = 0;
+jest.mock('@/hooks/useResponsive', () => ({
+  ...jest.requireActual('@/hooks/useResponsive'),
+  useResponsiveWidth: () => mockResponsiveWidth,
+}));
+
 // Mock hooks and contexts
 jest.mock('@/hooks/useDebouncedValue', () => ({
   useDebouncedValue: (value: any) => value,
@@ -67,6 +73,78 @@ describe('ModernFilters Component', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockResponsiveWidth = 0;
+  });
+
+  describe('desktop first frame (#2765)', () => {
+    const originalOS = Platform.OS;
+    beforeEach(() => { Platform.OS = 'web'; });
+    afterEach(() => { Platform.OS = originalOS; });
+
+    const createFrame = () => {
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      return (props: Partial<React.ComponentProps<typeof ModernFilters>> = {}) => (
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <ModernFilters
+              initialViewportWidth={1440}
+              filterGroups={mockFilterGroups}
+              selectedFilters={{}}
+              onFilterChange={mockOnFilterChange}
+              onResetGroup={mockOnResetGroup}
+              onClearAll={mockOnClearAll}
+              {...props}
+            />
+          </ThemeProvider>
+        </QueryClientProvider>
+      );
+    };
+
+    it('opens desktop groups with cached options before its own width is available', () => {
+      render(createFrame()());
+      expect(screen.getByRole('button', { name: 'Свернуть Категории' }).props.accessibilityState.expanded).toBe(true);
+      expect(screen.getByRole('checkbox', { name: 'Горы' })).toBeTruthy();
+      expect(screen.getByRole('checkbox', { name: 'Самолет' })).toBeTruthy();
+      expect(screen.queryByTestId('filters-apply-footer')).toBeNull();
+    });
+
+    it('replaces reserved rows with options and preserves a manually collapsed group', () => {
+      const frame = createFrame();
+      const pendingGroups = mockFilterGroups.map(group => ({ ...group, options: [] }));
+      const { rerender } = render(frame({ filterGroups: pendingGroups, isLoading: true }));
+      expect(screen.getByTestId('filter-options-loading-categories', { includeHiddenElements: true })).toBeTruthy();
+      expect(screen.getByTestId('filter-options-loading-transports', { includeHiddenElements: true })).toBeTruthy();
+      expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
+      fireEvent.press(screen.getByRole('button', { name: 'Свернуть Категории' }));
+
+      rerender(frame({ isLoading: false }));
+      expect(screen.queryByTestId('filter-options-loading-categories', { includeHiddenElements: true })).toBeNull();
+      expect(screen.queryByTestId('filter-options-loading-transports', { includeHiddenElements: true })).toBeNull();
+      expect(screen.queryByRole('checkbox', { name: 'Горы' })).toBeNull();
+      expect(screen.getByRole('checkbox', { name: 'Самолет' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Развернуть Категории' }).props.accessibilityState.expanded).toBe(false);
+    });
+
+    it.each([
+      ['web', 1280],
+      ['android', 1440],
+      ['ios', 1440],
+    ] as const)('keeps %s width %s groups collapsed', (os, width) => {
+      Platform.OS = os;
+      render(createFrame()({ initialViewportWidth: width, isLoading: true }));
+      expect(screen.getByRole('button', { name: 'Развернуть Категории' }).props.accessibilityState.expanded).toBe(false);
+      expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
+      expect(screen.getByTestId('filters-apply-footer')).toBeTruthy();
+    });
+
+    it('uses live width instead of the inherited desktop width after resize', () => {
+      const frame = createFrame();
+      const { rerender } = render(frame());
+      expect(screen.queryByTestId('filters-apply-footer')).toBeNull();
+      mockResponsiveWidth = 1280;
+      rerender(frame({ resultsCount: 10 }));
+      expect(screen.getByTestId('filters-apply-footer')).toBeTruthy();
+    });
   });
 
   it('renders filter groups correctly', () => {

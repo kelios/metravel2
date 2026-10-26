@@ -1,5 +1,6 @@
 import { Platform } from 'react-native'
 import type { StylesCtx } from './tokens'
+import { webViewStyle } from '@/utils/webProps'
 
 export const createGroupStyles = (ctx: StylesCtx) => {
   const { colors, spacing, typography, radii, CONTROL_RADIUS } = ctx
@@ -138,5 +139,10 @@ export const createGroupStyles = (ctx: StylesCtx) => {
       marginTop: spacing.xs,
       overflow: 'hidden',
     },
+    // The option count is not known yet. Keep later headers outside the visible
+    // scroll area until real rows replace these identically spaced placeholders.
+    groupLoadingContent: Platform.OS === 'web'
+      ? webViewStyle({ minHeight: '100vh' })
+      : { minHeight: 640 },
   } as const
 }

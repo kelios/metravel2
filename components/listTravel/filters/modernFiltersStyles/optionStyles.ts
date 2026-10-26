@@ -1,5 +1,6 @@
 import { Platform } from 'react-native'
 import type { StylesCtx } from './tokens'
+import { webViewStyle } from '@/utils/webProps'
 
 export const createOptionStyles = (ctx: StylesCtx) => {
   const { colors, spacing, typography, radii, CONTROL_RADIUS } = ctx
@@ -16,10 +17,10 @@ export const createOptionStyles = (ctx: StylesCtx) => {
       borderColor: 'transparent',
       minHeight: 44,
       ...Platform.select({
-        web: {
+        web: webViewStyle({
           cursor: 'pointer',
           transition: 'all 0.18s ease',
-        },
+        }),
       }),
     },
     filterOptionHover: Platform.select({

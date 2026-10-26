@@ -7273,6 +7273,25 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   GA не исправляется задним числом. Consent/native scope не расширяется.
 
 
+### SEARCH-FILTER-BOOT-001 — раскрытие desktop-групп после первого кадра
+
+- **Problem key:** `search-desktop-filter-sidebar-expand-cls`.
+- **Каноническая задача:** #2765; связанные #2759/#1298 отвечают за геометрию
+  колонки и общий первый кадр, а #2755 — расположение сортировки.
+- **Инвариант:** на `/search` от 1440 px раскрытые по умолчанию группы
+  появляются раскрытыми; загрузка справочника не сдвигает видимые заголовки.
+- **Подтверждённый механизм:** собственный hydration-safe width=0 в новом
+  `ModernFilters` создавал пустой `expandedGroups`, затем effect раскрывал
+  группы. Пустые options до ответа API не занимали места строк; внешний
+  `minHeight` колонки не резервировал внутреннюю геометрию.
+- **Корректирующий слой:** передача известной ширины каталога через
+  `SidebarFilters`, существующий `resolveListTravelRawWidth` и нейтральные
+  loading-строки с геометрией `filterOption`. На mobile/native defaults
+  остаются свёрнутыми; данные refetch не скрываются каркасом.
+- **Постоянный контроль:** Jest `ModernFilters` и
+  `e2e/search-filter-first-frame.spec.ts`; production `/search` 1440:
+  CLS ≤0,01 без источников `filter-scrollview`. Приёмочные цифры — в #2765.
+
 ### WIZARD-PUBLICATION-001 — legacy flags снимают pending_review при сохранении
 
 - **Problem key:** `wizard-pending-review-legacy-flags-drift`.
