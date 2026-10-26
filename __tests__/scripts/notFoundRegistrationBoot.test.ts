@@ -10,15 +10,22 @@ const ROOT = '_layout-aa.js', TABS = '_layout-bb.js', EDITOR = 'new-cc.js', DEP 
 
 describe('NotFound route registration boot (#2701)', () => {
   let dir: string, jsDir: string
-  const write = (name: string, deps: string[] = []) => fs.writeFileSync(path.join(jsDir, name),
-    `globalThis.__METRAVEL_CHUNK_DEPS__??={};globalThis.__METRAVEL_CHUNK_DEPS__["${WEB}${name}"]=${JSON.stringify(deps.map(dep => WEB + dep))};__d(function(){},1,[]);`)
+  const write = (name: string, body: string) => fs.writeFileSync(path.join(jsDir, name), body)
+  // #2741: granular chunks — a layout file defines its module, and the router
+  // context in `entry` lists every file each layout needs (Expo `paths` arrays).
+  const facade = (id: number) => `__d(function(){},${id},[]);`
+  const routerContext = (sets: Record<number, string[]>) => `__d(function(){},1,${JSON.stringify({
+    paths: Object.fromEntries(Object.entries(sets).map(([id, names]) => [id, names.map(name => WEB + name)])),
+  })});__r(1);`
+  const writeEntry = (sets: Record<number, string[]>) => write('entry-ab.js', routerContext(sets))
   beforeEach(() => {
     dir = makeTempDir('not-found-boot-')
     jsDir = path.join(dir, '_expo/static/js/web')
     fs.mkdirSync(jsDir, { recursive: true })
     fs.mkdirSync(path.join(dir, 'travel'))
-    write(DEP); write(NESTED, [DEP]); write(ROOT, [DEP]); write(TABS, [NESTED]); write(EDITOR)
-    write('_layout-ff.js', ['unrelated-ff.js']) // retained generation, deliberately incomplete
+    write(DEP, facade(2)); write(NESTED, facade(3)); write(ROOT, facade(10)); write(TABS, facade(20)); write(EDITOR, facade(30))
+    write('_layout-ff.js', facade(40)) // retained generation, not on the editor page
+    writeEntry({ 10: [ROOT, DEP], 20: [TABS, NESTED, DEP], 30: [EDITOR, NESTED], 40: ['unrelated-ff.js'] })
     fs.writeFileSync(path.join(dir, 'travel/new.html'), page([DEP, ROOT, TABS, EDITOR, 'entry-ab.js']))
     for (const name of ['+not-found.html', '[...missing].html']) fs.writeFileSync(path.join(dir, name), page([DEP, ROOT, 'entry-ab.js']))
   })
@@ -54,11 +61,9 @@ describe('NotFound route registration boot (#2701)', () => {
     expect(fs.readFileSync(path.join(dir, '+not-found.html'), 'utf8')).toBe(baseline)
   })
 
-  it('rejects a pending-layout delivery contract: no Tabs wrapper, a cycle, invalid path or a non-deferred layout', () => {
+  it('rejects a pending-layout delivery contract: no Tabs wrapper, invalid path or a non-deferred layout', () => {
     expect(() => readNotFoundRegistrationBootChunks(jsDir, page([ROOT, 'entry-ab.js']))).toThrow(/root and Tabs/)
-    write(NESTED, [TABS])
-    expect(() => prepareNotFoundDocumentBoot(dir)).toThrow(/cyclic/)
-    write(NESTED, ['../invalid.js'])
+    writeEntry({ 10: [ROOT, DEP], 20: [TABS, '../invalid.js'] })
     expect(() => prepareNotFoundDocumentBoot(dir)).toThrow(/invalid boot chunk path/)
     expect(() => readNotFoundRegistrationBootChunks(jsDir, page([ROOT, TABS, 'entry-ab.js']).replace(' defer', ' async'))).toThrow(/classic defer/)
   })

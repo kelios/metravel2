@@ -609,6 +609,17 @@ if (process.env.ANALYZE_BUNDLE === '1') {
   }
 }
 
+// #2741: the web export uses Expo's granular chunk planner, and our pass merges
+// its shared groups by delivery routes (ROUTE-BUNDLE-001). Both keys are read by
+// the two-line patch in patches/@expo+metro-config; native and dev bundles are
+// never granular (withExpoSerializers gates it on a non-lazy web client export).
+const { mergeGranularChunkPlan } = require('./scripts/lib/granularChunkMerge')
+config.serializer = {
+  ...config.serializer,
+  unstable_granularWebExport: true,
+  unstable_mergeGranularChunkPlan: mergeGranularChunkPlan,
+}
+
 const { applyWebBuildMinifier } = require('./scripts/lib/webMinifierConfig')
 config.transformer = applyWebBuildMinifier(config.transformer)
 

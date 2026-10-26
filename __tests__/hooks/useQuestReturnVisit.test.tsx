@@ -11,7 +11,7 @@ jest.mock('@/utils/analytics', () => ({
   sendAnalyticsEvent: (...args: any[]) => mockSendAnalyticsEvent(...args),
   queueAnalyticsEvent: jest.fn(),
 }))
-jest.mock('@/services/notifications', () => ({
+jest.mock('@/services/questReturnReminder', () => ({
   cancelQuestReturnReminder: jest.fn(async () => undefined),
 }))
 

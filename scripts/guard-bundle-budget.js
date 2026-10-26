@@ -269,14 +269,23 @@ function logicalName(file) {
 // two async roots (the /quests catalog screen, opened by /quests and by the city
 // page) cannot be pinned by name. `__shared:<owner>` rows find their one file by
 // marker across every shared chunk; shared chunks nobody claims stay covered by
-// the release total and the eager route budgets, as before.
+// the release total and the eager route budgets, as before. #2741: Expo's
+// granular chunking names a shared chunk `__shared-<owner hash>`, which changes
+// with the owner set just the same.
 const SHARED_GROUP = '__shared'
 function ownerGroupName(name) {
-  return /^__shared-\d+$/.test(name) ? SHARED_GROUP : name
+  return /^__shared-[0-9a-f]+$/.test(name) ? SHARED_GROUP : name
 }
 
 const KB = 1024
 const toKB = (bytes) => Math.round((bytes / KB) * 10) / 10
+
+const CHUNK_COMPLETION_MARKER =
+  /\n?\(function\(\)\{var s=typeof document!=="undefined"&&document\.currentScript;[^\n]*?__expo_chunk_completion__[^\n]*?\}\)\(\);/g
+const IMPORT_PATHS = /,?"paths":\{(?:"\d+":(?:"[^"]*"|\[(?:"[^"]*",?)*\]),?)*\}/g
+function stripLoaderMetadata(source) {
+  return source.replace(CHUNK_COMPLETION_MARKER, '').replace(IMPORT_PATHS, '')
+}
 
 const files = fs.readdirSync(jsDir).filter((f) => f.endsWith('.js'))
 const sizeLabel = (c) => `${toKB(c.raw)} KB raw / ${toKB(c.gzip)} KB gzip / ${toKB(c.brotli)} KB brotli`
@@ -345,14 +354,13 @@ for (const file of files) {
   allBrotli += brotli
   fileSizes.set(file, { raw, gzip, brotli })
   const name = logicalName(file)
-  // Route-scoped chunk dependency metadata is measured by the HTML eager and
-  // release-total budgets. Strip only that generated prefix for named feature
-  // budgets so a 300-byte manifest does not look like feature-code growth.
+  // Generated loader metadata is measured by the HTML eager and release-total
+  // budgets; named budgets pin feature code. Before #2741 that was our chunk
+  // manifest prefix; Expo's granular chunking instead writes each import()'s
+  // file array into `paths` and appends a completion marker to async chunks
+  // (~0.3 KB, more than some route-stub ceilings).
   const source = buf.toString('utf8')
-  const budgetSource = source.replace(
-    /^globalThis\.__METRAVEL_CHUNK_DEPS__\?\?=\{};globalThis\.__METRAVEL_CHUNK_DEPS__\[[^\]]+\]=\[(?:"[^"]*"|[0-9]+)(?:,(?:"[^"]*"|[0-9]+))*\];/,
-    '',
-  )
+  const budgetSource = stripLoaderMetadata(source)
   const budgetBuf = budgetSource.length === source.length ? buf : Buffer.from(budgetSource)
   const budgetRaw = budgetBuf.length
   const budgetGzip = budgetBuf === buf ? gzip : zlib.gzipSync(budgetBuf).length
@@ -366,8 +374,8 @@ for (const file of files) {
   const group = ownerGroupName(name)
   const owners = ownerSplits.get(group)
   if (owners) {
-    // The generated deps prefix lists other chunks' file names, so the marker
-    // is looked up in the chunk's own code only.
+    // `paths` lists other chunks' file names, so the marker is looked up in
+    // the chunk's own code only.
     const matched = owners.filter((owner) => budgetSource.includes(owner.marker)).map((owner) => owner.key)
     if (group !== SHARED_GROUP || matched.length > 0) {
       ownerCandidates.push({ file, logical: group, owners: matched, raw: budgetRaw, gzip: budgetGzip, brotli: budgetBrotli })

@@ -1093,6 +1093,40 @@ describe('bundle budget release contract', () => {
       }
     })
 
+    // #2741: Expo granular chunks name shared files by owner hash and carry
+    // loader metadata (import() file arrays, the completion marker) that the
+    // release total counts but a named feature budget does not.
+    it('measures named rows without granular loader metadata and finds hash-named shared owners', () => {
+      const tmpDir = makeTempDir('metravel-bundle-budget-granular-')
+      const SHARED_MARKER = 'quests.catalog.content'
+      const files = Array.from({ length: 40 }, (_, index) => `/_expo/static/js/web/__shared-${index}abc-${'0'.repeat(32)}.js`)
+      const paths = `{"0":12,"paths":{"7":${JSON.stringify(files)}}}`
+      const completion =
+        '\n(function(){var s=typeof document!=="undefined"&&document.currentScript;if(s&&s.src){var k="__expo_chunk_completion__";(globalThis[k]||(globalThis[k]=new Set())).add(s.src);}})();'
+      try {
+        const budget = {
+          tolerancePct: 0,
+          chunks: { ...ownerRows, '__shared:quests-catalog': { marker: SHARED_MARKER, maxRawKB: 1.1 } },
+        }
+        const { jsDir, testBudgetPath } = writeFixture(
+          tmpDir,
+          {
+            'index-1a2b3c4d.js': chunkSource(HOME_MARKER, 100),
+            'index-5e6f7a8b.js': chunkSource(QUESTS_MARKER, 100),
+            '__shared-744bf9912ad4c9f4-0a0b0c0d.js': `__d(function(){${chunkSource(SHARED_MARKER, 1000)}},5,${paths});${completion}`,
+          },
+          budget,
+        )
+        const report = JSON.parse(runGuard(jsDir, testBudgetPath).stdout)
+        expect(report.ownerChunks['__shared:quests-catalog'].files).toEqual(['__shared-744bf9912ad4c9f4-0a0b0c0d.js'])
+        expect(report.breaches).toEqual([])
+        // The metadata is still part of the release total.
+        expect(report.allRawKB * 1024).toBeGreaterThan(1.1 * 1024 + files.join('').length)
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true })
+      }
+    })
+
     it('fails closed on an index chunk that no owner claims', () => {
       const tmpDir = makeTempDir('metravel-bundle-budget-index-unattributed-')
       try {

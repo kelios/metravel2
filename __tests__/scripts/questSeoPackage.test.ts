@@ -40,8 +40,12 @@ const WEB_JS = '/_expo/static/js/web/'
 // The export's chunks a translated member boots with (#2465).
 const BOOT_FILES: Record<string, string> = {
   '__expo-metro-runtime-000a.js': 'globalThis.__d=function(){};',
-  'entry-0123abcd.js': '__d(function(){},0,[]);',
-  '[...missing]-0a1b.js': `globalThis.__METRAVEL_CHUNK_DEPS__??={};globalThis.__METRAVEL_CHUNK_DEPS__["${WEB_JS}[...missing]-0a1b.js"]=["${WEB_JS}__shared-3-0c.js"];__d(function(){},1,[]);`,
+  // #2741: the router context in entry lists every file a route needs (Expo granular `paths`).
+  'entry-0123abcd.js': `__d(function(){},0,${JSON.stringify({ paths: {
+    1: [`${WEB_JS}[...missing]-0a1b.js`, `${WEB_JS}__shared-3-0c.js`],
+    4: [`${WEB_JS}[...missing]-0e2f.js`, `${WEB_JS}__shared-8-0f.js`],
+  } })});__r(0);`,
+  '[...missing]-0a1b.js': '__d(function(){},1,[]);',
   '__shared-3-0c.js': '__d(function(){t({h:1,v:"ru"})},2,[]);',
   ...Object.fromEntries(['be', 'uk', 'pl', 'en'].map((locale) => [`locale-${locale}-0d.js`,
     `__d(function(g,r,i,a,m,e,d){e.${locale}Catalog=new Map([[1,{value:"${locale}"}],[2,{value:"lazy"}]])},3,[]);`])),
@@ -55,7 +59,7 @@ function writeBootChunks(dist: string, withBothRouteChunks = false) {
   const routes = ['[...missing]-0a1b.js']
   if (withBothRouteChunks) {
     routes.push('[...missing]-0e2f.js')
-    fs.writeFileSync(path.join(dir, routes[1]), `globalThis.__METRAVEL_CHUNK_DEPS__??={};globalThis.__METRAVEL_CHUNK_DEPS__["${WEB_JS}${routes[1]}"]=["${WEB_JS}__shared-8-0f.js"];__d(function(){},4,[]);`)
+    fs.writeFileSync(path.join(dir, routes[1]), '__d(function(){},4,[]);')
     fs.writeFileSync(path.join(dir, '__shared-8-0f.js'), '__d(function(){},5,[]);')
   }
   const catchAllHtml = `<head></head><body><script src="${WEB_JS}__expo-metro-runtime-000a.js" defer></script>${routes.map((name) => `<script src="${WEB_JS}${name}" defer></script>`).join('')}<script src="${WEB_JS}entry-0123abcd.js" defer></script></body>`

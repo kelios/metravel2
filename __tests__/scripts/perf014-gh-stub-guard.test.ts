@@ -23,19 +23,12 @@ const ROUTE_CONTEXT_STUB_REL = 'metro-stubs/expo-router-context.web.js'
 const EXPO_CHUNK_PATCH_REL = 'patches/@expo+metro-config+58.0.17.patch'
 const EXPO_CHUNK_SERIALIZER_REL =
   'node_modules/@expo/metro-config/build/serializer/serializeChunks.js'
-// SDK 58 splits the serializer into chunking strategies: the per-route shared chunks
-// live in their own strategy file (added by the patch), the upstream Chunk class keeps
-// owning metadata.requires and the legacy strategy supplies the async import() targets.
-const EXPO_CHUNK_STRATEGY_REL =
+const EXPO_GRANULAR_STRATEGY_REL =
+  'node_modules/@expo/metro-config/build/serializer/chunking/createGranularChunkingStrategy.js'
+const EXPO_SERIALIZERS_REL = 'node_modules/@expo/metro-config/build/serializer/withExpoSerializers.js'
+const EXPO_OLD_STRATEGY_REL =
   'node_modules/@expo/metro-config/build/serializer/chunking/createMetravelRouteSharedChunkingStrategy.js'
-const EXPO_CHUNK_CLASS_REL = 'node_modules/@expo/metro-config/build/serializer/chunking/Chunk.js'
-const EXPO_LEGACY_STRATEGY_REL =
-  'node_modules/@expo/metro-config/build/serializer/chunking/createLegacyChunkingStrategy.js'
-const EXPO_ASYNC_RUNTIME_PATCH_REL = 'patches/expo+58.0.19.patch'
 const EXPO_ASYNC_RUNTIME_REL = 'node_modules/expo/src/async-require/asyncRequireModule.ts'
-const EXPO_CHUNK_PATCH_MARKER = 'METRAVEL_PER_ROUTE_COMMON_CHUNK'
-// swc output breaks array literals across lines; compare structure, not layout.
-const compact = (source: string) => source.replace(/\s+/g, '')
 
 describe('PERF-014 gesture-handler web stub — metro.config resolver', () => {
   let resolveRequest: (ctx: any, name: string, platform: string) => any
@@ -109,160 +102,36 @@ describe('PERF-014 gesture-handler web stub — metro.config resolver', () => {
     expect(web.filePath.replace(/\\/g, '/').endsWith(ROUTE_CONTEXT_STUB_REL)).toBe(true)
   })
 
-  it('preserves sealed worker dependencies while extracting route shared chunks', () => {
-    const result = runNodeCli(['-e', `
-const { Chunk } = require('@expo/metro-config/build/serializer/chunking/Chunk');
-const { createMetravelRouteSharedChunkingStrategy, metravelRouteSharedInternals } = require('@expo/metro-config/build/serializer/chunking/createMetravelRouteSharedChunkingStrategy');
-const { extractSharedChunks, deduplicateAgainstKnownChunks, removeEntryDepsFromAsyncChunks } = metravelRouteSharedInternals;
-const mod = path => ({ path, dependencies: new Map() });
-const shared = mod('/shared.js'), workerOnly = mod('/worker-only.js');
-const a = mod('/app/a.tsx'), b = mod('/app/b.tsx'), w = mod('/worker.js'), e = mod('/entry.js');
-const graph = { dependencies: new Map([shared, workerOnly, a, b, w, e].map(m => [m.path, m])) };
-const strategy = createMetravelRouteSharedChunkingStrategy({ entryFile: e.path, preModules: [], graph, options: {}, serializerConfig: {}, serializeChunkOptions: {} });
-const chunk = (entry, isAsync, isEntry = false) => new Chunk(entry.path, new Set([entry]), graph, {}, strategy, isAsync, false, isEntry);
-const entry = chunk(e, false, true), routeA = chunk(a, true), routeB = chunk(b, true), worker = chunk(w, true, true);
-entry.deps.add(shared);
-for (const c of [routeA, routeB, worker]) c.deps.add(shared);
-worker.deps.add(workerOnly);
-worker.seal();
-const chunks = new Set([entry, routeA, routeB, worker]);
-// Entry dedupe must never strip the worker's independent registry.
-removeEntryDepsFromAsyncChunks(entry, chunks);
-routeA.deps.add(shared); routeB.deps.add(shared);
-const extracted = extractSharedChunks(chunks, graph, {}, strategy);
-deduplicateAgainstKnownChunks(chunks, entry);
-console.log(JSON.stringify({ workerDeps: [...worker.deps].map(m => m.path).sort(),
-  sharedCount: extracted.length, workerRequires: worker.requiredChunks.size,
-  routeRequires: [routeA.requiredChunks.size, routeB.requiredChunks.size] }));
-`])
-    expect(result.status).toBe(0)
-    expect(JSON.parse(result.stdout.trim())).toEqual({
-      workerDeps: ['/shared.js', '/worker-only.js', '/worker.js'],
-      sharedCount: 1,
-      workerRequires: 0,
-      routeRequires: [1, 1],
-    })
+  // #2741: the web export uses Expo's granular chunk planner; the merge pass
+  // lives in scripts/lib/granularChunkMerge.js (unit-tested in
+  // granularChunkMerge.test.ts) and reaches the planner through metro.config.
+  it('wires the granular web export and the merge pass through metro.config', () => {
+    jest.resetModules()
+    const cfg = require(path.join(ROOT, 'metro.config.js'))
+    const { mergeGranularChunkPlan } = require(path.join(ROOT, 'scripts/lib/granularChunkMerge.js'))
+    expect(cfg.serializer.unstable_granularWebExport).toBe(true)
+    expect(cfg.serializer.unstable_mergeGranularChunkPlan).toBe(mergeGranularChunkPlan)
   })
 
-  it('keeps the per-route Expo chunk patch applied after install', () => {
+  it('keeps the two-line granular patch applied after install and nothing of the old strategy', () => {
     const patch = fs.readFileSync(path.join(ROOT, EXPO_CHUNK_PATCH_REL), 'utf8')
-    const installedSerializer = fs.readFileSync(path.join(ROOT, EXPO_CHUNK_SERIALIZER_REL), 'utf8')
-    const installedStrategy = fs.readFileSync(path.join(ROOT, EXPO_CHUNK_STRATEGY_REL), 'utf8')
-    const runtimePatch = fs.readFileSync(path.join(ROOT, EXPO_ASYNC_RUNTIME_PATCH_REL), 'utf8')
+    const installedPlanner = fs.readFileSync(path.join(ROOT, EXPO_GRANULAR_STRATEGY_REL), 'utf8')
+    const installedSerializers = fs.readFileSync(path.join(ROOT, EXPO_SERIALIZERS_REL), 'utf8')
+    const installedChunks = fs.readFileSync(path.join(ROOT, EXPO_CHUNK_SERIALIZER_REL), 'utf8')
     const installedRuntime = fs.readFileSync(path.join(ROOT, EXPO_ASYNC_RUNTIME_REL), 'utf8')
 
-    expect(patch).toContain(EXPO_CHUNK_PATCH_MARKER)
-    // The strategy has to be selected by the serializer, not merely sit next to legacy.
-    expect(installedSerializer).toContain('createMetravelRouteSharedChunkingStrategy')
-    expect(installedStrategy).toContain(EXPO_CHUNK_PATCH_MARKER)
-    expect(installedStrategy).toContain('ownersByDependency')
-    expect(installedStrategy).toContain('matchingEntryPaths')
-    expect(runtimePatch).toContain(EXPO_CHUNK_PATCH_MARKER)
-    expect(installedRuntime).toContain(EXPO_CHUNK_PATCH_MARKER)
-    expect(installedStrategy).toContain('__METRAVEL_CHUNK_DEPS__')
-    expect(installedStrategy).toContain('__METRAVEL_SHARED_CHUNKS__')
-    expect(installedRuntime).toContain('__METRAVEL_CHUNK_DEPS__')
-    expect(installedRuntime).toContain('__METRAVEL_SHARED_CHUNKS__')
-    expect(installedRuntime).toContain('Promise.all(pending)')
-  })
-
-  it('names required shared chunks by hashed path and hashes them into the chunk filename', () => {
-    // A cached chunk under an unchanged filename must resolve the exact shared
-    // chunks it was serialized against: ordinals into the current build's group
-    // list drift after a regroup and produced "Requiring unknown module" on prod.
-    const installedStrategy = fs.readFileSync(path.join(ROOT, EXPO_CHUNK_STRATEGY_REL), 'utf8')
-    const installedLegacy = fs.readFileSync(path.join(ROOT, EXPO_LEGACY_STRATEGY_REL), 'utf8')
-    const installedRuntime = fs.readFileSync(path.join(ROOT, EXPO_ASYNC_RUNTIME_REL), 'utf8')
-    const patch = fs.readFileSync(path.join(ROOT, EXPO_CHUNK_PATCH_REL), 'utf8')
-    const runtimePatch = fs.readFileSync(path.join(ROOT, EXPO_ASYNC_RUNTIME_PATCH_REL), 'utf8')
-
-    for (const text of [patch, installedStrategy, runtimePatch, installedRuntime]) {
-      expect(text).toContain('METRAVEL_CHUNK_DEPS_BY_PATH')
+    for (const marker of ['METRAVEL_MERGE_GRANULAR_PLAN', 'METRAVEL_GRANULAR_WEB_EXPORT']) {
+      expect(patch).toContain(marker)
     }
-    expect(installedStrategy).toContain('__METRAVEL_CHUNK_DEPS__[${JSON.stringify(ownBundlePath)}]=${JSON.stringify(requiredAsyncPaths)}')
-    expect(installedStrategy).not.toContain('JSON.stringify(requiredAsyncIds)')
-    expect(installedRuntime).toContain("typeof id === 'string' ? id : sharedChunks?.[id]")
-
-    // Required shared chunks join the filename hash before the legacy hook runs: that
-    // hook returns early for includeAsyncPaths, and production web export would
-    // otherwise ignore them.
-    expect(installedLegacy).toContain('if (options.includeAsyncPaths) return targets;')
-    const targets = installedStrategy.indexOf('getAsyncChunkTargets (chunk, chunksByPath) {')
-    const requiredLoop = installedStrategy.indexOf('for (const requiredChunk of chunk.requiredChunks)', targets)
-    const legacyTargets = installedStrategy.indexOf('legacy.getAsyncChunkTargets(chunk, chunksByPath)', targets)
-    expect(targets).toBeGreaterThan(-1)
-    expect(requiredLoop).toBeGreaterThan(targets)
-    expect(legacyTargets).toBeGreaterThan(requiredLoop)
-  })
-
-  it('gives a shared chunk the sync dependencies it needs when it is loaded as an import() target', () => {
-    // #1749: an `import()` target can land inside a shared chunk, and the runtime then
-    // fetches that shared chunk on a route whose HTML never shipped it. Without its own
-    // manifest the neighbours its factories require synchronously never arrive and /map
-    // died with «Requiring unknown module "1947"». The manifest edges must stay out of
-    // `metadata.requires`: the HTML serializer topologically sorts that field and throws
-    // on the cycles shared chunks form.
-    const installedStrategy = fs.readFileSync(path.join(ROOT, EXPO_CHUNK_STRATEGY_REL), 'utf8')
-    const installedChunk = fs.readFileSync(path.join(ROOT, EXPO_CHUNK_CLASS_REL), 'utf8')
-    const patch = fs.readFileSync(path.join(ROOT, EXPO_CHUNK_PATCH_REL), 'utf8')
-
-    for (const text of [patch, installedStrategy]) {
-      expect(text).toContain('METRAVEL_SHARED_CHUNK_SYNC_DEPS')
-      expect(text).toContain('linkSharedChunkDependencies')
-      expect(text).toContain('sharedDependencies')
-    }
-    expect(compact(installedStrategy)).toContain(
-      '[...newSet([...chunk.requiredChunks,...extend(chunk).sharedDependencies])]',
-    )
-    // metadata.requires must keep listing requiredChunks only: upstream Chunk.js owns
-    // the field and the strategy metadata hook contributes modulePaths alone.
-    expect(compact(installedChunk)).toContain(
-      'requires:[...this.requiredChunks.values()].map((chunk)=>{',
-    )
-    const metadataHook = installedStrategy.slice(installedStrategy.indexOf('getMetadata (chunk) {'))
-    expect(metadataHook.slice(0, metadataHook.indexOf('return strategy;'))).not.toContain('requires')
-    // The pass runs after empty chunks are dropped, so no edge can name a removed chunk.
-    const dedupe = installedStrategy.indexOf('removeEmptyChunks(chunks);')
-    const link = installedStrategy.indexOf('linkSharedChunkDependencies(sharedChunks, graph);')
-    expect(dedupe).toBeGreaterThan(-1)
-    expect(link).toBeGreaterThan(dedupe)
-  })
-
-  it('re-runs the owner closure after shared groups with identical route sets are merged', () => {
-    // #1749: that merge unions owners, and the group merged in owes its owners to
-    // everything the other half requires synchronously. Running the closure only before
-    // the merge leaves those groups off the routes that execute them.
-    const installedStrategy = fs.readFileSync(path.join(ROOT, EXPO_CHUNK_STRATEGY_REL), 'utf8')
-    const first = installedStrategy.indexOf('propagateOwnersThroughSyncEdges(sharedGroups, graph)')
-    const merge = installedStrategy.indexOf('const groupsByRouteKey = new Map();')
-    const second = installedStrategy.indexOf(
-      'propagateOwnersThroughSyncEdges(routeScopedGroups, graph)',
-    )
-    expect(first).toBeGreaterThan(-1)
-    expect(merge).toBeGreaterThan(first)
-    expect(second).toBeGreaterThan(merge)
-  })
-
-  // #1340: the runtime may only await shared chunks that are not on the page yet.
-  // Awaiting one that the HTML already shipped as a <script> pushes the route module
-  // past the start of hydration, React.lazy suspends, and the route Suspense boundary
-  // (fallback={null} in production) drops the server-rendered DOM for ~600 ms.
-  it('serialises and consumes the shared-chunk loaded marker', () => {
-    const installedStrategy = fs.readFileSync(path.join(ROOT, EXPO_CHUNK_STRATEGY_REL), 'utf8')
-    const installedRuntime = fs.readFileSync(path.join(ROOT, EXPO_ASYNC_RUNTIME_REL), 'utf8')
-    const serializerPatch = fs.readFileSync(path.join(ROOT, EXPO_CHUNK_PATCH_REL), 'utf8')
-    const runtimePatch = fs.readFileSync(path.join(ROOT, EXPO_ASYNC_RUNTIME_PATCH_REL), 'utf8')
-
-    for (const source of [installedStrategy, serializerPatch]) {
-      expect(source).toContain('__METRAVEL_LOADED_CHUNKS__')
-      expect(source).toContain('loadedRegistration')
-    }
-    for (const source of [installedRuntime, runtimePatch]) {
-      expect(source).toContain('__METRAVEL_LOADED_CHUNKS__')
-      // The skip is the whole point: an already-evaluated chunk must not be awaited.
-      expect(source).toContain('loadedChunks?.[')
-      expect(source).toContain('pending.push(loadBundle(chunkPath))')
-    }
+    expect(installedPlanner).toContain('context.serializerConfig?.unstable_mergeGranularChunkPlan')
+    expect(installedPlanner).toContain('mergePlan(rawPlan, context)')
+    expect(installedSerializers).toContain('config.serializer?.unstable_granularWebExport === true')
+    // Granular stays gated on a non-lazy web client export: native and dev keep legacy.
+    expect(installedSerializers).toMatch(/context\.platform === 'web' && context\.environment === 'client'[^;]*!options\.dev && !isLazyBundle/)
+    expect(installedChunks).not.toContain('Metravel')
+    expect(fs.existsSync(path.join(ROOT, EXPO_OLD_STRATEGY_REL))).toBe(false)
+    expect(fs.existsSync(path.join(ROOT, 'patches/expo+58.0.19.patch'))).toBe(false)
+    expect(installedRuntime).not.toContain('__METRAVEL_CHUNK_DEPS__')
   })
 })
 

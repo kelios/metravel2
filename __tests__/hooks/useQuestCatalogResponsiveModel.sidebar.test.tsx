@@ -39,7 +39,6 @@ describe('вычет сайдбара в модели каталога квес�
     const withSidebar = model(1440)
     const explicit = model(1440, { hasSidebar: true })
     expect(explicit.cardWidth).toBe(withSidebar.cardWidth)
-    expect(explicit.screenWidth).toBe(1440)
   })
 
   it('без сайдбара отдаёт лендингу больше места, чем каталогу', () => {

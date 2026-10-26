@@ -17,11 +17,18 @@ const bootCatalog = (entries: unknown[]) => `(globalThis.__METRAVEL_BOOT_CATALOG
 describe('quest locale boot chunks', () => {
   let dir: string
   const write = (name: string, body = '__d(function(){},1,[]);') => fs.writeFileSync(path.join(dir, name), body)
+  // #2741: granular chunks — a route file defines its module; the router context
+  // in `entry` lists every file each route needs (Expo `paths` arrays).
+  const routerContext = (sets: Record<number, string[]>) => `__d(function(){},1,${JSON.stringify({
+    paths: Object.fromEntries(Object.entries(sets).map(([id, names]) => [id, names.map((name) => WEB + name)])),
+  })});__r(1);`
+  const ROUTE_SET = { 2: [ROUTE, '__shared-0-aa.js', '__shared-3-bb.js'] }
 
   beforeEach(() => {
     dir = makeTempDir('boot-chunks-')
-    write('[...missing]-abc123.js', `globalThis.__METRAVEL_CHUNK_DEPS__??={};globalThis.__METRAVEL_CHUNK_DEPS__["${WEB}[...missing]-abc123.js"]=["${WEB}__shared-0-aa.js","${WEB}__shared-3-bb.js",7];__d(function(){},2,[]);`)
-    for (const name of ['__shared-0-aa.js', '__shared-3-bb.js', 'entry-1.js']) write(name)
+    write('[...missing]-abc123.js', '__d(function(){},2,[]);')
+    for (const name of ['__shared-0-aa.js', '__shared-3-bb.js']) write(name)
+    write('entry-1.js', routerContext(ROUTE_SET))
     for (const locale of ['pl', 'en']) write(`locale-${locale}-ff00.js`)
     write('locale-plx-ff00.js')
     write(BOOT, bootCatalog([]))
@@ -42,7 +49,8 @@ describe('quest locale boot chunks', () => {
   })
 
   it('selects every route named by the page in page order, deduplicating dependencies and route references', () => {
-    write(OTHER_ROUTE, `globalThis.__METRAVEL_CHUNK_DEPS__??={};globalThis.__METRAVEL_CHUNK_DEPS__["${WEB}${OTHER_ROUTE}"]=["${WEB}__shared-3-bb.js","${WEB}${ROUTE}"];__d(function(){},3,[]);`)
+    write(OTHER_ROUTE, '__d(function(){},3,[]);')
+    write('entry-1.js', routerContext({ ...ROUTE_SET, 3: [OTHER_ROUTE, '__shared-3-bb.js', ROUTE] }))
     expect(readQuestLocaleBootChunks(dir, ['pl'], page([OTHER_ROUTE, ROUTE, OTHER_ROUTE, 'entry-1.js'])).get('pl')).toEqual([
       `${WEB}__shared-3-bb.js`, `${WEB}__shared-0-aa.js`, `${WEB}${OTHER_ROUTE}`, `${WEB}${ROUTE}`, `${WEB}locale-pl-ff00.js`,
     ])
@@ -62,7 +70,8 @@ describe('quest locale boot chunks', () => {
 
   it('checks a page against the chunks it names, not the directory', () => {
     const route = fs.readFileSync(path.join(dir, '[...missing]-abc123.js'), 'utf8')
-    const read = (src: string) => (src.endsWith('[...missing]-abc123.js') ? route : src.endsWith(BOOT) ? bootCatalog([]) : '')
+    const read = (src: string) => (src.endsWith('[...missing]-abc123.js') ? route : src.endsWith(BOOT) ? bootCatalog([])
+      : src.endsWith('entry-1.js') ? routerContext(ROUTE_SET) : '')
     expect(bootChunkIssues(page(['__shared-0-aa.js', '__shared-3-bb.js', '[...missing]-abc123.js', BOOT, 'entry-1.js']), 'pl', read)).toEqual([])
     expect(bootChunkIssues(page(['__shared-0-aa.js', '[...missing]-abc123.js', 'entry-1.js']), 'pl', read)).toEqual([
       'does not ship the locale-pl boot catalog', `does not ship boot chunk ${WEB}__shared-3-bb.js`,
@@ -73,8 +82,9 @@ describe('quest locale boot chunks', () => {
   })
 
   it('checks the dependencies of every route and all boot script positions, including duplicates', () => {
-    write(OTHER_ROUTE, `globalThis.__METRAVEL_CHUNK_DEPS__??={};globalThis.__METRAVEL_CHUNK_DEPS__["${WEB}${OTHER_ROUTE}"]=["${WEB}__shared-4-cc.js"];__d(function(){},3,[]);`)
+    write(OTHER_ROUTE, '__d(function(){},3,[]);')
     write('__shared-4-cc.js')
+    write('entry-1.js', routerContext({ ...ROUTE_SET, 3: [OTHER_ROUTE, '__shared-4-cc.js'] }))
     const read = (src: string) => fs.readFileSync(path.join(dir, src.slice(WEB.length)), 'utf8')
     const healthy = ['__shared-0-aa.js', '__shared-3-bb.js', '__shared-4-cc.js', ROUTE, OTHER_ROUTE, BOOT, 'entry-1.js']
     expect(bootChunkIssues(page(healthy), 'pl', read)).toEqual([])

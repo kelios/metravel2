@@ -55,15 +55,23 @@ function emptyAppRoot(html) {
   return `${source.slice(0, contentStart)}${source.slice(close)}`
 }
 
+const { createChunkDependencyIndex } = require('./webChunkGraph')
+
 const WEB_CHUNK_PREFIX = '/_expo/static/js/web/'
-const CHUNK_MANIFEST = /^globalThis\.__METRAVEL_CHUNK_DEPS__\?\?=\{\};globalThis\.__METRAVEL_CHUNK_DEPS__\["(?:[^"\\]|\\.)*"\]=(\[(?:[^\]"\\]|"(?:[^"\\]|\\.)*")*\]);/
 const CATCH_ALL_CHUNK = /^\[\.\.\.missing\]-[0-9a-f]+\.js$/
 const LAYOUT_CHUNK = /^_layout-[0-9a-f]+\.js$/
 const WEB_CHUNK_PATH = /^\/_expo\/static\/js\/web\/[^/\\?#"'<>]+\.js$/
 
-function chunkDependencies(source) {
-  const manifest = CHUNK_MANIFEST.exec(String(source))
-  return manifest ? JSON.parse(manifest[1]).filter((dep) => typeof dep === 'string') : []
+/**
+ * #2741: a chunk does not list its own dependencies any more. Expo's granular
+ * chunking writes every file an `import()` target needs into the importer's
+ * `paths`, and the page's scripts always carry the importer of its routes
+ * (the router context in `entry`). The index is built over the page only: a
+ * release `dist` also keeps earlier generations' chunks.
+ */
+function pageChunkDependencies(html, readChunk) {
+  const srcs = scriptSrcs(html).filter((src) => src.startsWith(WEB_CHUNK_PREFIX))
+  return createChunkDependencyIndex(srcs, readChunk)
 }
 
 function onlyChunk(files, pattern, label) {
@@ -92,7 +100,8 @@ function readQuestLocaleBootChunks(jsDir, locales, exportedCatchAllHtml, fileSys
     if (!WEB_CHUNK_PATH.test(src)) throw new Error(`invalid boot chunk path ${src}`)
     return fileSystem.readFileSync(`${jsDir}/${src.slice(WEB_CHUNK_PREFIX.length)}`, 'utf8')
   }
-  const deps = [...new Set(routes.flatMap((route) => chunkDependencies(readChunk(route))))]
+  const dependenciesOf = pageChunkDependencies(exportedCatchAllHtml, readChunk)
+  const deps = [...new Set(routes.flatMap((route) => dependenciesOf(route)))]
   for (const dep of deps) readChunk(dep)
   // A selected route may also be a declared dependency. Keep the page's route
   // order, while registering every non-route dependency before those routes.
@@ -106,42 +115,45 @@ function readQuestLocaleBootChunks(jsDir, locales, exportedCatchAllHtml, fileSys
 }
 
 /** The editor export owns both root and Tabs layout wrappers, not its leaf UI. */
-function readNotFoundRegistrationBootChunks(jsDir, exportedEditorHtml, fileSystem = fs) {
+function notFoundRegistrationBoot(jsDir, exportedEditorHtml, fileSystem) {
   if (typeof exportedEditorHtml !== 'string' || !exportedEditorHtml.trim()) throw new Error('missing authoritative exported editor HTML')
   const doc = expoScriptDocument(exportedEditorHtml)
   if (doc.issues.length) throw new Error(doc.issues.join('; '))
   const layouts = doc.scripts.map(node => node.attribs.src)
     .filter(src => LAYOUT_CHUNK.test(src.slice(WEB_CHUNK_PREFIX.length)))
   if (layouts.length < 2) throw new Error('exported editor HTML must ship root and Tabs layout wrappers')
-  const ordered = [], visiting = new Set(), visited = new Set()
-  const visit = (src) => {
+  const readChunk = (src) => {
     if (!WEB_CHUNK_PATH.test(src)) throw new Error(`invalid boot chunk path ${src}`)
-    if (visiting.has(src)) throw new Error(`cyclic boot chunk dependency ${src}`)
-    if (visited.has(src)) return
-    visiting.add(src)
-    const source = fileSystem.readFileSync(path.join(jsDir, src.slice(WEB_CHUNK_PREFIX.length)), 'utf8')
-    for (const dep of chunkDependencies(source)) visit(dep)
-    visiting.delete(src)
-    visited.add(src)
-    ordered.push(src)
+    return fileSystem.readFileSync(path.join(jsDir, src.slice(WEB_CHUNK_PREFIX.length)), 'utf8')
   }
-  layouts.forEach(visit)
-  return ordered
+  const dependenciesOf = pageChunkDependencies(exportedEditorHtml, readChunk)
+  // Granular sets are complete per entry, so no walk: each layout's set, then the layout.
+  const ordered = []
+  for (const layout of layouts) {
+    for (const src of [...dependenciesOf(layout), layout]) {
+      readChunk(src)
+      if (!ordered.includes(src)) ordered.push(src)
+    }
+  }
+  return { chunks: ordered, layouts, dependenciesOf }
+}
+
+function readNotFoundRegistrationBootChunks(jsDir, exportedEditorHtml, fileSystem = fs) {
+  return notFoundRegistrationBoot(jsDir, exportedEditorHtml, fileSystem).chunks
 }
 
 /** Validate all outputs before writing either canonical NotFound document. */
 function prepareNotFoundDocumentBoot(distDir, fileSystem = fs) {
   const jsDir = path.join(distDir, '_expo', 'static', 'js', 'web')
-  const chunks = readNotFoundRegistrationBootChunks(jsDir,
+  const { chunks, layouts, dependenciesOf } = notFoundRegistrationBoot(jsDir,
     fileSystem.readFileSync(path.join(distDir, 'travel', 'new.html'), 'utf8'), fileSystem)
   const outputs = ['+not-found.html', '[...missing].html'].map(name => {
     const filename = path.join(distDir, name)
     const html = shipBootChunks(fileSystem.readFileSync(filename, 'utf8'), chunks)
     const doc = expoScriptDocument(html)
     const positions = new Map(doc.scripts.map((node, index) => [node.attribs.src, index]))
-    for (const src of chunks) {
-      const source = fileSystem.readFileSync(path.join(jsDir, src.slice(WEB_CHUNK_PREFIX.length)), 'utf8')
-      for (const dep of chunkDependencies(source)) {
+    for (const src of layouts) {
+      for (const dep of dependenciesOf(src)) {
         if (!(positions.get(dep) < positions.get(src))) throw new Error(`${name}: boot dependency ${dep} must precede ${src}`)
       }
     }
@@ -311,7 +323,8 @@ function bootChunkIssues(html, locale, readChunk) {
   if (new Set(catalogs).size > 1) issues.push(`ships more than one locale-${locale} boot catalog`)
   // #2484: the complete catalogue loads after boot, off the critical path.
   issues.push(...named(fullCatalogPattern(locale)).map((src) => `ships the full catalogue ${src} before entry`))
-  const deps = [...new Set([...new Set(routes)].flatMap((route) => chunkDependencies(readChunk(route))))]
+  const dependenciesOf = pageChunkDependencies(html, readChunk)
+  const deps = [...new Set([...new Set(routes)].flatMap((route) => dependenciesOf(route)))]
   const present = new Set(scripts)
   issues.push(...deps.filter((dep) => !present.has(dep)).map((dep) => `does not ship boot chunk ${dep}`))
   if (catalogs.length === 1) {

@@ -246,22 +246,6 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
                 } as any,
             }),
         },
-        actionBtnSecondary: {
-            backgroundColor: colors.backgroundSecondary,
-            borderWidth: 1,
-            borderColor: colors.borderLight,
-            ...Platform.select({
-                web: { boxShadow: 'none' } as any,
-            }),
-        },
-        actionBtnText: {
-            color: colors.textOnPrimary,
-            fontWeight: '600',
-            fontSize: typography.sizes.sm,
-        },
-        actionBtnTextSecondary: {
-            color: colors.text,
-        },
         // Desktop-web пилюля действия: всегда квадратная icon-only, подпись при
         // наведении показывается ОТДЕЛЬНЫМ абсолютным чипом под кнопкой.
         // Инлайновое раскрытие подписи меняло ширину пилюли, последняя кнопка
@@ -726,31 +710,6 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
                 }
                 : null),
         },
-        showNearbyBtn: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: spacing.xs,
-            minHeight: DESIGN_TOKENS.touchTarget.minHeight,
-            paddingHorizontal: spacing.md,
-            paddingVertical: spacing.sm,
-            borderRadius: CONTROL_RADIUS,
-            backgroundColor: colors.brand,
-            ...Platform.select({
-                web: {
-                    cursor: 'pointer',
-                    boxShadow: ((colors.boxShadows as any)?.light ?? DESIGN_TOKENS.shadows.light) as any,
-                } as any,
-            }),
-        },
-        showNearbyBtnDisabled: {
-            opacity: 0.7,
-        },
-        showNearbyBtnText: {
-            color: colors.textOnPrimary,
-            fontSize: typography.sizes.sm,
-            fontWeight: '700',
-        },
         geoMessageText: {
             color: colors.warningDark,
             fontSize: typography.sizes.sm,
@@ -867,32 +826,6 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
         },
         questVirtualizedItem: {
             marginBottom: spacing.lg,
-        },
-
-        /* ---- Mobile filter toggle (Modern pill) ---- */
-        mobileFilterBtn: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: spacing.sm,
-            backgroundColor: colors.backgroundSecondary,
-            paddingHorizontal: spacing.md,
-            paddingVertical: spacing.sm,
-            borderRadius: CONTROL_RADIUS,
-            borderWidth: 1,
-            borderColor: colors.borderLight,
-            flexShrink: 0,
-            minHeight: DESIGN_TOKENS.touchTarget.minHeight,
-            ...Platform.select({
-                web: {
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                } as any,
-            }),
-        },
-        mobileFilterBtnText: {
-            color: colors.text,
-            fontSize: typography.sizes.sm,
-            fontWeight: '600',
         },
 
         /* ---- Mobile sidebar overlay (Smooth backdrop) ---- */
@@ -1114,23 +1047,6 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             fontSize: typography.sizes.xs,
             fontWeight: '700',
         },
-        questCardPioneerBadge: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            alignSelf: 'flex-start',
-            gap: spacing.xs,
-            backgroundColor: colors.brandSoft,
-            borderWidth: 1,
-            borderColor: colors.brandAlpha30,
-            paddingHorizontal: spacing.sm,
-            paddingVertical: spacing.xs,
-            borderRadius: radii.full,
-        },
-        questCardPioneerBadgeText: {
-            color: colors.brandDark,
-            fontSize: typography.sizes.xs,
-            fontWeight: '800',
-        },
         questCardReviewsChip: {
             position: 'absolute',
             right: spacing.sm,
@@ -1177,12 +1093,6 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             color: 'rgba(255,255,255,0.95)',
             fontSize: 12,
             fontWeight: '500',
-        },
-        questCardMetaDivider: {
-            width: 3,
-            height: 3,
-            borderRadius: 1.5,
-            backgroundColor: 'rgba(255,255,255,0.35)',
         },
         questCardPioneerRow: {
             flexDirection: 'row',

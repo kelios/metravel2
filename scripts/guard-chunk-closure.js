@@ -12,15 +12,21 @@
 // shared-чанка, которого на /map не было ни в HTML, ни в манифесте, и страница
 // падала в корневой ErrorBoundary с «Requiring unknown module "1947"» (#1749).
 //
-// Проверяются оба пути:
-//   1) стартовый набор маршрута — замыкание по синхронным зависимостям;
-//   2) любая async-цель — набор маршрута ∪ сам чанк ∪ его `__METRAVEL_CHUNK_DEPS__`
-//      (рантайм читает манифест ровно одного запрошенного чанка и не обходит
-//      манифесты того, что только что загрузил, поэтому манифест обязан быть
-//      транзитивным).
+// Проверяется замыкание того, что реально исполняется (#2741):
+//   1) корни страницы — модули `__r(id)` её скриптов — и их синхронные
+//      зависимости должны быть определены в скриптах страницы;
+//   2) каждая async-цель (`paths` исполняемого модуля) — её синхронное
+//      замыкание должно быть в наборе «страница ∪ файл импортёра ∪ массив
+//      `paths`». Granular-чанкинг Expo пишет у `import()` все файлы целевого
+//      entry, кроме файла импортёра, и рантайм не обходит `paths` только что
+//      загруженных файлов — массив обязан быть самодостаточным.
+// Модуль, который файл везёт, но маршрут никогда не исполняет, не проверяется:
+// granular-группа с одинаковыми владельцами содержит и такие, а `__d` только
+// регистрирует фабрику.
 
 const fs = require('fs')
 const path = require('path')
+const { parseChunk } = require('./lib/webChunkGraph')
 
 const args = process.argv.slice(2)
 const dirArg = args.find((a) => !a.startsWith('--'))
@@ -40,100 +46,16 @@ if (!fs.existsSync(jsDir)) {
   process.exit(1)
 }
 
-/** Найти конец JSON-значения, начинающегося на позиции start (`[` или `{`). */
-function endOfValue(source, start) {
-  const open = source[start]
-  const close = open === '[' ? ']' : '}'
-  let depth = 0
-  let inString = false
-  let quote = ''
-  for (let i = start; i < source.length; i += 1) {
-    const ch = source[i]
-    if (inString) {
-      if (ch === '\\') {
-        i += 1
-        continue
-      }
-      if (ch === quote) inString = false
-      continue
-    }
-    if (ch === '"' || ch === "'") {
-      inString = true
-      quote = ch
-      continue
-    }
-    if (ch === open) depth += 1
-    else if (ch === close) {
-      depth -= 1
-      if (depth === 0) return i + 1
-    }
-  }
-  return -1
-}
-
-const DEFINE = /\},(\d+),(?=[[{])/g
-
-/** { defs: Map<id, {deps:number[], paths:Map<id,string>}> } */
-function parseChunk(source) {
-  const defs = new Map()
-  DEFINE.lastIndex = 0
-  let match
-  while ((match = DEFINE.exec(source))) {
-    const id = Number(match[1])
-    const valueStart = match.index + match[0].length
-    const valueEnd = endOfValue(source, valueStart)
-    if (valueEnd < 0) continue
-    const raw = source.slice(valueStart, valueEnd)
-    let parsed
-    try {
-      parsed = JSON.parse(raw)
-    } catch {
-      continue
-    }
-    const deps = []
-    const paths = new Map()
-    if (Array.isArray(parsed)) {
-      for (const value of parsed) if (typeof value === 'number') deps.push(value)
-    } else if (parsed && typeof parsed === 'object') {
-      for (const [key, value] of Object.entries(parsed)) {
-        if (key === 'paths') {
-          if (value && typeof value === 'object') {
-            for (const [depId, chunkPath] of Object.entries(value)) {
-              if (typeof chunkPath === 'string') paths.set(Number(depId), chunkPath)
-            }
-          }
-          continue
-        }
-        if (typeof value === 'number') deps.push(value)
-      }
-    } else {
-      continue
-    }
-    // Асинхронные рёбра несут собственный путь чанка — исполнять их синхронно
-    // никто не будет, и на странице их определений быть не обязано.
-    defs.set(id, { deps: deps.filter((dep) => !paths.has(dep)), paths })
-    DEFINE.lastIndex = valueEnd
-  }
-  return defs
-}
-
-const MANIFEST = /^globalThis\.__METRAVEL_CHUNK_DEPS__\?\?=\{};globalThis\.__METRAVEL_CHUNK_DEPS__\[("(?:[^"\\]|\\.)*")\]=(\[[^\]]*\]);/
-
-const chunks = new Map() // url path -> { defs, manifest: string[] }
+const RUN_MODULE = /__r\((\d+)\)/g
+const chunks = new Map() // url path -> { defs, roots }
+const fileByModule = new Map()
 for (const file of fs.readdirSync(jsDir)) {
   if (!file.endsWith('.js')) continue
   const source = fs.readFileSync(path.join(jsDir, file), 'utf8')
-  const manifestMatch = MANIFEST.exec(source)
-  let manifest = []
-  if (manifestMatch) {
-    try {
-      const listed = JSON.parse(manifestMatch[2])
-      manifest = listed.filter((entry) => typeof entry === 'string')
-    } catch {
-      manifest = []
-    }
-  }
-  chunks.set(`/_expo/static/js/web/${file}`, { defs: parseChunk(source), manifest })
+  const url = `/_expo/static/js/web/${file}`
+  const defs = parseChunk(source)
+  chunks.set(url, { defs, roots: [...source.matchAll(RUN_MODULE)].map((match) => Number(match[1])) })
+  for (const id of defs.keys()) fileByModule.set(id, url)
 }
 
 const htmlFiles = []
@@ -185,54 +107,55 @@ const defsOf = (urls) => {
 for (const { scripts, route } of routesByScriptKey.values()) {
   if (checkedRoutes >= MAX_ROUTES) break
   checkedRoutes += 1
-  const baseDefs = defsOf(scripts)
 
   const report = (kind, moduleId, missing, via) => {
     failures.push({ route, kind, moduleId, missing, via })
   }
+  for (const url of scripts) {
+    if (!chunks.has(url)) report('missing-chunk', -1, url, route)
+  }
 
-  for (const [id, def] of baseDefs) {
-    for (const dep of def.deps) {
-      if (!baseDefs.has(dep)) report('eager', id, dep, scripts.join(','))
+  const asyncQueue = []
+  const seenAsync = new Set()
+  /** Синхронное замыкание roots в loaded; async-рёбра уходят в очередь. */
+  const walk = (roots, loaded, kind, via) => {
+    const seen = new Set()
+    const stack = roots.slice()
+    while (stack.length) {
+      const id = stack.pop()
+      if (seen.has(id)) continue
+      seen.add(id)
+      const def = loaded.get(id)
+      if (!def) continue
+      for (const dep of def.deps) {
+        if (!loaded.has(dep)) report(kind, id, dep, via)
+        else stack.push(dep)
+      }
+      for (const [target, files] of def.paths) {
+        const importer = fileByModule.get(id)
+        const key = `${target}|${importer}`
+        if (seenAsync.has(key)) continue
+        seenAsync.add(key)
+        asyncQueue.push({ target, files: importer ? [importer, ...files] : files })
+      }
     }
   }
 
-  // Async-цели: `paths` любого доставленного модуля.
-  const asyncTargets = new Set()
-  for (const def of baseDefs.values()) {
-    for (const chunkPath of def.paths.values()) asyncTargets.add(chunkPath)
-  }
-  const seenTargets = new Set()
-  while (asyncTargets.size) {
-    const targetPath = asyncTargets.values().next().value
-    asyncTargets.delete(targetPath)
-    if (seenTargets.has(targetPath)) continue
-    seenTargets.add(targetPath)
-    const target = chunks.get(targetPath)
-    if (!target) {
-      report('missing-chunk', -1, targetPath, route)
+  const roots = scripts.flatMap((url) => chunks.get(url)?.roots ?? [])
+  if (!roots.length) report('no-roots', -1, -1, scripts.join(','))
+  walk(roots, defsOf(scripts), 'eager', scripts.join(','))
+
+  while (asyncQueue.length) {
+    const { target, files } = asyncQueue.shift()
+    for (const url of files) {
+      if (!chunks.has(url)) report('missing-chunk', -1, url, files.join(','))
+    }
+    const loaded = defsOf([...scripts, ...files])
+    if (!loaded.has(target)) {
+      report('async', target, target, files.join(','))
       continue
     }
-    const loaded = new Map(baseDefs)
-    for (const url of [targetPath, ...target.manifest]) {
-      const chunk = chunks.get(url)
-      if (!chunk) {
-        report('missing-chunk', -1, url, targetPath)
-        continue
-      }
-      for (const [id, def] of chunk.defs) loaded.set(id, def)
-    }
-    for (const [id, def] of target.defs) {
-      for (const dep of def.deps) {
-        if (!loaded.has(dep)) report('async', id, dep, targetPath)
-      }
-    }
-    // Цепочка навигаций: цели, открывшиеся из только что загруженного чанка.
-    for (const def of target.defs.values()) {
-      for (const chunkPath of def.paths.values()) {
-        if (!seenTargets.has(chunkPath)) asyncTargets.add(chunkPath)
-      }
-    }
+    walk([target], loaded, 'async', files.join(','))
   }
 }
 
@@ -244,6 +167,8 @@ if (failures.length) {
   for (const failure of shown) {
     if (failure.kind === 'missing-chunk') {
       console.error(`  [${failure.route}] чанк не найден в выпуске: ${failure.missing} (ссылка из ${failure.via})`)
+    } else if (failure.kind === 'no-roots') {
+      console.error(`  [${failure.route}] в скриптах страницы нет ни одного __r(id) — замыкание не проверить (${failure.via})`)
     } else {
       console.error(
         `  [${failure.route}] ${failure.kind}: модуль ${failure.moduleId} требует ${failure.missing}, которого нет в наборе (${failure.kind === 'async' ? `async-цель ${failure.via}` : 'стартовый набор'})`,

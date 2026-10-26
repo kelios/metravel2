@@ -1,5 +1,4 @@
 import { translate as i18nT } from '@/i18n'
-import { mapNotificationPayloadToHref } from '@/utils/incomingAppLinks'
 
 export interface NotificationChannel {
   id: string
@@ -119,12 +118,6 @@ export async function scheduleQuestReturnReminder(
 ): Promise<boolean> {
   return false
 }
-export async function cancelQuestReturnReminder(
-  _ownerId: string,
-  _questId: string,
-): Promise<void> {}
+// One web no-op for the quest catalog and logout alike (#2741).
+export { cancelQuestReturnReminder } from './questReturnReminder.web'
 export async function cancelQuestReminder(_questId: string): Promise<void> {}
-
-export function extractDeepLinkFromNotification(data: Record<string, unknown>): string | null {
-  return mapNotificationPayloadToHref(data)
-}

@@ -6,6 +6,9 @@
  * маршруте, чей HTML его не вёз, а соседний shared-чанк с синхронной зависимостью
  * не приезжал ни оттуда, ни из манифеста. Бюджеты и SEO-проверки такой выпуск
  * пропускали: по размеру и разметке он безупречен.
+ *
+ * #2741: с granular-чанкингом Expo набор файлов import() — массив в `paths`
+ * модуля, своего манифеста у чанков больше нет.
  */
 
 import fs from 'fs'
@@ -34,16 +37,14 @@ const writeExport = (
 }
 
 /** Модуль в формате метро-выпуска: фабрика, id, карта зависимостей. */
-const moduleDef = (id: number, deps: Record<string, number>, paths?: Record<number, string>) => {
+const moduleDef = (id: number, deps: Record<string, number>, paths?: Record<number, string | string[]>) => {
   const map: Record<string, unknown> = { ...deps }
   if (paths) map.paths = paths
   return `__d(function(g,r,i,a,m,e,d){},${id},${JSON.stringify(map)});`
 }
 
-const manifest = (own: string, required: string[]) =>
-  `globalThis.__METRAVEL_CHUNK_DEPS__??={};globalThis.__METRAVEL_CHUNK_DEPS__[${JSON.stringify(
-    `/${JS_DIR}/${own}`,
-  )}]=${JSON.stringify(required.map((name) => `/${JS_DIR}/${name}`))};`
+/** Корень страницы: entry исполняет модуль сам. */
+const run = (id: number) => `__r(${id});`
 
 describe('guard-chunk-closure', () => {
   it('пропускает выпуск, где async-цель везёт свои синхронные зависимости', () => {
@@ -52,12 +53,9 @@ describe('guard-chunk-closure', () => {
       chunks: [
         {
           name: 'route-aaa.js',
-          source: moduleDef(1, { 0: 100 }, { 100: `/${JS_DIR}/shared-a.js` }),
+          source: moduleDef(1, { 0: 100 }, { 100: [`/${JS_DIR}/shared-b.js`, `/${JS_DIR}/shared-a.js`] }) + run(1),
         },
-        {
-          name: 'shared-a.js',
-          source: manifest('shared-a.js', ['shared-b.js']) + moduleDef(100, { 0: 200 }),
-        },
+        { name: 'shared-a.js', source: moduleDef(100, { 0: 200 }) },
         { name: 'shared-b.js', source: moduleDef(200, {}) },
       ],
       html: { 'map.html': ['route-aaa.js'] },
@@ -74,9 +72,9 @@ describe('guard-chunk-closure', () => {
       chunks: [
         {
           name: 'route-aaa.js',
-          source: moduleDef(1, { 0: 100 }, { 100: `/${JS_DIR}/shared-a.js` }),
+          source: moduleDef(1, { 0: 100 }, { 100: `/${JS_DIR}/shared-a.js` }) + run(1),
         },
-        // Ровно прод-случай: манифеста нет, сосед с модулем 200 никем не грузится.
+        // Ровно прод-случай: сосед с модулем 200 не входит в набор import().
         { name: 'shared-a.js', source: moduleDef(100, { 0: 200 }) },
         { name: 'shared-b.js', source: moduleDef(200, {}) },
       ],
@@ -93,7 +91,7 @@ describe('guard-chunk-closure', () => {
     const dir = makeTempDir('chunk-closure-eager-gap')
     writeExport(dir, {
       chunks: [
-        { name: 'route-aaa.js', source: moduleDef(1, { 0: 2 }) },
+        { name: 'route-aaa.js', source: moduleDef(1, { 0: 2 }) + run(1) },
         { name: 'shared-a.js', source: moduleDef(2, {}) },
       ],
       html: { 'map.html': ['route-aaa.js'] },
@@ -112,7 +110,7 @@ describe('guard-chunk-closure', () => {
         {
           name: 'route-aaa.js',
           // 100 — цель import(), её определения на странице быть не обязано.
-          source: moduleDef(1, { 0: 100 }, { 100: `/${JS_DIR}/shared-a.js` }),
+          source: moduleDef(1, { 0: 100 }, { 100: `/${JS_DIR}/shared-a.js` }) + run(1),
         },
         { name: 'shared-a.js', source: moduleDef(100, {}) },
       ],
@@ -120,5 +118,30 @@ describe('guard-chunk-closure', () => {
     })
 
     expect(runNodeCli([GUARD, dir]).status).toBe(0)
+  })
+
+  it('не требует зависимостей у модуля, который файл везёт, но маршрут не исполняет', () => {
+    const dir = makeTempDir('chunk-closure-unexecuted')
+    writeExport(dir, {
+      chunks: [
+        // 5 лежит в том же granular-файле, но из корня 1 недостижим.
+        { name: 'route-aaa.js', source: moduleDef(1, {}) + moduleDef(5, { 0: 999 }) + run(1) },
+      ],
+      html: { 'map.html': ['route-aaa.js'] },
+    })
+
+    expect(runNodeCli([GUARD, dir]).status).toBe(0)
+  })
+
+  it('отказывает, если в скриптах страницы нет корня', () => {
+    const dir = makeTempDir('chunk-closure-no-roots')
+    writeExport(dir, {
+      chunks: [{ name: 'route-aaa.js', source: moduleDef(1, {}) }],
+      html: { 'map.html': ['route-aaa.js'] },
+    })
+
+    const result = runNodeCli([GUARD, dir])
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('нет ни одного __r(id)')
   })
 })

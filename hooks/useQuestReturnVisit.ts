@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'react'
 
 import { trackReturnVisitAfterFinish } from '@/utils/questRetentionAnalytics'
 import { useAuthStore } from '@/stores/authStore'
-import { cancelQuestReturnReminder } from '@/services/notifications'
+import { cancelQuestReturnReminder } from '@/services/questReturnReminder'
 import {
   clearQuestFinishRecord,
   evaluateReturnVisit,

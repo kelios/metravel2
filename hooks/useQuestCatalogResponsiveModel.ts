@@ -7,19 +7,12 @@ import { QUESTS_GRID_MIN_COLUMN_WIDTH, QUESTS_GRID_WEB_GAP, QUESTS_LANDING_PADDI
 const { spacing } = DESIGN_TOKENS
 const useWebLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
+// Only what the catalog and the country landing read: map height, title sizes
+// and friends were computed here and never read (#2741 dropped them).
 export type QuestCatalogResponsiveModel = {
   isMobile: boolean
-  isSmallPhone: boolean
-  isTablet: boolean
-  screenWidth: number
-  sidebarWidth: number
   cardColumns: number
   cardWidth: number
-  gridMinColumnWidth: number
-  mapHeight: number
-  cardImageHeight: number
-  headerTitleSize: number
-  contentTitleSize: number
 }
 
 export type QuestCatalogResponsiveOptions = {
@@ -52,8 +45,6 @@ export function useQuestCatalogResponsiveModel(
   const { width, isMobile, isTablet, isLargeTablet } = useBreakpoints()
 
   return useMemo<QuestCatalogResponsiveModel>(() => {
-    const isSmallPhone = width < 360
-
     const sidebarWidth = hasSidebar ? (isTablet ? 280 : isLargeTablet ? 300 : 340) : 0
     const available = hasSidebar
       ? (isMobile ? width : Math.max(320, width - sidebarWidth - spacing.xl * 2))
@@ -82,31 +73,7 @@ export function useQuestCatalogResponsiveModel(
       cardWidth = Math.min(600, contentWidth)
     }
 
-    const gridMinColumnWidth = cardColumns >= 2 ? 300 : contentWidth
-
-    const mapHeight = isMobile
-      ? Math.min(420, Math.max(280, width * 0.7))
-      : Math.min(620, Math.max(400, width * 0.35))
-
-    const cardImageHeight = isMobile ? 220 : 260
-
-    const headerTitleSize = isMobile ? 20 : 26
-    const contentTitleSize = isMobile ? 20 : 28
-
-    return {
-      isMobile,
-      isSmallPhone,
-      isTablet,
-      screenWidth: width,
-      sidebarWidth,
-      cardColumns,
-      cardWidth,
-      gridMinColumnWidth,
-      mapHeight,
-      cardImageHeight,
-      headerTitleSize,
-      contentTitleSize,
-    }
+    return { isMobile, cardColumns, cardWidth }
   }, [width, isMobile, isTablet, isLargeTablet, questCount, hasSidebar, contentMaxWidth, columnGap])
 }
 

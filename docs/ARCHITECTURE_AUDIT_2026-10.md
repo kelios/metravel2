@@ -887,6 +887,10 @@ real production bug ("Requiring unknown module", `docs/PROBLEM_MEMORY.md:901-917
 Risk: must be re-ported on every SDK bump against compiled output. Fix:
 upstream the fix or isolate it as a custom serializer passed via
 `metro.config.js` so it survives upgrades. Effort: L.
+*Status 26.10.2026 (#2741):* the web export runs Expo's granular planner; the
+route-set merge lives in `scripts/lib/granularChunkMerge.js` behind a two-hunk
+`@expo/metro-config` patch (hook + opt-in flag), the runtime patch and the
+`__METRAVEL_*` manifest are gone.
 
 **DEP-2 — React Native and Hermes built from source on Android + RN patch.**
 Sev: critical (build/upgrade). `plugins/withAndroidReleaseSafety.js:21-31,139-148`
