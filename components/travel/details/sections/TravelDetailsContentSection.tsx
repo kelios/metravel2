@@ -107,20 +107,10 @@ export const TravelDetailsContentSection: React.FC<{
     [anchors.video, setVideoRef],
   )
 
+  // Читатель сначала получает саму статью; призывы и квесты рядом идут после
+  // текста, а не перед ним (#2774).
   return (
     <>
-      <TravelDetailsDeferredTransition
-        key={travel.id}
-        testID="travel-details-quest-transition"
-        isMobile={isMobile}
-        pending={false}
-        placeholder={null}
-        runtimeFrameReady
-        allowEmptyRuntime
-      >
-        <DeferredQuestForCitySection travel={travel} styles={styles} />
-      </TravelDetailsDeferredTransition>
-
       {shouldRenderDescriptionSection && (
         <View
           ref={anchors.description}
@@ -145,6 +135,10 @@ export const TravelDetailsContentSection: React.FC<{
                     : readingTimeLabel}
                 </Text>
               </View>
+              {Platform.OS === 'web' && <h2 style={WEB_SR_ONLY_HEADING_STYLE as any}>{i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.soderzhanie_marshruta_4fdeae71')}</h2>}
+
+              <TravelDescription title={travel.name} htmlContent={descriptionContent.html} serverSanitized={descriptionContent.serverSanitized} articleBodyMedia={articleBodyMedia} noBox />
+
               <TravelRegisterCtaSection
                 redirect={travel.slug ? `/travels/${travel.slug}` : undefined}
                 travelId={travel.id}
@@ -152,9 +146,6 @@ export const TravelDetailsContentSection: React.FC<{
                 imageUrl={travel.travel_image_thumb_url || travel.travel_image_thumb_small_url}
               />
               <TravelArticleShareTripCta travel={travel} isMobile={isMobile} />
-              {Platform.OS === 'web' && <h2 style={WEB_SR_ONLY_HEADING_STYLE as any}>{i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.soderzhanie_marshruta_4fdeae71')}</h2>}
-
-              <TravelDescription title={travel.name} htmlContent={descriptionContent.html} serverSanitized={descriptionContent.serverSanitized} articleBodyMedia={articleBodyMedia} noBox />
 
               {/* Кнопки «наверх» нет намеренно (#1023): навигацию покрывают sticky-табы секций */}
             </View>
@@ -306,6 +297,18 @@ export const TravelDetailsContentSection: React.FC<{
           )}
         </View>
       )}
+
+      <TravelDetailsDeferredTransition
+        key={travel.id}
+        testID="travel-details-quest-transition"
+        isMobile={isMobile}
+        pending={false}
+        placeholder={null}
+        runtimeFrameReady
+        allowEmptyRuntime
+      >
+        <DeferredQuestForCitySection travel={travel} styles={styles} />
+      </TravelDetailsDeferredTransition>
     </>
   )
 })

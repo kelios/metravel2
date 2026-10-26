@@ -58,6 +58,13 @@ jest.mock('@/components/travel/details/sections/TravelArticleShareTripCta', () =
   }
 })
 
+jest.mock('@/components/travel/details/sections/DeferredQuestForCitySection', () => {
+  const { Text } = require('react-native')
+  return function MockDeferredQuestForCitySection() {
+    return <Text testID="travel-nearby-quests">Квесты рядом</Text>
+  }
+})
+
 jest.mock('@/components/travel/details/sections/TravelPeerBadgePrompt', () => {
   const { Text } = require('react-native')
   return function MockTravelPeerBadgePrompt({ hasArticleText }: { hasArticleText: boolean }) {
@@ -133,7 +140,9 @@ describe('TravelDetailsContentSection', () => {
     mockProgressiveShouldLoad = true
   })
 
-  it('places one share invitation after the existing save CTA and before the article body', () => {
+  // #2774: the article body comes first; the save CTA with its adjacent share
+  // invitation follows the text, and nearby quests close the content section.
+  it('renders the article body before the save CTA, share invitation and nearby quests', () => {
     const view = render(
       <TravelDetailsContentSection
         travel={createTravel()}
@@ -146,10 +155,11 @@ describe('TravelDetailsContentSection', () => {
 
     expect(screen.getAllByTestId('travel-article-share-trip')).toHaveLength(1)
     const content = JSON.stringify(view.toJSON())
+    expect(content.indexOf('travel-description-Тестовый маршрут')).toBeLessThan(content.indexOf('travel-register-cta'))
     expect(content.indexOf('travel-register-cta')).toBeLessThan(content.indexOf('travel-article-share-trip'))
-    expect(content.indexOf('travel-article-share-trip')).toBeLessThan(content.indexOf('travel-description-Тестовый маршрут'))
-    expect(content.indexOf('travel-description-Тестовый маршрут')).toBeLessThan(content.indexOf('travel-peer-badge-prompt'))
+    expect(content.indexOf('travel-article-share-trip')).toBeLessThan(content.indexOf('travel-peer-badge-prompt'))
     expect(content.indexOf('travel-peer-badge-prompt')).toBeLessThan(content.indexOf('lazy-youtube'))
+    expect(content.indexOf('lazy-youtube')).toBeLessThan(content.indexOf('travel-nearby-quests'))
     expect(screen.getByTestId('travel-details-description').findAllByProps({ testID: 'travel-peer-badge-prompt' })).toHaveLength(0)
   })
 
