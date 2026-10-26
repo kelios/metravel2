@@ -9,6 +9,7 @@ import i18n from './instance'
 import { selectPluralCategory } from './pluralRules'
 import type { TranslationKey, TranslationParams } from './resources'
 import type { CompiledPluralForms, LoadedTranslation } from './catalogCompiler'
+import { getServerLocaleCatalogState } from '@/utils/ssr/requestLocale'
 export { compileLocaleCatalog, hashTranslationKey } from './catalogCompiler'
 
 type CompiledTranslation =
@@ -27,8 +28,9 @@ const MISSING_TRANSLATIONS: Record<SupportedLocale, string> = {
   en: 'Translation not available',
 }
 const TRANSLATION_KEY_PATTERN = /^[a-z][a-zA-Z]*:[\w.-]+$/
-const loadedCatalogs = new Map<SupportedLocale, Map<number, LoadedTranslation>>()
-const localeLoadPromises = new Map<SupportedLocale, Promise<void>>()
+const serverCatalogs = getServerLocaleCatalogState()
+const loadedCatalogs = serverCatalogs?.loadedCatalogs ?? new Map<SupportedLocale, Map<number, LoadedTranslation>>()
+const localeLoadPromises = serverCatalogs?.loadPromises ?? new Map<SupportedLocale, Promise<void>>()
 // Locales whose loaded catalogue is still the boot subset of a document.
 const partialCatalogs = new Set<SupportedLocale>()
 
@@ -98,6 +100,7 @@ const retryFullCatalogOnNextChunk = (locale: SupportedLocale) => {
 }
 
 export const loadWebLocale = async (locale: SupportedLocale): Promise<void> => {
+  if (!isSupportedLocale(locale)) throw new Error('Unsupported locale catalogue')
   if (locale === FALLBACK_LOCALE) return
   if (loadedCatalogs.has(locale) && !partialCatalogs.has(locale)) return
   const existing = localeLoadPromises.get(locale)
@@ -127,6 +130,30 @@ export const loadWebLocale = async (locale: SupportedLocale): Promise<void> => {
     return
   }
   await promise
+}
+
+const SERVER_LOCALE_READY = Promise.resolve()
+
+/** Stable Suspense resource, shared by middleware and the rendering bundle. */
+export function prepareServerWebLocale(locale: SupportedLocale): Promise<void> {
+  if (!serverCatalogs || !isSupportedLocale(locale)) {
+    return Promise.reject(Object.assign(new Error('SSR locale unavailable'), { httpStatus: 503 }))
+  }
+  if (locale === FALLBACK_LOCALE) return SERVER_LOCALE_READY
+  const existing = serverCatalogs.readyPromises.get(locale)
+  if (existing) return existing
+  let timeout: ReturnType<typeof setTimeout> | undefined
+  const promise = Promise.race([
+    loadWebLocale(locale),
+    new Promise<never>((_, reject) => {
+      timeout = setTimeout(() => reject(new Error('SSR locale catalogue timed out')), 5000)
+    }),
+  ]).catch(() => {
+    if (serverCatalogs.readyPromises.get(locale) === promise) serverCatalogs.readyPromises.delete(locale)
+    throw Object.assign(new Error('SSR locale unavailable'), { httpStatus: 503 })
+  }).finally(() => clearTimeout(timeout))
+  serverCatalogs.readyPromises.set(locale, promise)
+  return promise
 }
 
 /** Каталог локали уже в памяти — её можно применить синхронно. */

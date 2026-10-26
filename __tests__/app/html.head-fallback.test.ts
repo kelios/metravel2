@@ -22,9 +22,9 @@ function loadCriticalHeadScript(): string {
   expect(end).toBeGreaterThan(start)
   const getter = source.slice(start + marker.length, end).trim()
   return new Function(
-    'i18nT', 'SITE_BRAND', 'MAP_TITLE', 'MAP_DESCRIPTION', 'SECRET_LINK_ROUTE_PATHS', 'DESIGN_COLORS', 'getSeasonalThemeBootScript',
+    'i18nT', 'SITE_BRAND', 'getMapSeoTitle', 'getMapSeoDescription', 'SECRET_LINK_ROUTE_PATHS', 'DESIGN_COLORS', 'getSeasonalThemeBootScript',
     `return (${getter})()`,
-  )(i18nT, 'Metravel', getMapSeoTitle(), getMapSeoDescription(), SECRET_LINK_ROUTE_PATHS, DESIGN_COLORS, getSeasonalThemeBootScript)
+  )(i18nT, 'Metravel', getMapSeoTitle, getMapSeoDescription, SECRET_LINK_ROUTE_PATHS, DESIGN_COLORS, getSeasonalThemeBootScript)
 }
 
 function runCriticalHead(doc: Document, pathname: string): void {

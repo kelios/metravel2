@@ -423,3 +423,5 @@ module.exports = reactiveLocalePlugin
 module.exports.isOwner = isOwner
 module.exports.ROOTS = ROOTS
 module.exports.resetLocaleModuleCache = () => { presentationExportCache.clear(); sourceProgramCache.clear() }
+module.exports.localeReturningExport = localeReturningExport
+module.exports.resolveImport = resolveImport

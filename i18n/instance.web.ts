@@ -1,16 +1,22 @@
 import { DEFAULT_LOCALE, type SupportedLocale } from './config'
 import type { i18n as I18nInstance } from 'i18next'
+import { isServerSsrRuntime, readRequestLocale } from '@/utils/ssr/requestLocale'
 
 type LanguageChangedListener = (language: string) => void
 
 const languageChangedListeners = new Set<LanguageChangedListener>()
+let browserLocale: SupportedLocale = DEFAULT_LOCALE
 
 const webI18n = {
-  language: DEFAULT_LOCALE as string,
-  resolvedLanguage: DEFAULT_LOCALE as string,
+  get language(): string {
+    return isServerSsrRuntime() ? readRequestLocale() ?? DEFAULT_LOCALE : browserLocale
+  },
+  get resolvedLanguage(): string {
+    return this.language
+  },
   async changeLanguage(locale: SupportedLocale): Promise<void> {
-    this.language = locale
-    this.resolvedLanguage = locale
+    if (isServerSsrRuntime()) throw new Error('SSR locale belongs to the request')
+    browserLocale = locale
     for (const listener of languageChangedListeners) listener(locale)
   },
   on(event: 'languageChanged', listener: LanguageChangedListener) {

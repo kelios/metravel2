@@ -41,11 +41,6 @@ export { getAnalyticsInlineScript };
 const METRIKA_ID = process.env.EXPO_PUBLIC_METRIKA_ID ? parseInt(process.env.EXPO_PUBLIC_METRIKA_ID, 10) : 0;
 const GA_ID = process.env.EXPO_PUBLIC_GOOGLE_GA4 || '';
 const SITE_BRAND = 'Metravel';
-// Single source of truth for /map title + description (also used by the runtime
-// Helmet SEO via screens/tabs/MapScreen). Keeping the pre-hydration fallback in
-// sync prevents og:title / document.title divergence on /map.
-const MAP_TITLE = getMapSeoTitle();
-const MAP_DESCRIPTION = getMapSeoDescription();
 const TRAVEL_HERO_PRELOAD_SCRIPT_SRC = '/travel-hero-preload-v2.js';
 
 if (!METRIKA_ID && typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
@@ -260,6 +255,12 @@ const getLegacyParamRedirectScript = () => String.raw`
 
 // Contract anchor for tests: p.indexOf('/article/')===0
 const getCriticalHeadScript = () => {
+  // Single source of truth for /map title + description (also used by the runtime
+  // Helmet SEO via screens/tabs/MapScreen). Keeping the pre-hydration fallback in
+  // sync prevents og:title / document.title divergence on /map. Read per render:
+  // an SSR request selects its own locale.
+  const MAP_TITLE = getMapSeoTitle();
+  const MAP_DESCRIPTION = getMapSeoDescription();
   const HOME_TITLE = i18nT('seoStatic:root.home.title');
   const HOME_DESCRIPTION = i18nT('seoStatic:root.home.description');
   const DEFAULT_DESCRIPTION = i18nT('seoStatic:root.default.description');

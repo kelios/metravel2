@@ -27,6 +27,8 @@ import {
 import { isWebLocaleLoaded, loadWebLocale, translate } from './translate'
 import { claimLocaleBootRecovery, releaseLocaleBootShell } from './localeBootShell'
 import { getBootLocaleRecoveryCopy } from './bootLocaleRecoveryCopy'
+import { isServerSsrRuntime, readRequestLocale } from '@/utils/ssr/requestLocale'
+import { prepareServerWebLocale } from './translate.web'
 
 type LocaleContextValue = {
   locale: SupportedLocale
@@ -88,9 +90,19 @@ const BootLocaleBoundary = React.memo(
 )
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
+  const serverRendering = isServerSsrRuntime()
+  const serverLocale = readRequestLocale()
+  // Middleware normally preloads this before metadata. Direct renderer users
+  // still wait for the same finite resource rather than a browser-only gate.
+  if (serverRendering && !isWebLocaleLoaded(serverLocale ?? 'ru')) {
+    use(prepareServerWebLocale(serverLocale ?? 'ru'))
+  }
   const pathname = usePathname()
   const route = parseQuestLocaleRoute(pathname)
   const routeLocale = route?.locale ?? null
+  if (serverRendering && routeLocale && routeLocale !== serverLocale) {
+    throw Object.assign(new Error('SSR locale context does not match the route'), { httpStatus: 503 })
+  }
   const [locale, setLocaleState] = useState<SupportedLocale>(() =>
     normalizeActiveLocale(i18n.resolvedLanguage),
   )
@@ -114,7 +126,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const isRoutePending = targetLocale !== null && (
     locale !== targetLocale || (routeLocale !== null && !isWebLocaleLoaded(targetLocale))
   )
-  const pending = isBootPending || isRoutePending
+  const pending = !serverRendering && (isBootPending || isRoutePending)
 
   // The head recovery owns failures before React arrives. Hand off in the first
   // commit, before catalogue effects can fail and render our recovery controls.
