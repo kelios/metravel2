@@ -185,6 +185,47 @@ curl -s -o /dev/null -w '%{http_code}\n' --max-time 60 http://localhost:8081/
 и не чинят. Полное описание локального стека (данные, вход, секреты, S3) —
 `/Users/juliasavran/Sites/metravel/README-local.md`.
 
+### 3.0.1 Окружение нового worktree или shared clone
+
+Из корня нового checkout нашего frontend запусти `npm run worktree:bootstrap`.
+Команда находит основной checkout через Git worktree metadata; для
+`git clone --shared <локальный-frontend> <target>` проверяет local origin,
+object alternates и происхождение HEAD. Источник должен завершаться нашим
+каноническим frontend origin `kelios/metravel2`; произвольный `--source` не
+принимается. В основном checkout команда сообщает, что подготовка не нужна.
+
+По умолчанию копируются `.env`, `.env.prod`, `.env.e2e` и проверенные по
+`workers/book-renderer/fonts.lock.json` файлы `.codex-temp/book-renderer-fonts/`.
+Это независимые копии: build/e2e могут перезаписывать `.env`, поэтому симлинк
+на основной checkout изменил бы чужое окружение. Содержимое не выводится;
+отсутствующие источники перечисляются без создания фиктивных значений.
+Существующие файлы сохраняются; обновление — только явным
+`npm run worktree:bootstrap -- --force`. Symlink-компоненты, tracked или
+не ignored пути отклоняются до копирования. Основной checkout не изменяется.
+
+Для разрешённой локальной Android-операции опция `--android-secrets` добавляет
+только пять потребляемых файлов в `.secrets/`: `metravel-android-prod.env`,
+`google-services.json`, `metravel-android-release.json`,
+`metravel-android-upload.jks`, `google-play-service-account.json`.
+Это подготовка файлов, а не разрешение build/upload/release. Остальная
+`.secrets/`, `.env.dev`, `.env.deploy`, credentials из внешних директорий и
+неизвестные cache-файлы не переносятся. Env/secrets создаются с режимом `0600`.
+
+`node_modules`, `ios/Pods` и generated `android/` не копируются и не
+симлинкуются bootstrap-командой. Зависимости устанавливаются отдельно по
+frozen lockfile; Android затем готовится `npm run android:prebuild`, iOS —
+штатным `npm run ios:prebuild` и CocoaPods при необходимости, с UTF-8 locale
+(`LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pod install` из `ios/`). Эти команды
+проходят обычные operation/release gates и могут менять native source.
+Bootstrap их автоматически не запускает, main/clean-source guards не отменяет.
+
+Проверка: fresh checkout → bootstrap → повтор (существующие файлы сохранены)
+→ focused `bookRendererWorker` → `npm run build:web:prod -- --allow-dirty`
+→ `E2E_SUITE=smoke npm run e2e`. Quality/build locks и подготовка backend
+перед локальным runtime остаются обязательными. Если источника нет и в основном
+checkout, настрой нужное окружение там; fonts готовятся
+`node scripts/prepare-book-renderer-fonts.js` по существующему pinned lock.
+
 ### 3.1 E2E окружение и доступы
 
 - Для e2e-авторизации и тестовых доступов используй переменные из `.env.e2e`.

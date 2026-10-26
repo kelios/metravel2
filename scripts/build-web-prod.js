@@ -8,6 +8,10 @@ const { spawnSync } = require('child_process')
 
 const repoRoot = path.resolve(__dirname, '..')
 const envProdPath = path.join(repoRoot, '.env.prod')
+if (!fs.existsSync(envProdPath)) {
+  console.error('Missing .env.prod. Run npm run worktree:bootstrap in an owned worktree; initialize the primary checkout environment if it is missing there too.')
+  process.exit(1)
+}
 const envPath = path.join(repoRoot, '.env')
 const distProdPath = path.join(repoRoot, 'dist', 'prod')
 // Build into a staging dir and swap into dist/prod only after every step

@@ -12,6 +12,20 @@
 `$metravel-problem-memory`, затем `$metravel-ticket-board` и
 `$metravel-task-contract`.
 
+## WORKTREE-ENV-BOOTSTRAP-001 — ignored окружение параллельных checkout
+
+- **Цепочка:** #2727 → #2744.
+- **Механизм:** Git не переносит ignored env и pinned font cache в новый
+  worktree/shared clone. Потребители давали filesystem/auth failures вместо
+  диагностики подготовки окружения.
+- **Инвариант:** подготовка только из проверенного основного checkout нашего
+  frontend, по явному ignored allowlist; без вывода содержимого, symlink escape,
+  перезаписи по умолчанию и изменений source checkout.
+- **Контроль:** `worktree:bootstrap`, focused regression fixtures и диагностика
+  build/e2e/font consumers. Native dependencies и release gates самостоятельны.
+- **Маршрутизация:** нарушение этого инварианта — reopen #2744; новая native
+  capability или новый секрет требуют отдельного обоснования, не blanket-copy.
+
 ## Как пользоваться
 
 1. Сформулируй симптом, нарушенный инвариант, surface, owning layer,

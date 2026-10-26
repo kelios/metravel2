@@ -43,6 +43,9 @@ function applyEnvFile(filePath) {
 }
 
 function applyE2EEnvFiles(rootDir = process.cwd()) {
+  if (!fs.existsSync(path.join(rootDir, '.env.e2e'))) {
+    console.warn('Missing .env.e2e. Run npm run worktree:bootstrap in an owned worktree, or supply the E2E environment explicitly.');
+  }
   for (const fileName of E2E_ENV_FILES) {
     applyEnvFile(path.join(rootDir, fileName))
   }

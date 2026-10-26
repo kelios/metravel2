@@ -45,6 +45,9 @@ function rewriteFontCss(css, mapping) {
 }
 
 function verifiedFontBundle(fontDir, root = ROOT) {
+  if (!fs.existsSync(path.join(fontDir, 'fonts.lock.json'))) {
+    throw new Error('Missing pinned book fonts. Run npm run worktree:bootstrap in an owned worktree, or node scripts/prepare-book-renderer-fonts.js in the primary checkout.');
+  }
   const expected = JSON.parse(fs.readFileSync(path.join(root, 'workers/book-renderer/fonts.lock.json'), 'utf8'));
   const actual = JSON.parse(fs.readFileSync(path.join(fontDir, 'fonts.lock.json'), 'utf8'));
   if (JSON.stringify(expected) !== JSON.stringify(actual) || expected.source_url !== canonicalFontsUrl(root)) {
