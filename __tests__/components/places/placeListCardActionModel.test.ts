@@ -44,3 +44,47 @@ describe('placeListCardActionModel menuActions', () => {
     expect(build({ isCompactActionCard: false }).overflowActions).toEqual([])
   })
 })
+
+// #2778 (PLACE-CARD-ACTION-OVERLOAD): на `/places` ряд набирал «Коорд.», «На
+// карте», «Прочитать», «Мои точки», «Навигация» + стрелку Telegram у заголовка.
+describe('placeListCardActionModel actionBudget', () => {
+  const onMap: ActionChip = { key: 'open-map', label: 'На карте', icon: 'map-pin', onPress: noop }
+  const article: ActionChip = { key: 'article', label: 'Прочитать', icon: 'book-open', onPress: noop }
+  const route: ActionChip = { key: 'route', label: 'Маршрут', icon: 'corner-up-right', onPress: noop }
+  const placesCard = {
+    actionBudget: true,
+    addButtonPlacement: 'button',
+    inlineActions: [onMap, article],
+    mapActions: [nav],
+    onAddPoint: noop,
+    onCopyCoord: noop,
+    onShare: noop,
+  }
+
+  it('/places: main + secondary + «Сохранить» in the row, the rest in «⋯»', () => {
+    const model = build(placesCard)
+    expect(model.visibleInlineActions.map((a) => a.key)).toEqual(['open-map', 'article'])
+    expect(model.showSaveTile).toBe(true)
+    expect(model.showCopyChip).toBe(false)
+    expect(model.showShareChip).toBe(false)
+    expect(model.showTitleShare).toBe(false)
+    expect(model.showRowQuickActions).toBe(false)
+    expect(model.overflowActions.map((a) => a.key)).toEqual(['google', 'copy-coord', 'share'])
+  })
+
+  it('never shows more than three labelled row actions besides «⋯»', () => {
+    const model = build({ ...placesCard, quickActions: [route] })
+    const labelled =
+      model.visibleInlineActions.length + (model.showSaveTile ? 1 : 0) +
+      (model.showRowQuickActions ? 1 : 0) + (model.showCopyChip ? 1 : 0) + (model.showShareChip ? 1 : 0)
+    expect(labelled).toBeLessThanOrEqual(3)
+    expect(model.overflowActions.map((a) => a.key)).toEqual(['route', 'google', 'copy-coord', 'share'])
+  })
+
+  it('without the budget the existing cards keep their row (travel points, «Мои точки»)', () => {
+    const model = build({ ...placesCard, actionBudget: false })
+    expect(model.showCopyChip).toBe(true)
+    expect(model.showTitleShare).toBe(true)
+    expect(model.overflowActions.map((a) => a.key)).toEqual(['google'])
+  })
+})

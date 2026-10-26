@@ -63,7 +63,14 @@ export type PlaceListCardProps = {
   titleLayout?: 'overlay' | 'content'
   titleNumberOfLines?: number
   popupAligned?: boolean
+  /**
+   * #2778: не больше трёх подписанных действий в ряду (главное + вторичные,
+   * включая «Сохранить»); координаты, Telegram и навигаторы — пункты «⋯».
+   */
+  actionBudget?: boolean
   relatedTravelUrl?: string | null
+  /** Название связанной статьи, если `title` карточки — имя места (#2776). */
+  relatedTravelTitle?: string | null
   relatedTravelId?: number | null
   relatedTravelCountry?: string | null
   relatedTravelCity?: string | null

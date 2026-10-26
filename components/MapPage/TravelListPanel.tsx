@@ -32,6 +32,7 @@ import {
   LIST_BOTTOM_PADDING,
 } from './TravelListPanel/helpers'
 import { getWebCardWidth } from './AddressListItem/utils'
+import { resolveListDistanceOrigin, useNearbyPlacesOrder } from './TravelListPanel/nearbyOrder'
 import { translate as i18nT } from '@/i18n'
 import { formatRadiusValue } from '@/constants/mapConfig'
 import { qualifyMapPointCount, type MapPointCountScope } from '@/utils/mapPointCount'
@@ -60,6 +61,8 @@ type Props = {
   compactPreview?: boolean
   currentRadiusKm?: string | number | null
   userLocation?: { latitude: number; longitude: number } | null
+  /** Центр радиус-запроса: точка отсчёта расстояний, пока GPS неизвестен (#2776). */
+  searchCenter?: { latitude: number; longitude: number } | null
   transportMode?: 'car' | 'bike' | 'foot'
   onToggleFavorite?: (id: string | number) => void
   favorites?: Set<string | number>
@@ -81,6 +84,7 @@ const TravelListPanel: React.FC<Props> = ({
   onRefresh,
   isRefreshing = false,
   userLocation,
+  searchCenter,
   transportMode = 'car',
   onToggleFavorite,
   favorites = EMPTY_FAVORITES,
@@ -110,6 +114,14 @@ const TravelListPanel: React.FC<Props> = ({
     [styles.list, insets.bottom],
   )
 
+  // #2776: расстояние у каждой карточки и порядок «ближе — выше, служебные
+  // точки — после целей» (TravelListPanel/nearbyOrder.ts).
+  const distanceOrigin = useMemo(
+    () => resolveListDistanceOrigin(userLocation, searchCenter),
+    [userLocation, searchCenter],
+  )
+  const orderedTravelsData = useNearbyPlacesOrder(travelsData, distanceOrigin, getTravelItemKey)
+
   const renderItem = useTravelItemRenderer({
     styles,
     isMobile,
@@ -118,6 +130,7 @@ const TravelListPanel: React.FC<Props> = ({
     onSelectPlace,
     onHideTravel,
     userLocation,
+    distanceOrigin,
     transportMode,
     screenWidth,
     onToggleFavorite,
@@ -142,8 +155,8 @@ const TravelListPanel: React.FC<Props> = ({
   )
 
   const visibleTravelsData = useMemo(
-    () => (compactPreview ? travelsData.slice(0, 3) : travelsData),
-    [compactPreview, travelsData],
+    () => (compactPreview ? orderedTravelsData.slice(0, 3) : orderedTravelsData),
+    [compactPreview, orderedTravelsData],
   )
 
   const itemKeys = useMemo(

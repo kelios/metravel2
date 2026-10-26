@@ -7,6 +7,7 @@ import type { ThemedColors } from '@/hooks/useTheme';
 import { formatMapPoints, qualifyMapPointCount, type MapPointCountScope } from '@/utils/mapPointCount';
 import { DEFAULT_RADIUS_KM, formatRadiusLabel } from '@/constants/mapConfig';
 import { translate as i18nT } from '@/i18n'
+import { MAP_ACTION_ICON } from '@/components/MapPage/mapActionIcons'
 
 
 interface FiltersPanelHeaderProps {
@@ -52,7 +53,7 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
         <View style={styles.compactMetaRow}>
           <View style={styles.compactMetaBadge}>
             <Feather
-              name={mode === 'radius' ? 'target' : 'navigation'}
+              name={mode === 'radius' ? MAP_ACTION_ICON.radius : MAP_ACTION_ICON.route}
               size={12}
               color={colors.primaryDark}
             />
@@ -86,7 +87,7 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
         <>
           <View style={styles.modeSummaryRow}>
             <Feather
-              name={mode === 'radius' ? 'target' : 'navigation'}
+              name={mode === 'radius' ? MAP_ACTION_ICON.radius : MAP_ACTION_ICON.route}
               size={13}
               color={colors.primaryDark}
             />

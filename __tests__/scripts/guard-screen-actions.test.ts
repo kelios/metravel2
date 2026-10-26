@@ -57,6 +57,22 @@ describe('guard-screen-actions (#2101)', () => {
     expect(scanSource('components/trips/PublicTripDetail.tsx', source)).toHaveLength(1)
   })
 
+  // #2777/#2778: форма ряда действий на карте и в карточке места.
+  it('негативная проба: карточка места без actionBudget падает', () => {
+    const source = `const c = <PlaceListCard compact popupAligned title={t} />`
+    expect(scanSource('screens/tabs/PlacesScreen.parts.tsx', source)).toHaveLength(1)
+    const ok = `const c = <PlaceListCard compact popupAligned actionBudget title={t} />`
+    expect(scanSource('screens/tabs/PlacesScreen.parts.tsx', ok)).toEqual([])
+  })
+
+  it('негативная проба: «развернуть» на сбросе карты падает', () => {
+    const source = `
+      <Feather name="maximize" />
+      <Feather name={MAP_ACTION_ICON.reset} /> <Feather name={MAP_ACTION_ICON.route} />
+    `
+    expect(scanSource('components/MapPage/MapMobile/MapMobileTopOverlay.tsx', source)).toHaveLength(1)
+  })
+
   it('экран без декларации шапки падает', () => {
     expect(scanSource('components/trips/PublicTripDetail.tsx', 'export const S = () => null')).toHaveLength(1)
   })

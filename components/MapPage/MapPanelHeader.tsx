@@ -2,6 +2,7 @@ import type { MapOnboardingTargetRegistry } from './MapOnboarding'
 import React, { memo } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
+import { MAP_ACTION_ICON } from './mapActionIcons'
 
 import type { ThemedColors } from '@/hooks/useTheme'
 import { formatPlaceCountBadge } from '@/components/MapPage/TravelListPanel/helpers'
@@ -170,7 +171,7 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
             testID="map-panel-tab-route"
             targetRef={targetRegistry?.['map-panel-tab-route']}
             active={activeTab === 'route'}
-            icon="navigation"
+            icon={MAP_ACTION_ICON.route}
             label={routeLabel}
             accessibilityLabel={routeLabel}
             accessibilityHint={i18nT('map:components.MapPage.MapPanelHeader.postroenie_marshruta_7aa011b1')}

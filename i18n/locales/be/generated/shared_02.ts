@@ -36,7 +36,6 @@ export const sharedGenerated2 = {
   "hooks.useAddressListItemActions.ne_udalos_sohranit_tochku_3c69cb31": "Не ўдалося захаваць кропку",
   "hooks.useAddressListItemActions.tochka_dobavlena_v_moi_tochki_000bc83b": "Кропка дададзеная ў «Мае кропкі»",
   "hooks.useAddressListItemActions.tochka_ubrana_iz_moi_tochki_b104d947": "Кропка прыбрана з «Мае кропкі»",
-  "hooks.useAddressListItemActions.voydite_chtoby_sohranit_tochku_990d6c7e": "Увайдзіце, каб захаваць кропку",
   "hooks.useAndroidBackHandler.nazhmite_esche_raz_dlya_vyhoda_6b6fd338": "Націсніце яшчэ раз для выхаду",
   "hooks.useArticleRating.ne_udalos_sohranit_otsenku_b527e142": "Не атрымалася захаваць адзнаку",
   "hooks.useArticleRating.otsenka_sohranena_6cf770b3": "Ацэнка захавана",

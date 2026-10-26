@@ -14,11 +14,45 @@ import { isChainNoiseSegment, splitGeocodeChain } from '@/utils/geocodeHelpers'
 export interface PlaceTitleSource {
   name?: unknown
   address?: unknown
+  /** Название статьи у legacy-записи карты (`title` = `travel.name`). */
+  title?: unknown
+  placeId?: unknown
+  place_id?: unknown
+  primarySource?: unknown
+  primary_source?: unknown
 }
 
 export interface PlaceTitleParts {
   title: string
   subtitle?: string
+  /** Статья, из которой взята точка, — вторичная строка «Из статьи …» (#2776). */
+  sourceTitle?: string
+}
+
+const sameText = (a: string, b: string) =>
+  a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0
+
+const readText = (value: unknown) => (typeof value === 'string' ? value.trim() : '')
+
+/**
+ * #2776 (MAP-NEARBY-CARD-TITLE-HIERARCHY): у legacy-точки без `place_id` бэкенд
+ * кладёт в `name` название СТАТЬИ (`MapPlaceMarker.name` →
+ * `travel.name`, travels/services/map_place_service.py), а имя самого места —
+ * в `address`. Заголовок брал `name`, и «Раков» стоял крупно над «Костёлом в
+ * Ивенце». Признак: места нет, а `name` совпадает с заголовком статьи из
+ * `primary_source.article_title` или legacy `title`. У канонического места
+ * (`place_id`) `name` — имя места, его не трогаем.
+ */
+const readArticleTitleUsedAsName = (point: PlaceTitleSource, name: string): string => {
+  if (!name) return ''
+  const placeId = point.placeId ?? point.place_id
+  if (placeId != null && String(placeId).trim() !== '') return ''
+  const primary = (point.primarySource ?? point.primary_source) as Record<string, unknown> | null | undefined
+  const candidates = [
+    primary && typeof primary === 'object' ? readText(primary.articleTitle ?? primary.article_title) : '',
+    readText(point.title),
+  ]
+  return candidates.find((candidate) => candidate && sameText(candidate, name)) ?? ''
 }
 
 export const stripCountryFromCategoryString = (raw: unknown, address?: string | null): string => {
@@ -51,6 +85,11 @@ export const buildPlaceTitleParts = (point: PlaceTitleSource): PlaceTitleParts =
   const rawName = String(point?.name ?? '').trim()
   const rawAddress = String(point?.address ?? '').trim()
 
+  const articleTitle = rawAddress ? readArticleTitleUsedAsName(point, rawName) : ''
+  if (articleTitle) {
+    return { ...buildPlaceTitleParts({ address: rawAddress }), sourceTitle: articleTitle }
+  }
+
   const addressSegments = rawAddress ? splitGeocodeChain(rawAddress) : []
   const dedupedAddress = addressSegments.join(', ')
 
@@ -65,7 +104,7 @@ export const buildPlaceTitleParts = (point: PlaceTitleSource): PlaceTitleParts =
   if (
     name &&
     dedupedAddress &&
-    name.localeCompare(dedupedAddress, undefined, { sensitivity: 'accent' }) !== 0
+    !sameText(name, dedupedAddress)
   ) {
     return { title: name, subtitle: dedupedAddress }
   }

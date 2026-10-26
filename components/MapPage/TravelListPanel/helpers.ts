@@ -64,7 +64,8 @@ export function buildTravelListSummaryHint({
 // Clean POI title for the compact preview card, shared with the popup and the
 // «Места рядом» list cards (buildPlaceTitleParts) so titles never diverge.
 export const getTravelItemTitle = (item: any): string => {
-  const { title } = buildPlaceTitleParts({ name: item?.name ?? item?.title, address: item?.address })
+  // #2776: вся запись — по ней util отличает статью в `name` от имени места.
+  const { title } = buildPlaceTitleParts({ ...item, name: item?.name ?? item?.title })
   return title
 }
 

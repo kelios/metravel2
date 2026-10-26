@@ -5,6 +5,7 @@ import PlacesScreen from '@/screens/tabs/PlacesScreen'
 import { fetchPlacesCatalog } from '@/api/places'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import type { PlacesCatalogPage } from '@/utils/placesCatalog'
+import { useAuthStore } from '@/stores/authStore'
 
 const mockPush = jest.fn()
 const mockSetParams = jest.fn()
@@ -199,6 +200,24 @@ describe('PlacesScreen category search', () => {
     fireEvent.changeText(await findByTestId('places-category-search-input'), 'аэродром')
 
     expect(await findByTestId('places-category-search-empty')).toBeTruthy()
+  })
+
+  // #2778: у гостя «Сохранить» активна и ведёт на вход; на native после входа —
+  // обратно в каталог `/places`, а не на главную.
+  it('sends a guest from «Сохранить» to login and back to /places', async () => {
+    ;(Platform as any).OS = 'ios'
+    const prev = useAuthStore.getState()
+    useAuthStore.setState({ isAuthenticated: false, authReady: true } as any)
+    try {
+      const { findByTestId } = render(<PlacesScreen />, {
+        wrapper: createQueryWrapper().Wrapper,
+      })
+      const placeCard = await findByTestId('places-card-place-1')
+      fireEvent.press(within(placeCard).getByLabelText('Сохранить'))
+      expect(mockPush).toHaveBeenCalledWith('/login?redirect=%2Fplaces&intent=save-point')
+    } finally {
+      useAuthStore.setState({ isAuthenticated: prev.isAuthenticated, authReady: prev.authReady } as any)
+    }
   })
 
   it('opens selected place on map and exposes navigator actions on the card', async () => {

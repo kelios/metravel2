@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton'
 import { formatPlaceCountBadge } from '@/components/MapPage/TravelListPanel/helpers'
+import { MAP_ACTION_ICON } from '@/components/MapPage/mapActionIcons'
 
 export const PRESSED_OPACITY_07 = { opacity: 0.7 } as const
 export const PRESSED_OPACITY_085 = { opacity: 0.85 } as const
@@ -25,7 +26,7 @@ export function CollapsedIconButton({
   badge,
   badgeStyles,
 }: {
-  icon: 'search' | 'navigation' | 'list' | 'sliders'
+  icon: 'search' | 'list' | 'sliders' | typeof MAP_ACTION_ICON.route
   label: string
   title: string
   onPress: () => void

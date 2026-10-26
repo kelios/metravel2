@@ -528,6 +528,9 @@ export default function MapScreen() {
   const headingAnchor: 'panel-head' | 'map-corner' =
     isWeb && !isMobile && !isDesktopCollapsed ? 'panel-head' : 'map-corner'
   const pageHeading = <MapPageHeading anchor={headingAnchor} styles={styles} />
+  // #2776: «Места рядом» считают расстояние от центра радиус-запроса («искать
+  // здесь» → URL → якорь), который карта получает в mapPanelProps, а не от якоря.
+  const listSearchCenter = mapPanelProps?.coordinates ?? coordinates
 
   // Desktop data-fetch error replaces the whole screen (separate from the
   // breakpoint-flip path — it is not part of the remount oscillation). Mobile
@@ -556,7 +559,7 @@ export default function MapScreen() {
       loading={loading}
       isFetching={isFetching}
       isPlaceholderData={isPlaceholderData}
-      coordinates={coordinates}
+      coordinates={listSearchCenter}
       transportMode={transportMode}
       buildRouteTo={buildRouteTo}
       focusPlace={focusPlace}
@@ -616,7 +619,8 @@ export default function MapScreen() {
       focusPlace={focusPlace}
       travelsCount={travelsCount}
       currentRadius={currentRadius}
-      coordinates={coordinates}
+      coordinates={listSearchCenter}
+      userLocation={selectedPlaceUserLocation}
       transportMode={transportMode}
       isConnected={isConnected}
       mapReady={mapReady}

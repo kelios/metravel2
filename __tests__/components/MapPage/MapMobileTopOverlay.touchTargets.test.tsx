@@ -66,9 +66,10 @@ describe('MapMobileTopOverlay — тач-таргеты тулбара', () => {
 
     RADIUS_MODE_BUTTONS.forEach((testID) => {
       const style = StyleSheet.flatten(getByTestId(testID).props.style)
-      expect({ testID, width: style.width, height: style.height }).toEqual({
+      // #2777: подписанные плитки (сброс, маршрут) шире круга, высота та же.
+      expect({ testID, wide: Number(style.width) >= MAP_TOOLBAR_TOUCH_TARGET_SIZE, height: style.height }).toEqual({
         testID,
-        width: MAP_TOOLBAR_TOUCH_TARGET_SIZE,
+        wide: true,
         height: MAP_TOOLBAR_TOUCH_TARGET_SIZE,
       })
     })

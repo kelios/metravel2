@@ -6,6 +6,7 @@ import Button from '@/components/ui/Button';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getPlaceLabel } from '@/utils/pluralize';
 import { translate as i18nT } from '@/i18n'
+import { MAP_ACTION_ICON } from '@/components/MapPage/mapActionIcons'
 
 
 interface FiltersPanelFooterProps {
@@ -115,7 +116,7 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
                 ? <ActivityIndicator size="small" color={colors.textMuted} />
                 : (
                   <Feather
-                    name="navigation"
+                    name={MAP_ACTION_ICON.route}
                     size={16}
                     color={
                       canBuildRoute && !routingLoading

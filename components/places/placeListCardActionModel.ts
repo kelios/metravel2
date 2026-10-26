@@ -7,6 +7,8 @@ import { translate as i18nT } from '@/i18n'
 import type { ActionChip } from './PlaceListCard.types'
 
 type ActionModelInput = {
+  /** #2778: ≤3 подписанных действия в ряду (главное + до двух), остальное — «⋯». */
+  actionBudget?: boolean
   addButtonPlacement: 'button' | 'row'
   addLabel: string
   colors: ReturnType<typeof useThemedColors>
@@ -28,7 +30,11 @@ type ActionModelInput = {
   showTitleInContent: boolean
 }
 
+/** Подписанных действий в ряду при `actionBudget`, не считая «⋯» и «Сохранить». */
+export const PLACE_CARD_VISIBLE_PRIMARY_ACTIONS = 2
+
 export function buildPlaceListCardActionModel({
+  actionBudget = false,
   addButtonPlacement,
   addLabel,
   colors,
@@ -50,7 +56,12 @@ export function buildPlaceListCardActionModel({
   showTitleInContent,
 }: ActionModelInput) {
   const overlayAddInline = isCompactActionCard && addButtonPlacement === 'row'
-  const showTitleShare = popupAligned && hasCoord && Boolean(onShare)
+  // #2778 (PLACE-CARD-ACTION-OVERLOAD): бюджет действует на компактной
+  // popup-aligned карточке (`/places`, «Места рядом»). В ряду — главное действие
+  // и вторичные с полными подписями, всего не больше трёх вместе с «Сохранить»;
+  // координаты, Telegram, лишние ссылки и навигаторы — пункты «⋯».
+  const budgeted = actionBudget && isCompactActionCard && popupAligned
+  const showTitleShare = !budgeted && popupAligned && hasCoord && Boolean(onShare)
   const showSaveTile = popupAligned && Boolean(onAddPoint)
   const savedColor = colors.success ?? colors.primaryDark ?? colors.primary
   const saveLabel = isSaved
@@ -74,28 +85,52 @@ export function buildPlaceListCardActionModel({
         }
       : null
   const visibleMapActions = isCompactActionCard ? [] : mapActions
-  const visibleInlineActions = isCompactActionCard
-    ? popupAligned ? inlineActions : []
-    : inlineActions
+  const primaryActions = budgeted ? [...inlineActions, ...quickActions] : []
+  const primarySlots = PLACE_CARD_VISIBLE_PRIMARY_ACTIONS
+  const visibleInlineActions = budgeted
+    ? primaryActions.slice(0, primarySlots)
+    : isCompactActionCard
+      ? popupAligned ? inlineActions : []
+      : inlineActions
+  const copyOverflowAction: ActionChip | null =
+    budgeted && hasCoord && onCopyCoord
+      ? {
+          key: 'copy-coord',
+          label: i18nT('map:components.places.PlaceListCard.skopirovat_koordinaty_6eaf9e07'),
+          icon: 'copy',
+          onPress: onCopyCoord,
+        }
+      : null
+  // Бюджет: сначала то, что не влезло в ряд, потом навигаторы и служебное.
+  const budgetOverflow = budgeted
+    ? [
+        ...primaryActions.slice(primarySlots),
+        ...mapActions,
+        ...(copyOverflowAction ? [copyOverflowAction] : []),
+        ...(shareOverflowAction ? [shareOverflowAction] : []),
+      ]
+    : null
   const overflowActions = [
-    ...(isCompactActionCard
-      ? [
-          ...(shareOverflowAction ? [shareOverflowAction] : []),
-          ...mapActions,
-          ...(popupAligned ? [] : inlineActions),
-        ]
-      : []),
+    ...(budgetOverflow ??
+      (isCompactActionCard
+        ? [
+            ...(shareOverflowAction ? [shareOverflowAction] : []),
+            ...mapActions,
+            ...(popupAligned ? [] : inlineActions),
+          ]
+        : [])),
     // #2101: правка/удаление объекта — «⋯» на любой раскладке, destructive последним.
     ...menuActions,
   ]
   const overflowHasMapActions = isCompactActionCard && mapActions.length > 0
   const showShareChip = !isCompactActionCard && hasCoord && Boolean(onShare)
+  const showCopyChip = !budgeted && hasCoord && Boolean(onCopyCoord)
   const showRowAddButton =
     showAddButton && addButtonPlacement === 'row' && Boolean(onAddPoint) && !overlayAddInline
-  const showRowQuickActions = popupAligned && quickActions.length > 0
+  const showRowQuickActions = !budgeted && popupAligned && quickActions.length > 0
   const hasActionRow = showActionRow && (
     showRowQuickActions ||
-    (hasCoord && Boolean(onCopyCoord)) ||
+    showCopyChip ||
     showShareChip ||
     showSaveTile ||
     visibleMapActions.length > 0 ||
@@ -121,6 +156,7 @@ export function buildPlaceListCardActionModel({
     savedColor,
     showInlineRelatedTravelActions: !popupAligned && Boolean(relatedTravelUrl) && showTitleInContent,
     showRowAddButton,
+    showCopyChip,
     showRowQuickActions,
     showSaveTile,
     showShareChip,

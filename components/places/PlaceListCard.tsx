@@ -1,11 +1,9 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import CardActionPressable from '@/components/ui/CardActionPressable';
-import ActionListSheet from '@/components/ui/ActionListSheet';
 import RelatedTravelActionStack from '@/components/travel/RelatedTravelActionStack'
-import { Menu } from '@/ui/paper';
 
 import { useThemedColors } from '@/hooks/useTheme';
 import { SEMANTIC_ACTION_ICON } from '@/components/navigation/navigationActionMeta';
@@ -13,6 +11,7 @@ import {
   CardMeta,
   LabeledActionChip,
   MapActionChip,
+  PlaceCardOverflowControl,
 } from './PlaceListCard.parts';
 import PlaceRatingBadge from './PlaceRatingBadge';
 import type { PlaceListCardProps } from './PlaceListCard.types';
@@ -56,7 +55,9 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
   titleLayout = 'overlay',
   titleNumberOfLines = 2,
   popupAligned = false,
+  actionBudget = false,
   relatedTravelUrl,
+  relatedTravelTitle,
   relatedTravelId,
   relatedTravelCountry,
   relatedTravelCity,
@@ -71,7 +72,6 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
     () => createStyles(colors, compact, showTitleInContent, popupAligned),
     [colors, compact, showTitleInContent, popupAligned],
   );
-  const [overflowVisible, setOverflowVisible] = useState(false);
 
   const hasCoord = !!coord;
   const isCompactActionCard = compact;
@@ -88,6 +88,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
     savedColor,
     showInlineRelatedTravelActions,
     showRowAddButton,
+    showCopyChip,
     showRowQuickActions,
     showSaveTile,
     showShareChip,
@@ -95,6 +96,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
     visibleInlineActions,
     visibleMapActions,
   } = buildPlaceListCardActionModel({
+    actionBudget,
     addButtonPlacement,
     addLabel,
     colors,
@@ -115,8 +117,6 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
     showAddButton,
     showTitleInContent,
   });
-  const openOverflowMenu = useCallback(() => setOverflowVisible(true), []);
-  const closeOverflowMenu = useCallback(() => setOverflowVisible(false), []);
   // Top-right overlay holds the two primary affordances (♥ favorite + ＋ save)
   // on EVERY card, so the list reads as one pattern regardless of whether a
   // card has a related travel or its own photo. Related-travel cards delegate
@@ -149,7 +149,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
     <RelatedTravelActionStack
       relatedTravelUrl={relatedTravelUrl}
       relatedTravelId={relatedTravelId}
-      fallbackTitle={title}
+      fallbackTitle={relatedTravelTitle || title}
       fallbackImageUrl={imageUrl}
       fallbackCountry={relatedTravelCountry}
       fallbackCity={relatedTravelCity}
@@ -292,7 +292,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
               <RelatedTravelActionStack
                 relatedTravelUrl={relatedTravelUrl}
                 relatedTravelId={relatedTravelId}
-                fallbackTitle={title}
+                fallbackTitle={relatedTravelTitle || title}
                 fallbackImageUrl={imageUrl}
                 fallbackCountry={relatedTravelCountry}
                 fallbackCity={relatedTravelCity}
@@ -318,7 +318,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
                   />
                 ))}
 
-              {hasCoord && onCopyCoord && (
+              {showCopyChip && onCopyCoord && (
                 <LabeledActionChip
                   accessibilityLabel={i18nT('map:components.places.PlaceListCard.skopirovat_koordinaty_6eaf9e07')}
                   icon="copy"
@@ -383,60 +383,15 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
               )}
 
               {overflowActions.length > 0 && (
-                isCompactActionCard ? (
-                  <>
-                    <LabeledActionChip
-                      accessibilityLabel={overflowActionTitle}
-                      accessibilityState={{ expanded: overflowVisible }}
-                      icon={overflowHasMapActions ? SEMANTIC_ACTION_ICON.navigationMenu : 'more-horizontal'}
-                      iconColor={colors.textMuted}
-                      label={overflowActionLabel}
-                      onPress={openOverflowMenu}
-                      styles={styles}
-                      title={overflowActionTitle}
-                    />
-                    <ActionListSheet
-                      actions={overflowActions}
-                      onClose={closeOverflowMenu}
-                      title={overflowActionTitle}
-                      visible={overflowVisible}
-                    />
-                  </>
-                ) : (
-                  <Menu
-                    visible={overflowVisible}
-                    onDismiss={closeOverflowMenu}
-                    contentStyle={styles.overflowMenuContent}
-                    anchor={
-                      <LabeledActionChip
-                        accessibilityLabel={overflowActionTitle}
-                        accessibilityState={{ expanded: overflowVisible }}
-                        icon={overflowHasMapActions ? SEMANTIC_ACTION_ICON.navigationMenu : 'more-horizontal'}
-                        iconColor={colors.textMuted}
-                        label={overflowActionLabel}
-                        onPress={openOverflowMenu}
-                        styles={styles}
-                        title={overflowActionTitle}
-                      />
-                    }
-                  >
-                    {overflowActions.map((action) => (
-                      <Menu.Item
-                        key={action.key}
-                        onPress={() => {
-                          closeOverflowMenu();
-                          action.onPress();
-                        }}
-                        title={action.title ?? action.label}
-                        style={styles.overflowMenuItem}
-                        titleStyle={[styles.overflowMenuItemTitle, action.destructive && { color: colors.danger }]}
-                        leadingIcon={({ size }) => (
-                          <Feather name={action.icon} size={size} color={action.destructive ? colors.danger : colors.textMuted} />
-                        )}
-                      />
-                    ))}
-                  </Menu>
-                )
+                <PlaceCardOverflowControl
+                  actions={overflowActions}
+                  colors={colors}
+                  compact={isCompactActionCard}
+                  hasMapActions={overflowHasMapActions}
+                  label={overflowActionLabel}
+                  styles={styles}
+                  title={overflowActionTitle}
+                />
               )}
 
               {showRowAddButton && onAddPoint && (

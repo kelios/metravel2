@@ -51,9 +51,22 @@ describe('mobile map point summary and existing radius actions', () => {
       onRemoveActiveFilter: jest.fn(),
     }), { initialProps: { busy: true, selected: false } })
     expect(result.current.showEmptyStateToast).toBe(false)
-    expect(result.current.showAllPlacesButton).toBe(onShowAllPlaces)
+    // #2777: на радиусе по умолчанию без фильтров сбрасывать нечего.
+    expect(result.current.showAllPlacesButton).toBeUndefined()
     rerender({ busy: false, selected: true })
     expect(result.current.showEmptyStateToast).toBe(true)
     expect(result.current.showAllPlacesButton).toBeUndefined()
+  })
+
+  // #2777: сброс есть, только когда сбрасывать есть что.
+  it.each([
+    ['default radius, no filters', '50', false, false],
+    ['non-default radius (home «Карта до 60 км»)', '60', false, true],
+    ['text query without chips', '50', true, true],
+  ])('reset button: %s', (_label, radius, hasActiveFilters, visible) => {
+    const { result } = renderHook(() => useMapMobilePointSummary({
+      ...base, activeRadius: radius, hasActiveFilters,
+    }))
+    expect(result.current.showAllPlacesButton).toBe(visible ? onShowAllPlaces : undefined)
   })
 })

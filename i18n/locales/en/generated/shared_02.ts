@@ -36,7 +36,6 @@ export const sharedGenerated2 = {
   "hooks.useAddressListItemActions.ne_udalos_sohranit_tochku_3c69cb31": "Failed to save point",
   "hooks.useAddressListItemActions.tochka_dobavlena_v_moi_tochki_000bc83b": "The point has been added to “My points”",
   "hooks.useAddressListItemActions.tochka_ubrana_iz_moi_tochki_b104d947": "The point has been removed from “My points”",
-  "hooks.useAddressListItemActions.voydite_chtoby_sohranit_tochku_990d6c7e": "Login to save point",
   "hooks.useAndroidBackHandler.nazhmite_esche_raz_dlya_vyhoda_6b6fd338": "Click again to exit",
   "hooks.useArticleRating.ne_udalos_sohranit_otsenku_b527e142": "Failed to save rating",
   "hooks.useArticleRating.otsenka_sohranena_6cf770b3": "Rating saved",

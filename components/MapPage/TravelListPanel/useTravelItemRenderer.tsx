@@ -13,6 +13,7 @@ import {
   IS_WEB,
 } from './helpers'
 import type { TravelListStyles } from './styles'
+import type { ListDistanceOrigin } from './nearbyOrder'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -24,6 +25,7 @@ type UseTravelItemRendererArgs = {
   onSelectPlace?: (item: any) => void
   onHideTravel?: (id: string | number) => void
   userLocation?: { latitude: number; longitude: number } | null
+  distanceOrigin?: ListDistanceOrigin | null
   transportMode: 'car' | 'bike' | 'foot'
   screenWidth: number
   onToggleFavorite?: (id: string | number) => void
@@ -38,6 +40,7 @@ export function useTravelItemRenderer({
   onSelectPlace,
   onHideTravel,
   userLocation,
+  distanceOrigin,
   transportMode,
   screenWidth,
   onToggleFavorite,
@@ -99,6 +102,7 @@ export function useTravelItemRenderer({
               onPress={() => (onSelectPlace ?? buildRouteTo)(item)}
               onHidePress={onHidePress}
               userLocation={userLocation}
+              distanceOrigin={distanceOrigin}
               transportMode={transportMode}
               onBuildRoute={() => buildRouteTo(item)}
               screenWidth={screenWidth}
@@ -132,6 +136,7 @@ export function useTravelItemRenderer({
           onPress={() => (onSelectPlace ?? buildRouteTo)(item)}
           onHidePress={onHidePress}
           userLocation={userLocation}
+          distanceOrigin={distanceOrigin}
           transportMode={transportMode}
           isFavorite={ctxIsFavorite}
           onToggleFavorite={handleToggleFavorite}
@@ -146,6 +151,7 @@ export function useTravelItemRenderer({
       onSelectPlace,
       onHideTravel,
       userLocation,
+      distanceOrigin,
       transportMode,
       screenWidth,
       styles,

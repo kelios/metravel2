@@ -9,6 +9,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import Button from '@/components/ui/Button'
 import { translate as i18nT } from '@/i18n'
 import { requestMapOnboardingRestart, registerMapOnboardingRestart, consumeMapOnboardingRestart } from './mapOnboardingCommands'
+import { MAP_ACTION_ICON } from './mapActionIcons'
 
 
 type FeatherIconName = ComponentProps<typeof Feather>['name']
@@ -111,7 +112,7 @@ export const getOnboardingSteps = (): OnboardingStep[] => [
   {
     title: i18nT('map:components.MapPage.MapOnboarding.nastroyte_filtry_11653829'),
     description: i18nT('map:components.MapPage.MapOnboarding.radius_zadaetsya_otdelnoy_knopkoy_pryamo_na_karte_6947594b'),
-    icon: 'filter',
+    icon: MAP_ACTION_ICON.filters,
     targetTestID: 'map-panel-tab-filters',
     placement: 'bottom',
   },
@@ -125,7 +126,7 @@ export const getOnboardingSteps = (): OnboardingStep[] => [
   {
     title: i18nT('map:components.MapPage.MapOnboarding.stroyte_marshruty_ba7a03e3'),
     description: i18nT('map:components.MapPage.MapOnboarding.pereklyuchites_v_rezhim_marshruta_chtoby_prolozhit_1a9fc39e'),
-    icon: 'navigation',
+    icon: MAP_ACTION_ICON.route,
     targetTestID: 'map-panel-tab-route',
     placement: 'bottom',
   },
@@ -148,7 +149,7 @@ export const getPhoneOnboardingSteps = (): OnboardingStep[] => [
   {
     title: i18nT('map:components.MapPage.MapOnboarding.nastroyte_filtry_11653829'),
     description: i18nT('map:components.MapPage.MapOnboarding.radius_zadaetsya_otdelnoy_knopkoy_pryamo_na_karte_6947594b'),
-    icon: 'filter',
+    icon: MAP_ACTION_ICON.filters,
     targetTestID: 'map-mobile-filters-button',
     placement: 'bottom',
   },
@@ -162,7 +163,7 @@ export const getPhoneOnboardingSteps = (): OnboardingStep[] => [
   {
     title: i18nT('map:components.MapPage.MapOnboarding.stroyte_marshruty_ba7a03e3'),
     description: i18nT('map:components.MapPage.MapOnboarding.pereklyuchites_v_rezhim_marshruta_chtoby_prolozhit_1a9fc39e'),
-    icon: 'navigation',
+    icon: MAP_ACTION_ICON.route,
     targetTestID: 'map-mobile-route-button',
     placement: 'bottom',
   },

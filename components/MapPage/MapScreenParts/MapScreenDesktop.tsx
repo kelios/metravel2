@@ -30,6 +30,7 @@ import {
   PRESSED_OPACITY_085,
 } from './shared'
 import { translate as i18nT } from '@/i18n'
+import { MAP_ACTION_ICON } from '@/components/MapPage/mapActionIcons'
 
 
 type MapScreenDesktopProps = {
@@ -65,7 +66,9 @@ type MapScreenDesktopProps = {
   focusPlace?: (item: any) => void
   travelsCount: number
   currentRadius: string | number
+  /** Центр радиус-запроса — точка отсчёта расстояний списка без GPS (#2776). */
   coordinates: any
+  userLocation?: { latitude: number; longitude: number } | null
   transportMode: any
   isConnected: boolean
   mapReady: boolean
@@ -122,6 +125,7 @@ export function MapScreenDesktopChrome({
   travelsCount,
   currentRadius,
   coordinates,
+  userLocation,
   transportMode,
   panelHeading,
 }: MapScreenDesktopProps) {
@@ -209,7 +213,7 @@ export function MapScreenDesktopChrome({
             badgeStyles={{ container: styles.collapsedBadge, text: styles.collapsedBadgeText }}
           />
           <CollapsedIconButton
-            icon="navigation"
+            icon={MAP_ACTION_ICON.route}
             label={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.postroenie_marshruta_c3fdf7cc')}
             title={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.postroit_marshrut_20dc07d3')}
             onPress={() => {
@@ -336,7 +340,8 @@ export function MapScreenDesktopChrome({
                     isRefreshing={isFetching && isPlaceholderData}
                     onRefresh={refetchMapData}
                      currentRadiusKm={currentRadius}
-                    userLocation={coordinates}
+                    userLocation={userLocation ?? null}
+                    searchCenter={coordinates}
                     transportMode={transportMode}
                     onResetFilters={handleClearAllFilters}
                     onExpandRadius={handleExpandRadius}

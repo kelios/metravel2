@@ -1,4 +1,5 @@
 import { act, renderHook } from '@testing-library/react-native'
+import { Platform } from 'react-native'
 
 import { useAddressListItemActions } from '@/hooks/useAddressListItemActions'
 import type { TravelCoords } from '@/types/types'
@@ -8,9 +9,16 @@ import type { TravelCoords } from '@/types/types'
 
 const mockCreatePoint = jest.fn()
 
+let mockIsAuthenticated = true
+const mockRouterPush = jest.fn()
+
 jest.mock('@/context/AuthContext', () => ({
   __esModule: true,
-  useAuth: () => ({ isAuthenticated: true, authReady: true }),
+  useAuth: () => ({ isAuthenticated: mockIsAuthenticated, authReady: true }),
+}))
+
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: mockRouterPush, replace: jest.fn() }),
 }))
 
 jest.mock('@/hooks/map/useSavedPointToggle', () => ({
@@ -86,5 +94,26 @@ describe('useAddressListItemActions save payload tags (#1960)', () => {
     const payload = await savePoint({ ...baseTravel, urlTravel: '', articleUrl: undefined })
 
     expect(payload?.tags).toBeUndefined()
+  })
+})
+
+// #2778: у гостя «Сохранить» не серая и не тост — ведёт ко входу с возвратом.
+describe('useAddressListItemActions guest save (#2778)', () => {
+  afterEach(() => {
+    mockIsAuthenticated = true
+    mockRouterPush.mockClear()
+    mockCreatePoint.mockClear()
+  })
+
+  it('sends a guest to login with the save intent and creates nothing', async () => {
+    mockIsAuthenticated = false
+    await savePoint(baseTravel)
+    expect(mockCreatePoint).not.toHaveBeenCalled()
+    // На native возврат — на карту (`fallbackRedirect`), на web — текущий адрес.
+    expect(mockRouterPush).toHaveBeenCalledWith(
+      Platform.OS === 'web'
+        ? expect.stringMatching(/^\/login\?redirect=.*&intent=save-point$/)
+        : '/login?redirect=%2Fmap&intent=save-point',
+    )
   })
 })

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useCallback, useState } from 'react'
 import type { StyleProp, TextStyle, ViewStyle } from 'react-native'
 import { Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
@@ -6,8 +6,11 @@ import Feather from '@expo/vector-icons/Feather'
 import {
   getNavigationActionVisual,
   resolveNavigationActionKind,
+  SEMANTIC_ACTION_ICON,
 } from '@/components/navigation/navigationActionMeta'
 import CardActionPressable from '@/components/ui/CardActionPressable'
+import ActionListSheet from '@/components/ui/ActionListSheet'
+import { Menu } from '@/ui/paper'
 import type { useThemedColors } from '@/hooks/useTheme'
 import type { ActionChip } from './PlaceListCard.types'
 
@@ -25,6 +28,9 @@ type PartStyles = {
   metaChip: StyleProp<ViewStyle>
   metaChipText: StyleProp<TextStyle>
   metaRow: StyleProp<ViewStyle>
+  overflowMenuContent?: StyleProp<ViewStyle>
+  overflowMenuItem?: StyleProp<ViewStyle>
+  overflowMenuItemTitle?: StyleProp<TextStyle>
 }
 
 export const LabeledActionChip = React.memo(function LabeledActionChip({
@@ -149,5 +155,73 @@ export const CardMeta = React.memo(function CardMeta({
         <Text key={`${badge}-${index}`} style={styles.badgeText}>{badge}</Text>
       ))}
     </View>
+  )
+})
+
+/**
+ * «⋯» карточки места: компактная карточка открывает общий `ActionListSheet`,
+ * полная — якорное меню. Вынесено из PlaceListCard (#2778), состояние открытия
+ * живёт здесь же.
+ */
+export const PlaceCardOverflowControl = React.memo(function PlaceCardOverflowControl({
+  actions,
+  colors,
+  compact,
+  hasMapActions,
+  label,
+  styles,
+  title,
+}: {
+  actions: ActionChip[]
+  colors: ReturnType<typeof useThemedColors>
+  compact: boolean
+  hasMapActions: boolean
+  label: string
+  styles: PartStyles
+  title: string
+}) {
+  const [visible, setVisible] = useState(false)
+  const open = useCallback(() => setVisible(true), [])
+  const close = useCallback(() => setVisible(false), [])
+  const trigger = (
+    <LabeledActionChip
+      accessibilityLabel={title}
+      accessibilityState={{ expanded: visible }}
+      icon={hasMapActions ? SEMANTIC_ACTION_ICON.navigationMenu : 'more-horizontal'}
+      iconColor={colors.textMuted}
+      label={label}
+      onPress={open}
+      styles={styles}
+      title={title}
+    />
+  )
+
+  if (compact) {
+    return (
+      <>
+        {trigger}
+        <ActionListSheet actions={actions} onClose={close} title={title} visible={visible} />
+      </>
+    )
+  }
+
+  return (
+    <Menu visible={visible} onDismiss={close} contentStyle={styles.overflowMenuContent} anchor={trigger}>
+      {actions.map((action) => (
+        <Menu.Item
+          key={action.key}
+          onPress={() => {
+            close()
+            action.onPress()
+          }}
+          title={action.title ?? action.label}
+          style={styles.overflowMenuItem}
+          titleStyle={[styles.overflowMenuItemTitle, action.destructive && { color: colors.danger }]}
+          leadingIcon={({ size }) => (
+            <Feather name={action.icon} size={size} color={action.destructive ? colors.danger : colors.textMuted} />
+          )}
+        />
+      ))}
+    </Menu>
   )
 })

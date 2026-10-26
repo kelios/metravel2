@@ -548,7 +548,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   } = useMapMobilePointSummary({
     activeRadius, totalCount, loadedCount: travelsData.length, filtersContextProps,
     routeMode, sheetState, hasSelectedPlace, activePopover, activeFilterItems,
-    onRemoveActiveFilter, onShowAllPlaces,
+    onRemoveActiveFilter, onShowAllPlaces, hasActiveFilters,
   })
   const filtersLoadingFallback = useMemo(
     () => (

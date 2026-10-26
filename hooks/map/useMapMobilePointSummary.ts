@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react'
-import { formatRadiusValue } from '@/constants/mapConfig'
+import { DEFAULT_RADIUS_KM, formatRadiusValue } from '@/constants/mapConfig'
 import { translate as i18nT } from '@/i18n'
 import { formatPlaceCountBadge, getPlacesLabel } from '@/components/MapPage/TravelListPanel/helpers'
 import { getNextRadiusOption, shouldShowMapEmptyState } from '@/components/MapPage/mapEmptyState'
@@ -24,13 +24,15 @@ interface PointSummaryParams {
   activeFilterItems?: ReadonlyArray<{ key: string; label: string }>
   onRemoveActiveFilter?: (key: string) => void
   onShowAllPlaces?: () => void
+  /** Категории или текстовый поиск (MapScreen `hasActiveMapFilters`). */
+  hasActiveFilters?: boolean
 }
 
 /** Existing mobile summary/chip model, shared by every map engine. */
 export function useMapMobilePointSummary({
   activeRadius, totalCount, loadedCount, filtersContextProps,
   routeMode, sheetState, hasSelectedPlace, activePopover,
-  activeFilterItems, onRemoveActiveFilter, onShowAllPlaces,
+  activeFilterItems, onRemoveActiveFilter, onShowAllPlaces, hasActiveFilters,
 }: PointSummaryParams) {
   const radiusBadge = useMemo(() => {
     const n = Number(activeRadius)
@@ -73,7 +75,13 @@ export function useMapMobilePointSummary({
   const activeFiltersRowVisible = isMapFilterChipsRowVisible({
     mode: routeMode, items: activeFilterItems, canRemove: !!onRemoveActiveFilter,
   })
-  const showAllPlacesButton = activeFiltersRowVisible ? undefined : onShowAllPlaces
+  // #2777: сброс виден, только когда сбрасывать есть что — фильтр или радиус не
+  // по умолчанию («Карта до 60 км» с главной). При видимых чипах сброс несёт их
+  // «Сбросить всё», вторая кнопка того же действия не нужна.
+  const hasResettableState =
+    Boolean(hasActiveFilters) || String(activeRadius) !== String(DEFAULT_RADIUS_KM)
+  const showAllPlacesButton =
+    activeFiltersRowVisible || !hasResettableState ? undefined : onShowAllPlaces
   return {
     radiusBadge, listBadge, listHeaderSummaryText, handleRadiusSelect,
     nextRadiusOption, showEmptyStateToast, handleExpandRadiusFromToast, showAllPlacesButton,

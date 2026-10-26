@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo } from 'react'
 
 import { getDistanceInfo } from '@/utils/distanceCalculator'
+import { formatDistanceFromOrigin, resolveListDistanceOrigin } from '../TravelListPanel/nearbyOrder'
 import {
   useAddressListItemActions,
   buildMapUrl,
@@ -16,7 +17,7 @@ import {
 } from '@/components/MapPage/Map/mapLinks'
 import { NAVIGATION_ACTION_LABELS, SEMANTIC_ACTION_ICON } from '@/components/navigation/navigationActionMeta'
 
-import { buildPlaceTitleParts } from '@/components/MapPage/Map/placeTitle'
+import { buildPlaceTitleParts, type PlaceTitleSource } from '@/components/MapPage/Map/placeTitle'
 
 import AddressListItemCard from './AddressListItemCard'
 import { isWebPlatform, type Props } from './constants'
@@ -37,6 +38,7 @@ const AddressListItem: React.FC<Props> = ({
   onPress,
   isMobile = false,
   userLocation,
+  distanceOrigin,
   transportMode = 'car',
   isFavorite = false,
   onToggleFavorite,
@@ -48,9 +50,11 @@ const AddressListItem: React.FC<Props> = ({
   // Reverse-geocoded points arrive with a raw address as their label. Derive a
   // clean title (POI name / first meaningful segment) + secondary address line,
   // reusing the same logic the marker popup uses so the two paths never diverge.
+  // #2776: вся запись, а не `{ name, address }` — по `place_id`/`primary_source`
+  // util узнаёт, что `name` legacy-точки — это статья, а место — в `address`.
   const placeTitle = useMemo(
-    () => buildPlaceTitleParts({ name: (travel as Record<string, unknown>).name, address }),
-    [travel, address],
+    () => buildPlaceTitleParts(travel as unknown as PlaceTitleSource),
+    [travel],
   )
 
   const width = screenWidth
@@ -95,15 +99,25 @@ const AddressListItem: React.FC<Props> = ({
     return addVersion(travelImageThumbUrl, travelUpdatedAt)
   }, [travelImageThumbUrl, travelUpdatedAt])
 
+  const origin = useMemo(
+    () => distanceOrigin ?? resolveListDistanceOrigin(userLocation, null),
+    [distanceOrigin, userLocation],
+  )
   const distanceInfo = useMemo(() => {
     const parsed = parseCoord(coord)
-    if (!parsed || !userLocation) return null
-    return getDistanceInfo(
-      { lat: userLocation.latitude, lng: userLocation.longitude },
+    if (!parsed || !origin) return null
+    const info = getDistanceInfo(
+      { lat: origin.latitude, lng: origin.longitude },
       { lat: parsed.lat, lng: parsed.lon },
       transportMode,
     )
-  }, [coord, userLocation, transportMode])
+    if (!info) return null
+    // Время в пути честно только от пользователя: от центра поиска его не едут.
+    return {
+      distanceText: formatDistanceFromOrigin(info.distanceText, origin.kind),
+      travelTimeText: origin.kind === 'user' ? info.travelTimeText : '',
+    }
+  }, [coord, origin, transportMode])
 
   const webMapActions = useMemo(() => {
     if (!coord || !isWebPlatform()) return []
@@ -263,6 +277,7 @@ const AddressListItem: React.FC<Props> = ({
       address={address}
       title={placeTitle.title}
       subtitle={placeTitle.subtitle}
+      sourceTitle={placeTitle.sourceTitle}
       coord={coord}
       imgUri={imgUri}
       categories={categories}

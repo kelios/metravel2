@@ -18,6 +18,16 @@ const BUTTON_SIZE = 38
  * остаётся 38dp внутри прозрачной рамки.
  */
 export const MAP_TOOLBAR_TOUCH_TARGET_SIZE = 48
+/**
+ * #2777: подписанная кнопка ряда (сброс, вход в маршрут) — иконка над короткой
+ * подписью в плитке той же высоты, что и круги. Горизонтальная пилюля «⟲
+ * Сбросить» (~95dp) вместе с «Маршрут» не помещается на 320: доступно
+ * 320 − 48 (локация) − 10 = 262dp, а четыре круга по 38 + две пилюли — 342.
+ * Плитка: основа 60, сжимается не уже 50 → минимум ряда 4·38 + 2·50 = 252 ≤ 262.
+ * Самая длинная подпись — RU «Сбросить» ≈ 46dp при 10px (BE/UK/PL/EN короче).
+ */
+export const MAP_TOOLBAR_LABELED_BUTTON_WIDTH = 60
+export const MAP_TOOLBAR_LABELED_BUTTON_MIN_WIDTH = 50
 /** Прозрачные поля вокруг видимого круга — по ним и добирается тач-таргет. */
 const MAP_TOOLBAR_TOUCH_PADDING = (MAP_TOOLBAR_TOUCH_TARGET_SIZE - BUTTON_SIZE) / 2
 
@@ -332,6 +342,33 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       // Статичный «фрост»-фон (правило проекта: без живого blur на мобиле).
       backgroundColor: colors.surface,
       ...(Platform.OS === 'web' ? shadowWeb : shadowNative),
+    },
+    labeledButtonTouch: {
+      width: MAP_TOOLBAR_LABELED_BUTTON_WIDTH,
+      height: MAP_TOOLBAR_TOUCH_TARGET_SIZE,
+      flexShrink: 1,
+      minWidth: MAP_TOOLBAR_LABELED_BUTTON_MIN_WIDTH,
+      alignItems: 'stretch' as const,
+      justifyContent: 'center' as const,
+      paddingHorizontal: 2,
+      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+    },
+    // Видимая плитка — высота круга (38), чтобы ряд не раздувался.
+    labeledButton: {
+      height: BUTTON_SIZE + 4,
+      borderRadius: 12,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      paddingHorizontal: 2,
+      backgroundColor: colors.surface,
+      ...(Platform.OS === 'web' ? shadowWeb : shadowNative),
+    },
+    labeledButtonText: {
+      fontSize: 10,
+      lineHeight: 12,
+      fontWeight: '600' as const,
+      color: colors.text,
+      textAlign: 'center' as const,
     },
     iconButtonPressed: {
       opacity: 0.85,

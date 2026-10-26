@@ -26,6 +26,7 @@ import {
   MAP_FILTER_CHIPS_STACK_OFFSET,
 } from '../mapFilterChips'
 import MapIcon from '../MapIcon'
+import { MAP_ACTION_ICON } from '../mapActionIcons'
 import { ROUTING_DIRECT_LINE } from '../RoutingStatus'
 import { restartMapOnboarding } from '../MapOnboarding'
 import {
@@ -46,6 +47,7 @@ import {
 import { MapMobileRadiusPopover } from './MapMobileRadiusPopover'
 import { MapMobileLayersPopover } from './MapMobileLayersPopover'
 import { MapMobileTransportPopover } from './MapMobileTransportPopover'
+import { MapToolbarLabeledButton } from './MapToolbarLabeledButton'
 import { translate as i18nT } from '@/i18n'
 import { buildRouteSummaryLabel, resolveRouteMetrics } from './routeSummaryFormat'
 
@@ -380,7 +382,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
         style={({ pressed }) => [styles.iconButtonTouch, pressed && styles.iconButtonPressed]}
       >
         <View style={styles.iconButton} pointerEvents="none">
-          <Feather name="crosshair" size={ICON_SIZE} color={colors.primaryDark} />
+          <Feather name={MAP_ACTION_ICON.locate} size={ICON_SIZE} color={colors.primaryDark} />
         </View>
       </Pressable>
 
@@ -401,7 +403,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
             style={({ pressed }) => [styles.iconButtonTouch, pressed && styles.iconButtonPressed]}
           >
             <View style={styles.iconButton} pointerEvents="none">
-              <Feather name="sliders" size={ICON_SIZE} color={colors.text} />
+              <Feather name={MAP_ACTION_ICON.filters} size={ICON_SIZE} color={colors.text} />
             </View>
           </Pressable>
 
@@ -421,7 +423,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                 ]}
                 pointerEvents="none"
               >
-                <Feather name="target" size={ICON_SIZE} color={colors.text} />
+                <Feather name={MAP_ACTION_ICON.radius} size={ICON_SIZE} color={colors.text} />
                 {!!radiusBadge && (
                   <View style={styles.badge} pointerEvents="none">
                     <RNText style={styles.badgeText} numberOfLines={1}>
@@ -448,7 +450,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
               ]}
               pointerEvents="none"
             >
-              <Feather name="layers" size={ICON_SIZE} color={colors.text} />
+              <Feather name={MAP_ACTION_ICON.layers} size={ICON_SIZE} color={colors.text} />
             </View>
           </Pressable>
 
@@ -461,7 +463,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
             style={({ pressed }) => [styles.iconButtonTouch, pressed && styles.iconButtonPressed]}
           >
             <View style={styles.iconButton} pointerEvents="none">
-              <Feather name="list" size={ICON_SIZE} color={colors.text} />
+              <Feather name={MAP_ACTION_ICON.list} size={ICON_SIZE} color={colors.text} />
               {!!listBadge && (
                 <View style={styles.badge} pointerEvents="none">
                   <RNText style={styles.badgeText} numberOfLines={1}>
@@ -472,43 +474,33 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
             </View>
           </Pressable>
 
-          {/* «Показать всё»: сбрасывает фильтры И подгоняет карту под все точки.
-              Всегда видима в radius-режиме — заодно escape-hatch, когда карта
-              «застряла» на Минск-fallback (геолокация отклонена/таймаут). Отдельная
-              кнопка «сбросить фильтры» больше не нужна: она была подмножеством этой. */}
+          {/* Сброс фильтров и радиуса + fit к точкам — подписанная плитка, только
+              когда сбрасывать есть что (#2777, useMapMobilePointSummary). Вход в
+              маршрут — тоже с подписью; в route-режиме его слот (и testID)
+              занимает индикатор маршрута. */}
           {!isRouteMode && onShowAllPlaces && (
-            <Pressable
+            <MapToolbarLabeledButton
               testID="map-mobile-show-all"
               onPress={onShowAllPlaces}
-              accessibilityRole="button"
-              accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.pokazat_vse_mesta_na_karte_i_sbrosit_filtry_88e4aa0a')}
-              style={({ pressed }) => [styles.iconButtonTouch, pressed && styles.iconButtonPressed]}
-            >
-              <View
-                style={[styles.iconButton, hasActiveFilters && styles.iconButtonActive]}
-                pointerEvents="none"
-              >
-                <Feather name="maximize" size={ICON_SIZE} color={colors.text} />
-              </View>
-            </Pressable>
+              icon={MAP_ACTION_ICON.reset}
+              label={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.resetShort')}
+              accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.resetA11y')}
+              active={hasActiveFilters}
+              colors={colors}
+              styles={styles}
+            />
           )}
-
-          {/* Вход в маршрут — иконка в общем ряду (было: extended FAB снизу
-              справа). В route-режиме этот же слот занимает индикатор маршрута,
-              поэтому testID у них один и тот же: одновременно они не живут. */}
           {!isRouteMode && onEnterRoute && (
-            <Pressable
+            <MapToolbarLabeledButton
               testID="map-mobile-route-button"
-            ref={targetRegistry?.['map-mobile-route-button']}
+              targetRef={targetRegistry?.['map-mobile-route-button']}
               onPress={onEnterRoute}
-              accessibilityRole="button"
+              icon={MAP_ACTION_ICON.route}
+              label={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.routeShort')}
               accessibilityLabel={routeAccessibilityLabel}
-              style={({ pressed }) => [styles.iconButtonTouch, pressed && styles.iconButtonPressed]}
-            >
-              <View style={styles.iconButton} pointerEvents="none">
-                <Feather name="navigation" size={ICON_SIZE} color={colors.text} />
-              </View>
-            </Pressable>
+              colors={colors}
+              styles={styles}
+            />
           )}
 
           {isRouteMode && (
@@ -525,7 +517,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                 style={styles.iconButtonTouch}
               >
                 <View style={[styles.iconButton, styles.iconButtonActive]} pointerEvents="none">
-                  <Feather name="navigation" size={ICON_SIZE} color={colors.primary} />
+                  <Feather name={MAP_ACTION_ICON.route} size={ICON_SIZE} color={colors.primary} />
                   {!!routeProgressLabel && (
                     <View style={styles.routeProgressBadge} pointerEvents="none">
                       <RNText style={styles.badgeText} numberOfLines={1}>
@@ -678,7 +670,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                 шрифт) неужимаемые метрики вытолкнули бы крестик за край пилюли
                 и экрана, и сводку стало бы нечем закрыть. */}
             <View style={styles.routeSummaryContent}>
-              <Feather name="navigation" size={13} color={colors.primaryDark} />
+              <Feather name={MAP_ACTION_ICON.route} size={13} color={colors.primaryDark} />
               {!!routeSummaryStatus && (
                 <RNText style={styles.routeSummaryTitle} numberOfLines={1}>
                   {routeSummaryStatus}

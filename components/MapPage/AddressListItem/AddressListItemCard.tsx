@@ -39,6 +39,8 @@ type Props = {
   address?: string
   title?: string
   subtitle?: string
+  /** Статья, из которой точка (#2776): вторичная строка «Из статьи …». */
+  sourceTitle?: string
   coord?: string
   imgUri?: string | null
   categories: string[]
@@ -80,6 +82,7 @@ const AddressListItemCard: React.FC<Props> = ({
   address,
   title,
   subtitle,
+  sourceTitle,
   coord,
   imgUri,
   categories,
@@ -106,12 +109,22 @@ const AddressListItemCard: React.FC<Props> = ({
   cardWidth,
 }) => {
   const categoryLabel = categories.join(', ')
+  // #2776: «12 км от вас» первым — список называется «Места рядом»; время в
+  // пути есть только от пользователя (nearbyOrder.ts).
   const distanceBadges = distanceInfo
-    ? [distanceInfo.distanceText, `${getTransportLabel(transportMode)} ${distanceInfo.travelTimeText}`]
+    ? [
+        distanceInfo.distanceText,
+        ...(distanceInfo.travelTimeText
+          ? [`${getTransportLabel(transportMode)} ${distanceInfo.travelTimeText}`]
+          : []),
+      ]
     : []
+  const sourceBadge = sourceTitle
+    ? i18nT('map:components.MapPage.AddressListItem.AddressListItemCard.fromArticle', { value1: sourceTitle })
+    : null
   // Secondary address line (POI titles separate the clean name from the full
-  // reverse-geocoded address) renders above the distance badges.
-  const badges = subtitle ? [subtitle, ...distanceBadges] : distanceBadges
+  // reverse-geocoded address) follows the distance and the source article.
+  const badges = [...distanceBadges, ...(sourceBadge ? [sourceBadge] : []), ...(subtitle ? [subtitle] : [])]
   const travelRecord = travel as Record<string, unknown>
 
   return (
@@ -120,6 +133,7 @@ const AddressListItemCard: React.FC<Props> = ({
       imageUrl={imgUri}
       categoryLabel={categoryLabel || undefined}
       relatedTravelUrl={urlTravel}
+      relatedTravelTitle={sourceTitle}
       // `urlTravel` — поле этой же записи `travel` (index.tsx:46), id из того же
       // ответа API: без него список делал бы запрос статьи на карточку (#1960).
       relatedTravelId={resolveMapPointRelatedTravelId(travel)}
@@ -139,7 +153,8 @@ const AddressListItemCard: React.FC<Props> = ({
       quickActions={quickActions}
       inlineActions={inlineActions}
       onAddPoint={handleAddPoint}
-      addDisabled={!authReady || !isAuthenticated || !isSavedPointsReady || isAddingPoint}
+      // #2778: у гостя «Сохранить» активна и ведёт ко входу (useAddressListItemActions).
+      addDisabled={!authReady || isAddingPoint || (isAuthenticated && !isSavedPointsReady)}
       isAdding={isAddingPoint || (isAuthenticated && !isSavedPointsReady)}
       imageHeight={cardImageHeight}
       width={cardWidth}
@@ -147,6 +162,7 @@ const AddressListItemCard: React.FC<Props> = ({
       addButtonPlacement="row"
       compact
       popupAligned
+      actionBudget
       titleLayout="content"
       titleNumberOfLines={2}
       style={PLACE_CARD_STYLE}

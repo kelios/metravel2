@@ -8,15 +8,15 @@ export interface MapMobileLayoutProps {
   onRefresh?: () => void
   isLoading?: boolean
   isRefreshing?: boolean
+  /** Центр радиус-запроса: от него «Места рядом» считают расстояние без GPS (#2776). */
   coordinates: { latitude: number; longitude: number } | null
   transportMode: 'car' | 'bike' | 'foot'
   buildRouteTo: (item: any) => void
   focusPlace?: (item: any) => void
   totalCount?: number
   onCenterOnUser: () => void
-  // Всегда видимая кнопка «Показать всё»: сбрасывает фильтры и подгоняет карту под
-  // все точки (fit ко всем маркерам). Escape-hatch, когда карта «застряла» на
-  // Минск-fallback (геолокация отклонена/таймаут).
+  // Сброс фильтров и радиуса + fit ко всем точкам. Кнопка в ряду видна, только
+  // когда сбрасывать есть что (#2777, useMapMobilePointSummary).
   onShowAllPlaces?: () => void
   // F-49 — Google-Maps-style "Search this area" affordance.
   canSearchThisArea?: boolean

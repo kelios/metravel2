@@ -97,7 +97,8 @@ describe('TravelListPanel native bottom sheet list', () => {
     expect(getByTestId('address-item-3')).toBeTruthy();
     expect(mockBottomSheetFlatList).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: travelsData,
+        // #2776: ближе к пользователю — выше (Place 3 ближе всех к Минску).
+        data: [travelsData[2], travelsData[1], travelsData[0]],
         style: expect.objectContaining({ flex: 1, width: '100%' }),
       }),
     );

@@ -22,6 +22,7 @@ export interface MapMobileSheetBodyProps {
   onRefresh?: () => void
   isLoading?: boolean
   isRefreshing?: boolean
+  /** Центр радиус-запроса — точка отсчёта расстояний списка без GPS (#2776). */
   coordinates: { latitude: number; longitude: number } | null
   userLocation?: { latitude: number; longitude: number } | null
   transportMode: 'car' | 'bike' | 'foot'
@@ -50,6 +51,7 @@ const MapMobileSheetBodyInner: React.FC<MapMobileSheetBodyProps> = ({
   onRefresh,
   isLoading,
   isRefreshing,
+  coordinates,
   userLocation,
   transportMode,
   onToggleFavorite,
@@ -79,6 +81,7 @@ const MapMobileSheetBodyInner: React.FC<MapMobileSheetBodyProps> = ({
         isRefreshing={isRefreshing}
         currentRadiusKm={filtersContextProps?.filterValue?.radius ?? null}
         userLocation={userLocation ?? null}
+        searchCenter={coordinates}
         transportMode={transportMode}
         onToggleFavorite={onToggleFavorite}
         favorites={favorites}

@@ -197,6 +197,42 @@ describe('AddressListItem (web right panel)', () => {
     (Platform as any).OS = prevOs;
   });
 
+  // #2776: legacy-точка без place_id несёт в `name` статью, а место — в `address`.
+  it('titles the card with the place, the article as a secondary line and the distance from the search centre', () => {
+    const prevOs = Platform.OS;
+    (Platform as any).OS = 'web';
+    mockPlaceListCard.mockClear();
+
+    renderWithProviders(
+      <AddressListItem
+        travel={{
+          ...baseTravel,
+          id: 1201,
+          name: 'Раков',
+          title: 'Раков',
+          place_id: null,
+          address: 'Костёл Святого Михаила Архангела в Ивенце (1741–1749)',
+          coord: '53.888,26.743',
+          primary_source: { source_id: '1201', point_id: 1201, travel_id: 90, article_title: 'Раков' },
+        }}
+        distanceOrigin={{ latitude: 53.9006, longitude: 27.559, kind: 'searchCenter' }}
+        isMobile
+      />,
+    );
+
+    const props = mockPlaceListCard.mock.calls.at(-1)?.[0];
+    expect(props.title).toBe('Костёл Святого Михаила Архангела в Ивенце (1741–1749)');
+    expect(props.relatedTravelTitle).toBe('Раков');
+    expect(props.badges).toEqual([
+      expect.stringMatching(/^\d+\s?км от центра поиска$/),
+      'Из статьи «Раков»',
+    ]);
+    // #2778: ≤3 подписанных действия, остальное в «⋯».
+    expect(props.actionBudget).toBe(true);
+
+    (Platform as any).OS = prevOs;
+  });
+
   it('shows the same popup-like navigation action set on web', async () => {
     const prevOs = Platform.OS;
     (Platform as any).OS = 'web';

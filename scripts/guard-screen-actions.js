@@ -25,6 +25,11 @@ const ACTION_SCREENS = [
   'components/quests/QuestWizard.tsx',
   'components/quests/questWizardShell.tsx',
   'components/quests/useQuestScreenHeader.ts',
+  // #2777: верхний ряд карты на телефоне — иконки из словаря действий карты.
+  'components/MapPage/MapMobile/MapMobileTopOverlay.tsx',
+  // #2778: карточка места в каталоге `/places` и в «Местах рядом» на карте.
+  'screens/tabs/PlacesScreen.parts.tsx',
+  'components/MapPage/AddressListItem/AddressListItemCard.tsx',
 ]
 
 // Экран, который обязан объявить действия в шапке (`useScreenHeader` прямо или через
@@ -37,6 +42,27 @@ const REQUIRE_HEADER_DECLARATION = {
   // Визард — единственный владелец действий и сброса квеста: декларацию зовёт он.
   'components/quests/QuestWizard.tsx': /useQuestScreenHeader\s*\(/,
   'components/quests/useQuestScreenHeader.ts': /useScreenHeader\s*\(/,
+}
+
+// Экран → обязательная форма ряда действий (MOBILE-ACTION-LABELS-001):
+//  - #2778: карточка места объявляет `actionBudget` — не больше трёх подписанных
+//    действий, координаты/Telegram/навигаторы в «⋯» (placeListCardActionModel);
+//  - #2777: ряд карты берёт иконки из `MAP_ACTION_ICON`, а «развернуть» и стрелка
+//    геолокации на сбросе/маршруте — нарушение.
+const REQUIRE_ACTION_SHAPE = {
+  'screens/tabs/PlacesScreen.parts.tsx': {
+    require: /<PlaceListCard\b[^]*?\bactionBudget\b[^]*?\/>/,
+    message: 'карточка места без actionBudget — вернутся 8–9 действий в ряду (#2778)',
+  },
+  'components/MapPage/AddressListItem/AddressListItemCard.tsx': {
+    require: /<PlaceListCard\b[^]*?\bactionBudget\b[^]*?\/>/,
+    message: 'карточка «Мест рядом» без actionBudget — вернутся дубли действий (#2778)',
+  },
+  'components/MapPage/MapMobile/MapMobileTopOverlay.tsx': {
+    require: /MAP_ACTION_ICON\.reset[^]*MAP_ACTION_ICON\.route/,
+    forbid: /name=["'](?:maximize(?:-2)?|navigation(?:-2)?)["']/,
+    message: 'иконки ряда карты — только из MAP_ACTION_ICON: «развернуть» на сбросе и стрелка геолокации на маршруте обманывают (#2777)',
+  },
 }
 
 // Файл → причина, почему корзина/danger-кнопка вне «⋯» допустима. Пусто = нарушение.
@@ -166,6 +192,10 @@ function scanSource(rel, source) {
   if (REQUIRE_HEADER_DECLARATION[rel] && !REQUIRE_HEADER_DECLARATION[rel].test(source)) {
     findings.push(`${rel}: экран обязан объявить действия шапки через useScreenHeader`)
   }
+  const shape = REQUIRE_ACTION_SHAPE[rel]
+  if (shape && ((shape.require && !shape.require.test(source)) || (shape.forbid && shape.forbid.test(source)))) {
+    findings.push(`${rel}: ${shape.message}`)
+  }
   return findings
 }
 
@@ -227,7 +257,7 @@ function scanScreenActions(rootDir) {
   return findings
 }
 
-module.exports = { ACTION_SCREENS, EXCEPTIONS, DELETE_SURFACES, scanSource, scanScreenActions, scanDeleteSurfaces }
+module.exports = { ACTION_SCREENS, EXCEPTIONS, DELETE_SURFACES, REQUIRE_ACTION_SHAPE, scanSource, scanScreenActions, scanDeleteSurfaces }
 
 if (require.main === module) {
   const rootIdx = process.argv.indexOf('--root')

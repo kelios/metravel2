@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '@/context/AuthContext';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useSavedPointToggle } from '@/hooks/map/useSavedPointToggle';
 import { PointStatus } from '@/types/userPoints';
 import { DESIGN_COLORS } from '@/constants/designSystem';
@@ -70,6 +71,9 @@ export function useAddressListItemActions(travel: TravelCoords) {
   const [isAddingPoint, setIsAddingPoint] = useState(false);
 
   const { isAuthenticated, authReady } = useAuth();
+  // #2778: гость жмёт «Сохранить» → вход с возвратом сюда, а не серая кнопка.
+  // web возвращает на текущий адрес карты, native — на `/map`.
+  const { requireAuth } = useRequireAuth({ intent: 'save-point', fallbackRedirect: '/map' });
   const { run, notify } = useActionFeedback();
 
   // #334 — saved-state shared with «Мои точки» через кэш userPointsAll, матч по
@@ -140,7 +144,7 @@ export function useAddressListItemActions(travel: TravelCoords) {
 
   const handleAddPoint = useCallback(async () => {
     if (!authReady) return;
-    if (!isAuthenticated) { notify(i18nT('shared:hooks.useAddressListItemActions.voydite_chtoby_sohranit_tochku_990d6c7e')); return; }
+    if (!isAuthenticated) { requireAuth(); return; }
     if (!isSavedPointsReady) return;
     if (isAddingPoint) return;
     const lat = Number(travel.lat);
@@ -179,7 +183,7 @@ export function useAddressListItemActions(travel: TravelCoords) {
         error: { message: i18nT('shared:hooks.useAddressListItemActions.ne_udalos_sohranit_tochku_3c69cb31') },
       });
     } finally { setIsAddingPoint(false); }
-  }, [address, articleUrl, authReady, notify, run, rawCategoryName, isAddingPoint, isAuthenticated, isSavedPointsReady, isSaved, relatedTravelId, removeSaved, createPoint, travel.lat, travel.lng, travelImageThumbUrl, urlTravel]);
+  }, [address, articleUrl, authReady, notify, requireAuth, run, rawCategoryName, isAddingPoint, isAuthenticated, isSavedPointsReady, isSaved, relatedTravelId, removeSaved, createPoint, travel.lat, travel.lng, travelImageThumbUrl, urlTravel]);
 
   return {
     rawCategoryName, categories, isAddingPoint, pointAdded: isSaved, isSavedPointsReady, isAuthenticated, authReady,

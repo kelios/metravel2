@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react-native'
+import { act, cleanup, fireEvent, render, waitFor, within } from '@testing-library/react-native'
 import { BackHandler, Platform, StyleSheet, View } from 'react-native'
 
 import { MapMobileLayout } from '@/components/MapPage/MapMobileLayout'
@@ -437,18 +437,23 @@ describe('MapMobileLayout', () => {
       expect(screen.queryByTestId('map-mobile-show-all')).toBeNull()
     })
 
-    it('keeps the reset FAB when no filters are active', () => {
+    // #2777: сбрасывать нечего (радиус по умолчанию, без фильтров) — кнопки нет.
+    it('hides the reset FAB when there is nothing to reset', () => {
       const screen = renderWith({ hasActiveFilters: false, activeFilterItems: [] })
 
       expect(screen.queryByTestId('map-mobile-active-filters')).toBeNull()
-      expect(screen.getByTestId('map-mobile-show-all')).toBeTruthy()
+      expect(screen.queryByTestId('map-mobile-show-all')).toBeNull()
     })
 
-    // Радиус всегда имеет значение и чипа не даёт — он не должен прятать FAB.
-    it('ignores the radius pseudo-filter for both the row and the FAB', () => {
+    // Радиус чипа не даёт, но не-дефолтный радиус («Карта до 60 км») — то, что
+    // сброс снимает: FAB есть, ряда чипов нет.
+    it('shows the reset FAB for a non-default radius without a chips row', () => {
       const screen = renderWith({
         hasActiveFilters: false,
-        activeFilterItems: [{ key: 'radius', label: '50 км' }],
+        activeFilterItems: [{ key: 'radius', label: '60 км' }],
+        filtersPanelProps: {
+          props: { ...filtersPanelProps.props, filterValue: { radius: '60' } },
+        },
       })
 
       expect(screen.queryByTestId('map-mobile-active-filters')).toBeNull()
@@ -509,11 +514,10 @@ describe('MapMobileLayout', () => {
         />,
       )
 
-      // Radius mode: no contextual route icons yet, just the entry icon in the
-      // top toolbar (иконка без подписи — «Маршрут» текстом больше не рисуем).
+      // Radius mode: no contextual route icons yet, just the entry in the top
+      // toolbar — с короткой подписью «Маршрут» внутри самой кнопки (#2777).
       expect(screen.queryByTestId('map-mobile-route-toolbar')).toBeNull()
-      expect(screen.queryByText('Маршрут')).toBeNull()
-      expect(screen.getByTestId('map-mobile-route-button')).toBeTruthy()
+      expect(within(screen.getByTestId('map-mobile-route-button')).getByText('Маршрут')).toBeTruthy()
       expect(screen.queryByTestId('map-mobile-transport-button')).toBeNull()
       expect(screen.queryByTestId('map-mobile-route-clear-button')).toBeNull()
 

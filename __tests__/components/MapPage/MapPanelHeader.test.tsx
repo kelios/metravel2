@@ -188,7 +188,8 @@ describe.each(['web', 'ios', 'android'])('MapPanelHeader on %s (#2217)', (os) =>
       utils.UNSAFE_getAllByType(Feather).map((icon) => [icon.props.name, icon.props.color]),
     ).toEqual([
       ['list', themedColors.textOnPrimary],
-      ['navigation', themedColors.textMuted],
+      // #2777: маршрут — глиф маршрута, не стрелка геолокации.
+      ['git-branch', themedColors.textMuted],
       ['sliders', themedColors.textMuted],
     ])
   })

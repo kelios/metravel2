@@ -7,6 +7,7 @@ import {
   useWindowDimensions,
 } from 'react-native'
 import * as Clipboard from 'expo-clipboard'
+import { useRouter, type Href } from 'expo-router'
 
 import {
   buildAppleMapsUrl,
@@ -27,6 +28,7 @@ import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem'
 import { useSavedPointToggle } from '@/hooks/map/useSavedPointToggle'
 import { useAuthStore } from '@/stores/authStore'
 import { PointStatus } from '@/types/userPoints'
+import { buildLoginHref } from '@/utils/authNavigation'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { type CatalogPlace } from '@/utils/placesCatalog'
 import { normalizeRelatedTravelRoute } from '@/utils/relatedTravel'
@@ -143,6 +145,14 @@ export const PlaceCard = React.memo(function PlaceCard({
   // ─── Popup-parity actions (mirror the map PlacePopupCard) ───
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const authReady = useAuthStore((s) => s.authReady)
+  // #2778: гость жмёт «Сохранить» → вход с возвратом в каталог, а не тост.
+  // Экран читает авторизацию из authStore, поэтому вход строится тут, без
+  // useRequireAuth (тому нужен AuthProvider).
+  const router = useRouter()
+  const requireAuth = React.useCallback(() => {
+    // web возвращает на текущий адрес с фильтрами, native — на `/places`.
+    router.push(buildLoginHref({ intent: 'save-point', fallbackRedirect: '/places' }) as Href)
+  }, [router])
 
   // Оценка места — авторизованное действие. Гостю показываем строку рейтинга
   // только когда у места уже есть оценки (иначе на каждой карточке висели бы
@@ -189,7 +199,7 @@ export const PlaceCard = React.memo(function PlaceCard({
   const handleAddPoint = React.useCallback(async () => {
     if (!authReady) return
     if (!isAuthenticated) {
-      void showToast({ type: 'info', text1: i18nT('map:screens.tabs.PlacesScreen_parts.voydite_chtoby_sohranit_tochku_cbf7d9b3'), position: 'bottom' })
+      requireAuth()
       return
     }
     if (!isSavedPointsReady) return
@@ -235,6 +245,7 @@ export const PlaceCard = React.memo(function PlaceCard({
   }, [
     authReady,
     isAuthenticated,
+    requireAuth,
     isSavedPointsReady,
     isAdding,
     isSaved,
@@ -284,7 +295,6 @@ export const PlaceCard = React.memo(function PlaceCard({
         relatedTravelId={place.relatedTravelId}
         relatedTravelCountry={place.country}
         onCardPress={() => onOpenMap(place)}
-        onMediaPress={() => onOpenMap(place)}
         mapActions={mapActions}
         inlineActions={
           [
@@ -316,14 +326,17 @@ export const PlaceCard = React.memo(function PlaceCard({
         onCopyCoord={normalizedCoord ? handleCopyCoord : undefined}
         onShare={normalizedCoord ? handleShare : undefined}
         onAddPoint={normalizedCoord ? handleAddPoint : undefined}
-        addLabel={isSaved ? i18nT('map:screens.tabs.PlacesScreen_parts.v_tochkah_53f65e25') : i18nT('map:screens.tabs.PlacesScreen_parts.moi_tochki_df71d705')}
-        addDisabled={!authReady || !normalizedCoord || !isSavedPointsReady || isAdding}
+        // #2778: одно «Сохранить» (как в «Местах рядом»); у гостя активно и ведёт ко входу.
+        isSaved={isSaved}
+        addLabel={i18nT('map:components.MapPage.AddressListItem.AddressListItemCard.sohranit_06fb5b11')}
+        addDisabled={!authReady || !normalizedCoord || isAdding || (isAuthenticated && !isSavedPointsReady)}
         isAdding={isAdding || (isAuthenticated && !isSavedPointsReady)}
         imageHeight={isMobileCard ? 240 : 280}
         eagerImage={priority}
         width={compactCardWidth}
         compact
         popupAligned
+        actionBudget
         titleLayout="content"
         titleNumberOfLines={2}
         style={styles.cardFill}

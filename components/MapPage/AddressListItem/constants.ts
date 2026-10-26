@@ -1,6 +1,7 @@
 import { Platform } from 'react-native'
 
 import { TravelCoords } from '@/types/types'
+import type { ListDistanceOrigin } from '../TravelListPanel/nearbyOrder'
 
 export const isWebPlatform = () => Platform.OS === 'web'
 
@@ -13,6 +14,11 @@ export type Props = {
   onPress?: () => void
   onHidePress?: () => void
   userLocation?: { latitude: number; longitude: number } | null
+  /**
+   * #2776: точка отсчёта расстояния карточки (GPS или центр радиус-запроса).
+   * Главнее `userLocation`; без неё отсчёт — `userLocation` как «от вас».
+   */
+  distanceOrigin?: ListDistanceOrigin | null
   transportMode?: 'car' | 'bike' | 'foot'
   isFavorite?: boolean
   onToggleFavorite?: () => void

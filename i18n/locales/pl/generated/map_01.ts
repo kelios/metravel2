@@ -245,7 +245,6 @@ export const mapGenerated1 = {
   "components.MapPage.MapMobile.MapMobileTopOverlay.otkryt_filtry_2e8bb063": "Otwórz filtry",
   "components.MapPage.MapMobile.MapMobileTopOverlay.pokazat_moe_mestopolozhenie_e7418fde": "Pokaż moją lokalizację",
   "components.MapPage.MapMobile.MapMobileTopOverlay.pokazat_spisok_ryadom_value1_1dee15c6": "Pokaż listę w pobliżu{{value1}}",
-  "components.MapPage.MapMobile.MapMobileTopOverlay.pokazat_vse_mesta_na_karte_i_sbrosit_filtry_88e4aa0a": "Pokaż wszystkie miejsca na mapie i zresetuj filtry",
   "components.MapPage.MapMobile.MapMobileTopOverlay.postroit_marshrut_da7efcc5": "Zbuduj trasę",
   "components.MapPage.MapMobile.MapMobileTopOverlay.postroit_marshrut_vybrano_value1_iz_2_tochek_926447de": "Zbuduj trasę: {{value1}} wybrana z 2 punktów",
   "components.MapPage.MapMobile.MapMobileTopOverlay.pryamaya_liniya_79c7e056": "Linia prosta",

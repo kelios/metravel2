@@ -245,7 +245,6 @@ export const mapGenerated1 = {
   "components.MapPage.MapMobile.MapMobileTopOverlay.otkryt_filtry_2e8bb063": "Адкрыць фільтры",
   "components.MapPage.MapMobile.MapMobileTopOverlay.pokazat_moe_mestopolozhenie_e7418fde": "Паказаць маё месцазнаходжанне",
   "components.MapPage.MapMobile.MapMobileTopOverlay.pokazat_spisok_ryadom_value1_1dee15c6": "Паказаць спіс побач{{value1}}",
-  "components.MapPage.MapMobile.MapMobileTopOverlay.pokazat_vse_mesta_na_karte_i_sbrosit_filtry_88e4aa0a": "Паказаць усе месцы на карце і скінуць фільтры",
   "components.MapPage.MapMobile.MapMobileTopOverlay.postroit_marshrut_da7efcc5": "Пабудаваць маршрут",
   "components.MapPage.MapMobile.MapMobileTopOverlay.postroit_marshrut_vybrano_value1_iz_2_tochek_926447de": "Пабудаваць маршрут: выбрана {{value1}} з 2 кропак",
   "components.MapPage.MapMobile.MapMobileTopOverlay.pryamaya_liniya_79c7e056": "Прамая лінія",
