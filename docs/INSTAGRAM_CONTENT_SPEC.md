@@ -496,7 +496,7 @@ V3 — Юля. Эпизод, где Юля правда была одна, сн�
 (`.codex-temp/instagram/style-c-sosnowiec-2026-10-23/`) и переписанная «Шесть замков с
 призраками» (`posts/2026-10-28-halloween-zamki-legendy/`, 25.10.2026).
 
-**Карусель (8–10 слайдов, тип `story` в `make-carousel.py`, MeTravel C по разделу 17):**
+**Карусель (8–10 слайдов, стиль E + F — типы `e` и `f` в `make-carousel.py`, `scripts/instagram/carousel_ef.py`; выбор владельца 26.10.2026 вместо MeTravel C/`story`):**
 
 | Слайд | Роль | Что на нём |
 | --- | --- | --- |

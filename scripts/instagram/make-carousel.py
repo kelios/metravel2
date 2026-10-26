@@ -9,6 +9,8 @@
   map   — {"type": "map", "title", "note", "points": [{"name", "lat", "lng"}], "line"?: false — без ломаной между точками, "map_h"?: высота карты (800), "row_h"?: шаг строки легенды (62), "zoom"?, "patches"?: [{"box","from"}], "tile_url"?, "credit"?, "inset_line"?: "auto"|"none", "inset"?: {"from","to","x","y","w","h"} — врезка крупным масштабом для тесного кластера точек (номера from..to, 1-based)}
   cta   — {"type": "cta", "image", "title", "text", "layout"?: "full" (по умолчанию: затемнение снизу, текст у низа) | "center" (прежняя: кадр
            притемнён целиком, текст по центру, "top"?: y начала текста, по умолчанию 430)}
+  e, f  — стиль E + F (владелец 26.10.2026, основной для новых каруселей): e — место (фото уходит в тёмный фон, для маршрута
+           карточка цифр и карта тропы), f — наш день (снимок в рамке с датой). Поля — в scripts/instagram/carousel_ef.py.
   story — MeTravel C (раздел 17 ТЗ, владелец 23.10.2026; шаблон 18.1): {"type": "story", "image", "kicker", "title", "body",
            "role"?: "cover" (заголовок крупнее) | "scene" (по умолчанию) | "final",
            "layout"?: "below" (по умолчанию для сцен, владелец 25.10.2026: фото НЕ перекрывается текстом — фото занимает верх до текстового блока,
@@ -440,7 +442,10 @@ def main():
     spec = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
     out_dir = Path(spec["out_dir"])
     out_dir.mkdir(parents=True, exist_ok=True)
-    builders = {"cover": slide_cover, "list": slide_list, "map": slide_map, "cta": slide_cta, "story": slide_story}
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import carousel_ef
+    builders = {"cover": slide_cover, "list": slide_list, "map": slide_map, "cta": slide_cta, "story": slide_story,
+                "e": carousel_ef.slide_e, "f": carousel_ef.slide_f}
     total = len(spec["slides"])
     for index, slide in enumerate(spec["slides"], 1):
         img, footer_fill = builders[slide["type"]](slide)
