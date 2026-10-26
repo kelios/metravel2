@@ -20,6 +20,11 @@ secret generation and changes to release/main/clean guards.
 - Copy env files independently. Reject symlinks in source/destination ancestors,
   tracked destinations and non-ignored paths before any copy. Plan all writes
   before execution; unknown failures use fixed sanitized messages.
+- Batch tracked/ignored policy lookup once per source/target: `ls-files -z`
+  rejects tracked entries; verbose/non-matching NUL `check-ignore --stdin`
+  validates every expected record, including explicit negation. Reject missing,
+  duplicate, unexpected or malformed records before any write. Four policy
+  subprocesses total, independent of the pinned font count (138 in real QA).
 - Default allowlist: .env, .env.prod, .env.e2e and verified font bundle records.
   Explicit `--android-secrets` adds only the five consumed portable Android
   secret filenames; default does not distribute signing/upload credentials.
@@ -43,6 +48,11 @@ Backend remains read-only. No native source/plugin changes.
   concurrent filesystem sandbox; atomic copy prevents accidental overwrite races.
 - Stale copied env → clear status plus explicit --force; no automatic refresh.
 - Different font revision → existing pinned validator refuses mismatch.
+- Per-file Git process overhead → fixed-count batch lookup; scale regression
+  exercises 138 valid fonts and the full negative-policy preflight.
+  Raising the QA timeout leaves this overhead in every new checkout, so it is
+  not a recovery strategy. Rollback of the follow-up retains the secure fa38
+  implementation while restoring its slower per-file metadata checks.
 - Missing node_modules/Pods → guidance, not heavy or destructive hidden operations.
 
 ## Validation and Recovery

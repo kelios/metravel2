@@ -23,6 +23,9 @@
   перезаписи по умолчанию и изменений source checkout.
 - **Контроль:** `worktree:bootstrap`, focused regression fixtures и диагностика
   build/e2e/font consumers. Native dependencies и release gates самостоятельны.
+- **Масштаб:** реальный bundle содержит 138 шрифтов; policy-проверки Git должны
+  выполняться пакетно, без subprocess на каждый файл. Масштабная регрессия
+  сохраняет проверки tracked/ignored, включая отрицательные ignore-правила.
 - **Маршрутизация:** нарушение этого инварианта — reopen #2744; новая native
   capability или новый секрет требуют отдельного обоснования, не blanket-copy.
 

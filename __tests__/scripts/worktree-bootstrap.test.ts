@@ -21,6 +21,7 @@ describe('worktree environment bootstrap', () => {
   let tracked: Set<string>
   let nonIgnored: Set<string>
   let log: jest.Mock
+  let policyCalls: Array<{ root: string; args: string[]; input?: string }>
 
   function write(root: string, relative: string, value = SENTINEL) {
     const file = path.join(root, relative)
@@ -29,7 +30,7 @@ describe('worktree environment bootstrap', () => {
     return file
   }
 
-  function git(root: string, args: string[]) {
+  function git(root: string, args: string[], input?: string) {
     const command = args.join(' ')
     const common = root === target && !shared ? path.join(source, '.git') : path.join(root, '.git')
     const primary = root === target && !shared ? source : root
@@ -46,20 +47,31 @@ describe('worktree environment bootstrap', () => {
       else stdout = `worktree ${primary}\0HEAD ${HEAD}\0branch refs/heads/main\0\0`
     } else if (command === 'worktree list --porcelain') {
       stdout = `worktree ${quotedLegacy ? '"untrusted\\npath"' : primary}\nHEAD ${HEAD}\n\n`
-    } else if (args[0] === 'ls-files') stdout = tracked.has(`${root}:${args[2]}`) ? args[2] : ''
-    else if (args[0] === 'check-ignore') status = nonIgnored.has(`${root}:${args[3]}`) ? 1 : 0
-    else throw new Error(`Unexpected fixture Git command: ${command}`)
+    } else if (args[0] === 'ls-files') {
+      policyCalls.push({ root, args: [...args], input })
+      stdout = args.slice(3).filter((relative) => tracked.has(`${root}:${relative}`)).map((relative) => `${relative}\0`).join('')
+    } else if (args[0] === 'check-ignore') {
+      policyCalls.push({ root, args: [...args], input })
+      const paths = (input ?? '').split('\0').slice(0, -1)
+      const ignored = paths.filter((relative) => !nonIgnored.has(`${root}:${relative}`))
+      stdout = paths.map((relative) => [
+        ...(nonIgnored.has(`${root}:${relative}`) ? ['', '', ''] : ['.gitignore', '1', '**']), relative, '',
+      ].join('\0')).join('')
+      status = ignored.length ? 0 : 1
+    } else throw new Error(`Unexpected fixture Git command: ${command}`)
     return { stdout, status }
   }
 
-  function fonts() {
-    const bytes = Buffer.from('wOF2fixture-font')
-    const name = `${sha(bytes)}.woff2`
-    const css = `@font-face{src:url(https://book-snapshot.invalid/fonts/${name})}`
+  function fonts(count = 1) {
+    const faces = Array.from({ length: count }, (_, index) => {
+      const bytes = Buffer.from(`wOF2fixture-font-${index}`)
+      return { bytes, name: `${sha(bytes)}.woff2` }
+    })
+    const css = faces.map(({ name }) => `@font-face{src:url(https://book-snapshot.invalid/fonts/${name})}`).join('\n')
     const fontUrl = 'https://fonts.googleapis.com/css2?family=Roboto'
     const lock = JSON.stringify({
       source_url: fontUrl, stylesheet_sha256: sha(css), stylesheet_size_bytes: Buffer.byteLength(css),
-      files: [{ path: name, sha256: sha(bytes), size_bytes: bytes.length }],
+      files: faces.map(({ bytes, name }) => ({ path: name, sha256: sha(bytes), size_bytes: bytes.length })),
     })
     for (const root of [source, target]) {
       write(root, 'workers/book-renderer/fonts.lock.json', lock)
@@ -67,8 +79,8 @@ describe('worktree environment bootstrap', () => {
     }
     write(source, `${FONT_DIR}/fonts.css`, css)
     write(source, `${FONT_DIR}/fonts.lock.json`, lock)
-    fs.writeFileSync(write(source, `${FONT_DIR}/${name}`), bytes)
-    return name
+    for (const { bytes, name } of faces) fs.writeFileSync(write(source, `${FONT_DIR}/${name}`), bytes)
+    return faces[0].name
   }
 
   beforeEach(() => {
@@ -90,6 +102,7 @@ describe('worktree environment bootstrap', () => {
     tracked = new Set()
     nonIgnored = new Set()
     log = jest.fn()
+    policyCalls = []
   })
 
   afterEach(() => fs.rmSync(scratch, { recursive: true, force: true }))
@@ -125,6 +138,33 @@ describe('worktree environment bootstrap', () => {
     expect(log).toHaveBeenCalledWith('kept: .env')
     bootstrap({ root: target, git, log, force: true })
     expect(fs.readFileSync(path.join(target, '.env'), 'utf8')).toBe(SENTINEL)
+  })
+
+  it('checks a real-sized pinned font bundle with four policy Git calls, including force', () => {
+    fonts(138)
+    const files = [...ENV_FILES, ...fs.readdirSync(path.join(source, FONT_DIR)).map((name: string) => `${FONT_DIR}/${name}`)]
+    for (const force of [false, true]) {
+      policyCalls = []
+      const result = bootstrap({ root: target, git, log, force })
+      expect(result).toHaveLength(files.length)
+      expect(result.every((item: { action: string }) => item.action === 'copied')).toBe(true)
+      expect(policyCalls).toHaveLength(4)
+      for (const root of [source, target]) {
+        const calls = policyCalls.filter((call) => call.root === root)
+        expect(calls).toHaveLength(2)
+        expect(calls[0].args.slice(0, 3)).toEqual(['ls-files', '-z', '--'])
+        expect([...calls[0].args.slice(3)].sort()).toEqual([...files].sort())
+        expect(calls[1].args).toEqual(['check-ignore', '--no-index', '--verbose', '--non-matching', '-z', '--stdin'])
+        expect(calls[1].input?.split('\0').slice(0, -1).sort()).toEqual([...files].sort())
+      }
+      for (const relative of files) {
+        const from = path.join(source, relative)
+        const to = path.join(target, relative)
+        expect(fs.readFileSync(to).equals(fs.readFileSync(from))).toBe(true)
+        expect(fs.statSync(to).ino).not.toBe(fs.statSync(from).ino)
+      }
+    }
+    expect(log.mock.calls.flat().join('\n')).not.toContain(SENTINEL)
   })
 
   it('requires explicit Android secret opt-in and still excludes unrelated secrets', () => {
@@ -196,6 +236,33 @@ describe('worktree environment bootstrap', () => {
       expect(fs.existsSync(path.join(target, '.env'))).toBe(false)
     },
   )
+
+  const ignoredRecords = ENV_FILES.map((relative: string) => ['.gitignore', '1', '**', relative, ''].join('\0')).join('')
+  const firstIgnoredRecord = ['.gitignore', '1', '**', '.env', ''].join('\0')
+  it.each([
+    { label: 'unterminated tracked path', command: 'ls-files', override: { stdout: '.env' } },
+    { label: 'unexpected tracked path', command: 'ls-files', override: { stdout: `${SENTINEL}\0` } },
+    { label: 'duplicate tracked path', command: 'ls-files', override: { stdout: '.env\0.env\0' } },
+    { label: 'tracked subprocess failure', command: 'ls-files', override: { status: 128, stdout: SENTINEL } },
+    { label: 'negated ignore pattern', command: 'check-ignore', override: { stdout: ignoredRecords.replace('**', '!**') } },
+    { label: 'unterminated ignore record', command: 'check-ignore', override: { stdout: ignoredRecords.slice(0, -1) } },
+    { label: 'missing ignore record', command: 'check-ignore', override: { stdout: ignoredRecords.slice(firstIgnoredRecord.length) } },
+    { label: 'duplicate ignore path', command: 'check-ignore', override: { stdout: ignoredRecords.replace('.env.prod\0', '.env\0') } },
+    { label: 'unexpected ignore path', command: 'check-ignore', override: { stdout: ignoredRecords.replace('.env\0', `${SENTINEL}\0`) } },
+    { label: 'invalid ignore line', command: 'check-ignore', override: { stdout: ignoredRecords.replace(['1', '**'].join('\0'), ['0', '**'].join('\0')) } },
+    { label: 'unignored subprocess status', command: 'check-ignore', override: { status: 1 } },
+    { label: 'ignore subprocess failure', command: 'check-ignore', override: { status: 128, stdout: SENTINEL } },
+    { label: 'signaled ignore subprocess', command: 'check-ignore', override: { signal: 'SIGTERM' } },
+    { label: 'ignore subprocess error', command: 'check-ignore', override: { error: new Error(SENTINEL) } },
+  ])('rejects $label before copying and without echoing Git output', ({ command, override }) => {
+    const brokenGit = (root: string, args: string[], input?: string) => {
+      const result = git(root, args, input)
+      return root === source && args[0] === command ? { ...result, ...override } : result
+    }
+    expect(main([], { root: target, git: brokenGit, log, error: log })).toBe(1)
+    expect(fs.existsSync(path.join(target, '.env'))).toBe(false)
+    expect(log.mock.calls.flat().join('\n')).not.toContain(SENTINEL)
+  })
 
   it('refuses a source font bundle incompatible with the target revision before env writes', () => {
     fonts()

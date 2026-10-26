@@ -23,9 +23,9 @@ class BootstrapError extends Error {}
 const fail = (message) => { throw new BootstrapError(message) }
 const hasControlCharacters = (value) => Array.from(value).some((character) => character.charCodeAt(0) < 32)
 
-function runGit(cwd, args) {
+function runGit(cwd, args, input) {
   return spawnSync('git', args, {
-    cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
+    cwd, input, encoding: 'utf8', stdio: [input === undefined ? 'ignore' : 'pipe', 'pipe', 'ignore'],
     env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' },
   })
 }
@@ -131,10 +131,37 @@ function safePath(root, relative, directory = false) {
   return current
 }
 
-function assertIgnored(git, root, relative) {
-  if (gitValue(git, root, ['ls-files', '--', relative])) fail(`Refusing tracked bootstrap path: ${relative}.`)
-  const result = git(root, ['check-ignore', '-q', '--', relative])
-  if (result.status !== 0) fail(`Bootstrap path must be ignored: ${relative}.`)
+function nulFields(output) {
+  if (typeof output !== 'string' || (output && !output.endsWith('\0'))) fail('Cannot verify bootstrap path policy.')
+  return output ? output.slice(0, -1).split('\0') : []
+}
+
+function assertIgnoredPaths(git, root, files) {
+  const allowed = new Set(files)
+  const paths = [...allowed]
+  const tracked = git(root, ['ls-files', '-z', '--', ...paths])
+  if (tracked.error || tracked.signal || tracked.status !== 0) fail('Cannot verify bootstrap path policy.')
+  const trackedPaths = nulFields(tracked.stdout)
+  if (trackedPaths.some((relative) => !allowed.has(relative)) || new Set(trackedPaths).size !== trackedPaths.length) {
+    fail('Cannot verify bootstrap path policy.')
+  }
+  if (trackedPaths.length) fail('Refusing tracked bootstrap paths.')
+
+  // Verbose records distinguish ignored paths from explicit !negations.
+  const ignored = git(root, ['check-ignore', '--no-index', '--verbose', '--non-matching', '-z', '--stdin'], `${paths.join('\0')}\0`)
+  if (ignored.error || ignored.signal || ![0, 1].includes(ignored.status)) fail('Cannot verify bootstrap path policy.')
+  const fields = nulFields(ignored.stdout)
+  if (fields.length !== paths.length * 4) fail('Cannot verify bootstrap path policy.')
+  const seen = new Set()
+  for (let index = 0; index < fields.length; index += 4) {
+    const [source, line, pattern, relative] = fields.slice(index, index + 4)
+    if (!allowed.has(relative) || seen.has(relative)) fail('Cannot verify bootstrap path policy.')
+    seen.add(relative)
+    if (!source || !/^[1-9]\d*$/.test(line) || !Number.isSafeInteger(Number(line)) || !pattern || pattern.startsWith('!')) {
+      fail('Bootstrap paths must be ignored.')
+    }
+  }
+  if (ignored.status !== 0) fail('Bootstrap paths must be ignored.')
 }
 
 function copyIndependent(source, target, mode, force) {
@@ -179,11 +206,11 @@ function bootstrap({ root = ROOT, force = false, androidSecrets = false, git = r
   const plan = files.map((relative) => {
     const from = safePath(source, relative)
     const to = safePath(root, relative)
-    assertIgnored(git, source, relative)
-    assertIgnored(git, root, relative)
     const action = !lstat(from) ? 'missing' : lstat(to) && !force ? 'kept' : 'copied'
     return { relative, from, to, action }
   })
+  assertIgnoredPaths(git, source, files)
+  assertIgnoredPaths(git, root, files)
   // All policy and type checks complete before creating directories/files.
   for (const item of plan) {
     if (item.action === 'copied') {

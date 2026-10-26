@@ -3,6 +3,7 @@
 - [x] 1.1 Implement owned source resolution and safe allowlist bootstrap.
 - [x] 1.2 Add npm command, consumer diagnostics and operational documentation.
 - [x] 1.3 Add regression fixtures for boundaries, force/idempotence and no secret output.
+- [x] 1.4 Batch Git policy checks after real 138-font QA exposed subprocess fan-out; cover scale and negated/malformed records.
 
 ## 2. Code review
 
