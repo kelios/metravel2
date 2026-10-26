@@ -155,6 +155,7 @@ type RightColumnComparableProps = {
   statusMode?: string
   onStatusModeChange?: unknown
   topContent?: unknown
+  listIntroContent?: unknown
   total: number
   travels: Travel[]
   sortOptions?: unknown
@@ -176,6 +177,9 @@ export function areRightColumnPropsEqual(
     prev.total === next.total &&
     prev.travels === next.travels &&
     prev.topContent === next.topContent &&
+    // Шапка списка тоже меняется извне: строка «Ещё по запросу» (#2775) обновляет
+    // текст по ответам источников, и без этого сравнения список её не перерисует.
+    prev.listIntroContent === next.listIntroContent &&
     prev.activeConditionChips === next.activeConditionChips &&
     prev.renderItem === next.renderItem &&
     prev.gridColumns === next.gridColumns &&

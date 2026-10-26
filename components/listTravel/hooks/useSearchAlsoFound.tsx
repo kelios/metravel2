@@ -6,6 +6,7 @@ import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListC
 import { useQuestContentLocale } from '@/hooks/useQuestContentLocale'
 import { translate as i18nT, translatePlural } from '@/i18n'
 import { formatInteger } from '@/i18n/format'
+import { readRetryOnce } from '@/utils/queryRetryPolicy'
 import { findQuestCityForQuery, isSiteSearchQueryLongEnough } from '@/utils/siteSearchQuestCity'
 import SearchAlsoFoundSummary, { type SearchAlsoFoundStatus } from '../SearchAlsoFoundSummary'
 
@@ -72,7 +73,7 @@ export function useSearchAlsoFound({ query, enabled, userId }: Input): ReactNode
     enabled,
     staleTime: QUEST_CITIES_STALE_TIME,
     gcTime: QUEST_CITIES_STALE_TIME,
-    retry: 1,
+    retry: readRetryOnce,
   })
 
   const city = useMemo(
@@ -86,7 +87,7 @@ export function useSearchAlsoFound({ query, enabled, userId }: Input): ReactNode
     enabled: active && city != null,
     staleTime: QUESTS_LIST_STALE_TIME,
     gcTime: QUESTS_LIST_GC_TIME,
-    retry: 1,
+    retry: readRetryOnce,
   })
 
   const placesQuery = useQuery({
@@ -94,7 +95,7 @@ export function useSearchAlsoFound({ query, enabled, userId }: Input): ReactNode
     queryFn: async ({ signal }) => (await loadExtras()).fetchSiteSearchPlaces(trimmedQuery, signal),
     enabled: active,
     staleTime: PLACES_STALE_TIME,
-    retry: 1,
+    retry: readRetryOnce,
   })
 
   // Ошибка источника — «по нему ничего»: строка не ждёт повторов и не
