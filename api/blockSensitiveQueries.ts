@@ -118,6 +118,7 @@ export const BLOCK_EXEMPT_ROOTS: Readonly<Record<string, string>> = {
   'quest-serving': 'анонимная проекция публикации редакционного квеста: язык, состояние и адреса без авторского контента',
   quests: 'каталог квестов редакционный',
   'quest-city-classification': 'справочник квестов',
+  'quest-cities': 'редакционный справочник городов для поиска квестов; пользовательского контента и id авторов нет',
   'quests-near-location': 'квесты редакционные',
   'quest-progress': 'своё прохождение',
   articleRating: 'своя оценка',

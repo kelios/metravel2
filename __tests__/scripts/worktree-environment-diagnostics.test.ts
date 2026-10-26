@@ -1,6 +1,7 @@
 /** @jest-environment node */
 import fs from 'node:fs'
 import path from 'node:path'
+import { makeTempDir } from './cli-test-utils'
 
 const { applyE2EEnvFiles } = require('../../scripts/e2e-env-files')
 const { verifiedFontBundle } = require('../../scripts/prepare-book-renderer-fonts')
@@ -14,7 +15,7 @@ describe('worktree prerequisite diagnostics', () => {
   beforeEach(() => {
     const base = path.resolve('.codex-temp/tests')
     fs.mkdirSync(base, { recursive: true })
-    scratch = fs.mkdtempSync(path.join(base, 'worktree-diagnostics-'))
+    scratch = makeTempDir('worktree-diagnostics-', { root: base })
     warning = jest.spyOn(console, 'warn').mockImplementation(() => {})
     delete process.env[key]
   })

@@ -2,6 +2,7 @@
 const fs = require('node:fs')
 const path = require('node:path')
 const crypto = require('node:crypto')
+const { makeTempDir } = require('./cli-test-utils')
 const { bootstrap, main, resolvePrimary, ENV_FILES, ANDROID_FILES, FONT_DIR } = require('../../scripts/worktree-bootstrap')
 
 const HEAD = 'a'.repeat(40)
@@ -86,7 +87,7 @@ describe('worktree environment bootstrap', () => {
   beforeEach(() => {
     const temporaryRoot = path.resolve(__dirname, '../../.codex-temp/tests')
     fs.mkdirSync(temporaryRoot, { recursive: true })
-    scratch = fs.mkdtempSync(path.join(temporaryRoot, 'bootstrap-'))
+    scratch = makeTempDir('bootstrap-', { root: temporaryRoot })
     source = path.join(scratch, 'primary')
     target = path.join(scratch, 'checkout')
     for (const root of [source, target]) {

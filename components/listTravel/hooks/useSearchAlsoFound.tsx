@@ -19,7 +19,7 @@ const PLACES_STALE_TIME = 5 * 60 * 1000
 // как только есть что раскрывать, поэтому тап по сводке открывает готовый список.
 let listRequest: Promise<typeof import('../SearchAlsoFound')> | null = null
 const loadList = () => {
-  listRequest ??= import('../SearchAlsoFound').catch((error: unknown) => {
+  listRequest ??= Promise.resolve(import('../SearchAlsoFound')).catch((error: unknown) => {
     listRequest = null
     throw error
   })
