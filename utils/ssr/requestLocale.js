@@ -10,8 +10,12 @@ function isServerSsrRuntime() {
   return typeof window === 'undefined' && process.env.EXPO_PUBLIC_WEB_RUNTIME_SSR === 'true'
 }
 
+// Reserved TLD: this module ships in the browser bundle, where a loopback URL
+// literal fails the production config guard (scripts/verify-prod-config.js).
+const URL_BASE = 'http://ssr.invalid'
+
 function resolveRequestLocale(url) {
-  const pathname = new URL(url || '/', 'http://localhost').pathname
+  const pathname = new URL(url || '/', URL_BASE).pathname
   const routePath = pathname.startsWith('/_expo/loaders/') ? pathname.slice('/_expo/loaders'.length) : pathname
   return parseQuestLocaleRoute(routePath)?.locale || 'ru'
 }

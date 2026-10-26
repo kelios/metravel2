@@ -49,6 +49,12 @@ describe('request-local web locale', () => {
     expect(bridge.resolveRequestLocale('/xx/quests/1/test')).toBe('ru')
     expect(bridge.resolveRequestLocale('/pl/quests/0/test')).toBe('ru')
     expect(bridge.resolveRequestLocale('/travels/test?locale=en')).toBe('ru')
+    expect(bridge.resolveRequestLocale('/pl/quests/9/../1/test')).toBe('pl')
+  })
+
+  it('ships no loopback URL into the browser bundle (prod config guard)', () => {
+    const source = require('node:fs').readFileSync(require.resolve('@/utils/ssr/requestLocale'), 'utf8')
+    expect(source).not.toMatch(/https?:\/\/(?:localhost(?![\w.-])|127\.)/)
   })
 
   it('keeps translations, locale metadata and date formatting isolated across interleaved requests', async () => {
