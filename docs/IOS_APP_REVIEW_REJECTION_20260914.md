@@ -173,7 +173,8 @@ Localization impact: none (служебные черновики EN).
 
 1. Проверить итоговый SHA и обязательные проверки задач; повторить source/store
    guards и `ios:environment:check`, сверить production EAS, доступы и signing.
-   Использовать tracked native project; не выполнять `expo prebuild --clean`.
+   Использовать tracked native project: он воспроизводим из конфига (#2742),
+   `npm run ios:native:parity` подтверждает совпадение с `expo prebuild --clean`.
 2. По отдельной команде на signed build собрать кандидат через `ios-deployer`.
    Зафиксировать SHA, версию/build и EAS build ID. Затем `ios:artifact:audit`
    проверяет exact IPA: подпись, entitlements/APNs, universal family,

@@ -368,6 +368,16 @@ code-review pass. Release operations сохраняют отдельные autho
   configuration/runtime обязательны simulator-проверки full-screen,
   resizable window, portrait и landscape; перед App Review нужны iPad
   screenshots и exact TestFlight acceptance.
+- Нативный проект `ios/` tracked, но воспроизводим из конфига (#2742): все
+  iOS-кастомизации (имя проекта `metravel`, `InfoPlist.strings` RU/BE/UK/PL/EN,
+  `PrivacyInfo.xcprivacy`, Podfile-правки, версии через `MARKETING_VERSION`,
+  портретный iPhone, состав Info.plist) — в `plugins/withIosNativeProject.js` и
+  `app.json`. Руками `ios/` не правят: меняют плагин/конфиг, затем
+  `npx expo prebuild --clean --platform ios && (cd ios && LANG=en_US.UTF-8
+  LC_ALL=en_US.UTF-8 pod install)` и коммитят результат. `npm run
+  ios:native:parity` (входит в `ios:prebuild`) сверяет tracked-проект с
+  генерацией: файлы байт в байт, `project.pbxproj` — без учёта интеграции
+  CocoaPods. Нужен `.env` с ключами Meta: их подставляет `app.config.js`.
 - Для iOS-specific behavior/config/runtime задачи сначала проверь `xcode-select -p`,
   `xcodebuild -version` и eligible destinations через `xcodebuild
   -showdestinations`/`xcrun simctl list devices available`. Отсутствующий runtime

@@ -2,7 +2,12 @@
 
 set -euo pipefail
 
-# Tracked native iOS files are canonical. Never run a destructive clean/prebuild here.
+# Tracked `ios/` — результат `expo prebuild --clean --platform ios` + `pod install`
+# (#2742): все iOS-кастомизации живут в `plugins/withIosNativeProject.js` и
+# `app.json`. Этот скрипт ничего не генерирует, а сверяет tracked-проект с
+# генерацией (`ios:native:parity`) и релизным контрактом. Изменение iOS-конфига:
+# `npx expo prebuild --clean --platform ios && (cd ios && pod install)`, затем
+# коммит перегенерированного `ios/`.
 #
 # `pod install` (#1504) — не деструктивная операция и запускать её можно:
 # CocoaPods пере-сериализует `ios/metravel.xcodeproj/project.pbxproj` целиком и
@@ -14,5 +19,6 @@ set -euo pipefail
 # реальное изменение состава зависимостей, а не потеря локализации.
 # На этой машине CocoaPods требует `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8`.
 node scripts/ios-environment-preflight.js
+node scripts/ios-native-parity.js
 node scripts/ios-release-guard.js
 echo 'Tracked iOS release configuration is ready; no native files were regenerated.'

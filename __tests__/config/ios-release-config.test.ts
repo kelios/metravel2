@@ -434,7 +434,7 @@ process.stdout.write(JSON.stringify({
     });
     const plistRoot = fixture({
       'ios/metravel/Info.plist': value => value.replace(
-        /\n\t<key>UISupportedInterfaceOrientations~ipad<\/key>[\s\S]*?\n\t<\/array>/,
+        /\s*<key>UISupportedInterfaceOrientations~ipad<\/key>\s*<array>[\s\S]*?<\/array>/,
         ''
       ),
     });
@@ -622,8 +622,8 @@ process.stdout.write(JSON.stringify({
   it('fails closed if the Apple-rejected manual LSMinimumSystemVersion key returns', () => {
     const testRoot = fixture({
       'ios/metravel/Info.plist': value => value.replace(
-        '\t<key>LSRequiresIPhoneOS</key>',
-        '\t<key>LSMinimumSystemVersion</key>\n\t<string>16.4</string>\n\t<key>LSRequiresIPhoneOS</key>'
+        '<key>LSRequiresIPhoneOS</key>',
+        '<key>LSMinimumSystemVersion</key>\n<string>16.4</string>\n<key>LSRequiresIPhoneOS</key>'
       ),
     });
     expect(validateIosRelease(testRoot)).toEqual(
@@ -937,8 +937,8 @@ for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
   it('fails closed when a native purpose string is reintroduced without launch value', () => {
     const testRoot = fixture({
       'ios/metravel/Info.plist': value => value.replace(
-        '\n</dict>\n</plist>',
-        '\n\t<key>NSPhotoLibraryAddUsageDescription</key>\n\t<string>Save photos</string>\n</dict>\n</plist>'
+        /<\/dict>\s*<\/plist>\s*$/,
+        '<key>NSPhotoLibraryAddUsageDescription</key>\n<string>Save photos</string>\n</dict>\n</plist>'
       ),
     });
     expect(validateIosRelease(testRoot)).toEqual(
@@ -995,8 +995,8 @@ for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
   it('fails closed when native Info.plist enables background remote notifications', () => {
     const testRoot = fixture({
       'ios/metravel/Info.plist': value => value.replace(
-        '\n</dict>\n</plist>',
-        '\n\t<key>UIBackgroundModes</key>\n\t<array>\n\t\t<string>remote-notification</string>\n\t</array>\n</dict>\n</plist>'
+        /<\/dict>\s*<\/plist>\s*$/,
+        '<key>UIBackgroundModes</key>\n<array>\n<string>remote-notification</string>\n</array>\n</dict>\n</plist>'
       ),
     });
     expect(validateIosRelease(testRoot)).toEqual(
@@ -1042,8 +1042,8 @@ for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
         'developmentRegion = en;'
       ),
       'ios/metravel/Info.plist': value => value.replace(
-        '<key>CFBundleDevelopmentRegion</key>\n\t<string>ru</string>',
-        '<key>CFBundleDevelopmentRegion</key>\n\t<string>en</string>'
+        /(<key>CFBundleDevelopmentRegion<\/key>\s*)<string>ru<\/string>/,
+        '$1<string>en</string>'
       ),
     });
     const codes = validateIosRelease(testRoot).map((error: { code: string }) => error.code);
@@ -1236,7 +1236,7 @@ for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
       'Info.plist loses the Meta client token',
       {
         'ios/metravel/Info.plist': value => value.replace(
-          /<key>FacebookClientToken<\/key>\n\t<string>[^<]*<\/string>\n/,
+          /<key>FacebookClientToken<\/key>\s*<string>[^<]*<\/string>\s*/,
           ''
         ),
       },
@@ -1246,7 +1246,7 @@ for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
       'Info.plist loses the fb<AppID> callback scheme',
       {
         'ios/metravel/Info.plist': value => value.replace(
-          /\t\t<dict>\n\t\t\t<key>CFBundleURLSchemes<\/key>\n\t\t\t<array>\n\t\t\t\t<string>fb\d+<\/string>\n\t\t\t<\/array>\n\t\t<\/dict>\n/,
+          /<dict>\s*<key>CFBundleURLSchemes<\/key>\s*<array>\s*<string>fb\d+<\/string>\s*<\/array>\s*<\/dict>\s*/,
           ''
         ),
       },
@@ -1256,7 +1256,7 @@ for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
       'Info.plist loses a Meta query scheme',
       {
         'ios/metravel/Info.plist': value => value.replace(
-          '\t\t<string>fbauth2</string>\n',
+          /<string>fbauth2<\/string>\s*/,
           ''
         ),
       },
@@ -1266,8 +1266,8 @@ for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
       'app events auto-logging is switched on',
       {
         'ios/metravel/Info.plist': value => value.replace(
-          '<key>FacebookAutoLogAppEventsEnabled</key>\n\t<false/>',
-          '<key>FacebookAutoLogAppEventsEnabled</key>\n\t<true/>'
+          /(<key>FacebookAutoLogAppEventsEnabled<\/key>\s*)<false\/>/,
+          '$1<true/>'
         ),
       },
       'FacebookAutoLogAppEventsEnabled is not false',
@@ -1276,8 +1276,8 @@ for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
       'advertiser ID collection is switched on',
       {
         'ios/metravel/Info.plist': value => value.replace(
-          '<key>FacebookAdvertiserIDCollectionEnabled</key>\n\t<false/>',
-          '<key>FacebookAdvertiserIDCollectionEnabled</key>\n\t<true/>'
+          /(<key>FacebookAdvertiserIDCollectionEnabled<\/key>\s*)<false\/>/,
+          '$1<true/>'
         ),
       },
       'FacebookAdvertiserIDCollectionEnabled is not false',
@@ -1286,8 +1286,8 @@ for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
       'SDK auto-init is switched on',
       {
         'ios/metravel/Info.plist': value => value.replace(
-          '<key>FacebookAutoInitEnabled</key>\n\t<false/>',
-          '<key>FacebookAutoInitEnabled</key>\n\t<true/>'
+          /(<key>FacebookAutoInitEnabled<\/key>\s*)<false\/>/,
+          '$1<true/>'
         ),
       },
       'FacebookAutoInitEnabled is not false',
