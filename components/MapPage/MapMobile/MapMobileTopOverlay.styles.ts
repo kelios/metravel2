@@ -350,7 +350,8 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       minWidth: MAP_TOOLBAR_LABELED_BUTTON_MIN_WIDTH,
       alignItems: 'stretch' as const,
       justifyContent: 'center' as const,
-      paddingHorizontal: 2,
+      // На 320 плитка сжимается до 50: подписи нужна почти вся ширина (#2777).
+      paddingHorizontal: 1,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     // Видимая плитка — высота круга (38), чтобы ряд не раздувался.
@@ -359,7 +360,7 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       borderRadius: 12,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
-      paddingHorizontal: 2,
+      paddingHorizontal: 0,
       backgroundColor: colors.surface,
       ...(Platform.OS === 'web' ? shadowWeb : shadowNative),
     },
@@ -367,6 +368,7 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       fontSize: 10,
       lineHeight: 12,
       fontWeight: '600' as const,
+      letterSpacing: -0.2,
       color: colors.text,
       textAlign: 'center' as const,
     },

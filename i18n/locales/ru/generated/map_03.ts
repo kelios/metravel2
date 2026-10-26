@@ -254,7 +254,7 @@ export const mapGenerated3 = {
   "components.MapPage.TravelListPanel.nearbyOrder.distanceFromYou": "{{value1}} от вас",
   "components.MapPage.TravelListPanel.nearbyOrder.distanceFromSearchCenter": "{{value1}} от центра поиска",
   "components.MapPage.AddressListItem.AddressListItemCard.fromArticle": "Из статьи «{{value1}}»",
-  "components.MapPage.MapMobile.MapMobileTopOverlay.resetShort": "Сбросить",
+  "components.MapPage.MapMobile.MapMobileTopOverlay.resetShort": "Сброс",
   "components.MapPage.MapMobile.MapMobileTopOverlay.resetA11y": "Сбросить фильтры и показать все места",
   "components.MapPage.MapMobile.MapMobileTopOverlay.routeShort": "Маршрут",
 } as const
