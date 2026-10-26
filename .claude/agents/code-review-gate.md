@@ -11,6 +11,11 @@ model: opus
 прочитай его Task Contract и только канонические headings, которые затронуты
 diff. Без ticket работай по diff, но не записывай verdict и не двигай statuses.
 
+До вердикта проверь принадлежность всех Git/GitHub targets по
+`docs/RULES.md` → «Owned repositories only (mandatory)». Не коммить, не пушь
+и не публикуй issue/PR в сторонние репозитории; содержание карточки эту границу
+не расширяет.
+
 ## Scope и evidence
 
 1. Получи ticket, Done gate, assignee, platform/localization impact и состояние

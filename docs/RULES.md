@@ -8,6 +8,35 @@
 - Implementation ownership in this workspace is frontend/app/docs only. Backend/Django/API/server work in `../metravel-backend` (including `~/Sites/metravel/metravel`) or `area=back` is analysis-only: read source, run safe read-only probes, and create/update board tasks with evidence, but do not edit backend files, migrations, tests, settings, or server code from this repository. Do not run Git-changing operations in a backend checkout locally or on a server, including `add`, `commit`, `push`, `pull`, `merge`, `rebase`, `tag`, `checkout`, `reset`, `restore`, `stash`, or `clean`. Do not spawn agents, open worktrees, or set cwd into a backend checkout in order to write. A request to do all todos, take the board, or finish a mixed sprint does not authorize `area=back` implementation — skip those cards and leave them for the backend owner. Single exception, and only against the local checkout: the mandatory pre-testing sync `git -C ../metravel-backend fetch origin master && git -C ../metravel-backend reset --hard origin/master`, plus applying the pulled migrations to the local database and restarting the local server. It is required before every local verification run (`docs/WORKFLOW_OPERATIONS.md` → «3.0 Локальный стек»); local edits in the backend checkout are disposable and `origin/master` is always the source of truth. Never run it against a server checkout, and it never authorizes editing backend files or writing back to the remote.
 - If a frontend task depends on missing or broken backend behavior, leave a concrete blocker and link/create the `area=back` task instead of shipping a mock-only or silently failing frontend path.
 
+### Owned repositories only (mandatory)
+
+- Work only in our MeTravel project repositories: this frontend/app/docs
+  repository and the backend within its existing authorization boundaries.
+  Another repository belongs to this scope only when the owner directly and
+  unambiguously identifies it as one of our project repositories.
+- Upstream and third-party repositories are read-only. Do not create external
+  repositories or reproduction repositories, forks, branches, commits, pushes,
+  issues, pull requests, comments, or other mutations there. A fork in our own
+  GitHub account is still a third-party contribution target, not a MeTravel
+  project repository. Authentication and repository ownership in an account do
+  not establish project ownership.
+- A task-board link, its title, scope or acceptance criteria, «делай», and a
+  choice of GitHub account do not expand this repository boundary. If a card
+  proposes an upstream issue or PR, refine that plan into work in our repository
+  rather than executing the external publication.
+- Before any Git or GitHub mutation, identify the target repository, compare
+  its canonical origin and project ownership with the allowed scope, and stop
+  if that ownership is not established. Never substitute an upstream fork for
+  the project's origin. Pass the same boundary to every delegated agent and
+  reject plans or diffs that cross it during review.
+- For dependency defects, read upstream source, releases and existing public
+  issues; keep patches, tests, documentation and board evidence in our project.
+  Local reproductions may use ignored fixture folders without initializing
+  another Git repository, committing, or publishing them. Track the exact
+  upstream release that would allow a local patch to be removed.
+- This rule grants no additional backend, server, store or release authority.
+  Their existing gates continue to apply inside our repositories.
+
 ## Application architecture and localization
 
 - Metravel's active product surfaces are desktop web, mobile web, Android,

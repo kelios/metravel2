@@ -17,6 +17,8 @@ re-reviews its own result and does not spawn another reviewer.
 - Original task and acceptance boundary.
 - `git status --short` and the complete task-owned diff.
 - Task-owned paths plus known unrelated/user changes.
+- Repository targets and canonical origins under `docs/RULES.md` →
+  «Owned repositories only (mandatory)»; third-party contributions are out of scope.
 - Validation already run and raw failures/evidence.
 - Platform/localization impact.
 
@@ -34,6 +36,8 @@ Report and fix only evidence-backed issues:
 
 Check:
 
+- project ownership of Git/GitHub targets, including delegated plans; never use
+  review or a board contract to authorize upstream mutations;
 - behavior, edge/failure states, and stated acceptance;
 - unnecessary wrappers/state/effects/branches/abstractions/comments;
 - duplication versus existing components/hooks/utils/adapters/tests;

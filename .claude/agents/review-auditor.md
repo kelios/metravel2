@@ -9,6 +9,10 @@ model: opus
 разрешён только по явному запросу. Следуй `$metravel-code-reviewer` contract;
 `AGENTS.md` унаследован, поэтому не перечитывай все project docs.
 
+Проверь целевые репозитории по `docs/RULES.md` → «Owned repositories only
+(mandatory)»: upstream только читается. Карточка борда или наш GitHub-аккаунт
+не разрешают сторонние коммиты, форки, issue/PR и публикации.
+
 Стадия `review` code-only: не открывай browser/preview, simulator или physical
 device и не запускай runtime/API/e2e QA. Разрешены static guards, lint,
 typecheck и focused unit tests; observable сценарии перечисли в handoff для

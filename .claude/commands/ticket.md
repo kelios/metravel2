@@ -4,6 +4,10 @@ description: Прогнать фронтенд-тикет через общий 
 
 Запусти скилл **ticket-flow** для обработки фронтенд-тикета через общий таск-борд MeTravel.
 
+Сначала проверь repository scope по `docs/RULES.md` → «Owned repositories only
+(mandatory)»: карточка с upstream issue/PR не разрешает сторонние записи;
+такой план уточняется для работы только в наших репозиториях.
+
 `$ARGUMENTS`:
 - число / `[FE-…]` / `[TASK-…]` — id или ключ существующего тикета на борде;
 - `next` — взять верхний `area=front`, `status=todo`;

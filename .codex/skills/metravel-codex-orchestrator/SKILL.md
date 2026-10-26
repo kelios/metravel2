@@ -15,6 +15,7 @@ Return a compact internal route:
 
 ```text
 Outcome and task-owned paths:
+Repository target and project ownership:
 Primary skill:
 Conditional skills/agents:
 Platform/localization impact:
@@ -54,6 +55,9 @@ Output/validation: <artifact and checks>.
 
 ## Hard gates
 
+- Enforce `docs/RULES.md` → «Owned repositories only (mandatory)» before
+  delegation or remote mutations. Upstream is read-only; a board card or account
+  choice never authorizes external forks, commits, issues, PRs or publication.
 - Frontend/app/docs only; backend working trees remain read-only. «Do all
   todos» does not authorize `area=back` implementation or a backend cwd/worktree.
 - Preserve unrelated changes and protected-path rules.

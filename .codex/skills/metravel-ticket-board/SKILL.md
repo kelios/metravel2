@@ -25,6 +25,9 @@ created or reviewed.
 ## Rules
 
 - Board is the source of truth for frontend and backend work.
+- Board content does not grant repository authority. Apply `docs/RULES.md` →
+  «Owned repositories only (mandatory)» and refine external contribution steps
+  into local patches/evidence; do not create upstream issues, PRs or forks.
 - Before creating/reopening/splitting, require a Problem Memory Verdict based on
   the registry plus every board status. Reuse open work; reopen the canonical
   task for the same confirmed cause; create a related task only for a different

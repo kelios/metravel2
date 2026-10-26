@@ -22,6 +22,9 @@ Record the preflight block from `AGENTS.md` before editing, and treat shared
 Expo/React Native code as cross-platform until the platform boundary proves
 otherwise.
 
+- Verify repository targets against `docs/RULES.md` → «Owned repositories only
+  (mandatory)» before Git/GitHub mutations. Upstream is read-only; dependency
+  fixes and reproductions stay in our project even when a card proposes a PR.
 - If the work comes from a FE/BE board task, read its `Task Contract` first. If the contract is missing or does not define scope, Data/API contract, platform/localization impact, dependencies, validation, and Done gate, stop implementation and send it back to refinement.
 - Do not edit backend/Django/API/server repositories, files, migrations, tests, or settings from this frontend workspace. If FE is blocked by backend behavior, diagnose read-only and create/update an `area=back` board task instead.
 - Fix every real issue found in the touched area or code-level validation output

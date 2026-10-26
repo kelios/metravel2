@@ -167,6 +167,8 @@ code-level checks; observable/runtime evidence собирается после p
 
 ## Handoff self-check
 
+- Repository targets obey `docs/RULES.md` → «Owned repositories only
+  (mandatory)»; upstream remains read-only, including when named in a board card.
 - Scope, platform/localization impact и authority соблюдены.
 - Загружен минимальный релевантный контекст, не весь docs/skills catalog.
 - Diff не содержит чужих изменений и случайных artifacts.
