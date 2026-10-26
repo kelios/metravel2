@@ -187,12 +187,12 @@ describe('ListTravel', () => {
 
   it('renders the search input', async () => {
     renderComponent();
-    expect(await screen.findByPlaceholderText('Найти путешествия...')).toBeTruthy();
+    expect(await screen.findByPlaceholderText('Найти маршрут…')).toBeTruthy();
   });
 
   it('renders an empty state message when there are no items', async () => {
     renderComponent();
-    expect(await screen.findByText(/Пока нет путешествий/i)).toBeTruthy();
+    expect(await screen.findByText(/Пока нет маршрутов/i)).toBeTruthy();
   });
 
   it('for "Мои путешествия" (metravel) shows empty state only after userId is available', async () => {
@@ -288,7 +288,7 @@ describe('ListTravel', () => {
     const rendered = renderComponent();
 
     expect(screen.getByTestId('list-travel-auth-bootstrap')).toBeTruthy();
-    expect(screen.queryByPlaceholderText('Найти путешествия...')).toBeNull();
+    expect(screen.queryByPlaceholderText('Найти маршрут…')).toBeNull();
 
     mockUseHydrationReady.mockReturnValue(true);
     rendered.rerender(
@@ -297,7 +297,7 @@ describe('ListTravel', () => {
       </QueryClientProvider>
     );
 
-    expect(await screen.findByPlaceholderText('Найти путешествия...')).toBeTruthy();
+    expect(await screen.findByPlaceholderText('Найти маршрут…')).toBeTruthy();
   });
 
   it('shows timeout error message when deleteTravel fails with timeout on web', async () => {
@@ -442,7 +442,7 @@ describe('ListTravel', () => {
     it('сигналит готовность и на честном пустом состоянии', async () => {
       renderComponent();
 
-      expect(await screen.findByText(/Пока нет путешествий/i)).toBeTruthy();
+      expect(await screen.findByText(/Пока нет маршрутов/i)).toBeTruthy();
       await waitFor(() => {
         expect(getMark()).toHaveBeenCalledTimes(1);
       });
@@ -454,7 +454,7 @@ describe('ListTravel', () => {
 
       renderComponent();
 
-      expect(await screen.findByPlaceholderText('Найти путешествия...')).toBeTruthy();
+      expect(await screen.findByPlaceholderText('Найти маршрут…')).toBeTruthy();
       expect(getMark()).not.toHaveBeenCalled();
     });
 

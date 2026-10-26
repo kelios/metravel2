@@ -2,7 +2,6 @@ import { Platform, StyleSheet } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import type { ThemedColors } from '@/hooks/useTheme';
 
-const PANEL_RADIUS = DESIGN_TOKENS.radii.lg;
 const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm;
 const CONTROL_SIZE = 44;
 
@@ -207,6 +206,28 @@ export const createCustomHeaderStyles = (
       minWidth: isMobile ? 116 : undefined,
       opacity: 0,
     },
+    // #2779: вход гостя в бренд-строке телефона — тот же бокс, что у пилюли
+    // пользователя (44 px высотой), но без её минимальной ширины: подпись входа
+    // короче имени, и строка вмещается на 320 px во всех локалях.
+    mobileLoginButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primarySoft,
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: 20,
+      gap: 6,
+      minHeight: 44,
+      minWidth: 44,
+      flexShrink: 1,
+    },
+    mobileLoginLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.primaryText,
+      flexShrink: 1,
+    },
     mobileUserAvatarContainer: {
       width: 24,
       height: 24,
@@ -328,109 +349,6 @@ export const createCustomHeaderStyles = (
       position: 'absolute',
       bottom: -4,
       right: -4,
-    },
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: colors.overlay,
-      justifyContent: 'flex-end',
-      ...(Platform.OS === 'web'
-        ? ({
-            position: 'fixed',
-            inset: 0,
-            zIndex: 6000,
-          } as any)
-        : null),
-    },
-    modalContent: {
-      backgroundColor: colors.surface,
-      borderTopLeftRadius: PANEL_RADIUS,
-      borderTopRightRadius: PANEL_RADIUS,
-      maxHeight: '86%',
-      paddingBottom: 12,
-      overflow: 'hidden',
-      borderWidth: Platform.OS === 'web' ? StyleSheet.hairlineWidth : 0,
-      borderColor: colors.borderLight,
-      zIndex: 6001,
-      ...Platform.select({
-        web: {
-          position: 'relative',
-          boxShadow: ((colors.boxShadows as any)?.modal ?? DESIGN_TOKENS.shadows.modal) as any,
-          backdropFilter: 'blur(18px) saturate(1.05)' as any,
-          WebkitBackdropFilter: 'blur(18px) saturate(1.05)' as any,
-        } as any,
-      }),
-    },
-    modalHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.borderLight,
-    },
-    modalTitle: {
-      fontSize: 18,
-      fontWeight: '800',
-      color: colors.text,
-    },
-    modalCloseButton: {
-      width: CONTROL_SIZE,
-      height: CONTROL_SIZE,
-      borderRadius: CONTROL_RADIUS,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.backgroundSecondary,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderLight,
-    },
-    modalNavContainer: {
-      paddingVertical: 10,
-    },
-    modalSectionTitle: {
-      paddingHorizontal: 16,
-      paddingTop: 12,
-      paddingBottom: 6,
-      fontSize: 11,
-      color: colors.textMuted,
-      fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
-      textTransform: 'uppercase',
-      letterSpacing: 0,
-    },
-    modalNavItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 12,
-      paddingVertical: 12,
-      gap: 12,
-      minHeight: 46,
-      marginHorizontal: 10,
-      borderRadius: CONTROL_RADIUS,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: 'transparent',
-    },
-    modalNavItemHover: {
-      backgroundColor: colors.surfaceMuted,
-    },
-    modalNavItemActive: {
-      backgroundColor: colors.primaryLight,
-      borderColor: colors.primaryAlpha30,
-    },
-    modalNavLabel: {
-      fontSize: 15,
-      color: colors.textMuted,
-      fontWeight: '500',
-      flex: 1,
-    },
-    modalNavLabelActive: {
-      color: colors.primaryText,
-      fontWeight: '600',
-    },
-    modalDivider: {
-      height: 1,
-      backgroundColor: colors.borderLight,
-      marginVertical: 8,
-      marginHorizontal: 16,
     },
   });
 };

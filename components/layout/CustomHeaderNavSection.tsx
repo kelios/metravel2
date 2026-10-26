@@ -1,7 +1,7 @@
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
+import { DESKTOP_BAR_NAV_ITEMS } from '@/constants/headerNavigation';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useThemedColors } from '@/hooks/useTheme';
 import { handleHeaderNavPress } from './customHeaderNavModel';
@@ -28,7 +28,7 @@ export default function CustomHeaderNavSection({
       style={styles.navScroll}
       alwaysBounceHorizontal={false}
     >
-      {(PRIMARY_HEADER_NAV_ITEMS ?? []).filter((item) => item.path !== '/trips').map((item) => {
+      {(DESKTOP_BAR_NAV_ITEMS ?? []).map((item) => {
         const isActive = !item.external && activePath === item.path;
         return (
           <Pressable

@@ -85,7 +85,7 @@ export const sharedGenerated1 = {
   "app.tabs.roulette.poprobuy_ubrat_chast_filtrov_ili_izmeni_zapr_355b9ced": "Spróbuj usunąć niektóre filtry lub zmienić zapytanie.",
   "app.tabs.roulette.sluchaynyy_marshrut_059a8a1d": "Losowa trasa",
   "app.tabs.roulette.sluchaynyy_vybor_iz_value1_value2_02b741a7": "Losowy wybór z {{value1}} {{value2}}",
-  "app.tabs.search.ne_udalos_zagruzit_poisk_puteshestviy_7798f9dd": "Nie udało się załadować wyszukiwarki podróży",
+  "app.tabs.search.loadError": "Nie udało się załadować wyszukiwarki tras",
   "app.tabs.search.otkryvaet_master_sozdaniya_novogo_marshruta_1167875d": "Otwiera Kreatora nowej trasy",
   "app.tabs.search.sozdat_marshrut_eaa135a8": "Utwórz trasę",
   "app.tabs.subscriptions.podpiski_f7c35e01": "Subskrypcje",

@@ -38,8 +38,10 @@ test.describe('@mobile Mobile dark theme', () => {
     await seedTheme(page, 'dark')
     await gotoWithRetry(page, '/')
 
+    // #2779: кнопка меню шапки открывает лист «Ещё»; тема — его подэкран.
     await page.getByTestId('mobile-menu-open').click()
-    await expect(page.getByTestId('mobile-menu-panel')).toBeVisible()
+    await expect(page.getByTestId('footer-more-list')).toBeVisible()
+    await page.getByTestId('footer-more-item-theme').click()
 
     await page.getByTestId('theme-toggle-light').click()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')

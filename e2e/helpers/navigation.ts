@@ -300,7 +300,7 @@ export async function navigateToFirstTravel(
   // Wait for either cards or empty state
   await Promise.race([
     cards.first().waitFor({ state: 'visible', timeout: 30_000 }),
-    page.waitForSelector('text=Пока нет путешествий', { timeout: 30_000 }),
+    page.waitForSelector('text=/Пока нет (маршрутов|путешествий)/i', { timeout: 30_000 }),
   ]).catch(() => null);
 
   if ((await cards.count()) === 0) return false;
@@ -420,12 +420,12 @@ export async function navigateToFirstTravel(
 export async function waitForMainListRender(page: Page) {
   await Promise.any([
     page.waitForSelector('#search-input', { timeout: 30_000 }),
-    page.waitForSelector('[placeholder*="Найти путешествия"]', { timeout: 30_000 }),
+    page.waitForSelector('[placeholder*="Найти маршрут"]', { timeout: 30_000 }),
     page.waitForSelector(
       '[data-testid="travel-card-link"], [testID="travel-card-link"], [data-testid="travel-list-item-skeleton"], [testID="travel-list-item-skeleton"], [data-testid="list-travel-skeleton"], [testID="list-travel-skeleton"]',
       { timeout: 30_000 }
     ),
-    page.waitForSelector('text=Пока нет путешествий', { timeout: 30_000 }),
+    page.waitForSelector('text=/Пока нет (маршрутов|путешествий)/i', { timeout: 30_000 }),
     page.waitForSelector('text=Ничего не найдено', { timeout: 30_000 }),
     page.waitForSelector('[data-testid="results-count-wrapper"], [testID="results-count-wrapper"]', { timeout: 30_000 }),
     page.waitForSelector('[data-testid="results-count-text"], [testID="results-count-text"]', { timeout: 30_000 }),

@@ -104,7 +104,7 @@ function RightColumnListStatus({
               density="compact"
               icon="alert-circle"
               title={i18nT('travel:components.listTravel.RightColumn.oshibka_zagruzki_3d856d87')}
-              description={i18nT('travel:components.listTravel.RightColumn.ne_udalos_zagruzit_puteshestviya_7460434d')}
+              description={i18nT('travel:components.listTravel.RightColumn.loadError')}
               variant="error"
               action={{
                 label: i18nT('travel:components.listTravel.RightColumn.povtorit_340c3e03'),

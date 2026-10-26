@@ -379,11 +379,6 @@ const LAZY_DEFEATED_BY_SYNC_ALLOWLIST: Array<{ file: string; specifier: string; 
     reason: 'открытый долг: тот же тест-фолбэк require в шапке',
   },
   {
-    file: 'components/layout/customHeaderMobileLazy.ts',
-    specifier: './CustomHeaderMobileMenu',
-    reason: 'открытый долг: тот же тест-фолбэк require в шапке',
-  },
-  {
     file: 'components/travel/details/travelDetailsDeferredLoader.ts',
     specifier: '@/components/travel/details/TravelDetailsDeferred',
     reason: '#1552: test-only require in the unprefixed file; web uses travelDetailsDeferredLoader.web.ts',

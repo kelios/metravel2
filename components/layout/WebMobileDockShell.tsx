@@ -9,7 +9,7 @@ import { breakpointLayoutProps, breakpointStyle } from '@/utils/breakpointLayout
 import { webViewStyle } from '@/utils/webProps'
 import { getTabA11yProps, getTabListA11yProps } from '@/utils/a11yTabRoles'
 import NavigationIcon from './NavigationIcon'
-import { BOTTOM_DOCK_HEIGHT, BOTTOM_DOCK_ITEM_DEFS, normalizeBottomDockActivePath, OPEN_WEB_DOCK_MORE_EVENT } from './bottomDockItemDefs'
+import { BOTTOM_DOCK_HEIGHT, BOTTOM_DOCK_ITEM_DEFS, normalizeBottomDockActivePath, requestOpenDockMore } from './bottomDockItemDefs'
 import { WEB_MOBILE_DOCK_LAYOUT, WEB_MOBILE_DOCK_LABEL_LAYOUT, WEB_MOBILE_DOCK_SIDE_PADDING } from './webMobileDockLayout'
 import { useDocumentView } from './documentView'
 
@@ -25,7 +25,7 @@ export default function WebMobileDockShell() {
   const styles = useMemo(() => createStyles(colors), [colors])
   const onClick = (event: MouseEvent<HTMLAnchorElement>, route: (typeof BOTTOM_DOCK_ITEM_DEFS)[number]['route'], isMore?: boolean) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
-    if (isMore && !document.dispatchEvent(new Event(OPEN_WEB_DOCK_MORE_EVENT, { cancelable: true }))) { event.preventDefault(); return }
+    if (isMore && requestOpenDockMore()) { event.preventDefault(); return }
     event.preventDefault()
     router.navigate(route)
   }
@@ -54,8 +54,15 @@ export default function WebMobileDockShell() {
   )
 }
 
+// Кнопка меню шапки до гидратации: без JS ведёт на `/more`, а когда контроллер
+// листа уже загружен — открывает тот же лист «Ещё», что и док (#2779).
+const openDockMoreFromHeader = (event: MouseEvent<HTMLAnchorElement>) => {
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+  if (requestOpenDockMore()) event.preventDefault()
+}
+
 export function WebHeaderMoreFallback({ color }: { color: string }) {
-  return <a href="/more" data-testid="header-more-fallback" aria-label={i18nT('navigation:components.layout.CustomHeaderMobileAccountSection.otkryt_menyu_e43b6ae3')} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', display: 'flex', flexShrink: 0, color }}><Feather name="menu" size={24} color={color} /></a>
+  return <a href="/more" onClick={openDockMoreFromHeader} data-testid="header-more-fallback" aria-label={i18nT('navigation:components.layout.CustomHeaderMobileAccountSection.otkryt_menyu_e43b6ae3')} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', display: 'flex', flexShrink: 0, color }}><Feather name="menu" size={24} color={color} /></a>
 }
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({

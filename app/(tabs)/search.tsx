@@ -127,7 +127,7 @@ function SearchScreen() {
           fallback={
             <View style={styles.errorContainer}>
               <ErrorDisplay
-                message={i18nT('shared:app.tabs.search.ne_udalos_zagruzit_poisk_puteshestviy_7798f9dd')}
+                message={i18nT('shared:app.tabs.search.loadError')}
                 onRetry={() => router.replace((pathname || '/search') as any)}
                 variant="error"
               />

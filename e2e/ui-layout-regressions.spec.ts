@@ -286,7 +286,7 @@ test.describe('@perf UI layout regression guards (overlap/cutoff/viewport)', () 
         return;
       }
 
-      // Use stable testIDs from CustomHeader mobile menu.
+      // Stable testIDs: the header menu button opens the shared «Ещё» sheet (#2779).
       const burger = page.locator('[data-testid="mobile-menu-open"]:visible').first();
       const accountMenu = page.locator('[data-testid="account-menu-anchor"]:visible').first();
       await expect
@@ -326,9 +326,9 @@ test.describe('@perf UI layout regression guards (overlap/cutoff/viewport)', () 
 
       await burger.click();
 
-      const overlay = page.getByTestId('mobile-menu-overlay');
-      const panel = page.getByTestId('mobile-menu-panel');
-      const close = page.getByTestId('mobile-menu-close');
+      const overlay = page.getByTestId('footer-more-backdrop');
+      const panel = page.getByTestId('footer-more-sheet');
+      const close = page.getByTestId('footer-more-close');
 
       await expect(overlay).toBeVisible({ timeout: 10_000 });
       await expect(panel).toBeVisible({ timeout: 10_000 });
@@ -344,7 +344,7 @@ test.describe('@perf UI layout regression guards (overlap/cutoff/viewport)', () 
       await expectFullyInViewport(close, page, { label: 'menu close button', margin: 2 });
 
       // At least one nav item should be present and in viewport.
-      const menuNavAnyVisible = page.getByRole('button', { name: /Путешествия|Беларусь|Карта|Квесты/i });
+      const menuNavAnyVisible = page.getByTestId('footer-more-item-travelsby');
       if (await menuNavAnyVisible.isVisible().catch(() => false)) {
         await expectFullyInViewport(menuNavAnyVisible, page, { label: 'menu nav item', margin: 2 });
         await expectTopmostAtCenter(page, menuNavAnyVisible, 'menu nav item');

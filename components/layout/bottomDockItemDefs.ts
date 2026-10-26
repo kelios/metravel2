@@ -1,3 +1,4 @@
+import { Platform } from 'react-native'
 import type { Href } from 'expo-router'
 import type { NavigationIconName } from '@/constants/navigationIcons'
 import { BOTTOM_DOCK_ROUTES } from '@/constants/bottomDockRoutes'
@@ -10,6 +11,31 @@ export function buildWebDockReserveCss(maxWidth: number): string {
   return `:root{--mt-dock-h:0px}@media (max-width:${maxWidth}px){:root{--mt-dock-h:calc(${BOTTOM_DOCK_HEIGHT}px + env(safe-area-inset-bottom, 0px))}body:has([data-mt-dock="off"]){--mt-dock-h:0px}}`
 }
 export const OPEN_WEB_DOCK_MORE_EVENT = 'metravel:open-bottom-dock-more'
+
+const nativeDockMoreOpeners = new Set<() => void>()
+
+/** Native: контроллер листа «Ещё» (`BottomDock`) регистрирует, чем лист открыть. */
+export function registerDockMoreOpener(open: () => void): () => void {
+  nativeDockMoreOpeners.add(open)
+  return () => {
+    nativeDockMoreOpeners.delete(open)
+  }
+}
+
+/**
+ * Открыть лист «Ещё» — единственное меню телефона (#2779) — откуда угодно: пункт
+ * «Ещё» дока и кнопка меню шапки ведут в один лист. `true` — лист открыл
+ * контроллер; `false` — контроллера ещё нет (web до загрузки ленивого чанка), и
+ * вызывающий ведёт на страницу `/more` с тем же набором.
+ */
+export function requestOpenDockMore(): boolean {
+  if (Platform.OS === 'web') {
+    if (typeof document === 'undefined') return false
+    return !document.dispatchEvent(new Event(OPEN_WEB_DOCK_MORE_EVENT, { cancelable: true }))
+  }
+  nativeDockMoreOpeners.forEach((open) => open())
+  return nativeDockMoreOpeners.size > 0
+}
 export type BottomDockIconName = NavigationIconName
 export type BottomDockItemDef = {
   accessibilityLabel: string

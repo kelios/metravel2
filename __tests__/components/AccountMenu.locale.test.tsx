@@ -6,9 +6,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 // сохранённый язык восстанавливается из AsyncStorage после загрузки модулей.
 // Подпись, прочитанная при загрузке модуля, осталась бы русской (#2156).
 import AccountMenu from '@/components/layout/AccountMenu'
-import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation'
+import { HEADER_NAV_ITEMS, SUPPLEMENTARY_NAV_ITEMS } from '@/constants/headerNavigation'
 import { isNavRouteAvailable } from '@/constants/platformNavRoutes'
-import { i18n, translate, type SupportedLocale } from '@/i18n'
+import { i18n, type SupportedLocale } from '@/i18n'
 
 jest.mock('@/context/AuthContext', () => ({
   useAuth: () => ({
@@ -55,16 +55,11 @@ jest.mock('react-native-paper', () => {
   return { Menu, Paragraph }
 })
 
-const ACCOUNT_MENU_NAV_KEYS = [
-  'navigationStatic:components.layout.AccountMenu.hochu_poehat_fa6b46d5',
-  'navigationStatic:components.layout.AccountMenu.vy_smotreli_7405801e',
-  'navigationStatic:components.layout.AccountMenu.o_sayte_50990f19',
-] as const
-
-// Все 11 подписей «Навигации» на активном языке: 8 из списка шапки + 3 своих.
+// Все подписи «Навигации» на активном языке: список шапки + общий с листом «Ещё»
+// список дополнительных пунктов (#2779).
 const navigationTitles = () => [
   ...HEADER_NAV_ITEMS.filter((item) => isNavRouteAvailable(item.path)).map((item) => item.label),
-  ...ACCOUNT_MENU_NAV_KEYS.map((key) => translate(key)),
+  ...SUPPLEMENTARY_NAV_ITEMS.map((item) => item.label),
 ]
 
 const renderMenu = () =>

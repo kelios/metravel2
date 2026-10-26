@@ -14,7 +14,7 @@ test.describe('@smoke Auth smoke', () => {
         timeout: 30_000,
       }),
       page.waitForSelector('[data-testid="list-travel-skeleton"], [testID="list-travel-skeleton"]', { timeout: 30_000 }),
-      page.waitForSelector('text=Пока нет путешествий', { timeout: 30_000 }),
+      page.waitForSelector('text=/Пока нет (маршрутов|путешествий)/i', { timeout: 30_000 }),
       page.waitForSelector('text=Ничего не найдено', { timeout: 30_000 }),
       page.waitForSelector('[data-testid="results-count-wrapper"], [testID="results-count-wrapper"]', { timeout: 30_000 }),
       page.waitForSelector('text=Результаты', { timeout: 30_000 }),

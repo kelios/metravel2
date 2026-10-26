@@ -25,12 +25,21 @@ export function getTravelLabel(count: number): string {
 }
 
 /**
- * Родительный падеж после предлога: «из 332 путешествий», «из 21 путешествия»
- * (#2375). `getTravelLabel` даёт именительный счётный («332 путешествия») и после
- * «из» не согласуется.
+ * Счётчик выдачи каталога и поиска: «7 маршрутов» (#2779). В навигации, каталоге
+ * и поиске статья-поездка называется «маршрут»; `getTravelLabel` остаётся у
+ * кабинета («Мои путешествия»), автора и PDF-книги.
  */
-export function getTravelLabelGenitive(count: number): string {
-  return translatePlural('errors:utils.pluralize.travelNounGenitive', count);
+export function getRouteLabel(count: number): string {
+  return translatePlural('errors:utils.pluralize.routeNoun', count);
+}
+
+/**
+ * Родительный падеж после предлога: «из 332 маршрутов», «из 21 маршрута»
+ * (#2375, #2779 — «Случайный маршрут» говорит о маршрутах). `getRouteLabel` даёт
+ * именительный счётный («332 маршрута») и после «из» не согласуется.
+ */
+export function getRouteLabelGenitive(count: number): string {
+  return translatePlural('errors:utils.pluralize.routeNounGenitive', count);
 }
 
 export function getPhotoLabel(count: number): string {

@@ -176,7 +176,7 @@ describe('ModernFilters Component', () => {
 
     expect(screen.getByText('Категории')).toBeTruthy();
     expect(screen.getByText('Транспорт')).toBeTruthy();
-    expect(screen.getByText('10 путешествий')).toBeTruthy();
+    expect(screen.getByText('10 маршрутов')).toBeTruthy();
   });
 
   it('calls onFilterChange when filter option is selected', async () => {
@@ -212,7 +212,7 @@ describe('ModernFilters Component', () => {
       />
     );
 
-    expect(screen.getByText('1 путешествие')).toBeTruthy();
+    expect(screen.getByText('1 маршрут')).toBeTruthy();
 
     rerender(
       <QueryClientProvider client={new QueryClient()}>
@@ -229,7 +229,7 @@ describe('ModernFilters Component', () => {
       </QueryClientProvider>
     );
 
-    expect(screen.getByText('5 путешествий')).toBeTruthy();
+    expect(screen.getByText('5 маршрутов')).toBeTruthy();
   });
 
   // #2375: группы, совпадающие с выбором по умолчанию экрана, не считаются активными
@@ -408,7 +408,7 @@ describe('ModernFilters Component', () => {
     // Icon-only on native — fixed 44×44 accessible target, not the wide text variant (F-39).
     expect(toggleStyle.width).toBe(44);
 
-    expect(screen.getByText('330 путешествий')).toBeTruthy();
+    expect(screen.getByText('330 маршрутов')).toBeTruthy();
     const resultsChip = screen.getByTestId('filters-results-chip');
     const resultsChipStyle = StyleSheet.flatten(resultsChip.props.style);
     expect(resultsChipStyle.flexShrink).toBe(0);

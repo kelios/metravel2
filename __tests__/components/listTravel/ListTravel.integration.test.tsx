@@ -426,7 +426,7 @@ describe('ListTravel Integration Tests', () => {
 
     // Check that main components are rendered
     await waitFor(() => {
-      expect(within(screen.getByTestId('results-count-wrapper')).getByText('2 путешествия')).toBeTruthy();
+      expect(within(screen.getByTestId('results-count-wrapper')).getByText('2 маршрута')).toBeTruthy();
     });
 
     expect(screen.getByText('Mountain Trip')).toBeTruthy();
@@ -535,7 +535,7 @@ describe('ListTravel Integration Tests', () => {
     renderWithProviders(<ListTravel />);
 
     await waitFor(() => {
-      expect(within(screen.getByTestId('results-count-wrapper')).getByText('1 путешествие')).toBeTruthy();
+      expect(within(screen.getByTestId('results-count-wrapper')).getByText('1 маршрут')).toBeTruthy();
     });
 
     expect(screen.getByText('Mountain Trip')).toBeTruthy();
@@ -620,7 +620,7 @@ describe('ListTravel Integration Tests', () => {
     renderWithProviders(<ListTravel />);
 
     await waitFor(() => {
-      expect(within(screen.getByTestId('results-count-wrapper')).getByText('20 путешествий')).toBeTruthy();
+      expect(within(screen.getByTestId('results-count-wrapper')).getByText('20 маршрутов')).toBeTruthy();
     });
 
     expect(screen.getByText('Waterfall Trip')).toBeTruthy();
@@ -665,7 +665,7 @@ describe('ListTravel Integration Tests', () => {
     renderWithProviders(<ListTravel />);
 
     // Search input should be present
-    const searchInput = screen.getByPlaceholderText('Найти путешествия...');
+    const searchInput = screen.getByPlaceholderText('Найти маршрут…');
     expect(searchInput).toBeTruthy();
 
     // Type in search
@@ -681,10 +681,10 @@ describe('ListTravel Integration Tests', () => {
     const view = renderWithProviders(<ListTravel />);
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('Найти путешествия...')).toBeTruthy();
+      expect(screen.getByPlaceholderText('Найти маршрут…')).toBeTruthy();
     });
 
-    expect(screen.getByPlaceholderText('Найти путешествия...').props.value).toBe('mountain');
+    expect(screen.getByPlaceholderText('Найти маршрут…').props.value).toBe('mountain');
     expect(mockUseListTravelData).toHaveBeenCalledWith(
       expect.objectContaining({
         search: 'mountain',
@@ -707,7 +707,7 @@ describe('ListTravel Integration Tests', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('Найти путешествия...').props.value).toBe('beach');
+      expect(screen.getByPlaceholderText('Найти маршрут…').props.value).toBe('beach');
     });
 
     expect(mockUseListTravelData).toHaveBeenCalledWith(
@@ -732,7 +732,7 @@ describe('ListTravel Integration Tests', () => {
     renderWithProviders(<ListTravel />);
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('Найти путешествия...').props.value).toBe('Минск');
+      expect(screen.getByPlaceholderText('Найти маршрут…').props.value).toBe('Минск');
     });
     expect(mockUseListTravelData).toHaveBeenCalledWith(
       expect.objectContaining({ search: 'Минск', isQueryEnabled: true }),
@@ -764,7 +764,7 @@ describe('ListTravel Integration Tests', () => {
     renderWithProviders(<ListTravel />);
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('Найти путешествия...').props.value).toBe('Брест');
+      expect(screen.getByPlaceholderText('Найти маршрут…').props.value).toBe('Брест');
     });
     expect(mockUseListTravelData).toHaveBeenCalledWith(
       expect.objectContaining({ search: 'Брест', isQueryEnabled: true }),
@@ -804,7 +804,7 @@ describe('ListTravel Integration Tests', () => {
     await waitFor(() => {
       expect(screen.getByText('Ничего не найдено')).toBeTruthy();
     });
-    expect(screen.getByPlaceholderText('Найти путешествия...').props.value).toBe('no-match-query');
+    expect(screen.getByPlaceholderText('Найти маршрут…').props.value).toBe('no-match-query');
 
     const enabledCalls = mockUseListTravelData.mock.calls
       .map(([props]) => props)
@@ -834,11 +834,12 @@ describe('ListTravel Integration Tests', () => {
     expect(mockResetFilters).toHaveBeenCalled();
   });
 
-  it('handles responsive layout changes', () => {
+  it('handles responsive layout changes', async () => {
     const { rerender } = renderWithProviders(<ListTravel />);
 
-    // Should show sidebar on desktop
-    expect(screen.getByText('Категории')).toBeTruthy();
+    // Should show sidebar on desktop. Filter groups mount once the first
+    // catalog load completes (#2765), so wait for them instead of reading sync.
+    expect(await screen.findByText('Категории')).toBeTruthy();
 
     (global as any).__mockResponsive = {
       width: 375,
@@ -929,7 +930,7 @@ describe('ListTravel Integration Tests', () => {
 
     // Should show error message
     expect(screen.getByText('Ошибка загрузки')).toBeTruthy();
-    expect(screen.getByText('Не удалось загрузить путешествия.')).toBeTruthy();
+    expect(screen.getByText('Не удалось загрузить маршруты.')).toBeTruthy();
   });
 
   it('handles empty state correctly', () => {

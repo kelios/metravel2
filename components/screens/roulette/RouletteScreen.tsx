@@ -28,7 +28,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useRouletteLogic } from '@/components/roulette/useRoulette';
 import { createStyles } from '@/components/roulette/styles';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
-import { getTravelLabelGenitive } from '@/utils/pluralize';
+import { getRouteLabelGenitive } from '@/utils/pluralize';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { translate as i18nT } from '@/i18n'
 import { useScreenHeader } from '@/components/layout/ScreenHeaderContext'
@@ -383,7 +383,7 @@ export default function RouletteScreen() {
                     {result.length === 0 && typeof totalCount === 'number' && totalCount > 0 && (
                       <>
                         <Text style={styles.poolHint}>
-                          {i18nT('shared:app.tabs.roulette.sluchaynyy_vybor_iz_value1_value2_02b741a7', { value1: totalCount, value2: getTravelLabelGenitive(totalCount) })}
+                          {i18nT('shared:app.tabs.roulette.sluchaynyy_vybor_iz_value1_value2_02b741a7', { value1: totalCount, value2: getRouteLabelGenitive(totalCount) })}
                         </Text>
                         <View style={styles.slotsRow}>
                           {PLACEHOLDER_SLOTS.map((slotIndex) => (
@@ -461,7 +461,7 @@ export default function RouletteScreen() {
                         />
                         {typeof totalCount === 'number' && totalCount > 0 && (
                           <Text style={styles.poolHint}>
-                            {i18nT('shared:app.tabs.roulette.sluchaynyy_vybor_iz_value1_value2_02b741a7', { value1: totalCount, value2: getTravelLabelGenitive(totalCount) })}
+                            {i18nT('shared:app.tabs.roulette.sluchaynyy_vybor_iz_value1_value2_02b741a7', { value1: totalCount, value2: getRouteLabelGenitive(totalCount) })}
                           </Text>
                         )}
                       </View>

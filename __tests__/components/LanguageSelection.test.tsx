@@ -119,10 +119,10 @@ describe('language selection surfaces', () => {
       <BottomDockMoreList
         styles={styles}
         iconColor="#000"
-        itemFilter={() => true}
+        account={{}}
         onClose={onClose}
-        renderItem={(item, openLanguage) => (
-          <Pressable key={item.key} testID={`footer-more-item-${item.key}`} onPress={item.action ? openLanguage : onClose}>
+        renderItem={(item, openView) => (
+          <Pressable key={item.key} testID={`footer-more-item-${item.key}`} onPress={item.action ? () => openView(item.action!) : onClose}>
             <Text>{item.label}</Text>
           </Pressable>
         )}

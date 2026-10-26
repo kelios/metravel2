@@ -21,20 +21,17 @@ import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { useBottomSheetStore } from "@/stores/bottomSheetStore";
 import { useMapPanelStore } from "@/stores/mapPanelStore";
 import { hapticSelection } from "@/utils/haptics";
-import { buildArticlesHrefFromSource } from "@/utils/articleNavigation";
 import NavigationIcon from './NavigationIcon';
 import BottomDockMoreList from './BottomDockMoreList';
 import {
   BOTTOM_DOCK_HEIGHT,
   BOTTOM_DOCK_ITEM_DEFS,
-  BOTTOM_DOCK_MORE_MENU_SECTIONS,
   normalizeBottomDockActivePath,
+  type BottomDockMoreMenuItem,
 } from "./bottomDockModel";
-import { OPEN_WEB_DOCK_MORE_EVENT } from './bottomDockItemDefs';
-import { isNavRouteAvailable } from "@/constants/platformNavRoutes";
+import { OPEN_WEB_DOCK_MORE_EVENT, registerDockMoreOpener } from './bottomDockItemDefs';
 import { useAuth } from "@/context/AuthContext";
-import { runAccountMenuTarget } from "./accountMenuModel";
-import { handleHeaderNavPress } from "./customHeaderNavModel";
+import BottomDockMoreItem from './BottomDockMoreItem';
 import { translate as i18nT } from '@/i18n'
 import { getTabA11yProps, getTabListA11yProps } from '@/utils/a11yTabRoles';
 
@@ -158,9 +155,12 @@ function BottomDock({ onDockHeight, renderDock = true }: BottomDockProps) {
   const webMoreSheetRef = useRef<any>(null);
   const nativeSnapPoints = useMemo(() => ['45%'], []);
   const colors = useThemedColors();
-  const router = useRouter();
   const pathname = usePathname();
-  const { isSuperuser, logout } = useAuth();
+  const { isAuthenticated, isSuperuser, userId, username } = useAuth();
+  const moreAccount = useMemo(
+    () => ({ isAuthenticated, isSuperuser, userId, username }),
+    [isAuthenticated, isSuperuser, userId, username]
+  );
   const insets = useSafeAreaInsets();
   useFocusTrap(webMoreSheetRef, { enabled: showMore && Platform.OS === 'web' });
 
@@ -192,6 +192,15 @@ function BottomDock({ onDockHeight, renderDock = true }: BottomDockProps) {
     return false;
   }, [showMore, pathname]);
   useAndroidBackHandler(handleDismissSheet);
+
+  // Native: кнопка меню шапки открывает этот же лист (#2779) — одно меню на телефоне.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    return registerDockMoreOpener(() => {
+      if (GorhomBottomSheet && nativeSheetRef.current) nativeSheetRef.current.expand();
+      setShowMore(true);
+    });
+  }, []);
 
   useEffect(() => {
     if (Platform.OS !== 'web' || !isMobile || renderDock) return;
@@ -291,63 +300,10 @@ function BottomDock({ onDockHeight, renderDock = true }: BottomDockProps) {
   );
 
   const renderMoreMenuItem = useCallbackReact(
-    (item: (typeof BOTTOM_DOCK_MORE_MENU_SECTIONS)[number]["items"][number], closeMenu: () => void, openLanguage: () => void) => (
-      <Pressable
-        key={item.key}
-        onPress={() => {
-          // #2100: язык — подэкран этого же листа, лист не закрываем.
-          if (item.action === 'language') {
-            openLanguage();
-            return;
-          }
-          // #2152: ролевой пункт аккаунта — общий исполнитель целей меню шапки.
-          if (item.accountTarget) {
-            runAccountMenuTarget(item.accountTarget, 'mobile', {
-              navigate: (path) => {
-                closeMenu();
-                handleHeaderNavPress(router, path);
-              },
-              // Вкладка открывается в том же тапе, до закрытия листа: отложенный
-              // window.open iOS Safari молча блокирует (#2139).
-              openExternal: (url) => {
-                handleHeaderNavPress(router, url, true);
-                closeMenu();
-              },
-              logout: () => {
-                closeMenu();
-                void logout();
-              },
-            });
-            return;
-          }
-          closeMenu();
-          const route = Platform.OS !== 'web' && item.route === '/articles'
-            ? buildArticlesHrefFromSource(pathname)
-            : item.route;
-          router.push(route as any);
-        }}
-        style={({ hovered, pressed }) => [
-          styles.moreItem,
-          (hovered || pressed) && styles.moreItemPressed,
-          globalFocusStyles.focusable,
-        ]}
-        android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
-        accessibilityRole={item.action ? "button" : "link"}
-        accessibilityLabel={item.accessibilityLabel}
-        testID={`footer-more-item-${item.key}`}
-      >
-        <NavigationIcon
-          name={item.iconName}
-          size={18}
-          color={item.muted ? colors.textMuted : colors.primary}
-          style={styles.moreItemIcon}
-        />
-        <Text style={[styles.moreItemText, item.muted && styles.moreItemTextMuted]}>
-          {item.label}
-        </Text>
-      </Pressable>
+    (item: BottomDockMoreMenuItem, closeMenu: () => void, openView: (view: 'language' | 'theme') => void) => (
+      <BottomDockMoreItem key={item.key} item={item} styles={styles} onClose={closeMenu} onOpenView={openView} />
     ),
-    [colors.primary, colors.textMuted, logout, pathname, router, styles.moreItem, styles.moreItemIcon, styles.moreItemText, styles.moreItemTextMuted]
+    [styles]
   );
 
   if (!isMobile) return null;
@@ -437,6 +393,7 @@ function BottomDock({ onDockHeight, renderDock = true }: BottomDockProps) {
                 style={[styles.sheetCloseBtn, globalFocusStyles.focusable]}
                 accessibilityRole="button"
                 accessibilityLabel={i18nT('common:action.close')}
+                testID="footer-more-close"
               >
                 <Feather name="x" size={20} color={colors.textMuted} />
               </Pressable>
@@ -444,9 +401,8 @@ function BottomDock({ onDockHeight, renderDock = true }: BottomDockProps) {
             <BottomDockMoreList
               styles={styles}
               iconColor={colors.primary}
-              isSuperuser={isSuperuser}
-              itemFilter={(item) => item.route !== '/privacy' && item.route !== '/cookies'}
-              renderItem={(item, openLanguage) => renderMoreMenuItem(item, () => setShowMore(false), openLanguage)}
+              account={moreAccount}
+              renderItem={(item, openView) => renderMoreMenuItem(item, () => setShowMore(false), openView)}
               onClose={() => setShowMore(false)}
               testID="footer-more-list"
             />
@@ -479,6 +435,7 @@ function BottomDock({ onDockHeight, renderDock = true }: BottomDockProps) {
                   style={[styles.sheetCloseBtn, globalFocusStyles.focusable]}
                   accessibilityRole="button"
                   accessibilityLabel={i18nT('common:action.close')}
+                  testID="footer-more-close"
                 >
                   <Feather name="x" size={20} color={colors.textMuted} />
                 </Pressable>
@@ -486,10 +443,8 @@ function BottomDock({ onDockHeight, renderDock = true }: BottomDockProps) {
               <BottomDockMoreList
                 styles={styles}
                 iconColor={colors.primary}
-                isSuperuser={isSuperuser}
-                // Настройки cookies (#2135) — только web: общая политика маршрутов.
-                itemFilter={(item) => item.route !== '/privacy' && isNavRouteAvailable(item.route)}
-                renderItem={(item, openLanguage) => renderMoreMenuItem(item, () => setShowMore(false), openLanguage)}
+                account={moreAccount}
+                renderItem={(item, openView) => renderMoreMenuItem(item, () => setShowMore(false), openView)}
                 onClose={() => setShowMore(false)}
               />
             </View>
@@ -522,10 +477,8 @@ function BottomDock({ onDockHeight, renderDock = true }: BottomDockProps) {
               <BottomDockMoreList
                 styles={styles}
                 iconColor={colors.primary}
-                isSuperuser={isSuperuser}
-                // Настройки cookies (#2135) — только web: общая политика маршрутов.
-                itemFilter={(item) => (Platform.OS === 'web' || item.route !== '/privacy') && isNavRouteAvailable(item.route)}
-                renderItem={(item, openLanguage) => renderMoreMenuItem(item, () => nativeSheetRef.current?.close(), openLanguage)}
+                account={moreAccount}
+                renderItem={(item, openView) => renderMoreMenuItem(item, () => nativeSheetRef.current?.close(), openView)}
                 onClose={() => nativeSheetRef.current?.close()}
               />
             </GorhomBottomSheetView>
@@ -773,15 +726,26 @@ const createStyles = (
     backgroundColor: colors.surfaceMuted,
     borderColor: colors.borderLight,
   },
-  moreItemIcon: {
+  moreItemIconSlot: {
+    position: 'relative',
     marginRight: 12,
-  } as any,
+  },
   moreItemText: {
     flex: 1,
     fontSize: 15,
     color: colors.text,
   },
   moreItemTextMuted: {
+    color: colors.textMuted,
+  },
+  moreItemTextBlock: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  moreItemHint: {
+    fontSize: 12,
+    lineHeight: 16,
     color: colors.textMuted,
   },
   moreDivider: {

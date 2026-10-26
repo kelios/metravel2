@@ -15,7 +15,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
-import { getTravelLabel } from '@/utils/pluralize';
+import { getRouteLabel } from '@/utils/pluralize';
 import Chip from '@/components/ui/Chip';
 import { useSearchHistoryStore } from '@/stores/searchHistoryStore';
 import {
@@ -64,7 +64,7 @@ function StickySearchBar({
   isSearchPending = false,
   flush = false,
   resultsCount,
-  placeholder = i18nT('home:components.mainPage.StickySearchBar.nayti_puteshestviya_91417b58'),
+  placeholder = i18nT('home:components.mainPage.StickySearchBar.placeholder'),
   onToggleRecommendations,
   isRecommendationsVisible,
   onClearAll,
@@ -275,13 +275,13 @@ function StickySearchBar({
             placeholderTextColor={colors.textMuted}
             style={[styles.input, isMobile && styles.inputMobile]}
             returnKeyType="search"
-            accessibilityLabel={i18nT('home:components.mainPage.StickySearchBar.poisk_puteshestviy_e43cf138')}
+            accessibilityLabel={i18nT('home:components.mainPage.StickySearchBar.searchA11y')}
             {...Platform.select({
               web: {
                 // @ts-ignore -- aria-label is a web-only ARIA attribute not in RN TextInput types
                 'aria-label': isMobile
-                  ? i18nT('home:components.mainPage.StickySearchBar.poisk_puteshestviy_e43cf138')
-                  : i18nT('home:components.mainPage.StickySearchBar.poisk_puteshestviy_nazhmite_value1_dlya_byst_da8afc47', { value1: shortcutLabel }),
+                  ? i18nT('home:components.mainPage.StickySearchBar.searchA11y')
+                  : i18nT('home:components.mainPage.StickySearchBar.searchA11yWithShortcut', { value1: shortcutLabel }),
               },
             })}
           />
@@ -343,7 +343,7 @@ function StickySearchBar({
                   <Text style={styles.resultsLabel}>{i18nT('home:components.mainPage.StickySearchBar.rezultaty_54e0674a')}</Text>
                   <Text style={styles.resultsText} testID="results-count-text">
                     {resultsCount !== undefined
-                      ? `${resultsCount} ${getTravelLabel(resultsCount)}`
+                      ? `${resultsCount} ${getRouteLabel(resultsCount)}`
                       : '—'}
                   </Text>
                 </>

@@ -85,7 +85,7 @@ export const sharedGenerated1 = {
   "app.tabs.roulette.poprobuy_ubrat_chast_filtrov_ili_izmeni_zapr_355b9ced": "Try removing some of the filters or changing the query.",
   "app.tabs.roulette.sluchaynyy_marshrut_059a8a1d": "Random route",
   "app.tabs.roulette.sluchaynyy_vybor_iz_value1_value2_02b741a7": "Random selection from {{value1}} {{value2}}",
-  "app.tabs.search.ne_udalos_zagruzit_poisk_puteshestviy_7798f9dd": "Failed to load travel search",
+  "app.tabs.search.loadError": "Failed to load route search",
   "app.tabs.search.otkryvaet_master_sozdaniya_novogo_marshruta_1167875d": "Opens the New Route Wizard",
   "app.tabs.search.sozdat_marshrut_eaa135a8": "Create route",
   "app.tabs.subscriptions.podpiski_f7c35e01": "Subscriptions",

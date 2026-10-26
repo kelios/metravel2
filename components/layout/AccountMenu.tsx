@@ -24,6 +24,7 @@ import {
   DOCUMENT_NAV_ITEMS,
   PRIMARY_HEADER_NAV_ITEMS,
   SECONDARY_HEADER_NAV_ITEMS,
+  SUPPLEMENTARY_NAV_ITEMS,
   type HeaderNavItem,
 } from '@/constants/headerNavigation'
 import { isNavRouteAvailable } from '@/constants/platformNavRoutes'
@@ -79,11 +80,11 @@ const toHeaderNavLink = (keyPrefix: 'nav' | 'doc') => (item: HeaderNavItem): Men
   icon: item.icon,
 })
 
+// #2779: дополнительные пункты («Статьи», «Хочу поехать», «Вы смотрели», «О сайте») —
+// общий список `SUPPLEMENTARY_NAV_ITEMS`, тот же, что у листа «Ещё» телефона.
 const STATIC_NAV_LINKS: MenuLinkItem[] = [
   ...PRIMARY_HEADER_NAV_ITEMS.map(toHeaderNavLink('nav')),
-  { key: 'nav-favorites', get title() { return i18nT('navigationStatic:components.layout.AccountMenu.hochu_poehat_fa6b46d5') }, path: '/favorites', icon: 'heart' },
-  { key: 'nav-history', get title() { return i18nT('navigationStatic:components.layout.AccountMenu.vy_smotreli_7405801e') }, path: '/history', icon: 'clock' },
-  { key: 'nav-about', get title() { return i18nT('navigationStatic:components.layout.AccountMenu.o_sayte_50990f19') }, path: '/about', icon: 'info' },
+  ...SUPPLEMENTARY_NAV_ITEMS.map(toHeaderNavLink('nav')),
   ...SECONDARY_HEADER_NAV_ITEMS.map(toHeaderNavLink('nav')),
 ]
 

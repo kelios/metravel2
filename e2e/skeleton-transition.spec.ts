@@ -81,7 +81,7 @@ test.describe('@perf Skeleton transition (no layout shift)', () => {
 
     await gotoWithRetry(page, getTravelsListPath());
 
-    const search = page.getByRole('searchbox', { name: /Поиск путешествий/i });
+    const search = page.getByRole('searchbox', { name: /Поиск маршрутов/i });
     await expect(search).toBeVisible({ timeout: 30_000 });
 
     // Каталог стоит каркасами TravelListItemSkeleton в рядах карточек (#2253).

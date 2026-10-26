@@ -50,7 +50,14 @@ describe('persistent real SSR dock (#2216)', () => {
     expect(doc.querySelectorAll('[role="tablist"] [role="tab"]')).toHaveLength(5)
     expect(doc.querySelectorAll('[aria-selected="true"]')).toHaveLength(1)
     const more = new DOMParser().parseFromString(renderToString(createElement(More)), 'text/html')
-    expect(more.querySelectorAll('a')).toHaveLength(8)
+    // #2779: страница `/more` без JS несёт тот же набор, что лист «Ещё»: пункты дока
+    // и все переходы листа внутри сайта (действия и внешние ссылки требуют приложения).
+    const { BOTTOM_DOCK_MORE_MENU_SECTIONS } = require('@/components/layout/bottomDockModel')
+    const sheetRoutes = BOTTOM_DOCK_MORE_MENU_SECTIONS.flatMap((section: { items: { route?: string; external?: boolean }[] }) => section.items)
+      .filter((item: { route?: string; external?: boolean }) => item.route && !item.external)
+      .map((item: { route?: string }) => item.route)
+    expect([...more.querySelectorAll('a')].map(a => a.getAttribute('href'))).toEqual(['/search', '/map', '/quests', '/profile', ...sheetRoutes])
+    expect(sheetRoutes).toEqual(expect.arrayContaining(['/travelsby', '/places', '/trips', '/roulette', '/articles', '/history', '/privacy', '/contact']))
     expect([...more.querySelectorAll('a')].every(a => a.getAttribute('href')?.startsWith('/') && a.getAttribute('href') !== '/more' && a.textContent?.trim())).toBe(true)
   })
   it('hydrates the SAME row, preserves href/modified clicks and updates active state', async () => {

@@ -246,7 +246,7 @@ describe('ListTravel - Filter Management', () => {
             const { getByText } = renderComponent();
 
             await waitFor(() => {
-                expect(getByText('Пока нет путешествий')).toBeTruthy();
+                expect(getByText('Пока нет маршрутов')).toBeTruthy();
             });
         });
 

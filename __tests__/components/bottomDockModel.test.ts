@@ -4,14 +4,11 @@ import {
 } from '@/components/layout/bottomDockModel'
 
 describe('bottomDockModel', () => {
-  it('does not expose public trips in the mobile more menu (feature hidden)', () => {
+  it('keeps the PDF book export out of the mobile web more menu', () => {
     const primaryItems = BOTTOM_DOCK_MORE_MENU_SECTIONS.find((section) => section.key === 'primary')?.items ?? []
 
-    // «Попутчики» (public trips) намеренно скрыты из меню дока.
-    expect(primaryItems.some((item) => item.key === 'trips')).toBe(false)
     // Экспорт в PDF («Книга путешествий») скрыт в мобильной версии сайта.
     expect(primaryItems.some((item) => item.key === 'export' || item.route === '/export')).toBe(false)
-    // остальные пункты меню остаются на месте
     expect(primaryItems).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ key: 'places', route: '/places' }),
@@ -27,7 +24,7 @@ describe('bottomDockModel', () => {
     expect(secondaryItems).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          key: 'about',
+          key: 'contact',
           label: 'Связаться с нами',
           route: '/contact',
           iconName: 'mail',

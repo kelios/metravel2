@@ -34,7 +34,6 @@ const SAFE_AREA_ONLY = new Set([
   'components/quests/QuestFullMap.tsx',
   'components/trips/planning/TripPlanRouteMap.tsx',
   'components/quests/hooks/useQuestKeyboardReveal.ts',
-  'components/layout/CustomHeaderMobileMenu.tsx',
 ])
 
 const WEB_DOCK_ANCHORS = new Set([

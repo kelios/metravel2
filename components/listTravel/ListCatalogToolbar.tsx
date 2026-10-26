@@ -4,7 +4,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
-import { getTravelLabel } from '@/utils/pluralize'
+import { getRouteLabel } from '@/utils/pluralize'
 import type { ListDensity } from '@/stores/listViewStore'
 import { translate as i18nT } from '@/i18n'
 import { DialogMenu } from '@/ui/paper'
@@ -93,7 +93,7 @@ function ListCatalogToolbar({
 
   const countNode = countVisible ? (
     <Text style={styles.countText} numberOfLines={1} testID="toolbar-results-count">
-      {resultsCount} {getTravelLabel(resultsCount as number)}
+      {resultsCount} {getRouteLabel(resultsCount as number)}
     </Text>
   ) : null
 

@@ -158,11 +158,17 @@ async function exerciseReason(page, fixture) {
 async function accountDestination(page, destination) {
   const mobile = page.viewportSize().width === 390
   if (mobile) {
-    await page.getByTestId('mobile-menu-open').click()
-    const menu = page.getByTestId('mobile-menu-panel')
-    await expect(menu).toBeVisible()
-    await menu.getByRole('button', { name: destination === 'profile' ? /^Личный кабинет/ : label(selectors.myTravels) }).click()
-    await expect(menu).toHaveCount(0)
+    // #2779: «Профиль» — пункт нижнего дока; «Мои путешествия» — секция аккаунта
+    // листа «Ещё», который открывает кнопка меню шапки.
+    if (destination === 'profile') {
+      await page.getByTestId('footer-item-favorites').click()
+    } else {
+      await page.getByTestId('mobile-menu-open').click()
+      const sheet = page.getByTestId('footer-more-sheet')
+      await expect(sheet).toBeVisible()
+      await page.getByTestId('footer-more-item-my-travels').click()
+      await expect(sheet).toHaveCount(0)
+    }
   } else {
     await page.locator('#main-navigation').getByTestId('account-menu-anchor').click()
     if (destination === 'travels') await page.getByRole('button', { name: label(selectors.travels), exact: true }).click()

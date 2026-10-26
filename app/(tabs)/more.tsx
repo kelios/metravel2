@@ -6,11 +6,15 @@ import { translate as i18nT } from '@/i18n'
 import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset'
 import { useScreenHeader } from '@/components/layout/ScreenHeaderContext'
 import { BOTTOM_DOCK_ITEM_DEFS } from '@/components/layout/bottomDockItemDefs'
+import { BOTTOM_DOCK_MORE_MENU_SECTIONS } from '@/components/layout/bottomDockModel'
 import { webAccessibilityProps } from '@/utils/webProps'
 import { routeMetadata } from '@/utils/seoRoutes/routeMetadata'
 
 // Real prerendered destination for More before the optional sheet controller loads.
 // Only ordinary existing public routes/labels; no role-specific actions/auth/menu model.
+// #2779: набор — тот же, что у листа «Ещё» (`BOTTOM_DOCK_MORE_MENU_SECTIONS`):
+// пункты дока, навигация и документы. Без JS остаются только переходы внутри
+// сайта — пункты-действия (язык, тема) и внешние ссылки требуют приложения.
 export default function MoreScreen() {
   const colors = useThemedColors()
   const title = BOTTOM_DOCK_ITEM_DEFS.find(item => item.isMore)!.label
@@ -18,10 +22,9 @@ export default function MoreScreen() {
   const bottom = useScrollBottomPadding(DESIGN_TOKENS.spacing.lg)
   const links: { route: Href; label: string }[] = [
     ...BOTTOM_DOCK_ITEM_DEFS.filter(item => !item.isMore).map(item => ({ route: item.route, label: item.label })),
-    { route: '/places', label: i18nT('navigationStatic:components.layout.bottomDockModel.mesta_9ad589a8') },
-    { route: '/travelsby', label: i18nT('navigationStatic:components.layout.bottomDockModel.belarus_8e52cdc9') },
-    { route: '/history', label: i18nT('navigationStatic:components.layout.bottomDockModel.vy_smotreli_b91d245f') },
-    { route: '/contact', label: i18nT('navigationStatic:components.layout.bottomDockModel.svyazatsya_s_nami_657cb895') },
+    ...BOTTOM_DOCK_MORE_MENU_SECTIONS.flatMap(section => section.items)
+      .filter(item => item.route !== undefined && !item.external)
+      .map(item => ({ route: item.route as Href, label: item.label })),
   ]
   return <ScrollView testID="more-navigation-page" contentContainerStyle={[styles.content, { paddingBottom: asBottomDimension(bottom) }]}>
     <View {...(Platform.OS === 'web' ? webAccessibilityProps({ role: 'navigation' }) : null)} accessibilityLabel={title} style={styles.links}>

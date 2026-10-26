@@ -12,7 +12,7 @@ import {
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-import { getTravelLabel } from '@/utils/pluralize';
+import { getRouteLabel } from '@/utils/pluralize';
 import { BREAKPOINTS } from './utils/listTravelConstants';
 import { useResponsiveWidth } from '@/hooks/useResponsive';
 import { resolveListTravelRawWidth } from './listTravelBaseModel';
@@ -80,7 +80,7 @@ function splitModernFilterGroups(filterGroups: FilterGroup[]) {
 
 function getModernFiltersResultsText(resultsCount?: number) {
   if (typeof resultsCount !== 'number') return '';
-  return `${resultsCount} ${getTravelLabel(resultsCount)}`;
+  return `${resultsCount} ${getRouteLabel(resultsCount)}`;
 }
 
 function blurActiveWebElement() {

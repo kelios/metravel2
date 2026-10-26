@@ -85,7 +85,7 @@ export const sharedGenerated1 = {
   "app.tabs.roulette.poprobuy_ubrat_chast_filtrov_ili_izmeni_zapr_355b9ced": "Попробуй убрать часть фильтров или измени запрос.",
   "app.tabs.roulette.sluchaynyy_marshrut_059a8a1d": "Случайный маршрут",
   "app.tabs.roulette.sluchaynyy_vybor_iz_value1_value2_02b741a7": "Случайный выбор из {{value1}} {{value2}}",
-  "app.tabs.search.ne_udalos_zagruzit_poisk_puteshestviy_7798f9dd": "Не удалось загрузить поиск путешествий",
+  "app.tabs.search.loadError": "Не удалось загрузить поиск маршрутов",
   "app.tabs.search.otkryvaet_master_sozdaniya_novogo_marshruta_1167875d": "Открывает мастер создания нового маршрута",
   "app.tabs.search.sozdat_marshrut_eaa135a8": "Создать маршрут",
   "app.tabs.subscriptions.podpiski_f7c35e01": "Подписки",

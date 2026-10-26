@@ -457,8 +457,8 @@ export const buildEmptyStateMessage = ({
     }
     return {
       icon: 'inbox',
-      title: i18nT('travel:components.listTravel.ListTravelBase_helpers.poka_net_puteshestviy_f1ec3679'),
-      description: i18nT('travel:components.listTravel.ListTravelBase_helpers.puteshestviya_poyavyatsya_zdes_kogda_budut_d_32234ae1'),
+      title: i18nT('travel:components.listTravel.ListTravelBase_helpers.emptyCatalogTitle'),
+      description: i18nT('travel:components.listTravel.ListTravelBase_helpers.emptyCatalogDescription'),
       variant: 'empty' as const,
     }
   }

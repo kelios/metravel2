@@ -11,17 +11,18 @@ import {
   type AccountMenuInput,
   type AccountMenuSurface,
 } from '@/components/layout/accountMenuModel'
-import { BOTTOM_DOCK_MORE_MENU_SECTIONS } from '@/components/layout/bottomDockModel'
 import { buildBottomDockMoreSections } from '@/components/layout/bottomDockMoreSections'
 import { openExternalUrl } from '@/utils/externalLinks'
 
 // #2152: ролевой пункт аккаунта обязан быть на КАЖДОЙ поверхности меню —
-// desktop-меню, гамбургер шапки и лист «Ещё» дока. После #2100 гамбургера на
-// вложенных экранах телефона нет, и «Борд задач» админа пропал: третья
-// поверхность держала свой статический список. Guard семейства: новый ролевой
-// пункт, добавленный мимо `buildAccountRoleEntries`, краснеет здесь.
+// desktop-меню и лист «Ещё» дока. После #2100 гамбургера на вложенных экранах
+// телефона не было, и «Борд задач» админа пропал: лист держал свой статический
+// список. С #2779 лист — единственное меню телефона (кнопка шапки открывает его же),
+// и ролевые пункты приходят в нём секцией аккаунта из общей модели. Guard
+// семейства: новый ролевой пункт, добавленный мимо `buildAccountRoleEntries`,
+// краснеет здесь.
 
-const mockAuth = { isSuperuser: false, logout: jest.fn(async () => undefined) }
+const mockAuth = { isAuthenticated: true, isSuperuser: false, userId: 7, username: 'admin', logout: jest.fn(async () => undefined) }
 jest.mock('@/context/AuthContext', () => ({
   useAuth: () => mockAuth,
 }))
@@ -37,6 +38,9 @@ jest.mock('expo-router', () => ({
 jest.mock('@/utils/externalLinks', () => ({
   openExternalUrl: jest.fn(async () => true),
   openExternalUrlInNewTab: jest.fn(),
+}))
+jest.mock('@/hooks/useDeferredUnreadCount', () => ({
+  useDeferredUnreadCount: () => ({ count: 0 }),
 }))
 jest.mock('@/utils/growthFunnelAnalytics', () => ({
   trackRegisterCtaClicked: jest.fn(),
@@ -58,8 +62,7 @@ const renderMoreList = (isSuperuser: boolean) =>
     <BottomDockMoreList
       styles={listStyles}
       iconColor="#000"
-      isSuperuser={isSuperuser}
-      itemFilter={() => true}
+      account={{ isAuthenticated: true, isSuperuser, userId: 7, username: 'admin' }}
       onClose={jest.fn()}
       renderItem={(item) => (
         <Pressable key={item.key} testID={`footer-more-item-${item.key}`}>
@@ -94,12 +97,17 @@ describe('ролевые пункты аккаунта на всех повер�
     }
   })
 
-  it('лист «Ещё» дока содержит каждый ролевой пункт отдельной секцией только у суперпользователя', () => {
-    const roleSection = buildBottomDockMoreSections({ isSuperuser: true }).find((section) => section.key === 'role')
-    expect(roleSection?.items).toEqual(
-      roleEntries.map((entry) => expect.objectContaining({ key: entry.key, label: entry.title, accountTarget: entry.target })),
+  it('лист «Ещё» дока содержит каждый ролевой пункт в секции аккаунта только у суперпользователя', () => {
+    const accountOf = (isSuperuser: boolean) =>
+      buildBottomDockMoreSections({ isAuthenticated: true, isSuperuser, userId: 7, username: 'admin' }, 'ios')
+        .find((section) => section.key === 'account')?.items ?? []
+    expect(accountOf(true)).toEqual(
+      expect.arrayContaining(
+        roleEntries.map((entry) => expect.objectContaining({ key: entry.key, label: entry.title, accountTarget: entry.target })),
+      ),
     )
-    expect(buildBottomDockMoreSections({ isSuperuser: false })).toBe(BOTTOM_DOCK_MORE_MENU_SECTIONS)
+    const regularKeys = accountOf(false).map((item) => item.key)
+    for (const entry of roleEntries) expect(regularKeys).not.toContain(entry.key)
   })
 
   it('BottomDockMoreList рисует «Борд задач» админу и не рисует обычному', () => {

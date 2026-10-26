@@ -96,9 +96,9 @@ export const hasListFilterQuery = (
  */
 /**
  * Пункты верхнего меню desktop, которых нет в нижнем доке (корни дока — /search,
- * /map, /quests, /profile). `/places` и `/roulette` на телефоне открывают из
- * «Ещё»; `/trips` — только переходом (CTA главной, «Мои поездки»), ни дока, ни
- * «Ещё» у него нет, и назад иначе вернуться нечем. Это вложенные экраны со
+ * /map, /quests, /profile). `/places`, `/roulette` и `/trips` на телефоне
+ * открывают из листа «Ещё» (#2779) или переходом (CTA главной, «Мои поездки»);
+ * в доке их нет, и назад иначе вернуться нечем. Это вложенные экраны со
  * строкой «←» (#2099, `docs/features/mobile-screen-shell-mock.md` §2).
  */
 export const MOBILE_NESTED_SECTION_PATHS = new Set<string>(['/trips', '/places', '/roulette'])

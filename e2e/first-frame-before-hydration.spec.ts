@@ -614,8 +614,11 @@ test.describe('eager mobile navigation without application JS', () => {
       await expect(page).toHaveURL(/\/more(?:[?#]|$)/)
       await expect(page.getByTestId('more-navigation-page')).toBeVisible()
       const links = page.getByTestId('more-navigation-page').locator('a')
-      await expect(links).toHaveCount(8)
+      // #2779: `/more` несёт тот же набор, что лист «Ещё» (дока + навигация + документы).
       await expect(links.first()).toBeVisible()
+      expect(await links.evaluateAll(nodes => nodes.map(a => a.getAttribute('href')))).toEqual(
+        expect.arrayContaining(['/search', '/map', '/quests', '/profile', '/travelsby', '/places', '/trips', '/roulette', '/articles', '/history', '/privacy', '/contact']),
+      )
       expect(await page.evaluate(APP_HYDRATED)).toBe(false)
       expect(await links.evaluateAll(nodes => nodes.every(a => a.getAttribute('href')?.startsWith('/') && a.getAttribute('href') !== '/more'))).toBe(true)
     })

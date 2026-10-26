@@ -888,30 +888,33 @@ async function waitForScreenSettled(page: Page, title: string, timeoutMs = 15_00
 }
 
 /**
- * Переключает тему через реальную UI-кнопку (`mobile-menu-open` →
- * `theme-toggle-<light|dark>` → закрыть по `mobile-menu-overlay`) — без
- * перезагрузки страницы. Кнопка есть в глобальной шапке на всех измеряемых
- * экранах (`mobile-dark-theme.spec.ts` подтверждает: клик обновляет
- * `html[data-theme]` сразу, реальный `ThemeToggle` — не мок, `JEST_WORKER_ID`
- * в браузерном e2e не выставлен). Возвращает `false`, если что-то из цепочки
+ * Переключает тему через реальную UI-кнопку (`mobile-menu-open` → лист «Ещё» →
+ * `footer-more-item-theme` → `theme-toggle-<light|dark>` → закрыть кнопкой
+ * `footer-more-close`) — без перезагрузки страницы (#2779: у шапки своего меню
+ * нет, тема — подэкран листа). Кнопка есть в глобальной шапке на всех
+ * измеряемых экранах (`mobile-dark-theme.spec.ts` подтверждает: клик обновляет
+ * `html[data-theme]` сразу). Возвращает `false`, если что-то из цепочки
  * недоступно — тогда `ensureTheme` ниже перезагружает страницу с темой,
- * зашитой в `localStorage` до старта приложения (то же поведение, что было
- * до правки, но включается только при живом переключении темы, не на каждый
- * вьюпорт).
+ * зашитой в `localStorage` до старта приложения.
  */
 async function toggleThemeViaMenu(page: Page, theme: Theme): Promise<boolean> {
   const menuOpen = page.getByTestId('mobile-menu-open')
   if ((await menuOpen.count()) === 0) return false
   await menuOpen.click().catch(() => null)
-  const panel = page.getByTestId('mobile-menu-panel')
+  const panel = page.getByTestId('footer-more-sheet')
   const opened = await panel
     .waitFor({ state: 'visible', timeout: 5_000 })
     .then(() => true)
     .catch(() => false)
   if (!opened) return false
 
+  await page.getByTestId('footer-more-item-theme').click().catch(() => null)
   const toggle = page.getByTestId(`theme-toggle-${theme}`)
-  if ((await toggle.count()) === 0) {
+  const toggleShown = await toggle
+    .waitFor({ state: 'visible', timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false)
+  if (!toggleShown) {
     await closeMobileMenu(page, panel)
     return false
   }
@@ -929,16 +932,14 @@ async function toggleThemeViaMenu(page: Page, theme: Theme): Promise<boolean> {
 }
 
 /**
- * Закрывает меню кнопкой `mobile-menu-close`, а НЕ кликом в центр оверлея:
- * центр экрана приходится на пункт панели («Путеводитель по Беларуси» и т. п.),
- * `click({ force: true })` попадал в него и уводил страницу на `/travelsby` —
- * тёмные комбинации замеряли другой экран (#2094: home dark 0.199 вместо
- * 0.076, trips dark ctaOccluded=true). Если меню всё же не закрылось, пробуем
- * Escape. Путь страницы после закрытия обязан остаться прежним.
+ * Закрывает лист кнопкой `footer-more-close`, а НЕ кликом в центр подложки:
+ * центр экрана приходится на пункт листа, и клик уводил страницу на другой
+ * экран — тёмные комбинации замеряли не тот экран (#2094). Если лист всё же не
+ * закрылся, пробуем Escape. Путь страницы после закрытия обязан остаться прежним.
  */
 async function closeMobileMenu(page: Page, panel: Locator): Promise<void> {
   const pathBefore = new URL(page.url()).pathname
-  const close = page.getByTestId('mobile-menu-close')
+  const close = page.getByTestId('footer-more-close')
   if ((await close.count()) > 0) {
     await close.first().click().catch(() => null)
   }

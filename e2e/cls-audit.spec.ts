@@ -479,9 +479,9 @@ test.describe('@perf CLS audit', () => {
         await page.goto('/travelsby', { waitUntil: 'domcontentloaded', timeout: 60_000 });
         await Promise.any([
           page.waitForSelector('#search-input', { timeout: 30_000 }),
-          page.waitForSelector('[placeholder*="Найти путешествия"]', { timeout: 30_000 }),
+          page.waitForSelector('[placeholder*="Найти маршрут"]', { timeout: 30_000 }),
           page.waitForSelector('[data-testid="travel-card-link"], [data-testid="travel-list-item-skeleton"]', { timeout: 30_000 }),
-          page.waitForSelector('text=Пока нет путешествий', { timeout: 30_000 }),
+          page.waitForSelector('text=/Пока нет (маршрутов|путешествий)/i', { timeout: 30_000 }),
         ]);
         lastError = null;
         break;

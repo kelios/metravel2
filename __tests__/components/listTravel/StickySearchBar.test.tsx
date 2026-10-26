@@ -98,7 +98,7 @@ describe('StickySearchBar Component', () => {
       />
     );
 
-    expect(screen.getByPlaceholderText('Найти путешествия...')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Найти маршрут…')).toBeTruthy();
     expect(screen.getByTestId('toggle-recommendations-button')).toBeTruthy();
     const results = screen.getByTestId('results-count-text');
     expect(String((results.props as any).children)).toContain('10');
@@ -119,7 +119,7 @@ describe('StickySearchBar Component', () => {
       />
     );
 
-    const searchInput = screen.getByPlaceholderText('Найти путешествия...');
+    const searchInput = screen.getByPlaceholderText('Найти маршрут…');
     fireEvent.changeText(searchInput, 'test search');
 
     await waitFor(() => {
@@ -388,7 +388,7 @@ describe('StickySearchBar Component', () => {
       />
     );
 
-    fireEvent(screen.getByPlaceholderText('Найти путешествия...'), 'focus');
+    fireEvent(screen.getByPlaceholderText('Найти маршрут…'), 'focus');
 
     expect(screen.getByTestId('search-history-panel')).toBeTruthy();
 

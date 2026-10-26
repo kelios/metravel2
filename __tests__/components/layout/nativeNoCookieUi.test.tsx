@@ -56,11 +56,10 @@ jest.mock('react-native-paper', () => {
 })
 
 import AccountMenu from '@/components/layout/AccountMenu'
-import CustomHeaderMobileMenu from '@/components/layout/CustomHeaderMobileMenu'
+import { buildBottomDockMoreSections } from '@/components/layout/bottomDockMoreSections'
 import { AboutIntroCard } from '@/components/about/AboutIntroCard'
 import { getIsHeaderMobile } from '@/components/layout/customHeaderModel'
 import { isNavRouteAvailable, WEB_ONLY_NAV_ROUTES } from '@/constants/platformNavRoutes'
-import { NativeMenuAccessibilityProvider } from '@/components/ui/NativeMenuAccessibilityScope'
 
 const COOKIE_ITEM = 'Настройки cookies'
 const PRIVACY_ITEM = 'Политика конфиденциальности'
@@ -77,27 +76,6 @@ const renderWithClient = (ui: React.ReactElement) =>
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       {ui}
     </QueryClientProvider>,
-  )
-
-const renderMobileMenu = () =>
-  render(
-    <NativeMenuAccessibilityProvider>
-      <CustomHeaderMobileMenu
-        visible
-        onRequestClose={jest.fn()}
-        onOverlayPress={jest.fn()}
-        onNavPress={jest.fn()}
-        onUserAction={jest.fn()}
-        onLogout={jest.fn()}
-        colors={{} as any}
-        styles={{}}
-        activePath="/"
-        isAuthenticated={false}
-        favoritesCount={0}
-        returnFocusRef={React.createRef()}
-        restoreFocusRef={{ current: true }}
-      />
-    </NativeMenuAccessibilityProvider>,
   )
 
 const renderAboutCard = () =>
@@ -193,20 +171,19 @@ describe('native app has no cookie UI (#2135)', () => {
     })
   })
 
-  describe('phone header menu', () => {
-    it('native documents list has no cookie settings', () => {
-      setPlatform('ios')
-      const { getByText, queryByText } = renderMobileMenu()
+  // #2779: на телефоне одно меню — лист «Ещё» (кнопка меню шапки открывает его же).
+  describe('phone «Ещё» sheet', () => {
+    const sheetLabels = (os: string) =>
+      buildBottomDockMoreSections({}, os).flatMap((section) => section.items.map((item) => item.label))
 
-      expect(getByText(PRIVACY_ITEM)).toBeTruthy()
-      expect(queryByText(COOKIE_ITEM)).toBeNull()
+    it.each(['ios', 'android'])('%s documents list has the privacy policy but no cookie settings', (os) => {
+      const labels = sheetLabels(os)
+      expect(labels).toContain(PRIVACY_ITEM)
+      expect(labels).not.toContain(COOKIE_ITEM)
     })
 
     it('web documents list keeps cookie settings', () => {
-      setPlatform('web')
-      const { getByText } = renderMobileMenu()
-
-      expect(getByText(COOKIE_ITEM)).toBeTruthy()
+      expect(sheetLabels('web')).toEqual(expect.arrayContaining([PRIVACY_ITEM, COOKIE_ITEM]))
     })
   })
 

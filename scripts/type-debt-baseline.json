@@ -700,20 +700,6 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
-    "components/layout/customHeaderMobileLazy.ts": {
-      "styleCast": 0,
-      "logicCast": 1,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "components/layout/CustomHeaderMobileMenu.tsx": {
-      "styleCast": 0,
-      "logicCast": 3,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
     "components/layout/customHeaderNavModel.ts": {
       "styleCast": 0,
       "logicCast": 1,

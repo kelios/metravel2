@@ -55,9 +55,9 @@ const SAME_FORM_SETS: Record<string, { locales: Locale[]; reason: string }> = {
     locales: ['be', 'uk'],
     reason: 'BE «фота» и UK «фото» не склоняются: «1 фото», «5 фото»',
   },
-  'errors:utils.pluralize.travelNounGenitive': {
+  'errors:utils.pluralize.routeNounGenitive': {
     locales: ['pl'],
-    reason: 'PL родительный после «z» един для всех чисел: «z 1 podróży», «z 2 podróży», «z 5 podróży» (#2375)',
+    reason: 'PL родительный мн. ч. после «z» один для 2–4 и 5+: «z 2 tras», «z 5 tras» (#2375, #2779)',
   },
   ...Object.fromEntries(
     [

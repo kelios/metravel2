@@ -76,11 +76,11 @@ describe('roulette count in the real mobile filters panel', () => {
     fireEvent.press(panel.getByTestId('mobile-filters-button'));
     expect(panel.getByText('Страны')).toBeTruthy();
     expect(panel.getByText('Загружаем…')).toBeTruthy();
-    expect(panel.queryByText('0 путешествий')).toBeNull();
+    expect(panel.queryByText('0 маршрутов')).toBeNull();
 
     await act(async () => pending.reject(new Error('facets offline')));
     await waitFor(() => expect(panel.getByText('Не удалось выполнить действие')).toBeTruthy());
-    expect(panel.queryByText('0 путешествий')).toBeNull();
+    expect(panel.queryByText('0 маршрутов')).toBeNull();
     expect(panel.getByText('Страны')).toBeTruthy();
     fireEvent.press(panel.getByText('Страны'));
     fireEvent.press(panel.getByRole('checkbox', { name: 'Италия' }));
@@ -90,7 +90,7 @@ describe('roulette count in the real mobile filters panel', () => {
     await act(async () => {
       await panel.client.invalidateQueries({ queryKey: queryKeys.rouletteTravelFacets({ countries: [3] }) });
     });
-    await waitFor(() => expect(panel.getByText('0 путешествий')).toBeTruthy());
+    await waitFor(() => expect(panel.getByText('0 маршрутов')).toBeTruthy());
     expect(panel.queryByText('Не удалось выполнить действие')).toBeNull();
     panel.unmount();
     panel.client.clear();
@@ -100,7 +100,7 @@ describe('roulette count in the real mobile filters panel', () => {
     fetchFacets.mockResolvedValueOnce({ total: 7, facets: {} });
     const panel = renderRoulette();
     fireEvent.press(panel.getByTestId('mobile-filters-button'));
-    await waitFor(() => expect(panel.getByText('7 путешествий')).toBeTruthy());
+    await waitFor(() => expect(panel.getByText('7 маршрутов')).toBeTruthy());
 
     const refetch = deferredFacets();
     fetchFacets.mockReturnValueOnce(refetch.promise);
@@ -108,10 +108,10 @@ describe('roulette count in the real mobile filters panel', () => {
       void panel.client.invalidateQueries({ queryKey: queryKeys.rouletteTravelFacets({ countries: [3] }) });
     });
     await waitFor(() => expect(panel.getByText('Загружаем…')).toBeTruthy());
-    expect(panel.getByText('7 путешествий')).toBeTruthy();
+    expect(panel.getByText('7 маршрутов')).toBeTruthy();
     await act(async () => refetch.reject(new Error('refetch offline')));
     await waitFor(() => expect(panel.getByText('Не удалось выполнить действие')).toBeTruthy());
-    expect(panel.getByText('7 путешествий')).toBeTruthy();
+    expect(panel.getByText('7 маршрутов')).toBeTruthy();
 
     const changed = deferredFacets();
     fetchFacets.mockReturnValueOnce(changed.promise);
@@ -121,11 +121,11 @@ describe('roulette count in the real mobile filters panel', () => {
     } as ReturnType<typeof useListTravelFilters>);
     panel.rerender(panel.tree());
     await waitFor(() => expect(panel.getByText('Загружаем…')).toBeTruthy());
-    expect(panel.queryByText('7 путешествий')).toBeNull();
-    expect(panel.queryByText('0 путешествий')).toBeNull();
+    expect(panel.queryByText('7 маршрутов')).toBeNull();
+    expect(panel.queryByText('0 маршрутов')).toBeNull();
     expect(panel.queryByText('Не удалось выполнить действие')).toBeNull();
     await act(async () => changed.resolve({ total: 3, facets: {} }));
-    await waitFor(() => expect(panel.getByText('3 путешествия')).toBeTruthy());
+    await waitFor(() => expect(panel.getByText('3 маршрута')).toBeTruthy());
     panel.unmount();
     panel.client.clear();
   });
