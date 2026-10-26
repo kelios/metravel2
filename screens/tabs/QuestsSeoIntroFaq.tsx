@@ -116,6 +116,8 @@ function FaqCard({
   )
 }
 
+const LEAD_MOBILE_LINES = 3
+
 function QuestsSeoIntroFaq({
   variant = 'both',
   items: itemsProp,
@@ -137,6 +139,10 @@ function QuestsSeoIntroFaq({
   const { isSmallPhone, isPhone } = useBreakpoints()
   const isMobile = isSmallPhone || isPhone
   const [openIndex, setOpenIndex] = useState<number | null>(null)
+  // #2781: на телефоне длинное интро занимало весь первый экран каталога.
+  // Свёрнутый текст остаётся в разметке целиком (line-clamp), его видит поиск.
+  const [leadExpanded, setLeadExpanded] = useState(false)
+  const clampLead = isMobile && !leadExpanded
 
   const items = useMemo(() => itemsProp ?? getQuestFaqItems(), [itemsProp])
   const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile])
@@ -163,9 +169,24 @@ function QuestsSeoIntroFaq({
               {eyebrow ?? i18nT('quests:screens.tabs.QuestsSeoIntroFaq.eyebrow')}
             </Text>
           </View>
-          <Text style={styles.lead} testID="quests-seo-lead">
+          <Text style={styles.lead} testID="quests-seo-lead" numberOfLines={clampLead ? LEAD_MOBILE_LINES : undefined}>
             {lead ?? i18nT('quests:screens.tabs.QuestsSeoIntroFaq.lead')}
           </Text>
+          {isMobile && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ expanded: leadExpanded }}
+              onPress={() => setLeadExpanded((value) => !value)}
+              style={styles.leadToggle}
+              testID="quests-seo-lead-toggle"
+            >
+              <Text style={styles.leadToggleText}>
+                {leadExpanded
+                  ? i18nT('quests:screens.tabs.QuestsSeoIntroFaq.leadLess')
+                  : i18nT('quests:screens.tabs.QuestsSeoIntroFaq.leadMore')}
+              </Text>
+            </Pressable>
+          )}
           {/* Entry point into the DIY landing — also keeps it off the orphan list. */}
           <Link href="/quests/scenario" asChild>
             <Pressable
@@ -252,6 +273,18 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: bool
       lineHeight: isMobile ? 22 : 26,
       color: colors.textMuted,
       letterSpacing: 0.1,
+    },
+    leadToggle: {
+      alignSelf: 'flex-start',
+      minHeight: 44,
+      justifyContent: 'center',
+      marginTop: -8,
+      ...webViewStyle({ cursor: 'pointer' }),
+    },
+    leadToggleText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.primary,
     },
     scenarioLink: {
       flexDirection: 'row',

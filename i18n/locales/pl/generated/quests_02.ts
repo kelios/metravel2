@@ -176,6 +176,8 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsSeoIntroFaq.a8": "Escape room to płatna gra w pomieszczeniu, a quest miejski Metravel to bezpłatny spacer na świeżym powietrzu: punkty trasy biegną prawdziwymi ulicami, a zadania rozwiązuje się przez obserwację na miejscu. Wolisz papier? Każdy quest można wydrukować i przejść jak grę-książeczkę.",
   "screens.tabs.QuestsSeoIntroFaq.q8": "Czym quest miejski różni się od escape roomu?",
   "screens.tabs.QuestsSeoIntroFaq.scenarioLink": "Gotowy scenariusz questu — wydrukuj za darmo",
+  "screens.tabs.QuestsSeoIntroFaq.leadMore": "Więcej",
+  "screens.tabs.QuestsSeoIntroFaq.leadLess": "Zwiń",
   "screens.tabs.QuestScenarioScreen.eyebrow": "Gra-książeczka",
   "screens.tabs.QuestScenarioScreen.breadcrumb": "Scenariusz questu",
   "screens.tabs.QuestScenarioScreen.title": "Gotowy scenariusz questu po mieście — wydrukuj za darmo",

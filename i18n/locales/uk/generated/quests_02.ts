@@ -176,6 +176,8 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsSeoIntroFaq.a8": "Квест-кімната — це платна гра в приміщенні, а міський квест Metravel — безкоштовна прогулянка на свіжому повітрі: точки маршруту розставлені справжніми вулицями, а завдання розв'язуються спостереженням на місці. Хочете паперову версію — будь-який квест можна роздрукувати та пройти як квест-бук.",
   "screens.tabs.QuestsSeoIntroFaq.q8": "Чим міський квест відрізняється від квест-кімнати?",
   "screens.tabs.QuestsSeoIntroFaq.scenarioLink": "Готовий сценарій квесту — роздрукувати безкоштовно",
+  "screens.tabs.QuestsSeoIntroFaq.leadMore": "Детальніше",
+  "screens.tabs.QuestsSeoIntroFaq.leadLess": "Згорнути",
   "screens.tabs.QuestScenarioScreen.eyebrow": "Квест-бук",
   "screens.tabs.QuestScenarioScreen.breadcrumb": "Сценарій квесту",
   "screens.tabs.QuestScenarioScreen.title": "Готовий сценарій квесту містом — безкоштовно роздрукувати",

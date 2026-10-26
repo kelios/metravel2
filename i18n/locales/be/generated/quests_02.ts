@@ -176,6 +176,8 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsSeoIntroFaq.a8": "Квэст-пакой — гэта платная гульня ў памяшканні, а гарадскі квэст Metravel — бясплатная прагулка на свежым паветры: пункты маршруту расстаўлены па сапраўдных вуліцах, а заданні вырашаюцца назіраннем на месцы. Хочацца папяровай версіі — любы квэст можна раздрукаваць і прайсці як квэст-бук.",
   "screens.tabs.QuestsSeoIntroFaq.q8": "Чым гарадскі квэст адрозніваецца ад квэст-пакоя?",
   "screens.tabs.QuestsSeoIntroFaq.scenarioLink": "Гатовы сцэнар квэста — раздрукаваць бясплатна",
+  "screens.tabs.QuestsSeoIntroFaq.leadMore": "Падрабязней",
+  "screens.tabs.QuestsSeoIntroFaq.leadLess": "Згарнуць",
   "screens.tabs.QuestScenarioScreen.eyebrow": "Квэст-бук",
   "screens.tabs.QuestScenarioScreen.breadcrumb": "Сцэнар квэста",
   "screens.tabs.QuestScenarioScreen.title": "Гатовы сцэнар квэста па горадзе — бясплатна раздрукаваць",

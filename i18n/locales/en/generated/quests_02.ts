@@ -176,6 +176,8 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsSeoIntroFaq.a8": "An escape room is a paid indoor game, while a Metravel city quest is a free outdoor walk: the route points run along real streets and the tasks are solved by observing on the spot. Prefer paper? Any quest can be printed and played as a quest book.",
   "screens.tabs.QuestsSeoIntroFaq.q8": "How is a city quest different from an escape room?",
   "screens.tabs.QuestsSeoIntroFaq.scenarioLink": "A ready-made quest scenario — print it free",
+  "screens.tabs.QuestsSeoIntroFaq.leadMore": "Read more",
+  "screens.tabs.QuestsSeoIntroFaq.leadLess": "Show less",
   "screens.tabs.QuestScenarioScreen.eyebrow": "Quest book",
   "screens.tabs.QuestScenarioScreen.breadcrumb": "Quest scenario",
   "screens.tabs.QuestScenarioScreen.title": "A ready-made city quest scenario — print it free",
