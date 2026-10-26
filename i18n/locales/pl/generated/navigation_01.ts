@@ -15,7 +15,7 @@ export const navigationGenerated1 = {
   "components.layout.AccountMenu.soobscheniya_644700aa": "Wiadomości",
   "components.layout.AccountMenu.soobscheniya_value1_a08d8c49": "Wiadomości ({{value1}})",
   "components.layout.AccountMenu.tema_oformleniya_06b0d02a": "Motyw",
-  "components.layout.AccountMenu.voyti_d3fdfdb5": "Zaloguj się",
+  "components.layout.AccountMenu.voyti_d3fdfdb5": "Zaloguj",
   "components.layout.AccountMenu.voyti_v_akkaunt_db700823": "Zaloguj się do konta",
   "components.layout.AccountMenu.vyhod_fc2f589e": "Wyjdź",
   "components.layout.AccountMenu.zaregistrirovatsya_36130f31": "Zarejestruj się",

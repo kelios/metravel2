@@ -67,7 +67,7 @@ export const navigationStaticResources = {
   "components.layout.SkipLinks.pereyti_k_navigatsii_bb05b7ca": "Перейти до навігації",
   "components.layout.SkipLinks.pereyti_k_osnovnomu_soderzhimomu_6663999c": "Перейти до основного вмісту",
   "constants.headerNavigation.belarus_df5087c4": "Білорусь",
-  "constants.headerNavigation.hint.belarus": "Маршрути Білоруссю",
+  "constants.headerNavigation.hint.belarus": "Маршрути по Білорусі",
   "constants.headerNavigation.hint.places": "Замки, музеї, природа на карті",
   "constants.headerNavigation.hint.articles": "Поради й нотатки мандрівників",
   "constants.headerNavigation.karta_276d5425": "Карта",
