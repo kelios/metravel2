@@ -292,6 +292,11 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
     }
     return map;
   }, [groupsWithoutSort, selectedFilters]);
+  // Later groups have no final position until this expanded dictionary resolves.
+  // Mount them with the ready content instead of moving clipped headers into view.
+  const loadingGroupIndex = isLoading
+    ? groupsWithoutSort.findIndex((group) => expandedGroups.has(group.key) && group.options.length === 0)
+    : -1;
   const handleDismissFilters = useCallback(() => {
     blurActiveWebElement();
     onClose?.();
@@ -530,6 +535,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
         contentContainerStyle={styles.scrollContent}
       >
         {groupsWithoutSort.map((group, index) => {
+          if (loadingGroupIndex >= 0 && index > loadingGroupIndex) return null;
           const isExpanded = expandedGroups.has(group.key);
           const {
             isMultiSelect,

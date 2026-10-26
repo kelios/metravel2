@@ -113,9 +113,11 @@ describe('ModernFilters Component', () => {
       const pendingGroups = mockFilterGroups.map(group => ({ ...group, options: [] }));
       const { rerender } = render(frame({ filterGroups: pendingGroups, isLoading: true }));
       expect(screen.getByTestId('filter-options-loading-categories', { includeHiddenElements: true })).toBeTruthy();
-      expect(screen.getByTestId('filter-options-loading-transports', { includeHiddenElements: true })).toBeTruthy();
+      expect(screen.queryByText('Транспорт')).toBeNull();
+      expect(screen.queryByTestId('filter-options-loading-transports', { includeHiddenElements: true })).toBeNull();
       expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
       fireEvent.press(screen.getByRole('button', { name: 'Свернуть Категории' }));
+      expect(screen.getByTestId('filter-options-loading-transports', { includeHiddenElements: true })).toBeTruthy();
 
       rerender(frame({ isLoading: false }));
       expect(screen.queryByTestId('filter-options-loading-categories', { includeHiddenElements: true })).toBeNull();
@@ -125,14 +127,27 @@ describe('ModernFilters Component', () => {
       expect(screen.getByRole('button', { name: 'Развернуть Категории' }).props.accessibilityState.expanded).toBe(false);
     });
 
+    it('keeps cached options and subsequent headers while dictionaries refresh', () => {
+      render(createFrame()({ isLoading: true }));
+      expect(screen.getByRole('checkbox', { name: 'Горы' })).toBeTruthy();
+      expect(screen.getByRole('checkbox', { name: 'Самолет' })).toBeTruthy();
+      expect(screen.getByText('Транспорт')).toBeTruthy();
+      expect(screen.queryByTestId('filter-options-loading-categories', { includeHiddenElements: true })).toBeNull();
+    });
+
     it.each([
       ['web', 1280],
       ['android', 1440],
       ['ios', 1440],
     ] as const)('keeps %s width %s groups collapsed', (os, width) => {
       Platform.OS = os;
-      render(createFrame()({ initialViewportWidth: width, isLoading: true }));
+      render(createFrame()({
+        initialViewportWidth: width,
+        isLoading: true,
+        filterGroups: mockFilterGroups.map(group => ({ ...group, options: [] })),
+      }));
       expect(screen.getByRole('button', { name: 'Развернуть Категории' }).props.accessibilityState.expanded).toBe(false);
+      expect(screen.getByRole('button', { name: 'Развернуть Транспорт' })).toBeTruthy();
       expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
       expect(screen.getByTestId('filters-apply-footer')).toBeTruthy();
     });
