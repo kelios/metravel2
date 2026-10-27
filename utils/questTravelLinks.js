@@ -77,6 +77,25 @@ function minDistanceKm(coords, lat, lng) {
   }, Infinity);
 }
 
+// Every quest page scans all published travels; the per-travel part is pure,
+// so it is derived once per travel object instead of once per page.
+const travelProfiles = new WeakMap();
+
+function travelProfile(travel) {
+  const cached = travel && typeof travel === 'object' ? travelProfiles.get(travel) : undefined;
+  if (cached) return cached;
+  const profile = {
+    slug: String(travel?.slug || '').trim(),
+    title: String(travel?.name || '').trim(),
+    travelCity: normalizeLocationText(travel?.cityName || travel?.city_name || travel?.city?.name),
+    travelCountry: normalizeLocationText(travel?.countryName || travel?.country_name),
+    travelCode: String(travel?.countryCode || travel?.country_code || '').trim().toLowerCase(),
+    coords: extractTravelCoordsForQuestPromo(travel),
+  };
+  if (travel && typeof travel === 'object') travelProfiles.set(travel, profile);
+  return profile;
+}
+
 function findQuestCityTravelLinks(city, travels, limit = 4) {
   const cityName = normalizeLocationText(city?.name);
   const countryName = normalizeLocationText(city?.countryName);
@@ -87,16 +106,10 @@ function findQuestCityTravelLinks(city, travels, limit = 4) {
   const matches = [];
 
   for (const travel of Array.isArray(travels) ? travels : []) {
-    const slug = String(travel?.slug || '').trim();
-    const title = String(travel?.name || '').trim();
+    const { slug, title, travelCity, travelCountry, travelCode, coords } = travelProfile(travel);
     if (!slug || !title) continue;
 
-    const travelCity = normalizeLocationText(travel?.cityName || travel?.city_name || travel?.city?.name);
-    const travelCountry = normalizeLocationText(travel?.countryName || travel?.country_name);
-    const travelCode = String(travel?.countryCode || travel?.country_code || '').trim().toLowerCase();
-    const distanceKm = cityCoords.length
-      ? minDistanceKm(extractTravelCoordsForQuestPromo(travel), city.lat, city.lng)
-      : Infinity;
+    const distanceKm = cityCoords.length ? minDistanceKm(coords, city.lat, city.lng) : Infinity;
 
     if (countryCode && travelCode && countryCode !== travelCode && distanceKm >= 15) continue;
     if (!countryCode && countryName && travelCountry && countryName !== travelCountry && distanceKm >= 15) continue;

@@ -177,66 +177,90 @@ function publicPageText(page, includeLinks = false) {
   ].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
 }
 
-function buildQuestWebProjection(snapshot, catalogs) {
+function scoreCohort(cohort, kind, locale, countries) {
+  const scores = scoreQuestPageLevel(cohort.map((entry) => ({ path: entry.canonical_path, kind: `quest-${kind}`, text: publicPageText(entry.page) })));
+  scores.forEach((score, index) => { cohort[index].quality = { indexable: score.issues.length === 0,
+    word_count: score.words, own_fivegram_ratio: score.ratio === null ? (score.words > 0 ? 1 : 0) : score.ratio }; });
+  if (kind === 'country') cohort.forEach((entry) => {
+    const country = countries.find((row) => row.countryCode === entry.country_code);
+    if (!questCountryLandingIsLinkable(country)) entry.quality.indexable = false;
+  });
+  // A non-empty detail cohort with zero eligible pages denotes lost public content.
+  if (kind !== 'country' && cohort.length && !cohort.some((entry) => entry.quality.indexable)) throw new Error(`No ${locale} ${kind} page clears the public content floors`);
+}
+
+/**
+ * Emits pages in publication order (details by locale, then RU landings) while
+ * only one locale's private bundles are resident: the corpus never is.
+ * `source.bundles(locale)` loads that locale on demand; returns the discovery.
+ */
+function projectQuestWeb(source, catalogs, emit) {
+  const snapshot = source.header;
   if (!snapshot || snapshot.schema_version !== 2 || !Array.isArray(snapshot.catalog)
       || !snapshot.source_snapshot || !Array.isArray(snapshot.source_snapshot.quests)
-      || snapshot.catalog.length > 500 || !snapshot.bundles?.ru) throw new Error('Invalid private quest publication snapshot');
+      || snapshot.catalog.length > 500) throw new Error('Invalid private quest publication snapshot');
   const byIdentity = assertCatalogMatchesReceipt(snapshot.catalog, snapshot.source_snapshot, questRouteKey);
   if (byIdentity.size !== snapshot.source_snapshot.quests.length
       || new Set(snapshot.catalog.map((quest) => questRouteKey(quest)?.path)).size !== snapshot.catalog.length) throw new Error('Duplicate quest publication identity');
   const cityGroups = buildQuestCityLandingGroups(snapshot.catalog, buildQuestCityAliasMap(snapshot.catalog));
   const context = { ...snapshot, cityGroups, travel_links: snapshot.travel_links || [] };
-  const pages = [];
+  const countries = buildQuestCountryLandingGroups(snapshot.catalog, { locale: 'ru' });
+  let landings = [], discovery;
   for (const locale of LOCALES) {
+    const localeBundles = source.bundles(locale);
+    if (locale === 'ru' && !localeBundles) throw new Error('Invalid private quest publication snapshot');
+    const localeContext = { ...context, bundles: { [locale]: localeBundles } };
     const ssg = createSsgTranslator(catalogs, locale);
+    const details = [];
     for (const quest of snapshot.catalog) {
       const route = questRouteKey(quest);
       if (!route) throw new Error('Unroutable published quest');
       const key = `${route.cityId}/${route.questId}`, record = byIdentity.get(key);
       if (!record.locales[locale]?.published || !record.locales[locale].complete) continue;
-      const bundle = snapshot.bundles[locale]?.[key];
+      const bundle = localeBundles?.[key];
       if (!bundle || !Array.isArray(bundle.steps) || typeof bundle.title !== 'string' || !bundle.title.trim()) throw new Error('Missing exact-locale private bundle');
       if (bundle.quest_id != null && bundle.quest_id !== route.questId) throw new Error('Private bundle identity mismatch');
       if (locale !== 'ru' && bundle.content_locale !== locale) throw new Error('Private locale bundle fell back to another language');
-      pages.push(buildDetail(quest, bundle, route, record, locale, cityGroups.find((group) => group.cityIds.includes(String(route.cityId))), context, ssg));
+      details.push(buildDetail(quest, bundle, route, record, locale, cityGroups.find((group) => group.cityIds.includes(String(route.cityId))), localeContext, ssg));
     }
+    scoreCohort(details, 'detail', locale, countries);
+    if (locale === 'ru') {
+      const bundles = new Map(Object.entries(localeBundles).map(([key, bundle]) => [key.split('/').slice(1).join('/'), bundle]));
+      const ru = createSsgTranslator(catalogs, 'ru');
+      const cities = cityGroups.map((city) => buildCity(city, bundles, context.travel_links, { groups: countries, cityGroups }, ru));
+      const countryPages = countries.map(buildCountry);
+      scoreCohort(cities, 'city', 'ru', countries);
+      scoreCohort(countryPages, 'country', 'ru', countries);
+      landings = [...cities, ...countryPages];
+      // A landing's source identity includes its selected quest revisions. Content
+      // hashes also include the cohort verdict; a sibling edit can change robots.
+      for (const page of landings) {
+        const selected = page.kind === 'city'
+          ? cityGroups.find((city) => `/quests/${city.segment}` === page.canonical_path).quests
+          : countries.find((country) => country.countryCode === page.country_code).quests;
+        page.source_revision = hash(selected.map((quest) => {
+          const route = questRouteKey(quest);
+          return byIdentity.get(`${route.cityId}/${route.questId}`).source_revision;
+        }));
+        page.content_revision = hash({ page: page.page, quality: page.quality });
+      }
+      const catalog = snapshot.catalog.map(projectQuestDiscoveryRow);
+      if (catalog.some((quest) => !quest)) throw new Error('Invalid public discovery metadata');
+      discovery = { catalog, preview: selectPopularQuests(catalog, 8),
+        travel_graph: buildTravelLinkGraphs(context.travel_links, snapshot.catalog, localeBundles),
+        cities: cityGroups.map((city) => ({ title: city.cityName, path: `/quests/${city.segment}` })),
+        countries: countries.filter(questCountryLandingIsLinkable).map((country) => ({ title: country.countryName, path: `/quests/country/${country.countryAlias}` })) };
+    }
+    details.forEach(emit);
   }
-  const bundles = new Map(Object.entries(snapshot.bundles.ru).map(([key, bundle]) => [key.split('/').slice(1).join('/'), bundle]));
-  const countries = buildQuestCountryLandingGroups(snapshot.catalog, { locale: 'ru' });
-  const ru = createSsgTranslator(catalogs, 'ru');
-  for (const city of cityGroups) pages.push(buildCity(city, bundles, context.travel_links, { groups: countries, cityGroups }, ru));
-  for (const country of countries) pages.push(buildCountry(country));
-  for (const kind of ['detail', 'city', 'country']) for (const locale of LOCALES) {
-    const cohort = pages.filter((page) => page.kind === kind && page.locale === locale);
-    const scores = scoreQuestPageLevel(cohort.map((entry) => ({ path: entry.canonical_path, kind: `quest-${kind}`, text: publicPageText(entry.page) })));
-    scores.forEach((score, index) => { cohort[index].quality = { indexable: score.issues.length === 0,
-      word_count: score.words, own_fivegram_ratio: score.ratio === null ? (score.words > 0 ? 1 : 0) : score.ratio }; });
-    if (kind === 'country') cohort.forEach((entry) => {
-      const country = countries.find((row) => row.countryCode === entry.country_code);
-      if (!questCountryLandingIsLinkable(country)) entry.quality.indexable = false;
-    });
-    // A non-empty detail cohort with zero eligible pages denotes lost public content.
-    if (kind !== 'country' && cohort.length && !cohort.some((entry) => entry.quality.indexable)) throw new Error(`No ${locale} ${kind} page clears the public content floors`);
-  }
-  // A landing's source identity includes its selected quest revisions. Content
-  // hashes also include the cohort verdict; a sibling edit can change robots.
-  for (const page of pages) if (page.kind !== 'detail') {
-    const selected = page.kind === 'city'
-      ? cityGroups.find((city) => `/quests/${city.segment}` === page.canonical_path).quests
-      : countries.find((country) => country.countryCode === page.country_code).quests;
-    page.source_revision = hash(selected.map((quest) => {
-      const route = questRouteKey(quest);
-      return byIdentity.get(`${route.cityId}/${route.questId}`).source_revision;
-    }));
-    page.content_revision = hash({ page: page.page, quality: page.quality });
-  }
-  const catalog = snapshot.catalog.map(projectQuestDiscoveryRow);
-  if (catalog.some((quest) => !quest)) throw new Error('Invalid public discovery metadata');
-  const discovery = { catalog, preview: selectPopularQuests(catalog, 8),
-    travel_graph: buildTravelLinkGraphs(context.travel_links, snapshot.catalog, snapshot.bundles.ru),
-    cities: cityGroups.map((city) => ({ title: city.cityName, path: `/quests/${city.segment}` })),
-    countries: countries.filter(questCountryLandingIsLinkable).map((country) => ({ title: country.countryName, path: `/quests/country/${country.countryAlias}` })) };
+  landings.forEach(emit);
+  return discovery;
+}
+
+function buildQuestWebProjection(snapshot, catalogs) {
+  const pages = [];
+  const discovery = projectQuestWeb({ header: snapshot, bundles: (locale) => snapshot.bundles?.[locale] }, catalogs, (page) => pages.push(page));
   return { schema_version: 2, pages, discovery };
 }
 
-module.exports = { buildQuestWebProjection, publicPageText, introModel, formatQuestDuration };
+module.exports = { buildQuestWebProjection, projectQuestWeb, publicPageText, introModel, formatQuestDuration };

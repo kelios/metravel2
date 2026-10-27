@@ -241,9 +241,24 @@ function questTextRevealsAnswer(text, answerLiterals) {
   const tokens = new Set(normalizeQuestText(text).split(' ').filter(Boolean));
   if (!tokens.size) return false;
   return answerLiterals.some((literal) => {
-    const words = normalizeQuestText(literal).split(' ').filter(Boolean);
+    const words = questLiteralWords(literal);
     return words.length > 0 && words.every((word) => tokens.has(word));
   });
+}
+
+// The same literals are checked against every sentence of a point (a range is
+// up to 101 of them); their tokens are pure, so each is normalized once. The
+// cache is bounded for long-lived callers.
+const literalWords = new Map();
+
+function questLiteralWords(literal) {
+  let words = literalWords.get(literal);
+  if (!words) {
+    if (literalWords.size >= 50000) literalWords.clear();
+    words = normalizeQuestText(literal).split(' ').filter(Boolean);
+    literalWords.set(literal, words);
+  }
+  return words;
 }
 
 /**
