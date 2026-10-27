@@ -3,6 +3,7 @@ export const errorsStaticResources = {
   "api.misc.rejectionReasonRequired": "Укажыце прычыну адхілення даўжынёй ад 1 да 2000 сімвалаў.",
   "unknownError": "Невядомая памылка",
   "unexpectedError": "Адбылася непрадбачаная памылка",
+  "loader.pageLoadFailed": "Не ўдалося загрузіць старонку. Праверце злучэнне і паспрабуйце яшчэ раз.",
   "map.routeFailed": "Памылка маршруту",
   "api.common.ratingRange": "Рэйтынг павінен быць ад 1 да 5",
   "api.common.participantRatingRange": "Ацэнка павінна быць ад 1 да 5",

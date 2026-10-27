@@ -3,6 +3,7 @@ import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import { Platform } from 'react-native';
 import { Tabs, useIsFocused, usePathname } from 'expo-router';
 import CustomHeader from '@/components/layout/CustomHeader';
+import LoaderScreenErrorBoundary from '@/components/ui/LoaderScreenErrorBoundary';
 import { isQuestDetailHeaderPath, shouldShowBrandRow, shouldShowHeaderContextBar } from '@/components/layout/customHeaderModel';
 import {
     HEADER_HEIGHT_FALLBACK,
@@ -234,6 +235,12 @@ const Header = React.memo(function Header() {
 // (`tabBar={() => null}`), поэтому `href: null` не нужен ни одному экрану.
 const HIDDEN = { title: '', href: undefined, lazy: true } as const;
 const registrationOnlyLayout = () => <></>;
+
+// #2822: упавший loader ловится на уровне экрана — шапка и URL остаются, «Попробовать снова»
+// перерисовывает тот же экран, а не сбрасывает приложение на «/». Loader-ы есть только на web.
+export const unstable_settings = {
+    screenErrorBoundary: Platform.OS === 'web' ? LoaderScreenErrorBoundary : undefined,
+};
 
 export default function TabLayout() {
     const registrationOnly = useDocumentRouteRegistration();

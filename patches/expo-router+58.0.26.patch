@@ -1,3 +1,126 @@
+diff --git a/node_modules/expo-router/build/loaders/LoaderClient.js b/node_modules/expo-router/build/loaders/LoaderClient.js
+index 978a299..3a51df2 100644
+--- a/node_modules/expo-router/build/loaders/LoaderClient.js
++++ b/node_modules/expo-router/build/loaders/LoaderClient.js
+@@ -8,9 +8,13 @@ Object.defineProperty(exports, "LoaderClient", {
+         return LoaderClient;
+     }
+ });
++const LOADER_RETRY_BASE_MS = 1000;
++const LOADER_RETRY_MAX_MS = 30000;
++const LOADER_AUTO_RETRIES = 2;
+ class LoaderClient {
+     active = new Map();
+     fetchers = new Map();
++    failures = new Map();
+     subscribeLoader(path, callback = ()=>{}, { committed = false } = {}) {
+         const source = this.getOrCreateSource(path);
+         const subscription = {
+@@ -34,6 +38,10 @@ class LoaderClient {
+     registerFetcher(path, fetcher) {
+         this.fetchers.set(path, fetcher);
+     }
++    /** Backoff end for a path that used up its automatic retries; undefined while they remain. */ stickyErrorUntil(path) {
++        const failure = this.failures.get(path);
++        return failure && failure.count > LOADER_AUTO_RETRIES ? failure.retryAt : undefined;
++    }
+     /** Aborts and detaches a source unless a committed reader still owns it. */ abort(path) {
+         const source = this.active.get(path);
+         if (!source) {
+@@ -63,21 +71,36 @@ class LoaderClient {
+         }
+         const controller = new AbortController();
+         source.controller = controller;
+-        let request;
+-        try {
+-            request = fetcherFn(path, {
+-                signal: controller.signal
+-            });
+-        } catch (error) {
+-            request = Promise.reject(error);
++        const run = ()=>{
++            let request;
++            try {
++                request = fetcherFn(path, {
++                    signal: controller.signal
++                });
++            } catch (error) {
++                request = Promise.reject(error);
++            }
++            request.then((data)=>this.settle(path, source, controller, {
++                    data
++                }), (error)=>this.settle(path, source, controller, {
++                    error: new Error(`Failed to load loader data for route: ${path}`, {
++                        cause: error
++                    })
++                }));
++        };
++        // metravel #2822: readLoaderData clears a failed entry before React's retry render reads
++        // it, so a failing loader was refetched without pause (1660 requests in 15 s). A path that
++        // failed waits out an exponential backoff before its next request; the reader stays
++        // suspended meanwhile and an abort cancels the pending request.
++        const waitMs = Math.max(0, (this.failures.get(path)?.retryAt ?? 0) - Date.now());
++        if (waitMs === 0) {
++            run();
++            return;
+         }
+-        request.then((data)=>this.settle(path, source, controller, {
+-                data
+-            }), (error)=>this.settle(path, source, controller, {
+-                error: new Error(`Failed to load loader data for route: ${path}`, {
+-                    cause: error
+-                })
+-            }));
++        const timer = setTimeout(run, waitMs);
++        controller.signal.addEventListener('abort', ()=>clearTimeout(timer), {
++            once: true
++        });
+     }
+     revalidate() {
+         const livePaths = new Set();
+@@ -142,6 +165,15 @@ class LoaderClient {
+         if (controller.signal.aborted) {
+             return;
+         }
++        if ('error' in result) {
++            const count = (this.failures.get(path)?.count ?? 0) + 1;
++            this.failures.set(path, {
++                count,
++                retryAt: Date.now() + Math.min(LOADER_RETRY_BASE_MS * 2 ** (count - 1), LOADER_RETRY_MAX_MS)
++            });
++        } else {
++            this.failures.delete(path);
++        }
+         const isCurrentSource = this.active.get(path) === source;
+         for (const { callback } of source.subscribers){
+             callback(result, isCurrentSource);
+diff --git a/node_modules/expo-router/build/loaders/readLoaderData.js b/node_modules/expo-router/build/loaders/readLoaderData.js
+index 8324480..04212ad 100644
+--- a/node_modules/expo-router/build/loaders/readLoaderData.js
++++ b/node_modules/expo-router/build/loaders/readLoaderData.js
+@@ -15,11 +15,20 @@ function readLoaderData({ client, store }, resolvedPath, fetcher) {
+     }
+     if (suspended) {
+         if ('error' in suspended) {
+-            queueMicrotask(()=>{
++            const clear = ()=>{
+                 if (store.get(resolvedPath) === suspended) {
+                     store.clear(resolvedPath);
+                 }
+-            });
++            };
++            // metravel #2822: after the automatic retries the error stays readable until its
++            // backoff ends, so React's retry render reaches the error boundary instead of
++            // suspending on a new request and keeping the previous screen without feedback.
++            const stickyUntil = client.stickyErrorUntil?.(resolvedPath);
++            if (stickyUntil === undefined) {
++                queueMicrotask(clear);
++            } else {
++                setTimeout(clear, Math.max(0, stickyUntil - Date.now()));
++            }
+             throw suspended.error;
+         }
+         return suspended.data;
 diff --git a/node_modules/expo-router/build/react-navigation/routers/TabRouter.js b/node_modules/expo-router/build/react-navigation/routers/TabRouter.js
 index 0dedc7f..f8b2b45 100644
 --- a/node_modules/expo-router/build/react-navigation/routers/TabRouter.js

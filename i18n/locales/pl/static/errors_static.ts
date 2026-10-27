@@ -3,6 +3,7 @@ export const errorsStaticResources = {
   "api.misc.rejectionReasonRequired": "Podaj powód odrzucenia o długości od 1 do 2000 znaków.",
   "unknownError": "Nieznany błąd",
   "unexpectedError": "Wystąpił nieoczekiwany błąd",
+  "loader.pageLoadFailed": "Nie udało się wczytać strony. Sprawdź połączenie i spróbuj ponownie.",
   "map.routeFailed": "Błąd trasy",
   "api.common.ratingRange": "Ocena musi wynosić od 1 do 5",
   "api.common.participantRatingRange": "Ocena musi wynosić od 1 do 5",

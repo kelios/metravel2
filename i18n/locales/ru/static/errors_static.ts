@@ -3,6 +3,7 @@ export const errorsStaticResources = {
   "api.misc.rejectionReasonRequired": "Укажите причину отклонения длиной от 1 до 2000 символов.",
   "unknownError": "Неизвестная ошибка",
   "unexpectedError": "Произошла непредвиденная ошибка",
+  "loader.pageLoadFailed": "Не удалось загрузить страницу. Проверьте соединение и попробуйте ещё раз.",
   "map.routeFailed": "Ошибка маршрута",
   "api.common.ratingRange": "Рейтинг должен быть от 1 до 5",
   "api.common.participantRatingRange": "Оценка должна быть от 1 до 5",

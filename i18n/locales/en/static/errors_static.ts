@@ -3,6 +3,7 @@ export const errorsStaticResources = {
   "api.misc.rejectionReasonRequired": "Enter a rejection reason between 1 and 2000 characters.",
   "unknownError": "Unknown error",
   "unexpectedError": "An unexpected error occurred",
+  "loader.pageLoadFailed": "The page could not be loaded. Check your connection and try again.",
   "map.routeFailed": "Route error",
   "api.common.ratingRange": "The rating must be from 1 to 5",
   "api.common.participantRatingRange": "The rating must be from 1 to 5",

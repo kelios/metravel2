@@ -6,6 +6,10 @@ import { translate as i18nT } from '@/i18n'
 import { useLocaleRevision } from '@/i18n/useLocaleRevision'
 
 
+// expo-router LoaderClient wraps every failed loader fetch with this message; the raw English
+// route path is not a visitor-facing explanation (#2822).
+const EXPO_LOADER_ERROR_PREFIX = 'Failed to load loader data for route:';
+
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
@@ -101,34 +105,43 @@ class ErrorBoundaryInstance extends Component<Props & { localeRevision?: string 
 
   render() {
     if (this.state.hasError) {
-      const colors = getThemedColors(this.context?.isDark ?? false);
-      const styles = getStyles(colors);
-
       if (this.props.fallback) {
         return this.props.fallback;
       }
 
-      return (
-        <View style={styles.container}>
-          <View style={styles.content}>
-            <Text style={styles.title}>{i18nT('errors:components.ui.ErrorBoundary.chto_to_poshlo_ne_tak_aef679ab')}</Text>
-            <Text style={styles.message}>
-              {this.state.error?.message || i18nT('errorsStatic:unexpectedError')}
-            </Text>
-            <ErrorActionButton
-              label={i18nT('errors:components.ui.ErrorBoundary.poprobovat_snova_8836dde0')}
-              onPress={this.handleReset}
-              accessibilityLabel={i18nT('errors:components.ui.ErrorBoundary.poprobovat_snova_8836dde0')}
-              styles={styles}
-              primary
-            />
-          </View>
-        </View>
-      );
+      return <ErrorFallbackView error={this.state.error} onRetry={this.handleReset} isDark={this.context?.isDark ?? false} />;
     }
 
     return this.props.children;
   }
+}
+
+export function isExpoLoaderError(error: unknown): boolean {
+  return String((error as Error | null)?.message ?? '').startsWith(EXPO_LOADER_ERROR_PREFIX);
+}
+
+/** The error screen shared by the app boundary and the loader screen boundary. */
+export function ErrorFallbackView({ error, onRetry, isDark }: { error: Error | null; onRetry: () => void; isDark: boolean }) {
+  const styles = getStyles(getThemedColors(isDark));
+  return (
+    <View style={styles.container}>
+      <View style={styles.content}>
+        <Text style={styles.title}>{i18nT('errors:components.ui.ErrorBoundary.chto_to_poshlo_ne_tak_aef679ab')}</Text>
+        <Text style={styles.message}>
+          {isExpoLoaderError(error)
+            ? i18nT('errorsStatic:loader.pageLoadFailed')
+            : error?.message || i18nT('errorsStatic:unexpectedError')}
+        </Text>
+        <ErrorActionButton
+          label={i18nT('errors:components.ui.ErrorBoundary.poprobovat_snova_8836dde0')}
+          onPress={onRetry}
+          accessibilityLabel={i18nT('errors:components.ui.ErrorBoundary.poprobovat_snova_8836dde0')}
+          styles={styles}
+          primary
+        />
+      </View>
+    </View>
+  );
 }
 
 const getStyles = (colors: ThemedColors) => StyleSheet.create({
