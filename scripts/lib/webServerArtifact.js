@@ -50,6 +50,37 @@ function containedFile(baseDir, relativeFile) {
   return target;
 }
 
+// Expo puts routes with more dynamic segments first, so on the server
+// `/quests/[city]/[questId]` shadowed `/quests/country/[country]` and
+// `/quests/theme/[theme]`, while the client router (static before dynamic)
+// opened the real page. The server takes the first match, so order by
+// specificity: at the first differing segment a static name precedes a
+// dynamic one, which precedes a catch-all; a prefix precedes its extensions.
+function routeSegmentRanks(page) {
+  return page.split('/')
+    .filter((segment) => segment && segment !== 'index' && !/^\(.+\)$/.test(segment))
+    .map((segment) => (segment.startsWith('[...') || segment.startsWith('[[') ? 2 : segment.startsWith('[') ? 1 : 0));
+}
+
+function compareRouteSpecificity(a, b) {
+  const left = routeSegmentRanks(a.page);
+  const right = routeSegmentRanks(b.page);
+  for (let index = 0; index < Math.min(left.length, right.length); index += 1) {
+    if (left[index] !== right[index]) return left[index] - right[index];
+  }
+  return left.length - right.length;
+}
+
+/** Rewrites the export's route manifest in server matching order (stable). */
+function orderServerRoutes(buildDir) {
+  const manifestPath = containedFile(path.join(buildDir, 'server'), '_expo/routes.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  if (!Array.isArray(manifest.htmlRoutes)) throw new Error('Missing SSR manifest htmlRoutes');
+  manifest.htmlRoutes = [...manifest.htmlRoutes].sort(compareRouteSpecificity);
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+  return manifest.htmlRoutes.length;
+}
+
 function assertServerExport(buildDir) {
   const serverDir = path.join(buildDir, 'server');
   const clientDir = path.join(buildDir, 'client');
@@ -57,6 +88,9 @@ function assertServerExport(buildDir) {
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   if (manifest.rendering?.mode !== 'ssr' || !Array.isArray(manifest.htmlRoutes) || !manifest.htmlRoutes.length) {
     throw new Error('Expected a nonempty Expo SSR routes manifest');
+  }
+  if (manifest.htmlRoutes.some((route, index) => index && compareRouteSpecificity(manifest.htmlRoutes[index - 1], route) > 0)) {
+    throw new Error('SSR routes manifest is not in specificity order (run orderServerRoutes)');
   }
   const modules = new Set([manifest.rendering.file]);
   const clientAssets = new Set();
@@ -98,4 +132,4 @@ function assertServerExport(buildDir) {
 }
 
 
-module.exports = { getJsBundleSignature, containedFile, assertServerExport }
+module.exports = { getJsBundleSignature, containedFile, assertServerExport, orderServerRoutes, compareRouteSpecificity }

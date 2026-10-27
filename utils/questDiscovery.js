@@ -43,7 +43,10 @@ function projectQuestDiscoveryRow(raw) {
       if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return null;
     } catch { return null; }
   } else if (cover === undefined) return null;
-  const rawTags = raw.tags ?? {};
+  // Quest.tags defaults to a list of slugs; edited rows carry a boolean map.
+  const rawTags = Array.isArray(raw.tags)
+    ? (raw.tags.every((tag) => typeof tag === 'string') ? Object.fromEntries(raw.tags.map((tag) => [tag, true])) : null)
+    : raw.tags ?? {};
   if (!rawTags || typeof rawTags !== 'object' || Array.isArray(rawTags) || Object.keys(rawTags).length > 50) return null;
   const tagNames = Object.keys(rawTags);
   if (tagNames.some((key) => !/^[a-z0-9_-]{1,80}$/.test(key))) return null;

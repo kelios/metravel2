@@ -75,7 +75,8 @@ function validateQuestPublicProjection(raw, route) {
     versions.push({ locale: version.locale, path: version.path, content_revision: version.content_revision });
   }
   if (route.locale !== 'ru' && !versions.some((entry) => entry.locale === route.locale)) return null;
-  if (versions.length && (versions.length < 2 || versions[0].locale !== 'ru'
+  // A RU-only quest publishes exactly its RU version; hreflang needs two (questPublicSeo).
+  if (versions.length && (versions[0].locale !== 'ru'
       || versions.some((entry, index) => index > 0 && QUEST_LOCALES.indexOf(versions[index - 1].locale) >= QUEST_LOCALES.indexOf(entry.locale)))) return null;
   const quality = raw.quality;
   if (!quality || typeof quality.indexable !== 'boolean'

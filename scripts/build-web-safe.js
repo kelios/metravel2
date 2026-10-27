@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const { assertHtmlChunkReloadGuards } = require('./lib/htmlChunkReloadGuard');
 const { resolveWebOutput } = require('./lib/webOutput');
-const { getJsBundleSignature, containedFile, assertServerExport } = require('./lib/webServerArtifact');
+const { getJsBundleSignature, containedFile, assertServerExport, orderServerRoutes } = require('./lib/webServerArtifact');
 
 const rootDir = path.resolve(__dirname, '..');
 
@@ -213,6 +213,7 @@ function main() {
     if (code === 0 || (terminatedByUs && exportReady)) {
       try {
         if (outputMode === 'server') {
+          orderServerRoutes(outputDir);
           const result = assertServerExport(outputDir);
           console.log(`[build-web-safe] SSR export verified: ${result.modules} modules, ${result.assets} client assets`);
           process.exit(0);

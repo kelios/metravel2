@@ -137,6 +137,23 @@ describe('build-web-safe helpers', () => {
     expect(() => assertServerExport(dir)).toThrow('SSR routes manifest')
   })
 
+  // Expo listed `[city]/[questId]` first, so the server rendered
+  // /quests/country/belarus with the quest-detail route (no H1, wrong screen).
+  it('orders server routes so a static segment wins over a dynamic one', () => {
+    const { orderServerRoutes } = require('@/scripts/lib/webServerArtifact')
+    const { dir, manifest, manifestPath } = serverFixture()
+    const route = manifest.htmlRoutes[0]
+    const pages = ['/[...missing]', '/(tabs)/quests/[city]/[questId]', '/(tabs)/quests/[city]/index',
+      '/(tabs)/quests/country/[country]/index', '/(tabs)/quests/theme/[theme]', '/(tabs)/quests/index']
+    manifest.htmlRoutes = pages.map((page) => ({ ...route, page }))
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest))
+    expect(() => assertServerExport(dir)).toThrow('specificity order')
+    orderServerRoutes(dir)
+    expect(assertServerExport(dir).manifest.htmlRoutes.map((entry: { page: string }) => entry.page)).toEqual([
+      '/(tabs)/quests/index', '/(tabs)/quests/country/[country]/index', '/(tabs)/quests/theme/[theme]',
+      '/(tabs)/quests/[city]/index', '/(tabs)/quests/[city]/[questId]', '/[...missing]'])
+  })
+
   it('keeps the independent SSR build away from production, root and scratch root', () => {
     expect(getOutputDir([])).toBe(path.join(projectRoot, '.codex-temp/ssr-2766'))
     expect(() => getOutputDir(['--output-dir', 'dist/prod'])).toThrow('inside .codex-temp')

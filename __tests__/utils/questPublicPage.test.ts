@@ -29,6 +29,17 @@ describe('public quest route and selected projection', () => {
     expect(result?.versions.map((entry) => entry.locale)).toEqual(['ru', 'be', 'uk', 'pl', 'en']);
   });
 
+  // The backend publishes [ru] for a quest without translations; requiring two
+  // versions turned every RU-only quest page into a 503.
+  it('accepts a RU-only quest with its single RU version but no other lone locale', () => {
+    const raw = projection();
+    const route = parseQuestPublicRoute(raw.canonical_path)!;
+    const ruOnly = { ...raw, versions: raw.versions.filter((entry: { locale: string }) => entry.locale === 'ru') };
+    expect(validateQuestPublicProjection(ruOnly, route)?.versions.map((entry) => entry.locale)).toEqual(['ru']);
+    const plOnly = { ...raw, versions: raw.versions.filter((entry: { locale: string }) => entry.locale === 'pl') };
+    expect(validateQuestPublicProjection(plOnly, route)).toBeNull();
+  });
+
   it('rejects wrong locale, wrong identity, unavailable revisions and unsafe links', () => {
     const route = parseQuestPublicRoute('/quests/7/fixture-city-walk')!;
     expect(validateQuestPublicProjection(projection('pl'), route)).toBeNull();

@@ -21,6 +21,7 @@ import { useQuestCatalogResponsiveModel } from '@/hooks/useQuestCatalogResponsiv
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useTheme, useThemedColors } from '@/hooks/useTheme';
 import { useQuestsList } from '@/hooks/useQuestsApi';
+import { useHydrationReady } from '@/hooks/useHydrationReady';
 import { useQuestReturnVisit } from '@/hooks/useQuestReturnVisit';
 import { useQuestReviewPrompt } from '@/hooks/useQuestReviewPrompt';
 import QuestsContentPanel from './QuestsContentPanel';
@@ -125,7 +126,11 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
 
     // API data
     const { quests: ALL_QUESTS, loading: questsLoading, error: questsError } = useQuestsList();
-    const dataLoaded = !questsLoading;
+    // A server-seeded catalogue still waits for hydration: the grid sizes its
+    // cards from a measured width, so the first frame keeps the static skeleton
+    // (no reflow of seeded cards — CLS 0.14 on /quests@1440 under SSR).
+    const hydrationReady = useHydrationReady();
+    const dataLoaded = hydrationReady && !questsLoading;
     const reviewedQuests = useMemo(() => filterReviewedQuests(ALL_QUESTS), [ALL_QUESTS]);
     // Личные срезы «Пройденные»/«Не пройденные» (#1791) — один связный концерн
     // со своей авторизационной границей, поэтому он живёт отдельным хуком.

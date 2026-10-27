@@ -13,6 +13,16 @@ it('whitelists public catalogue metadata while dropping private fields and neutr
   expect(JSON.stringify(result)).not.toMatch(/secret|Private visitor/);
 });
 
+// Quest.tags defaults to a list on the backend; quest 96 on prod still carries one,
+// and one rejected row failed the whole publication refresh.
+it('accepts the model-default list of tag slugs as a boolean map', () => {
+  const quest = questPrivateSnapshot().catalog[0];
+  expect(projectQuestDiscoveryRow({ ...quest, tags: ['kids', 'age-8-10'] })?.tags).toEqual({ kids: true, 'age-8-10': true });
+  expect(projectQuestDiscoveryRow({ ...quest, tags: { kids: true, bike: false } })?.tags).toEqual({ kids: true, bike: false });
+  expect(projectQuestDiscoveryRow({ ...quest, tags: ['kids', 5] })).toBeNull();
+  expect(projectQuestDiscoveryRow({ ...quest, tags: ['Bad Tag'] })).toBeNull();
+});
+
 it('rejects broken identities, invalid media and the wrong selected discovery view', () => {
   const quest = questPrivateSnapshot().catalog[0];
   expect(projectQuestDiscoveryRow({ ...quest, city_id: '../other' })).toBeNull();
