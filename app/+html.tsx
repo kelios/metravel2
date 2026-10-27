@@ -465,6 +465,11 @@ export default function Root({ children }: { children: React.ReactNode }) {
     && (node.type === 'title' || node.type === 'meta'
       || (node.type === 'link' && ['canonical', 'alternate'].includes(String((node.props as { rel?: string }).rel))));
   const routeMetadataNodes = headNodes.filter(isRouteMetadataNode);
+  // One node per key, as the client head manager keeps after hydration: a route
+  // that declares robots (a quest's cohort verdict) owns it; the site default
+  // fills only the routes that do not.
+  const routeDeclaresRobots = routeMetadataNodes.some((node) => React.isValidElement(node)
+    && node.type === 'meta' && (node.props as { name?: string }).name === 'robots');
   const assetHeadNodes = headNodes.filter((node) => !isRouteMetadataNode(node));
   const isProduction = typeof process !== 'undefined' && 
     (process.env.EXPO_PUBLIC_SITE_URL === 'https://metravel.by' || 
@@ -540,10 +545,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
           The inline JS above fixes [param] canonical URLs. */}
       <meta name="twitter:site" content="@metravel_by" />
 
-      <meta
-        name="robots"
-        content={siteDefaultRobots()}
-      />
+      {routeDeclaresRobots ? null : <meta name="robots" content={siteDefaultRobots()} />}
 
       {/* Schema.org structured data */}
       <script
