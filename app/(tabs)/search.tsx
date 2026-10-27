@@ -43,6 +43,7 @@ function SearchScreen() {
       authState: 'authenticated',
       intent: 'create-travel',
       action: 'create',
+      mode: 'full',
     })
     router.push('/travel/new' as any)
   }, [router])

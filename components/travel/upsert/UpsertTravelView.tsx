@@ -336,9 +336,10 @@ const AccessDeniedState = ({ colors, styles, router }: WizardStateProps) => {
   );
 };
 
-const AuthRequiredState = ({ colors, styles, router, createHref, shareTripContext }: WizardStateProps & {
+const AuthRequiredState = ({ colors, styles, router, createHref, shareTripContext, mode }: WizardStateProps & {
   createHref: string;
   shareTripContext: UpsertTravelController['shareTripContext'];
+  mode: UpsertTravelController['publicationMode'];
 }) => {
   const intent = shareTripContext ? 'share-trip' : 'create-travel';
   useEffect(() => {
@@ -357,9 +358,10 @@ const AuthRequiredState = ({ colors, styles, router, createHref, shareTripContex
       intent,
       action: 'login',
       sourceTravelId: shareTripContext?.sourceTravelId,
+      mode,
     });
     router.push(buildLoginHref({ redirect: createHref, intent }) as any);
-  }, [createHref, intent, router, shareTripContext?.sourceTravelId]);
+  }, [createHref, intent, mode, router, shareTripContext?.sourceTravelId]);
 
   const handleRegister = useCallback(() => {
     trackContentCreateCtaClicked({
@@ -369,9 +371,10 @@ const AuthRequiredState = ({ colors, styles, router, createHref, shareTripContex
       intent,
       action: 'register',
       sourceTravelId: shareTripContext?.sourceTravelId,
+      mode,
     });
     router.push(buildRegistrationHref({ redirect: createHref, intent }) as any);
-  }, [createHref, intent, router, shareTripContext?.sourceTravelId]);
+  }, [createHref, intent, mode, router, shareTripContext?.sourceTravelId]);
 
   const actions = useMemo<EmptyStateAction[]>(
     () => [
@@ -560,7 +563,8 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
 
   if (!controller.isAuthenticated && controller.isNew) {
     return <AuthRequiredState colors={colors} styles={styles} router={router}
-      createHref={controller.createHref} shareTripContext={controller.shareTripContext} />;
+      createHref={controller.createHref} shareTripContext={controller.shareTripContext}
+      mode={controller.publicationMode} />;
   }
 
   return (

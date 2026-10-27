@@ -529,6 +529,7 @@ export const travelGenerated4 = {
   "components.travel.ValidationFeedback.recommendationCount_other": "{{count}} рэкамендацый",
   "components.travel.TravelWizardHeader.stepProgressLabel": "Крок {{value1}} з {{value2}} · {{value3}}",
   "articleShareTrip.action": "Былі тут? Раскажыце пра сваю паездку",
+  "articleShareTrip.fullAction": "Напісаць поўны артыкул з маршрутам",
   "articleShareTrip.countryLabel": "Краіны падарожжа",
   "peerBadgePrompt.title": "Спадабаўся артыкул? Узнагародзьце аўтара значком",
   "peerBadgePrompt.action": "Узнагародзіць аўтара",

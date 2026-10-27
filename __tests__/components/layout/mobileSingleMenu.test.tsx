@@ -6,6 +6,7 @@ import { requestOpenDockMore } from '@/components/layout/bottomDockItemDefs'
 import { BOTTOM_DOCK_MORE_MENU_SECTIONS } from '@/components/layout/bottomDockModel'
 import { buildBottomDockMoreSections } from '@/components/layout/bottomDockMoreSections'
 import { BOTTOM_DOCK_SECTION_PATHS } from '@/constants/bottomDockRoutes'
+import { TRAVEL_NOTE_CREATE_HREF } from '@/utils/travelArticleCreateIntent'
 import { DESKTOP_BAR_NAV_ITEMS, HEADER_NAV_ITEMS, SUPPLEMENTARY_NAV_ITEMS } from '@/constants/headerNavigation'
 
 // #2779: на телефоне одно меню — лист «Ещё». Кнопка меню шапки открывает его же,
@@ -112,6 +113,14 @@ describe('одно меню телефона (#2779)', () => {
     )
     expect(account.map((item) => item.key)).not.toContain('profile')
     expect(account.map((item) => item.key)).not.toContain('travel-new')
+    // #2829: «Короткая заметка» — в навигации листа рядом с «Создать маршрут», без дубля в аккаунте.
+    expect(account.map((item) => item.key)).not.toContain('travel-note')
+    const primary = buildBottomDockMoreSections({ isAuthenticated: true, userId: 7 }, 'ios')
+      .find((section) => section.key === 'primary')!.items
+    const primaryKeys = primary.map((item) => item.key)
+    expect(primaryKeys.indexOf('travel-note')).toBe(primaryKeys.indexOf('travel-new') + 1)
+    // Литерал дока (модель не тянет строитель в стартовый граф) обязан совпадать со строителем.
+    expect(primary.find((item) => item.key === 'travel-note')?.route).toBe(TRAVEL_NOTE_CREATE_HREF)
   })
 
   it('кнопка меню шапки открывает тот же лист, что и пункт дока', () => {

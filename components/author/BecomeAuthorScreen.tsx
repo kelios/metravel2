@@ -42,6 +42,7 @@ export default function BecomeAuthorScreen() {
     trackContentCreateCtaClicked({
       contentType: 'route', source, authState, intent: 'create-travel',
       action: isAuthenticated ? 'create' : 'register',
+      mode: 'full',
     })
     if (!isAuthenticated) {
       trackRegisterCtaClicked({ source, intent: 'create-travel', authState })

@@ -529,6 +529,7 @@ export const travelGenerated4 = {
   "components.travel.ValidationFeedback.recommendationCount_other": "{{count}} zalecenia",
   "components.travel.TravelWizardHeader.stepProgressLabel": "Krok {{value1}} z {{value2}} · {{value3}}",
   "articleShareTrip.action": "Byliście tutaj? Opowiedzcie o swojej podróży",
+  "articleShareTrip.fullAction": "Napisz pełny artykuł z trasą",
   "articleShareTrip.countryLabel": "Kraje podróży",
   "peerBadgePrompt.title": "Podobał Ci się artykuł? Przyznaj autorowi odznakę",
   "peerBadgePrompt.action": "Przyznaj odznakę autorowi",

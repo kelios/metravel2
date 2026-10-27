@@ -1,4 +1,4 @@
-import type { Travel, TravelFormData } from '@/types/types';
+import type { Travel, TravelFormData, TravelPublicationFormat } from '@/types/types';
 import type { TravelFilters } from '@/hooks/useTravelFilters';
 
 export type TravelArticleCreateIntent = {
@@ -66,23 +66,40 @@ export function parseTravelArticleCreateIntent(
   };
 }
 
-export function buildTravelArticleCreateIntentHref(intent: TravelArticleCreateIntent | null): string {
-  if (!intent) return '/travel/new';
-  const normalized = parseTravelArticleCreateIntent({
+/**
+ * Единственный строитель ссылки создания: режим (#2829: `mode=note` — короткая
+ * заметка #2666) и контекст статьи живут в одном URL, поэтому вход через логин или
+ * регистрацию возвращает автора в тот же режим и с тем же местом.
+ */
+export function buildTravelArticleCreateIntentHref(
+  intent: TravelArticleCreateIntent | null,
+  mode: TravelPublicationFormat = 'full',
+): string {
+  const normalized = intent ? parseTravelArticleCreateIntent({
     source_travel_id: intent.sourceTravelId,
     country: intent.country,
     place: intent.place,
-  });
-  if (!normalized) return '/travel/new';
-  const query = new URLSearchParams({ source_travel_id: normalized.sourceTravelId });
-  if (normalized.country) query.set('country', normalized.country);
-  if (normalized.place) query.set('place', normalized.place);
-  return `/travel/new?${query.toString()}`;
+  }) : null;
+  const query = new URLSearchParams();
+  if (mode === 'note') query.set('mode', 'note');
+  if (normalized) {
+    query.set('source_travel_id', normalized.sourceTravelId);
+    if (normalized.country) query.set('country', normalized.country);
+    if (normalized.place) query.set('place', normalized.place);
+  }
+  const search = query.toString();
+  return search ? `/travel/new?${search}` : '/travel/new';
 }
 
-export function buildTravelArticleCreateHref(travel: ArticleContext): string {
+/** Вход в короткую заметку из меню — без контекста статьи. */
+export const TRAVEL_NOTE_CREATE_HREF = buildTravelArticleCreateIntentHref(null, 'note');
+
+export function buildTravelArticleCreateHref(
+  travel: ArticleContext,
+  mode: TravelPublicationFormat = 'full',
+): string {
   const sourceTravelId = positiveId(travel.id);
-  if (!sourceTravelId) return '/travel/new';
+  if (!sourceTravelId) return buildTravelArticleCreateIntentHref(null, mode);
   const countries = Array.isArray(travel.countries) ? travel.countries : [];
   const country = countries.map((value: unknown) => {
     if (value && typeof value === 'object') {
@@ -95,7 +112,7 @@ export function buildTravelArticleCreateHref(travel: ArticleContext): string {
     placeValue(typeof point === 'string' ? point : point?.name)
   )).find(Boolean);
   const place = placeValue(travel.cityName) ?? firstPoint;
-  return buildTravelArticleCreateIntentHref({ sourceTravelId, country, place });
+  return buildTravelArticleCreateIntentHref({ sourceTravelId, country, place }, mode);
 }
 
 export function resolveInitialPrefill(

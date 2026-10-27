@@ -104,6 +104,10 @@ export const BOTTOM_DOCK_MORE_MENU_SECTIONS: BottomDockMoreMenuSection[] = [
       ...moreNavItemsFrom(SUPPLEMENTARY_NAV_ITEMS),
       ...moreNavItemsFrom(SECONDARY_HEADER_NAV_ITEMS),
       { key: 'travel-new', get label() { return i18nT('navigationStatic:components.layout.bottomDockModel.sozdat_marshrut_a61a17b8') }, get accessibilityLabel() { return i18nT('navigationStatic:components.layout.bottomDockModel.sozdat_marshrut_a61a17b8') }, route: '/travel/new', iconName: 'plus-circle' },
+      // #2829: литерал, а не `TRAVEL_NOTE_CREATE_HREF`: модель тянет `constants/layout.ts`
+      // в общий стартовый граф, а разбор контекста статьи нужен только мастеру и статье.
+      // Совпадение со строителем ссылки держит `mobileSingleMenu.test.tsx`.
+      { key: 'travel-note', get label() { return i18nT('navigationStatic:createMenu.travelNote') }, get accessibilityLabel() { return i18nT('navigationStatic:createMenu.travelNote') }, route: '/travel/new?mode=note', iconName: 'edit-3' },
       // Экспорт в PDF («Книга путешествий») на сайте — только десктоп; в приложении он
       // приходит секцией аккаунта (`isBookExportEntryVisible`).
     ],

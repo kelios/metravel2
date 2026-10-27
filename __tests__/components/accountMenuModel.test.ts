@@ -116,6 +116,7 @@ describe('accountMenuModel (#2139)', () => {
     expect(mobile).toEqual([
       'profile',
       'travel-new',
+      'travel-note',
       'my-travels',
       'user-points',
       'messages',
@@ -125,6 +126,14 @@ describe('accountMenuModel (#2139)', () => {
       'instagram-schedule',
       'logout',
     ])
+  })
+
+  it('рядом с полным мастером — вход в короткую заметку (#2829)', () => {
+    const model = buildAccountMenuModel({ ...base })
+    expect(model.travels.find((entry) => entry.key === 'travel-new')?.target)
+      .toEqual({ kind: 'route', path: '/travel/new' })
+    expect(model.travels.find((entry) => entry.key === 'travel-note')?.target)
+      .toEqual({ kind: 'route', path: '/travel/new?mode=note' })
   })
 
   it('публичный профиль ведёт на страницу пользователя и скрыт без userId', () => {

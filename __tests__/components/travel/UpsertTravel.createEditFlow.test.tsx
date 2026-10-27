@@ -187,7 +187,7 @@ describe('UpsertTravel create/edit flow', () => {
     expect(capturedFormArgs?.isNew).toBe(true);
   });
 
-  it('preserves the bounded article context when registration returns without a session and the reader chooses login', () => {
+  it('preserves the bounded article context and note mode when registration returns without a session and the reader chooses login', () => {
     mockLocalParams = { source_travel_id: '42', country: 'PL', place: 'Краков', token: 'ignored', mode: 'note' };
     mockAuthState = { ...mockAuthState, isAuthenticated: false, userId: '' };
     const view = render(<UpsertTravel />);
@@ -195,8 +195,9 @@ describe('UpsertTravel create/edit flow', () => {
     const login = new URL(mockPush.mock.calls[0][0], 'https://metravel.by');
     expect(login.pathname).toBe('/login');
     expect(login.searchParams.get('intent')).toBe('share-trip');
-    expect(login.searchParams.get('redirect')).toBe('/travel/new?source_travel_id=42&country=PL&place=%D0%9A%D1%80%D0%B0%D0%BA%D0%BE%D0%B2');
-    expect(login.searchParams.get('redirect')).not.toMatch(/token|mode/);
+    // #2829: режим заметки переживает вход так же, как контекст статьи; посторонние параметры — нет.
+    expect(login.searchParams.get('redirect')).toBe('/travel/new?mode=note&source_travel_id=42&country=PL&place=%D0%9A%D1%80%D0%B0%D0%BA%D0%BE%D0%B2');
+    expect(login.searchParams.get('redirect')).not.toMatch(/token/);
     fireEvent.press(view.getByRole('button', { name: 'Зарегистрироваться и вернуться к созданию путешествия' }));
     const registration = new URL(mockPush.mock.calls[1][0], 'https://metravel.by');
     expect(registration.searchParams.get('redirect')).toBe(login.searchParams.get('redirect'));

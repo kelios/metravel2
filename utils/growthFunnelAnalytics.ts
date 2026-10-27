@@ -1,5 +1,6 @@
 import { queueAnalyticsEvent, sendAnalyticsEvent } from '@/utils/analytics';
 import type { AppStorePlatform } from '@/constants/appStore';
+import type { TravelPublicationFormat } from '@/types/types';
 
 export const GROWTH_FUNNEL_EVENTS = {
   registerCtaClick: 'cta_register_click',
@@ -60,6 +61,8 @@ type ContentCreateParams = {
   action?: unknown;
   sourceTravelId?: unknown;
   variant?: unknown;
+  /** #2829: в какой режим мастера ведёт вход создания; у входов вне мастера — нет. */
+  mode?: TravelPublicationFormat;
 };
 
 type RouteCreateParams = {
@@ -309,6 +312,7 @@ export const trackContentCreateCtaClicked = ({
   action,
   sourceTravelId,
   variant,
+  mode,
 }: ContentCreateParams) => {
   emitGrowthFunnelEvent(GROWTH_FUNNEL_EVENTS.contentCreateCtaClick, {
     content_type: contentType,
@@ -318,6 +322,7 @@ export const trackContentCreateCtaClicked = ({
     action: safeString(action),
     source_travel_id: safeString(sourceTravelId),
     variant: safeString(variant),
+    mode: mode === 'note' || mode === 'full' ? mode : undefined,
   });
 };
 

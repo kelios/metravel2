@@ -3,6 +3,7 @@ import { BOOK_EXPORT_ROUTE, isBookExportEntryVisible, isNavRouteAvailable } from
 import { buildLoginHref } from '@/utils/authNavigation'
 import { trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics'
 import { routes } from '@/utils/routes'
+import { TRAVEL_NOTE_CREATE_HREF } from '@/utils/travelArticleCreateIntent'
 import { translate as i18nT, translatePlural } from '@/i18n'
 
 // Единый источник пунктов меню аккаунта для desktop (AccountMenu) и мобильного
@@ -87,6 +88,13 @@ const buildTravelEntries = (): AccountMenuEntry[] => [
     title: i18nT('navigationStatic:components.layout.AccountMenu.dobavit_puteshestvie_bebd3820'),
     icon: 'plus-circle',
     target: { kind: 'route', path: '/travel/new' },
+  },
+  // #2829: рядом с полным мастером — вход в короткую заметку (#2666).
+  {
+    key: 'travel-note',
+    title: i18nT('navigationStatic:createMenu.travelNote'),
+    icon: 'edit-3',
+    target: { kind: 'route', path: TRAVEL_NOTE_CREATE_HREF },
   },
   {
     key: 'my-travels',

@@ -26,6 +26,7 @@ jest.mock('@/hooks/useTheme', () => ({
 const mockUseAuth = useAuth as jest.Mock
 const mockQueue = queueAnalyticsEvent as jest.Mock
 const actionLabel = 'Были здесь? Расскажите о своей поездке'
+const fullActionLabel = 'Написать полную статью с маршрутом'
 
 const travel = {
   id: 42,
@@ -47,7 +48,7 @@ describe('TravelArticleShareTripCta', () => {
     await act(async () => { await i18n.changeLanguage('ru') })
   })
 
-  it('takes a guest to registration with the full bounded create URL and share intent', () => {
+  it('takes a guest to registration with the bounded note create URL and share intent', () => {
     const screen = render(<TravelArticleShareTripCta travel={travel} isMobile />)
 
     expect(mockQueue).not.toHaveBeenCalled()
@@ -59,6 +60,7 @@ describe('TravelArticleShareTripCta', () => {
     const createUrl = new URL(authUrl.searchParams.get('redirect')!, 'https://metravel.by')
     expect(createUrl.pathname).toBe('/travel/new')
     expect(Object.fromEntries(createUrl.searchParams)).toEqual({
+      mode: 'note',
       source_travel_id: '42',
       country: 'BY',
       place: 'Гродно',
@@ -70,6 +72,7 @@ describe('TravelArticleShareTripCta', () => {
       auth_state: 'guest',
       source_travel_id: '42',
       action: 'register',
+      mode: 'note',
     })
     expect(mockQueue.mock.calls.some(([event]) => String(event).includes('favorite'))).toBe(false)
   })
@@ -84,9 +87,31 @@ describe('TravelArticleShareTripCta', () => {
     expect(createUrl.pathname).toBe('/travel/new')
     expect(createUrl.searchParams.get('source_travel_id')).toBe('42')
     expect(createUrl.searchParams.get('place')).toBe('Гродно')
+    expect(createUrl.searchParams.get('mode')).toBe('note')
     expect(mockQueue).toHaveBeenCalledWith('content_create_cta_click', expect.objectContaining({
       auth_state: 'authenticated',
       action: 'create',
+      mode: 'note',
+    }))
+  })
+
+  it('keeps the full wizard as the second choice with the same article context (#2829)', () => {
+    mockUseAuth.mockReturnValue({ authReady: true, isAuthenticated: true, userId: '8' })
+    const screen = render(<TravelArticleShareTripCta travel={travel} isMobile={false} />)
+
+    fireEvent.press(screen.getByRole('button', { name: fullActionLabel }))
+
+    const createUrl = new URL(mockPush.mock.calls[0][0], 'https://metravel.by')
+    expect(createUrl.pathname).toBe('/travel/new')
+    expect(Object.fromEntries(createUrl.searchParams)).toEqual({
+      source_travel_id: '42',
+      country: 'BY',
+      place: 'Гродно',
+    })
+    expect(mockQueue).toHaveBeenCalledWith('content_create_cta_click', expect.objectContaining({
+      source: 'travel_article',
+      action: 'create',
+      mode: 'full',
     }))
   })
 
@@ -155,7 +180,7 @@ describe('TravelArticleShareTripCta', () => {
 
     const authUrl = new URL(mockPush.mock.calls[0][0], 'https://metravel.by')
     const createUrl = new URL(authUrl.searchParams.get('redirect')!, 'https://metravel.by')
-    expect(Object.fromEntries(createUrl.searchParams)).toEqual({ source_travel_id: '42' })
+    expect(Object.fromEntries(createUrl.searchParams)).toEqual({ mode: 'note', source_travel_id: '42' })
     expect(createUrl.searchParams.get('place')).not.toBe(travel.name)
   })
 
@@ -165,6 +190,7 @@ describe('TravelArticleShareTripCta', () => {
     for (const locale of ['be', 'uk', 'pl', 'en', 'ru']) {
       await act(async () => { await i18n.changeLanguage(locale) })
       expect(screen.getByRole('button', { name: i18n.t('travel:articleShareTrip.action') })).toBeTruthy()
+      expect(screen.getByRole('button', { name: i18n.t('travel:articleShareTrip.fullAction') })).toBeTruthy()
     }
     expect(mockQueue).not.toHaveBeenCalled()
   })

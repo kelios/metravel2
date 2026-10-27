@@ -123,6 +123,7 @@ function ContributionBanner({ variant = 'default', density = 'regular' }: Contri
       authState,
       intent: 'add-place',
       action: isAuthenticated ? 'create' : 'login',
+      mode: 'full',
     })
     if (isAuthenticated) {
       router.push(ADD_PLACE_PATH as any)
@@ -139,6 +140,7 @@ function ContributionBanner({ variant = 'default', density = 'regular' }: Contri
       authState,
       intent: 'add-place',
       action: 'register',
+      mode: 'full',
     })
     router.push(
       (`/registration?redirect=${encodeURIComponent(ADD_PLACE_PATH)}&intent=add-place`) as any,

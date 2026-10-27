@@ -152,7 +152,8 @@ export function useUpsertTravelController(): UpsertTravelController {
   // записи приходит с сервера и остаётся единственным источником.
   const requestedPublicationMode = useRef(isNew ? parseTravelPublicationMode(searchParams) : 'full').current;
   const createHref = useMemo(
-    () => buildTravelArticleCreateIntentHref(shareTripContext), [shareTripContext],
+    () => buildTravelArticleCreateIntentHref(shareTripContext, requestedPublicationMode),
+    [requestedPublicationMode, shareTripContext],
   );
   const [articlePrefill, setArticlePrefill] = useState<{
     pending: boolean;

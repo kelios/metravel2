@@ -289,6 +289,17 @@ describe('growthFunnelAnalytics', () => {
     );
   });
 
+  it('passes the wizard mode of a create entry and drops anything but note/full (#2829)', () => {
+    trackContentCreateCtaClicked({ contentType: 'route', source: 'travel_article', mode: 'note' });
+    trackContentCreateCtaClicked({ contentType: 'route', source: 'search_toolbar', mode: 'full' });
+    trackContentCreateCtaClicked({ contentType: 'route', source: 'home', mode: 'draft' as never });
+
+    const calls = mockedQueueAnalyticsEvent.mock.calls
+      .filter(([event]) => event === GROWTH_FUNNEL_EVENTS.contentCreateCtaClick)
+      .map(([, params]) => (params as Record<string, unknown>).mode);
+    expect(calls).toEqual(['note', 'full', undefined]);
+  });
+
   it('tracks content creation CTA clicks as a normalized funnel step', () => {
     trackContentCreateCtaClicked({
       contentType: 'route',

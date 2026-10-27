@@ -100,4 +100,5 @@ export const navigationStaticResources = {
   "seasonalTheme.option.christmas": "Christmas & New Year",
   "seasonalTheme.option.christmas.description": "Evergreen, fairy lights and winter glow",
   "bottomDock.appDownload.a11y": "Download the MeTravel app",
+  "createMenu.travelNote": "Quick trip note",
 } as const

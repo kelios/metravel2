@@ -3,7 +3,9 @@ import {
   buildTravelArticleCreateIntentHref,
   parseTravelArticleCreateIntent,
   resolveInitialPrefill,
+  TRAVEL_NOTE_CREATE_HREF,
 } from '@/utils/travelArticleCreateIntent';
+import { parseTravelPublicationMode } from '@/utils/travelNote';
 import { buildLoginHref, buildRegistrationHref, resolvePostAuthPath } from '@/utils/authNavigation';
 
 const article = {
@@ -103,5 +105,26 @@ describe('article creation context', () => {
       redirect: login.searchParams.get('redirect'), intent: login.searchParams.get('intent'),
     })).toBe(href);
     expect(resolvePostAuthPath({ redirect: '//evil.example', intent: 'share-trip' })).toBe('/');
+  });
+
+  it('carries note mode next to the article context and through auth (#2829)', () => {
+    const href = buildTravelArticleCreateHref(article, 'note');
+    expect(href).toBe('/travel/new?mode=note&source_travel_id=42&country=PL&place=%D0%9A%D1%80%D0%B0%D0%BA%D0%BE%D0%B2');
+    expect(parseTravelArticleCreateIntent(href)).toEqual({ sourceTravelId: '42', country: 'PL', place: 'Краков' });
+    const query = Object.fromEntries(new URL(href, 'https://metravel.by').searchParams);
+    expect(parseTravelPublicationMode(query)).toBe('note');
+    const login = new URL(buildLoginHref({ redirect: href, intent: 'share-trip' }), 'https://metravel.by');
+    expect(resolvePostAuthPath({
+      redirect: login.searchParams.get('redirect'), intent: login.searchParams.get('intent'),
+    })).toBe(href);
+  });
+
+  it('builds the menu note entry and leaves the full wizard without a mode', () => {
+    expect(TRAVEL_NOTE_CREATE_HREF).toBe('/travel/new?mode=note');
+    expect(buildTravelArticleCreateIntentHref(null)).toBe('/travel/new');
+    expect(buildTravelArticleCreateIntentHref(null, 'full')).toBe('/travel/new');
+    expect(buildTravelArticleCreateHref({ ...article, id: 'bad' as never }, 'note')).toBe('/travel/new?mode=note');
+    expect(buildTravelArticleCreateHref(article, 'full')).toBe(buildTravelArticleCreateHref(article));
+    expect(buildTravelArticleCreateHref(article)).not.toMatch(/mode=/);
   });
 });

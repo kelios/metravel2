@@ -88,6 +88,9 @@ test.describe('@smoke AccountMenu: task-board item visibility', () => {
     // compact and replaces the account links instead of stacking both groups.
     await menuAction(page, 'Путешествия').click()
     await expect(menu.getByRole('link', { name: 'Добавить путешествие', exact: true })).toBeVisible()
+    // #2829: рядом с полным мастером — вход в короткую заметку.
+    await expect(menu.getByRole('link', { name: 'Короткая заметка', exact: true }))
+      .toHaveAttribute('href', '/travel/new?mode=note')
     await expect(taskBoardItem(page)).toHaveCount(0)
     await expectCompactAccountMenu(menu)
   })

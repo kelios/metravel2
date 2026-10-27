@@ -100,4 +100,5 @@ export const navigationStaticResources = {
   "seasonalTheme.option.christmas": "Різдво і Новий рік",
   "seasonalTheme.option.christmas.description": "Хвоя, гірлянди й зимове сяйво",
   "bottomDock.appDownload.a11y": "Завантажити застосунок MeTravel",
+  "createMenu.travelNote": "Коротка нотатка",
 } as const
