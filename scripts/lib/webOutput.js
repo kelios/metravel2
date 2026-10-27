@@ -42,7 +42,7 @@ function resolveWebSsrCapability(value) {
 // enabled). Committed here, it holds for every later deploy from main. Turn it
 // off only after the backend `rollback-code` has retired the live SSR release:
 // a static build must not be published under a still-active server release.
-const WEB_SSR_ROLLOUT_ENABLED = true
+const WEB_SSR_ROLLOUT_ENABLED = false
 
 function resolveDeployWebOutput(value, rolloutEnabled = WEB_SSR_ROLLOUT_ENABLED) {
   const capability = resolveWebSsrCapability(value)
