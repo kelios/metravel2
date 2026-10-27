@@ -1,7 +1,7 @@
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
-const { shellRoute, publicConfig, sharedCriticalCss, writeSharedCss } = require('@/scripts/prepare-web-ssr')
+const { shellRoute, publicConfig, writePublicConfig, sharedCriticalCss, writeSharedCss } = require('@/scripts/prepare-web-ssr')
 const { externalizeHeadStyles } = require('@/scripts/externalize-head-styles')
 
 const CRITICAL = `body{margin:0}${'.x{color:red}'.repeat(300)}`
@@ -36,6 +36,16 @@ describe('one-export SSR transition', () => {
       EXPO_PUBLIC_API_URL: 'https://metravel.by',
       EXPO_PUBLIC_WEB_RUNTIME_SSR: 'true',
     })
+  })
+
+  it('writes the public configuration readable by the backend gateway uid', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ssr-env-'))
+    const file = writePublicConfig(dir, { EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR: 'true' })
+    expect(fs.statSync(file).mode & 0o777).toBe(0o644)
+    expect(JSON.parse(fs.readFileSync(file, 'utf8'))).toEqual({ EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR: 'true' })
+    fs.chmodSync(file, 0o600)
+    expect(fs.statSync(writePublicConfig(dir, {})).mode & 0o777).toBe(0o644)
+    fs.rmSync(dir, { recursive: true, force: true })
   })
 
   it('derives the shared critical CSS file from the rendered shell with the static externalizer name', () => {

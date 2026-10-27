@@ -97,6 +97,17 @@ function writeSharedCss(clientRoot, { fileName, css }) {
   fs.writeFileSync(target, css)
 }
 
+// Only EXPO_PUBLIC_* strings (publicConfig, rechecked by the backend stage).
+// The Django gateway reads the quest flag here under its own uid, so the file
+// must be world-readable like the rest of the release: 0600 turned every
+// quest and home page into 503 while articles, which skip it, rendered.
+function writePublicConfig(runtimeDir, config) {
+  const file = path.join(runtimeDir, '.ssr-env.json')
+  fs.writeFileSync(file, `${JSON.stringify(config)}\n`)
+  fs.chmodSync(file, 0o644)
+  return file
+}
+
 async function prepareWebSsr({ exportDir, staticDir, runtimeDir, envFile, sha, dirty = false }) {
   const { serverDir, clientDir, manifest } = assertServerExport(exportDir)
   const config = publicConfig(envFile)
@@ -127,7 +138,7 @@ async function prepareWebSsr({ exportDir, staticDir, runtimeDir, envFile, sha, d
   fs.mkdirSync(path.join(runtime, 'node_modules'), { recursive: true })
   fs.cpSync(packageRoot, path.join(runtime, 'node_modules/expo-server'), { recursive: true })
   if (config.EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR === 'true') await packageQuestWebBuilder(runtime)
-  fs.writeFileSync(path.join(runtimeDir, '.ssr-env.json'), `${JSON.stringify(config)}\n`, { mode: 0o600 })
+  writePublicConfig(runtimeDir, config)
   fs.writeFileSync(path.join(runtimeDir, '.ssr-build.json'), `${JSON.stringify({ sha, dirty, output: 'server', criticalCss: criticalCss.fileName })}\n`)
   console.log(`[prepare-web-ssr] ${shellCount} legacy shells, one client bundle, private runtime packaged`)
   return shellCount
@@ -147,5 +158,5 @@ async function main() {
   await prepareWebSsr(options)
 }
 
-module.exports = { shellRoute, publicConfig, sharedCriticalCss, writeSharedCss, prepareWebSsr }
+module.exports = { shellRoute, publicConfig, writePublicConfig, sharedCriticalCss, writeSharedCss, prepareWebSsr }
 if (require.main === module) main().catch((error) => { console.error(`[prepare-web-ssr] ${error.message}`); process.exitCode = 1 })
