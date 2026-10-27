@@ -156,6 +156,49 @@ describe('MapPlaceBottomCard', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it('swallows only the closing gesture ghost click; the next gesture at the same point gets its click (#2813)', () => {
+    require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }))
+
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <MapPlaceBottomCard point={point} userLocation={null} onClose={jest.fn()} />,
+      )
+    })
+    const close = tree.root.findByProps({ testID: 'map-place-bottom-card-close' })
+    const tap = { clientX: 360, clientY: 120 }
+    const closeEvent = {
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn(),
+      nativeEvent: { ...tap, preventDefault: jest.fn(), stopPropagation: jest.fn(), stopImmediatePropagation: jest.fn() },
+    }
+    const onDocumentClick = jest.fn()
+    document.addEventListener('click', onDocumentClick)
+    const clickAtTap = () => {
+      const click = new MouseEvent('click', { bubbles: true, cancelable: true, ...tap })
+      document.body.dispatchEvent(click)
+      return click
+    }
+
+    try {
+      // Touch: the guard is armed twice (pointerup + touchend).
+      renderer.act(() => {
+        close.props.onPointerUp(closeEvent)
+        close.props.onTouchEnd(closeEvent)
+      })
+      expect(clickAtTap().defaultPrevented).toBe(true)
+      expect(onDocumentClick).not.toHaveBeenCalled()
+
+      // A new gesture starts: no ghost click of the closing tap can follow, so a
+      // deliberate tap at the same point (e.g. «Маршрут» in the top toolbar) passes.
+      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+      expect(clickAtTap().defaultPrevented).toBe(false)
+      expect(onDocumentClick).toHaveBeenCalledTimes(1)
+    } finally {
+      document.removeEventListener('click', onDocumentClick)
+    }
+  })
+
   it('keeps the compact bottom-sheet (no extra ScrollView) on wider viewports', () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 900, height: 800, scale: 1, fontScale: 1 }))
 

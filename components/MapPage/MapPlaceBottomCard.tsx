@@ -42,6 +42,7 @@ const guardWebCompatibilityClick = (event: any) => {
   let timeoutId: ReturnType<typeof setTimeout> | null = null
   const cleanup = () => {
     document.removeEventListener('click', stopCompatibilityClick, true)
+    document.removeEventListener('pointerdown', cleanup, true)
     if (timeoutId != null) clearTimeout(timeoutId)
   }
   const stopCompatibilityClick = (clickEvent: MouseEvent) => {
@@ -57,6 +58,11 @@ const guardWebCompatibilityClick = (event: any) => {
   }
 
   document.addEventListener('click', stopCompatibilityClick, true)
+  // Совместимый click закрывающего жеста всегда приходит раньше pointerdown
+  // следующего. Chromium-мышь его не шлёт (карточка размонтирована на pointerup),
+  // а тач ставит гард дважды (pointerup + touchend) — без снятия на новом жесте
+  // гард съедал бы первое нажатие в той же точке, например «Маршрут» (#2813).
+  document.addEventListener('pointerdown', cleanup, true)
   timeoutId = setTimeout(cleanup, WEB_COMPAT_CLICK_GUARD_MS)
 }
 // Android renders elevated descendants (map FABs / WebView controls) above a
