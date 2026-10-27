@@ -7,6 +7,7 @@ const http = require('node:http')
 const { AsyncLocalStorage } = require('node:async_hooks')
 const { assertServerExport, containedFile } = require('./lib/webServerArtifact')
 const { resolveWebOutput } = require('./lib/webOutput')
+const { installSsrApiTransport } = require('./lib/ssrApiTransport')
 const { installRequestLocaleStore, resolveRequestLocale } = require('../utils/ssr/requestLocale')
 const { SHARED_CSS_URL_DIR, SSR_CRITICAL_CSS_ENV, isSharedCriticalCssFile } = require('../utils/ssr/criticalCss')
 
@@ -54,6 +55,7 @@ function createSsrServer({ buildDir = process.env.SSR_BUILD_DIR || path.join(rep
   if (resolveWebOutput() !== 'server') throw new Error('SSR runner requires explicit server output and runtime flags')
   const { serverDir, clientDir } = assertServerExport(generationDir)
   const requestLocales = installRequestLocaleStore(new AsyncLocalStorage())
+  installSsrApiTransport()
   const { createRequestHandler } = require('expo-server/adapter/http')
   const handleExpo = createRequestHandler({ build: serverDir, environment: 'production' }, {
     handleRouteError(error) {

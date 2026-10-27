@@ -10,15 +10,20 @@ sha="${2:-}"
 helper=deploy/prod/web_ssr_release.py
 remote_prefix="cd $(quote "$PROD_REMOTE_DIR") && "
 ssh_args=(-o BatchMode=yes -o ConnectTimeout=15)
+# The helper starts compose services (quest-web-refresh) whose environment
+# interpolates the production secrets kept in ~/.bashrc: an interactive shell,
+# as for deploy/prod/release_app.sh. Without it the refresher crash-loops on
+# SECRET_KEY and every quest page and the home page answer 503. Its stdout
+# stays clean (job-control notices go to stderr), so JSON replies parse.
+remote_shell() { ssh "${ssh_args[@]}" "$PROD_SSH_TARGET" "bash -ic $(quote "$1")"; }
 
 if [[ "$action" == capability ]]; then
-  ssh "${ssh_args[@]}" "$PROD_SSH_TARGET" \
-    "${remote_prefix}if [ -f $helper ]; then python3 $helper capability; else printf '%s\\n' '{\"schema_version\":1,\"available\":false,\"enabled\":false}'; fi"
+  remote_shell "${remote_prefix}if [ -f $helper ]; then python3 $helper capability; else printf '%s\\n' '{\"schema_version\":1,\"available\":false,\"enabled\":false}'; fi"
   exit
 fi
 [[ "$sha" =~ ^[a-f0-9]{40}$ ]] || { echo 'Invalid SSR source SHA' >&2; exit 1; }
 receipt="web-ssr/receipts/$sha.json"
-remote() { ssh "${ssh_args[@]}" "$PROD_SSH_TARGET" "${remote_prefix}python3 $helper $*"; }
+remote() { remote_shell "${remote_prefix}python3 $helper $*"; }
 
 case "$action" in
   stage)

@@ -116,7 +116,7 @@ async function prepareWebSsr({ exportDir, staticDir, runtimeDir, envFile, sha, d
   fs.mkdirSync(path.join(runtime, 'lib'), { recursive: true })
   fs.copyFileSync(path.join(__dirname, 'serve-web-ssr.js'), path.join(runtime, 'serve-web-ssr.js'))
   fs.copyFileSync(path.join(__dirname, 'deploy-expo-overlay.sh'), path.join(runtime, 'deploy-expo-overlay.sh'))
-  for (const helper of ['webServerArtifact.js', 'webOutput.js']) {
+  for (const helper of ['webServerArtifact.js', 'webOutput.js', 'ssrApiTransport.js']) {
     fs.copyFileSync(path.join(__dirname, 'lib', helper), path.join(runtime, 'lib', helper))
   }
   fs.mkdirSync(path.join(runtimeDir, 'utils', 'ssr'), { recursive: true })

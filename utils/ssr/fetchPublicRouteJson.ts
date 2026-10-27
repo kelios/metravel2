@@ -1,5 +1,7 @@
 import type { ImmutableRequest } from 'expo-server'
 
+const SSR_API_TRANSPORT = Symbol.for('metravel.ssr.apiTransport')
+
 export function publicRouteError(httpStatus: 404 | 410 | 503): Error & { httpStatus: number } {
   return Object.assign(new Error(httpStatus === 503 ? 'Service Unavailable' : 'Not Found'), { httpStatus })
 }
@@ -37,7 +39,11 @@ export async function fetchPublicRouteJsonResponse(
   if (request.signal.aborted) cancel()
   const timeout = setTimeout(cancel, 10_000)
   try {
-    const response = await fetch(`${apiRoot}/${endpoint}`, { headers, credentials: 'omit', redirect: 'error', signal: controller.signal })
+    // Node fetch drops a forbidden Host header; the SSR runner installs a
+    // node:http transport that keeps it (scripts/lib/ssrApiTransport.js).
+    const send = headers.Host ? (globalThis as Record<symbol, unknown>)[SSR_API_TRANSPORT] as typeof fetch | undefined : fetch
+    if (typeof send !== 'function') throw publicRouteError(503)
+    const response = await send(`${apiRoot}/${endpoint}`, { headers, credentials: 'omit', redirect: 'error', signal: controller.signal })
     let data: unknown = null
     try { data = await response.json() } catch { if (response.ok) throw publicRouteError(503) }
     return { status: response.status, ok: response.ok, data }

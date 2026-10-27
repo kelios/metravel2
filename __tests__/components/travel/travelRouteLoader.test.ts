@@ -79,7 +79,14 @@ describe('travel route loader', () => {
   it('uses internal transport with build-owned public Host and protocol for Django', async () => {
     process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by'
     process.env.SSR_API_ORIGIN = 'http://app:8000'
-    await loadTravelRoute(request(), { param: 'demo' })
+    // Node fetch drops Host; the runner-installed transport carries it.
+    const registry = globalThis as unknown as Record<symbol, unknown>
+    registry[Symbol.for('metravel.ssr.apiTransport')] = fetchMock
+    try {
+      await loadTravelRoute(request(), { param: 'demo' })
+    } finally {
+      delete registry[Symbol.for('metravel.ssr.apiTransport')]
+    }
     expect(fetchMock).toHaveBeenCalledWith('http://app:8000/api/travels/by-slug/demo/', expect.objectContaining({
       credentials: 'omit',
       headers: { Accept: 'application/json', Host: 'metravel.by', 'X-Forwarded-Proto': 'https' },
