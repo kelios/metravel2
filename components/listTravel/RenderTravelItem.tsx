@@ -138,7 +138,7 @@ function RenderTravelItem({
         && currentUserId && extractOwnerIds(item).includes(String(currentUserId).trim()));
     const renderAuthorFeedback = useCallback((onEdit: () => void) => (
         <TravelModerationFeedback key={`${item.id}:${currentUserId}`} travel={item} onCorrect={onEdit} list
-            listSlots={authorFeedbackSlots} />
+            showStatus={false} listSlots={authorFeedbackSlots} />
     ), [authorFeedbackSlots, currentUserId, item]);
     const containerStyle = useMemo<ViewStyle>(() => ({
         width: '100%',

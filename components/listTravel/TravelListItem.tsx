@@ -6,7 +6,7 @@ import { router } from 'expo-router'
 import type { Travel } from '@/types/types'
 import FavoriteButton from '@/components/travel/FavoriteButton'
 import TravelStatusButton from '@/components/travel/TravelStatusButton'
-import TravelPublicationStatusChip from '@/components/travel/TravelPublicationStatusChip'
+import TravelPublicationStatusChip, { travelDisplayStatusLabelKey } from '@/components/travel/TravelPublicationStatusChip'
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers'
 import { routes } from '@/utils/routes'
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard'
@@ -24,7 +24,7 @@ import { globalFocusStyles } from '@/styles/globalFocus'
 import { formatViewCount, shouldShowViewCount } from '@/components/travel/utils/travelHelpers'
 import { hasAnyTravelEngagementStats } from '@/utils/travelEngagementStats'
 import { appendReturnToParam } from '@/utils/navigationReturnPath'
-import { isTravelDraft } from '@/utils/travelPublicationStatus'
+import { isTravelDraft, resolveTravelModerationFeedback } from '@/utils/travelPublicationStatus'
 import {
   buildResponsiveImagePropsFromMedia,
   getMediaPlaceholderData,
@@ -199,6 +199,9 @@ function TravelListItem({
   const showViews = shouldShowViewCount(views, { isOwner: Boolean(renderAuthorFeedback) })
   const travelKey = slug?.trim() || String(id)
   const isDraft = isTravelDraft(travel)
+  // The author sees every publication status as an icon on the card itself;
+  // other viewers only ever meet the draft chip (#2836).
+  const authorStatus = renderAuthorFeedback ? resolveTravelModerationFeedback(travel).status : undefined
   const cardTestId = selectable
     ? `travel-card-selectable-${travelKey}`
     : `travel-card-${travelKey}`
@@ -438,7 +441,9 @@ function TravelListItem({
 
   const a11yLabel =
     i18nT('travel:components.listTravel.TravelListItem.a11yTitle', { value1: title }) +
-    (isDraft && !renderAuthorFeedback ? i18nT('travel:components.listTravel.TravelListItem.status_chernovik_a0df151f') : '') +
+    (authorStatus !== undefined
+      ? i18nT('travel:components.listTravel.TravelListItem.status_value1', { value1: i18nT(travelDisplayStatusLabelKey(authorStatus)) })
+      : isDraft ? i18nT('travel:components.listTravel.TravelListItem.status_chernovik_a0df151f') : '') +
     (countries.length ? i18nT('travel:components.listTravel.TravelListItem.strany_value1_755975ff', { value1: countries.join(', ') }) : '') +
     (displayYear ? i18nT('travel:components.listTravel.TravelListItem.god_value1_e70dda0d', { value1: displayYear }) : '') +
     (showViews ? i18nT('travel:components.listTravel.TravelListItem.prosmotrov_value1_aadc926b', { value1: viewsFormatted }) : '')
@@ -667,7 +672,8 @@ function TravelListItem({
 
   const hasSecondaryMeta =
     topRowItems.length > 0 ||
-    (isDraft && !renderAuthorFeedback) ||
+    isDraft ||
+    authorStatus !== undefined ||
     hasEngagementStats ||
     hasRating ||
     displayYear != null
@@ -676,7 +682,9 @@ function TravelListItem({
     <View style={styles.metaRow}>
       <View style={styles.inlineMetaGroup}>{topRowItems}</View>
       <View style={styles.metaBadgesRow}>
-        {isDraft && !renderAuthorFeedback ? <TravelPublicationStatusChip status="draft" compact testID="draft-status-badge" /> : null}
+        {authorStatus !== undefined
+          ? <TravelPublicationStatusChip status={authorStatus} iconOnly testID="publication-status-icon" />
+          : isDraft ? <TravelPublicationStatusChip status="draft" compact testID="draft-status-badge" /> : null}
         {displayYear != null && (
           <View style={styles.metaYear} testID="year-meta">
             <Feather name="calendar" size={VIEW_ICON_SIZE} color={colors.textMuted} />

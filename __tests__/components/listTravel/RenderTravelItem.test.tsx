@@ -207,7 +207,8 @@ describe('real author-card moderation controls', () => {
 
   it('shows the rejection without a duplicate draft badge and correction opens the existing editor', () => {
     const screen = renderWithProviders(<RenderTravelItem item={rejectedTravel} currentUserId="1" showAuthorModerationFeedback />);
-    expect(screen.getByText('Отклонено')).toBeTruthy();
+    expect(screen.getByTestId('publication-status-icon').props.accessibilityLabel).toBe('Отклонено');
+    expect(screen.queryByText('Отклонено')).toBeNull();
     expect(screen.queryByTestId('draft-status-badge')).toBeNull();
     fireEvent.press(screen.getByTestId('moderation-correct-button'));
     expect(mockRouterPush).toHaveBeenCalledTimes(1);

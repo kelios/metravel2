@@ -162,6 +162,7 @@ export const travelGenerated1 = {
   "components.listTravel.TravelListItem.prosmotrov_value1_aadc926b": ". Wyświetlenia: {{value1}}",
   "components.listTravel.TravelListItem.redaktirovat_2e33442a": "Edytuj",
   "components.listTravel.TravelListItem.status_chernovik_a0df151f": ". Stan: wersja robocza",
+  "components.listTravel.TravelListItem.status_value1": ". Stan: {{value1}}",
   "components.listTravel.TravelListItem.strany_value1_755975ff": ". Kraje: {{value1}}",
   "components.listTravel.TravelListItem.udalyaetsya_6e5041bf": "Usunięto...",
   "components.listTravel.TravelListItemSelectableOverlay.ubrat_iz_vybrannogo_de894210": "Usuń z wybranych",

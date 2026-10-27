@@ -97,7 +97,8 @@ describe('author-list collapsed feedback geometry across independent rows', () =
         }
 
         const full = footers[0]
-        const chip = full.firstElementChild!
+        // The status lives on the card as an icon, so the footer starts at the reason.
+        expect(full.querySelector('[data-testid="publication-status-icon"]')).toBeNull()
         const preview = full.querySelector('[data-testid="moderation-reason-preview"]')!
         const reasonLabel = preview.previousElementSibling!
         const details = full.querySelector('[data-testid="moderation-reason-expand"]')!
@@ -108,8 +109,7 @@ describe('author-list collapsed feedback geometry across independent rows', () =
         // constants. The floor covers two preview/date/action lines and every
         // visible control's padding, border and touch target. jsdom does not
         // measure text or browser flex layout; production must prove the bounds.
-        const required = verticalEdges(full) + 3 * pixels(full, 'gap')
-          + pixels(chip.firstElementChild!, 'lineHeight') + verticalEdges(chip)
+        const required = verticalEdges(full) + 2 * pixels(full, 'gap')
           + pixels(reasonLabel, 'lineHeight') + 2 * pixels(preview, 'lineHeight')
           + Math.max(pixels(details, 'minHeight'), pixels(details.firstElementChild!, 'lineHeight') + verticalEdges(details))
           + 2 * pixels(date, 'lineHeight')
@@ -142,21 +142,20 @@ describe('author-list collapsed feedback geometry across independent rows', () =
       })))
       const footers = Array.from(host.querySelectorAll<HTMLElement>('[data-testid="travel-moderation-feedback"]'))
       const floors = footers.map((footer) => pixels(footer, 'minHeight'))
-      const chipOnly = verticalEdges(footers[0]) + pixels(footers[0].firstElementChild!.firstElementChild!, 'lineHeight')
-        + verticalEdges(footers[0].firstElementChild!)
+      const edges = footers.map(verticalEdges)
       await act(async () => root.unmount())
       host.remove()
-      return { floors, chipOnly }
+      return { floors, edges }
     }
     const plain = (id: number, publication_status: string) =>
       ({ id, slug: `plain-${id}`, name: `Plain ${id}`, userIds: '7', countryName: '', publication_status } as Travel)
     const drafts = await renderGrid([plain(91, 'draft'), travels[5], plain(92, 'draft')])
-    expect(new Set(drafts.floors).size).toBe(1)
-    expect(drafts.floors[0]).toBe(drafts.chipOnly)
+    expect(drafts.floors).toEqual([0, 0, 0])
+    expect(drafts.edges).toEqual([0, 0, 0])
 
     const approved = await renderGrid([travels[2], plain(93, 'draft')])
     expect(new Set(approved.floors).size).toBe(1)
-    expect(approved.floors[0]).toBeGreaterThan(approved.chipOnly)
+    expect(approved.floors[0]).toBeGreaterThan(0)
 
     const full = await renderGrid(travels)
     expect(full.floors[0]).toBeGreaterThan(approved.floors[0])

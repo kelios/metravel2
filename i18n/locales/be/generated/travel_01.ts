@@ -162,6 +162,7 @@ export const travelGenerated1 = {
   "components.listTravel.TravelListItem.prosmotrov_value1_aadc926b": ". Праглядаў: {{value1}}",
   "components.listTravel.TravelListItem.redaktirovat_2e33442a": "Рэдагаваць",
   "components.listTravel.TravelListItem.status_chernovik_a0df151f": ". Статус: чарнавік",
+  "components.listTravel.TravelListItem.status_value1": ". Статус: {{value1}}",
   "components.listTravel.TravelListItem.strany_value1_755975ff": ". Краіны: {{value1}}",
   "components.listTravel.TravelListItem.udalyaetsya_6e5041bf": "Выдаляецца…",
   "components.listTravel.TravelListItemSelectableOverlay.ubrat_iz_vybrannogo_de894210": "Прыбраць з абранага",
