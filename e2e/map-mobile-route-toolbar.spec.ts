@@ -285,13 +285,25 @@ test.describe('@smoke mobile map route toolbar (#597)', () => {
         }
       })
 
-    const marker = page.locator('.metravel-pin-marker').first()
-    await expect(marker).toBeVisible({ timeout: 30_000 })
-    await marker.click({ force: true })
     const cardAction = byTid(page, 'popup-primary-action')
+    // The first fixture is at the GPS fix: <100 m must leave the route empty.
+    // Select it from the list because the live-location pin overlaps its marker.
+    await byTid(page, 'map-mobile-open-list').click()
+    await page.getByTestId('map-travel-card').filter({ hasText: 'Верхний город' }).click()
     await expect(cardAction).toContainText('Маршрут от меня', { timeout: 15_000 })
-    await cardAction.click({ force: true })
+    await cardAction.click()
+    await expect(page.getByText('Вы уже на месте', { exact: true })).toBeVisible()
+    await expect(byTid(page, 'map-mobile-route-summary')).toHaveCount(0)
+    expect(await persistedPointCount()).toBe(0)
+    await byTid(page, 'map-place-bottom-card-close').click()
+
+    // List selection also brings the distant fixture into view after the nearby focus zoom.
+    await byTid(page, 'map-mobile-open-list').click()
+    await page.getByTestId('map-travel-card').filter({ hasText: 'Комсомольское озеро' }).click()
+    await expect(cardAction).toContainText('Маршрут от меня', { timeout: 15_000 })
+    await cardAction.click()
     await expect(byTid(page, 'map-mobile-route-summary')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText('2/2', { exact: true })).toBeVisible()
     await expect.poll(persistedPointCount, { timeout: 10_000 }).toBe(2)
 
     await byTid(page, 'map-mobile-filters-button').click()
@@ -300,12 +312,12 @@ test.describe('@smoke mobile map route toolbar (#597)', () => {
     await expect(byTid(page, 'map-mobile-radius-button')).toBeVisible({ timeout: 15_000 })
     expect(await persistedPointCount()).toBe(2)
 
-    await byTid(page, 'map-mobile-route-button').click({ force: true })
+    await byTid(page, 'map-mobile-route-button').click()
     await expect(byTid(page, 'map-mobile-route-summary')).toBeVisible({ timeout: 15_000 })
     expect(await persistedPointCount()).toBe(2)
 
     // Негативный контроль: явное действие по-прежнему стирает маршрут.
-    await byTid(page, 'map-mobile-route-clear-button').click({ force: true })
+    await byTid(page, 'map-mobile-route-clear-button').click()
     await expect.poll(persistedPointCount, { timeout: 10_000 }).toBe(0)
   })
 
@@ -352,7 +364,7 @@ test.describe('@smoke mobile map route toolbar (#597)', () => {
     await expect(next).toBeVisible({ timeout: 15_000 })
     expect(
       await page.evaluate(() => window.localStorage.getItem('metravel_map_onboarding_completed')),
-    ).toBeNull()
+    ).toBe('true')
     // #2303 — the phone tour: an intro, then every step lights a real toolbar
     // node (non-zero spotlight) and its card stays inside the window.
     const viewport = page.viewportSize()!

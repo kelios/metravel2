@@ -61,6 +61,10 @@ test.describe('Travel rich-text Instagram embeds', () => {
     await page.waitForLoadState('networkidle').catch(() => null)
 
     const richText = page.locator('.travel-rich-text').first()
+    const descriptionPlaceholder = page.getByTestId('travel-description-fallback')
+    await expect(descriptionPlaceholder).toHaveCount(1)
+    await expect(richText).toHaveCount(0)
+    await descriptionPlaceholder.scrollIntoViewIfNeeded()
     await expect(richText).toBeVisible({ timeout: 60_000 })
 
     const instagramFacades = page.locator('.travel-rich-text .ig-lite[data-ig-embed*="instagram.com"]')
