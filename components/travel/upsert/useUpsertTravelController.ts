@@ -1,7 +1,7 @@
 import { useMemo, useEffect, useCallback, useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
-import type { TravelFormData } from '@/types/types';
+import type { TravelFormData, TravelPublicationFormat } from '@/types/types';
 import { useAuth } from '@/context/AuthContext';
 import { useTravelFilters } from '@/hooks/useTravelFilters';
 import { useTravelFormData } from '@/hooks/useTravelFormData';
@@ -18,11 +18,19 @@ import {
   type TravelArticleCreateIntent,
   type TravelArticleInitialPrefill,
 } from '@/utils/travelArticleCreateIntent';
+import {
+  FULL_TOTAL_STEPS,
+  NOTE_TOTAL_STEPS,
+  parseTravelPublicationMode,
+  resolveTravelPublicationFormat,
+} from '@/utils/travelNote';
 
 type ManualSave = ReturnType<typeof useTravelFormData>['handleManualSave'];
 
 export interface UpsertTravelController {
   isNew: boolean;
+  /** #2666: редактор записи — `note` (два экрана заметки) или `full` (шестишаговый мастер). */
+  publicationMode: TravelPublicationFormat;
   isInitialLoading: boolean;
   hasAccess: boolean;
   moderationFeedbackContextKey: string | null;
@@ -140,6 +148,9 @@ export function useUpsertTravelController(): UpsertTravelController {
   const travelId = (id as string | null) ?? null;
   const isNew = !id;
   const shareTripContext = useRef(isNew ? parseTravelArticleCreateIntent(searchParams) : null).current;
+  // Режим создания читается из URL один раз: после первого сохранения формат
+  // записи приходит с сервера и остаётся единственным источником.
+  const requestedPublicationMode = useRef(isNew ? parseTravelPublicationMode(searchParams) : 'full').current;
   const createHref = useMemo(
     () => buildTravelArticleCreateIntentHref(shareTripContext), [shareTripContext],
   );
@@ -147,10 +158,13 @@ export function useUpsertTravelController(): UpsertTravelController {
     pending: boolean;
     value: TravelArticleInitialPrefill | null;
   }>(() => ({ pending: Boolean(shareTripContext), value: null }));
+  // Новая заметка хранит свой шаг отдельно: иначе брошенный на шаге 2+ полный мастер
+  // открывал бы свежую заметку сразу на «Месте и рассказе», минуя «Фото».
+  const newStepKey = requestedPublicationMode === 'note' ? 'new_note' : 'new';
   const stepStorageKey = useMemo(
     () => isNew && shareTripContext
-      ? undefined : `metravel_travel_wizard_step_${isNew ? 'new' : String(id)}`,
-    [id, isNew, shareTripContext]
+      ? undefined : `metravel_travel_wizard_step_${isNew ? newStepKey : String(id)}`,
+    [id, isNew, newStepKey, shareTripContext]
   );
 
   const form = useTravelFormData({
@@ -162,6 +176,7 @@ export function useUpsertTravelController(): UpsertTravelController {
     authReady,
     initialPrefill: articlePrefill.value,
     prefillPending: articlePrefill.pending,
+    initialPublicationFormat: requestedPublicationMode,
     onAuthRequired: async () => {
       // Clear app auth state so header/menu doesn't keep showing a stale user.
       await logout();
@@ -192,6 +207,7 @@ export function useUpsertTravelController(): UpsertTravelController {
     isNew,
     currentData: form.formData,
     enabled: isAuthenticated && !form.isInitialLoading && form.hasAccess && !form.loadError,
+    newDraftKind: requestedPublicationMode === 'note' ? 'note' : undefined,
   });
 
   const { saveDraft, clearDraft, recoverDraft, flushDraft } = draft;
@@ -234,8 +250,13 @@ export function useUpsertTravelController(): UpsertTravelController {
     return result && typeof result === 'object' ? result : null;
   }, [saveAndClearDraft]);
 
+  // Одобряет и отклоняет модератор только в шаге публикации полного мастера, поэтому
+  // чужую существующую заметку суперадмин открывает там; автор — в двух экранах.
+  const publicationMode: TravelPublicationFormat =
+    resolveTravelPublicationFormat(form.formData) === 'note' &&
+    (requestedPublicationMode === 'note' || !isSuperuser) ? 'note' : 'full';
   const wizard = useTravelWizard({
-    totalSteps: 6,
+    totalSteps: publicationMode === 'note' ? NOTE_TOTAL_STEPS : FULL_TOTAL_STEPS,
     hasUnsavedChanges: form.autosave.hasUnsavedChanges,
     canSave: form.autosave.canSave,
     onSave: handleWizardSave,
@@ -365,6 +386,7 @@ export function useUpsertTravelController(): UpsertTravelController {
   return useMemo(
     () => ({
       isNew,
+      publicationMode,
       isInitialLoading: form.isInitialLoading,
       hasAccess: form.hasAccess,
       moderationFeedbackContextKey,
@@ -405,6 +427,7 @@ export function useUpsertTravelController(): UpsertTravelController {
     }),
     [
       isNew,
+      publicationMode,
       shareTripContext,
       createHref,
       shareTripCountryField,

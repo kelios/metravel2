@@ -3,7 +3,7 @@ import { useRouter, type Href } from 'expo-router';
 import { QueryClientContext } from '@tanstack/react-query';
 import { fetchTravel } from '@/api/travelsApi';
 import { ApiError } from '@/api/client';
-import { TravelFormData, Travel, MarkerData } from '@/types/types';
+import { TravelFormData, Travel, MarkerData, type TravelPublicationFormat } from '@/types/types';
 import { useFormState } from '@/hooks/useFormState';
 import {
   getEmptyFormData,
@@ -32,11 +32,13 @@ interface UseTravelFormDataOptions {
   onAuthRequired?: (context: { redirect: string }) => void | Promise<void>;
   initialPrefill?: TravelArticleInitialPrefill | null;
   prefillPending?: boolean;
+  /** Формат новой записи (#2666: `/travel/new?mode=note`); у существующей его задаёт сервер. */
+  initialPublicationFormat?: TravelPublicationFormat;
 }
 
 export function useTravelFormData(options: UseTravelFormDataOptions) {
   const { travelId, isNew, userId, isSuperAdmin, isAuthenticated, authReady, onAuthRequired,
-    initialPrefill, prefillPending = false } = options;
+    initialPrefill, prefillPending = false, initialPublicationFormat = 'full' } = options;
   const router = useRouter();
   const networkStatus = useNetworkStatus();
   const isOnline = networkStatus.isConnected && networkStatus.isInternetReachable !== false;
@@ -47,8 +49,9 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   }, [isNew, travelId]);
 
   const initialFormData = useMemo(() => {
-    return getEmptyFormData(stableTravelId != null ? String(stableTravelId) : null);
-  }, [stableTravelId]);
+    const empty = getEmptyFormData(stableTravelId != null ? String(stableTravelId) : null);
+    return isNew ? { ...empty, publication_format: initialPublicationFormat } : empty;
+  }, [initialPublicationFormat, isNew, stableTravelId]);
 
   const formDataRef = useRef<TravelFormData>(initialFormData);
   const saveAbortControllerRef = useRef<AbortController | null>(null);

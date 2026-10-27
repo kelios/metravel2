@@ -366,6 +366,31 @@ describe('ImageGalleryComponent.web', () => {
     expect(images.length).toBeGreaterThan(0);
   });
 
+  it('creates the record on the first picked photo when there is no travel id yet (#2666)', async () => {
+    const resolveTravelId = jest.fn(async () => '77');
+    renderSafe(
+      <ImageGalleryComponent collection="gallery" idTravel="" initialImages={[]} maxImages={10} resolveTravelId={resolveTravelId} />,
+    );
+
+    await runDrop([new File(['data'], 'note.jpg', { type: 'image/jpeg' })]);
+
+    await waitFor(() => expect(uploadImageMock).toHaveBeenCalled());
+    expect(resolveTravelId).toHaveBeenCalledTimes(1);
+    expect((uploadImageMock.mock.calls[0][0] as FormData).get('id')).toBe('77');
+  });
+
+  it('does not upload when the record could not be created', async () => {
+    const resolveTravelId = jest.fn(async () => null);
+    const { findByText } = renderSafe(
+      <ImageGalleryComponent collection="gallery" idTravel="" initialImages={[]} maxImages={10} resolveTravelId={resolveTravelId} />,
+    );
+
+    await runDrop([new File(['data'], 'note.jpg', { type: 'image/jpeg' })]);
+
+    expect(await findByText(/Ошибка загрузки/)).toBeTruthy();
+    expect(uploadImageMock).not.toHaveBeenCalled();
+  });
+
   it('compresses oversized web gallery files instead of rejecting them before upload', async () => {
     const largeFile = new File([new Uint8Array(10 * 1024 * 1024 + 128)], 'large-trip-photo.jpg', {
       type: 'image/jpeg',

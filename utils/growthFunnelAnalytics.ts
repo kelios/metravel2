@@ -63,6 +63,8 @@ type ContentCreateParams = {
 };
 
 type RouteCreateParams = {
+  // #2666: короткая заметка или полная статья; без явного значения — полный мастер.
+  mode?: 'note' | 'full';
   source?: unknown;
   travelId?: unknown;
   sourceTravelId?: unknown;
@@ -344,8 +346,9 @@ export const trackContentCreateAuthGateViewed = ({
   });
 };
 
-const routeBaseParams = ({ source, travelId, sourceTravelId, step }: RouteCreateParams) => ({
+const routeBaseParams = ({ mode, source, travelId, sourceTravelId, step }: RouteCreateParams) => ({
   content_type: 'route',
+  mode: mode === 'note' ? 'note' : 'full',
   source: safeString(source),
   travel_id: safeString(travelId),
   source_travel_id: safeString(sourceTravelId),

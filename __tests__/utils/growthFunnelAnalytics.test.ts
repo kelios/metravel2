@@ -18,6 +18,7 @@ import {
   trackRegistrationViewed,
   trackRouteCreateDraftSaved,
   trackRouteCreateStarted,
+  trackRouteCreatePublishAttempted,
   trackRouteCreatePublishBlocked,
   trackRouteCreatePublishSucceeded,
 } from '@/utils/growthFunnelAnalytics';
@@ -91,8 +92,26 @@ describe('growthFunnelAnalytics', () => {
       auth_state: 'guest', intent: 'share-trip', action: 'register',
     });
     expect(mockedQueueAnalyticsEvent).toHaveBeenNthCalledWith(3, 'route_create_started', {
-      content_type: 'route', source: 'travel_article_cta', source_travel_id: '42', travel_id: '999', step: 1,
+      content_type: 'route', mode: 'full', source: 'travel_article_cta', source_travel_id: '42', travel_id: '999', step: 1,
     });
+  });
+
+  it('labels route creation events with the note or full editor mode (#2666)', () => {
+    trackRouteCreateStarted({ mode: 'note', source: 'travel_new', step: 1 });
+    trackRouteCreatePublishAttempted({ mode: 'note', travelId: 7, step: 2, isNew: false, missingFieldsCount: 0 });
+    trackRouteCreatePublishSucceeded({ mode: 'note', travelId: 7, step: 2 });
+    trackRouteCreatePublishAttempted({ travelId: 8, step: 6 });
+
+    const routeEvents = new Set(['route_create_started', 'route_create_publish_attempt', 'travel_publish']);
+    expect(mockedQueueAnalyticsEvent.mock.calls
+      .filter(([event]) => routeEvents.has(event))
+      .map(([event, params]) => [event, (params as { mode?: string }).mode]))
+      .toEqual([
+        ['route_create_started', 'note'],
+        ['route_create_publish_attempt', 'note'],
+        ['travel_publish', 'note'],
+        ['route_create_publish_attempt', 'full'],
+      ]);
   });
 
   it('tracks registration views with safe funnel dimensions', () => {
@@ -242,7 +261,7 @@ describe('growthFunnelAnalytics', () => {
       2,
       'travel_publish',
       {
-        content_type: 'route',
+        content_type: 'route', mode: 'full',
         travel_id: '42',
         step: 6,
         checklist_completed_count: 5,
@@ -326,7 +345,7 @@ describe('growthFunnelAnalytics', () => {
     expect(mockedQueueAnalyticsEvent).toHaveBeenCalledWith(
       GROWTH_FUNNEL_EVENTS.routeCreateDraftSaved,
       {
-        content_type: 'route',
+        content_type: 'route', mode: 'full',
         travel_id: '42',
         step: 6,
         fields_completed_count: 4,
@@ -350,7 +369,7 @@ describe('growthFunnelAnalytics', () => {
     expect(mockedQueueAnalyticsEvent).toHaveBeenCalledWith(
       GROWTH_FUNNEL_EVENTS.routeCreatePublishBlocked,
       {
-        content_type: 'route',
+        content_type: 'route', mode: 'full',
         travel_id: '42',
         step: 6,
         missing_fields_count: 2,

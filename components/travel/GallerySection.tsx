@@ -12,9 +12,14 @@ interface GallerySectionProps {
     travelId?: string | number | null;
     onChange?: (items: GalleryValueItem[]) => void;
     isLoading?: boolean;
+    /** Создать запись по первому выбранному фото, если id ещё нет (#2666). */
+    resolveTravelId?: () => Promise<string | null>;
+    maxImages?: number;
 }
 
-const GallerySection: React.FC<GallerySectionProps> = ({ images, travelId, onChange, isLoading }) => {
+const GallerySection: React.FC<GallerySectionProps> = ({
+    images, travelId, onChange, isLoading, resolveTravelId, maxImages = 10,
+}) => {
     const colors = useThemedColors();
 
     const normalizedImages = useMemo(() => {
@@ -49,8 +54,9 @@ const GallerySection: React.FC<GallerySectionProps> = ({ images, travelId, onCha
         );
     }
 
-    // Без ID нельзя загрузить файлы (нужен travelId на бэке)
-    if (!travelId) {
+    // Без ID нельзя загрузить файлы (нужен travelId на бэке), если форма не умеет
+    // создать запись по первому выбранному фото.
+    if (!travelId && !resolveTravelId) {
         return (
             <View style={styles.galleryContainer}>
                 <Text style={styles.infoText}>
@@ -65,10 +71,11 @@ const GallerySection: React.FC<GallerySectionProps> = ({ images, travelId, onCha
             <ImageGalleryComponent
                 // Бэкенд коллекция галереи
                 collection="gallery"
-                idTravel={String(travelId)}
+                idTravel={travelId ? String(travelId) : ''}
                 initialImages={normalizedImages}
-                maxImages={10}
+                maxImages={maxImages}
                 onChange={onChange}
+                resolveTravelId={resolveTravelId}
             />
         </View>
     );

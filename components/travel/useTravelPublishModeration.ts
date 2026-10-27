@@ -27,6 +27,7 @@ import {
 import { showToastMessage } from '@/utils/toast';
 import { hasToastBeenShown } from '@/utils/errorHelpers';
 import { resolveTravelPublicationStatus } from '@/utils/travelPublicationStatus';
+import { FULL_WIZARD_ISSUE_STEPS, getNoteModerationIssues, resolveTravelPublicationFormat } from '@/utils/travelNote';
 import { translate as i18nT } from '@/i18n';
 
 type ChecklistItem = { ok: boolean };
@@ -83,6 +84,7 @@ export function useTravelPublishModeration({
         : null;
     useEffect(() => setStatus('draft'), [formData.id, publicationStatus]);
 
+    const isNote = resolveTravelPublicationFormat(formData) === 'note';
     const pendingModeration = publicationStatus === 'pending_review';
     const userPendingModeration = !isSuperAdmin && pendingModeration;
     const isNew = !formData.id;
@@ -191,6 +193,7 @@ export function useTravelPublishModeration({
                 });
 
                 trackRouteCreateDraftSaved({
+                    mode: isNote ? 'note' : 'full',
                     travelId: resolvedId,
                     step: currentStep,
                     fieldsCompletedCount,
@@ -208,6 +211,7 @@ export function useTravelPublishModeration({
             router.replace('/metravel');
         } catch (error) {
             if (publicationStatus === 'draft') trackRouteCreateDraftFailed({
+                mode: isNote ? 'note' : 'full',
                 travelId: formData.id,
                 step: currentStep,
                 errorType: 'save_failed',
@@ -226,7 +230,13 @@ export function useTravelPublishModeration({
         }
     };
 
-    const collectCriticalMissing = useCallback(() => getModerationIssues({
+    // #2666: заметку модератор одобряет по её собственной готовности, а не по полной статье.
+    const collectCriticalMissing = useCallback(() => isNote ? getNoteModerationIssues({
+        name: formData.name,
+        description: formData.description,
+        coordsMeTravel: routePoints,
+        gallery: galleryItems as TravelFormData['gallery'],
+    }, FULL_WIZARD_ISSUE_STEPS) : getModerationIssues({
         name: formData.name ?? '',
         description: formData.description ?? '',
         countries: formData.countries ?? [],
@@ -240,6 +250,7 @@ export function useTravelPublishModeration({
         formData.countries,
         formData.categories,
         formData.travel_image_thumb_small_url,
+        isNote,
         routePoints,
         galleryItems,
     ]);
@@ -256,6 +267,7 @@ export function useTravelPublishModeration({
             travel_id: formData.id ?? null,
         });
         trackRouteCreatePublishAttempted({
+            mode: isNote ? 'note' : 'full',
             travelId: formData.id,
             step: currentStep,
             isNew,
@@ -264,6 +276,7 @@ export function useTravelPublishModeration({
 
         if (criticalMissing.length > 0) {
             trackRouteCreatePublishBlocked({
+                mode: isNote ? 'note' : 'full',
                 travelId: formData.id,
                 step: currentStep,
                 missingFieldsCount: criticalMissing.length,
@@ -288,6 +301,7 @@ export function useTravelPublishModeration({
             const resolvedId = resolveSavedId(saved, nextForm);
             if (!resolvedId) {
                 trackRouteCreatePublishFailed({
+                    mode: isNote ? 'note' : 'full',
                     travelId: formData.id,
                     step: currentStep,
                     errorType: 'missing_saved_id',
@@ -307,6 +321,7 @@ export function useTravelPublishModeration({
                 total_checklist_count: checklist.length,
             });
             trackRouteCreatePublishSucceeded({
+                mode: isNote ? 'note' : 'full',
                 travelId: resolvedId,
                 step: currentStep,
                 checklistCompletedCount: checklist.filter(item => item.ok).length,
@@ -326,6 +341,7 @@ export function useTravelPublishModeration({
             router.replace('/metravel');
         } catch (error) {
             trackRouteCreatePublishFailed({
+                mode: isNote ? 'note' : 'full',
                 travelId: formData.id,
                 step: currentStep,
                 errorType: 'save_failed',

@@ -1,4 +1,6 @@
 export type TravelPublicationStatus = 'draft' | 'pending_review' | 'approved' | 'published';
+/** Формат статьи (#2699): `note` — короткая заметка о поездке, `full` — полная статья с маршрутом. */
+export type TravelPublicationFormat = 'full' | 'note';
 export type TravelModerationDecision = 'approved' | 'rejected';
 
 export type TravelModerationMetadata = {
@@ -177,6 +179,7 @@ export type Travel = TravelModerationMetadata & {
     publish?: boolean | number | null
     moderation?: boolean | number | null
     publication_status?: TravelPublicationStatus | (string & {}) | null
+    publication_format?: TravelPublicationFormat
     engagementStats?: {
         favoritesCount: number | null
         wishlistCount: number | null
@@ -410,6 +413,7 @@ export interface TravelFormData extends TravelModerationMetadata {
     publish: boolean;
     moderation?: boolean;
     publication_status?: TravelPublicationStatus | (string & {}) | null;
+    publication_format?: TravelPublicationFormat;
     travel_image_thumb_url?: string | null;
     travel_image_thumb_small_url?: string | null;
 

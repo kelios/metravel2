@@ -232,6 +232,7 @@ export function getEmptyFormData(id: string | null): TravelFormData {
     recommendation: '',
     description: '',
     publication_status: 'draft',
+    publication_format: 'full',
     publish: false,
     moderation: false,
     visa: false,
@@ -306,6 +307,7 @@ export function transformTravelToFormData(travel: Travel): TravelFormData {
     publication_status: travel.publication_status !== undefined
       ? travel.publication_status
       : resolveTravelPublicationStatus(travel),
+    publication_format: travelRecord.publication_format === 'note' ? 'note' : 'full',
     moderation: coerceBoolean(travelRecord.moderation, false),
     publish: coerceBoolean(travelRecord.publish, false),
     visa: coerceBoolean(travelRecord.visa, false),

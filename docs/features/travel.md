@@ -235,6 +235,7 @@ runtime-проверка должна различать свежий backend re
 | `components/travel/upsert/useUpsertTravelController.ts` | auth/access, form data, filters, draft recovery, wizard state |
 | `components/travel/upsert/UpsertTravelView.tsx` | loading/error/access states и wizard chrome |
 | `components/travel/upsert/WizardStepRouter.tsx` | выбор одного из шести step components |
+| `components/travel/note/TravelNoteFlow.tsx` | двухэкранный редактор заметки (`publication_format: 'note'`) |
 | `hooks/useTravelFormData.ts` | load/save/upsert, marker/media state и autosave contract |
 | `hooks/useTravelWizard.ts` | step navigation, validation и publish transition |
 | `hooks/useDraftRecovery.ts` | local draft persistence/recovery |
@@ -263,6 +264,37 @@ runtime-проверка должна различать свежий backend re
 Одноразовое предзаполнение входит в чистую baseline до autosave; восстановленный
 черновик, редактирование существующей поездки и пользовательский ввод имеют
 приоритет. Обычные входы в мастер сохраняют прежнее поведение.
+
+### Короткая заметка о поездке (#2666)
+
+`/travel/new?mode=note` открывает тот же Travel в двух экранах
+(`components/travel/note/TravelNoteFlow.tsx`, логика —
+`components/travel/note/useTravelNoteFlow.ts`, правила — `utils/travelNote.ts`):
+1) «Фото» — 1–10 кадров галереи, первое открывает заметку; 2) «Место и рассказ» —
+поиск места, название (подставляется из места и редактируется) и простой текст,
+который уходит в `description` абзацами `<p>`. Любой другой `mode` и вход без
+параметра — прежний шестишаговый мастер.
+
+- Формат хранит сервер: `publication_format: 'full' | 'note'` (#2699). Новая
+  заметка отправляет `note` первым же сохранением; дальше редактор выбирается по
+  полю записи, а не по URL. Суперадмин открывает чужую заметку в полном мастере:
+  одобрение и отклонение живут только в его шаге публикации.
+- Черновик создаётся по первому выбранному фото (`resolveTravelId` у
+  `GallerySection`/галерей web и native), не при открытии страницы.
+- Страна точки берётся из выбранного места по каталогу стран; если её не удалось
+  сопоставить, место не сохраняется (сервер не примет точку заметки без страны).
+  Категории статьи и точки не запрашиваются.
+- Готовность к отправке (`getNoteModerationIssues`) повторяет серверную: ровно
+  одна точка со страной, не меньше 50 видимых символов (символы Unicode без
+  невидимых Cc/Cf, как `len()` на сервере), 1–10 фото галереи. Плюс название от 3
+  символов: без него сохранение подставило бы служебный плейсхолдер черновика.
+  Шаг новой заметки хранится под своим ключом (`metravel_travel_wizard_step_new_note`),
+  чтобы брошенный полный мастер не открывал заметку сразу на втором экране.
+  Отправка — та же каноническая команда `intent='submit'`; после неё экран
+  «Отправлено на модерацию». Чек-лист и проверки модератора в полном мастере для
+  заметки используют этот же набор.
+- События `route_create_started`, `route_create_publish_attempt`, `travel_publish`
+  и остальные события создания маршрута несут `mode: 'note' | 'full'`.
 
 ### Media upload contract
 

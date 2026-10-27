@@ -5,6 +5,7 @@
 
 import { TravelFormData } from '@/types/types';
 import { translate as i18nT, translatePlural } from '@/i18n'
+import { getNoteModerationIssues, resolveTravelPublicationFormat } from '@/utils/travelNote'
 
 
 type UnknownRecord = Record<string, unknown>;
@@ -410,6 +411,11 @@ export function validateReadyForModeration(formData: TravelFormData): {
   isValid: boolean;
   missingFields: string[];
 } {
+  // Заметка (#2666) готова по своему короткому набору; полная статья — по шагу 6.
+  if (resolveTravelPublicationFormat(formData) === 'note') {
+    const issues = getNoteModerationIssues(formData);
+    return { isValid: issues.length === 0, missingFields: issues.map((issue) => issue.key) };
+  }
   const validation = validateStep(6, formData);
 
   return {

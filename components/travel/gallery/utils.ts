@@ -168,3 +168,19 @@ export const normalizeDisplayUrl = (value: string): string => {
     return absolute
   }
 }
+
+/** Id записи для загрузки: уже известный либо полученный от владельца формы. */
+export const resolveUploadTravelId = async (
+  idTravel: string | null | undefined,
+  resolveTravelId?: () => Promise<string | null>,
+): Promise<string | null> => {
+  const known = typeof idTravel === 'string' ? idTravel.trim() : ''
+  if (known) return known
+  if (!resolveTravelId) return null
+  try {
+    const resolved = await resolveTravelId()
+    return resolved && String(resolved).trim() ? String(resolved).trim() : null
+  } catch {
+    return null
+  }
+}

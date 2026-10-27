@@ -436,6 +436,33 @@ describe('useDraftRecovery', () => {
     expect(localStorage.getItem(draftKey)).toBeNull();
   });
 
+  it('keeps a new note draft apart from a new full-article draft (#2666)', async () => {
+    jest.useFakeTimers();
+    const { result } = renderHook(() =>
+      useDraftRecovery({
+        travelId: null,
+        isNew: true,
+        enabled: true,
+        newDraftKind: 'note',
+        currentData: { name: 'server' } as any,
+      })
+    );
+
+    act(() => {
+      result.current.saveDraft({ name: 'note draft' } as any);
+    });
+    act(() => {
+      jest.advanceTimersByTime(2100);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(await AsyncStorage.getItem('metravel_travel_draft_new_note')).toBeTruthy();
+    expect(await AsyncStorage.getItem('metravel_travel_draft_new')).toBeNull();
+  });
+
   it('uses a stable `_new` key for a new travel (never `_null`)', async () => {
     jest.useFakeTimers();
     const { result } = renderHook(() =>

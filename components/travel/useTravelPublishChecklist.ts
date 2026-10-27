@@ -2,8 +2,15 @@ import { useMemo } from 'react';
 import type { TravelFormData } from '@/types/types';
 import { getModerationIssues, getPointsWithoutCategories, type ModerationIssue } from '@/utils/formValidation';
 import { getQualityScore } from '@/utils/travelWizardValidation';
-import { translate as i18nT } from '@/i18n'
+import { translate as i18nT, translatePlural } from '@/i18n'
 import { formatPhotos } from '@/utils/pluralize'
+import {
+  FULL_WIZARD_ISSUE_STEPS,
+  NOTE_MAX_PHOTOS,
+  NOTE_MIN_TEXT_LENGTH,
+  getNoteModerationIssues,
+  resolveTravelPublicationFormat,
+} from '@/utils/travelNote'
 
 
 type UnknownRecord = Record<string, unknown>;
@@ -23,6 +30,9 @@ const getLegacyArray = (data: UnknownRecord, key: string): unknown[] => {
 };
 
 export const useTravelPublishChecklist = (formData: TravelFormData) => {
+  // #2666: у заметки свой короткий чек-лист (рассказ, одна точка, название, фото) — так
+  // модератор, открывший её в мастере, видит то же, что проверяет сервер.
+  const isNote = resolveTravelPublicationFormat(formData) === 'note';
   const routePoints = useMemo(() => {
     const data = formData as unknown as UnknownRecord;
     const coords = getLegacyArray(data, 'coordsMeTravel');
@@ -43,7 +53,21 @@ export const useTravelPublishChecklist = (formData: TravelFormData) => {
     [routePoints],
   );
 
+  const noteIssues = useMemo(
+    () => (isNote ? getNoteModerationIssues(formData, FULL_WIZARD_ISSUE_STEPS) : []),
+    [formData, isNote],
+  );
+
   const requiredChecklist = useMemo<ChecklistItem[]>(() => {
+    if (isNote) {
+      const missing = new Set(noteIssues.map((issue) => issue.key));
+      return [
+        { key: 'description', label: i18nT('travel:components.travel.note.checklist.story'), detail: translatePlural('travel:components.travel.note.checklist.storyDetail', NOTE_MIN_TEXT_LENGTH, { value1: NOTE_MIN_TEXT_LENGTH }), ok: !missing.has('description'), required: true },
+        { key: 'route', label: i18nT('travel:components.travel.note.checklist.place'), detail: i18nT('travel:components.travel.note.checklist.placeDetail'), ok: !missing.has('route') && !missing.has('countries'), required: true },
+        { key: 'name', label: i18nT('errors:utils.formValidation.nazvanie_569bb861'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.minimum_3_simvola_6627ac3c'), ok: !missing.has('name'), required: true },
+        { key: 'photos', label: i18nT('travel:components.travel.note.checklist.photos'), detail: i18nT('travel:components.travel.note.checklist.photosDetail', { value1: NOTE_MAX_PHOTOS }), ok: !missing.has('photos'), required: true },
+      ];
+    }
     const hasName = !!formData.name && formData.name.trim().length >= 3;
     const hasDescription = !!formData.description && formData.description.trim().length >= 50;
     const hasCountries = Array.isArray(formData.countries) && formData.countries.length > 0;
@@ -68,6 +92,8 @@ export const useTravelPublishChecklist = (formData: TravelFormData) => {
     formData.name,
     formData.travel_image_thumb_small_url,
     galleryItems.length,
+    isNote,
+    noteIssues,
     routePoints.length,
     uncategorizedPointsCount,
   ]);
@@ -89,6 +115,7 @@ export const useTravelPublishChecklist = (formData: TravelFormData) => {
   }, [formData.plus, formData.minus, formData.recommendation, formData.youtube_link, galleryItems.length]);
 
   const checklist = useMemo<ChecklistItem[]>(() => {
+    if (isNote) return requiredChecklist;
     const hasName = !!formData.name && formData.name.trim().length > 0;
     const hasDescription = !!formData.description && formData.description.trim().length > 0;
     const hasCountries = Array.isArray(formData.countries) && formData.countries.length > 0;
@@ -113,11 +140,14 @@ export const useTravelPublishChecklist = (formData: TravelFormData) => {
     formData.name,
     formData.travel_image_thumb_small_url,
     galleryItems.length,
+    isNote,
+    requiredChecklist,
     routePoints.length,
     uncategorizedPointsCount,
   ]);
 
   const moderationIssues = useMemo(() => {
+    if (isNote) return noteIssues;
     return getModerationIssues({
       name: formData.name ?? '',
       description: formData.description ?? '',
@@ -134,6 +164,8 @@ export const useTravelPublishChecklist = (formData: TravelFormData) => {
     formData.name,
     formData.travel_image_thumb_small_url,
     galleryItems,
+    isNote,
+    noteIssues,
     routePoints,
   ]);
 

@@ -21,4 +21,10 @@ export interface ImageGalleryComponentProps {
   initialImages: GalleryItem[]
   maxImages?: number
   onChange?: (items: GalleryValueItem[]) => void
+  /**
+   * Пока у записи нет id, галерея всё равно принимает файлы и перед первой
+   * загрузкой просит id у владельца формы (#2666: заметка создаёт черновик
+   * только когда автор выбрал фото). `null` — черновик создать не удалось.
+   */
+  resolveTravelId?: () => Promise<string | null>
 }

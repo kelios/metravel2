@@ -29,6 +29,7 @@ import {
   extractBackendImageIdFromUrl,
   isBackendImageId,
   normalizeDisplayUrl,
+  resolveUploadTravelId,
   WEB_SUPPORTED_UPLOAD_EXTENSIONS,
 } from './utils'
 import { translate as i18nT } from '@/i18n'
@@ -125,6 +126,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   initialImages: initialImagesProp,
   maxImages = 10,
   onChange,
+  resolveTravelId,
 }) => {
   const colors = useThemedColors()
   const viewportWidth = useResponsiveWidth()
@@ -411,6 +413,17 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
 
       setImages((prev) => dedupeGalleryItems([...prev, ...placeholders]))
 
+      const targetTravelId = await resolveUploadTravelId(idTravel, resolveTravelId)
+      if (!targetTravelId) {
+        const placeholderKeys = new Set(placeholders.map((item) => item.stableKey))
+        const message = i18nT('travel:components.travel.gallery.ImageGallery.oshibka_zagruzki_178f1fc0')
+        setImages((prev) => prev.map((img) => (
+          placeholderKeys.has(img.stableKey ?? '') ? { ...img, isUploading: false, error: message } : img
+        )))
+        setBatchUploadProgress(null)
+        return
+      }
+
       for (let i = 0; i < validFiles.length; i++) {
         const file = validFiles[i]
         const placeholder = placeholders[i]
@@ -422,7 +435,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
           const formData = new FormData()
           formData.append('file', uploadableFile)
           formData.append('collection', collection)
-          formData.append('id', idTravel)
+          formData.append('id', targetTravelId)
 
           const response: UploadImageResponse = await uploadImage(formData)
           const uploadedUrlRaw =
@@ -491,7 +504,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
 
       setBatchUploadProgress(null)
     },
-    [collection, idTravel, maxImages, validateUploadFile],
+    [collection, idTravel, maxImages, resolveTravelId, validateUploadFile],
   )
 
   const handleFilesAccepted = useCallback(

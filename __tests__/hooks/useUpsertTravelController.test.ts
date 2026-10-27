@@ -162,6 +162,45 @@ describe('useUpsertTravelController', () => {
     expect(result.current.isNew).toBe(false);
   });
 
+  it('creates a note from mode=note and keeps the six-step wizard otherwise (#2666)', () => {
+    mockUseLocalSearchParams.mockReturnValue({ mode: 'note' });
+    mockUseTravelFormData.mockImplementation((options: { initialPublicationFormat?: string }) => ({
+      ...baseForm,
+      formData: { ...baseForm.formData, publication_format: options.initialPublicationFormat },
+    }));
+    const note = renderHook(() => useUpsertTravelController());
+    expect(mockUseTravelFormData).toHaveBeenLastCalledWith(expect.objectContaining({ initialPublicationFormat: 'note' }));
+    expect(mockUseTravelWizard).toHaveBeenLastCalledWith(expect.objectContaining({
+      totalSteps: 2,
+      // Шаг брошенного полного мастера не открывает свежую заметку на втором экране.
+      stepStorageKey: 'metravel_travel_wizard_step_new_note',
+    }));
+    expect(mockUseDraftRecovery).toHaveBeenLastCalledWith(expect.objectContaining({ newDraftKind: 'note' }));
+    expect(note.result.current.publicationMode).toBe('note');
+
+    mockUseLocalSearchParams.mockReturnValue({ mode: 'other' });
+    const full = renderHook(() => useUpsertTravelController());
+    expect(mockUseTravelFormData).toHaveBeenLastCalledWith(expect.objectContaining({ initialPublicationFormat: 'full' }));
+    expect(mockUseTravelWizard).toHaveBeenLastCalledWith(expect.objectContaining({
+      totalSteps: 6,
+      stepStorageKey: 'metravel_travel_wizard_step_new',
+    }));
+    expect(mockUseDraftRecovery).toHaveBeenLastCalledWith(expect.objectContaining({ newDraftKind: undefined }));
+    expect(full.result.current.publicationMode).toBe('full');
+  });
+
+  it('opens an existing note by its stored format, and in the full wizard for a moderator', () => {
+    mockUseLocalSearchParams.mockReturnValue({ id: '55' });
+    mockUseTravelFormData.mockReturnValue({
+      ...baseForm,
+      formData: { ...baseForm.formData, id: '55', publication_format: 'note' },
+    });
+    expect(renderHook(() => useUpsertTravelController()).result.current.publicationMode).toBe('note');
+
+    mockUseAuth.mockReturnValue({ userId: 'admin', isAuthenticated: true, isSuperuser: true, authReady: true });
+    expect(renderHook(() => useUpsertTravelController()).result.current.publicationMode).toBe('full');
+  });
+
   it('waits for the first country result and preserves article context without restoring a stale new-wizard step', () => {
     mockUseLocalSearchParams.mockReturnValue({ source_travel_id: '42', country: 'PL', place: 'Краков' });
     mockUseTravelFilters.mockReturnValue({ filters: baseFilters, isLoading: true });

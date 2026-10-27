@@ -1129,6 +1129,77 @@ test.describe('Создание путешествия - Полный flow', () 
     });
   });
 
+  // #2666: короткая заметка — два экрана от входа до отправки; полный мастер не меняется.
+  test('заметка о поездке: фото → место и рассказ → модерация', async ({ page }) => {
+    const upserts: Array<Record<string, unknown>> = [];
+    page.on('request', (request) => {
+      if (!/\/travels\/upsert\/?/.test(request.url()) || request.method() !== 'PUT') return;
+      try {
+        const body = JSON.parse(request.postData() ?? '{}');
+        upserts.push(body?.data ?? body);
+      } catch {
+        // ignore
+      }
+    });
+
+    await page.goto('/travel/new?mode=note', { waitUntil: 'domcontentloaded' });
+    await dismissConsentBanner(page);
+    await expect(page.getByTestId('travel-note.root')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText('Фото с поездки', { exact: true })).toBeVisible();
+
+    // Черновик создаётся по первому выбранному фото, не при открытии страницы.
+    expect(upserts).toHaveLength(0);
+    await page.locator('input[type="file"]').first().setInputFiles({
+      name: 'note-photo.png',
+      mimeType: 'image/png',
+      buffer: tinyPngBuffer,
+    });
+    await expect.poll(() => upserts.length, { timeout: 15_000 }).toBeGreaterThan(0);
+    expect(upserts[0]).toEqual(expect.objectContaining({ publication_format: 'note' }));
+
+    await page.getByTestId('travel-note.next').click();
+    await page.getByPlaceholder('Например, Мирский замок').fill('Париж');
+    await page.getByTestId('location-result-e2e-paris').click();
+    await expect(page.getByText('Страна: Франция', { exact: true })).toBeVisible();
+    await expect(page.getByTestId('travel-note.name')).toHaveValue(/Париж/);
+
+    await page.getByTestId('travel-note.story').fill(
+      'Заехали сюда по дороге домой и остались до заката у старой мельницы на окраине.',
+    );
+    await expect(page.getByTestId('travel-note.story-counter')).toHaveText('Текста достаточно для отправки');
+
+    await page.getByTestId('travel-note.submit').click();
+    await expect(page.getByTestId('travel-note.submitted')).toBeVisible({ timeout: 15_000 });
+    const submit = upserts.at(-1);
+    expect(submit).toEqual(expect.objectContaining({
+      publication_format: 'note',
+      publication_status: 'pending_review',
+      enforce_moderation_validation: true,
+      categories: [],
+    }));
+    expect(submit).not.toHaveProperty('publish');
+    expect(submit).not.toHaveProperty('moderation');
+    expect((submit?.coordsMeTravel as Array<Record<string, unknown>>)?.[0]).toEqual(
+      expect.objectContaining({ country: 250, categories: [] }),
+    );
+
+    // Без mode — прежний шестишаговый мастер.
+    await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
+    await ensureCanCreateTravel(page);
+    await expect(page.getByPlaceholder('Например: Неделя в Грузии')).toBeVisible();
+    await expect(page.getByTestId('travel-note.root')).toHaveCount(0);
+  });
+
+  test('заметка: без фото и места отправка не уходит, автор видит, чего не хватает', async ({ page }) => {
+    await page.goto('/travel/new?mode=note', { waitUntil: 'domcontentloaded' });
+    await dismissConsentBanner(page);
+    await page.getByTestId('travel-note.next').click();
+    await page.getByTestId('travel-note.submit').click();
+    await expect(page.getByTestId('travel-note.issues')).toBeVisible();
+    await expect(page.getByText('Добавьте фото: от 1 до 10', { exact: true })).toBeVisible();
+    await expect(page.getByText('Выберите одно место', { exact: true })).toBeVisible();
+  });
+
   test('должен создать быстрый черновик (Quick Mode)', async ({ page }) => {
     await maybeMockNominatimSearch(page)
     const mockDraftId = 999_101

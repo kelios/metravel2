@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 
 import { getErrorStatus } from '@/api/parsers/apiResponseParser';
 import DraftRecoveryDialog from '@/components/travel/DraftRecoveryDialog';
+import TravelNoteFlow from '@/components/travel/note/TravelNoteFlow';
 import TravelPreviewModal from '@/components/travel/TravelPreviewModal';
 import type { UpsertTravelController } from '@/components/travel/upsert/useUpsertTravelController';
 import WizardExitDialog from '@/components/travel/upsert/WizardExitDialog';
@@ -419,6 +420,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
 
     hasTrackedRouteCreateStartedRef.current = true;
     trackRouteCreateStarted({
+      mode: controller.publicationMode,
       source: controller.shareTripContext ? 'travel_article_cta' : 'travel_new',
       sourceTravelId: controller.shareTripContext?.sourceTravelId,
       travelId: controller.formData?.id,
@@ -429,6 +431,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
     controller.isAuthenticated,
     controller.isInitialLoading,
     controller.isNew,
+    controller.publicationMode,
     controller.shareTripContext,
     wizard.currentStep,
   ]);
@@ -616,13 +619,17 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
         />
       ) : null}
 
-      <WizardStepRouter
-        controller={controller}
-        commonStepProps={commonStepProps}
-        navigationProps={navigationProps}
-        colors={colors}
-        styles={styles}
-      />
+      {controller.publicationMode === 'note' ? (
+        <TravelNoteFlow controller={controller} />
+      ) : (
+        <WizardStepRouter
+          controller={controller}
+          commonStepProps={commonStepProps}
+          navigationProps={navigationProps}
+          colors={colors}
+          styles={styles}
+        />
+      )}
     </View>
   );
 }

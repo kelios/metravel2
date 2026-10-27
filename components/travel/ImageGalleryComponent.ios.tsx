@@ -22,6 +22,7 @@ import { compressTravelPhoto } from '@/utils/imageCompressor';
 import { UploadProgressBar } from '@/components/ui/UploadProgressBar';
 import type { GalleryValueItem } from '@/components/travel/gallery/types';
 import { GalleryCaptionEditor } from '@/components/travel/gallery/GalleryCaptionEditor';
+import { resolveUploadTravelId } from '@/components/travel/gallery/utils';
 import { translate as i18nT } from '@/i18n'
 import { showToast } from '@/utils/toast'
 
@@ -65,6 +66,7 @@ interface ImageGalleryComponentProps {
   initialImages: GalleryItem[];
   maxImages?: number;
   onChange?: (items: GalleryValueItem[]) => void;
+  resolveTravelId?: () => Promise<string | null>;
 }
 
 const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
@@ -73,6 +75,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
   initialImages,
   maxImages = 10,
   onChange,
+  resolveTravelId,
 }) => {
   const colors = useThemedColors();
 
@@ -141,11 +144,25 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
         return;
       }
 
+      // Загрузка видна и блокирует повторный выбор уже на время создания черновика.
       setIsUploading(true);
       // AND-15: Reset progress tracking
       setUploadTotal(assets.length);
       setUploadCurrent(0);
       setUploadProgress(0);
+
+      // Без id запись создаётся по первому выбору фото (#2666), а не заранее.
+      const targetTravelId = await resolveUploadTravelId(idTravel, resolveTravelId);
+      if (!targetTravelId) {
+        setIsUploading(false);
+        void showToast({
+          type: 'error',
+          text1: i18nT('travel:components.travel.ImageGalleryComponent.errorTitle'),
+          text2: i18nT('travel:components.travel.ImageGalleryComponent.uploadFailed'),
+          position: 'bottom',
+        });
+        return;
+      }
       const newLoading = [...loading];
 
       let completedCount = 0;
@@ -173,7 +190,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
             type,
           } as any);
           formData.append('collection', collection);
-          formData.append('id', idTravel);
+          formData.append('id', targetTravelId);
 
           const response = await uploadImage(formData, (pct) => {
             // AND-15: Per-file progress combined with overall progress
@@ -225,7 +242,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
 
       setIsUploading(false);
     },
-    [images, loading, collection, idTravel, maxImages]
+    [images, loading, collection, idTravel, maxImages, resolveTravelId]
   );
 
   const handlePickImages = useCallback(async () => {
