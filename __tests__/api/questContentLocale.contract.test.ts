@@ -128,6 +128,7 @@ describe('quest content query keys end with the locale', () => {
     questsPreview: () => queryKeys.questsPreview(6, LOCALE),
     questsCompactCatalog: () => queryKeys.questsCompactCatalog('7', LOCALE),
     questCityClassification: () => queryKeys.questCityClassification(1, LOCALE),
+    questCitiesDirectory: () => queryKeys.questCitiesDirectory(LOCALE),
     questsNearLocation: () => queryKeys.questsNearLocation('minsk', LOCALE),
   }
 

@@ -164,7 +164,7 @@ const RNW_SLIM_ENABLED = process.env.EXPO_PUBLIC_RNW_SLIM === '1'
 const QUILL_SOURCE_DIR_RE = /[\\/]node_modules[\\/]quill[\\/]/
 const SANITIZE_HTML_SOURCE_DIR_RE = /[\\/]node_modules[\\/]sanitize-html[\\/]/
 const WEB_SINGLE_COPY_PACKAGES = new Map(
-  ['@react-native/normalize-colors'].map((name) => [name, require.resolve(name, { paths: [__dirname] })]),
+  [['@react-native/normalize-colors', require.resolve('@react-native/normalize-colors')]],
 )
 // Runtime mock flags reject production use, but Metro still follows fixture
 // imports (including import()) and emits their catalogs. Keep that dev data out
