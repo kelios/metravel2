@@ -120,6 +120,11 @@ export default function TravelNoteFlow({ controller }: TravelNoteFlowProps) {
   const primaryLabel = isStoryStep
     ? i18nT('travel:components.travel.note.submit')
     : i18nT('travel:components.travel.note.next');
+  // Нижняя панель на телефоне делит ширину с «Назад»: полные подписи там обрезались
+  // многоточием (приёмка #2666 на 390 px), поэтому у неё короткие.
+  const footerPrimaryLabel = isStoryStep
+    ? i18nT('travel:components.travel.note.footerSubmit')
+    : i18nT('travel:components.travel.note.footerNext');
 
   return (
     <SafeAreaView style={styles.safeContainer} edges={['left', 'right', 'bottom']} testID="travel-note.root">
@@ -236,7 +241,7 @@ export default function TravelNoteFlow({ controller }: TravelNoteFlowProps) {
         <WizardStepFooter
           onBack={onBack}
           onPrimary={onPrimary}
-          primaryLabel={primaryLabel}
+          primaryLabel={footerPrimaryLabel}
           primaryDisabled={note.isSubmitting}
           primaryTestID={isStoryStep ? 'travel-note.footer-submit' : 'travel-note.footer-next'}
         />

@@ -19,7 +19,10 @@ jest.mock('@/components/travel/TravelWizardHeader', () => {
   );
 });
 
-jest.mock('@/components/travel/upsert/WizardStepFooter', () => () => null);
+jest.mock('@/components/travel/upsert/WizardStepFooter', () => {
+  const { Text } = require('react-native');
+  return ({ primaryLabel, primaryTestID }: any) => <Text testID={primaryTestID}>{primaryLabel}</Text>;
+});
 
 jest.mock('@/components/travel/GallerySection', () => {
   const { Pressable, Text } = require('react-native');
@@ -102,6 +105,8 @@ describe('TravelNoteFlow (#2666)', () => {
     const screen = renderNote(harness);
     expect(screen.getByText('gallery:')).toBeTruthy();
 
+    // Нижняя панель телефона — короткие подписи, чтобы не обрезаться рядом с «Назад».
+    expect(screen.getByTestId('travel-note.footer-next')).toHaveTextContent('Далее');
     await act(async () => { fireEvent.press(screen.getByTestId('gallery-stub')); });
     expect(harness.handleManualSave).toHaveBeenCalledWith({ publication_format: 'note' });
 
@@ -111,6 +116,7 @@ describe('TravelNoteFlow (#2666)', () => {
     expect(screen.getByTestId('travel-note.name').props.value).toBeTruthy();
 
     fireEvent.changeText(screen.getByTestId('travel-note.story'), STORY);
+    expect(screen.getByTestId('travel-note.footer-submit')).toHaveTextContent('Отправить');
     expect(screen.getByTestId('travel-note.story-counter')).toHaveTextContent('Текста достаточно для отправки');
 
     await act(async () => { fireEvent.press(screen.getByTestId('travel-note.submit')); });

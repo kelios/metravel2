@@ -555,6 +555,8 @@ export const travelGenerated4 = {
   "components.travel.note.story.missing_other": "Ще {{value1}} символу до надсилання",
   "components.travel.note.story.enough": "Тексту достатньо для надсилання",
   "components.travel.note.submit": "Надіслати на модерацію",
+  "components.travel.note.footerNext": "Далі",
+  "components.travel.note.footerSubmit": "Надіслати",
   "components.travel.note.issues.title": "Щоб надіслати нотатку, залишилося:",
   "components.travel.note.issues.photos": "Додайте фото: від 1 до {{value1}}",
   "components.travel.note.issues.place": "Оберіть одне місце",

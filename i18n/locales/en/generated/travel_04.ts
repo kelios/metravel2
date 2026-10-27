@@ -555,6 +555,8 @@ export const travelGenerated4 = {
   "components.travel.note.story.missing_other": "{{value1}} more characters to send",
   "components.travel.note.story.enough": "Enough text to send",
   "components.travel.note.submit": "Send for moderation",
+  "components.travel.note.footerNext": "Next",
+  "components.travel.note.footerSubmit": "Send",
   "components.travel.note.issues.title": "To send the note, you still need to:",
   "components.travel.note.issues.photos": "Add photos: 1 to {{value1}}",
   "components.travel.note.issues.place": "Choose one place",

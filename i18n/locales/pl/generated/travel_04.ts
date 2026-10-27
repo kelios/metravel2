@@ -555,6 +555,8 @@ export const travelGenerated4 = {
   "components.travel.note.story.missing_other": "Jeszcze {{value1}} znaku do wysłania",
   "components.travel.note.story.enough": "Tekstu wystarczy do wysłania",
   "components.travel.note.submit": "Wyślij do moderacji",
+  "components.travel.note.footerNext": "Dalej",
+  "components.travel.note.footerSubmit": "Wyślij",
   "components.travel.note.issues.title": "Aby wysłać notatkę, pozostało:",
   "components.travel.note.issues.photos": "Dodaj zdjęcia: od 1 do {{value1}}",
   "components.travel.note.issues.place": "Wybierz jedno miejsce",
