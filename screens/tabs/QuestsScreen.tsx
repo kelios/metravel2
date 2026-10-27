@@ -18,7 +18,6 @@ import { rIC } from '@/utils/rIC';
 import { useIsFocused } from 'expo-router';
 import { useBreakpoints } from '@/hooks/useResponsive';
 import { useQuestCatalogResponsiveModel } from '@/hooks/useQuestCatalogResponsiveModel';
-import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useTheme, useThemedColors } from '@/hooks/useTheme';
 import { useQuestsList } from '@/hooks/useQuestsApi';
 import { useHydrationReady } from '@/hooks/useHydrationReady';
@@ -61,6 +60,8 @@ import type { QuestSortOrder } from './questsShared';
 import { useQuestCatalogHandoff } from './useQuestCatalogHandoff';
 import { useQuestCatalogSelection, type QuestCatalogRouteSelection } from './useQuestCatalogSelection';
 import { useQuestCountrySelection } from './useQuestCountrySelection';
+import { useQuestCatalogSearchAnalytics } from './useQuestCatalogSearchAnalytics';
+import { useQuestCatalogSearchQuery } from './useQuestCatalogSearchQuery';
 import { translate as i18nT } from '@/i18n'
 
 const { spacing, radii } = DESIGN_TOKENS;
@@ -110,9 +111,7 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
             setFilterDrawerOpen(false);
         }, route);
     const selectionGeneration = getGeneration();
-    // Свободный текстовый поиск по всему каталогу (название/город/страна/теги).
-    // Пока строка непустая — перекрывает выбор города и «Рядом», ищем по ВСЕМ квестам.
-    const [searchQuery, setSearchQuery] = useState('');
+    const { searchQuery, setSearchQuery, searchTerm } = useQuestCatalogSearchQuery();
     const [nearbyRequestVersion, setNearbyRequestVersion] = useState(0);
     const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
     const [geoRequesting, setGeoRequesting] = useState(false);
@@ -387,11 +386,6 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
         return counts;
     }, [CITIES, nearbyCount, cityQuests, kidsQuests.length, bikeQuests.length, themeSlices, reviewedQuests.length, personalSlices]);
 
-    // #1826: поле ввода остаётся мгновенным (`searchQuery` — состояние экрана),
-    // а пересчёт каталога отстаёт на паузу в наборе. Без этого каждый символ
-    // перестраивал `questsAll` новым массивом и обнулял мемоизацию карточек.
-    const searchTerm = useDebouncedValue(searchQuery.trim().toLowerCase(), 200);
-
     const questsAll: (QuestMeta & { _distanceKm?: number })[] = useMemo(() => {
         if (!dataLoaded) return EMPTY_QUESTS;
         // Свободный поиск перекрывает город/«Рядом»: ищем по всему каталогу.
@@ -446,6 +440,14 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
         themeSlices,
         personalSlices,
     ]);
+
+    useQuestCatalogSearchAnalytics({
+        query: searchQuery,
+        appliedSearchTerm: searchTerm,
+        resultsCount: questsAll.length,
+        ready: dataLoaded && !questsError,
+        focused: isFocused,
+    });
 
     // «Популярные» — тот же порядок, которым бэкенд отвечает на `?sort=popular`
     // и по которому отобрано промо главной (#1798): прохождения → просмотры →

@@ -1,0 +1,2581 @@
+{
+  "revision": "2026-10-27.1",
+  "status": "design-reference",
+  "notReadyBook": true,
+  "pages": [
+    {
+      "pdfPage": 1,
+      "kind": "cover-front",
+      "widthMm": 150,
+      "heightMm": 100,
+      "profileId": "pocket-150x100",
+      "country": "BY",
+      "component": "cover",
+      "revision": "2026-10-27.1",
+      "bookId": "belarus-memory",
+      "frames": [
+        {
+          "type": "image",
+          "file": "belarus-cover-art-v1.png",
+          "x": 0,
+          "top": 0,
+          "width": 150,
+          "height": 100,
+          "effectivePpi": 260.1,
+          "crop": false
+        },
+        {
+          "type": "text",
+          "x": 9,
+          "top": 8,
+          "width": 132,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 9,
+          "top": 14,
+          "width": 132,
+          "height": 10.548,
+          "font": "SerifBold",
+          "sizePt": 23
+        },
+        {
+          "type": "text",
+          "x": 9,
+          "top": 25,
+          "width": 132,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 9,
+          "top": 84,
+          "width": 132,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 9,
+          "top": 89,
+          "width": 132,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 2,
+      "kind": "cover-inside-front",
+      "widthMm": 150,
+      "heightMm": 100,
+      "profileId": "pocket-150x100",
+      "country": "BY",
+      "component": "cover",
+      "revision": "2026-10-27.1",
+      "bookId": "belarus-memory",
+      "frames": [
+        {
+          "type": "text",
+          "x": 15,
+          "top": 12,
+          "width": 120,
+          "height": 6.421,
+          "font": "SerifBold",
+          "sizePt": 14
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 29,
+          "width": 120,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 49,
+          "width": 120,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 77,
+          "width": 120,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 3,
+      "kind": "cover-inside-back",
+      "widthMm": 150,
+      "heightMm": 100,
+      "profileId": "pocket-150x100",
+      "country": "BY",
+      "component": "cover",
+      "revision": "2026-10-27.1",
+      "bookId": "belarus-memory",
+      "frames": [
+        {
+          "type": "text",
+          "x": 15,
+          "top": 12,
+          "width": 120,
+          "height": 6.421,
+          "font": "SerifBold",
+          "sizePt": 14
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 30,
+          "width": 120,
+          "height": 12.382,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 4,
+      "kind": "cover-back",
+      "widthMm": 150,
+      "heightMm": 100,
+      "profileId": "pocket-150x100",
+      "country": "BY",
+      "component": "cover",
+      "revision": "2026-10-27.1",
+      "bookId": "belarus-memory",
+      "frames": [
+        {
+          "type": "text",
+          "x": 15,
+          "top": 12,
+          "width": 120,
+          "height": 9.172,
+          "font": "SerifBold",
+          "sizePt": 20
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 30,
+          "width": 120,
+          "height": 8.255,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 85,
+          "width": 120,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 5,
+      "kind": "destination",
+      "widthMm": 150,
+      "heightMm": 100,
+      "profileId": "pocket-150x100",
+      "country": "BY",
+      "revision": "2026-10-27.1",
+      "component": "body",
+      "logicalPage": 6,
+      "stopId": "mir-castle",
+      "safeMm": 5,
+      "bindingMm": 15,
+      "bindingSide": "right",
+      "continuationOnPage8": true,
+      "frames": [
+        {
+          "type": "text",
+          "x": 5,
+          "top": 5,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 91,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "binding-exclusion",
+          "x": 135,
+          "top": 0,
+          "width": 15,
+          "height": 100
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 12,
+          "width": 130,
+          "height": 6.421,
+          "font": "SerifBold",
+          "sizePt": 14
+        },
+        {
+          "type": "image",
+          "file": "mir-castle-2023.jpg",
+          "x": 5,
+          "top": 28,
+          "width": 56,
+          "height": 48,
+          "effectivePpi": 580.6,
+          "crop": false
+        },
+        {
+          "type": "text",
+          "x": 65,
+          "top": 27,
+          "width": 70,
+          "height": 45.403,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 79,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 87,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 6,
+      "kind": "memory",
+      "widthMm": 150,
+      "heightMm": 100,
+      "profileId": "pocket-150x100",
+      "country": "BY",
+      "revision": "2026-10-27.1",
+      "component": "body",
+      "logicalPage": 7,
+      "stopId": "mir-castle",
+      "safeMm": 5,
+      "bindingMm": 15,
+      "bindingSide": "left",
+      "frames": [
+        {
+          "type": "text",
+          "x": 15,
+          "top": 5,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 91,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "binding-exclusion",
+          "x": 0,
+          "top": 0,
+          "width": 15,
+          "height": 100
+        },
+        {
+          "type": "text",
+          "x": 38.0,
+          "top": 44.0,
+          "width": 84,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "photo-slot",
+          "x": 30.0,
+          "top": 16,
+          "width": 100,
+          "height": 70,
+          "maxPhotoMm": [
+            100,
+            70
+          ]
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 89,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 7,
+      "kind": "notes",
+      "widthMm": 150,
+      "heightMm": 100,
+      "profileId": "pocket-150x100",
+      "country": "BY",
+      "revision": "2026-10-27.1",
+      "component": "body",
+      "logicalPage": 8,
+      "stopId": "mir-castle",
+      "safeMm": 5,
+      "bindingMm": 15,
+      "bindingSide": "right",
+      "frames": [
+        {
+          "type": "text",
+          "x": 5,
+          "top": 5,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 91,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "binding-exclusion",
+          "x": 135,
+          "top": 0,
+          "width": 15,
+          "height": 100
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 14,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "qr",
+          "x": 5,
+          "top": 21.1275,
+          "width": 23.76,
+          "height": 23.76,
+          "dataMm": 18,
+          "quietModules": 4,
+          "modules": 25,
+          "value": "https://mirzamak.by/"
+        },
+        {
+          "type": "text",
+          "x": 32.760000000000005,
+          "top": 21.1275,
+          "width": 102.24,
+          "height": 8.255,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 32.760000000000005,
+          "top": 31.3825,
+          "width": 102.24,
+          "height": 8.255,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 48.8875,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 8,
+      "kind": "collage",
+      "widthMm": 150,
+      "heightMm": 100,
+      "profileId": "pocket-150x100",
+      "country": "BY",
+      "revision": "2026-10-27.1",
+      "component": "body",
+      "logicalPage": 9,
+      "stopId": "mir-castle",
+      "safeMm": 5,
+      "bindingMm": 15,
+      "bindingSide": "left",
+      "frames": [
+        {
+          "type": "text",
+          "x": 15,
+          "top": 5,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 91,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "binding-exclusion",
+          "x": 0,
+          "top": 0,
+          "width": 15,
+          "height": 100
+        },
+        {
+          "type": "text",
+          "x": 21,
+          "top": 78,
+          "width": 118,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 9,
+      "kind": "cover-front",
+      "widthMm": 148,
+      "heightMm": 210,
+      "profileId": "album-a5",
+      "country": "BY",
+      "component": "cover",
+      "revision": "2026-10-27.1",
+      "bookId": "belarus-memory",
+      "frames": [
+        {
+          "type": "image",
+          "file": "belarus-cover-art-v1.png",
+          "x": 0,
+          "top": 0,
+          "width": 148,
+          "height": 210,
+          "effectivePpi": 263.6,
+          "crop": false
+        },
+        {
+          "type": "text",
+          "x": 9,
+          "top": 8,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 9,
+          "top": 14,
+          "width": 130,
+          "height": 14.676,
+          "font": "SerifBold",
+          "sizePt": 32
+        },
+        {
+          "type": "text",
+          "x": 9,
+          "top": 33,
+          "width": 130,
+          "height": 5.045,
+          "font": "Sans",
+          "sizePt": 11
+        },
+        {
+          "type": "text",
+          "x": 9,
+          "top": 194,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 9,
+          "top": 199,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 10,
+      "kind": "cover-inside-front",
+      "widthMm": 148,
+      "heightMm": 210,
+      "profileId": "album-a5",
+      "country": "BY",
+      "component": "cover",
+      "revision": "2026-10-27.1",
+      "bookId": "belarus-memory",
+      "frames": [
+        {
+          "type": "text",
+          "x": 15,
+          "top": 12,
+          "width": 118,
+          "height": 10.089,
+          "font": "SerifBold",
+          "sizePt": 22
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 29,
+          "width": 118,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 49,
+          "width": 118,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 187,
+          "width": 118,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 11,
+      "kind": "cover-inside-back",
+      "widthMm": 148,
+      "heightMm": 210,
+      "profileId": "album-a5",
+      "country": "BY",
+      "component": "cover",
+      "revision": "2026-10-27.1",
+      "bookId": "belarus-memory",
+      "frames": [
+        {
+          "type": "text",
+          "x": 15,
+          "top": 12,
+          "width": 118,
+          "height": 10.089,
+          "font": "SerifBold",
+          "sizePt": 22
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 40,
+          "width": 118,
+          "height": 14.446,
+          "font": "Sans",
+          "sizePt": 10.5
+        }
+      ]
+    },
+    {
+      "pdfPage": 12,
+      "kind": "cover-back",
+      "widthMm": 148,
+      "heightMm": 210,
+      "profileId": "album-a5",
+      "country": "BY",
+      "component": "cover",
+      "revision": "2026-10-27.1",
+      "bookId": "belarus-memory",
+      "frames": [
+        {
+          "type": "text",
+          "x": 15,
+          "top": 12,
+          "width": 118,
+          "height": 12.841,
+          "font": "SerifBold",
+          "sizePt": 28
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 45,
+          "width": 118,
+          "height": 15.134,
+          "font": "Sans",
+          "sizePt": 11
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 195,
+          "width": 118,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 13,
+      "kind": "destination",
+      "widthMm": 148,
+      "heightMm": 210,
+      "profileId": "album-a5",
+      "country": "BY",
+      "revision": "2026-10-27.1",
+      "component": "body",
+      "logicalPage": 6,
+      "stopId": "mir-castle",
+      "safeMm": 5,
+      "bindingMm": 15,
+      "bindingSide": "right",
+      "continuationOnPage8": false,
+      "frames": [
+        {
+          "type": "text",
+          "x": 5,
+          "top": 5,
+          "width": 128,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 201,
+          "width": 128,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "binding-exclusion",
+          "x": 133,
+          "top": 0,
+          "width": 15,
+          "height": 210
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 12,
+          "width": 128,
+          "height": 10.089,
+          "font": "SerifBold",
+          "sizePt": 22
+        },
+        {
+          "type": "image",
+          "file": "mir-castle-2023.jpg",
+          "x": 5,
+          "top": 34,
+          "width": 118,
+          "height": 68,
+          "effectivePpi": 318.6,
+          "crop": false
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 107,
+          "width": 128,
+          "height": 57.785,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "qr",
+          "x": 5,
+          "top": 174,
+          "width": 26.4,
+          "height": 26.4,
+          "dataMm": 20,
+          "quietModules": 4,
+          "modules": 25,
+          "value": "https://mirzamak.by/"
+        },
+        {
+          "type": "text",
+          "x": 35.4,
+          "top": 174,
+          "width": 97.6,
+          "height": 4.815,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "text",
+          "x": 35.4,
+          "top": 183,
+          "width": 97.6,
+          "height": 4.815,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "text",
+          "x": 35.4,
+          "top": 191,
+          "width": 97.6,
+          "height": 4.815,
+          "font": "Sans",
+          "sizePt": 10.5
+        }
+      ]
+    },
+    {
+      "pdfPage": 14,
+      "kind": "memory",
+      "widthMm": 148,
+      "heightMm": 210,
+      "profileId": "album-a5",
+      "country": "BY",
+      "revision": "2026-10-27.1",
+      "component": "body",
+      "logicalPage": 7,
+      "stopId": "mir-castle",
+      "safeMm": 5,
+      "bindingMm": 15,
+      "bindingSide": "left",
+      "frames": [
+        {
+          "type": "text",
+          "x": 15,
+          "top": 5,
+          "width": 128,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 201,
+          "width": 128,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "binding-exclusion",
+          "x": 0,
+          "top": 0,
+          "width": 15,
+          "height": 210
+        },
+        {
+          "type": "text",
+          "x": 33.0,
+          "top": 100.0,
+          "width": 92,
+          "height": 9.631,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "photo-slot",
+          "x": 25.0,
+          "top": 28,
+          "width": 108,
+          "height": 158,
+          "maxPhotoMm": [
+            102,
+            152
+          ]
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 189,
+          "width": 128,
+          "height": 4.815,
+          "font": "Sans",
+          "sizePt": 10.5
+        }
+      ]
+    },
+    {
+      "pdfPage": 15,
+      "kind": "notes",
+      "widthMm": 148,
+      "heightMm": 210,
+      "profileId": "album-a5",
+      "country": "BY",
+      "revision": "2026-10-27.1",
+      "component": "body",
+      "logicalPage": 8,
+      "stopId": "mir-castle",
+      "safeMm": 5,
+      "bindingMm": 15,
+      "bindingSide": "right",
+      "frames": [
+        {
+          "type": "text",
+          "x": 5,
+          "top": 5,
+          "width": 128,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 201,
+          "width": 128,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "binding-exclusion",
+          "x": 133,
+          "top": 0,
+          "width": 15,
+          "height": 210
+        },
+        {
+          "type": "qr",
+          "x": 5,
+          "top": 14,
+          "width": 26.4,
+          "height": 26.4,
+          "dataMm": 20,
+          "quietModules": 4,
+          "modules": 25,
+          "value": "https://mirzamak.by/"
+        },
+        {
+          "type": "text",
+          "x": 35.4,
+          "top": 14,
+          "width": 97.6,
+          "height": 9.631,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "text",
+          "x": 35.4,
+          "top": 25.630833333333335,
+          "width": 97.6,
+          "height": 14.446,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 44.4,
+          "width": 128,
+          "height": 14.446,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 62.84625,
+          "width": 128,
+          "height": 4.815,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 70.66166666666666,
+          "width": 128,
+          "height": 4.815,
+          "font": "Sans",
+          "sizePt": 10.5
+        }
+      ]
+    },
+    {
+      "pdfPage": 16,
+      "kind": "collage",
+      "widthMm": 148,
+      "heightMm": 210,
+      "profileId": "album-a5",
+      "country": "BY",
+      "revision": "2026-10-27.1",
+      "component": "body",
+      "logicalPage": 9,
+      "stopId": "mir-castle",
+      "safeMm": 5,
+      "bindingMm": 15,
+      "bindingSide": "left",
+      "frames": [
+        {
+          "type": "text",
+          "x": 15,
+          "top": 5,
+          "width": 128,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 201,
+          "width": 128,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "binding-exclusion",
+          "x": 0,
+          "top": 0,
+          "width": 15,
+          "height": 210
+        },
+        {
+          "type": "text",
+          "x": 21,
+          "top": 188,
+          "width": 116,
+          "height": 9.631,
+          "font": "Sans",
+          "sizePt": 10.5
+        }
+      ]
+    },
+    {
+      "pdfPage": 17,
+      "kind": "cover-front",
+      "widthMm": 150,
+      "heightMm": 100,
+      "profileId": "pocket-150x100",
+      "country": "PL",
+      "component": "cover",
+      "revision": "2026-10-27.1",
+      "bookId": "poland-memory",
+      "frames": [
+        {
+          "type": "image",
+          "file": "poland-cover-art-v1.png",
+          "x": 0,
+          "top": 0,
+          "width": 150,
+          "height": 100,
+          "effectivePpi": 260.1,
+          "crop": false
+        },
+        {
+          "type": "text",
+          "x": 9,
+          "top": 8,
+          "width": 132,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 9,
+          "top": 14,
+          "width": 132,
+          "height": 10.548,
+          "font": "SerifBold",
+          "sizePt": 23
+        },
+        {
+          "type": "text",
+          "x": 9,
+          "top": 25,
+          "width": 132,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 9,
+          "top": 84,
+          "width": 132,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 9,
+          "top": 89,
+          "width": 132,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 18,
+      "kind": "cover-inside-front",
+      "widthMm": 150,
+      "heightMm": 100,
+      "profileId": "pocket-150x100",
+      "country": "PL",
+      "component": "cover",
+      "revision": "2026-10-27.1",
+      "bookId": "poland-memory",
+      "frames": [
+        {
+          "type": "text",
+          "x": 15,
+          "top": 12,
+          "width": 120,
+          "height": 6.421,
+          "font": "SerifBold",
+          "sizePt": 14
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 29,
+          "width": 120,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 49,
+          "width": 120,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 77,
+          "width": 120,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 19,
+      "kind": "cover-inside-back",
+      "widthMm": 150,
+      "heightMm": 100,
+      "profileId": "pocket-150x100",
+      "country": "PL",
+      "component": "cover",
+      "revision": "2026-10-27.1",
+      "bookId": "poland-memory",
+      "frames": [
+        {
+          "type": "text",
+          "x": 15,
+          "top": 12,
+          "width": 120,
+          "height": 6.421,
+          "font": "SerifBold",
+          "sizePt": 14
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 30,
+          "width": 120,
+          "height": 12.382,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 20,
+      "kind": "cover-back",
+      "widthMm": 150,
+      "heightMm": 100,
+      "profileId": "pocket-150x100",
+      "country": "PL",
+      "component": "cover",
+      "revision": "2026-10-27.1",
+      "bookId": "poland-memory",
+      "frames": [
+        {
+          "type": "text",
+          "x": 15,
+          "top": 12,
+          "width": 120,
+          "height": 9.172,
+          "font": "SerifBold",
+          "sizePt": 20
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 30,
+          "width": 120,
+          "height": 8.255,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 85,
+          "width": 120,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 21,
+      "kind": "destination",
+      "widthMm": 150,
+      "heightMm": 100,
+      "profileId": "pocket-150x100",
+      "country": "PL",
+      "revision": "2026-10-27.1",
+      "component": "body",
+      "logicalPage": 6,
+      "stopId": "malbork",
+      "safeMm": 5,
+      "bindingMm": 15,
+      "bindingSide": "right",
+      "continuationOnPage8": false,
+      "frames": [
+        {
+          "type": "text",
+          "x": 5,
+          "top": 5,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 91,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "binding-exclusion",
+          "x": 135,
+          "top": 0,
+          "width": 15,
+          "height": 100
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 12,
+          "width": 130,
+          "height": 6.421,
+          "font": "SerifBold",
+          "sizePt": 14
+        },
+        {
+          "type": "image",
+          "file": "malbork-castle-2019.jpg",
+          "x": 5,
+          "top": 28,
+          "width": 56,
+          "height": 48,
+          "effectivePpi": 580.6,
+          "crop": false
+        },
+        {
+          "type": "text",
+          "x": 65,
+          "top": 27,
+          "width": 70,
+          "height": 45.403,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 79,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 87,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 22,
+      "kind": "memory",
+      "widthMm": 150,
+      "heightMm": 100,
+      "profileId": "pocket-150x100",
+      "country": "PL",
+      "revision": "2026-10-27.1",
+      "component": "body",
+      "logicalPage": 7,
+      "stopId": "malbork",
+      "safeMm": 5,
+      "bindingMm": 15,
+      "bindingSide": "left",
+      "frames": [
+        {
+          "type": "text",
+          "x": 15,
+          "top": 5,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 91,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "binding-exclusion",
+          "x": 0,
+          "top": 0,
+          "width": 15,
+          "height": 100
+        },
+        {
+          "type": "text",
+          "x": 38.0,
+          "top": 44.0,
+          "width": 84,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "photo-slot",
+          "x": 30.0,
+          "top": 16,
+          "width": 100,
+          "height": 70,
+          "maxPhotoMm": [
+            100,
+            70
+          ]
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 89,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 23,
+      "kind": "notes",
+      "widthMm": 150,
+      "heightMm": 100,
+      "profileId": "pocket-150x100",
+      "country": "PL",
+      "revision": "2026-10-27.1",
+      "component": "body",
+      "logicalPage": 8,
+      "stopId": "malbork",
+      "safeMm": 5,
+      "bindingMm": 15,
+      "bindingSide": "right",
+      "frames": [
+        {
+          "type": "text",
+          "x": 5,
+          "top": 5,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 91,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "binding-exclusion",
+          "x": 135,
+          "top": 0,
+          "width": 15,
+          "height": 100
+        },
+        {
+          "type": "qr",
+          "x": 5,
+          "top": 14,
+          "width": 22.363636363636363,
+          "height": 22.363636363636363,
+          "dataMm": 18,
+          "quietModules": 4,
+          "modules": 33,
+          "value": "https://zamek.malbork.pl/wizyta/historia-zamku/lata-1280-1457/"
+        },
+        {
+          "type": "text",
+          "x": 31.363636363636363,
+          "top": 14,
+          "width": 103.63636363636364,
+          "height": 8.255,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 31.363636363636363,
+          "top": 24.255000000000003,
+          "width": 103.63636363636364,
+          "height": 8.255,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 40.36363636363636,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 24,
+      "kind": "collage",
+      "widthMm": 150,
+      "heightMm": 100,
+      "profileId": "pocket-150x100",
+      "country": "PL",
+      "revision": "2026-10-27.1",
+      "component": "body",
+      "logicalPage": 9,
+      "stopId": "malbork",
+      "safeMm": 5,
+      "bindingMm": 15,
+      "bindingSide": "left",
+      "frames": [
+        {
+          "type": "text",
+          "x": 15,
+          "top": 5,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 91,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "binding-exclusion",
+          "x": 0,
+          "top": 0,
+          "width": 15,
+          "height": 100
+        },
+        {
+          "type": "text",
+          "x": 21,
+          "top": 78,
+          "width": 118,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 25,
+      "kind": "cover-front",
+      "widthMm": 148,
+      "heightMm": 210,
+      "profileId": "album-a5",
+      "country": "PL",
+      "component": "cover",
+      "revision": "2026-10-27.1",
+      "bookId": "poland-memory",
+      "frames": [
+        {
+          "type": "image",
+          "file": "poland-cover-art-v1.png",
+          "x": 0,
+          "top": 0,
+          "width": 148,
+          "height": 210,
+          "effectivePpi": 263.6,
+          "crop": false
+        },
+        {
+          "type": "text",
+          "x": 9,
+          "top": 8,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 9,
+          "top": 14,
+          "width": 130,
+          "height": 14.676,
+          "font": "SerifBold",
+          "sizePt": 32
+        },
+        {
+          "type": "text",
+          "x": 9,
+          "top": 33,
+          "width": 130,
+          "height": 5.045,
+          "font": "Sans",
+          "sizePt": 11
+        },
+        {
+          "type": "text",
+          "x": 9,
+          "top": 194,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 9,
+          "top": 199,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 26,
+      "kind": "cover-inside-front",
+      "widthMm": 148,
+      "heightMm": 210,
+      "profileId": "album-a5",
+      "country": "PL",
+      "component": "cover",
+      "revision": "2026-10-27.1",
+      "bookId": "poland-memory",
+      "frames": [
+        {
+          "type": "text",
+          "x": 15,
+          "top": 12,
+          "width": 118,
+          "height": 10.089,
+          "font": "SerifBold",
+          "sizePt": 22
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 29,
+          "width": 118,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 49,
+          "width": 118,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 187,
+          "width": 118,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 27,
+      "kind": "cover-inside-back",
+      "widthMm": 148,
+      "heightMm": 210,
+      "profileId": "album-a5",
+      "country": "PL",
+      "component": "cover",
+      "revision": "2026-10-27.1",
+      "bookId": "poland-memory",
+      "frames": [
+        {
+          "type": "text",
+          "x": 15,
+          "top": 12,
+          "width": 118,
+          "height": 10.089,
+          "font": "SerifBold",
+          "sizePt": 22
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 40,
+          "width": 118,
+          "height": 14.446,
+          "font": "Sans",
+          "sizePt": 10.5
+        }
+      ]
+    },
+    {
+      "pdfPage": 28,
+      "kind": "cover-back",
+      "widthMm": 148,
+      "heightMm": 210,
+      "profileId": "album-a5",
+      "country": "PL",
+      "component": "cover",
+      "revision": "2026-10-27.1",
+      "bookId": "poland-memory",
+      "frames": [
+        {
+          "type": "text",
+          "x": 15,
+          "top": 12,
+          "width": 118,
+          "height": 12.841,
+          "font": "SerifBold",
+          "sizePt": 28
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 45,
+          "width": 118,
+          "height": 15.134,
+          "font": "Sans",
+          "sizePt": 11
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 195,
+          "width": 118,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 29,
+      "kind": "destination",
+      "widthMm": 148,
+      "heightMm": 210,
+      "profileId": "album-a5",
+      "country": "PL",
+      "revision": "2026-10-27.1",
+      "component": "body",
+      "logicalPage": 6,
+      "stopId": "malbork",
+      "safeMm": 5,
+      "bindingMm": 15,
+      "bindingSide": "right",
+      "continuationOnPage8": false,
+      "frames": [
+        {
+          "type": "text",
+          "x": 5,
+          "top": 5,
+          "width": 128,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 201,
+          "width": 128,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "binding-exclusion",
+          "x": 133,
+          "top": 0,
+          "width": 15,
+          "height": 210
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 12,
+          "width": 128,
+          "height": 10.089,
+          "font": "SerifBold",
+          "sizePt": 22
+        },
+        {
+          "type": "image",
+          "file": "malbork-castle-2019.jpg",
+          "x": 5,
+          "top": 34,
+          "width": 118,
+          "height": 68,
+          "effectivePpi": 319.7,
+          "crop": false
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 107,
+          "width": 128,
+          "height": 52.97,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "qr",
+          "x": 5,
+          "top": 174,
+          "width": 24.848484848484848,
+          "height": 24.848484848484848,
+          "dataMm": 20,
+          "quietModules": 4,
+          "modules": 33,
+          "value": "https://zamek.malbork.pl/wizyta/historia-zamku/lata-1280-1457/"
+        },
+        {
+          "type": "text",
+          "x": 33.848484848484844,
+          "top": 174,
+          "width": 99.15151515151516,
+          "height": 4.815,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "text",
+          "x": 33.848484848484844,
+          "top": 183,
+          "width": 99.15151515151516,
+          "height": 4.815,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "text",
+          "x": 33.848484848484844,
+          "top": 191,
+          "width": 99.15151515151516,
+          "height": 4.815,
+          "font": "Sans",
+          "sizePt": 10.5
+        }
+      ]
+    },
+    {
+      "pdfPage": 30,
+      "kind": "memory",
+      "widthMm": 148,
+      "heightMm": 210,
+      "profileId": "album-a5",
+      "country": "PL",
+      "revision": "2026-10-27.1",
+      "component": "body",
+      "logicalPage": 7,
+      "stopId": "malbork",
+      "safeMm": 5,
+      "bindingMm": 15,
+      "bindingSide": "left",
+      "frames": [
+        {
+          "type": "text",
+          "x": 15,
+          "top": 5,
+          "width": 128,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 201,
+          "width": 128,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "binding-exclusion",
+          "x": 0,
+          "top": 0,
+          "width": 15,
+          "height": 210
+        },
+        {
+          "type": "text",
+          "x": 33.0,
+          "top": 100.0,
+          "width": 92,
+          "height": 9.631,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "photo-slot",
+          "x": 25.0,
+          "top": 28,
+          "width": 108,
+          "height": 158,
+          "maxPhotoMm": [
+            102,
+            152
+          ]
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 189,
+          "width": 128,
+          "height": 4.815,
+          "font": "Sans",
+          "sizePt": 10.5
+        }
+      ]
+    },
+    {
+      "pdfPage": 31,
+      "kind": "notes",
+      "widthMm": 148,
+      "heightMm": 210,
+      "profileId": "album-a5",
+      "country": "PL",
+      "revision": "2026-10-27.1",
+      "component": "body",
+      "logicalPage": 8,
+      "stopId": "malbork",
+      "safeMm": 5,
+      "bindingMm": 15,
+      "bindingSide": "right",
+      "frames": [
+        {
+          "type": "text",
+          "x": 5,
+          "top": 5,
+          "width": 128,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 201,
+          "width": 128,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "binding-exclusion",
+          "x": 133,
+          "top": 0,
+          "width": 15,
+          "height": 210
+        },
+        {
+          "type": "qr",
+          "x": 5,
+          "top": 14,
+          "width": 24.848484848484848,
+          "height": 24.848484848484848,
+          "dataMm": 20,
+          "quietModules": 4,
+          "modules": 33,
+          "value": "https://zamek.malbork.pl/wizyta/historia-zamku/lata-1280-1457/"
+        },
+        {
+          "type": "text",
+          "x": 33.848484848484844,
+          "top": 14,
+          "width": 99.15151515151516,
+          "height": 9.631,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "text",
+          "x": 33.848484848484844,
+          "top": 25.630833333333335,
+          "width": 99.15151515151516,
+          "height": 14.446,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 44.077083333333334,
+          "width": 128,
+          "height": 14.446,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 62.52333333333333,
+          "width": 128,
+          "height": 4.815,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 70.33875,
+          "width": 128,
+          "height": 4.815,
+          "font": "Sans",
+          "sizePt": 10.5
+        }
+      ]
+    },
+    {
+      "pdfPage": 32,
+      "kind": "collage",
+      "widthMm": 148,
+      "heightMm": 210,
+      "profileId": "album-a5",
+      "country": "PL",
+      "revision": "2026-10-27.1",
+      "component": "body",
+      "logicalPage": 9,
+      "stopId": "malbork",
+      "safeMm": 5,
+      "bindingMm": 15,
+      "bindingSide": "left",
+      "frames": [
+        {
+          "type": "text",
+          "x": 15,
+          "top": 5,
+          "width": 128,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 201,
+          "width": 128,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "binding-exclusion",
+          "x": 0,
+          "top": 0,
+          "width": 15,
+          "height": 210
+        },
+        {
+          "type": "text",
+          "x": 21,
+          "top": 188,
+          "width": 116,
+          "height": 9.631,
+          "font": "Sans",
+          "sizePt": 10.5
+        }
+      ]
+    },
+    {
+      "pdfPage": 33,
+      "kind": "home-control-front",
+      "widthMm": 210,
+      "heightMm": 297,
+      "component": "control",
+      "revision": "2026-10-27.1",
+      "rulerMm": 50,
+      "physicalAcceptance": "H1 required; digital geometry is not a paper pass",
+      "frames": [
+        {
+          "type": "text",
+          "x": 15,
+          "top": 12,
+          "width": 180,
+          "height": 9.172,
+          "font": "SerifBold",
+          "sizePt": 20
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 27,
+          "width": 180,
+          "height": 5.045,
+          "font": "Sans",
+          "sizePt": 11
+        },
+        {
+          "type": "text",
+          "x": 20,
+          "top": 54,
+          "width": 165,
+          "height": 5.045,
+          "font": "Sans",
+          "sizePt": 11
+        },
+        {
+          "type": "text",
+          "x": 38,
+          "top": 88,
+          "width": 134,
+          "height": 5.962,
+          "font": "SansBold",
+          "sizePt": 13
+        },
+        {
+          "type": "text",
+          "x": 38,
+          "top": 106,
+          "width": 134,
+          "height": 10.089,
+          "font": "Sans",
+          "sizePt": 11
+        },
+        {
+          "type": "text",
+          "x": 38,
+          "top": 195,
+          "width": 134,
+          "height": 5.962,
+          "font": "SansBold",
+          "sizePt": 13
+        },
+        {
+          "type": "text",
+          "x": 38,
+          "top": 213,
+          "width": 134,
+          "height": 10.089,
+          "font": "Sans",
+          "sizePt": 11
+        }
+      ]
+    },
+    {
+      "pdfPage": 34,
+      "kind": "home-control-back",
+      "widthMm": 210,
+      "heightMm": 297,
+      "component": "control",
+      "revision": "2026-10-27.1",
+      "rulerMm": 50,
+      "physicalAcceptance": "H1 required; digital geometry is not a paper pass",
+      "frames": [
+        {
+          "type": "text",
+          "x": 15,
+          "top": 12,
+          "width": 180,
+          "height": 9.172,
+          "font": "SerifBold",
+          "sizePt": 20
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 27,
+          "width": 180,
+          "height": 5.045,
+          "font": "Sans",
+          "sizePt": 11
+        },
+        {
+          "type": "text",
+          "x": 20,
+          "top": 54,
+          "width": 165,
+          "height": 5.045,
+          "font": "Sans",
+          "sizePt": 11
+        },
+        {
+          "type": "text",
+          "x": 38,
+          "top": 88,
+          "width": 134,
+          "height": 5.962,
+          "font": "SansBold",
+          "sizePt": 13
+        },
+        {
+          "type": "text",
+          "x": 38,
+          "top": 106,
+          "width": 134,
+          "height": 10.089,
+          "font": "Sans",
+          "sizePt": 11
+        },
+        {
+          "type": "text",
+          "x": 38,
+          "top": 195,
+          "width": 134,
+          "height": 5.962,
+          "font": "SansBold",
+          "sizePt": 13
+        },
+        {
+          "type": "text",
+          "x": 38,
+          "top": 213,
+          "width": 134,
+          "height": 10.089,
+          "font": "Sans",
+          "sizePt": 11
+        }
+      ]
+    },
+    {
+      "pdfPage": 35,
+      "kind": "destination-stress",
+      "widthMm": 150,
+      "heightMm": 100,
+      "profileId": "pocket-150x100",
+      "country": "BY",
+      "revision": "2026-10-27.1",
+      "component": "body",
+      "logicalPage": 6,
+      "stopId": "mir-castle",
+      "safeMm": 5,
+      "bindingMm": 15,
+      "bindingSide": "right",
+      "continuationOnPage8": true,
+      "frames": [
+        {
+          "type": "text",
+          "x": 5,
+          "top": 5,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 91,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "binding-exclusion",
+          "x": 135,
+          "top": 0,
+          "width": 15,
+          "height": 100
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 12,
+          "width": 130,
+          "height": 6.421,
+          "font": "SerifBold",
+          "sizePt": 14
+        },
+        {
+          "type": "image",
+          "file": "mir-castle-2023.jpg",
+          "x": 5,
+          "top": 28,
+          "width": 56,
+          "height": 48,
+          "effectivePpi": 580.6,
+          "crop": false
+        },
+        {
+          "type": "text",
+          "x": 65,
+          "top": 27,
+          "width": 70,
+          "height": 45.403,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 79,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 87,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 36,
+      "kind": "notes",
+      "widthMm": 150,
+      "heightMm": 100,
+      "profileId": "pocket-150x100",
+      "country": "BY",
+      "revision": "2026-10-27.1",
+      "component": "body",
+      "logicalPage": 8,
+      "stopId": "mir-castle",
+      "safeMm": 5,
+      "bindingMm": 15,
+      "bindingSide": "right",
+      "frames": [
+        {
+          "type": "text",
+          "x": 5,
+          "top": 5,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 91,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "binding-exclusion",
+          "x": 135,
+          "top": 0,
+          "width": 15,
+          "height": 100
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 14,
+          "width": 130,
+          "height": 12.382,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "qr",
+          "x": 5,
+          "top": 29.3825,
+          "width": 23.76,
+          "height": 23.76,
+          "dataMm": 18,
+          "quietModules": 4,
+          "modules": 25,
+          "value": "https://mirzamak.by/"
+        },
+        {
+          "type": "text",
+          "x": 32.760000000000005,
+          "top": 29.3825,
+          "width": 102.24,
+          "height": 8.255,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 32.760000000000005,
+          "top": 39.6375,
+          "width": 102.24,
+          "height": 8.255,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 57.1425,
+          "width": 130,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        }
+      ]
+    },
+    {
+      "pdfPage": 37,
+      "kind": "destination-stress",
+      "widthMm": 148,
+      "heightMm": 210,
+      "profileId": "album-a5",
+      "country": "BY",
+      "revision": "2026-10-27.1",
+      "component": "body",
+      "logicalPage": 6,
+      "stopId": "mir-castle",
+      "safeMm": 5,
+      "bindingMm": 15,
+      "bindingSide": "right",
+      "continuationOnPage8": true,
+      "frames": [
+        {
+          "type": "text",
+          "x": 5,
+          "top": 5,
+          "width": 128,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 201,
+          "width": 128,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "binding-exclusion",
+          "x": 133,
+          "top": 0,
+          "width": 15,
+          "height": 210
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 12,
+          "width": 128,
+          "height": 20.179,
+          "font": "SerifBold",
+          "sizePt": 22
+        },
+        {
+          "type": "image",
+          "file": "mir-castle-2023.jpg",
+          "x": 5,
+          "top": 34,
+          "width": 118,
+          "height": 68,
+          "effectivePpi": 318.6,
+          "crop": false
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 107,
+          "width": 128,
+          "height": 57.785,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "qr",
+          "x": 5,
+          "top": 174,
+          "width": 26.4,
+          "height": 26.4,
+          "dataMm": 20,
+          "quietModules": 4,
+          "modules": 25,
+          "value": "https://mirzamak.by/"
+        },
+        {
+          "type": "text",
+          "x": 35.4,
+          "top": 174,
+          "width": 97.6,
+          "height": 4.815,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "text",
+          "x": 35.4,
+          "top": 183,
+          "width": 97.6,
+          "height": 4.815,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "text",
+          "x": 35.4,
+          "top": 191,
+          "width": 97.6,
+          "height": 4.815,
+          "font": "Sans",
+          "sizePt": 10.5
+        }
+      ]
+    },
+    {
+      "pdfPage": 38,
+      "kind": "notes",
+      "widthMm": 148,
+      "heightMm": 210,
+      "profileId": "album-a5",
+      "country": "BY",
+      "revision": "2026-10-27.1",
+      "component": "body",
+      "logicalPage": 8,
+      "stopId": "mir-castle",
+      "safeMm": 5,
+      "bindingMm": 15,
+      "bindingSide": "right",
+      "frames": [
+        {
+          "type": "text",
+          "x": 5,
+          "top": 5,
+          "width": 128,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 201,
+          "width": 128,
+          "height": 4.128,
+          "font": "Sans",
+          "sizePt": 9
+        },
+        {
+          "type": "binding-exclusion",
+          "x": 133,
+          "top": 0,
+          "width": 15,
+          "height": 210
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 14,
+          "width": 128,
+          "height": 19.262,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "qr",
+          "x": 5,
+          "top": 36.26166666666667,
+          "width": 26.4,
+          "height": 26.4,
+          "dataMm": 20,
+          "quietModules": 4,
+          "modules": 25,
+          "value": "https://mirzamak.by/"
+        },
+        {
+          "type": "text",
+          "x": 35.4,
+          "top": 36.26166666666667,
+          "width": 97.6,
+          "height": 9.631,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "text",
+          "x": 35.4,
+          "top": 47.892500000000005,
+          "width": 97.6,
+          "height": 14.446,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 66.66166666666666,
+          "width": 128,
+          "height": 14.446,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 85.10791666666665,
+          "width": 128,
+          "height": 4.815,
+          "font": "Sans",
+          "sizePt": 10.5
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 92.92333333333332,
+          "width": 128,
+          "height": 4.815,
+          "font": "Sans",
+          "sizePt": 10.5
+        }
+      ]
+    }
+  ],
+  "profiles": {
+    "pocket-150x100": {
+      "width": 150,
+      "height": 100,
+      "body": 9,
+      "title": 14,
+      "photo": [
+        100,
+        70
+      ],
+      "qr": 18
+    },
+    "album-a5": {
+      "width": 148,
+      "height": 210,
+      "body": 10.5,
+      "title": 22,
+      "photo": [
+        108,
+        158
+      ],
+      "qr": 20
+    }
+  },
+  "fontFiles": {
+    "NotoSans-Regular.ttf": "f5f552c8c5edb61fe6efb824baf4d4de47b1a8689ab4925ff43f7bd6a4ebece5",
+    "NotoSans-Bold.ttf": "3a08a47daa00cade516425c15c57615aef2fd418ec9811a7b9f465088f92cc05",
+    "NotoSerif-Bold.ttf": "96656aa5cec8f1d6fd0e804c1fad397e1a1cfa082e6642124e0bda68cd8363ce"
+  }
+}
