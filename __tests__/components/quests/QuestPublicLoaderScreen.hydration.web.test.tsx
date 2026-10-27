@@ -35,34 +35,30 @@ beforeAll(() => {
   pages = buildQuestWebProjection(questPrivateSnapshot(), loadSsgCatalogs(require('node:path').resolve(__dirname, '../../..')).catalogs).pages;
 });
 
-it.each([390, 768, 1440])('hydrates the public body at %spx and keeps its single heading when gameplay opens', async (width) => {
+it.each([390, 768, 1440])('serves the public body as server HTML and hands off to the app screen after hydration at %spx', async (width) => {
   const page = pages.find((entry) => entry.kind === 'detail' && entry.locale === 'pl')!;
   payload = { ...page, schema_version: 2, state: 'available', publication_id: 'b'.repeat(64), corpus_revision: 'c'.repeat(64),
     ru_source_path: '/quests/7/fixture-city-walk', versions: [] };
   const original = window.innerWidth;
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
-  const tree = createElement(Screen, { fallback: createElement('p', null, 'Legacy') });
+  const tree = createElement(Screen, { fallback: createElement('p', { 'data-testid': 'legacy' }, 'Legacy') });
   const container = document.createElement('div');
   container.innerHTML = renderToString(tree);
   document.body.appendChild(container);
   const publicBody = container.querySelector('main[data-quest-public-page]');
-  const text = publicBody?.textContent;
   expect(container.querySelectorAll('h1')).toHaveLength(1);
   expect(publicBody?.getAttribute('lang')).toBe('pl');
+  expect(publicBody?.textContent).toContain((page.page as { lead: string }).lead);
+  expect(container.querySelector('[data-testid="legacy"]')).toBeNull();
   const errors: unknown[] = [];
   let root: ReturnType<typeof hydrateRoot> | undefined;
   try {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: width });
     await act(async () => { root = hydrateRoot(container, tree, { onRecoverableError: (error) => errors.push(error) }); });
     expect(errors).toEqual([]);
-    expect(container.querySelector('main')).toBe(publicBody);
-    expect(publicBody?.textContent).toBe(text);
-    await act(async () => { container.querySelector('button')!.click(); });
-    expect(container.querySelectorAll('h1')).toHaveLength(1);
-    expect(container.querySelector('h2')?.textContent).toBe('Gameplay pl');
-    expect(container.querySelector('main')).toBe(publicBody);
-    expect(publicBody?.textContent).toContain('Gameplay pl');
-    expect(publicBody?.textContent).toContain((page.page as { lead: string }).lead);
+    // Visitors get the regular app screen, not the crawler document.
+    expect(container.querySelector('main[data-quest-public-page]')).toBeNull();
+    expect(container.querySelector('[data-testid="legacy"]')?.textContent).toBe('Legacy');
   } finally {
     await act(async () => root?.unmount());
     container.remove();

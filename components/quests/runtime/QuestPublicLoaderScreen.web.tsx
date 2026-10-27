@@ -8,6 +8,7 @@ import QuestVersionLinks from '@/components/quests/QuestVersionLinks';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useHydrationReady } from '@/hooks/useHydrationReady';
 import type { QuestPublicProjection } from '@/utils/questPublicPage';
 import { parseQuestLocaleRoute, type QuestServingProjection } from '@/utils/questLocaleRouting';
 import { jsonLdScript } from '@/components/seo/jsonLdScript';
@@ -97,7 +98,13 @@ function QuestPublicDocument({ data }: { data: QuestPublicProjection }) {
   </>;
 }
 
+/**
+ * The projection document is the server HTML only (crawlers, no-JS, first paint).
+ * Once hydrated — and on every client-side navigation — the visitor gets the
+ * regular app screen, the same handoff the former SSG fallback made.
+ */
 export default function QuestPublicLoaderScreen({ fallback }: { fallback: React.ReactNode }) {
   const data = useLoaderData() as QuestPublicProjection | null;
-  return data ? <QuestPublicDocument key={data.canonical_path} data={data} /> : <>{fallback}</>;
+  const hydrated = useHydrationReady();
+  return data && !hydrated ? <QuestPublicDocument key={data.canonical_path} data={data} /> : <>{fallback}</>;
 }
