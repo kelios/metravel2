@@ -60,7 +60,12 @@ SSH_OK_RE = re.compile(r'Accepted (\w+) for (\S+) from (\S+)')
 # pam `authentication failure` + `Failed password`) под одним pid — попыткой считается соединение.
 SSHD_PID_RE = re.compile(r'sshd(?:-session)?\[(\d+)\]')
 F2B_RE = re.compile(r'^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),\d+ fail2ban\.\w+\s+\[\d+\]: (\w+)\s+\[([\w-]+)\] (Ban|Unban|Restore Ban|Found) (\S+)')
-LIMIT_REQ_RE = re.compile(r'limiting requests.*client: ([0-9a-fA-F.:]+)')
+# Первое `client:` после зоны — адрес клиента; referrer/host/request дальше в строке задаёт клиент.
+LIMIT_REQ_RE = re.compile(r'limiting requests.*?(?:by zone "([^"]+)".*?)?client: ([0-9a-fA-F.:]+)')
+# Отказы nginx (#2823): 403 закрытому роботу и CSRF Django, 429 limit_req. Отказ в зоне login —
+# штатная защита входа от подбора, тревогой не считается.
+REFUSED_STATUSES = ('403', '429')
+LOGIN_ZONE = 'login'
 MOD_ERR_RE = re.compile(r'^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),\d+ ERROR .*\((\w+)\)')
 STATUS_RE = re.compile(r'^(\d{3})')
 WARN_BOT_MIN = 50
@@ -192,8 +197,9 @@ def ip_network_label(ip):
 def analyze_nginx(access, err, since, ignore):
     out = {
         'external': 0, 'status': Counter(), 'scanner_requests': 0, 'scanner_ips': Counter(),
-        'scanner_paths': Counter(), 'admin_login_posts': 0, 'http_5xx_paths': Counter(), 'http_499': 0,
-        'bots': Counter(), 'bot_paths': defaultdict(Counter), 'top_networks': Counter(), 'limit_req': Counter(),
+        'scanner_paths': Counter(), 'admin_login_posts': 0, 'admin_login_refused': 0, 'http_5xx_paths': Counter(),
+        'http_499': 0, 'bots': Counter(), 'bot_served': Counter(), 'bot_paths': defaultdict(Counter),
+        'top_networks': Counter(), 'limit_req': Counter(), 'limit_req_zones': Counter(),
         'skipped': 0,
     }
     for line in access:
@@ -226,11 +232,16 @@ def analyze_nginx(access, err, since, ignore):
             out['scanner_requests'] += 1
             out['scanner_ips'][ip] += 1
             out['scanner_paths'][path[:60]] += 1
+        refused = status in REFUSED_STATUSES
         if request.startswith('POST /admin/login/'):
             out['admin_login_posts'] += 1
+            out['admin_login_refused'] += refused
         token = next((t for t in BOT_TOKENS if t in ua), None)
         if token:
             out['bots'][token] += 1
+            # Отдано роботу — всё, кроме отказа, редиректа на канонический хост и самого robots.txt.
+            if not refused and not status.startswith('3') and path != '/robots.txt':
+                out['bot_served'][token] += 1
             out['bot_paths'][token][path.split('/')[1] if path.startswith('/') and len(path) > 1 else '/'] += 1
     count_limit_req(out, err, ignore)
     return out
@@ -239,8 +250,9 @@ def analyze_nginx(access, err, since, ignore):
 def count_limit_req(out, err, ignore):
     for line in err:
         m = LIMIT_REQ_RE.search(line)
-        if m and m.group(1) not in ignore:
-            out['limit_req'][m.group(1)] += 1
+        if m and m.group(2) not in ignore:
+            out['limit_req'][m.group(2)] += 1
+            out['limit_req_zones'][m.group(1) or '?'] += 1
 
 
 def analyze_fail2ban(text, since, tz):
@@ -424,16 +436,21 @@ def build_report(args, now, since, ng, f2b, auth, mod, relay, closed, facts, pre
     lines.append(f'Сканеры (.env/.git/wp-*/php): {ng["scanner_requests"]} запросов с {len(ng["scanner_ips"])} адресов{fmt_delta("scanner_requests", ng["scanner_requests"], prev)}')
     lines.append(f'  топ адресов: {top(ng["scanner_ips"])}')
     lines.append(f'  топ путей: {top(ng["scanner_paths"])}')
-    lines.append(f'POST /admin/login/: {ng["admin_login_posts"]}; срабатываний limit_req: {sum(ng["limit_req"].values())} ({top(ng["limit_req"], 3)})')
+    admin_checked = ng['admin_login_posts'] - ng['admin_login_refused']
+    lines.append(f'POST /admin/login/: {ng["admin_login_posts"]}, из них отказ 403/429: {ng["admin_login_refused"]}, '
+                 f'дошли до проверки пароля: {admin_checked}')
+    lines.append(f'Срабатываний limit_req: {sum(ng["limit_req"].values())} ({top(ng["limit_req"], 3)}); '
+                 f'по зонам: {top(ng["limit_req_zones"])}')
     if st.get('5xx', 0):
         lines.append(f'  5xx по путям: {top(ng["http_5xx_paths"])}')
     lines.append(f'Топ сетей по запросам (/24, /48): {top(ng["top_networks"])}')
     if st.get('5xx', 0) >= WARN_5XX_MIN:
         warn.append(f'5xx внешним клиентам: {st["5xx"]} (порог {WARN_5XX_MIN})')
-    if sum(ng['limit_req'].values()) >= WARN_LIMIT_REQ_MIN:
-        warn.append(f'limit_req сработал {sum(ng["limit_req"].values())} раз по чужим адресам')
-    if ng['admin_login_posts'] >= WARN_ADMIN_LOGIN_MIN:
-        warn.append(f'подбор пароля к /admin/login/: {ng["admin_login_posts"]} POST')
+    limited = sum(n for zone, n in ng['limit_req_zones'].items() if zone != LOGIN_ZONE)
+    if limited >= WARN_LIMIT_REQ_MIN:
+        warn.append(f'limit_req сработал {limited} раз по чужим адресам вне зоны login')
+    if admin_checked >= WARN_ADMIN_LOGIN_MIN:
+        warn.append(f'подбор пароля к /admin/login/: {admin_checked} POST дошли до проверки пароля')
     lines.append('')
 
     lines.append('== Роботы (user_agent) ==')
@@ -441,11 +458,13 @@ def build_report(args, now, since, ng, f2b, auth, mod, relay, closed, facts, pre
     lines.append(f'Всего запросов роботов: {bot_total}{fmt_delta("bot_requests", bot_total, prev)}; закрыто в robots.txt: {len(closed)}')
     for token, n in ng['bots'].most_common(20):
         is_closed = token in closed
-        mark = ' [закрыт в robots.txt]' if is_closed else ''
+        served = ng['bot_served'][token]
+        mark = f' [закрыт в robots.txt, отдано {served}]' if is_closed else ''
         sections = top(ng['bot_paths'][token], 3)
         lines.append(f'  {token:<20} {n:>6}{mark}  {sections}')
-        if is_closed and n >= WARN_BOT_MIN:
-            warn.append(f'закрытый робот {token} всё равно сделал {n} запросов')
+        if is_closed and served >= WARN_BOT_MIN:
+            warn.append(f'закрытый робот {token} получил {served} ответов вместо 403 — '
+                        'сверить map $closed_crawler в nginx.conf бэка с robots.txt')
     lines.append('')
 
     lines.append('== Почта приложения ==')
