@@ -19,23 +19,40 @@ function ssrApiRequest(url, { headers = {}, signal } = {}) {
       reject(new Error('Unsupported SSR API protocol'))
       return
     }
-    const request = client.request(target, { method: 'GET', headers, signal }, (response) => {
-      const chunks = []
-      let size = 0
-      response.on('data', (chunk) => {
-        size += chunk.length
-        if (size > MAX_BODY_BYTES) request.destroy(new Error('SSR API response exceeds its byte bound'))
-        else chunks.push(chunk)
-      })
-      response.on('end', () => {
-        const status = response.statusCode || 0
-        const body = Buffer.concat(chunks).toString('utf8')
-        resolve({ status, ok: status >= 200 && status < 300, json: async () => JSON.parse(body) })
-      })
-      response.on('error', reject)
-    })
-    request.on('error', reject)
-    request.end()
+    const send = (retried = false) => {
+      let receivedResponse = false
+      try {
+        const request = client.request(target, {
+          method: 'GET', headers, signal, ...(retried ? { agent: false } : {}),
+        }, (response) => {
+          receivedResponse = true
+          const chunks = []
+          let size = 0
+          response.on('data', (chunk) => {
+            size += chunk.length
+            if (size > MAX_BODY_BYTES) request.destroy(new Error('SSR API response exceeds its byte bound'))
+            else chunks.push(chunk)
+          })
+          response.on('end', () => {
+            const status = response.statusCode || 0
+            const body = Buffer.concat(chunks).toString('utf8')
+            resolve({ status, ok: status >= 200 && status < 300, json: async () => JSON.parse(body) })
+          })
+          response.on('error', reject)
+        })
+        request.on('error', (error) => {
+          // A retiring worker can close a keep-alive socket as Node reuses it.
+          // Retry this GET once on a new connection, within the same deadline.
+          if (!retried && request.reusedSocket && error.code === 'ECONNRESET'
+              && !receivedResponse && !signal?.aborted) send(true)
+          else reject(error)
+        })
+        request.end()
+      } catch (error) {
+        reject(error)
+      }
+    }
+    send()
   })
 }
 
