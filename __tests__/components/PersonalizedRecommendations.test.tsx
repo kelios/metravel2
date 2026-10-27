@@ -43,11 +43,6 @@ jest.mock('react-native', () => {
   }
 })
 
-// Mock window for web
-global.window = {
-  location: { href: '' },
-} as any
-
 describe('PersonalizedRecommendations', () => {
   beforeEach(() => {
     jest.clearAllMocks()

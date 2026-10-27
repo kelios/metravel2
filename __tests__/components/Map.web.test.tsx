@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react-native';
 import MapClientSideComponent from '@/components/MapPage/Map.web';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { restoreWindowStubs, stubWindowProperties } from '../helpers/windowStubs';
 
 // Mock leaflet modules
 const mockLeaflet = {
@@ -29,36 +30,6 @@ const mockReactLeaflet = {
     getZoom: jest.fn(() => 10),
   })),
 };
-
-// Mock window object
-Object.defineProperty(window, 'window', {
-  value: {
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    requestIdleCallback: jest.fn((callback: any) => {
-      setTimeout(callback, 0);
-      return 1;
-    }),
-    L: mockLeaflet,
-  },
-  writable: true,
-});
-
-// Mock document
-Object.defineProperty(window, 'document', {
-  value: {
-    querySelector: jest.fn(() => null),
-    createElement: jest.fn(() => ({
-      setAttribute: jest.fn(),
-      rel: '',
-      href: '',
-    })),
-    head: {
-      appendChild: jest.fn(),
-    },
-  },
-  writable: true,
-});
 
 // Mock leaflet CSS import
 jest.mock('leaflet/dist/leaflet.css', () => ({}), { virtual: true });
@@ -126,11 +97,18 @@ describe('MapClientSideComponent (Map.web.tsx)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (window as any).L = mockLeaflet;
-    (window as any).requestIdleCallback = jest.fn((callback: any) => {
-      setTimeout(callback, 0);
-      return 1;
+    // Только свойства настоящего jsdom-окна: глобал window/document в jsdom 26 не заменить (#2735).
+    stubWindowProperties({
+      L: mockLeaflet,
+      requestIdleCallback: jest.fn((callback: any) => {
+        setTimeout(callback, 0);
+        return 1;
+      }),
     });
+  });
+
+  afterEach(() => {
+    restoreWindowStubs();
   });
 
   beforeAll(() => {

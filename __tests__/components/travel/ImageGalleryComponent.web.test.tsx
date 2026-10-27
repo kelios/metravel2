@@ -1,3 +1,5 @@
+/** @jest-environment-options {"url": "http://localhost:8081/travel/42"} */
+// jsdom 26: window.location неподменяем (#2735) — детерминированный origin задаётся URL окружения.
 import React from 'react';
 import { Platform, Image, StyleSheet } from 'react-native';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
@@ -159,42 +161,16 @@ const runDropNoWait = (files: File[]) => {
 describe('ImageGalleryComponent.web', () => {
   const originalPlatform = Platform.OS;
   const originalCreateObjectURL = URL.createObjectURL;
-  const originalWindowLocation = window.location;
 
   beforeAll(() => {
     Object.defineProperty(Platform, 'OS', { value: 'web' });
     URL.createObjectURL = jest.fn(() => 'blob://preview');
     process.env.EXPO_PUBLIC_API_URL = 'https://example.test/api';
-
-    // jsdom treats window.location as readonly; redefine for deterministic origin.
-    // @ts-ignore -- jsdom readonly window.location: must delete before reassigning in tests
-    delete (window as any).location;
-    const href = 'http://localhost:8081/travel/42';
-    (window as any).location = {
-      ...originalWindowLocation,
-      href,
-      origin: 'http://localhost:8081',
-      protocol: 'http:',
-      hostname: 'localhost',
-      host: 'localhost:8081',
-      pathname: '/travel/42',
-      search: '',
-      hash: '',
-      assign: jest.fn(),
-      replace: jest.fn(),
-      reload: jest.fn(),
-      toString: () => href,
-    };
   });
 
   afterAll(() => {
     Object.defineProperty(Platform, 'OS', { value: originalPlatform });
     URL.createObjectURL = originalCreateObjectURL;
-
-    // restore jsdom location
-    // @ts-ignore -- jsdom readonly window.location: must delete before restoring in tests
-    delete (window as any).location;
-    (window as any).location = originalWindowLocation;
   });
 
   beforeEach(() => {

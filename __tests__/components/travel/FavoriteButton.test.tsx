@@ -1,3 +1,8 @@
+/**
+ * @jest-environment node
+ */
+// Native-путь выбирается по отсутствию `document`; в jsdom 26 его убрать нельзя — окружение node,
+// где setup.ts подкладывает заглушку document, а тест её снимает (#2735).
 import { Platform, StyleSheet } from 'react-native'
 import { fireEvent, render, waitFor } from '@testing-library/react-native'
 
@@ -19,10 +24,9 @@ jest.mock('@/utils/haptics', () => ({ hapticImpact: jest.fn(), hapticNotificatio
 
 describe('FavoriteButton: оба варианта дают один и тот же отклик (#2103)', () => {
   const originalOS = Platform.OS
-  const originalDocument = Object.getOwnPropertyDescriptor(globalThis, 'document')
+  const originalDocument = (globalThis as any).document
   beforeEach(() => {
-    // overlay выбирает web-ветку по наличию document — для native-пути его нет
-    Object.defineProperty(globalThis, 'document', { configurable: true, value: undefined })
+    delete (globalThis as any).document
     jest.clearAllMocks()
     ;(Platform as any).OS = 'ios'
     mockIsFavorite.mockReturnValue(false)
@@ -30,7 +34,7 @@ describe('FavoriteButton: оба варианта дают один и тот ж
   })
   afterEach(() => {
     ;(Platform as any).OS = originalOS
-    if (originalDocument) Object.defineProperty(globalThis, 'document', originalDocument)
+    ;(globalThis as any).document = originalDocument
   })
 
   it.each(['overlay', 'plain'] as const)('%s: success toast with «Отменить»', async (variant) => {

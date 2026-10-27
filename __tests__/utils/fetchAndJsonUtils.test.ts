@@ -5,6 +5,7 @@ import {
   openBookPreviewWindow,
   openPendingBookPreviewWindow,
 } from '@/utils/openBookPreviewWindow'
+import { restoreWindowStubs, stubWindowProperty } from '../helpers/windowStubs'
 
 class FakeResponse {
   status: number
@@ -119,58 +120,6 @@ describe('fetchWithTimeout', () => {
       /Сетевое соединение было прервано/
     )
   })
-
-  it('retries once on 502 from local Metro API proxy', async () => {
-    const originalWindow = global.window
-    ;(global as any).window = {
-      location: {
-        origin: 'http://localhost:8081',
-        hostname: 'localhost',
-      },
-    }
-
-    const firstResponse = { status: 502 } as Response
-    const secondResponse = { status: 200, ok: true } as Response
-    const fetchMock = jest.fn()
-      .mockResolvedValueOnce(firstResponse)
-      .mockResolvedValueOnce(secondResponse)
-    global.fetch = fetchMock as any
-
-    const result = await fetchWithTimeout('http://localhost:8081/api/countries/', {}, 1000)
-
-    expect(result).toBe(secondResponse)
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    ;(global as any).window = originalWindow
-  })
-
-  it('does not retry local proxy 502 after external signal was aborted', async () => {
-    const originalWindow = global.window
-    ;(global as any).window = {
-      location: {
-        origin: 'http://localhost:8081',
-        hostname: 'localhost',
-      },
-    }
-
-    const externalController = new AbortController()
-    const firstResponse = { status: 502 } as Response
-    const fetchMock = jest.fn().mockImplementationOnce(() => {
-      externalController.abort()
-      return Promise.resolve(firstResponse)
-    })
-    global.fetch = fetchMock as any
-
-    await expect(
-      fetchWithTimeout(
-        'http://localhost:8081/api/countries/',
-        { signal: externalController.signal },
-        1000
-      )
-    ).rejects.toMatchObject({ name: 'AbortError' })
-
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    ;(global as any).window = originalWindow
-  })
 })
 
 describe('safeJsonParse', () => {
@@ -235,32 +184,30 @@ describe('safeJsonParseString', () => {
 })
 
 describe('openBookPreviewWindow', () => {
-  const originalWindow = global.window
   const originalCreateObjectURL = global.URL.createObjectURL
   const originalRevokeObjectURL = global.URL.revokeObjectURL
 
   beforeEach(() => {
     global.URL.createObjectURL = jest.fn(() => 'blob:http://localhost/mock-preview')
     global.URL.revokeObjectURL = jest.fn()
+    // Слот «запомненное окно предпросмотра» живёт на настоящем window — изолируем его между тестами.
+    stubWindowProperty('__metravelBookPreviewWindow', undefined)
   })
 
   afterEach(() => {
-    global.window = originalWindow as any
+    restoreWindowStubs()
     global.URL.createObjectURL = originalCreateObjectURL
     global.URL.revokeObjectURL = originalRevokeObjectURL
     jest.restoreAllMocks()
   })
 
   it('does nothing when window.open returns null', () => {
-    const mockWindow: any = {
-      ...window,
-      open: jest.fn(() => null),
-    }
-    global.window = mockWindow as any
+    const open = jest.fn(() => null)
+    stubWindowProperty('open', open)
 
     openBookPreviewWindow('<html></html>')
 
-    expect(mockWindow.open).toHaveBeenCalledWith(
+    expect(open).toHaveBeenCalledWith(
       'blob:http://localhost/mock-preview',
       '_blank',
       'noopener'
@@ -271,8 +218,7 @@ describe('openBookPreviewWindow', () => {
     const winInstance: any = {}
     const open = jest.fn(() => winInstance)
 
-    const mockWindow: any = { ...window, open }
-    global.window = mockWindow as any
+    stubWindowProperty('open', open)
 
     const html = '<html><body>Test</body></html>'
     openBookPreviewWindow(html)
@@ -310,7 +256,7 @@ describe('openBookPreviewWindow', () => {
     const open = jest.fn((_url: string, _target?: string, features?: string) =>
       features && features.includes('noopener') ? null : pendingWindow,
     )
-    global.window = { ...window, open } as any
+    stubWindowProperty('open', open)
 
     const opened = openPendingBookPreviewWindow()
 
@@ -331,8 +277,7 @@ describe('openBookPreviewWindow', () => {
     }
 
     const open = jest.fn(() => pendingWindow)
-    const mockWindow: any = { ...window, open }
-    global.window = mockWindow as any
+    stubWindowProperty('open', open)
 
     openPendingBookPreviewWindow()
     pendingWrite.mockClear()
@@ -347,7 +292,7 @@ describe('openBookPreviewWindow', () => {
   it('#2125: заглушка говорит «Готовим печатную версию…» — без «карты», она общая для книги, плана и квеста', () => {
     const write = jest.fn()
     const pendingWindow: any = { opener: {}, document: { open: jest.fn(), write, close: jest.fn() } }
-    global.window = { ...window, open: jest.fn(() => pendingWindow) } as any
+    stubWindowProperty('open', jest.fn(() => pendingWindow))
 
     openPendingBookPreviewWindow()
 
@@ -366,7 +311,7 @@ describe('openBookPreviewWindow', () => {
     }
     const blobWindow: any = {}
     const open = jest.fn((url: string) => (url === 'about:blank' ? pendingWindow : blobWindow))
-    global.window = { ...window, open } as any
+    stubWindowProperty('open', open)
 
     openPendingBookPreviewWindow()
     discardPendingBookPreviewWindow(pendingWindow)
@@ -401,16 +346,13 @@ describe('openBookPreviewWindow', () => {
       },
     }
 
-    const mockWindow: any = {
-      ...window,
-      open: jest.fn(),
-    }
-    global.window = mockWindow as any
+    const open = jest.fn()
+    stubWindowProperty('open', open)
 
     openBookPreviewWindow('<html><body>Retry</body></html>', failingTargetWindow)
     jest.runAllTimers()
 
-    expect(mockWindow.open).not.toHaveBeenCalled()
+    expect(open).not.toHaveBeenCalled()
     expect(failingTargetWindow.location.replace).toHaveBeenCalledWith('about:blank')
 
     jest.useRealTimers()

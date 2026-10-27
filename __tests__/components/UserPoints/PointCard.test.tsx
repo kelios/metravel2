@@ -5,6 +5,7 @@ import { PointCard } from '@/components/UserPoints/PointCard';
 import { PointStatus } from '@/types/userPoints';
 import type { ImportedPoint } from '@/types/userPoints';
 import { __resetViewportMetricsForTests } from '@/utils/viewportMetrics';
+import { restoreWindowStubs, stubWindowProperty } from '../../helpers/windowStubs';
 
 const mockPlaceListCard = jest.fn((props: any) => {
   const React = require('react');
@@ -151,23 +152,17 @@ describe('PointCard', () => {
 
   it('copies coordinates via navigator.clipboard on web when available', async () => {
     const originalPlatform = require('react-native').Platform.OS;
-    const originalWindow = (global as any).window;
     (require('react-native').Platform as any).OS = 'web';
 
     const writeText = jest.fn(async () => true);
-    // Заглушка окна обязана уметь то же, что настоящее: web-ветка вьюпорт-стора
-    // подписывается на `resize`/`orientationchange` (#1814). Окно и платформа
-    // восстанавливаются в `finally` — иначе первая же ошибка внутри теста
-    // оставляет глобалы сломанными и роняет все следующие кейсы файла.
-    (global as any).window = {
-      navigator: {
-        clipboard: {
-          writeText,
-        },
-      },
-      addEventListener: jest.fn(),
-      removeEventListener: jest.fn(),
-    };
+    // Подменяется только `navigator` настоящего jsdom-окна (глобал `window` в jsdom 26
+    // заменить нельзя, #2735): addEventListener/resize остаются настоящими, как и требует
+    // web-ветка вьюпорт-стора (#1814). Платформа и стаб восстанавливаются в `finally` —
+    // иначе первая же ошибка внутри теста оставляет глобалы сломанными для следующих кейсов.
+    stubWindowProperty(
+      'navigator',
+      Object.create(window.navigator, { clipboard: { value: { writeText } } }),
+    );
 
     try {
       render(<PointCard point={mockPoint} />);
@@ -178,10 +173,10 @@ describe('PointCard', () => {
       });
     } finally {
       (require('react-native').Platform as any).OS = originalPlatform;
-      (global as any).window = originalWindow;
+      restoreWindowStubs();
       // Модульное состояние `viewportMetrics` тоже глобал: на web-ветке оно
-      // повесило слушатели инвалидации на заглушку окна и запомнило это флагом.
-      // Без сброса кэш вьюпорта остаётся привязан к выброшенному окну — и
+      // повесило слушатели инвалидации и запомнило это флагом.
+      // Без сброса кэш вьюпорта остаётся привязан к состоянию этого кейса — и
       // следующий web-кейс этого файла читал бы ширину, которая уже никогда не
       // инвалидируется.
       __resetViewportMetricsForTests();

@@ -10,56 +10,36 @@ jest.mock('@/utils/externalLinks', () => ({
 
 describe('handleHeaderNavPress', () => {
   const originalOS = Platform.OS
-  const originalLocation = window.location
+  const originalUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`
 
   afterEach(() => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: originalOS })
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: originalLocation,
-    })
+    // location в jsdom 26 non-configurable: исходный адрес возвращаем через history.
+    window.history.replaceState(null, '', originalUrl)
     jest.clearAllMocks()
   })
 
   it('uses SPA navigation for web internal header routes', () => {
-    const assign = jest.fn()
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: {
-        ...originalLocation,
-        origin: 'https://metravel.by',
-        pathname: '/',
-        search: '',
-        assign,
-      },
-    })
+    window.history.replaceState(null, '', '/')
     const router = { push: jest.fn() }
 
     handleHeaderNavPress(router, '/roulette')
 
-    expect(assign).not.toHaveBeenCalled()
+    // Жёсткой навигации (смены документа) нет: адрес остаётся прежним, переход делает router.
+    expect(window.location.pathname).toBe('/')
     expect(router.push).toHaveBeenCalledWith('/roulette')
   })
 
   it('keeps router push for current web route', () => {
-    const assign = jest.fn()
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: {
-        ...originalLocation,
-        origin: 'https://metravel.by',
-        pathname: '/roulette',
-        search: '',
-        assign,
-      },
-    })
+    window.history.replaceState(null, '', '/roulette')
     const router = { push: jest.fn() }
 
     handleHeaderNavPress(router, '/roulette')
 
-    expect(assign).not.toHaveBeenCalled()
+    // Жёсткой навигации (смены документа) нет: адрес остаётся прежним, переход делает router.
+    expect(window.location.pathname).toBe('/roulette')
     expect(router.push).toHaveBeenCalledWith('/roulette')
   })
 

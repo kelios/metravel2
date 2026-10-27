@@ -50,8 +50,26 @@ const travels = [
   { publication_status: 'pending_review', ...metadata },
 ].map((state, index) => ({ id: index + 1, slug: `geometry-${index}`, name: `Travel ${index}`, userIds: '7', countryName: '', ...state } as Travel))
 
+// jsdom 26 (cssstyle 4) копирует в getComputedStyle шорткод `font` базового класса RNW-текста
+// после longhand-ов и сбрасывает уже применённый `line-height` в "normal" (#2735). Для
+// line-height берём каскад: инлайн-стиль, иначе последнее совпавшее правило листа — атомарные
+// классы RNW одной специфичности, побеждает порядок вставки.
+const cascadedLineHeight = (node: Element): string => {
+  const inline = (node as HTMLElement).style.getPropertyValue('line-height')
+  if (inline) return inline
+  let value = ''
+  for (const sheet of Array.from(document.styleSheets)) {
+    for (const rule of Array.from(sheet.cssRules) as CSSStyleRule[]) {
+      const declared = rule.style?.getPropertyValue('line-height')
+      if (declared && node.matches(rule.selectorText)) value = declared
+    }
+  }
+  return value
+}
+
 const pixels = (node: Element, property: keyof CSSStyleDeclaration): number => {
-  const value = Number.parseFloat(String(getComputedStyle(node)[property]))
+  const raw = property === 'lineHeight' ? cascadedLineHeight(node) : getComputedStyle(node)[property]
+  const value = Number.parseFloat(String(raw))
   expect(Number.isFinite(value)).toBe(true)
   return value
 }

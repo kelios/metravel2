@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ListTravel from '@/components/listTravel/ListTravelBase';
+import { restoreWindowStubs, stubWindowProperties } from '../../helpers/windowStubs';
 
 const mockRouterPush = jest.fn();
 const mockUseHydrationReady = jest.fn(() => true);
@@ -140,16 +141,11 @@ describe('ListTravel', () => {
   beforeEach(() => {
     queryClient = createTestQueryClient();
 
-    // Mock window methods for web environment
-    if (typeof window !== 'undefined') {
-      window.addEventListener = jest.fn();
-      window.removeEventListener = jest.fn();
-    } else {
-      (global as any).window = {
-        addEventListener: jest.fn(),
-        removeEventListener: jest.fn(),
-      };
-    }
+    // Подменяются только методы настоящего jsdom-окна: глобал window в jsdom 26 не заменить (#2735).
+    stubWindowProperties({
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+    });
 
     // Reset global mocks for delete flow
     (global as any).fetch = jest.fn();
@@ -175,6 +171,7 @@ describe('ListTravel', () => {
   });
 
   afterEach(() => {
+    restoreWindowStubs();
     queryClient.clear();
   });
 

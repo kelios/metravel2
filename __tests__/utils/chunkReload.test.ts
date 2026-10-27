@@ -1,5 +1,7 @@
 import { Platform } from 'react-native'
 import { isChunkLoadError, importWithRetry } from '@/utils/chunkReload'
+import { reloadOnceForStaleChunk } from '@/utils/chunkReloadGuard'
+import { restoreWindowStubs, stubWindowProperty } from '../helpers/windowStubs'
 
 describe('isChunkLoadError', () => {
   it('matches ChunkLoadError by name', () => {
@@ -24,11 +26,10 @@ describe('isChunkLoadError', () => {
 
 describe('importWithRetry', () => {
   const originalPlatform = Platform.OS
-  const originalWindow = (global as any).window
 
   afterEach(() => {
     ;(Platform.OS as any) = originalPlatform
-    ;(global as any).window = originalWindow
+    restoreWindowStubs()
     jest.useRealTimers()
   })
 
@@ -54,7 +55,9 @@ describe('importWithRetry', () => {
     ;(Platform.OS as any) = 'web'
     const reload = jest.fn()
     const store: Record<string, string> = {}
-    ;(global as any).window = {
+    // jsdom 26: window.location.reload нельзя подменить, поэтому настоящий guard (sessionStorage + reload)
+    // работает над изолированным окном-двойником, а на реальное окно ставится только его точка входа.
+    const guardWindow: any = {
       location: { reload, href: 'https://metravel.by/travels/x' },
       sessionStorage: {
         getItem: (k: string) => (k in store ? store[k] : null),
@@ -63,6 +66,7 @@ describe('importWithRetry', () => {
         },
       },
     }
+    stubWindowProperty('__metravelReloadStaleChunk', () => reloadOnceForStaleChunk(guardWindow))
 
     const factory = jest.fn().mockRejectedValue(new Error('Loading chunk 9 failed.'))
 

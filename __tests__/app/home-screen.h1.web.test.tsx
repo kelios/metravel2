@@ -33,8 +33,14 @@ function loadHomeScreen() {
 }
 
 describe('HomeScreen SSG H1 cleanup (#1609)', () => {
+  const originalUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`
+
   beforeEach(() => {
     document.body.innerHTML = ''
+  })
+
+  afterEach(() => {
+    window.history.replaceState(null, '', originalUrl)
   })
 
   it('removes the SSG-injected sr-only <h1 data-ssg-travel-h1> once the real content mounts', async () => {
@@ -55,11 +61,8 @@ describe('HomeScreen SSG H1 cleanup (#1609)', () => {
   it('does not touch unrelated stale h1 markers when not on the home path', async () => {
     // isHomePath resolves from window.location.pathname; jsdom defaults to '/'
     // for every test unless changed, so simulate a non-home URL explicitly.
-    const originalLocation = window.location
-    // @ts-expect-error jsdom allows reassigning location in tests
-    delete window.location
-    // @ts-expect-error partial Location for the pathname read HomeScreen uses
-    window.location = { ...originalLocation, pathname: '/travels/some-slug' }
+    // location в jsdom 26 non-configurable — меняем адрес через history, afterEach возвращает исходный.
+    window.history.replaceState(null, '', '/travels/some-slug')
 
     const ssg = document.createElement('h1')
     ssg.setAttribute('data-ssg-travel-h1', 'true')
@@ -74,8 +77,5 @@ describe('HomeScreen SSG H1 cleanup (#1609)', () => {
     // timer flush is the only way to prove the effect never ran.
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(document.querySelectorAll('h1[data-ssg-travel-h1]').length).toBe(1)
-
-    // @ts-expect-error restore the real jsdom location for later tests
-    window.location = originalLocation
   })
 })

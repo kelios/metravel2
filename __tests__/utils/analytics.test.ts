@@ -1,3 +1,23 @@
+import { restoreWindowStubs, stubWindowProperties, stubWindowProperty } from '../helpers/windowStubs'
+
+// Свойства, которые analytics.ts читает/пишет на window: заглушаем все, чтобы ничего не утекало
+// между тестами, а restoreWindowStubs() вернул настоящее окно jsdom к исходному виду.
+const installWindow = (props: Record<string, unknown>): any => {
+  stubWindowProperties({
+    gtag: undefined,
+    ym: undefined,
+    metravelLoadAnalytics: undefined,
+    __metravelGaId: undefined,
+    __metravelMetrikaId: undefined,
+    __metravelMetrikaReady: undefined,
+    __metravelMetrikaFailed: undefined,
+    __metravelAnalyticsEventQueue: undefined,
+    __metravelAnalyticsQueueListenerAttached: undefined,
+    ...props,
+  })
+  return window
+}
+
 describe('utils/analytics', () => {
   const originalEnv = process.env
   const originalJestWorkerId = process.env.JEST_WORKER_ID
@@ -15,6 +35,7 @@ describe('utils/analytics', () => {
   })
 
   afterEach(() => {
+    restoreWindowStubs()
     process.env = originalEnv
     if (originalJestWorkerId) {
       process.env.JEST_WORKER_ID = originalJestWorkerId
@@ -46,7 +67,7 @@ describe('utils/analytics', () => {
 
     const gtag = jest.fn()
     const ym = jest.fn()
-    ;(global as any).window = {
+    installWindow({
       gtag,
       ym,
       localStorage: {
@@ -54,7 +75,7 @@ describe('utils/analytics', () => {
       },
       __metravelMetrikaId: 62803912,
       __metravelMetrikaReady: true,
-    }
+    })
 
     const { sendAnalyticsEvent } = require('@/utils/analytics')
 
@@ -74,7 +95,7 @@ describe('utils/analytics', () => {
 
     const gtag = jest.fn()
     const ym = jest.fn()
-    ;(global as any).window = {
+    installWindow({
       gtag,
       ym,
       localStorage: {
@@ -82,7 +103,7 @@ describe('utils/analytics', () => {
       },
       __metravelMetrikaId: 62803912,
       __metravelMetrikaReady: true,
-    }
+    })
 
     const { sendAnalyticsEvent } = require('@/utils/analytics')
 
@@ -97,12 +118,12 @@ describe('utils/analytics', () => {
     const gtag = jest.fn()
     const ym = jest.fn()
     const dispatchEvent = jest.fn()
-    ;(global as any).window = {
+    installWindow({
       gtag, ym, dispatchEvent,
       localStorage: { getItem: () => JSON.stringify({ necessary: true, analytics: true }) },
       __metravelMetrikaId: 62803912,
       __metravelMetrikaReady: true,
-    }
+    })
     const params = Object.freeze({
       source: 'quest_detail', client_id: 'our-browser', session_id: 'our-visit', quest_id: 'q1',
     })
@@ -120,14 +141,14 @@ describe('utils/analytics', () => {
     }))
 
     const ym = jest.fn()
-    ;(global as any).window = {
+    installWindow({
       ym,
       localStorage: {
         getItem: jest.fn(() => JSON.stringify({ necessary: true, analytics: true })),
       },
       __metravelMetrikaId: 62803912,
       __metravelMetrikaReady: true,
-    }
+    })
 
     const { sendAnalyticsEvent } = require('@/utils/analytics')
 
@@ -142,14 +163,14 @@ describe('utils/analytics', () => {
     }))
 
     const ym = jest.fn()
-    ;(global as any).window = {
+    installWindow({
       ym,
       localStorage: {
         getItem: jest.fn(() => JSON.stringify({ necessary: true, analytics: true })),
       },
       __metravelMetrikaId: 62803912,
       __metravelMetrikaReady: true,
-    }
+    })
 
     const { sendAnalyticsEvent } = require('@/utils/analytics')
     const activationGoals = [
@@ -179,14 +200,13 @@ describe('utils/analytics', () => {
     jest.doMock('react-native', () => ({
       Platform: { OS: 'web' },
     }))
-    const navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
-    Object.defineProperty(globalThis, 'navigator', { value: { webdriver: true }, configurable: true })
+    stubWindowProperty('navigator', { webdriver: true })
 
     const gtag = jest.fn()
     const ym = jest.fn()
     const metravelLoadAnalytics = jest.fn()
     // Оба счётчика готовы: без проверки автоматизации событие ушло бы сразу.
-    ;(global as any).window = {
+    installWindow({
       gtag,
       ym,
       addEventListener: jest.fn(),
@@ -197,19 +217,15 @@ describe('utils/analytics', () => {
       __metravelGaId: 'G-TEST123',
       __metravelMetrikaId: 62803912,
       __metravelMetrikaReady: true,
-    }
+    })
 
-    try {
-      const { sendAnalyticsEvent } = require('@/utils/analytics')
-      await sendAnalyticsEvent('quest_view', { quest_id: 1 })
+    const { sendAnalyticsEvent } = require('@/utils/analytics')
+    await sendAnalyticsEvent('quest_view', { quest_id: 1 })
 
-      expect(metravelLoadAnalytics).not.toHaveBeenCalled()
-      expect(gtag).not.toHaveBeenCalled()
-      expect(ym).not.toHaveBeenCalled()
-      expect((global as any).window.__metravelAnalyticsEventQueue).toBeUndefined()
-    } finally {
-      if (navigatorDescriptor) Object.defineProperty(globalThis, 'navigator', navigatorDescriptor)
-    }
+    expect(metravelLoadAnalytics).not.toHaveBeenCalled()
+    expect(gtag).not.toHaveBeenCalled()
+    expect(ym).not.toHaveBeenCalled()
+    expect((global as any).window.__metravelAnalyticsEventQueue).toBeUndefined()
   })
 
   it('queues early web events until analytics providers become ready', async () => {
@@ -236,7 +252,7 @@ describe('utils/analytics', () => {
       setItem: jest.fn(),
     }
 
-    ;(global as any).window = {
+    installWindow({
       addEventListener,
       dispatchEvent,
       localStorage,
@@ -244,7 +260,7 @@ describe('utils/analytics', () => {
       __metravelGaId: 'G-TEST123',
       __metravelMetrikaId: 62803912,
       __metravelMetrikaReady: false,
-    }
+    })
 
     const { sendAnalyticsEvent } = require('@/utils/analytics')
 
@@ -276,18 +292,12 @@ describe('utils/analytics', () => {
   })
 
   describe('pre-provider analytics intent (#2281)', () => {
-    let navigatorDescriptor: PropertyDescriptor | undefined
-    beforeEach(() => { navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator') })
-    afterEach(() => {
-      if (navigatorDescriptor) Object.defineProperty(globalThis, 'navigator', navigatorDescriptor)
-      else Reflect.deleteProperty(globalThis, 'navigator')
-    })
     const setup = (automation: boolean, consent = true, os = 'web') => {
       jest.doMock('react-native', () => ({ Platform: { OS: os } }))
       jest.doMock('@/utils/consent', () => ({ readConsent: () => ({ necessary: true, analytics: consent }) }))
-      Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { webdriver: automation } })
+      stubWindowProperty('navigator', { webdriver: automation })
       const listeners: Record<string, Array<(event: Event) => void>> = {}
-      const w: any = {
+      const props: any = {
         gtag: jest.fn(), ym: jest.fn(), metravelLoadAnalytics: jest.fn(),
         __metravelGaId: 'G-TEST123', __metravelMetrikaId: 62803912, __metravelMetrikaReady: true,
         addEventListener: jest.fn((name: string, handler: (event: Event) => void) => {
@@ -298,7 +308,7 @@ describe('utils/analytics', () => {
           return true
         }),
       }
-      ;(global as any).window = w
+      const w: any = installWindow(props)
       const intents = () => w.dispatchEvent.mock.calls
         .filter(([event]: [Event]) => event.type === 'metravel:analytics-intent')
         .map(([event]: [CustomEvent]) => event.detail)
@@ -377,7 +387,7 @@ describe('utils/analytics', () => {
       }))
 
       const listeners: Record<string, Array<() => void>> = {}
-      const w: any = {
+      const props: any = {
         addEventListener: jest.fn((name: string, handler: () => void) => {
           listeners[name] = listeners[name] || []
           listeners[name].push(handler)
@@ -394,7 +404,7 @@ describe('utils/analytics', () => {
       const emitReady = () => {
         for (const handler of listeners['metravel:analytics-ready'] || []) handler()
       }
-      ;(global as any).window = w
+      const w: any = installWindow(props)
       return { w, emitReady }
     }
 

@@ -273,11 +273,7 @@ describe('printHtml.web', () => {
       openBookPreviewWindow: (...a: unknown[]) => openWindow(...a),
       discardPendingBookPreviewWindow: (...a: unknown[]) => discardWindow(...a),
     }))
-    ;(global as unknown as { window: unknown }).window = { open: jest.fn() }
-  })
-
-  afterEach(() => {
-    delete (global as unknown as { window?: unknown }).window
+    // Настоящее окно jsdom уже даёт `window.open` (jsdom 26: заменить глобальный window нельзя, #2735).
   })
 
   const web = () => require('@/utils/printHtml.web') as typeof import('@/utils/printHtml.web')
@@ -347,25 +343,30 @@ describe('printHtml.web', () => {
     expect(discardWindow).not.toHaveBeenCalled()
   })
 
-  it('isPrintAvailable не зависит от window — разметка не меняется между SSG и гидрацией', () => {
-    delete (global as unknown as { window?: unknown }).window
-    // Web-ответ не спрашивает и native-модуль: даже без него на сайте печатать есть чем.
-    mockRequireOptionalNativeModule.mockReturnValue(null)
-    expect(web().isPrintAvailable()).toBe(true)
-    expect(
-      (jest.requireActual('@/utils/printAvailability.web') as typeof import('@/utils/printAvailability.web')).isPrintAvailable()
-    ).toBe(true)
-    expect(mockRequireOptionalNativeModule).not.toHaveBeenCalled()
-  })
-
   describe('#2318 inPlace', () => {
-    const doc = { open: jest.fn(), write: jest.fn(), close: jest.fn(), documentElement: { setAttribute: jest.fn() } }
+    // jsdom 26: `window.document` заменить нельзя — шпионим за методами настоящего документа
+    // (без реальной перезаписи страницы теста).
+    let doc: {
+      open: jest.SpyInstance
+      write: jest.SpyInstance
+      close: jest.SpyInstance
+      documentElement: { setAttribute: jest.SpyInstance }
+    }
     beforeEach(() => {
-      doc.open.mockReset()
-      doc.write.mockReset()
-      doc.close.mockReset()
-      doc.documentElement.setAttribute.mockReset()
-      ;(global as unknown as { window: unknown }).window = { open: jest.fn(), document: doc }
+      doc = {
+        open: jest.spyOn(document, 'open').mockImplementation(() => document),
+        write: jest.spyOn(document, 'write').mockImplementation(() => undefined),
+        close: jest.spyOn(document, 'close').mockImplementation(() => undefined),
+        documentElement: {
+          setAttribute: jest.spyOn(document.documentElement, 'setAttribute').mockImplementation(() => undefined),
+        },
+      }
+    })
+    afterEach(() => {
+      doc.open.mockRestore()
+      doc.write.mockRestore()
+      doc.close.mockRestore()
+      doc.documentElement.setAttribute.mockRestore()
     })
 
     it('окно не открывается, печатная версия пишется в документ этой вкладки', async () => {

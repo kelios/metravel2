@@ -23,12 +23,17 @@ jest.mock('@/utils/openBookPreviewWindow', () => ({
 import { Platform } from 'react-native';
 import { generatePrintableQuest } from '@/components/quests/QuestPrintable';
 import * as printableMap from '@/components/quests/printable/map';
+import { restoreWindowStubs, stubWindowProperty } from '../../helpers/windowStubs';
 
 describe('QuestPrintable', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (Platform as { OS: string }).OS = 'web';
-    (global as typeof globalThis & { window?: Record<string, unknown> }).window = { open: jest.fn() };
+    stubWindowProperty('open', jest.fn());
+  });
+
+  afterEach(() => {
+    restoreWindowStubs();
   });
 
   it('#2473: кириллическая вывеска PL-перевода печатается с lang языка оригинала', async () => {

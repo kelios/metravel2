@@ -7,21 +7,11 @@ jest.mock('@/utils/logger', () => ({
   logError: jest.fn(),
 }));
 
-const mockReload = jest.fn();
-let origLocation: Location;
-
-beforeAll(() => {
-  origLocation = (global as any).window?.location;
-  // @ts-ignore -- delete non-optional property for test mock setup
-  delete ((global as any).window as any).location;
-  (global as any).window.location = { ...origLocation, reload: mockReload };
-});
-
-afterAll(() => {
-  if ((global as any).window) {
-    (global as any).window.location = origLocation;
-  }
-});
+// jsdom 26: window.location / location.reload — non-configurable, подменить нельзя (#2735).
+// Перезагрузку ловим по сигналу jsdom «Not implemented: navigation», который jest-environment-jsdom
+// отправляет в console.error.
+const isNavigationAttempt = (call: unknown[]) =>
+  call.some((arg) => String((arg as Error | undefined)?.message ?? arg).includes('Not implemented: navigation'));
 
 describe('ErrorBoundary', () => {
   const { Platform } = require('react-native');
@@ -33,7 +23,6 @@ describe('ErrorBoundary', () => {
 
   beforeEach(() => {
     originalPlatform = Platform.OS;
-    mockReload.mockReset();
   });
 
   afterEach(() => {
@@ -119,7 +108,8 @@ describe('ErrorBoundary', () => {
 
   it('shows retry button on web and uses local reset instead of reload', () => {
     const consoleError = console.error;
-    console.error = jest.fn();
+    const errorSpy = jest.fn();
+    console.error = errorSpy;
     Platform.OS = 'web';
 
     const { getByLabelText } = render(
@@ -129,7 +119,7 @@ describe('ErrorBoundary', () => {
     );
 
     fireEvent.press(getByLabelText('Попробовать снова'));
-    expect(mockReload).not.toHaveBeenCalled();
+    expect(errorSpy.mock.calls.some(isNavigationAttempt)).toBe(false);
 
     console.error = consoleError;
   });

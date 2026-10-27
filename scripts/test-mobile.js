@@ -35,7 +35,7 @@ if (hasErrors) {
 // Запускаем Jest тесты
 try {
   console.log('📱 Запуск unit тестов...');
-  execSync('npm test -- --no-watch --passWithNoTests --testPathPattern="NavigationArrows|ScrollToTopButton|ReadingProgressBar|ShareButtons|EmptyState"', {
+  execSync('npm test -- --no-watch --passWithNoTests --testPathPatterns="NavigationArrows|ScrollToTopButton|ReadingProgressBar|ShareButtons|EmptyState"', {
     stdio: 'inherit',
     cwd: process.cwd(),
   });

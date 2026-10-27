@@ -37,6 +37,13 @@ const renderGate = (auth: { isAuthenticated: boolean; userId: string | null }) =
   );
 };
 
+// Лист грузится lazy-чанком; первая загрузка модуля в Jest (трансформ и выполнение зависимостей)
+// синхронно занимает event loop дольше таймаута findBy. Тест проверяет поведение гейта, а не
+// время загрузки чанка, поэтому модуль загружается заранее — `import()` берёт его из реестра.
+beforeAll(() => {
+  require('@/components/auth/TermsReacceptSheet');
+});
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockPathname = '/';

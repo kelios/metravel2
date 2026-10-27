@@ -434,6 +434,9 @@ if (typeof (global as any).clearImmediate !== 'function') {
   ;(global as any).clearImmediate = (id: any) => clearTimeout(id)
 }
 
+import { installCompactTestInstanceFormat } from './helpers/compactTestInstanceFormat'
+installCompactTestInstanceFormat()
+
 // Polyfill TextEncoder/TextDecoder for JSDOM environment
 import { TextEncoder, TextDecoder } from 'util'
 global.TextEncoder = TextEncoder

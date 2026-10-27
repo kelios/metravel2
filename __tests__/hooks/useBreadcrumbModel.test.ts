@@ -7,6 +7,7 @@ import { useBreadcrumbModel } from '@/hooks/useBreadcrumbModel';
 import { queryKeys } from '@/api/queryKeys';
 import { questsListQueryOptions } from '@/hooks/questsListQuery';
 import { i18n } from '@/i18n';
+import { restoreWindowStubs, stubWindowProperty } from '../helpers/windowStubs';
 
 jest.mock('expo-router', () => ({
   usePathname: jest.fn(),
@@ -58,9 +59,12 @@ describe('useBreadcrumbModel', () => {
   const wrapper = ({ children }: { children: React.ReactNode }) =>
     React.createElement(QueryClientProvider, { client: queryClient }, children);
 
+  afterEach(() => {
+    restoreWindowStubs();
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
-    (global as any).window = undefined;
     (Platform.OS as any) = 'ios';
     // gcTime по умолчанию: у travel-ключа больше нет собственного наблюдателя от
     // крошек, а при `gcTime: 0` посеянные данные вычищались бы до чтения.
@@ -93,21 +97,19 @@ describe('useBreadcrumbModel', () => {
 
   it('uses static travel preload for travel breadcrumbs without fetching by slug', async () => {
     (Platform.OS as any) = 'web';
-    (global as any).window = {
-      __metravelTravelPreload: {
-        data: {
-          id: 566,
-          slug: 'test-slug',
-          name: 'Статический маршрут',
-          description: '<p>Описание маршрута</p>',
-          gallery: [],
-          travelAddress: [{ id: 1, name: 'Точка' }],
-          coordsMeTravel: [],
-        },
+    stubWindowProperty('__metravelTravelPreload', {
+      data: {
+        id: 566,
         slug: 'test-slug',
-        isId: false,
+        name: 'Статический маршрут',
+        description: '<p>Описание маршрута</p>',
+        gallery: [],
+        travelAddress: [{ id: 1, name: 'Точка' }],
+        coordsMeTravel: [],
       },
-    };
+      slug: 'test-slug',
+      isId: false,
+    });
     usePathname.mockReturnValue('/travels/test-slug');
     useLocalSearchParams.mockReturnValue({ returnTo: '/travelsby' });
 
@@ -118,7 +120,7 @@ describe('useBreadcrumbModel', () => {
     });
 
     expect(fetchTravelBySlug).not.toHaveBeenCalled();
-    expect((global as any).window.__metravelTravelPreload?.data?.id).toBe(566);
+    expect((window as any).__metravelTravelPreload?.data?.id).toBe(566);
   });
 
   it('should not show Belarus return context for non-Belarus travel from travelsby', async () => {

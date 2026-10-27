@@ -8,6 +8,7 @@ import { Platform, StyleSheet } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
 import { NativeMenuAccessibilityProvider, NativeMenuBackground } from '@/components/ui/NativeMenuAccessibilityScope';
 import { registerDockMoreOpener } from '@/components/layout/bottomDockItemDefs';
+import { restoreWindowStubs, stubWindowProperties } from '../helpers/windowStubs';
 
 jest.mock('react-native-paper', () => jest.requireActual('react-native-paper'));
 
@@ -417,13 +418,11 @@ describe('CustomHeader', () => {
 
         it('keeps header context bar hidden on web travel routes without interaction', async () => {
             jest.useFakeTimers();
-            const restoreWindow = global.window;
             Object.defineProperty(Platform, 'OS', { value: 'web' });
-            (global as any).window = {
-                ...restoreWindow,
+            stubWindowProperties({
                 addEventListener: jest.fn(),
                 removeEventListener: jest.fn(),
-            };
+            });
 
             try {
                 (usePathname as jest.Mock).mockReturnValue('/travels/test-slug');
@@ -444,7 +443,7 @@ describe('CustomHeader', () => {
             } finally {
                 jest.runOnlyPendingTimers();
                 jest.useRealTimers();
-                (global as any).window = restoreWindow;
+                restoreWindowStubs();
             }
         });
 

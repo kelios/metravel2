@@ -3,6 +3,7 @@ import { render, fireEvent } from '@testing-library/react-native';
 import ErrorDisplay from '@/components/ui/ErrorDisplay';
 import { Platform } from 'react-native';
 import { openExternalUrl } from '@/utils/externalLinks';
+import { restoreWindowStubs, stubWindowProperty } from '../helpers/windowStubs';
 
 jest.mock('@/utils/externalLinks', () => ({
   openExternalUrl: jest.fn(),
@@ -68,18 +69,16 @@ jest.mock('@/constants/designSystem', () => ({
 
 let openSpy: jest.Mock;
 
-beforeAll(() => {
+beforeEach(() => {
   openSpy = jest.fn();
-  Object.defineProperty(globalThis, 'window', {
-    value: {
-      open: openSpy,
-    },
-    writable: true,
-  });
+  stubWindowProperty('open', openSpy);
+});
+
+afterEach(() => {
+  restoreWindowStubs();
 });
 
 beforeEach(() => {
-  openSpy.mockClear();
   mockOpenExternalUrl.mockClear();
 });
 

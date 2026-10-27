@@ -12,6 +12,7 @@ import {
   withNetworkErrorHandler
 } from '@/utils/networkErrorHandler';
 import { ApiError } from '@/api/client';
+import { restoreWindowStubs, stubWindowProperties } from '../helpers/windowStubs';
 
 jest.mock('@/utils/toast', () => ({
   __esModule: true,
@@ -20,8 +21,6 @@ jest.mock('@/utils/toast', () => ({
 
 describe('networkErrorHandler', () => {
   const originalPlatformOS = Platform.OS;
-  const originalNavigator = (globalThis as any).navigator;
-  const originalWindow = (globalThis as any).window;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -30,16 +29,10 @@ describe('networkErrorHandler', () => {
       value: 'web',
     });
 
-    ;(globalThis as any).window = {
+    stubWindowProperties({
       addEventListener: jest.fn(),
       removeEventListener: jest.fn(),
-    } as any;
-
-    Object.defineProperty(globalThis, 'navigator', {
-      configurable: true,
-      value: {
-        onLine: true,
-      },
+      navigator: { onLine: true },
     });
   });
 
@@ -48,11 +41,7 @@ describe('networkErrorHandler', () => {
       configurable: true,
       value: originalPlatformOS,
     });
-    Object.defineProperty(globalThis, 'navigator', {
-      configurable: true,
-      value: originalNavigator,
-    });
-    ;(globalThis as any).window = originalWindow as any;
+    restoreWindowStubs();
   });
 
   describe('isNetworkError', () => {

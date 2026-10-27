@@ -1,6 +1,7 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useTravelDetails } from '@/hooks/useTravelDetails';
 import { Platform } from 'react-native';
+import { restoreWindowStubs, stubWindowProperties } from '../helpers/windowStubs';
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: jest.fn(),
@@ -34,7 +35,6 @@ let capturedQueryFn: ((...args: any[]) => Promise<any>) | null = null;
 
 describe('useTravelDetails', () => {
   const originalPlatform = Platform.OS;
-  const originalWindow = (global as any).window;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -60,8 +60,7 @@ describe('useTravelDetails', () => {
     // Some tests override Platform.OS; reset to avoid cross-test leaks.
     (Platform.OS as any) = originalPlatform;
     jest.useRealTimers();
-    // Restore window (tests may override it).
-    (global as any).window = originalWindow;
+    restoreWindowStubs();
   });
 
   it('treats numeric param as id and calls fetchTravel', async () => {
@@ -100,7 +99,7 @@ describe('useTravelDetails', () => {
 
   it('uses meaningful preloaded travel as initialData on web (no extra await needed)', async () => {
     (Platform.OS as any) = 'web';
-    (global as any).window = {
+    stubWindowProperties({
       __metravelTravelPreload: {
         data: {
           id: 498,
@@ -114,7 +113,7 @@ describe('useTravelDetails', () => {
         slug: 'awesome-trip',
         isId: false,
       },
-    };
+    });
 
     useLocalSearchParams.mockReturnValue({ param: 'awesome-trip' });
 
@@ -159,7 +158,7 @@ describe('useTravelDetails', () => {
     });
     const setQueryData = jest.fn();
     (useQueryClient as jest.Mock).mockReturnValue({ setQueryData });
-    (global as any).window = {
+    stubWindowProperties({
       requestIdleCallback,
       cancelIdleCallback: jest.fn(),
       __metravelTravelPreload: {
@@ -175,7 +174,7 @@ describe('useTravelDetails', () => {
         slug: 'awesome-trip',
         isId: false,
       },
-    };
+    });
     useLocalSearchParams.mockReturnValue({ param: 'awesome-trip' });
     (useQuery as jest.Mock).mockImplementation(({ queryFn, initialData }: any) => {
       capturedQueryFn = queryFn;
@@ -198,7 +197,7 @@ describe('useTravelDetails', () => {
   it('hydrates instantly from a partial-media preload and forces a background backfill fetch', async () => {
     (Platform.OS as any) = 'web';
     let capturedConfig: any = null;
-    (global as any).window = {
+    stubWindowProperties({
       __metravelTravelPreload: {
         data: {
           id: 498,
@@ -216,7 +215,7 @@ describe('useTravelDetails', () => {
         isId: false,
         mediaPartial: true,
       },
-    };
+    });
 
     useLocalSearchParams.mockReturnValue({ param: 'awesome-trip' });
 
@@ -270,7 +269,7 @@ describe('useTravelDetails', () => {
   it('hydrates and backfills a partial preload for a numeric fallback route', async () => {
     (Platform.OS as any) = 'web';
     let capturedConfig: any = null;
-    (global as any).window = {
+    stubWindowProperties({
       __metravelTravelPreload: {
         data: {
           id: 498,
@@ -286,7 +285,7 @@ describe('useTravelDetails', () => {
         isId: true,
         mediaPartial: true,
       },
-    };
+    });
     useLocalSearchParams.mockReturnValue({ param: '498' });
     (fetchTravel as jest.Mock).mockResolvedValue({
       id: 498,
@@ -317,7 +316,7 @@ describe('useTravelDetails', () => {
   it('keeps partial preload content visible when the background media backfill fails', () => {
     (Platform.OS as any) = 'web';
     const backfillError = new Error('network unavailable');
-    (global as any).window = {
+    stubWindowProperties({
       __metravelTravelPreload: {
         data: {
           id: 498,
@@ -333,7 +332,7 @@ describe('useTravelDetails', () => {
         isId: false,
         mediaPartial: true,
       },
-    };
+    });
     useLocalSearchParams.mockReturnValue({ param: 'awesome-trip' });
     (useQuery as jest.Mock).mockImplementation((config: any) => ({
       data: config.initialData,
@@ -353,14 +352,14 @@ describe('useTravelDetails', () => {
   it('keeps a query error fatal when a partial marker has no usable preload content', () => {
     (Platform.OS as any) = 'web';
     const initialError = new Error('travel unavailable');
-    (global as any).window = {
+    stubWindowProperties({
       __metravelTravelPreload: {
         data: {},
         slug: 'awesome-trip',
         isId: false,
         mediaPartial: true,
       },
-    };
+    });
     useLocalSearchParams.mockReturnValue({ param: 'awesome-trip' });
     (useQuery as jest.Mock).mockImplementation((config: any) => ({
       data: config.initialData,
@@ -379,7 +378,7 @@ describe('useTravelDetails', () => {
 
   it('skips preload polling in queryFn once initialData has consumed the preload', async () => {
     (Platform.OS as any) = 'web';
-    (global as any).window = {
+    stubWindowProperties({
       __metravelTravelPreload: {
         data: {
           id: 498,
@@ -399,7 +398,7 @@ describe('useTravelDetails', () => {
       __metravelTravelPreloadPromise: new Promise<void>(() => {
         // never resolves; queryFn must not wait for it after initialData
       }),
-    };
+    });
 
     useLocalSearchParams.mockReturnValue({ param: 'awesome-trip' });
     (fetchTravelBySlug as jest.Mock).mockResolvedValue({ slug: 'awesome-trip', from: 'network' });
@@ -435,7 +434,7 @@ describe('useTravelDetails', () => {
 
   it('ignores sparse preloaded travel payloads and falls back to fetchTravelBySlug', async () => {
     (Platform.OS as any) = 'web';
-    (global as any).window = {
+    stubWindowProperties({
       __metravelTravelPreload: {
         data: {
           description: '<p>Only detail payload</p>',
@@ -444,7 +443,7 @@ describe('useTravelDetails', () => {
         slug: 'awesome-trip',
         isId: false,
       },
-    };
+    });
 
     useLocalSearchParams.mockReturnValue({ param: 'awesome-trip' });
     (fetchTravelBySlug as jest.Mock).mockResolvedValue({
@@ -470,7 +469,7 @@ describe('useTravelDetails', () => {
 
   it('reuses direct-api preload payloads even when they miss optional detail arrays', async () => {
     (Platform.OS as any) = 'web';
-    (global as any).window = {
+    stubWindowProperties({
       __metravelTravelPreload: {
         data: {
           id: 498,
@@ -482,7 +481,7 @@ describe('useTravelDetails', () => {
         isId: false,
         source: 'direct-api',
       },
-    };
+    });
 
     useLocalSearchParams.mockReturnValue({ param: 'awesome-trip' });
     (fetchTravelBySlug as jest.Mock).mockResolvedValue({ slug: 'awesome-trip', from: 'network' });
@@ -507,15 +506,14 @@ describe('useTravelDetails', () => {
     (Platform.OS as any) = 'web';
     let resolveBootstrap: (() => void) | null = null;
 
-    (global as any).window = {
+    stubWindowProperties({
       __metravelTravelPreloadScriptLoaded: true,
       __metravelTravelPreloadTargetPath: '/travels/awesome-trip',
       __metravelTravelPreloadPending: true,
       __metravelTravelPreloadPromise: new Promise<void>((resolve) => {
         resolveBootstrap = resolve;
       }),
-      location: { pathname: '/travels/awesome-trip' },
-    };
+    });
 
     useLocalSearchParams.mockReturnValue({ param: 'awesome-trip' });
     (fetchTravelBySlug as jest.Mock).mockResolvedValue({ slug: 'awesome-trip', from: 'network' });
@@ -525,7 +523,7 @@ describe('useTravelDetails', () => {
     const queryPromise = capturedQueryFn!();
 
     setTimeout(() => {
-      (global as any).window.__metravelTravelPreload = {
+      stubWindowProperties({ __metravelTravelPreload: {
         data: {
           id: 503,
           slug: 'awesome-trip',
@@ -537,8 +535,7 @@ describe('useTravelDetails', () => {
         },
         slug: 'awesome-trip',
         isId: false,
-      };
-      (global as any).window.__metravelTravelPreloadPending = false;
+      }, __metravelTravelPreloadPending: false });
       resolveBootstrap?.();
     }, 100);
 
@@ -571,15 +568,14 @@ describe('useTravelDetails', () => {
     // __metravelTravelPreloadScriptLoaded is sticky-true and the bootstrap
     // promise never resolves for the travel we're navigating to now. The query
     // must fetch immediately instead of blocking on that stale promise.
-    (global as any).window = {
+    stubWindowProperties({
       __metravelTravelPreloadScriptLoaded: true,
       __metravelTravelPreloadTargetPath: '/travels/first-loaded-trip',
       __metravelTravelPreloadPending: true,
       __metravelTravelPreloadPromise: new Promise<void>(() => {
         /* never resolves */
       }),
-      location: { pathname: '/travels/second-trip' },
-    };
+    });
 
     useLocalSearchParams.mockReturnValue({ param: 'second-trip' });
     (fetchTravelBySlug as jest.Mock).mockResolvedValue({ slug: 'second-trip', from: 'network' });
@@ -594,7 +590,7 @@ describe('useTravelDetails', () => {
 
   it('falls back to fetchTravelBySlug when preload has identity but misses detail fields', async () => {
     (Platform.OS as any) = 'web';
-    (global as any).window = {
+    stubWindowProperties({
       __metravelTravelPreload: {
         data: {
           id: 498,
@@ -605,7 +601,7 @@ describe('useTravelDetails', () => {
         slug: 'awesome-trip',
         isId: false,
       },
-    };
+    });
 
     useLocalSearchParams.mockReturnValue({ param: 'awesome-trip' });
     (fetchTravelBySlug as jest.Mock).mockResolvedValue({
@@ -633,7 +629,7 @@ describe('useTravelDetails', () => {
 
   it('falls back to fetchTravelBySlug when preload has description and gallery but misses map arrays', async () => {
     (Platform.OS as any) = 'web';
-    (global as any).window = {
+    stubWindowProperties({
       __metravelTravelPreload: {
         data: {
           id: 362,
@@ -645,7 +641,7 @@ describe('useTravelDetails', () => {
         slug: 'morskoe-oko-v-mae',
         isId: false,
       },
-    };
+    });
 
     useLocalSearchParams.mockReturnValue({ param: 'morskoe-oko-v-mae' });
     (fetchTravelBySlug as jest.Mock).mockResolvedValue({
@@ -675,7 +671,7 @@ describe('useTravelDetails', () => {
 
   it('falls back to fetchTravelBySlug when preload is structurally complete but content-empty', async () => {
     (Platform.OS as any) = 'web';
-    (global as any).window = {
+    stubWindowProperties({
       __metravelTravelPreload: {
         data: {
           id: 439,
@@ -689,7 +685,7 @@ describe('useTravelDetails', () => {
         slug: 'akkaunty-v-instagram-o-puteshestviyah-po-belarusi',
         isId: false,
       },
-    };
+    });
 
     useLocalSearchParams.mockReturnValue({ param: 'akkaunty-v-instagram-o-puteshestviyah-po-belarusi' });
     (fetchTravelBySlug as jest.Mock).mockResolvedValue({
@@ -723,7 +719,7 @@ describe('useTravelDetails', () => {
 
   it('falls back to fetchTravelBySlug when preload keeps media links but loses embed markup', async () => {
     (Platform.OS as any) = 'web';
-    (global as any).window = {
+    stubWindowProperties({
       __metravelTravelPreload: {
         data: {
           id: 439,
@@ -738,7 +734,7 @@ describe('useTravelDetails', () => {
         slug: 'akkaunty-v-instagram-o-puteshestviyah-po-belarusi',
         isId: false,
       },
-    };
+    });
 
     useLocalSearchParams.mockReturnValue({ param: 'akkaunty-v-instagram-o-puteshestviyah-po-belarusi' });
     (fetchTravelBySlug as jest.Mock).mockResolvedValue({

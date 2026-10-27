@@ -4,23 +4,16 @@
  */
 
 import { optimizeImageUrl, buildResponsiveImageProps } from '@/utils/imageOptimization';
+import { restoreWindowStubs, stubWindowProperty } from '../helpers/windowStubs';
 
 describe('Preload URL synchronization', () => {
-  const mockWindow = {
-    devicePixelRatio: 2,
-    location: {
-      origin: 'https://metravel.by',
-    },
-  };
-
   beforeEach(() => {
-    // @ts-ignore -- jsdom test environment: assigning mock window object for isolation
-    global.window = mockWindow;
+    // jsdom 26: `location` нельзя подменить, а origin jsdom-окна — http://localhost; подменяется только DPR.
+    stubWindowProperty('devicePixelRatio', 2);
   });
 
   afterEach(() => {
-    // @ts-ignore -- jsdom test environment: restoring window to undefined after test
-    global.window = undefined;
+    restoreWindowStubs();
   });
 
   test('buildResponsiveImageProps uses correct DPR when not specified', () => {

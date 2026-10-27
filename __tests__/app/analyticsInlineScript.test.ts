@@ -13,11 +13,6 @@ type SetupOptions = {
 const TEST_METRIKA_ID = '12345678'
 const TEST_GA_ID = 'G-TEST'
 
-const originalWindow = (global as any).window
-const originalDocument = (global as any).document
-const originalHistory = (global as any).history
-const originalNavigator = (global as any).navigator
-
 const setupDomEnv = ({
   host = 'metravel.by',
   consent = { necessary: true, analytics: true },
@@ -85,11 +80,9 @@ const setupDomEnv = ({
   windowMock.window = windowMock
   windowMock.navigator = navigator
 
-  ;(global as any).window = windowMock
-  ;(global as any).document = documentMock
-  ;(global as any).history = historyMock
-  ;(global as any).navigator = windowMock.navigator
-  ;(global as any).localStorage = windowMock.localStorage
+  // Снипет получает window/document/navigator параметрами `new Function` (см. runAnalyticsSnippet) и
+  // не читает одноимённые глобалы, поэтому подмена глобального окружения не нужна: с jsdom 26 она и
+  // невозможна (#2735), а раньше была мёртвой.
 
   return { windowMock, documentMock, headMock, createdScripts, ymSpy }
 }
@@ -110,11 +103,6 @@ describe('analytics inline script', () => {
   afterEach(() => {
     jest.resetModules()
     jest.clearAllMocks()
-    ;(global as any).window = originalWindow
-    ;(global as any).document = originalDocument
-    ;(global as any).history = originalHistory
-    ;(global as any).navigator = originalNavigator
-    delete (global as any).localStorage
   })
 
   it('initializes Yandex Metrica and GA when consent is granted on production host', () => {

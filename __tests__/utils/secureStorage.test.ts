@@ -7,9 +7,9 @@ import {
   removeSecureItem,
   isSecureStorageAvailable,
 } from '@/utils/secureStorage'
+import { restoreWindowStubs, stubWindowProperties, stubWindowProperty } from '../helpers/windowStubs'
 
 const originalPlatformOS = Platform.OS
-const originalWindow = global.window
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
@@ -38,7 +38,7 @@ describe('secureStorage (web)', () => {
 
     const local: Record<string, string> = {}
     const session: Record<string, string> = {}
-    global.window = {
+    stubWindowProperties({
       localStorage: {
         getItem: jest.fn((key: string) => local[key] ?? null),
         setItem: jest.fn((key: string, value: string) => {
@@ -57,7 +57,7 @@ describe('secureStorage (web)', () => {
           delete session[key]
         }),
       },
-    } as any
+    })
 
     ;(AsyncStorage.setItem as jest.Mock).mockClear()
     ;(AsyncStorage.getItem as jest.Mock).mockClear()
@@ -69,7 +69,7 @@ describe('secureStorage (web)', () => {
       configurable: true,
       value: originalPlatformOS,
     })
-    global.window = originalWindow as any
+    restoreWindowStubs()
   })
 
   it('stores and retrieves value via localStorage with encryption', async () => {
@@ -87,7 +87,7 @@ describe('secureStorage (web)', () => {
   })
 
   it('falls back to in-memory store when localStorage is not available', async () => {
-    ;(global.window as any).localStorage = undefined
+    stubWindowProperty('localStorage', undefined)
 
     await setSecureItem('token', 'value')
     // No AsyncStorage write on web — value is kept in the per-session memory store.
@@ -111,7 +111,9 @@ describe('secureStorage (web)', () => {
   })
 
   it('does not throw when accessing localStorage throws (block-all-cookies)', async () => {
-    Object.defineProperty(global.window as any, 'localStorage', {
+    // Сначала штатный стаб (он запоминает настоящий дескриптор для restore), затем getter, который бросает.
+    stubWindowProperty('localStorage', undefined)
+    Object.defineProperty(window, 'localStorage', {
       configurable: true,
       get() {
         throw new DOMException('The operation is insecure.', 'SecurityError')

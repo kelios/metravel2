@@ -2,6 +2,7 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Platform, Pressable, View, Text } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { restoreWindowStubs, stubWindowProperty } from '../../helpers/windowStubs';
 
 jest.mock('@/context/AuthContext', () => ({
   __esModule: true,
@@ -132,6 +133,10 @@ const baseTravel: any = {
 };
 
 describe('AddressListItem (web right panel)', () => {
+  afterEach(() => {
+    restoreWindowStubs();
+  });
+
   it('renders UnifiedTravelCard with travel data on web', () => {
     const prevOs = Platform.OS;
     (Platform as any).OS = 'web';
@@ -238,8 +243,7 @@ describe('AddressListItem (web right panel)', () => {
     (Platform as any).OS = 'web';
 
     const openSpy = jest.fn();
-    (globalThis as any).window = (globalThis as any).window || {};
-    (globalThis as any).window.open = openSpy;
+    stubWindowProperty('open', openSpy);
 
     const RN = require('react-native');
     jest.spyOn(RN.Linking, 'canOpenURL').mockResolvedValue(false);

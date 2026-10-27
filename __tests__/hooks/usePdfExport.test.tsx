@@ -64,35 +64,6 @@ jest.mock('@/utils/openBookPreviewWindow', () => ({
 global.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
 global.URL.revokeObjectURL = jest.fn();
 
-const mockDocument = {
-  createElement: jest.fn((tag) => {
-    const element = {
-      tagName: tag.toUpperCase(),
-      style: { cssText: '' },
-      appendChild: jest.fn(),
-      removeChild: jest.fn(),
-      textContent: '',
-      innerHTML: '',
-      href: '',
-      src: '',
-      download: '',
-      click: jest.fn(),
-      remove: jest.fn(),
-      parentNode: {
-        removeChild: jest.fn(),
-      },
-    };
-    return element;
-  }),
-  body: {
-    appendChild: jest.fn(),
-    removeChild: jest.fn(),
-  },
-  querySelectorAll: jest.fn(() => []),
-};
-
-global.document = mockDocument as unknown as Document;
-
 const originalWindowOpen = typeof window !== 'undefined' ? window.open : undefined;
 const originalPlatformOS = Platform.OS;
 const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());

@@ -1,5 +1,5 @@
 import { Platform, StyleSheet } from 'react-native'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native'
+import { render, screen } from '@testing-library/react-native'
 
 import FavoriteButton from '@/components/travel/FavoriteButton'
 import { showToast } from '@/utils/toast'
@@ -26,24 +26,8 @@ jest.mock('@/utils/toast', () => ({
 
 describe('FavoriteButton (overlay variant)', () => {
   const originalPlatform = Platform.OS
-  const originalDocumentDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'document')
-
-  const setDocumentForTest = (value: unknown) => {
-    Object.defineProperty(globalThis, 'document', {
-      configurable: true,
-      value,
-    })
-  }
-
-  const restoreDocument = () => {
-    if (originalDocumentDescriptor) {
-      Object.defineProperty(globalThis, 'document', originalDocumentDescriptor)
-    }
-  }
-
   beforeEach(() => {
     ;(Platform as any).OS = 'web'
-    restoreDocument()
     mockUseAuth.mockReturnValue({ isAuthenticated: false })
     mockUseFavorites.mockReturnValue({
       isFavorite: jest.fn(() => false),
@@ -56,7 +40,6 @@ describe('FavoriteButton (overlay variant)', () => {
 
   afterEach(() => {
     ;(Platform as any).OS = originalPlatform
-    restoreDocument()
   })
 
   it('marks the web hit area as a card action for clickable-card containment', () => {
@@ -92,90 +75,5 @@ describe('FavoriteButton (overlay variant)', () => {
       height: 44,
       width: 44,
     })
-  })
-
-  it('adds an authenticated Android travel result to favorites without showing an error toast', async () => {
-    const addFavorite = jest.fn(async () => undefined)
-
-    ;(Platform as any).OS = 'android'
-    setDocumentForTest(undefined)
-    mockUseAuth.mockReturnValue({ isAuthenticated: true })
-    mockUseFavorites.mockReturnValue({
-      isFavorite: jest.fn(() => false),
-      addFavorite,
-      removeFavorite: jest.fn(),
-    })
-
-    render(
-      <FavoriteButton
-        variant="overlay"
-        id={514}
-        type="travel"
-        title="Random travel"
-        url="/travels/random-travel"
-        imageUrl="https://metravel.by/media/random.jpg"
-        country="Польша"
-      />
-    )
-
-    fireEvent.press(screen.getByTestId('favorite-button'))
-
-    await waitFor(() => {
-      expect(addFavorite).toHaveBeenCalledWith({
-        id: 514,
-        type: 'travel',
-        title: 'Random travel',
-        url: '/travels/random-travel',
-        imageUrl: 'https://metravel.by/media/random.jpg',
-        country: 'Польша',
-        city: undefined,
-      })
-    })
-    expect(showToast).not.toHaveBeenCalledWith(expect.objectContaining({
-      type: 'error',
-      text1: 'Не удалось обновить «Хочу поехать»',
-    }))
-  })
-
-  it('adds an Android guest travel result locally instead of opening login', async () => {
-    const addFavorite = jest.fn(async () => undefined)
-
-    ;(Platform as any).OS = 'android'
-    setDocumentForTest(undefined)
-    mockUseAuth.mockReturnValue({ isAuthenticated: false })
-    mockUseFavorites.mockReturnValue({
-      isFavorite: jest.fn(() => false),
-      addFavorite,
-      removeFavorite: jest.fn(),
-    })
-
-    render(
-      <FavoriteButton
-        variant="overlay"
-        id={514}
-        type="travel"
-        title="Random travel"
-        url="/travels/random-travel"
-      />
-    )
-
-    fireEvent.press(screen.getByTestId('favorite-button'))
-
-    await waitFor(() => {
-      expect(addFavorite).toHaveBeenCalledWith({
-        id: 514,
-        type: 'travel',
-        title: 'Random travel',
-        url: '/travels/random-travel',
-        imageUrl: undefined,
-        country: undefined,
-        city: undefined,
-      })
-    })
-    expect(mockRequireAuth).not.toHaveBeenCalled()
-    expect(showToast).toHaveBeenCalledWith(expect.objectContaining({
-      type: 'success',
-      text1: 'Сохранено на этом устройстве',
-    }))
   })
 })

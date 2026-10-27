@@ -2,6 +2,8 @@
 
 const { QueryClient, QueryClientProvider } = require('@tanstack/react-query')
 
+const { restoreWindowStubs, stubWindowProperty } = require('../../helpers/windowStubs')
+
  const RN = require('react-native')
  const originalPlatformOS = RN.Platform.OS
  RN.Platform.OS = 'web'
@@ -42,14 +44,12 @@ const mockLeaflet = {
   })),
 }
 
-const originalWindow = (globalThis as any).window
 beforeAll(() => {
-  ;(globalThis as any).window = (globalThis as any).window || {}
-  ;(globalThis as any).window.L = mockLeaflet
+  stubWindowProperty('L', mockLeaflet)
 })
 
 afterAll(() => {
-  ;(globalThis as any).window = originalWindow
+  restoreWindowStubs()
 })
 
 // Lightweight react-leaflet namespace used by tests
@@ -251,21 +251,6 @@ jest.mock('@/components/MapPage/Map/MapLogicComponent', () => {
   return api
 })
 
-// Mock window object and matchMedia
-Object.defineProperty(window, 'window', {
-  value: {
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    matchMedia: jest.fn(() => ({
-      matches: false,
-      addListener: jest.fn(),
-      removeListener: jest.fn(),
-    })),
-    L: mockLeaflet,
-  },
-  writable: true,
-})
-
 // Mock expo-location
 jest.mock('expo-location', () => ({
   requestForegroundPermissionsAsync: jest.fn(() => Promise.resolve({ status: 'granted' })),
@@ -406,6 +391,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
   })
 
   afterEach(() => {
+    restoreWindowStubs()
     const el = document.getElementById('test-map-container')
     if (el) el.remove()
   })
@@ -593,8 +579,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     ;(process.env as any).NODE_ENV = 'test'
 
     const openSpy = jest.fn()
-    ;(globalThis as any).window = (globalThis as any).window || {}
-    ;(globalThis as any).window.open = openSpy
+    stubWindowProperty('open', openSpy)
 
     const travel = {
       data: [

@@ -1,5 +1,6 @@
 import { Platform, View, Text, Linking } from 'react-native';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { restoreWindowStubs, stubWindowProperty } from '../../helpers/windowStubs';
 
 import PointListRow from '@/components/travel/PointListRow';
 
@@ -100,6 +101,10 @@ const rowStyles = {
 };
 
 describe('PointList (web coordinates list uses popup template)', () => {
+  afterEach(() => {
+    restoreWindowStubs();
+  });
+
   it('shows point cards by default and keeps preview available after collapse', () => {
     const prevOs = Platform.OS;
     (Platform as any).OS = 'web';
@@ -215,14 +220,10 @@ describe('PointList (web coordinates list uses popup template)', () => {
     (Platform as any).OS = 'web';
 
     const openSpy = jest.fn();
-    (globalThis as any).window = (globalThis as any).window || {};
-    (globalThis as any).window.open = openSpy;
+    stubWindowProperty('open', openSpy);
 
     const writeText = jest.fn(() => Promise.resolve());
-    Object.defineProperty(global, 'navigator', {
-      value: { clipboard: { writeText } },
-      writable: true,
-    });
+    stubWindowProperty('navigator', Object.create(window.navigator, { clipboard: { value: { writeText } } }));
 
     jest.spyOn(Linking, 'canOpenURL').mockResolvedValue(false as any);
     jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined as any);
