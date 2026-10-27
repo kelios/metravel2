@@ -15,4 +15,6 @@
 - [ ] 3.1 По разрешённому AGENTS.md пайплайну зафиксировать явные пути, push main и выкатить reviewed SHA штатным frontend-deployer.
 - [ ] 3.2 Подтвердить deployed SHA, повторить direct renderer 4/8/12 без nginx cache и full post-deploy SEO scan: 0x503; 429 учитывать отдельно.
 - [ ] 3.3 Зафиксировать frontend evidence на #2818 и точный оставшийся backend gate #2819; не объявлять полный Done до его production drill.
+- [x] 3.5 Первый полный post-deploy scan после выката 6183122ad: 1435/1436, один 503 — `/pl/quests/42/antalya-kaleici`, запрос рендерера к API потерян в замене воркера gunicorn 17:32:51.97 без записи в логе app (свежее соединение, прежнее условие повтора его не покрывало).
+- [x] 3.6 Расширить Bounded recovery (Claude, 27.10): один повтор и для свежего соединения, коды ECONNRESET/EPIPE/ECONNREFUSED до начала ответа, пауза 150 мс на подхват воркера внутри прежнего дедлайна, лог кода ошибки без URL; регрессии на свежий сброс и отмену во время паузы.
 - [ ] 3.4 Выполнить OpenSpec strict validation и проверить итоговый diff; перед archive — openspec validate --all.

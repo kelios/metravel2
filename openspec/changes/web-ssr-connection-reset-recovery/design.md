@@ -14,6 +14,8 @@ An HTTP status or partial body is a real response, so it never triggers recovery
 
 Rejected: increase the 10-second timeout, since observed failures finish earlier; warm the sitemap or serialize renders, since neither removes the connection race; retry all errors, since this amplifies genuine API outages.
 
+Widened 27.10.2026 by production evidence: the first full post-deploy scan after deploy `6183122ad` still had one 503 whose API request vanished during a Gunicorn worker replacement (no app log line) — the retiring worker had accepted a fresh connection just before exiting. Recovery now covers ECONNRESET/EPIPE/ECONNREFUSED on reused and fresh connections before any response, once, after a 150 ms replacement delay that the original signal can cancel. The bound (at most two connection attempts, no retry of HTTP statuses, timeouts or partial bodies) keeps genuine outages visible; the transport logs only the error code, attempt and reuse flag.
+
 Root owns planning/board/evidence; worker owns transport and tests. Backend rollback #2819 remains a read-only dependency: finalized rollback must validate the active pair and previous generation, restore client/renderer/builder, reject stale receipts and preserve history when republishing the same SHA.
 
 ## Risks / Trade-offs

@@ -9,6 +9,12 @@ const https = require('node:https')
 // must address Django under the public host (utils/ssr/fetchPublicRouteJson).
 const SSR_API_TRANSPORT = Symbol.for('metravel.ssr.apiTransport')
 const MAX_BODY_BYTES = 32 * 1024 * 1024
+// Connection-level failures before any response byte. Loaders only send
+// idempotent guest GETs, so one more attempt on a new connection is safe;
+// HTTP statuses, timeouts and partial bodies are real answers and never retried.
+const RETRYABLE_CODES = new Set(['ECONNRESET', 'EPIPE', 'ECONNREFUSED'])
+// Gunicorn's replacement worker is ready ~60 ms after the request (#1964).
+const RETRY_DELAY_MS = 150
 
 /** A fetch-shaped GET that keeps every header and never follows redirects. */
 function ssrApiRequest(url, { headers = {}, signal } = {}) {
@@ -41,11 +47,26 @@ function ssrApiRequest(url, { headers = {}, signal } = {}) {
           response.on('error', reject)
         })
         request.on('error', (error) => {
-          // A retiring worker can close a keep-alive socket as Node reuses it.
-          // Retry this GET once on a new connection, within the same deadline.
-          if (!retried && request.reusedSocket && error.code === 'ECONNRESET'
-              && !receivedResponse && !signal?.aborted) send(true)
-          else reject(error)
+          // Gunicorn retires its only worker every ~400 requests: the retiring
+          // worker can close a keep-alive socket as Node reuses it, or drop a
+          // fresh connection it accepted just before exiting (#2818). Retry this
+          // GET once on a new connection after the replacement takes over,
+          // within the same deadline. Only the code is logged, never the URL.
+          const recoverable = RETRYABLE_CODES.has(error.code) && !receivedResponse
+          if (recoverable) console.warn(`[ssr-api] ${error.code} before response, attempt ${retried ? 2 : 1}, reused=${Boolean(request.reusedSocket)}`)
+          if (retried || !recoverable || signal?.aborted) {
+            reject(error)
+            return
+          }
+          const cancel = () => {
+            clearTimeout(timer)
+            reject(signal.reason)
+          }
+          const timer = setTimeout(() => {
+            signal?.removeEventListener('abort', cancel)
+            send(true)
+          }, RETRY_DELAY_MS)
+          signal?.addEventListener('abort', cancel, { once: true })
         })
         request.end()
       } catch (error) {

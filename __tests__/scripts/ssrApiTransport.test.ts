@@ -12,6 +12,7 @@ describe('SSR internal API transport', () => {
   const seen: Array<{ host?: string; forwarded?: string; path?: string; socket: Socket }> = []
 
   beforeEach(async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {})
     seen.length = 0
     handleRequest = undefined
     server = http.createServer((request: IncomingMessage, response: ServerResponse) => {
@@ -89,10 +90,42 @@ describe('SSR internal API transport', () => {
     ])
   })
 
-  it('does not retry a reset on a fresh connection', async () => {
+  // #2818: a retiring Gunicorn worker can also drop a connection it accepted
+  // just before exiting; the replacement answers the second attempt.
+  it('retries a reset on a fresh connection once, after the replacement delay', async () => {
+    let attempts = 0
+    handleRequest = (request, response) => {
+      if (++attempts === 1) return request.socket.destroy()
+      response.writeHead(200, { 'Content-Type': 'application/json' })
+      response.end(JSON.stringify({ slug: 'fresh' }))
+    }
+    const started = Date.now()
+    const response = await ssrApiRequest(`${origin}/fresh-reset`)
+    await expect(response.json()).resolves.toEqual({ slug: 'fresh' })
+    expect(attempts).toBe(2)
+    expect(Date.now() - started).toBeGreaterThanOrEqual(140)
+    // Only the code, attempt and reuse flag are logged — never the URL.
+    expect(console.warn).toHaveBeenCalledTimes(1)
+    expect(console.warn).toHaveBeenCalledWith('[ssr-api] ECONNRESET before response, attempt 1, reused=false')
+  })
+
+  it('cancels the pending retry delay with the original signal', async () => {
     handleRequest = (request) => request.socket.destroy()
-    await expect(ssrApiRequest(`${origin}/reset`)).rejects.toMatchObject({ code: 'ECONNRESET' })
-    expect(seen).toHaveLength(1)
+    let resetLogged: () => void = () => {}
+    const delayStarted = new Promise<void>((resolve) => { resetLogged = resolve })
+    ;(console.warn as jest.Mock).mockImplementation(() => resetLogged())
+    const requestSpy = jest.spyOn(http, 'request')
+    const controller = new AbortController()
+    const pending = ssrApiRequest(`${origin}/reset-then-abort`, { signal: controller.signal })
+    const failure = pending.catch((error: unknown) => error)
+    await delayStarted
+    controller.abort()
+    await expect(failure).resolves.toBe(controller.signal.reason)
+    expect(controller.signal.reason).toMatchObject({ name: 'AbortError' })
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    // A missing cancel would still start the retry with the aborted signal.
+    expect(requestSpy).toHaveBeenCalledTimes(1)
+    expect(seen.filter((request) => request.path === '/reset-then-abort')).toHaveLength(1)
   })
 
   it('never makes a third attempt after the fresh retry also resets', async () => {
@@ -105,7 +138,7 @@ describe('SSR internal API transport', () => {
   it('does not retry other request errors even on a reused socket', async () => {
     await warmConnection()
     const originalRequest = http.request
-    const error = Object.assign(new Error('write failed'), { code: 'EPIPE' })
+    const error = Object.assign(new Error('protocol failed'), { code: 'EPROTO' })
     let reusedSocket = false
     const requestSpy = jest.spyOn(http, 'request').mockImplementation((...args: unknown[]) => {
       const request = originalRequest.apply(http, args)
@@ -115,7 +148,7 @@ describe('SSR internal API transport', () => {
       })
       return request
     })
-    await expect(ssrApiRequest(`${origin}/broken-pipe`)).rejects.toBe(error)
+    await expect(ssrApiRequest(`${origin}/protocol-error`)).rejects.toBe(error)
     expect(reusedSocket).toBe(true)
     expect(requestSpy).toHaveBeenCalledTimes(1)
   })
