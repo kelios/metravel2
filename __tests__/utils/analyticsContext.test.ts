@@ -143,6 +143,23 @@ describe('идентификаторы и источник визита', () => 
     expect(ctx.getAnalyticsTrafficSource()).toBe(first)
   })
 
+  it('utm_source берётся с посадочного адреса, а не с текущего после SPA-перехода', () => {
+    // Посадочная `/?utm_source=instagram`, затем клиентский переход на квест:
+    // в `location` метки уже нет, в записи навигации документа — есть.
+    const original = window.performance.getEntriesByType
+    window.performance.getEntriesByType = jest.fn((type: string) =>
+      type === 'navigation'
+        ? [{ name: 'https://metravel.by/?utm_source=instagram&utm_medium=social&utm_campaign=profile' }]
+        : [],
+    ) as unknown as typeof window.performance.getEntriesByType
+    try {
+      const ctx = loadWebContext()
+      expect(ctx.getAnalyticsTrafficSource()).toBe('instagram')
+    } finally {
+      window.performance.getEntriesByType = original
+    }
+  })
+
   it('отзыв согласия стирает уже заведённые метки, а не только глушит отправку', () => {
     const ctx = loadWebContext()
     expect(ctx.getAnalyticsClientId()).toBeTruthy()

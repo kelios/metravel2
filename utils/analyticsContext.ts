@@ -221,6 +221,23 @@ export const getAnalyticsSessionId = (): string | undefined => {
 }
 
 /**
+ * Адрес, с которым документ был загружен, а не текущий. Источник считается при
+ * первом событии воронки, а к нему посадочная `/?utm_source=instagram` уже
+ * сменилась SPA-переходом на квест без метки (#2680). Запись навигации хранит
+ * исходный URL документа — так же, как `document.referrer` хранит исходный
+ * реферер.
+ */
+const landingHref = (w: Window): string => {
+  try {
+    const entry = w.performance?.getEntriesByType?.('navigation')?.[0]
+    if (entry?.name) return String(entry.name)
+  } catch {
+    // ниже
+  }
+  return String(w.location?.href || '')
+}
+
+/**
  * Источник визита фиксируется ОДИН раз за сессию и дальше читается из неё.
  *
  * Считать его в момент события нельзя: к пятой точке квеста игрок давно ушёл с
@@ -237,7 +254,7 @@ export const getAnalyticsTrafficSource = (): AnalyticsTrafficSource | undefined 
 
   let utmSource: string | undefined
   try {
-    utmSource = new URL(String(w.location?.href || '')).searchParams.get('utm_source') || undefined
+    utmSource = new URL(landingHref(w)).searchParams.get('utm_source') || undefined
   } catch {
     utmSource = undefined
   }
