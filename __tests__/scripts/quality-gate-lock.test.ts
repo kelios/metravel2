@@ -49,6 +49,30 @@ describe('quality-gate-lock', () => {
     expect(conflicts.map((row: { pid: number }) => row.pid)).toEqual([12, 20])
   })
 
+  it('counts only processes of this exact checkout, not prefix siblings or nested worktrees', () => {
+    const rows = lockModule.parseProcessTable(`
+      30 1 node /w/repo-a/node_modules/.bin/jest --runInBand
+      31 1 node /w/repo/.claude/worktrees/x/node_modules/.bin/jest
+      32 1 node /w/repo/.codex-temp/deploy/node_modules/.bin/jest
+      33 1 node /srv/w/repo/node_modules/.bin/jest
+      34 1 node /w/repo/node_modules/.bin/jest --runInBand
+      35 1 node /w/repo-a/node_modules/.bin/jest --rootDir=/w/repo
+      36 1 npm run test:run
+    `)
+    const nestedCheckouts = new Set(['/w/repo/.claude/worktrees/x', '/w/repo/.codex-temp/deploy'])
+    const cwdByPid: Record<number, string> = { 36: '/w/repo', 30: '/w/repo-a' }
+
+    const conflicts = lockModule.findConflictingQualityProcesses({
+      rows,
+      root: '/w/repo',
+      currentPid: 99,
+      getCwd: (pid: number) => cwdByPid[pid] || '',
+      isCheckoutDir: (dir: string) => nestedCheckouts.has(dir),
+    })
+
+    expect(conflicts.map((row: { pid: number }) => row.pid)).toEqual([34, 35, 36])
+  })
+
   it('blocks a second process and releases the atomic lock for the next run', () => {
     const tempDir = makeTempDir('quality-gate-lock-')
     const lockPath = path.join(tempDir, 'quality-gate.lock')

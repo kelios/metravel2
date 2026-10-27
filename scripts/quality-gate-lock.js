@@ -99,11 +99,42 @@ function getAncestorPids(rows, pid = process.pid) {
   return ancestors
 }
 
+function hasGitMarker(dir) {
+  return fs.existsSync(path.join(dir, '.git'))
+}
+
+function isInsideNestedCheckout(root, tail, isCheckoutDir) {
+  let dir = root
+  for (const segment of tail.split(path.sep).filter(Boolean)) {
+    dir = path.join(dir, segment)
+    if (isCheckoutDir(dir)) return true
+  }
+  return false
+}
+
+// A substring match is not enough: `/w/repo` is a prefix of the sibling
+// checkout `/w/repo-a`, and `.claude/worktrees/*` or `.codex-temp/*` worktrees
+// live under the root while being separate checkouts with their own `.git`.
+// The root must start a path token, end at a separator, and no directory
+// between it and the referenced file may be another checkout.
+function commandReferencesCheckout(command, root, isCheckoutDir) {
+  for (let index = command.indexOf(root); index !== -1; index = command.indexOf(root, index + 1)) {
+    if (index > 0 && !/[\s"'=:]/.test(command[index - 1])) continue
+    const rest = command.slice(index + root.length)
+    const tokenEnd = rest.search(/[\s"']/)
+    const tail = tokenEnd === -1 ? rest : rest.slice(0, tokenEnd)
+    if (tail === '') return true
+    if (tail.startsWith(path.sep) && !isInsideNestedCheckout(root, tail, isCheckoutDir)) return true
+  }
+  return false
+}
+
 function findConflictingQualityProcesses({
   rows = listProcesses(),
   root = repoRoot,
   currentPid = process.pid,
   getCwd = readProcessCwd,
+  isCheckoutDir = hasGitMarker,
 } = {}) {
   const resolvedRoot = path.resolve(root)
   const ancestors = getAncestorPids(rows, currentPid)
@@ -111,7 +142,7 @@ function findConflictingQualityProcesses({
   return rows.filter((row) => {
     if (ancestors.has(row.pid)) return false
     if (!QUALITY_PROCESS_PATTERNS.some((pattern) => pattern.test(row.command))) return false
-    if (row.command.includes(resolvedRoot)) return true
+    if (commandReferencesCheckout(row.command, resolvedRoot, isCheckoutDir)) return true
     return getCwd(row.pid) === resolvedRoot
   })
 }
