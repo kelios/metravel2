@@ -126,6 +126,42 @@ describe('author-list collapsed feedback geometry across independent rows', () =
     }
   })
 
+  it('reserves only the slots present in the list, so a drafts-only list has no dead footer (#2815)', async () => {
+    const renderGrid = async (currentData: Travel[]) => {
+      const host = document.createElement('div')
+      host.style.width = '1440px'
+      document.body.appendChild(host)
+      const root = createRoot(host)
+      await act(async () => root.render(createElement(ProfileTravelGrid, {
+        currentData,
+        styles: createProfileScreenStyles({ colors: { background: '#fff' }, contentPadding: 12, gapSize: 8,
+          isDesktopWeb: true, maxContentWidth: 1280 }),
+        isCardsSingleColumn: false, gridColumns: 2, gapSize: 8, isMobileDevice: false,
+        userId: '7', isSuperuser: false, activeTab: 'travels', handleDeleteMyTravel: jest.fn(),
+        width: 1440, removingTravelId: null,
+      })))
+      const footers = Array.from(host.querySelectorAll<HTMLElement>('[data-testid="travel-moderation-feedback"]'))
+      const floors = footers.map((footer) => pixels(footer, 'minHeight'))
+      const chipOnly = verticalEdges(footers[0]) + pixels(footers[0].firstElementChild!.firstElementChild!, 'lineHeight')
+        + verticalEdges(footers[0].firstElementChild!)
+      await act(async () => root.unmount())
+      host.remove()
+      return { floors, chipOnly }
+    }
+    const plain = (id: number, publication_status: string) =>
+      ({ id, slug: `plain-${id}`, name: `Plain ${id}`, userIds: '7', countryName: '', publication_status } as Travel)
+    const drafts = await renderGrid([plain(91, 'draft'), travels[5], plain(92, 'draft')])
+    expect(new Set(drafts.floors).size).toBe(1)
+    expect(drafts.floors[0]).toBe(drafts.chipOnly)
+
+    const approved = await renderGrid([travels[2], plain(93, 'draft')])
+    expect(new Set(approved.floors).size).toBe(1)
+    expect(approved.floors[0]).toBeGreaterThan(approved.chipOnly)
+
+    const full = await renderGrid(travels)
+    expect(full.floors[0]).toBeGreaterThan(approved.floors[0])
+  })
+
   it('does not reserve the authored-card floor in the wizard', async () => {
     const host = document.createElement('div')
     document.body.appendChild(host)

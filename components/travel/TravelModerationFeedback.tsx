@@ -12,11 +12,15 @@ import { useTranslation } from '@/i18n/LocaleProvider';
 import { resolveTravelModerationFeedback, type TravelPublicationFields } from '@/utils/travelPublicationStatus';
 import type { TravelModerationMetadata } from '@/types/types';
 
+type FeedbackTravel = TravelPublicationFields & TravelModerationMetadata;
+
 type Props = {
-  travel: TravelPublicationFields & TravelModerationMetadata;
+  travel: FeedbackTravel;
   onCorrect?: () => void;
   showStatus?: boolean;
   list?: boolean;
+  /** List-wide union from `resolveListFeedbackSlots`; defaults to this card's own slots. */
+  listSlots?: number;
 };
 
 const { spacing, typography, touchTarget } = DESIGN_TOKENS;
@@ -24,32 +28,53 @@ const FEEDBACK_LINE_HEIGHT = typography.scale.bodySmall.lineHeight;
 const REASON_LINE_HEIGHT = typography.sizes.sm * 1.5;
 const DATE_LINE_HEIGHT = typography.scale.caption.lineHeight;
 const CORRECTION_LINE_HEIGHT = typography.scale.body.lineHeight;
-// One collapsed author-list floor, independent of the current decision/row.
-// Button sm has spacing.xs vertical padding and outline has two 2px borders.
-// Reserve two date/action lines as well as the bounded reason preview; use a
-// minimum, so larger accessibility text remains free to grow rather than clip.
-const LIST_FEEDBACK_MIN_HEIGHT = 2 * spacing.md
-  + FEEDBACK_LINE_HEIGHT + 2 * spacing.xs
-  + FEEDBACK_LINE_HEIGHT + 2 * REASON_LINE_HEIGHT + touchTarget.minHeight
-  + 2 * DATE_LINE_HEIGHT
-  + Math.max(touchTarget.minHeight, 2 * CORRECTION_LINE_HEIGHT + 2 * spacing.xs + 4)
-  + 3 * spacing.sm;
+// Optional rows below the status chip. A list reserves one common floor for the
+// slots present in ANY of its cards (#2669: rows stay level across independent
+// flex rows), but never for slots no card has — a drafts-only list must not get
+// the rejected-card footer as dead space (#2815). Button sm has spacing.xs
+// vertical padding and outline has two 2px borders. A minimum rather than a
+// fixed height keeps larger accessibility text free to grow rather than clip.
+const SLOT_REASON = 1;
+const SLOT_DATE = 2;
+const SLOT_CORRECTION = 4;
+const SLOT_HEIGHTS: ReadonlyArray<readonly [number, number]> = [
+  [SLOT_REASON, FEEDBACK_LINE_HEIGHT + 2 * REASON_LINE_HEIGHT + touchTarget.minHeight],
+  [SLOT_DATE, 2 * DATE_LINE_HEIGHT],
+  [SLOT_CORRECTION, Math.max(touchTarget.minHeight, 2 * CORRECTION_LINE_HEIGHT + 2 * spacing.xs + 4)],
+];
 
-export default function TravelModerationFeedback({ travel, onCorrect, showStatus = true, list = false }: Props) {
+function resolveFeedbackSlots(travel: FeedbackTravel): number {
+  const feedback = resolveTravelModerationFeedback(travel);
+  return (feedback.reason ? SLOT_REASON : 0)
+    | (feedback.decidedAt ? SLOT_DATE : 0)
+    | (feedback.status === 'rejected' ? SLOT_CORRECTION : 0);
+}
+
+export function resolveListFeedbackSlots(travels: readonly FeedbackTravel[]): number {
+  return travels.reduce((slots, travel) => slots | resolveFeedbackSlots(travel), 0);
+}
+
+const listFeedbackMinHeight = (slots: number) => SLOT_HEIGHTS.reduce(
+  (height, [slot, slotHeight]) => (slots & slot ? height + spacing.sm + slotHeight : height),
+  2 * spacing.md + FEEDBACK_LINE_HEIGHT + 2 * spacing.xs,
+);
+
+export default function TravelModerationFeedback({ travel, onCorrect, showStatus = true, list = false, listSlots }: Props) {
   const { t } = useTranslation();
   const colors = useThemedColors();
   const feedback = resolveTravelModerationFeedback(travel);
   const [openedReason, setOpenedReason] = useState<string | null>(null);
   useEffect(() => setOpenedReason(null), [feedback.status, feedback.reason]);
+  const slots = listSlots ?? (list ? resolveFeedbackSlots(travel) : 0);
   const styles = useMemo(() => StyleSheet.create({
-    root: { gap: spacing.sm, minWidth: 0, ...(list ? { padding: spacing.md, flexGrow: 1, minHeight: LIST_FEEDBACK_MIN_HEIGHT } : {}) },
+    root: { gap: spacing.sm, minWidth: 0, ...(list ? { padding: spacing.md, flexGrow: 1, minHeight: listFeedbackMinHeight(slots) } : {}) },
     reason: { color: colors.text, fontSize: typography.sizes.sm, lineHeight: REASON_LINE_HEIGHT, ...(list ? { minHeight: 2 * REASON_LINE_HEIGHT } : {}) },
     reasonLabel: { color: colors.text, fontWeight: '600', fontSize: typography.sizes.sm, lineHeight: FEEDBACK_LINE_HEIGHT },
     date: { color: colors.textMuted, fontSize: typography.sizes.xs, lineHeight: DATE_LINE_HEIGHT },
     details: { alignSelf: 'flex-start', justifyContent: 'center', minHeight: touchTarget.minHeight },
     detailsText: { color: colors.primaryText, fontSize: typography.sizes.sm, fontWeight: '600', lineHeight: FEEDBACK_LINE_HEIGHT },
     correctionLabel: { lineHeight: CORRECTION_LINE_HEIGHT },
-  }), [colors, list]);
+  }), [colors, list, slots]);
   const showFullReason = Boolean(feedback.reason && openedReason === feedback.reason);
 
   return (

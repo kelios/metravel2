@@ -95,10 +95,12 @@ jest.mock('@/components/listTravel/RenderTravelItem', () => {
     selectable,
     onDeletePress,
     onToggle,
+    authorFeedbackSlots,
   }: any) {
     return (
       <View>
         <Text>{item?.name ?? 'Travel'}</Text>
+        <Text testID={`mock-feedback-slots-${String(item?.id)}`}>{String(authorFeedbackSlots)}</Text>
         <Pressable
           testID={`mock-delete-${String(item?.id)}`}
           onPress={() => onDeletePress?.(item?.id)}
@@ -626,6 +628,45 @@ describe('ListTravel Integration Tests', () => {
     expect(screen.getByText('Waterfall Trip')).toBeTruthy();
     expect(screen.queryByText('Fallback Trip')).toBeNull();
     expect(screen.queryByTestId('travel-results-fallback-notice')).toBeNull();
+  });
+
+  it('sizes /metravel moderation footers from the fallback list actually shown (#2815)', async () => {
+    (global as any).__mockRouteName = 'metravel';
+    (global as any).__mockPathname = '/metravel';
+    mockUseListTravelFilters.mockReturnValue({
+      filter: { year: '2026' },
+      queryParams: { year: '2026' },
+      resetFilters: jest.fn(),
+      onSelect: jest.fn(),
+      applyFilter: jest.fn(),
+      handleToggleCategory: jest.fn(),
+    });
+    const rejectedTravel = {
+      ...mockTravels[0],
+      id: 515,
+      name: 'Rejected Fallback Trip',
+      publication_status: 'draft',
+      moderation_decision: 'rejected',
+      moderation_decision_reason: 'Fix photos.',
+      moderation_decided_at: '2026-10-21T09:15:00Z',
+    };
+    const result = (data: unknown[]) => ({
+      data, total: data.length, hasMore: false, isLoading: false, isFetching: false, isError: false,
+      status: 'success', isInitialLoading: false, isNextPageLoading: false, isEmpty: data.length === 0,
+      refetch: jest.fn(), handleEndReached: jest.fn(), handleRefresh: jest.fn(), isRefreshing: false,
+    });
+    let callIndex = 0;
+    mockUseListTravelData.mockImplementation(() => {
+      const currentCall = callIndex % 5;
+      callIndex += 1;
+      return currentCall === 1 ? result([rejectedTravel]) : result([]);
+    });
+
+    renderWithProviders(<ListTravel />);
+
+    await waitFor(() => expect(screen.getByText('Rejected Fallback Trip')).toBeTruthy());
+    // reason | date | correction slots of the shown fallback card, not of the empty main list.
+    expect(screen.getByTestId('mock-feedback-slots-515').props.children).toBe('7');
   });
 
   it('passes categoryTravelAddress from URL params into initialFilter', async () => {

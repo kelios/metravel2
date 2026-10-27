@@ -12,6 +12,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useAuth } from '@/context/AuthContext'
 import StaleContentBanner from '@/components/ui/StaleContentBanner'
+import { resolveListFeedbackSlots } from '@/components/travel/TravelModerationFeedback'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { markSsgFirstScreenReady, useHydrationReady } from '@/hooks/useHydrationReady'
 import type { Travel } from '@/types/types'
@@ -326,48 +327,6 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
       [effectiveWidth, gapSize, gridColumns, contentPadding]
     );
 
-    const renderTravelListItem = useCallback(
-      (travel: Travel, index: number, hasUserScrolled = false) => {
-        const mediaLoading = getCatalogCardMediaLoading(index, gridColumns, hasUserScrolled)
-
-        return (
-          <RenderTravelItem
-            item={travel}
-            index={index}
-            isMobile={isMobileDevice}
-            isSuperuser={isSuper}
-            currentUserId={userId != null ? String(userId) : null}
-            isMetravel={isMeTravel}
-            onDeletePress={handleDeletePress}
-            // Грузим весь начальный первый ряд eager/high-priority (а не только
-            // index 0). После первого скролла все ремоунты переходят на lazy/low.
-            isFirst={mediaLoading === 'eager'}
-            mediaLoading={mediaLoading}
-            selectable={isExport}
-            isSelected={isSelected(travel.id)}
-            onToggle={isExport ? () => toggleSelect(travel) : undefined}
-            cardWidth={searchCardWidth}
-            imageHeight={searchCardImageHeight}
-            viewportWidth={width}
-            gridColumns={gridColumns}
-          />
-        )
-      },
-      [
-        handleDeletePress,
-        isExport,
-        isSelected,
-        isMeTravel,
-        isMobileDevice,
-        isSuper,
-        gridColumns,
-        searchCardWidth,
-        searchCardImageHeight,
-        toggleSelect,
-        userId,
-        width,
-      ]
-    );
 
     /* Loading helpers */
     const handleClearAll = useCallback(() => {
@@ -539,6 +498,57 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
     const displayedStaleContentMeta = activeFallbackMatch?.query.staleContentMeta ?? staleContentMeta;
     const hasDisplayedItems = displayedTravels.length > 0;
     const displayedShowEmptyState = !activeFallbackMatch && !isFallbackLoading && showEmptyState;
+
+    // Footer floor follows the list actually shown, fallback picks included (#2815).
+    const authorFeedbackSlots = useMemo(
+      () => (isMeTravel ? resolveListFeedbackSlots(displayedTravels) : undefined),
+      [isMeTravel, displayedTravels]
+    );
+
+    const renderTravelListItem = useCallback(
+      (travel: Travel, index: number, hasUserScrolled = false) => {
+        const mediaLoading = getCatalogCardMediaLoading(index, gridColumns, hasUserScrolled)
+
+        return (
+          <RenderTravelItem
+            item={travel}
+            index={index}
+            isMobile={isMobileDevice}
+            isSuperuser={isSuper}
+            currentUserId={userId != null ? String(userId) : null}
+            isMetravel={isMeTravel}
+            authorFeedbackSlots={authorFeedbackSlots}
+            onDeletePress={handleDeletePress}
+            // Грузим весь начальный первый ряд eager/high-priority (а не только
+            // index 0). После первого скролла все ремоунты переходят на lazy/low.
+            isFirst={mediaLoading === 'eager'}
+            mediaLoading={mediaLoading}
+            selectable={isExport}
+            isSelected={isSelected(travel.id)}
+            onToggle={isExport ? () => toggleSelect(travel) : undefined}
+            cardWidth={searchCardWidth}
+            imageHeight={searchCardImageHeight}
+            viewportWidth={width}
+            gridColumns={gridColumns}
+          />
+        )
+      },
+      [
+        authorFeedbackSlots,
+        handleDeletePress,
+        isExport,
+        isSelected,
+        isMeTravel,
+        isMobileDevice,
+        isSuper,
+        gridColumns,
+        searchCardWidth,
+        searchCardImageHeight,
+        toggleSelect,
+        userId,
+        width,
+      ]
+    );
     const displayedShowInitialLoading = isInitialLoading || isFallbackLoading;
 
     // #1406: SSG-шелл каталога снимается по готовности ДАННЫХ, а не кода

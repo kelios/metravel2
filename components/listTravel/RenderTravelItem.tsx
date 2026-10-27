@@ -75,6 +75,8 @@ type RenderTravelItemProps = {
     currentUserId?: string | null;
     isMetravel?: boolean;
     showAuthorModerationFeedback?: boolean;
+    /** List-wide feedback slots (`resolveListFeedbackSlots`) so footers share one floor. */
+    authorFeedbackSlots?: number;
     onDeletePress?: (id: number) => void;
     isFirst?: boolean;
     isSingle?: boolean;
@@ -106,6 +108,7 @@ function RenderTravelItem({
                               currentUserId,
                               isMetravel,
                               showAuthorModerationFeedback = false,
+                              authorFeedbackSlots,
                               onDeletePress,
                               isFirst,
                               isSingle = false,
@@ -134,8 +137,9 @@ function RenderTravelItem({
     const authorFeedbackVisible = Boolean(item && !selectable && (showAuthorModerationFeedback || isMetravel)
         && currentUserId && extractOwnerIds(item).includes(String(currentUserId).trim()));
     const renderAuthorFeedback = useCallback((onEdit: () => void) => (
-        <TravelModerationFeedback key={`${item.id}:${currentUserId}`} travel={item} onCorrect={onEdit} list />
-    ), [currentUserId, item]);
+        <TravelModerationFeedback key={`${item.id}:${currentUserId}`} travel={item} onCorrect={onEdit} list
+            listSlots={authorFeedbackSlots} />
+    ), [authorFeedbackSlots, currentUserId, item]);
     const containerStyle = useMemo<ViewStyle>(() => ({
         width: '100%',
         maxWidth: '100%',
@@ -188,6 +192,7 @@ function areEqual(prev: RenderTravelItemProps, next: RenderTravelItemProps) {
     if (prev.selectable !== next.selectable) return false;
     if (prev.isMetravel !== next.isMetravel) return false;
     if (prev.showAuthorModerationFeedback !== next.showAuthorModerationFeedback) return false;
+    if (prev.authorFeedbackSlots !== next.authorFeedbackSlots) return false;
     
     // 4. Редкие изменения (меняются только при resize или смене роли)
     if (prev.isMobile !== next.isMobile) return false;

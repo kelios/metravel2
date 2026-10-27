@@ -24,6 +24,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import { useMyTravels } from '@/hooks/useMyTravels';
 import type { Travel } from '@/types/types';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
+import { resolveListFeedbackSlots } from '@/components/travel/TravelModerationFeedback';
 import { useProfileGrid } from '@/components/screens/profile/useProfileGrid';
 import { ProfileHeaderSection } from '@/components/screens/profile/ProfileHeaderSection';
 import { ProfileOverviewTab } from '@/components/screens/profile/ProfileOverviewTab';
@@ -769,6 +770,10 @@ export default function ProfileScreen() {
     ],
   );
 
+  const authorFeedbackSlots = useMemo(
+    () => (isProfileTravelTab(activeTab) ? resolveListFeedbackSlots(currentData) : undefined),
+    [activeTab, currentData],
+  );
   const renderItem = useCallback(({ item, index }: { item: Travel; index: number }) => (
     <RenderTravelItem
       item={item}
@@ -778,10 +783,11 @@ export default function ProfileScreen() {
       currentUserId={userId}
       isSuperuser={isSuperuser}
       {...(isProfileTravelTab(activeTab) ? { onDeletePress: handleDeleteMyTravel, showAuthorModerationFeedback: true } : {})}
+      authorFeedbackSlots={authorFeedbackSlots}
       viewportWidth={width}
       isDeleting={travelList.removingTravelId === item.id}
     />
-  ), [isMobileDevice, userId, isSuperuser, activeTab, handleDeleteMyTravel, travelList.removingTravelId, width]);
+  ), [isMobileDevice, userId, isSuperuser, activeTab, handleDeleteMyTravel, travelList.removingTravelId, width, authorFeedbackSlots]);
 
   if (!authReady) {
     return (

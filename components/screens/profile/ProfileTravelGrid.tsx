@@ -5,6 +5,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
+import { resolveListFeedbackSlots } from '@/components/travel/TravelModerationFeedback';
 import TravelListItemSkeleton from '@/components/listTravel/TravelListItemSkeleton';
 import type { Travel } from '@/types/types';
 import type { createProfileScreenStyles } from './profileScreen.styles';
@@ -95,6 +96,11 @@ export function ProfileTravelGrid({
     return result;
   }, [currentData, cols]);
 
+  const authorFeedbackSlots = useMemo(
+    () => (isOwnTravelTab(activeTab) ? resolveListFeedbackSlots(currentData) : undefined),
+    [activeTab, currentData],
+  );
+
   const placeholderBaseStyle = useMemo(() => ({
     flexGrow: 0, flexShrink: 0, minWidth: 0, opacity: 0, pointerEvents: 'none' as const,
   }), []);
@@ -120,6 +126,7 @@ export function ProfileTravelGrid({
                       isFirst={rowIndex === 0 && itemIndex === 0}
                       currentUserId={userId}
                       showAuthorModerationFeedback={isOwnTravelTab(activeTab)}
+                      authorFeedbackSlots={authorFeedbackSlots}
                       isSuperuser={isSuperuser}
                       onDeletePress={isOwnTravelTab(activeTab) ? handleDeleteMyTravel : undefined}
                       viewportWidth={width}
