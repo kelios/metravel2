@@ -1,24 +1,15 @@
-import React, { Suspense, useEffect, useMemo, useState } from 'react';
-import { Link, type Href, useIsFocused, useLoaderData, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, View } from 'react-native';
-import Button from '@/components/ui/Button';
+import React, { useMemo, useSyncExternalStore } from 'react';
+import { Link, type Href, useIsFocused, useLoaderData } from 'expo-router';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import QuestVersionLinks from '@/components/quests/QuestVersionLinks';
-import { useTranslation } from '@/i18n/LocaleProvider';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useThemedColors } from '@/hooks/useTheme';
-import { useHydrationReady } from '@/hooks/useHydrationReady';
 import type { QuestPublicProjection } from '@/utils/questPublicPage';
-import { parseQuestLocaleRoute, type QuestServingProjection } from '@/utils/questLocaleRouting';
+import type { QuestServingProjection } from '@/utils/questLocaleRouting';
 import { jsonLdScript } from '@/components/seo/jsonLdScript';
 import { quotedCyrillicSegments } from '@/utils/cyrillicLanguage';
-import { QUEST_PRINT_PARAM, isQuestPrintRequested } from '@/utils/questPrintRequest';
 import { buildQuestPublicStructuredData, questPublicAlternates } from './questPublicSeo';
-import { QuestPublicHeadingContext } from './QuestPublicHeadingContext';
 
-// This imports the existing gameplay implementation, never the web loader wrapper.
-const QuestGameplay = React.lazy(() => import('@/app/(tabs)/quests/[city]/[questId].tsx'));
 const PUBLIC_STYLES = `
 [data-quest-public-page]{box-sizing:border-box;width:100%;max-width:840px;margin:0 auto;padding:24px 20px 100px;color:var(--color-text);font:16px/1.55 system-ui,-apple-system,sans-serif;overflow-wrap:anywhere}
 [data-quest-public-page] h1{font-size:28px;line-height:1.2;margin:16px 0 12px}
@@ -45,21 +36,11 @@ function PublicText({ text, locale, countryCode }: { text: string; locale: strin
 }
 
 function QuestPublicDocument({ data }: { data: QuestPublicProjection }) {
-  const { t } = useTranslation();
-  const colors = useThemedColors();
   const focused = useIsFocused();
-  const [started, setStarted] = useState(false);
-  const params = useLocalSearchParams<{ print?: string | string[] }>();
-  const printRequested = isQuestPrintRequested(params[QUEST_PRINT_PARAM]);
-  useEffect(() => {
-    // An explicit print URL retains its existing client-only print action.
-    if (printRequested) setStarted(true);
-  }, [printRequested]);
   const projection = useMemo(() => servingProjection(data), [data]);
   const structured = useMemo(() => buildQuestPublicStructuredData(data), [data]);
   const additionalTags = useMemo(() => Object.entries(questPublicAlternates(data)).map(([locale, href]) =>
     <link key={locale} rel="alternate" hrefLang={locale} href={href} />), [data]);
-  const route = parseQuestLocaleRoute(data.canonical_path) ?? undefined;
   const page = data.page;
   const text = (value: string, locale: string = data.locale) => <PublicText text={value} locale={locale} countryCode={data.country_code} />;
   return <>
@@ -77,15 +58,6 @@ function QuestPublicDocument({ data }: { data: QuestPublicProjection }) {
         borderRadius={DESIGN_TOKENS.radii.md} /> : null}
       {page.paragraphs.map((value, index) => <p key={index}>{text(value)}</p>)}
       {page.facts.length ? <ul className="quest-public-facts">{page.facts.map((value, index) => <li key={index}>{text(value)}</li>)}</ul> : null}
-      {data.kind === 'detail' && !started ? <View style={{ marginVertical: DESIGN_TOKENS.spacing.md }}>
-        <Button label={t('quests:components.quests.questWizardStepCard.nachat_kvest_2847e749')}
-          onPress={() => setStarted(true)} size="lg" testID="quest-public-start" />
-      </View> : null}
-      {started && projection ? <QuestPublicHeadingContext.Provider value>
-        <Suspense fallback={<ActivityIndicator color={colors.primary} />}>
-          <QuestGameplay route={route} publicProjection={projection} />
-        </Suspense>
-      </QuestPublicHeadingContext.Provider> : null}
       {page.sections.map((section, sectionIndex) => <section key={sectionIndex}>
         {section.heading ? <h2>{text(section.heading)}</h2> : null}
         {section.paragraphs.map((value, index) => <p key={index}>{text(value)}</p>)}
@@ -98,13 +70,21 @@ function QuestPublicDocument({ data }: { data: QuestPublicProjection }) {
   </>;
 }
 
+const subscribeNever = () => () => {};
+
 /**
  * The projection document is the server HTML only (crawlers, no-JS, first paint).
- * Once hydrated — and on every client-side navigation — the visitor gets the
- * regular app screen, the same handoff the former SSG fallback made.
+ * React reads the server snapshot while rendering on the server and hydrating, so
+ * the markup matches; it then re-renders with the client snapshot. A client-side
+ * navigation mounts with the client snapshot directly: the visitor gets the
+ * regular app screen without a document frame (#2831, #2832).
  */
-export default function QuestPublicLoaderScreen({ fallback }: { fallback: React.ReactNode }) {
+export default function QuestPublicLoaderScreen({ children }: {
+  /** The app screen; a detail receives the loader projection as its publication proof. */
+  children: (projection: QuestServingProjection | null) => React.ReactNode;
+}) {
   const data = useLoaderData() as QuestPublicProjection | null;
-  const hydrated = useHydrationReady();
-  return data && !hydrated ? <QuestPublicDocument key={data.canonical_path} data={data} /> : <>{fallback}</>;
+  const serverMarkup = useSyncExternalStore(subscribeNever, () => false, () => true);
+  const projection = useMemo(() => (data ? servingProjection(data) : null), [data]);
+  return data && serverMarkup ? <QuestPublicDocument key={data.canonical_path} data={data} /> : <>{children(projection)}</>;
 }

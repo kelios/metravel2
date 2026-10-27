@@ -4,7 +4,7 @@ import QuestPublicLoaderScreen from '@/components/quests/runtime/QuestPublicLoad
 
 export default function QuestCountryRoute() {
   return process.env.EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR === 'true'
-    ? <QuestPublicLoaderScreen fallback={<LegacyQuestCountry />} /> : <LegacyQuestCountry />;
+    ? <QuestPublicLoaderScreen>{() => <LegacyQuestCountry />}</QuestPublicLoaderScreen> : <LegacyQuestCountry />;
 }
 
 export async function loader(request: ImmutableRequest | undefined, params: Record<string, string | string[]>) {

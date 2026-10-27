@@ -613,7 +613,7 @@ export default function QuestByIdScreen({ route, publicProjection }: { route?: Q
     bundle: usableBundle,
     questUrl: canonical,
   });
-  const showQuestSeo = isFocused && !publicProjection && !offlinePrefix && !isQuestPrintRequested(params[QUEST_PRINT_PARAM]);
+  const showQuestSeo = isFocused && !offlinePrefix && !isQuestPrintRequested(params[QUEST_PRINT_PARAM]);
   const seo = useMemo(() => getQuestSeo(bundle, questId, isLoading), [bundle, isLoading, questId]);
   const countModel = bundle ? resolveBundleCountModel(bundle) : null;
   // SSG/Expo Head and the delayed head patches must agree on the derivative URL.

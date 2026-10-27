@@ -5,7 +5,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native'
 import CustomHeader from '@/components/layout/CustomHeader'
 import FreezeWhenBlurred from '@/components/layout/FreezeWhenBlurred'
 import { useThemedColors } from '@/hooks/useTheme'
-import { parseQuestLocaleRoute } from '@/utils/questLocaleRouting'
+import { parseQuestLocaleRoute, type QuestServingProjection } from '@/utils/questLocaleRouting'
 import { readSyncImport } from '@/utils/syncImport'
 import { useDocumentRouteRegistration } from '@/components/layout/documentView'
 
@@ -66,8 +66,8 @@ export default function QuestLocaleRouteScreen() {
   const [QuestByIdScreen] = useState(() => loadedQuestScreen ?? LazyQuestByIdScreen)
   if (registrationOnly) return null
   if (!route) return <NotFoundScreen />
-  const gameplay = <Suspense fallback={<QuestScreenFallback />}>
-    <QuestByIdScreen key={route.path} route={route} />
+  const gameplay = (publicProjection?: QuestServingProjection) => <Suspense fallback={<QuestScreenFallback />}>
+    <QuestByIdScreen key={route.path} route={route} publicProjection={publicProjection} />
   </Suspense>
 
   // CustomHeader owns the top inset for this root Stack route, as on contact.
@@ -76,7 +76,8 @@ export default function QuestLocaleRouteScreen() {
       <View style={styles.root}>
         <CustomHeader />
         {process.env.EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR === 'true'
-          ? <QuestPublicLoaderScreen fallback={gameplay} /> : gameplay}
+          ? <QuestPublicLoaderScreen>{(projection) => gameplay(projection ?? undefined)}</QuestPublicLoaderScreen>
+          : gameplay()}
       </View>
     </FreezeWhenBlurred>
   )

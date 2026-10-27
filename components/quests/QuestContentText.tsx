@@ -2,7 +2,6 @@ import React, { createContext, useContext, useMemo } from 'react'
 import { Platform, Text, type TextProps } from 'react-native'
 import { quotedCyrillicSegments } from '@/utils/cyrillicLanguage'
 import type { QuestStep } from './types'
-import { QuestPublicHeadingContext } from './runtime/QuestPublicHeadingContext'
 
 /**
  * #2473: текст перевода квеста на клиентском экране.
@@ -43,9 +42,6 @@ export type QuestContentTextProps = Omit<TextProps, 'children'> & QuestContentLa
 
 export default function QuestContentText({ children, contentLocale, countryCode, ...textProps }: QuestContentTextProps) {
   const inherited = useContext(QuestContentLanguageContext)
-  const publicHeading = useContext(QuestPublicHeadingContext)
-  const headingProps = Platform.OS === 'web' && publicHeading
-    && (textProps as Record<string, unknown>)['aria-level'] === 1 ? { 'aria-level': 2 as const } : undefined
   const language = useMemo(() => ({
     contentLocale: contentLocale ?? inherited.contentLocale,
     countryCode: countryCode ?? inherited.countryCode,
@@ -54,9 +50,9 @@ export default function QuestContentText({ children, contentLocale, countryCode,
     () => (Platform.OS === 'web' ? quotedCyrillicSegments(children, language) : null),
     [children, language],
   )
-  if (!segments) return <Text {...textProps} {...headingProps}>{children}</Text>
+  if (!segments) return <Text {...textProps}>{children}</Text>
   return (
-    <Text {...textProps} {...headingProps}>
+    <Text {...textProps}>
       {segments.map((segment, index) =>
         segment.lang ? <LangText key={index} lang={segment.lang}>{segment.text}</LangText> : segment.text,
       )}

@@ -6,7 +6,8 @@ import type { QuestLocaleRoute, QuestServingProjection } from '@/utils/questLoca
 export default function QuestDetailRoute({ route, publicProjection }: { route?: QuestLocaleRoute; publicProjection?: QuestServingProjection } = {}) {
   if (route || publicProjection) return <LegacyQuestScreen route={route} publicProjection={publicProjection} />;
   return process.env.EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR === 'true'
-    ? <QuestPublicLoaderScreen fallback={<LegacyQuestScreen />} /> : <LegacyQuestScreen />;
+    ? <QuestPublicLoaderScreen>{(projection) => <LegacyQuestScreen publicProjection={projection ?? undefined} />}</QuestPublicLoaderScreen>
+    : <LegacyQuestScreen />;
 }
 
 export async function loader(request: ImmutableRequest | undefined, params: Record<string, string | string[]>) {
