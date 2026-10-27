@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
-import { useRouter } from 'expo-router'
+import { Link, useRouter, type Href } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import QuestEditorialText from './QuestEditorialText'
@@ -27,6 +27,7 @@ import {
 } from '@/utils/growthFunnelAnalytics'
 import { translatePlural, translate as i18nT } from '@/i18n'
 import { formatInteger, formatNumber } from '@/i18n/format'
+import { webDataSetProps } from '@/utils/webProps'
 
 const createDifficultyLabels = (): Record<string, string> => ({
   easy: i18nT('quests:components.quests.QuestForCityCard.difficulty.easy'),
@@ -47,6 +48,8 @@ function formatDuration(durationMin: number): string {
 }
 
 type Props = {
+  /** A CSS-driven first server document uses one card tree at every viewport. */
+  responsiveWeb?: boolean
   quest: QuestMeta
   /** Надзаголовок над названием квеста */
   eyebrow?: string
@@ -69,6 +72,7 @@ type Props = {
  * Ведёт на /quests/{cityId}/{quest_id}.
  */
 export function QuestForCityCard({
+  responsiveWeb = false,
   quest,
   eyebrow = i18nT('quests:components.quests.QuestForCityCard.gorodskoy_kvest_marshrut_90737ec7'),
   // #1115: дефолт был `eager`. `QuestForCitySection` на travel details рисует
@@ -103,7 +107,9 @@ export function QuestForCityCard({
   // появлялись без стрелок и через ~50 мс дорисовывали их. Разметки карточки нет в
   // статическом HTML (секция лениво подгружается и ждёт данные квестов), поэтому
   // mismatch невозможен и ждать собственный commit незачем.
-  const { isMobile, isPhone, isSmallPhone } = useBreakpoints({ clientOnly: true })
+  const breakpoints = useBreakpoints({ clientOnly: !responsiveWeb })
+  const { isMobile, isPhone, isSmallPhone } = responsiveWeb
+    ? { isMobile: false, isPhone: false, isSmallPhone: false } : breakpoints
   // Телефон (<480pt) — единственная ширина, где плитка и текст спорят за строку:
   // на планшете и десктопе колонка и так шире, чем нужно самому длинному
   // названию выдачи. Поэтому компактная плитка включается именно здесь.
@@ -131,8 +137,8 @@ export function QuestForCityCard({
     if (!href) return
     onPressCard?.()
     trackQuestCardClicked(analyticsParams)
-    router.push(href as any)
-  }, [analyticsParams, href, onPressCard, router])
+    if (!responsiveWeb) router.push(href as any)
+  }, [analyticsParams, href, onPressCard, responsiveWeb, router])
   const chips: { key: string; icon: NavigationIconName; label: string }[] = []
   // Расстояние первым: в блоке «следующий квест рядом» именно оно отвечает на
   // вопрос «дойду ли я туда сейчас».
@@ -166,7 +172,7 @@ export function QuestForCityCard({
       }
     : undefined
 
-  return (
+  const card = (
     <Pressable
       ref={impression.ref}
       onLayout={impression.onLayout}
@@ -185,13 +191,14 @@ export function QuestForCityCard({
         onLayout={mediaVisibility.onLayout}
         collapsable={false}
         style={[styles.media, isNarrowColumn && styles.mediaCompact]}
+        {...(responsiveWeb ? webDataSetProps({ questCardMedia: true }) : {})}
         testID={`quest-card-media-viewport-${quest.id}`}
       >
         <ImageCardMedia
           source={mediaVisibility.visible && coverUri ? { uri: coverUri } : null}
           webResponsiveSource={squareWebResponsiveSource}
-          width={tileSize}
-          height={tileHeight}
+          width={responsiveWeb ? '100%' : tileSize}
+          height={responsiveWeb ? undefined : tileHeight}
           fit="contain"
           blurBackground
           allowCriticalWebBlur
@@ -221,7 +228,7 @@ export function QuestForCityCard({
           // 5. Верхняя граница остаётся страховкой от аномально длинного
           // названия, а не фиксированной высотой: короткому заголовку она
           // ничего не добавляет.
-          numberOfLines={isSmallPhone ? 5 : isPhone ? 4 : isMobile ? 3 : 2}
+          numberOfLines={responsiveWeb ? undefined : isSmallPhone ? 5 : isPhone ? 4 : isMobile ? 3 : 2}
           accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
           aria-level={3 as any}
         >
@@ -250,12 +257,14 @@ export function QuestForCityCard({
           карточка, и на тач-экране она ничего не добавляет. На узкой колонке её
           40px вместе с отступом отдаются заголовку, ради которого заведён #1673. */}
       {isMobile ? null : (
-        <View style={styles.arrow} testID="quest-card-arrow">
+        <View style={styles.arrow} testID="quest-card-arrow"
+          {...(responsiveWeb ? webDataSetProps({ questCardArrow: true }) : {})}>
           <Feather name="arrow-right" size={18} color={colors.primary} />
         </View>
       )}
     </Pressable>
   )
+  return responsiveWeb && href ? <Link href={href as Href} asChild>{card}</Link> : card
 }
 
 function createStyles(colors: ThemedColors) {

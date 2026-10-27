@@ -1,6 +1,6 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
-import { useRouter } from 'expo-router'
+import { Link, useRouter, type Href } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import { ResponsiveContainer } from '@/components/layout'
@@ -11,6 +11,9 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { sendAnalyticsEvent } from '@/utils/analytics'
 import { translate as i18nT } from '@/i18n'
 import { isPhoneLayout } from '@/utils/phoneLayout';
+import { useQuestDiscovery } from '@/components/quests/runtime/QuestDiscoveryContext'
+import { webDataSetProps } from '@/utils/webProps'
+import { buildQuestPath } from '@/utils/routePaths'
 
 
 const IS_WEB = Platform.OS === 'web'
@@ -28,9 +31,11 @@ const SCENARIO_ROUTE = '/quests/scenario'
 function HomeQuestsPromoSection({ enabled = true }: { enabled?: boolean }) {
   const router = useRouter()
   const colors = useThemedColors()
+  const discovery = useQuestDiscovery()
+  const responsiveWeb = IS_WEB && discovery?.view === 'home'
   const { width, isPhone, isLargePhone } = useResponsive()
-  const isMobile = isPhoneLayout({ width, isPhone, isLargePhone })
-  const { quests: previewQuests, loading } = useQuestsPreview(MAX_QUESTS, { enabled })
+  const isMobile = !responsiveWeb && isPhoneLayout({ width, isPhone, isLargePhone })
+  const { quests: previewQuests, loading } = useQuestsPreview(responsiveWeb ? 8 : MAX_QUESTS, { enabled })
   const [hovered, setHovered] = useState(false)
   const [scenarioHovered, setScenarioHovered] = useState(false)
 
@@ -55,24 +60,27 @@ function HomeQuestsPromoSection({ enabled = true }: { enabled?: boolean }) {
   if (loading || visibleQuests.length === 0) return null
 
   return (
-    <View style={[styles.band, isMobile && styles.bandMobile]}>
-      <ResponsiveContainer maxWidth="xl" padding>
-        <View style={styles.header}>
+    <View style={[styles.band, isMobile && styles.bandMobile]}
+      {...(responsiveWeb ? webDataSetProps({ homeQuestPromo: true }) : {})}>
+      <ResponsiveContainer maxWidth="xl" padding clientOnly={!responsiveWeb}
+        dataSet={responsiveWeb ? { homeQuestContainer: true } : undefined}>
+        <View style={styles.header} {...(responsiveWeb ? webDataSetProps({ homeQuestHeader: true }) : {})}>
           <View
             style={styles.titleWrap}
             accessibilityRole="header"
             {...({ 'aria-level': 2 } as any)}
           >
-            <Text style={styles.title}>{i18nT('quests:components.home.HomeQuestsPromoSection.gorodskie_kvesty_6436f91c')}</Text>
+            <Text style={styles.title} {...(responsiveWeb ? webDataSetProps({ homeQuestTitle: true }) : {})}>{i18nT('quests:components.home.HomeQuestsPromoSection.gorodskie_kvesty_6436f91c')}</Text>
           </View>
-          <Text style={styles.subtitle}>
+          <Text style={styles.subtitle} {...(responsiveWeb ? webDataSetProps({ homeQuestSubtitle: true }) : {})}>
             {i18nT('quests:components.home.HomeQuestsPromoSection.peshie_marshruty_po_legendam_i_zagadkam_prya_84e2c2fb')}</Text>
         </View>
 
-        <View style={styles.grid}>
+        <View style={styles.grid} {...(responsiveWeb ? webDataSetProps({ homeQuestGrid: true }) : {})}>
           {visibleQuests.map((quest) => (
             <View key={quest.id} style={[styles.cardSlot, isMobile && styles.cardSlotMobile]}>
               <QuestForCityCard
+                responsiveWeb={responsiveWeb}
                 quest={quest}
                 imageLoading="lazy"
                 analyticsSource="home_quests"
@@ -82,12 +90,24 @@ function HomeQuestsPromoSection({ enabled = true }: { enabled?: boolean }) {
           ))}
         </View>
 
+        {responsiveWeb && (
+          <View {...webDataSetProps({ homeQuestMore: true })}>
+            {previewQuests.slice(MAX_QUESTS_MOBILE, 8).map((quest, offset) => {
+              const href = buildQuestPath(quest.cityId, quest.id)
+              return href ? <Link key={quest.id} href={href as Href}
+                {...webDataSetProps({ homeQuestMoreIndex: offset + MAX_QUESTS_MOBILE })}
+                style={{ color: colors.primaryText, fontSize: 14, lineHeight: 20 }}>{quest.title}</Link> : null
+            })}
+          </View>
+        )}
+
         {/* Подарочный сценарий-вход: отдельный CTA под подбор «квест в подарок». */}
         <Pressable
           onPress={handleScenario}
           accessibilityRole={IS_WEB ? ('link' as any) : 'button'}
           accessibilityLabel={i18nT('quests:components.home.HomeQuestsPromoSection.scenarioAria')}
           style={[styles.scenarioCard, scenarioHovered && styles.scenarioCardHover]}
+          {...(responsiveWeb ? webDataSetProps({ homeQuestScenario: true }) : {})}
           {...(IS_WEB
             ? ({
                 onMouseEnter: () => setScenarioHovered(true),
@@ -113,7 +133,7 @@ function HomeQuestsPromoSection({ enabled = true }: { enabled?: boolean }) {
               родителя. На устройстве это давало аборт на главной. Поэтому вне web
               узел не создаём вовсе; на web раскладка остаётся прежней, CSS-скрытием. */}
           {Platform.OS !== 'web' && isMobile ? null : (
-            <View style={styles.scenarioCta}>
+            <View style={styles.scenarioCta} {...(responsiveWeb ? webDataSetProps({ homeQuestScenarioCta: true }) : {})}>
               <Text style={styles.scenarioCtaText}>
                 {i18nT('quests:components.home.HomeQuestsPromoSection.scenarioCta')}
               </Text>

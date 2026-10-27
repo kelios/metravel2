@@ -1,4 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query';
+import { Platform } from 'react-native';
 
 // Holds a reference to the QueryClient that is actually mounted in the React
 // tree (created per-render in app/_layout.tsx and passed to QueryClientProvider).
@@ -13,7 +14,11 @@ import type { QueryClient } from '@tanstack/react-query';
 let activeClient: QueryClient | null = null;
 
 export const setActiveQueryClient = (client: QueryClient | null): void => {
+    // Concurrent web requests must never publish their private cache into a
+    // process-wide imperative client. SSR consumers use the React provider.
+    if (Platform.OS === 'web' && typeof window === 'undefined') return;
     activeClient = client;
 };
 
-export const getActiveQueryClient = (): QueryClient | null => activeClient;
+export const getActiveQueryClient = (): QueryClient | null =>
+    Platform.OS === 'web' && typeof window === 'undefined' ? null : activeClient;

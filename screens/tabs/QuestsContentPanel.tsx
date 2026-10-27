@@ -23,6 +23,7 @@ import { ALL_QUESTS_ID, COMPLETED_BY_OTHERS_FILTER_ID, COMPLETED_FILTER_ID, REVI
 import { getQuestThemeById } from '@/utils/questThemes';
 import QuestsMobileToolbar from './QuestsMobileToolbar';
 import QuestsSeoIntroFaq from './QuestsSeoIntroFaq';
+import QuestDiscoveryDirectory from '@/components/quests/runtime/QuestDiscoveryDirectory';
 import { pluralizeCompletions, pluralizePlayers, pluralizeQuest, type QuestMeta, type QuestSortOrder, type QuestThemeEntry } from './questsShared';
 import QuestsSortChips, { EMPTY_SORT_ORDERS } from './QuestsSortChips';
 
@@ -546,6 +547,7 @@ function QuestsContentPanel({
                         {seoFaqSlot}
 
                         {searchActive ? null : footerSlot}
+                        <QuestDiscoveryDirectory />
                     </>
                 )}
             </View>

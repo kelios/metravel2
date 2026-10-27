@@ -6,6 +6,8 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { assertHtmlChunkReloadGuards } = require('./lib/htmlChunkReloadGuard');
+const { resolveWebOutput } = require('./lib/webOutput');
+const { getJsBundleSignature, containedFile, assertServerExport } = require('./lib/webServerArtifact');
 
 const rootDir = path.resolve(__dirname, '..');
 
@@ -55,29 +57,6 @@ function createIsolatedExpoTempDir(projectRoot, now = Date.now(), pid = process.
   return tempDir;
 }
 
-// Signature = sorted "name:size" list of every .js chunk currently on disk.
-// Returns null if entry-*.js is missing or any chunk is 0 bytes.
-// Used to detect when Metro has stopped writing new files (stable signature
-// across consecutive polls), so we don't SIGTERM expo while a late chunk is
-// still flushing — that ships a 0-byte chunk and produces "ReferenceError:
-// __d is not defined → white screen" on prod.
-function getJsBundleSignature(buildDir) {
-  const webDir = path.join(buildDir, '_expo', 'static', 'js', 'web');
-  try {
-    const files = fs.readdirSync(webDir).filter((file) => file.endsWith('.js'));
-    if (!files.some((file) => file.startsWith('entry-'))) return null;
-    const sorted = [...files].sort();
-    const parts = [];
-    for (const file of sorted) {
-      const stat = fs.statSync(path.join(webDir, file));
-      if (stat.size === 0) return null;
-      parts.push(`${file}:${stat.size}`);
-    }
-    return parts.join('|');
-  } catch {
-    return null;
-  }
-}
 
 function fileExists(filePath) {
   try {
@@ -87,12 +66,14 @@ function fileExists(filePath) {
   }
 }
 
+
 function main() {
+  const outputMode = resolveWebOutput();
   // Share the cross-session build mutex with build-web-prod.js. When this
   // wrapper is spawned BY the prod build (which already holds the lock),
   // MT_BUILD_LOCK_OWNED=1 is inherited and acquireBuildLock() is a no-op.
-  const { acquireBuildLock, registerBuildLockCleanup } = require('./build-lock');
-  registerBuildLockCleanup();
+  const { acquireBuildLock, releaseBuildLock } = require('./build-lock');
+  process.once('exit', releaseBuildLock);
   acquireBuildLock();
 
   const passthroughArgs = getPassthroughArgs();
@@ -139,6 +120,17 @@ function main() {
     }
   );
 
+  let interrupted = false;
+  for (const signal of ['SIGINT', 'SIGTERM']) {
+    process.once(signal, () => {
+      interrupted = true;
+      child.kill(signal);
+      setTimeout(() => {
+        if (child.exitCode == null && child.signalCode == null) child.kill('SIGKILL');
+      }, 5000).unref();
+    });
+  }
+
   let exportReady = false;
   let terminatedByUs = false;
   let lastSignature = null;
@@ -151,7 +143,9 @@ function main() {
   // file → "ReferenceError: __d is not defined" → white screen on prod.
   const REQUIRED_STABLE_TICKS = 4;
 
-  const readinessTimer = setInterval(() => {
+  // Server exports include a renderer and loader bundles written after client
+  // chunks. Only a successful exporter exit proves those artifacts are final.
+  const readinessTimer = outputMode === 'server' ? null : setInterval(() => {
     if (exportReady) return;
 
     const candidateIndex = path.join(outputDir, 'index.html');
@@ -211,8 +205,19 @@ function main() {
     clearInterval(readinessTimer);
     cleanupIsolatedExpoTempDir();
 
+    if (interrupted) {
+      process.exit(typeof code === 'number' && code !== 0 ? code : 1);
+      return;
+    }
+
     if (code === 0 || (terminatedByUs && exportReady)) {
       try {
+        if (outputMode === 'server') {
+          const result = assertServerExport(outputDir);
+          console.log(`[build-web-safe] SSR export verified: ${result.modules} modules, ${result.assets} client assets`);
+          process.exit(0);
+          return;
+        }
         const { checked } = assertHtmlChunkReloadGuards(outputDir);
         console.log(`[build-web-safe] Chunk reload guard verified in ${checked} HTML files`);
         process.exit(0);
@@ -233,6 +238,8 @@ module.exports = {
   getPassthroughArgs,
   hasPlatformFlag,
   hasClearFlag,
+  containedFile,
+  assertServerExport,
   main,
 };
 

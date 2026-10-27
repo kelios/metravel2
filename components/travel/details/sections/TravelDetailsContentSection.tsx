@@ -15,6 +15,8 @@ import { htmlToPlainText } from '@/utils/seoText'
 import { useTravelDetailsContentSectionModel } from '../hooks/useTravelDetailsContentSectionModel'
 import YouTubeSectionSlot from './YouTubeSectionSlot'
 import DeferredQuestForCitySection from './DeferredQuestForCitySection'
+import TravelLinkGraphSection from './TravelLinkGraphSection'
+import { useTravelLoaderPayload } from '../travelLoaderData'
 import { TravelDetailsDeferredTransition } from '@/components/travel/details/TravelDetailsDeferredTransition'
 import TravelRegisterCtaSection from './TravelRegisterCtaSection'
 import TravelArticleShareTripCta from './TravelArticleShareTripCta'
@@ -60,6 +62,8 @@ export const TravelDetailsContentSection: React.FC<{
   forceOpenKey,
 }) {
   const styles = useTravelDetailsStyles()
+  const loaderPayload = useTravelLoaderPayload()
+  const hasSelectedGraph = Platform.OS === 'web' && Boolean(loaderPayload?.linkGraph)
   const publish = (travel as any).publish
   const moderation = (travel as any).moderation
   // #709: canonical rich_text.*.safe_html с бэка, legacy-поля — fallback для старого payload
@@ -298,7 +302,7 @@ export const TravelDetailsContentSection: React.FC<{
         </View>
       )}
 
-      <TravelDetailsDeferredTransition
+      {hasSelectedGraph ? <TravelLinkGraphSection travel={travel} styles={styles} /> : <TravelDetailsDeferredTransition
         key={travel.id}
         testID="travel-details-quest-transition"
         isMobile={isMobile}
@@ -308,7 +312,7 @@ export const TravelDetailsContentSection: React.FC<{
         allowEmptyRuntime
       >
         <DeferredQuestForCitySection travel={travel} styles={styles} />
-      </TravelDetailsDeferredTransition>
+      </TravelDetailsDeferredTransition>}
     </>
   )
 })

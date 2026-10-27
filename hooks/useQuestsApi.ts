@@ -42,6 +42,7 @@ import {
 import { devWarn } from '@/utils/logger';
 import type { QuestMeta, FrontendQuestBundle } from '@/utils/questAdapters';
 import { translate as i18nT } from '@/i18n'
+import { useQuestDiscovery } from '@/components/quests/runtime/QuestDiscoveryContext';
 
 
 // Re-export types for backward compatibility
@@ -90,9 +91,14 @@ const getErrorMessage = (error: unknown, fallback: string): string =>
 /** Хук для загрузки списка квестов */
 export function useQuestsList(opts?: { enabled?: boolean }) {
     const enabled = opts?.enabled ?? true;
+    const locale = useQuestContentLocale();
+    const discovery = useQuestDiscovery();
+    const initial = discovery?.locale === locale && discovery.view !== 'home' ? discovery.quests : undefined;
     const { data, isPending, error } = useQuery<ApiQuestMeta[]>({
-        ...questsListQueryOptions(useQuestContentLocale()),
+        ...questsListQueryOptions(locale),
         enabled,
+        initialData: initial,
+        initialDataUpdatedAt: initial ? 0 : undefined,
     });
 
     const quests = useMemo<QuestMeta[]>(
@@ -119,6 +125,8 @@ export function useQuestsPreview(limit: number, opts?: { enabled?: boolean }) {
     const enabled = opts?.enabled ?? true;
     const queryClient = useQueryClient();
     const locale = useQuestContentLocale();
+    const discovery = useQuestDiscovery();
+    const initial = discovery?.locale === locale ? discovery.quests : undefined;
 
     const { data, isPending, error } = useQuery<ApiQuestMeta[]>({
         queryKey: queryKeys.questsPreview(limit, locale),
@@ -131,11 +139,12 @@ export function useQuestsPreview(limit: number, opts?: { enabled?: boolean }) {
             // популярные (#1798): без пересортировки блок мигал бы выборкой по
             // id всякий раз, когда главную открывают после экрана квестов.
             const fullList = queryClient.getQueryData<ApiQuestMeta[]>(queryKeys.questsCatalog(locale));
-            return fullList?.length ? selectPopularQuests(fullList, limit) : undefined;
+            return fullList?.length ? selectPopularQuests(fullList, limit)
+                : initial?.length ? selectPopularQuests(initial, limit) : undefined;
         },
         // Возраст среза = возраст каталога, из которого он взят: иначе свежий
         // initialData вечно считался бы актуальным и промо-блок не обновлялся.
-        initialDataUpdatedAt: () => queryClient.getQueryState(queryKeys.questsCatalog(locale))?.dataUpdatedAt,
+        initialDataUpdatedAt: () => queryClient.getQueryState(queryKeys.questsCatalog(locale))?.dataUpdatedAt ?? (initial ? 0 : undefined),
     });
 
     const quests = useMemo<QuestMeta[]>(

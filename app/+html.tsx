@@ -692,9 +692,11 @@ export default function Root({ children }: { children: React.ReactNode }) {
     <body {...bodyAttributes}>
 
     {/* Travel hero preload — moved to body to avoid blocking head parsing on non-travel pages */}
-    <script
-      dangerouslySetInnerHTML={{ __html: getTravelHeroPreloadScript() }}
-    />
+    {process.env.EXPO_PUBLIC_WEB_RUNTIME_SSR !== 'true' ? (
+      <script
+        dangerouslySetInnerHTML={{ __html: getTravelHeroPreloadScript() }}
+      />
+    ) : null}
 
     {children}
 

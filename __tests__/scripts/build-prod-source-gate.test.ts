@@ -210,6 +210,11 @@ describe('build-prod.sh entry point', () => {
   beforeEach(() => {
     root = makeTempDir('build-prod-entry-point-')
     work = path.join(root, 'work')
+    fs.mkdirSync(path.join(work, 'scripts/lib'), { recursive: true })
+    fs.copyFileSync(
+      path.resolve(process.cwd(), 'scripts/lib/webOutput.js'),
+      path.join(work, 'scripts/lib/webOutput.js'),
+    )
     const setup = runCli(
       'bash',
       [
@@ -221,7 +226,7 @@ describe('build-prod.sh entry point', () => {
           'cd work',
           'git symbolic-ref HEAD refs/heads/main',
           'echo one > file.txt',
-          'git add file.txt',
+          'git add file.txt scripts/lib/webOutput.js',
           'git commit -qm one',
           'git remote add origin ../origin',
           'git push -q origin main',

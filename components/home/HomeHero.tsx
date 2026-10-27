@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Platform, View } from 'react-native'
 import { useRouter } from 'expo-router'
 
@@ -29,6 +29,8 @@ import { HOME_HERO_MEDIA_SLOT_RATIO, type QuickFilterParams } from './homeHeroSh
 import { translate as i18nT } from '@/i18n'
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 import { getHomeBookWidth, HOME_BOOK_GEOMETRY, resolveHomeBookGeometry } from './homeBookGeometry'
+import { useQuestDiscovery } from '@/components/quests/runtime/QuestDiscoveryContext'
+import { webDataSetProps } from '@/utils/webProps'
 
 
 const IS_WEB = Platform.OS === 'web'
@@ -72,7 +74,12 @@ const HomeHero = memo(function HomeHero({
   void travelsCountLoading
 
   const router = useRouter()
+  const discovery = useQuestDiscovery()
+  const responsiveWeb = IS_WEB && discovery?.view === 'home'
   const colors = useThemedColors()
+  const observedViewport = useHomeViewport({ clientOnly: !responsiveWeb })
+  // The responsive document has one logical tree. CSS owns its geometry before
+  // hydration; a later dimension update must not change copy, assets or nodes.
   const {
     isSmallPhone,
     isPhone,
@@ -82,7 +89,9 @@ const HomeHero = memo(function HomeHero({
     width: rawWidth,
     height: viewportHeight,
     isPortrait,
-  } = useHomeViewport({ clientOnly: true })
+  } = responsiveWeb ? { ...observedViewport, width: 1440, height: 900,
+    isSmallPhone: false, isPhone: false, isLargePhone: false, isTablet: false,
+    isDesktop: true, isPortrait: false } : observedViewport
 
   // Stabilize width — ignore <50px jitters (e.g. mobile address bar collapse).
   const stableWidthRef = useRef(rawWidth)
@@ -93,7 +102,8 @@ const HomeHero = memo(function HomeHero({
 
   const isMobile = isSmallPhone || isPhone || isLargePhone
   const isLandscape = !isPortrait && isMobile
-  const disableHeroSliderBlur = useMemo(detectDisableHeroSliderBlur, [])
+  const detectedDisableHeroSliderBlur = useMemo(detectDisableHeroSliderBlur, [])
+  const disableHeroSliderBlur = responsiveWeb || detectedDisableHeroSliderBlur
 
   const isNarrowLayout = isMobile || (IS_WEB && width < HOME_HERO_BOOK_LAYOUT_MIN_WIDTH)
   const showSideSlider = IS_WEB && width >= HOME_HERO_BOOK_LAYOUT_MIN_WIDTH && isDesktop
@@ -192,7 +202,11 @@ const HomeHero = memo(function HomeHero({
     visibleSlide,
   } = useHomeHeroSlider({
     slides: BOOK_IMAGES,
-    showSideSlider,
+    // Geometry is CSS-owned, while autoplay remains a desktop-only effect.
+    showSideSlider: responsiveWeb
+      ? observedViewport.width >= HOME_HERO_BOOK_LAYOUT_MIN_WIDTH && observedViewport.isDesktop
+      : showSideSlider,
+    resetWhenInactive: responsiveWeb,
     sliderMediaWidth,
     sliderHeight,
     prefersReducedMotion,
@@ -291,17 +305,28 @@ const HomeHero = memo(function HomeHero({
     ],
   )
 
-  const heroSubtitle = isMobile
+  const heroSubtitle = responsiveWeb
+    ? i18nT('home:components.home.HomeHero.realnye_marshruty_po_belarusi_i_evrope_ot_te_3f0b1078')
+    : isMobile
     ? i18nT('home:components.home.HomeHero.realnye_marshruty_po_belarusi_i_evrope_s_fot_9e18c02e')
     : showSideSlider && bookHeight > 0 && bookHeight < COMPACT_BOOK_MAX_HEIGHT
       ? i18nT('home:components.home.HomeHero.realnye_marshruty_po_belarusi_i_evrope_s_fot_3bbf5fae')
       : i18nT('home:components.home.HomeHero.realnye_marshruty_po_belarusi_i_evrope_ot_te_3f0b1078')
+  const moodRail = <HomeHeroMoodRail
+    colors={colors} styles={styles} isMobile={responsiveWeb || isMobile} isWeb={IS_WEB}
+    moodCards={MOOD_CARDS} onQuickFilterPress={handleQuickFilterPress} />
 
   return (
-    <View testID="home-hero" {...SCREEN_CONTENT_FIRST_PROPS} style={styles.container}>
-      <ResponsiveContainer maxWidth={1920} padding clientOnly>
+    <View testID="home-hero" {...SCREEN_CONTENT_FIRST_PROPS} style={styles.container}
+      {...(responsiveWeb ? webDataSetProps({ homeResponsiveHero: true }) : {})}>
+      <ResponsiveContainer maxWidth={1920} padding clientOnly={!responsiveWeb}
+        dataSet={responsiveWeb ? { homeHeroContainer: true } : undefined}>
         <View style={styles.heroShell}>
           <HomeHeroBookLayout
+            responsiveWeb={responsiveWeb}
+            responsiveMoodRail={responsiveWeb
+              ? <ResponsiveHeroPart enabled name="homeResponsiveMoodRail">{moodRail}</ResponsiveHeroPart>
+              : undefined}
             colors={colors}
             styles={styles}
             isWeb={IS_WEB}
@@ -337,34 +362,33 @@ const HomeHero = memo(function HomeHero({
             onMarkSlideLoaded={markSlideAsLoaded}
             onPageNotesVisibilityChange={setReportedPageNotes}
           />
-          {!bookShowsPageNotes && (
-            <HomeHeroMoodRail
-              colors={colors}
-              styles={styles}
-              isMobile={isMobile}
-              isWeb={IS_WEB}
-              moodCards={MOOD_CARDS}
-              onQuickFilterPress={handleQuickFilterPress}
-            />
-          )}
+          {!responsiveWeb && !bookShowsPageNotes && moodRail}
         </View>
 
-        {!showSideSlider && !isTabletLayout && (
+        {(responsiveWeb || (!showSideSlider && !isTabletLayout)) && (
+          <ResponsiveHeroPart enabled={responsiveWeb} name="homeResponsivePopular">
           <HomeHeroPopularSection
+            responsiveWeb={responsiveWeb}
+            hideFeatured={responsiveWeb}
             colors={colors}
             styles={styles}
             isWeb={IS_WEB}
-            useMobileGrid={isMobile}
+            useMobileGrid={responsiveWeb || isMobile}
             featuredCardWidth={featuredCardWidth}
             popularCardWidth={popularCardWidth}
             popularCardHeight={popularCardHeight}
             bookImages={BOOK_IMAGES}
             onOpenArticle={handleOpenArticle}
           />
+          </ResponsiveHeroPart>
         )}
       </ResponsiveContainer>
     </View>
   )
 })
+
+function ResponsiveHeroPart({ enabled, name, children }: { enabled: boolean; name: string; children: ReactNode }) {
+  return enabled ? <View {...webDataSetProps({ [name]: true })}>{children}</View> : <>{children}</>
+}
 
 export default HomeHero

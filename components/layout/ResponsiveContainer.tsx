@@ -7,6 +7,7 @@ import React, { useMemo } from 'react';
 import { View, StyleSheet, ViewStyle, Platform } from 'react-native';
 import { useResponsive } from '@/hooks/useResponsive';
 import { METRICS } from '@/constants/layout';
+import { webDataSetProps, type WebDataSet } from '@/utils/webProps';
 
 type MaxWidth = keyof typeof METRICS.containers | number;
 
@@ -26,6 +27,7 @@ interface ResponsiveContainerProps {
    * заметную часть CLS главной (#1282). См. HydrationReadyOptions.
    */
   clientOnly?: boolean;
+  dataSet?: WebDataSet;
 }
 
 export default function ResponsiveContainer({
@@ -38,6 +40,7 @@ export default function ResponsiveContainer({
   style,
   testID,
   clientOnly = false,
+  dataSet,
 }: ResponsiveContainerProps) {
   const { isSmallPhone, isPhone, isLargePhone, isTablet, isLargeDesktop } = useResponsive({ clientOnly });
 
@@ -83,6 +86,7 @@ export default function ResponsiveContainer({
 
   return (
     <View
+      {...(Platform.OS === 'web' && dataSet ? webDataSetProps(dataSet) : {})}
       style={[
         styles.container,
         {

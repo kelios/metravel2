@@ -10,6 +10,7 @@ const IOS_SUBMIT_CONFIG_FILES = Object.freeze([
   'package.json',
   'yarn.lock',
   'scripts/android-firebase-config.js',
+  'scripts/lib/webOutput.js',
 ]);
 const IOS_SUBMIT_PROJECT_DIRECTORIES = Object.freeze([
   'node_modules',

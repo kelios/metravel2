@@ -6,13 +6,7 @@ import { translate as i18nT } from '@/i18n'
 import { isLoopQuest } from '@/utils/questAudience'
 import type { FrontendQuestBundle } from '@/utils/questAdapters'
 
-/** Query-параметр адреса печатной версии квеста: `/quests/{city}/{id}?print=1`. */
-export const QUEST_PRINT_PARAM = 'print'
-
-export function isQuestPrintRequested(value: string | string[] | undefined): boolean {
-  const raw = Array.isArray(value) ? value[0] : value
-  return raw === '1' || raw === 'true'
-}
+export { QUEST_PRINT_PARAM, isQuestPrintRequested } from '@/utils/questPrintRequest'
 
 type Options = {
   enabled: boolean

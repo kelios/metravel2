@@ -1,5 +1,5 @@
 import React, { Suspense, memo, useCallback, useEffect, useMemo, useState } from 'react'
-import { Platform, RefreshControl, ScrollView, StyleSheet, View } from 'react-native'
+import { Platform, RefreshControl, ScrollView, StyleSheet, View, type DimensionValue } from 'react-native'
 import { useIsFocused } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
@@ -18,6 +18,9 @@ import { useProgressiveLoad, type ProgressiveLoadConfig } from '@/hooks/useProgr
 import { useHomeViewport } from './useHomeViewport'
 import { HOME_WEB_SCROLL_DOCK_CLIP, homeWebScrollEndPadding } from './homeScrollDockClip'
 import { buildCanonicalUrl } from '@/utils/seo'
+import { useQuestDiscovery } from '@/components/quests/runtime/QuestDiscoveryContext'
+import HomeResponsiveStyles from './HomeResponsiveStyles'
+import { webDataSetProps } from '@/utils/webProps'
 import {
   EmailSubscriptionForm,
   HomeAppPromoSection,
@@ -54,7 +57,7 @@ const WEB_SCROLL_STYLE = IS_WEB
 
 type PageSectionProps = {
   children: React.ReactNode
-  marginTop: number
+  marginTop: number | string
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | 'full' | number
   padding?: boolean
 }
@@ -62,11 +65,12 @@ type PageSectionProps = {
 type DeferredSectionProps = {
   children: React.ReactNode
   fallback: React.ReactNode
-  marginTop: number
-  minHeight?: number
+  marginTop: number | string
+  minHeight?: number | string
   container?: { maxWidth?: PageSectionProps['maxWidth']; padding?: boolean }
   priority?: ProgressiveLoadConfig['priority']
   rootMargin?: string
+  forceLoad?: boolean
 }
 
 // The first content feed remains eager. Everything below it is mounted when it
@@ -91,6 +95,7 @@ function DeferredSection({
   container,
   priority = 'immediate',
   rootMargin = '600px 0px',
+  forceLoad = false,
 }: DeferredSectionProps) {
   const { shouldLoad, setElementRef } = useProgressiveLoad({
     priority,
@@ -98,7 +103,7 @@ function DeferredSection({
     threshold: 0,
     disableFallbackOnWeb: priority !== 'immediate' && priority !== 'high',
   })
-  const content = shouldLoad ? <Suspense fallback={fallback}>{children}</Suspense> : fallback
+  const content = forceLoad || shouldLoad ? <Suspense fallback={fallback}>{children}</Suspense> : fallback
   const wrapped = container ? (
     <ResponsiveContainer maxWidth={container.maxWidth ?? 'xl'} padding={container.padding ?? true}>
       {content}
@@ -110,7 +115,8 @@ function DeferredSection({
   return (
     <View
       ref={setElementRef}
-      style={Platform.OS === 'web' && minHeight ? { marginTop, minHeight } : { marginTop }}
+      style={{ marginTop: marginTop as DimensionValue,
+        ...(Platform.OS === 'web' && minHeight ? { minHeight: minHeight as DimensionValue } : {}) }}
     >
       {wrapped}
     </View>
@@ -189,13 +195,13 @@ const FaqFallback = memo(function FaqFallback({
 })
 
 function Home() {
+  const discovery = useQuestDiscovery()
+  const responsiveHome = IS_WEB && discovery?.view === 'home'
   const isFocused = useIsFocused()
   const { isAuthenticated, userId } = useAuth()
   const colors = useThemedColors()
   const queryClient = useQueryClient()
-  // Home монтируется только после гидратации (index.tsx: `canMountContent`),
-  // поэтому первый кадр обязан знать реальную ширину — см. #1282.
-  const { isSmallPhone, isPhone } = useHomeViewport({ clientOnly: true })
+  const { isSmallPhone, isPhone } = useHomeViewport({ clientOnly: !responsiveHome })
   const isMobile = isSmallPhone || isPhone
 
   const [refreshing, setRefreshing] = useState(false)
@@ -261,11 +267,16 @@ function Home() {
     [isMobile],
   )
   const { gap, padH, padV } = layout
+  const sectionGap = (name: 'hero' | 'weekends' | 'sections' | 'faq' | 'finalCta') =>
+    responsiveHome ? `var(--home-gap-${name === 'finalCta' ? 'final' : name})` : gap[name]
+  const sectionHeight = (name: 'weekends' | 'feed', phone: number, desktop: number) =>
+    responsiveHome ? `var(--home-height-${name})` : isMobile ? phone : desktop
 
   return (
     <ScrollView
+      {...(responsiveHome ? webDataSetProps({ homeRuntimeLayout: true }) : {})}
       style={[styles.container, WEB_SCROLL_STYLE]}
-      contentContainerStyle={styles.contentContainer}
+      contentContainerStyle={[styles.contentContainer, responsiveHome && { paddingBottom: 'var(--home-scroll-end)' as DimensionValue }]}
       showsVerticalScrollIndicator={false}
       scrollEventThrottle={IS_WEB ? 32 : 16}
       nestedScrollEnabled={Platform.OS === 'android'}
@@ -280,6 +291,7 @@ function Home() {
         )
       }
     >
+      {responsiveHome && <HomeResponsiveStyles />}
       <HomeHero
         travelsCount={travelsCount}
         travelsCountLoading={isAuthenticated && travelsCountLoading}
@@ -295,15 +307,16 @@ function Home() {
           в пределах первых экранов прокрутки (INV2-05). Секция остаётся lazy:
           пока грузится/пусто — рисует null, так что hero-текст остаётся LCP. */}
       <DeferredSection
-        marginTop={gap.hero}
+        marginTop={sectionGap('hero')}
         minHeight={360}
         fallback={null}
         priority="high"
+        forceLoad={responsiveHome}
       >
         <HomeQuestsPromoSection enabled={isFocused} />
       </DeferredSection>
 
-      <DeferredSection marginTop={gap.weekends} minHeight={isMobile ? 520 : 560} container={{}} fallback={<SectionSkeleton />}>
+      <DeferredSection marginTop={sectionGap('weekends')} minHeight={sectionHeight('weekends', 520, 560)} container={{}} fallback={<SectionSkeleton />}>
         <HomeWeekendRoutesSection enabled={isFocused} />
       </DeferredSection>
 
@@ -314,8 +327,8 @@ function Home() {
           же, что и раньше — до #1475 `high` в useProgressiveLoad вообще
           ничем не отличался от `normal`. */}
       <DeferredSection
-        marginTop={gap.weekends}
-        minHeight={isMobile ? 500 : 540}
+        marginTop={sectionGap('weekends')}
+        minHeight={sectionHeight('feed', 500, 540)}
         container={{}}
         fallback={<SectionSkeleton />}
         priority="normal"
@@ -324,14 +337,14 @@ function Home() {
       </DeferredSection>
 
       {IS_WEB && (
-        <DeferredSection marginTop={gap.sections} minHeight={320} fallback={null} priority="low">
+        <DeferredSection marginTop={sectionGap('sections')} minHeight={320} fallback={null} priority="low">
           <HomeAppPromoSection />
         </DeferredSection>
       )}
 
       <DeferredSection
-        marginTop={gap.weekends}
-        minHeight={isMobile ? 500 : 540}
+        marginTop={sectionGap('weekends')}
+        minHeight={sectionHeight('feed', 500, 540)}
         container={{}}
         fallback={<SectionSkeleton />}
         priority="low"
@@ -339,12 +352,12 @@ function Home() {
         <HomeNewRoutesSection enabled={isFocused} />
       </DeferredSection>
 
-      <DeferredSection marginTop={gap.sections} minHeight={320} fallback={<SectionSkeleton />} priority="low">
+      <DeferredSection marginTop={sectionGap('sections')} minHeight={320} fallback={<SectionSkeleton />} priority="low">
         <HomeInspirationSections />
       </DeferredSection>
 
       <DeferredSection
-        marginTop={gap.faq}
+        marginTop={sectionGap('faq')}
         minHeight={360}
         fallback={<FaqFallback colors={colors} isMobile={isMobile} padH={padH} padV={padV} />}
         priority="low"
@@ -352,11 +365,11 @@ function Home() {
         <HomeFAQSection />
       </DeferredSection>
 
-      <DeferredSection marginTop={gap.sections} minHeight={240} fallback={null} priority="low">
+      <DeferredSection marginTop={sectionGap('sections')} minHeight={240} fallback={null} priority="low">
         <EmailSubscriptionForm source="home" pageUrl={buildCanonicalUrl('/')} clientOnly />
       </DeferredSection>
 
-      <DeferredSection marginTop={gap.finalCta} minHeight={300} fallback={<SectionSkeleton />} priority="low">
+      <DeferredSection marginTop={sectionGap('finalCta')} minHeight={300} fallback={<SectionSkeleton />} priority="low">
         <HomeBottomCtaSection travelsCount={travelsCount} />
       </DeferredSection>
     </ScrollView>

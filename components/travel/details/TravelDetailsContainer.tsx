@@ -34,6 +34,7 @@ import type { Travel } from '@/types/types'
 import { buildTravelPathFromTravel } from '@/utils/routePaths'
 import { cacheTravelOffline } from '@/hooks/useOfflineTravelCache'
 import { translate as i18nT } from '@/i18n'
+import { useTravelLoaderPayload } from './travelLoaderData'
 
 // #2118: слои рантайм-хрома по платформе — `getTravelDetailsRuntimeLayers`.
 const RUNTIME_LAYERS = getTravelDetailsRuntimeLayers(Platform.OS)
@@ -140,6 +141,7 @@ function useTravelSeoElement({
 }
 
 export default function TravelDetailsContainer() {
+  const loaderPayload = useTravelLoaderPayload()
   // useResponsive is hydration-safe: width=0 during SSR and first client render,
   // matching the SSG snapshot (Node.js window undefined → Dimensions=0).
   const { width: screenWidth } = useResponsive()
@@ -289,7 +291,7 @@ export default function TravelDetailsContainer() {
     canonicalUrl,
     headKey,
     isFocused,
-    jsonLd,
+    jsonLd: loaderPayload ? null : jsonLd,
     readyDesc,
     readyImage,
     readyTitle,

@@ -64,6 +64,16 @@ describe('post-deploy SEO check helpers', () => {
     )
   })
 
+  it('accepts the real loader-owned heading and its shared Article graph', () => {
+    const html = '<h1 data-router-travel-h1="true">Travel title</h1>'
+      + '<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Article"},{"@type":"BreadcrumbList"}]}</script>'
+    expect(validateTravelHtml(html)).toEqual([])
+    expect(validateTravelHtml(html.replace('<h1 ', '<h1 hidden ')).map((issue: { code: string }) => issue.code))
+      .toContain('travel.h1.hidden')
+    expect(validateTravelHtml(`<style>[data-router-travel-h1="true"]{display:none}</style>${html}`)
+      .map((issue: { code: string }) => issue.code)).toContain('travel.h1.hidden')
+  })
+
   it('rejects hidden, clipped, and duplicate travel H1 contracts', () => {
     const hidden = '<style>.ssg-travel-h1{position:absolute;width:1px;height:1px;clip:rect(0,0,0,0)}</style><h1 class="ssg-travel-h1">Travel title</h1>'
     expect(hasVisibleTravelSsgH1(hidden)).toBe(false)
@@ -280,10 +290,14 @@ describe('post-deploy SEO check helpers', () => {
     // которого проверка и существует. Поэтому роутер спрашивается здесь.
     it('keeps every static quest route out of the catalog-decided family', () => {
       const routesDir = path.join(process.cwd(), 'app', '(tabs)', 'quests')
-      const staticSegments = fs
-        .readdirSync(routesDir, { withFileTypes: true })
-        .map((entry: any) => entry.name.replace(/\.tsx$/, ''))
-        .filter((name: string) => name !== 'index' && !name.startsWith('[') && !name.startsWith('_'))
+      // `scenario.web.tsx` — платформенный вариант того же сегмента, не новый роут.
+      const staticSegments = [
+        ...new Set(
+          fs
+            .readdirSync(routesDir, { withFileTypes: true })
+            .map((entry: any) => entry.name.replace(/(\.(web|native|ios|android))?\.tsx$/, '')),
+        ),
+      ].filter((name: string) => name !== 'index' && !name.startsWith('[') && !name.startsWith('_'))
 
       expect(staticSegments.sort()).toEqual(['country', 'map', 'scenario', 'theme'])
       for (const segment of staticSegments) {

@@ -121,6 +121,20 @@ done
 echo "🚀 Прод-выкат $SHORT из ${WT} (DEPLOY=$DEPLOY)"
 if [[ "$DEPLOY" == "1" ]]; then
   check_prod_checkout_clean
+  # The committed rollout switch (WEB_SSR_ROLLOUT_ENABLED in webOutput.js) and
+  # the installed backend capability together select the runtime model. A
+  # broken/malformed installed helper must fail closed, never downgrade a live
+  # SSR release to an ordinary static build.
+  SSR_CAPABILITY="$(bash "$WT/scripts/web-ssr-publication.sh" capability)"
+  WEB_OUTPUT="$(node -e 'const {resolveDeployWebOutput}=require(process.argv[1]); process.stdout.write(resolveDeployWebOutput(JSON.parse(process.argv[2])).output)' "$WT/scripts/lib/webOutput.js" "$SSR_CAPABILITY")"
+  QUEST_WEB_RUNTIME="$(node -e 'const {resolveDeployWebOutput}=require(process.argv[1]); process.stdout.write(String(resolveDeployWebOutput(JSON.parse(process.argv[2])).questRuntime))' "$WT/scripts/lib/webOutput.js" "$SSR_CAPABILITY")"
+  export EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR="$QUEST_WEB_RUNTIME"
+  if [[ "$WEB_OUTPUT" == server ]]; then
+    export METRAVEL_WEB_OUTPUT=server EXPO_PUBLIC_WEB_RUNTIME_SSR=true
+    echo '✅ Backend SSR готов: один серверный экспорт и связанная публикация'
+  else
+    export METRAVEL_WEB_OUTPUT=static EXPO_PUBLIC_WEB_RUNTIME_SSR=false
+  fi
 fi
 set +e
 if [[ "${DEPLOY_QUIET:-0}" == "1" ]]; then

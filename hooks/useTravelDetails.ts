@@ -4,8 +4,8 @@ import { readRetryTwice } from '@/utils/queryRetryPolicy';
  * Изолирует логику загрузки данных от UI-компонентов
  */
 
-import { useCallback, useEffect, useMemo } from 'react';
-import { onlineManager, useQuery } from '@tanstack/react-query';
+import { useCallback, useEffect, useLayoutEffect, useMemo } from 'react';
+import { onlineManager, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { normalizeTravelItem } from '@/api/travelsNormalize';
 import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
@@ -20,6 +20,7 @@ import {
 } from '@/utils/publicStaleCache';
 import { loadTravelOfflineAdapter } from '@/services/offline/loadTravelOfflineAdapter';
 import { normalizeTravelRouteSegment } from '@/utils/travelRouteSegment';
+import { useTravelLoaderPayload } from '@/components/travel/details/travelLoaderData';
 
 export interface UseTravelDetailsReturn {
   travel: Travel | undefined;
@@ -56,6 +57,7 @@ type TravelPreloadWindow = Window & typeof globalThis & {
 const PRELOAD_WAIT_TIMEOUT_MS = 500;
 const PRELOAD_BOOTSTRAP_READY_TIMEOUT_MS = 350;
 const PRELOAD_POLL_INTERVAL_MS = 25;
+const useClientLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 // The inline preload bootstrap (app/+html.tsx) runs once, only for the initial
 // document URL, and records the path it targeted in __metravelTravelPreloadTargetPath.
@@ -301,6 +303,7 @@ async function waitForTravelPreload(
 }
 
 export function useTravelDetails(): UseTravelDetailsReturn {
+  const queryClient = useQueryClient();
   const { param } = useLocalSearchParams();
   const slug = Array.isArray(param) ? param[0] : (param ?? '');
   const idNum = Number(slug);
@@ -310,9 +313,11 @@ export function useTravelDetails(): UseTravelDetailsReturn {
   const normalizedSlug = normalizeTravelRouteSegment(slug);
   const isMissingParam = normalizedSlug.length === 0;
   const cacheKey = isId ? idNum : normalizedSlug;
+  const loaderPayload = useTravelLoaderPayload();
+  const loaderTravel = loaderPayload?.routeKey === normalizedSlug ? loaderPayload.travel : undefined;
   const initialPreloadedTravel = useMemo(
-    () => consumePreloadedTravel(normalizedSlug, isId, idNum, { consume: false }),
-    [normalizedSlug, isId, idNum]
+    () => loaderTravel ?? consumePreloadedTravel(normalizedSlug, isId, idNum, { consume: false }),
+    [loaderTravel, normalizedSlug, isId, idNum]
   );
   // #1479: The SSG inline preload for this slug carries only `media.cover`; the
   // full manifest is fetched in the background. Detect that partial state here
@@ -320,6 +325,7 @@ export function useTravelDetails(): UseTravelDetailsReturn {
   // so first paint still hydrates from the preload while the query is told to
   // backfill the full media once on mount.
   const preloadMediaPartial = useMemo(() => {
+    if (loaderTravel) return Boolean(loaderPayload?.mediaPartial);
     if (Platform.OS !== 'web' || typeof window === 'undefined') return false;
     const preload = (window as TravelPreloadWindow).__metravelTravelPreload;
     if (!preload?.mediaPartial) return false;
@@ -327,14 +333,14 @@ export function useTravelDetails(): UseTravelDetailsReturn {
       ? preload.isId && String(preload.slug) === String(idNum)
       : !preload.isId && preload.slug === normalizedSlug;
     return Boolean(matches);
-  }, [normalizedSlug, isId, idNum]);
+  }, [loaderTravel, loaderPayload?.mediaPartial, normalizedSlug, isId, idNum]);
   useEffect(() => {
-    if (!initialPreloadedTravel) return;
+    if (!initialPreloadedTravel || loaderTravel) return;
     const timeoutId = setTimeout(() => {
       consumePreloadedTravel(normalizedSlug, isId, idNum);
     }, 0);
     return () => clearTimeout(timeoutId);
-  }, [initialPreloadedTravel, normalizedSlug, isId, idNum]);
+  }, [initialPreloadedTravel, loaderTravel, normalizedSlug, isId, idNum]);
   const shouldRefetchInAutomation = isWebAutomation && !initialPreloadedTravel;
 
   const {
@@ -410,6 +416,9 @@ export function useTravelDetails(): UseTravelDetailsReturn {
   const stableRefetch = useCallback(() => {
     refetch();
   }, [refetch]);
+  useClientLayoutEffect(() => {
+    if (loaderTravel) queryClient.setQueryData(queryKeys.travel(cacheKey), loaderTravel);
+  }, [queryClient, cacheKey, loaderTravel]);
   // A failed partial-media backfill must not replace the already-renderable SSG
   // article with the full-page load error. The trimmed payload keeps legacy URL
   // fallbacks for below-fold media, so that path is fatal only with no usable

@@ -1,4 +1,4 @@
-import { searchInputAccessibilityProps } from '@/utils/webProps'
+import { searchInputAccessibilityProps, webDataSetProps } from '@/utils/webProps'
 import React, { memo, useCallback, useState } from 'react'
 import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
@@ -9,6 +9,7 @@ import { translate as i18nT } from '@/i18n'
 
 
 type HomeHeroSearchBarProps = {
+  responsiveWeb?: boolean
   colors: ThemedColors
   isMobile: boolean
   onSubmit: (query: string) => void
@@ -16,6 +17,7 @@ type HomeHeroSearchBarProps = {
 }
 
 function HomeHeroSearchBar({
+  responsiveWeb = false,
   colors,
   isMobile,
   onSubmit,
@@ -38,7 +40,7 @@ function HomeHeroSearchBar({
   }, [onSubmit, value])
 
   return (
-    <View style={styles.wrap}>
+    <View style={styles.wrap} {...(responsiveWeb ? webDataSetProps({ homeBookSearch: true }) : {})}>
       <View style={styles.field}>
         <Feather name="search" size={18} color={inputMutedColor} />
         <TextInput

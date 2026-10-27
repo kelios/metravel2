@@ -2,6 +2,37 @@ import { getTravelDetailsSeoViewModel } from '@/components/travel/details/hooks/
 import { normalizeTravelItem } from '@/api/travelsNormalize';
 
 describe('getTravelDetailsSeoViewModel', () => {
+  it.each([
+    { travel_image_detail_hd_url: 'https://metravel.by/travel-image/679/conversions/hash-detail_hd.jpg' },
+    { travel_image_thumb_url: 'https://metravel.by/travel-image/679/conversions/hash-thumb_200.jpg' },
+  ])('preserves the published HD social image when the gallery is empty: %j', (cover) => {
+    const seo = getTravelDetailsSeoViewModel({ id: 679, name: 'Поездка', slug: 'demo', gallery: [], ...cover }, 'demo');
+    expect(seo.readyImage).toBe('https://metravel.by/travel-image/679/conversions/hash-detail_hd.jpg?w=1280');
+  });
+
+  it('rejects bare media endpoint images in the shared published fallback order', () => {
+    const seo = getTravelDetailsSeoViewModel({ id: 679, name: 'Поездка', gallery: [{ url: '/gallery/' }],
+      travel_image_thumb_url: '/travel-image/' }, 'demo');
+    expect(seo.readyImage).toBe('https://metravel.by/assets/icons/logo_yellow_512x512.png');
+  });
+
+  it('preserves the published contextual description for short editorial leads', () => {
+    const travel = { id: 116, name: 'Минск', countryName: 'Беларусь', slug: 'minsk-fixture',
+      description: '<p>Утро в Минске: набережная и старые улицы.</p>', gallery: [] };
+    expect(getTravelDetailsSeoViewModel(travel, travel.slug).readyDesc).toBe(
+      'Утро в Минске: набережная и старые улицы. Минск — Беларусь. Маршрут, советы и впечатления путешественников в MeTravel.',
+    );
+  });
+
+  it('preserves a complete late sentence from the published snippet when the body is longer', () => {
+    const sentence = 'Прогулка ведёт через исторический центр города, вдоль старых домов и набережной, к зелёному парку и замку.';
+    const travel = { id: 116, name: 'Минск', slug: 'minsk-fixture',
+      description: `<p>${sentence} ${'Дальше открываются новые места и виды. '.repeat(6)}</p>` };
+    expect(getTravelDetailsSeoViewModel(travel, travel.slug).readyDesc).toBe(
+      `${sentence} Дальше открываются новые места и виды.`,
+    );
+  });
+
   it('uses the same stored metadata as SSG after API normalization without changing canonical or title', () => {
     const meta = 'Прогулка по старому городу: замок, набережная и тихие улицы. Советы для самостоятельной поездки.';
     const raw = { id: 116, name: 'Прогулка по Минску', slug: 'minsk-fixture',

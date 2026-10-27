@@ -28,6 +28,7 @@ import {
 import { useTravelSsgHeroHandoff } from './useTravelSsgHeroHandoff'
 import { translate as i18nT } from '@/i18n'
 import SliderCaption from '../sliderParts/SliderCaption'
+import { useTravelLoaderPayload } from './travelLoaderData'
 
 // #1499: раньше выбор делался здесь — `Platform.OS === 'web' ? Lazy : Static`.
 // Статический импорт native-ветки остаётся ребром графа и в web-бандле, поэтому
@@ -131,13 +132,15 @@ function TravelHeroSectionInner({
   const willRenderQuickJumps = !suppressQuickJumps && showQuickJumps && quickJumpLinks.length > 0
   const showFavoriteToggle = !deferExtras && (!(Platform.OS === 'web') || extrasReady)
 
+  const loaderPayload = useTravelLoaderPayload()
+  const isRouterSsrTravel = Platform.OS === 'web' && Boolean(loaderPayload?.travel)
   const heroContainerStyle = useMemo(
     () => [
       styles.sliderContainer,
-      { height: heroHeight },
+      !isRouterSsrTravel ? { height: heroHeight } : null,
       Platform.OS === 'web' ? ({ overflow: 'hidden' } as const) : null,
     ],
-    [styles.sliderContainer, heroHeight],
+    [styles.sliderContainer, heroHeight, isRouterSsrTravel],
   )
 
   const isWeb = Platform.OS === 'web'
@@ -267,6 +270,7 @@ function TravelHeroSectionInner({
                     img={firstImg}
                     alt={heroAlt}
                     height={heroHeight}
+                    viewportHeight={isRouterSsrTravel}
                     isMobile={isMobile}
                     media={findGalleryMediaImage(travel.media, firstImg.id)}
                     onLoad={handleWebHeroLoad}
@@ -305,7 +309,9 @@ function TravelHeroSectionInner({
         <SliderCaption caption={heroSliderImages[currentIndex]?.caption} />
       </View>
 
-      {isMobile ? <TravelAuthorQuickLink travel={travel} /> : null}
+      {isRouterSsrTravel ? (
+        <div data-ssr-mobile-author="true"><TravelAuthorQuickLink travel={travel} /></div>
+      ) : isMobile ? <TravelAuthorQuickLink travel={travel} /> : null}
 
       <ExtrasSlot
         styles={styles}

@@ -1282,6 +1282,42 @@ native-геозоны используют только координаты ш�
 
 ## SEO и SSG
 
+### Отдельная публикация данных и SSR (#2766 / #2771)
+
+При capability `quest_web` schema 2 и `EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR=true`
+детали RU/BE/UK/PL/EN, RU-лендинги города и страны получают одну выбранную
+публичную проекцию через официальный route loader. Транспорт общий с travel
+(`utils/ssr/fetchPublicRouteJson.ts`); `utils/questPublicPage.js` проверяет
+идентичность пути, ревизии и разрешённые поля до рендера. Canonical, robots,
+JSON-LD и видимое тело читают тот же loader result. `requested_path` может
+подтверждать только проверенный сервером alias; браузер не придумывает alias
+из несовпадающего canonical.
+
+`scripts/lib/questWebProjection.js` строит безопасные intro/facts/digest/links
+из согласованного приватного snapshot. Порог собственного текста остаётся
+`questPageDepth`: 300 слов и 30% собственных 5-грамм по виду страницы и локали.
+Сырые `task`, `hint`, ответы, прогресс и полный gameplay bundle остаются на
+приватном stdin сборщика. `package-quest-web-builder.js --output-dir <dir>`
+создаёт автономный Node 22 artifact и SHA-256 receipt; публикация данных
+использует закреплённый artifact независимо от указателя frontend-кода.
+
+`QuestPublicLoaderScreen.web.tsx` рендерит настоящий постоянный React intro;
+действие начала подключает gameplay рядом с ним. Контекст владельца заголовка
+сохраняет один H1. Native и неактивированный web используют прежние маршруты.
+`/`, `/quests` и `/quests/scenario` получают ограниченный discovery seed без
+личных данных. Seed не заменяет существующий browser cache; обычный query
+проходит барьер credentials и повторно запрашивает актуальное личное состояние.
+Частичная home preview не записывается как полный каталог.
+
+Для loader-подтверждённой главной CSS определяет геометрию до JavaScript:
+`HomeResponsiveStyles.web.tsx` и старый SSG adapter используют один
+`homeBookGeometryCss.js`. H1, поиск, CTA, primary media и текстовые ветки
+постоянны при гидратации; CSS выбирает mobile/tablet/book раскладку и 4/6
+карточек промо. Проверка на браузере, включая первый кадр/CLS и сохранённую
+локаль, остаётся обязательной после review и выката.
+
+### Статическая выдача до активации capability
+
 - Мета детали строит `buildQuestSeoMetadata` (`utils/questSeo.js`, CommonJS —
   общий модуль для приложения и сборочных скриптов): брендированный title с
   клампом длины и description с клампом до 160 закодированных символов.

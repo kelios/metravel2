@@ -1,13 +1,12 @@
 import { Platform } from 'react-native'
-import { DEFAULT_OG_IMAGE_PATH, buildCanonicalUrl, normalizeOgImageUrl } from '@/utils/seo'
-import { getStoredTravelSeoDescription } from '@/utils/seoText'
+import { DEFAULT_OG_IMAGE_PATH, buildCanonicalUrl, getSiteBaseUrl, normalizeOgImageUrl } from '@/utils/seo'
+import { buildTravelSeoDescription } from '@/utils/travelSeoDescription'
+import { pickTravelSeoImage } from '@/utils/travelSeoImage'
 
 import {
   buildIndexableTravelPath,
-  buildTravelSeoFallbackDescription,
   buildTravelSeoTitle,
   createTravelStructuredData,
-  getTravelSeoDescription,
 } from '@/utils/travelSeo'
 
 export function getTravelDetailsHeadKey(slug: string, travelId?: number | string | null) {
@@ -26,13 +25,9 @@ export function getTravelDetailsSeoViewModel(travel: any, slug: string) {
   // и Метрика/GA4 успевали снять hit с транслитом (см. Метрика 12.07.2026).
   // Анти-generic фолбэк для не-пререндеренных страниц живёт в app/+html.tsx.
   const title = displayTitle ? buildTravelSeoTitle(displayTitle) : null
-  const desc = getStoredTravelSeoDescription(travel?.meta_description) ?? (
-    typeof travel?.description === 'string' && travel.description.trim()
-      ? getTravelSeoDescription(travel.description)
-      : displayTitle
-        ? buildTravelSeoFallbackDescription(displayTitle)
-        : null
-  )
+  const desc = displayTitle || travel?.description
+    ? buildTravelSeoDescription({ ...travel, name: displayTitle }, travel?.description, travel?.meta_description)
+    : null
   // #1438: ветки проверяли только `typeof slug === 'string' && slug`, поэтому
   // литерал `'null'` (его давал нормализатор из `slug: null`) считался живым
   // слагом, и страница отдавала canonical/og:url `https://metravel.by/travels/null`.
@@ -45,12 +40,9 @@ export function getTravelDetailsSeoViewModel(travel: any, slug: string) {
   const canonicalPath =
     buildIndexableTravelPath(travel?.slug) ?? buildIndexableTravelPath(slug)
   const canonical = canonicalPath ? buildCanonicalUrl(canonicalPath) : undefined
-  const rawFirst = travel?.gallery?.[0] || travel?.travel_image_thumb_url
-  const firstUrl = rawFirst
-    ? typeof rawFirst === 'string'
-      ? rawFirst
-      : rawFirst.url
-    : undefined
+  const firstUrl = pickTravelSeoImage(travel, travel, {
+    siteUrl: getSiteBaseUrl(), fallbackImage: DEFAULT_OG_IMAGE_PATH,
+  })
   // #1221: своя нормализация здесь делала ровно половину работы — поднимала до https,
   // но оставляла ownership-URL без `?w=`, и рантайм-патч головы (`useTravelDetailsHeadSync`)
   // перебивал шириной снабжённый SSG-тег «голым» адресом, то есть мастером с `no-store`.

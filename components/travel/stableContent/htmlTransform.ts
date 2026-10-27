@@ -17,6 +17,7 @@ import { normalizeRichTextListFragments } from '@/utils/richTextLists'
 import { sanitizeRichText } from '@/utils/sanitizeRichText'
 import { applySmartImageLayout } from '@/utils/richTextImageLayout'
 import { guardServerSafeHtml } from '@/utils/serverSafeHtml'
+import { demoteRichTextPageHeadings } from '@/utils/richTextHeadings'
 import {
   familyRouteOfMediaUrl,
   isLegacyResizeRouteUrl,
@@ -834,9 +835,7 @@ export const prepareStableContentHtml = (html: string, options?: PrepareStableCo
   const normalized = replaceYouTubeIframes(
     normalizeImgTags(stripDangerousTags(safe), options?.articleBodyMedia ?? null),
   )
-  const demoted = normalized
-    .replace(/<\s*h1(\b[^>]*)>/gi, '<h2$1>')
-    .replace(/<\s*\/\s*h1\s*>/gi, '</h2>')
+  const demoted = demoteRichTextPageHeadings(normalized)
   const truncated = truncateInstagramCaptions(demoted)
   const normalizedLists = normalizeRichTextListFragments(truncated)
   return injectAutoHeadingAnchors(decorateRichImageFrames(applySmartImageLayout(normalizedLists)))

@@ -33,13 +33,16 @@ const { isLegacyResizeRoutePath, toLegacyResizePath } = require('./lib/readerMed
 const { injectSkeletonShell } = require('./ssg-skeletons');
 const { ensureHtmlChunkReloadGuards } = require('./lib/htmlChunkReloadGuard');
 const { buildQuestSeoMetadata, buildBrandedSeoTitle, clampMetaDescription } = require('../utils/questSeo');
+const { FAQ_SECTION_OPEN_TAG, extractFaqEntries, buildTravelFaqJsonLd } = require('../utils/travelFaq');
+const { buildTravelArticleStructuredData, buildTravelBreadcrumbStructuredData } = require('../utils/travelArticleJsonLd');
+const { buildTravelSeoDescription, truncateSeoText } = require('../utils/travelSeoDescription');
+const { isBareMediaEndpointUrl, upgradeThumbToDetailUrl, pickTravelSeoImage: pickSharedTravelSeoImage } = require('../utils/travelSeoImage');
+const { findQuestCityTravelLinks } = require('../utils/questTravelLinks');
+const { buildQuestPromoCatalog, findTravelQuestPromoMatches, buildRelatedIndex, pickRelatedTravels } = require('../utils/travelLinkGraph');
 const {
   buildSeoTitle: buildSharedSeoTitle,
-  htmlToPlainText,
   normalizeSeoLead,
-  finishTruncatedSnippet,
   clampDescriptionForAttr,
-  getStoredTravelSeoDescription,
 } = require('../utils/seoText');
 const {
   questRouteKey,
@@ -184,28 +187,7 @@ function stripHtmlToSnippet(html, maxLength = 160) {
 }
 
 /** Strip HTML tags and collapse whitespace → plain text description. */
-function stripHtml(html, maxLength = 160) {
-  if (!html) return '';
-  const plain = htmlToPlainText(html);
-  if (plain.length <= maxLength) return plain;
-  // Prefer ending on a complete sentence when one finishes late enough in the
-  // window — a full sentence reads better in the SERP than an ellipsis.
-  const window = plain.slice(0, maxLength);
-  const sentenceEnd = Math.max(
-    window.lastIndexOf('. '),
-    window.lastIndexOf('! '),
-    window.lastIndexOf('? '),
-  );
-  if (sentenceEnd >= Math.floor(maxLength * 0.6)) return window.slice(0, sentenceEnd + 1);
-  // Otherwise cut on a word boundary (reserving one char for the ellipsis),
-  // drop dangling connectives («…с пляжем и») and finish with «…» so the
-  // snippet visibly continues instead of stopping mid-phrase. Falls back to
-  // the hard cut when there is no space (single very long token).
-  const cut = plain.slice(0, maxLength - 1);
-  const lastSpace = cut.lastIndexOf(' ');
-  const onWord = lastSpace > 0 ? cut.slice(0, lastSpace) : cut;
-  return finishTruncatedSnippet(onWord) || `${cut}…`;
-}
+const stripHtml = truncateSeoText;
 
 function toAbsoluteUrl(input) {
   const value = String(input || '').trim();
@@ -455,72 +437,8 @@ function buildTravelHeroSrcSet(rawUrl, widths, { quality, updatedAt, id } = {}) 
 // рантайме, иначе статический и гидрированный заголовки разъехались бы.
 const buildSeoTitle = buildSharedSeoTitle;
 
-function isBareMediaEndpointUrl(input) {
-  const value = String(input || '').trim();
-  if (!value) return true;
-
-  let pathname = value;
-  try {
-    pathname = new URL(value).pathname || value;
-  } catch {
-    // ignore parse error for relative values
-  }
-
-  const cleanPath = pathname.split('?')[0].split('#')[0];
-  return /(?:^|\/)(travel-image|travel-description-image|address-image|gallery|uploads|media)\/?$/i.test(cleanPath);
-}
-
-function upgradeThumbToDetailUrl(input) {
-  const value = String(input || '').trim();
-  if (!value) return '';
-  return value.replace(/-thumb_200(?=\.[a-z0-9]+(?:$|[?#]))/i, '-detail_hd');
-}
-
-function buildTravelSeoDescription(travel, detailDescription, detailMetaDescription) {
-  const stored = getStoredTravelSeoDescription(detailMetaDescription);
-  if (stored) return stored;
-  const primary = stripHtmlToSnippet(detailDescription || travel?.description || '', 160);
-  const travelName = String(travel?.name || '').trim();
-  const countryName = String(travel?.countryName || '').trim();
-  const fallbackParts = [travelName, countryName].filter(Boolean);
-  const contextual =
-    fallbackParts.length > 0
-      ? `${fallbackParts.join(' — ')}. Маршрут, советы и впечатления путешественников в MeTravel.`
-      : FALLBACK_DESC;
-
-  if (primary.length >= 80) return clampDescriptionForAttr(primary, 160);
-
-  if (primary) {
-    const combined = `${primary.replace(/[.!?…\s]+$/g, '')}. ${contextual}`.replace(/\s+/g, ' ').trim();
-    return clampDescriptionForAttr(combined, 160);
-  }
-
-  return clampDescriptionForAttr(contextual, 160);
-}
-
 function pickTravelSeoImage(travel, detail) {
-  const galleryFirst = detail?.gallery?.[0];
-  const galleryUrl = galleryFirst
-    ? (typeof galleryFirst === 'string' ? galleryFirst : galleryFirst.url)
-    : '';
-  const galleryAbsolute = toAbsoluteUrl(galleryUrl);
-  if (galleryAbsolute && !isBareMediaEndpointUrl(galleryAbsolute)) return galleryAbsolute;
-
-  const detailHd = toAbsoluteUrl(travel?.travel_image_detail_hd_url || travel?.travelImageDetailHdUrl || '');
-  if (detailHd && !isBareMediaEndpointUrl(detailHd)) return detailHd;
-
-  const thumb = String(travel?.travel_image_thumb_url || travel?.travelImageThumbUrl || '').trim();
-  const upgradedThumb = toAbsoluteUrl(upgradeThumbToDetailUrl(thumb));
-  if (upgradedThumb && !upgradedThumb.includes('thumb_200') && !isBareMediaEndpointUrl(upgradedThumb)) return upgradedThumb;
-
-  const absoluteThumb = toAbsoluteUrl(thumb);
-  if (absoluteThumb && !absoluteThumb.includes('thumb_200') && !isBareMediaEndpointUrl(absoluteThumb)) return absoluteThumb;
-
-  const smallThumb = String(travel?.travel_image_thumb_small_url || travel?.travelImageThumbSmallUrl || '').trim();
-  const upgradedSmall = toAbsoluteUrl(upgradeThumbToDetailUrl(smallThumb));
-  if (upgradedSmall && !upgradedSmall.includes('thumb_200') && !isBareMediaEndpointUrl(upgradedSmall)) return upgradedSmall;
-
-  return OG_IMAGE;
+  return pickSharedTravelSeoImage(travel, detail, { siteUrl: SITE_URL, fallbackImage: OG_IMAGE });
 }
 
 // #1116: backend отдаёт готовые варианты в `detail.media.gallery[].variants`, и клиент
@@ -1505,121 +1423,8 @@ function injectJsonLd(baseHtml, payload, marker) {
   return applyHtmlFragment(baseHtml, '</head>', `${scriptTag}\n`, 'before');
 }
 
-function buildTravelArticleJsonLd({ headline, description, canonical, image, travel }) {
-  const cleanHeadline = String(headline || '').trim();
-  if (!cleanHeadline || !canonical) return null;
-
-  const authorName =
-    String(
-      travel?.user?.display_name ||
-      travel?.user?.name ||
-      travel?.userName ||
-      travel?.authorName ||
-      ''
-    ).trim() || 'MeTravel';
-
-  const payload = {
-    '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline: cleanHeadline,
-    description: String(description || '').trim(),
-    mainEntityOfPage: canonical,
-    url: canonical,
-    inLanguage: 'ru',
-    publisher: {
-      '@type': 'Organization',
-      name: 'MeTravel',
-      url: SITE_URL,
-      logo: {
-        '@type': 'ImageObject',
-        url: `${SITE_URL}/assets/icons/logo_yellow_60x60.png`,
-      },
-    },
-    author: {
-      '@type': 'Person',
-      name: authorName,
-    },
-  };
-
-  // #1221: JSON-LD строится мимо injectMeta, поэтому ширину добиваем и здесь —
-  // иначе Google Images и краулеры schema.org тянут мастер с `no-store`.
-  // #1872: тот же вызов, что у og:image, а не только ширина. Разойдись эти две
-  // ветки — одна страница просила бы одну и ту же обложку двумя адресами, то есть
-  // два cache-key на кадр.
-  const previewImage = toSocialPreviewUrl(image);
-  if (previewImage) payload.image = [previewImage];
-
-  const publishedAt = travel?.created_at || travel?.date_create || travel?.datePublished || null;
-  const modifiedAt = travel?.updated_at || travel?.date_update || travel?.dateModified || null;
-  if (publishedAt) payload.datePublished = publishedAt;
-  if (modifiedAt) payload.dateModified = modifiedAt;
-
-  return payload;
-}
-
-/**
- * The FAQ wrapper the editor writes. Exported so scripts/seo-audit.js can ask
- * "does this body have a FAQ block?" against the same definition that decides
- * what gets read here — one source of truth, or the auditor reports a clean
- * zero over exactly the articles a widened wrapper would newly cover.
- */
-const FAQ_SECTION_OPEN_TAG = '<section[^>]*(?:class="[^"]*seo-faq[^"]*"|data-faq="metravel-seo")[^>]*>';
-
-/**
- * Pull the Q/A pairs out of an article body's FAQ block.
- *
- * The editor stores them as microdata (`<section class="seo-faq">` with
- * `<details itemprop="mainEntity">`), but `sanitizeArticleBodyHtml` keeps only
- * a small tag allowlist and drops every attribute, so none of that markup
- * survives into the crawler-visible HTML — the questions arrive as bare
- * `<strong>`/`<p>` text. Rather than widening the sanitizer (which would put
- * attributes back into the body for the sake of a format Google reads less
- * reliably), we re-read the pairs here and emit them as JSON-LD.
- */
-function extractFaqEntries(descriptionHtml) {
-  const html = String(descriptionHtml || '');
-  if (!html.includes('<details')) return [];
-
-  // Prefer the FAQ section when present so an unrelated <details> elsewhere in
-  // the body is not advertised as an FAQ answer.
-  const faqSections = html.match(new RegExp(`${FAQ_SECTION_OPEN_TAG}[\\s\\S]*?<\\/section>`, 'gi'));
-  const scopes = faqSections && faqSections.length ? faqSections : [html];
-
-  const entries = [];
-  for (const scope of scopes) {
-    const blocks = scope.match(/<details[\s\S]*?<\/details>/gi) || [];
-    for (const block of blocks) {
-      const isFaqBlock = faqSections?.length || /itemprop\s*=\s*["']mainEntity["']/i.test(block);
-      if (!isFaqBlock) continue;
-
-      const summaryMatch = block.match(/<summary[^>]*>([\s\S]*?)<\/summary>/i);
-      if (!summaryMatch) continue;
-
-      const question = stripHtml(summaryMatch[1], Number.MAX_SAFE_INTEGER);
-      const answer = stripHtml(block.slice(summaryMatch.index + summaryMatch[0].length), Number.MAX_SAFE_INTEGER);
-      if (!question || !answer) continue;
-
-      entries.push({ question, answer });
-    }
-  }
-
-  return entries;
-}
-
-/** FAQPage JSON-LD for an article body, or null when it has no usable FAQ. */
-function buildTravelFaqJsonLd(descriptionHtml) {
-  const entries = extractFaqEntries(descriptionHtml);
-  if (!entries.length) return null;
-
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: entries.map((entry) => ({
-      '@type': 'Question',
-      name: entry.question,
-      acceptedAnswer: { '@type': 'Answer', text: entry.answer },
-    })),
-  };
+function buildTravelArticleJsonLd(options) {
+  return buildTravelArticleStructuredData({ ...options, image: toSocialPreviewUrl(options.image), language: RU_SSG.locale });
 }
 
 // ---------------------------------------------------------------------------
@@ -1635,165 +1440,6 @@ function buildQuestSeoDescription(quest) {
     points: quest?.points,
     durationMin: quest?.duration_min ?? quest?.durationMin,
   }).description;
-}
-
-function normalizeLocationText(value) {
-  return String(value || '')
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .replace(/[.,;:!?'„""–—-]/g, '')
-    .replace(/ё/g, 'е')
-    .trim();
-}
-
-function parseCoordPair(value) {
-  if (!value || typeof value !== 'string') return null;
-  const [latS, lngS] = value.split(',').map((part) => part.trim());
-  const lat = Number(latS);
-  const lng = Number(lngS);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-  return { lat, lng };
-}
-
-function extractTravelCoordsForQuestPromo(travel) {
-  const coords = [];
-  const pushCoord = (latValue, lngValue) => {
-    const lat = Number(latValue);
-    const lng = Number(lngValue);
-    if (Number.isFinite(lat) && Number.isFinite(lng)) coords.push({ lat, lng });
-  };
-
-  if (Array.isArray(travel?.travelAddress)) {
-    for (const item of travel.travelAddress) {
-      const parsed = parseCoordPair(typeof item === 'string' ? item : item?.coord || item?.coords);
-      if (parsed) coords.push(parsed);
-      else if (item && typeof item === 'object') pushCoord(item.lat ?? item.latitude, item.lng ?? item.lon ?? item.longitude);
-    }
-  }
-
-  if (Array.isArray(travel?.coordsMeTravelArr)) {
-    for (const raw of travel.coordsMeTravelArr) {
-      const parsed = parseCoordPair(raw);
-      if (parsed) coords.push(parsed);
-    }
-  }
-
-  if (Array.isArray(travel?.coordsMeTravel)) {
-    for (const item of travel.coordsMeTravel) {
-      if (item && typeof item === 'object') pushCoord(item.lat ?? item.latitude, item.lng ?? item.lon ?? item.longitude);
-    }
-  }
-
-  pushCoord(travel?.lat ?? travel?.latitude, travel?.lng ?? travel?.lon ?? travel?.longitude);
-
-  const seen = new Set();
-  return coords.filter((coord) => {
-    const key = `${coord.lat.toFixed(6)},${coord.lng.toFixed(6)}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-function haversineKm(aLat, aLng, bLat, bLng) {
-  const toRad = (degrees) => (degrees * Math.PI) / 180;
-  const dLat = toRad(bLat - aLat);
-  const dLng = toRad(bLng - aLng);
-  const lat1 = toRad(aLat);
-  const lat2 = toRad(bLat);
-  const h = Math.sin(dLat / 2) ** 2 + Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
-  return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h)));
-}
-
-function minDistanceKm(coords, lat, lng) {
-  if (!Array.isArray(coords) || !coords.length || !Number.isFinite(lat) || !Number.isFinite(lng)) return Infinity;
-  return coords.reduce((min, coord) => {
-    if (!Number.isFinite(coord.lat) || !Number.isFinite(coord.lng)) return min;
-    return Math.min(min, haversineKm(coord.lat, coord.lng, lat, lng));
-  }, Infinity);
-}
-
-function buildQuestPromoMeta(quest, bundle) {
-  const route = questRouteKey(quest) || questRouteKey({
-    quest_id: bundle?.quest_id || bundle?.id,
-    city_id: bundle?.city?.id,
-  });
-  if (!route) return null;
-
-  const city = bundle?.city || quest?.city || {};
-  const lat = Number(city.lat ?? quest?.lat ?? quest?.latitude);
-  const lng = Number(city.lng ?? city.lon ?? city.longitude ?? quest?.lng ?? quest?.lon ?? quest?.longitude);
-  const cover = String(quest?.cover_url || quest?.coverUrl || bundle?.cover_url || bundle?.coverUrl || '').trim();
-  const countryCode = String(city.country_code || city.countryCode || quest?.country_code || quest?.countryCode || '').trim().toLowerCase();
-  const title = String(quest?.title || bundle?.title || 'Городской квест').trim();
-
-  return {
-    ...quest,
-    route,
-    title,
-    cityName: String(quest?.city_name || quest?.cityName || city.name || '').trim(),
-    countryName: String(quest?.country_name || quest?.countryName || city.country_name || city.countryName || '').trim(),
-    countryCode,
-    lat,
-    lng,
-    points: Number(quest?.points) || getQuestSteps(bundle).length || 0,
-    durationMin: Number(quest?.duration_min ?? quest?.durationMin ?? bundle?.duration_min) || 0,
-    cover,
-  };
-}
-
-function buildQuestPromoCatalog(quests, questBundleMap) {
-  return (Array.isArray(quests) ? quests : [])
-    .map((quest) => {
-      const route = questRouteKey(quest);
-      return buildQuestPromoMeta(quest, route ? questBundleMap.get(route.questId) : null);
-    })
-    .filter(Boolean);
-}
-
-function findTravelQuestPromoMatches(travel, questCatalog, limit = 6) {
-  if (!Array.isArray(questCatalog) || !questCatalog.length) return [];
-
-  const coords = extractTravelCoordsForQuestPromo(travel);
-  const qCity = normalizeLocationText(travel?.cityName || travel?.city_name || travel?.city?.name);
-  const qCountry = normalizeLocationText(travel?.countryName || travel?.country_name);
-  const qCode = String(travel?.countryCode || travel?.country_code || '').toLowerCase().trim();
-  const matches = [];
-
-  for (const quest of questCatalog) {
-    const cCity = normalizeLocationText(quest.cityName);
-    const cCountry = normalizeLocationText(quest.countryName);
-    const cCode = String(quest.countryCode || '').toLowerCase().trim();
-
-    if (qCode && cCode && qCode !== cCode) continue;
-    if ((!qCode || !cCode) && qCountry && cCountry && qCountry !== cCountry) {
-      const near = minDistanceKm(coords, quest.lat, quest.lng) < 15;
-      if (!near) continue;
-    }
-
-    let score = 0;
-    if (qCity && cCity) {
-      if (qCity === cCity) score += 100;
-      else if (cCity.includes(qCity) || qCity.includes(cCity)) score += 55;
-    }
-
-    const distanceKm = minDistanceKm(coords, quest.lat, quest.lng);
-    if (distanceKm < 8) score += 60;
-    else if (distanceKm < 20) score += 40;
-    else if (distanceKm < 50) score += 40;
-
-    if ((qCountry && cCountry && qCountry === cCountry) || (qCode && cCode && qCode === cCode)) score += 15;
-    if (score < 55) continue;
-
-    matches.push({ quest, score, distanceKm });
-  }
-
-  matches.sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
-    return a.distanceKm - b.distanceKm;
-  });
-
-  return matches.slice(0, Math.max(1, limit));
 }
 
 function formatQuestPromoPoints(points) {
@@ -2409,49 +2055,6 @@ function buildQuestsListingModel(quests, cityAliasMap) {
       quests: questsSorted,
     };
   });
-}
-
-function findQuestCityTravelLinks(city, travels, limit = 4) {
-  const cityName = normalizeLocationText(city?.name);
-  const countryName = normalizeLocationText(city?.countryName);
-  const countryCode = String(city?.countryCode || '').trim().toLowerCase();
-  const cityCoords = Number.isFinite(city?.lat) && Number.isFinite(city?.lng)
-    ? [{ lat: city.lat, lng: city.lng }]
-    : [];
-  const matches = [];
-
-  for (const travel of Array.isArray(travels) ? travels : []) {
-    const slug = String(travel?.slug || '').trim();
-    const title = String(travel?.name || '').trim();
-    if (!slug || !title) continue;
-
-    const travelCity = normalizeLocationText(travel?.cityName || travel?.city_name || travel?.city?.name);
-    const travelCountry = normalizeLocationText(travel?.countryName || travel?.country_name);
-    const travelCode = String(travel?.countryCode || travel?.country_code || '').trim().toLowerCase();
-    const distanceKm = cityCoords.length
-      ? minDistanceKm(extractTravelCoordsForQuestPromo(travel), city.lat, city.lng)
-      : Infinity;
-
-    if (countryCode && travelCode && countryCode !== travelCode && distanceKm >= 15) continue;
-    if (!countryCode && countryName && travelCountry && countryName !== travelCountry && distanceKm >= 15) continue;
-
-    let score = 0;
-    if (cityName && travelCity) {
-      if (cityName === travelCity) score += 100;
-      else if (cityName.includes(travelCity) || travelCity.includes(cityName)) score += 55;
-    }
-    if (distanceKm < 8) score += 60;
-    else if (distanceKm < 20) score += 40;
-    else if (distanceKm < 50) score += 20;
-    if ((countryCode && countryCode === travelCode) || (countryName && countryName === travelCountry)) score += 15;
-    if (score < 55) continue;
-
-    matches.push({ path: `/travels/${encodeURIComponent(slug)}`, title, score, distanceKm });
-  }
-
-  return matches
-    .sort((a, b) => b.score - a.score || a.distanceKm - b.distanceKm || a.path.localeCompare(b.path))
-    .slice(0, Math.max(0, limit));
 }
 
 /**
@@ -3537,59 +3140,6 @@ function readStaticRouteHtml(route, fallbackHtml) {
 // ---------------------------------------------------------------------------
 // Related-travels index (FE-IDX-3): crawlable internal links between travels.
 // ---------------------------------------------------------------------------
-function travelPublicPath(t) {
-  const key = (t && (t.slug || (t.id != null ? String(t.id) : ''))) || '';
-  return key ? `/travels/${key}` : '';
-}
-
-function buildRelatedIndex(travels) {
-  const byCountry = new Map();
-  const all = [];
-  for (const t of travels) {
-    const p = travelPublicPath(t);
-    const name = String(t.name || '').trim();
-    if (!p || !name) continue;
-    const country = String(t.countryName || '').trim();
-    const entry = { path: p, name, country };
-    all.push(entry);
-    if (!byCountry.has(country)) byCountry.set(country, []);
-    byCountry.get(country).push(entry);
-  }
-  return { byCountry, all };
-}
-
-function pickRelatedTravels(travel, index, limit = 6) {
-  const selfPath = travelPublicPath(travel);
-  const country = String(travel?.countryName || '').trim();
-  const seen = new Set([selfPath]);
-  const out = [];
-  const add = (e) => {
-    if (out.length >= limit || !e || seen.has(e.path)) return;
-    seen.add(e.path);
-    out.push({ path: e.path, name: e.name });
-  };
-  // Rotate within the same-country list by id so all country articles get
-  // a chance to appear in each other's related blocks (not just the first N).
-  const offset = Math.abs(Number(travel?.id) || selfPath.length);
-  if (country && index.byCountry.has(country)) {
-    const countryList = index.byCountry.get(country);
-    const co = countryList.length ? offset % countryList.length : 0;
-    for (let i = 0; i < countryList.length && out.length < limit; i++) {
-      add(countryList[(co + i) % countryList.length]);
-    }
-  }
-  // Fill remaining from the global list, rotated by id so different pages link
-  // to different sets (spreads internal link equity instead of one hub).
-  const all = index.all;
-  if (all.length) {
-    const go = offset % all.length;
-    for (let i = 0; i < all.length && out.length < limit; i++) {
-      add(all[(go + i) % all.length]);
-    }
-  }
-  return out;
-}
-
 // ---------------------------------------------------------------------------
 // Static pages definitions
 // ---------------------------------------------------------------------------
@@ -3613,7 +3163,43 @@ const STATIC_PAGES = listStaticRouteSeo(readRequiredRuTranslation).map((page) =>
 // ---------------------------------------------------------------------------
 // The network producer has no dist dependency. One request pacer covers every
 // endpoint/fallback; no other API producer runs alongside this process.
+async function collectArticleMetadata({ read, apiBase }) {
+  console.log('\n📰 Fetching articles from API...');
+  let articles = [];
+  const articleErrors = [];
+  const articleParams = new URLSearchParams({
+    page: '1',
+    perPage: '500',
+    where: JSON.stringify({ publish: 1, moderation: 1 }),
+  });
+  const articleCandidates = await resolveArticleEndpointCandidates({ fetchJson: read, apiBase });
+
+  for (const endpoint of articleCandidates) {
+    const url = `${endpoint}/?${articleParams}`;
+    try {
+      const result = await read(url);
+      const items = extractCollectionItems(result);
+      if (items.length > 0) {
+        articles = items;
+        console.log(`  📦 Got ${articles.length} articles from ${endpoint}`);
+        break;
+      }
+      articleErrors.push(`${endpoint} returned empty result`);
+    } catch (err) {
+      articleErrors.push(err.message);
+    }
+  }
+
+  if (articles.length === 0) {
+    const diagnostics = articleErrors.length > 0 ? articleErrors[0] : 'no article endpoint candidates';
+    console.log(`⚠️  Articles API not available (skipping): ${diagnostics}`);
+  }
+
+  return articles;
+}
+
 async function collectSeoInputs({ apiBase = API_BASE, candidate = Boolean(QUEST_SEO_CANDIDATE),
+  runtimeEntities = process.env.EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR === 'true',
   publicationMode = QUEST_SEO_PUBLICATION_MODE, receiptCommand = QUEST_SEO_RECEIPT_COMMAND,
   fetchJson: fetchInput, readReceipt = runRevisionReceiptCommand,
   pace = createRequestPacer(BUILD_FETCH_MIN_INTERVAL_MS) } = {}) {
@@ -3628,6 +3214,12 @@ async function collectSeoInputs({ apiBase = API_BASE, candidate = Boolean(QUEST_
     onRetry: ({ error, attempt, attempts, delayMs }) =>
       console.warn(`  ⚠️  ${error.message} — retry ${attempt}/${attempts - 1} in ${delayMs}ms`),
   });
+  if (runtimeEntities) {
+    // Only metadata for the pre-existing noindex blog documents remains a
+    // post-processing step. Runtime entity bodies never join the build.
+    return { questSeoReceipt: null, quests: [], questBundles: [], travels: [], travelDetails: [],
+      articles: await collectArticleMetadata({ read, apiBase }), localizedBundles: [], rawTravelDetails: [] };
+  }
   // --- 1b. Quest catalog ---
   // Travel SSG needs the quest catalog before travel pages are written so city
   // articles can include crawlable "quest for this city" links in the HTML.
@@ -3800,36 +3392,7 @@ async function collectSeoInputs({ apiBase = API_BASE, candidate = Boolean(QUEST_
 
     travelDetails = travelsWithId.map((travel, i) => [travel.id, details[i]]);
   }
-  console.log('\n📰 Fetching articles from API...');
-  let articles = [];
-  const articleErrors = [];
-  const articleParams = new URLSearchParams({
-    page: '1',
-    perPage: '500',
-    where: JSON.stringify({ publish: 1, moderation: 1 }),
-  });
-  const articleCandidates = await resolveArticleEndpointCandidates({ fetchJson: read, apiBase });
-
-  for (const endpoint of articleCandidates) {
-    const url = `${endpoint}/?${articleParams}`;
-    try {
-      const result = await read(url);
-      const items = extractCollectionItems(result);
-      if (items.length > 0) {
-        articles = items;
-        console.log(`  📦 Got ${articles.length} articles from ${endpoint}`);
-        break;
-      }
-      articleErrors.push(`${endpoint} returned empty result`);
-    } catch (err) {
-      articleErrors.push(err.message);
-    }
-  }
-
-  if (articles.length === 0) {
-    const diagnostics = articleErrors.length > 0 ? articleErrors[0] : 'no article endpoint candidates';
-    console.log(`⚠️  Articles API not available (skipping): ${diagnostics}`);
-  }
+  const articles = await collectArticleMetadata({ read, apiBase });
 
   const localizedBundles = [];
   if (candidate && publicationMode === 'translations') {
@@ -3857,6 +3420,9 @@ function privateInputFile(argument) {
 
 async function main() {
   const inputArgument = getArg('quest-seo-inputs', '');
+  if (process.env.EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR === 'true' && (inputArgument || QUEST_SEO_CANDIDATE)) {
+    throw new Error('Runtime entity publication cannot consume a static quest SEO package or content capture');
+  }
   const inputFile = inputArgument ? privateInputFile(inputArgument) : '';
   const capturedInputs = inputFile ? readSeoInputs(inputFile, inputIdentity()) : null;
   const indexPath = path.join(DIST_DIR, 'index.html');
@@ -3999,30 +3565,10 @@ async function main() {
         ogType: 'article',
       });
 
-      const htmlWithBreadcrumb = injectBreadcrumbJsonLd(html, {
-        '@context': 'https://schema.org',
-        '@type': 'BreadcrumbList',
-        itemListElement: [
-          {
-            '@type': 'ListItem',
-            position: 1,
-            name: 'Главная',
-            item: `${SITE_URL}/`,
-          },
-          {
-            '@type': 'ListItem',
-            position: 2,
-            name: 'Путешествия',
-            item: `${SITE_URL}/travelsby`,
-          },
-          {
-            '@type': 'ListItem',
-            position: 3,
-            name: name || routeKey,
-            item: canonical,
-          },
-        ],
-      });
+      const htmlWithBreadcrumb = injectBreadcrumbJsonLd(html, buildTravelBreadcrumbStructuredData({
+        headline: name || routeKey,
+        canonical,
+      }));
 
       const htmlWithArticleJsonLd = injectJsonLd(
         htmlWithBreadcrumb,
@@ -4493,7 +4039,7 @@ async function main() {
   // SPA shell (a soft-404). Skip any `from` that collides with a live travel.
   const manifestPath = path.resolve(getArg('redirects', path.join(__dirname, 'seo-redirects.json')));
   const redirects = loadRedirectManifest(manifestPath);
-  if (redirects.length) {
+  if (redirects.length && process.env.EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR !== 'true') {
     console.log(`\n🔁 Generating slug redirects (${redirects.length})...`);
     let redirected = 0;
     let clashes = 0;

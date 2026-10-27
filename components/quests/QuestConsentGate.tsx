@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useContext, useMemo, useState } from 'react'
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { Link } from 'expo-router'
 
@@ -9,6 +9,7 @@ import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/b
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
+import { QuestPublicHeadingContext } from './runtime/QuestPublicHeadingContext'
 
 
 type Colors = ReturnType<typeof useThemedColors>
@@ -29,6 +30,7 @@ interface QuestConsentGateProps {
  * Кнопка «Начать квест» заблокирована, пока чекбокс не отмечен.
  */
 export default function QuestConsentGate({ title, coverUrl, onAccept, testID, ratingSlot, completionSlot }: QuestConsentGateProps) {
+  const publicHeading = useContext(QuestPublicHeadingContext)
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const [checked, setChecked] = useState(false)
@@ -60,7 +62,7 @@ export default function QuestConsentGate({ title, coverUrl, onAccept, testID, ra
       <Text
         style={styles.title}
         accessibilityRole="header"
-        {...({ 'aria-level': 1 } as Record<string, unknown>)}
+        {...({ 'aria-level': publicHeading ? 2 : 1 } as Record<string, unknown>)}
       >
         {title}
       </Text>

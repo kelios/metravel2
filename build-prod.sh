@@ -51,6 +51,9 @@ SEO_INPUT_CONTROL=''
 SEO_INPUT_LOG=''
 SEO_INPUT_NONCE=''
 SEO_INPUT_ARGS=()
+SSR_EXPORT_DIR="$PWD/.codex-temp/deploy/ssr-export"
+SSR_RELEASE_DIR="$PWD/.codex-temp/deploy/ssr-release"
+SSR_CODE_RELEASE=0
 
 # Время этапов (#2013). Выкат дорос до ~15 минут незаметно: длительность этапов
 # нигде не печаталась. Каждый этап закрывается строкой «⏱ этап: N с», а на
@@ -343,6 +346,19 @@ build_env() {
   echo "🚀 Сборка для $ENV → $DIR"
   apply_env "$ENV"
 
+  if [[ "${METRAVEL_WEB_OUTPUT:-static}" == "server" ]]; then
+    rm -rf "$DIR" "$SSR_EXPORT_DIR" "$SSR_RELEASE_DIR"
+    CI=1 EXPO_NO_INTERACTIVE=1 NODE_ENV=production EXPO_ENV="$ENV" \
+      EXPO_NO_METRO_LAZY=true EXPO_PUBLIC_RNW_SLIM=1 \
+      EXPO_WEB_BUILD_MINIFY=true EXPO_WEB_BUILD_GENERATE_SOURCE_MAP=false \
+      node scripts/build-web-safe.js -p web -c --output-dir "$SSR_EXPORT_DIR" 2>&1 | tee "$EXPORT_LOG"
+    node scripts/prepare-web-ssr.js --export-dir "$SSR_EXPORT_DIR" --static-dir "$DIR" \
+      --runtime-dir "$SSR_RELEASE_DIR" --env-file ".env.$ENV"
+    rm -f "$EXPORT_LOG"
+    EXPORT_LOG=''
+    return
+  fi
+
   rm -rf "$DIR"
   # build-web-safe.js всегда экспортирует в dist/, потом переносим в dist/$ENV.
   # `! -name '.*'` сохраняет служебные dotdir другого (staging) флоу
@@ -382,10 +398,45 @@ build_env() {
   fi
 }
 
+verify_quest_runtime() {
+  local mode="${1:-strict}"
+  local capability control_path
+  capability="$(bash scripts/web-ssr-publication.sh capability)"
+  control_path="$(node -e 'process.stdout.write(require("./scripts/lib/webOutput").getQuestControlPath(JSON.parse(process.argv[1]), {allowUnavailable: process.argv[2] === "deployment"}) || "")' "$capability" "$mode")"
+  local args=(--sha "$BUILD_SOURCE_SHA" --readiness-mode "$mode")
+  if [[ -n "$control_path" ]]; then args+=(--control-path "$control_path"); fi
+  node scripts/verify-live-quest-ssr.js "${args[@]}"
+}
+
 deploy_prod() {
   local ENV="$1"
+  if [[ "${SSR_CODE_RELEASE:-0}" == "1" ]]; then
+    bash scripts/web-ssr-publication.sh stage "$BUILD_SOURCE_SHA" "$SSR_RELEASE_DIR"
+    if ! { bash scripts/web-ssr-publication.sh publish-code "$BUILD_SOURCE_SHA" &&
+           node scripts/verify-live-web-ssr.js "$BUILD_SOURCE_SHA" --readiness-mode deployment &&
+           verify_quest_runtime deployment; }; then
+      echo "❌ Рендер не прошёл проверку — возвращаю связанную серверную и клиентскую версию"
+      bash scripts/web-ssr-publication.sh rollback-code "$BUILD_SOURCE_SHA" || echo "❌ Возврат требует восстановления владельцем"
+      return 1
+    fi
+    bash scripts/web-ssr-publication.sh finalize-code "$BUILD_SOURCE_SHA"
+    return
+  fi
   if [[ "$QUEST_SEO_MODE" != "legacy" ]]; then
+    if [[ "${METRAVEL_WEB_OUTPUT:-static}" == "server" ]]; then
+      bash scripts/web-ssr-publication.sh stage "$BUILD_SOURCE_SHA" "$SSR_RELEASE_DIR"
+    fi
     bash scripts/quest-seo-operation.sh publish "dist/$ENV" "$QUEST_SEO_STATE_PATH"
+    if [[ "${METRAVEL_WEB_OUTPUT:-static}" == "server" ]]; then
+      if ! { bash scripts/web-ssr-publication.sh activate "$BUILD_SOURCE_SHA" &&
+             node scripts/verify-live-web-ssr.js "$BUILD_SOURCE_SHA"; }; then
+        echo "❌ SSR не прошёл проверку готовности — возвращаю сервер и статический релиз"
+        bash scripts/web-ssr-publication.sh rollback "$BUILD_SOURCE_SHA" || echo "❌ Возврат SSR требует восстановления владельцем"
+        bash scripts/quest-seo-operation.sh rollback "$QUEST_SEO_STATE_PATH" || echo "❌ Возврат статического релиза требует восстановления владельцем"
+        return 1
+      fi
+      bash scripts/web-ssr-publication.sh finalize "$BUILD_SOURCE_SHA"
+    fi
     return
   fi
   local EXPO_OVERLAY_RETENTION_DAYS EXPO_OVERLAY_MAX_MB
@@ -729,11 +780,21 @@ for arg in "$@"; do
 done
 ENV="${ENV:-prod}"
 DEPLOY="${DEPLOY:-1}"
+node -e 'require("./scripts/lib/webOutput").resolveWebOutput()'
+if [[ "${EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR:-false}" == "true" ]]; then SSR_CODE_RELEASE=1; fi
+if [[ "$SSR_CODE_RELEASE" == "1" && "$ENV" != "prod" ]]; then
+  echo "❌ Публикация SSR-кода требует явного prod target"
+  exit 1
+fi
+if [[ "${METRAVEL_WEB_OUTPUT:-static}" == "server" && "$DEPLOY" == "1" && "$QUEST_SEO_MODE" == "legacy" && "$SSR_CODE_RELEASE" != "1" ]]; then
+  echo "❌ SSR publication requires the managed quest release and paired rollback"
+  exit 1
+fi
 case "$QUEST_SEO_MODE" in
   legacy | ru-only | translations) ;;
   *) echo "ERROR: QUEST_SEO_MODE must be legacy, ru-only or translations" >&2; exit 1 ;;
 esac
-if [[ "$QUEST_SEO_MODE" != "legacy" ]]; then
+if [[ "$QUEST_SEO_MODE" != "legacy" && "$SSR_CODE_RELEASE" != "1" ]]; then
   [[ "$ENV" == "prod" ]] || { echo "ERROR: v1 release requires explicit prod target" >&2; exit 1; }
   mkdir -p .codex-temp/deploy
   QUEST_SEO_CANDIDATE="$PWD/.codex-temp/deploy/quest-candidate-$$.json"
@@ -751,10 +812,10 @@ echo "🔁 Старт сборки..."
 stage "зависимости"
 install_deps
 
-if [[ "$DEPLOY" == "1" && "$ENV" == "prod" && "$QUEST_SEO_MODE" == "legacy" ]]; then
+if [[ "$DEPLOY" == "1" && "$ENV" == "prod" && ( "$QUEST_SEO_MODE" == "legacy" || "$SSR_CODE_RELEASE" == "1" ) ]]; then
   start_prod_media_checks
 fi
-if [[ "$QUEST_SEO_MODE" != "legacy" ]]; then
+if [[ "$QUEST_SEO_MODE" != "legacy" && "$SSR_CODE_RELEASE" != "1" ]]; then
   start_quest_overlay_capture
   start_seo_input_collection
 fi
@@ -798,6 +859,7 @@ fi
 
 stage "проверки статики"
 
+if [[ "$SSR_CODE_RELEASE" != "1" ]]; then
 # FE-IDX-1: убедиться, что тело статьи реально инжектировано в статику.
 # Без этого Googlebot видит пустой скелетон → "просканирована, но не проиндексирована".
 echo "Проверка: тело статей в статике (FE-IDX-1)..."
@@ -829,11 +891,14 @@ echo "✅ Ровно один <h1> на странице"
 
 echo "Проверка SEO-артефактов..."
 node scripts/verify-static-travel-seo.js --dist "dist/$ENV" --api https://metravel.by
+else
+  echo "✅ Тела статей и квестов принадлежат loader; проверка живого HTML выполняется перед финализацией"
+fi
 
 # Квесты — отдельный контент-слой со своими страницами и city-лендингами.
 # Транзиентный сбой API однажды молча выкинул их все из билда, а гварды выше
 # смотрят только на travel-страницы. Сверяем живой каталог с тем, что собрано.
-if [[ "$QUEST_SEO_MODE" == "legacy" ]]; then
+if [[ "$QUEST_SEO_MODE" == "legacy" && "$SSR_CODE_RELEASE" != "1" ]]; then
   echo "Проверка: quest-страницы и city-лендинги в статике..."
   node scripts/verify-static-quest-seo.js --dist "dist/$ENV" --api https://metravel.by
 fi
@@ -866,6 +931,9 @@ node scripts/guard-html-charset.js --dist "dist/$ENV"
 node scripts/guard-html-meta-description.js --dist "dist/$ENV"
 
 node scripts/assert-deployable-source.js --copy-marker "dist/$ENV/.build-source.json"
+if [[ "${METRAVEL_WEB_OUTPUT:-static}" == "server" ]]; then
+  cp "dist/$ENV/.build-source.json" "$SSR_RELEASE_DIR/.build-source.json"
+fi
 
 if [[ "$ENV" == "prod" ]]; then
   echo "Проверка prod-конфига перед деплоем..."
@@ -878,7 +946,7 @@ fi
 stage "предсжатие статики (brotli q11)"
 node scripts/precompress-static-assets.js "dist/$ENV"
 
-if [[ "$QUEST_SEO_MODE" != "legacy" ]]; then
+if [[ "$QUEST_SEO_MODE" != "legacy" && "$SSR_CODE_RELEASE" != "1" ]]; then
   stage "quest v1: проверка и применение захваченных assets"
   bash scripts/quest-seo-operation.sh apply "dist/$ENV" "$QUEST_SEO_STATE_PATH" "$QUEST_CAPTURE_NONCE"
   stage "quest v1: полная проверка live-каталога после HTML writers"
@@ -889,6 +957,13 @@ if [[ "$QUEST_SEO_MODE" != "legacy" ]]; then
   node scripts/verify-static-quest-seo.js --dist "dist/$ENV" --quest-seo-package-only
   stage "quest v1: private index и архив"
   node scripts/quest-seo-operation.js prepare "dist/$ENV" "$QUEST_SEO_STATE_PATH"
+fi
+
+if [[ "$SSR_CODE_RELEASE" == "1" ]]; then
+  # Publish the finished shell metadata, markers and precompressed assets from
+  # the same export as its server. No runtime code is copied into public dist.
+  rm -rf "$SSR_RELEASE_DIR/client"
+  cp -R "dist/$ENV" "$SSR_RELEASE_DIR/client"
 fi
 
 if [[ "$DEPLOY" == "1" ]]; then

@@ -3,6 +3,7 @@ import { Platform, View } from 'react-native';
 
 import type { TravelMediaImage } from '@/types/types';
 import { IMAGE_QUALITY, IMAGE_WIDTHS } from '@/constants/imageContract';
+import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
 import { createSafeImageUrl } from '@/utils/travelMedia';
 import { buildVersionedImageUrl } from '@/utils/imageOptimization';
@@ -81,6 +82,7 @@ function OptimizedLCPHeroInner({
   height,
   isMobile,
   media,
+  viewportHeight = false,
 }: {
   img: ImgLike;
   alt?: string;
@@ -88,6 +90,7 @@ function OptimizedLCPHeroInner({
   height?: number;
   isMobile?: boolean;
   media?: TravelMediaImage | null;
+  viewportHeight?: boolean;
 }) {
   const [loadError, setLoadError] = useState(false);
   const [overrideSrc, setOverrideSrc] = useState<string | null>(null);
@@ -102,18 +105,28 @@ function OptimizedLCPHeroInner({
     img.id,
   );
   const ratio = img.width && img.height ? img.width / img.height : 16 / 9;
-  const lcpMaxWidth = isMobile ? 720 : 1280;
+  const useMobileSource = isMobile && !viewportHeight;
+  const lcpMaxWidth = useMobileSource ? 720 : 1280;
   // #1167: набор — из общего контракта (`constants/imageContract.ts`).
-  const lcpWidths = isMobile ? IMAGE_WIDTHS.travelHeroMobile : IMAGE_WIDTHS.travelHeroDesktop;
+  const lcpWidths = useMobileSource ? IMAGE_WIDTHS.travelHeroMobile : IMAGE_WIDTHS.travelHeroDesktop;
   const targetWidth = lcpMaxWidth;
 
   const responsive = buildResponsiveImagePropsPreferringMedia(media ?? null, baseSrc, {
     maxWidth: targetWidth,
     widths: lcpWidths,
-    quality: isMobile ? IMAGE_QUALITY.small : IMAGE_QUALITY.large,
+    quality: useMobileSource ? IMAGE_QUALITY.small : IMAGE_QUALITY.large,
     fit: 'contain',
-    sizes: isMobile ? '100vw' : '(max-width: 1024px) 92vw, 720px',
+    sizes: viewportHeight ? '(max-width: 767px) 100vw, (max-width: 1279px) 92vw, 720px'
+      : isMobile ? '100vw' : '(max-width: 1024px) 92vw, 720px',
   });
+
+  const mobileResponsive = viewportHeight ? buildResponsiveImagePropsPreferringMedia(media ?? null, baseSrc, {
+    maxWidth: 720,
+    widths: IMAGE_WIDTHS.travelHeroMobile,
+    quality: IMAGE_QUALITY.small,
+    fit: 'contain',
+    sizes: '100vw',
+  }) : null;
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -167,7 +180,7 @@ function OptimizedLCPHeroInner({
   const placeholderColor = mediaPlaceholder.dominantColor || '';
   const placeholderBlurhash = Platform.OS === 'web' ? null : mediaPlaceholder.blurhash;
   const hasDataPlaceholder = Boolean(placeholderBlurhash || placeholderColor);
-  const fixedHeight = height ? `${Math.round(height)}px` : '100%';
+  const fixedHeight = viewportHeight ? 'var(--mt-travel-hero-height)' : height ? `${Math.round(height)}px` : '100%';
 
   const notifyReady = useCallback(async () => {
     if (didNotifyLoadRef.current) return;
@@ -194,7 +207,7 @@ function OptimizedLCPHeroInner({
       if (!el.complete || el.naturalWidth <= 0 || didNotifyLoadRef.current) return;
 
       // Mark URI as loaded so Slider knows this image is already cached
-      markUriLoaded(srcWithRetry);
+      markUriLoaded(el.currentSrc || srcWithRetry);
     }
 
     didNotifyLoadRef.current = true;
@@ -225,6 +238,58 @@ function OptimizedLCPHeroInner({
   if (!srcWithRetry) return <NeutralHeroPlaceholder height={height} />;
 
   if (Platform.OS !== 'web') return <NeutralHeroPlaceholder height={height} />;
+
+  const image = (
+    <img
+      src={srcWithRetry}
+      srcSet={overrideSrc ? undefined : responsive.srcSet}
+      sizes={responsive.sizes}
+      alt={alt || i18nT('travel:components.travel.details.TravelDetailsOptimizedLCPHero.defaultAlt')}
+      width={img.width || 1200}
+      height={img.height || Math.round(1200 / ratio)}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 1,
+        width: '100%',
+        height: '100%',
+        minWidth: 0,
+        minHeight: 0,
+        maxWidth: 'none',
+        maxHeight: 'none',
+        display: 'block',
+        objectFit: 'contain',
+        objectPosition: 'center',
+        // Critical HTML CSS paints an opaque neutral background on
+        // img[data-lcp]. Keep it for legacy payloads, but make the sharp
+        // layer transparent when a local data placeholder exists so the
+        // blurhash/color below remains visible until decode completes.
+        ...(hasDataPlaceholder ? { backgroundColor: 'transparent' } : null),
+      }}
+      loading="eager"
+      decoding="async"
+      fetchPriority="high"
+      ref={imgRef as any}
+      referrerPolicy="no-referrer-when-downgrade"
+      data-lcp
+      onLoad={() => {
+        void notifyReady();
+      }}
+      onError={() => {
+        if (!didTryApiPrefix) {
+          const fallback = buildApiPrefixedUrl(imgRef.current?.currentSrc || srcWithRetry);
+          if (fallback) {
+            setDidTryApiPrefix(true);
+            setOverrideSrc(fallback);
+            return;
+          }
+          setDidTryApiPrefix(true);
+        }
+        setLoadError(true);
+        onLoad?.();
+      }}
+    />
+  );
 
   return (
     <div
@@ -273,55 +338,16 @@ function OptimizedLCPHeroInner({
             }}
             data-hero-backdrop-overlay="true"
           />
-          <img
-            src={srcWithRetry}
-            srcSet={responsive.srcSet}
-            sizes={responsive.sizes}
-            alt={alt || i18nT('travel:components.travel.details.TravelDetailsOptimizedLCPHero.defaultAlt')}
-            width={img.width || 1200}
-            height={img.height || Math.round(1200 / ratio)}
-            style={{
-              position: 'absolute',
-              inset: 0,
-              zIndex: 1,
-              width: '100%',
-              height: '100%',
-              minWidth: 0,
-              minHeight: 0,
-              maxWidth: 'none',
-              maxHeight: 'none',
-              display: 'block',
-              objectFit: 'contain',
-              objectPosition: 'center',
-              // Critical HTML CSS paints an opaque neutral background on
-              // img[data-lcp]. Keep it for legacy payloads, but make the sharp
-              // layer transparent when a local data placeholder exists so the
-              // blurhash/color below remains visible until decode completes.
-              ...(hasDataPlaceholder ? { backgroundColor: 'transparent' } : null),
-            }}
-            loading="eager"
-            decoding="async"
-            fetchPriority="high"
-            ref={imgRef as any}
-            referrerPolicy="no-referrer-when-downgrade"
-            data-lcp
-            onLoad={() => {
-              void notifyReady();
-            }}
-            onError={() => {
-              if (!didTryApiPrefix) {
-                const fallback = buildApiPrefixedUrl(srcWithRetry);
-                if (fallback) {
-                  setDidTryApiPrefix(true);
-                  setOverrideSrc(fallback);
-                  return;
-                }
-                setDidTryApiPrefix(true);
-              }
-              setLoadError(true);
-              onLoad?.();
-            }}
-          />
+          {mobileResponsive && !overrideSrc ? (
+            <picture style={{ display: 'contents' }}>
+              <source
+                media={`(max-width: ${METRICS.breakpoints.tablet - 1}px)`}
+                srcSet={mobileResponsive.srcSet || mobileResponsive.src}
+                sizes={mobileResponsive.sizes}
+              />
+              {image}
+            </picture>
+          ) : image}
         </div>
       )}
     </div>

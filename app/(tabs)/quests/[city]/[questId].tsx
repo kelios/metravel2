@@ -31,7 +31,7 @@ import { useQuestRatingMeta } from '@/hooks/useQuestRatingMeta';
 import { useQuestServing } from '@/hooks/useQuestServing';
 import { usePublishQuestVersionNavigation } from '@/hooks/useQuestVersionNavigation';
 import QuestLocaleUnavailable from '@/components/quests/QuestLocaleUnavailable';
-import { questServingAlternates, type QuestLocaleRoute } from '@/utils/questLocaleRouting';
+import { questServingAlternates, type QuestLocaleRoute, type QuestServingProjection } from '@/utils/questLocaleRouting';
 import { useQuestCompletionMeta } from '@/hooks/useQuestCompletionMeta';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useActionConsent } from '@/hooks/useActionConsent';
@@ -403,7 +403,7 @@ const ErrorState = ({
   );
 };
 
-export default function QuestByIdScreen({ route }: { route?: QuestLocaleRoute } = {}) {
+export default function QuestByIdScreen({ route, publicProjection }: { route?: QuestLocaleRoute; publicProjection?: QuestServingProjection } = {}) {
   const params = useLocalSearchParams<{
     city?: string | string[];
     questId?: string | string[];
@@ -418,12 +418,13 @@ export default function QuestByIdScreen({ route }: { route?: QuestLocaleRoute } 
   const { isAuthenticated, userId } = useAuth();
   // A prefix is a content identity: a gameplay fallback or an offline copy cannot
   // prove that this URL is a released translation. Resolve E before its query.
-  const prefixServing = useQuestServing({
+  const livePrefixServing = useQuestServing({
     cityId: route?.cityId,
     questSlug: questId,
     locale: route?.locale ?? 'ru',
-    enabled: Platform.OS === 'web' && isFocused && Boolean(route && questId),
+    enabled: Platform.OS === 'web' && isFocused && Boolean(route && questId) && !publicProjection,
   });
+  const prefixServing = publicProjection ? { projection: publicProjection, pending: false, offline: false, refetch: () => {} } : livePrefixServing;
   const prefixAvailable = !route || prefixServing.projection?.state === 'available';
   const offlinePrefix = Boolean(route && prefixServing.offline);
   const shouldLoadQuest = isFocused && Boolean(questId) && (prefixAvailable || offlinePrefix);
@@ -435,10 +436,10 @@ export default function QuestByIdScreen({ route }: { route?: QuestLocaleRoute } 
     cityId: bundle?.city?.id,
     questSlug: questId,
     locale: 'ru',
-    enabled: Platform.OS === 'web' && isFocused && Boolean(!route && bundle && questId),
+    enabled: Platform.OS === 'web' && isFocused && Boolean(!route && bundle && questId) && !publicProjection,
     requireBootstrap: true,
   });
-  const serving = route ? prefixServing : ruServing;
+  const serving = publicProjection ? prefixServing : route ? prefixServing : ruServing;
   const prefixContentMismatch = Boolean(route && !offlinePrefix && bundle && bundle.contentLocale !== route.locale);
   const prefixIdentityMismatch = Boolean(route && !offlinePrefix && bundle
     && (bundle.questId !== questId || bundle.city?.id !== route.cityId));
@@ -612,7 +613,7 @@ export default function QuestByIdScreen({ route }: { route?: QuestLocaleRoute } 
     bundle: usableBundle,
     questUrl: canonical,
   });
-  const showQuestSeo = isFocused && !offlinePrefix && !isQuestPrintRequested(params[QUEST_PRINT_PARAM]);
+  const showQuestSeo = isFocused && !publicProjection && !offlinePrefix && !isQuestPrintRequested(params[QUEST_PRINT_PARAM]);
   const seo = useMemo(() => getQuestSeo(bundle, questId, isLoading), [bundle, isLoading, questId]);
   const countModel = bundle ? resolveBundleCountModel(bundle) : null;
   // SSG/Expo Head and the delayed head patches must agree on the derivative URL.

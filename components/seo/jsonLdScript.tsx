@@ -3,6 +3,7 @@ import { stringifyJsonLd } from '@/utils/jsonLd'
 type JsonLdScriptOptions = {
   key?: string
   id?: string
+  marker?: string
 }
 
 /**
@@ -11,7 +12,7 @@ type JsonLdScriptOptions = {
  */
 export function jsonLdScript(data: unknown, options?: JsonLdScriptOptions) {
   return (
-    <script key={options?.key} id={options?.id} type="application/ld+json">
+    <script key={options?.key} id={options?.id} data-seo-jsonld={options?.marker} type="application/ld+json">
       {stringifyJsonLd(data)}
     </script>
   )

@@ -8,6 +8,7 @@ import { NEARBY_QUEST_THRESHOLD_KM, SAME_CITY_THRESHOLD_KM } from '@/constants/n
 import type { Travel } from '@/types/types'
 import { translate as i18nT } from '@/i18n'
 import { formatDistance } from '@/utils/distanceCalculator'
+import type { QuestMeta } from '@/utils/questAdapters'
 
 
 const CARD_LIST_STYLE = { marginTop: 12, gap: 12 } as const
@@ -59,6 +60,17 @@ export const QuestForCitySection: React.FC<{
 
   const { matches } = useQuestsForLocation(query, { limit: MAX_QUESTS })
 
+  return <QuestForCityMatches travel={travel} styles={styles} matches={matches} />
+}
+
+/** The same visible section can receive an already selected public graph. */
+export function QuestForCityMatches({ travel, styles, matches, responsiveWeb = false }: {
+  travel: Travel
+  styles: any
+  matches: Array<{ quest: QuestMeta; distanceKm: number }>
+  responsiveWeb?: boolean
+}) {
+
   if (!matches.length) return null
 
   const heading = matches.length === 1 ? i18nT('travel:components.travel.details.sections.QuestForCitySection.kvest_po_etomu_gorodu_6742264a') : i18nT('travel:components.travel.details.sections.QuestForCitySection.kvesty_po_etomu_gorodu_i_ryadom_5bc0bff9')
@@ -90,6 +102,7 @@ export const QuestForCitySection: React.FC<{
           <QuestForCityCard
             key={quest.id}
             quest={quest}
+            responsiveWeb={responsiveWeb}
             eyebrow={buildEyebrow(distanceKm, quest.cityName)}
             analyticsSource="travel_detail"
             analyticsContextId={travel.id ?? travel.slug}

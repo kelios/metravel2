@@ -1,4 +1,5 @@
 const path = require('path')
+const { resolveWebOutput } = require('./scripts/lib/webOutput')
 
 const {
   assertGoogleServicesConfig,
@@ -47,6 +48,7 @@ const androidGoogleServices = () => {
 }
 
 module.exports = ({ config }) => {
+  const webOutput = resolveWebOutput()
   const appID = cleanEnv(process.env.EXPO_PUBLIC_META_APP_ID)
   const clientToken = cleanEnv(process.env.META_FACEBOOK_CLIENT_TOKEN)
   const facebookEnabled =
@@ -80,5 +82,6 @@ module.exports = ({ config }) => {
     ...config,
     plugins,
     android: { ...config.android, ...androidGoogleServices() },
+    ...(process.env.METRAVEL_WEB_OUTPUT ? { web: { ...config.web, output: webOutput } } : {}),
   }
 }

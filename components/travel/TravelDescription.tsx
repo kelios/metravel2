@@ -15,6 +15,10 @@ import DeferredStableContent from '@/components/travel/DeferredStableContent';
 import { runAfterInteractions } from '@/utils/runAfterInteractions';
 import type { ArticleBodyMediaIndex } from '@/components/travel/stableContent/articleBodyMedia';
 import { translate as i18nT } from '@/i18n'
+import { useResponsive } from '@/hooks/useResponsive';
+import { guardServerSafeHtml } from '@/utils/serverSafeHtml';
+import { demoteRichTextPageHeadings } from '@/utils/richTextHeadings';
+import { useTravelLoaderPayload } from '@/components/travel/details/travelLoaderData';
 
 
 interface TravelDescriptionProps {
@@ -50,13 +54,19 @@ function resolveWebElement(node: unknown): Element | null {
  * - На native парсинг откладывается до простоя JS-потока (runAfterInteractions + 2s форсаж).
  */
 
-const TravelDescription: React.FC<TravelDescriptionProps> = ({
+type TravelDescriptionContentProps = TravelDescriptionProps & {
+    dimensions: { width: number; height: number };
+    hasLoaderTravel: boolean;
+};
+
+const TravelDescriptionContent: React.FC<TravelDescriptionContentProps> = ({
                                                                  htmlContent,
                                                                  noBox = false,
                                                                  serverSanitized = false,
                                                                  articleBodyMedia = null,
+                                                                 dimensions: { width, height },
+                                                                 hasLoaderTravel,
                                                              }) => {
-    const { width, height } = useWindowDimensions();
     const isMobileLayout = width < METRICS.breakpoints.tablet;
     const colors = useThemedColors();
     const shouldUseFullWidthLayout = noBox && !isMobileLayout;
@@ -99,6 +109,12 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
     // первый интерактив (web: гидратация шелла/hero; native: взаимодействия).
     const [revealedHtml, setRevealedHtml] = useState<string | null>(null);
     const canParseHtml = revealedHtml === htmlContent;
+    const initialDescriptionHtml = useMemo(
+        () => Platform.OS === 'web' && serverSanitized && hasLoaderTravel
+            ? demoteRichTextPageHeadings(guardServerSafeHtml(htmlContent))
+            : null,
+        [hasLoaderTravel, htmlContent, serverSanitized],
+    );
 
     useEffect(() => {
         let cancelled = false;
@@ -321,6 +337,8 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
               articleBodyMedia={articleBodyMedia}
               fallback={contentFallback}
             />
+          ) : initialDescriptionHtml !== null ? (
+            <div data-ssr-html-island="description" dangerouslySetInnerHTML={{ __html: initialDescriptionHtml }} />
           ) : (
             contentFallback
           )}
@@ -360,5 +378,22 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
       </View>
     );
 };
+
+function LoaderTravelDescription(props: TravelDescriptionProps) {
+    const dimensions = useResponsive();
+    return <TravelDescriptionContent {...props} dimensions={dimensions} hasLoaderTravel />;
+}
+
+function WindowTravelDescription(props: TravelDescriptionProps) {
+    const dimensions = useWindowDimensions();
+    return <TravelDescriptionContent {...props} dimensions={dimensions} hasLoaderTravel={false} />;
+}
+
+function TravelDescription(props: TravelDescriptionProps) {
+    const hasLoaderTravel = Boolean(useTravelLoaderPayload()?.travel);
+    return Platform.OS === 'web' && hasLoaderTravel
+        ? <LoaderTravelDescription {...props} />
+        : <WindowTravelDescription {...props} />;
+}
 
 export default memo(TravelDescription);

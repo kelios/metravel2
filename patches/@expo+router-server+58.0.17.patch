@@ -1,8 +1,34 @@
 diff --git a/node_modules/@expo/router-server/build/server/renderStreamingContent.js b/node_modules/@expo/router-server/build/server/renderStreamingContent.js
-index 5d2be29..34d1e4b 100644
+index 5d2be29..4b27a57 100644
 --- a/node_modules/@expo/router-server/build/server/renderStreamingContent.js
 +++ b/node_modules/@expo/router-server/build/server/renderStreamingContent.js
-@@ -250,7 +250,23 @@ async function getStreamingContent(location, options) {
+@@ -216,7 +216,10 @@ async function getStreamingContent(location, options) {
+                 ...bodyJsNodes ?? []
+             ]
+         };
+-        const isStatic = options.output === 'static';
++        // metravel #2766: RNW inserts route styles during render. Buffer real
++        // requests too, so a cold SSR response includes its complete sheet and
++        // render failures are reported before a successful response is sent.
++        const bufferDocument = options.output === 'static' || options.request != null;
+         const renderErrors = [];
+         const stream = await _server2().default.renderToReadableStream(/*#__PURE__*/ (0, _jsxruntime().jsx)(_server1().ServerDocument, {
+             data: serverDocumentData,
+@@ -238,19 +241,35 @@ async function getStreamingContent(location, options) {
+                 if (options.request?.signal.aborted) {
+                     return;
+                 }
+-                if (isStatic) {
++                if (bufferDocument) {
+                     renderErrors.push(error);
+                 } else {
+                     console.error('SSR streaming render error:', error);
+                 }
+             }
+         });
+-        if (isStatic) {
++        if (bufferDocument) {
+             await stream.allReady;
              if (renderErrors.length > 0) {
                  throw renderErrors[0];
              }

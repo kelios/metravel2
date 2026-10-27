@@ -5,6 +5,7 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { useVisibleCardCount } from '@/hooks/useVisibleCardCount'
 import type { ThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
+import { webDataSetProps } from '@/utils/webProps'
 
 
 type BookImage = {
@@ -18,6 +19,8 @@ type BookImage = {
 }
 
 type HomeHeroPopularSectionProps = {
+  responsiveWeb?: boolean
+  hideFeatured?: boolean
   colors: ThemedColors
   styles: any
   isWeb: boolean
@@ -30,6 +33,7 @@ type HomeHeroPopularSectionProps = {
 }
 
 type PopularCardProps = {
+  responsiveWeb?: boolean
   image: BookImage
   styles: any
   colors: ThemedColors
@@ -117,6 +121,7 @@ function FeaturedRouteCard({
 }
 
 function PopularRouteCard({
+  responsiveWeb = false,
   image,
   styles,
   colors,
@@ -127,6 +132,7 @@ function PopularRouteCard({
 }: PopularCardProps) {
   return (
     <Pressable
+      {...(responsiveWeb ? webDataSetProps({ homePopularCard: true }) : {})}
       key={image.title}
       onPress={() => onOpenArticle(image.href)}
       style={({ pressed, hovered, focused }: any) => [
@@ -147,8 +153,8 @@ function PopularRouteCard({
       <ImageCardMedia
         source={image.source}
         placeholderColor={image.dominantColor}
-        width={width}
-        height={height}
+        width={responsiveWeb ? '100%' : width}
+        height={responsiveWeb ? undefined : height}
         borderRadius={0}
         fit="contain"
         blurBackground
@@ -158,15 +164,17 @@ function PopularRouteCard({
         loading="lazy"
         style={
           useGridLayout
-            ? [styles.imageCardImage, { width, height }]
+            ? [styles.imageCardImage, responsiveWeb ? { width: '100%', aspectRatio: 3 / 2 } : { width, height }]
             : styles.imageCardImage
         }
       />
-      <View style={styles.imageCardContent}>
-        <Text style={styles.imageCardTitle} numberOfLines={useGridLayout ? 2 : 1}>
+      <View style={styles.imageCardContent} {...(responsiveWeb ? webDataSetProps({ homePopularContent: true }) : {})}>
+        <Text style={styles.imageCardTitle} numberOfLines={useGridLayout ? 2 : 1}
+          {...(responsiveWeb ? webDataSetProps({ homePopularTitle: true }) : {})}>
           {image.title}
         </Text>
-        <Text style={styles.imageCardSubtitle} numberOfLines={useGridLayout ? 2 : 1}>
+        <Text style={styles.imageCardSubtitle} numberOfLines={useGridLayout ? 2 : 1}
+          {...(responsiveWeb ? webDataSetProps({ homePopularSubtitle: true }) : {})}>
           {image.subtitle}
         </Text>
       </View>
@@ -175,6 +183,8 @@ function PopularRouteCard({
 }
 
 export default function HomeHeroPopularSection({
+  responsiveWeb = false,
+  hideFeatured = false,
   colors,
   styles,
   isWeb,
@@ -194,14 +204,14 @@ export default function HomeHeroPopularSection({
   })
 
   return (
-    <View style={styles.popularSection}>
-      <FeaturedRouteCard
+    <View style={styles.popularSection} {...(responsiveWeb ? webDataSetProps({ homePopularSection: true }) : {})}>
+      {!hideFeatured && <FeaturedRouteCard
         colors={colors}
         featuredCardWidth={featuredCardWidth}
         image={featuredImage}
         onOpenArticle={onOpenArticle}
         styles={styles}
-      />
+      />}
       <View style={styles.popularTitleRow}>
         <Text
           style={styles.popularTitle}
@@ -209,8 +219,9 @@ export default function HomeHeroPopularSection({
           {...({ 'aria-level': 2 } as any)}
         >
           {i18nT('home:components.home.HomeHeroPopularSection.populyarnye_marshruty_870b269e')}</Text>
-        {!useMobileGrid && (
+        {(!useMobileGrid || responsiveWeb) && (
           <Pressable
+            {...(responsiveWeb ? webDataSetProps({ homePopularSeeAll: true }) : {})}
             onPress={() => onOpenArticle('/search')}
             style={styles.popularSeeAll}
             hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
@@ -223,9 +234,10 @@ export default function HomeHeroPopularSection({
         )}
       </View>
       {useMobileGrid ? (
-        <View style={styles.popularGrid}>
+        <View style={styles.popularGrid} {...(responsiveWeb ? webDataSetProps({ homePopularGrid: true }) : {})}>
           {popularItems.map((image) => (
             <PopularRouteCard
+              responsiveWeb={responsiveWeb}
               key={image.title}
               image={image}
               styles={styles}

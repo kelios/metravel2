@@ -12,6 +12,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo'
 import { translate as i18nT } from '@/i18n'
 import { staticRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
+import { useQuestDiscovery } from '@/components/quests/runtime/QuestDiscoveryContext'
 
 
 // Тематическое hero-изображение для соцсетей (1200×630) вместо generic-логотипа.
@@ -44,6 +45,8 @@ function normalizePath(raw: string | null | undefined) {
 }
 
 function HomeScreen() {
+  const discovery = useQuestDiscovery()
+  const runtimeHome = IS_WEB && discovery?.view === 'home'
   const pathname = usePathname()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
@@ -51,7 +54,7 @@ function HomeScreen() {
   // On web, start as false so SSR and first client render produce the same
   // neutral output. Prevents hydration mismatch when URL is /travels/* but
   // index tab renders during SSR with pathname='/'.
-  const [hydrated, setHydrated] = useState(!IS_WEB)
+  const [hydrated, setHydrated] = useState(!IS_WEB || runtimeHome)
   useEffect(() => {
     if (IS_WEB) setHydrated(true)
   }, [])
@@ -65,7 +68,7 @@ function HomeScreen() {
   // `false`, and — since `pathname` never changes again — render nothing forever
   // (white screen / stale content after tapping the logo or logging in).
   // Re-reading on a rAF after the URL settles fixes that.
-  const [isHomePath, setIsHomePath] = useState(!IS_WEB)
+  const [isHomePath, setIsHomePath] = useState(!IS_WEB || runtimeHome)
   useEffect(() => {
     if (!IS_WEB) return
     if (!hydrated) {

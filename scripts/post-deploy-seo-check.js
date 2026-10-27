@@ -493,7 +493,7 @@ function getTravelSsgH1Tag(html) {
   const tags = String(html || '').match(/<h1\b[^>]*>/gi) || []
   return tags.find((tag) => {
     const className = tag.match(/\bclass\s*=\s*(["'])(.*?)\1/i)?.[2] || ''
-    return className.split(/\s+/).includes('ssg-travel-h1')
+    return className.split(/\s+/).includes('ssg-travel-h1') || /\bdata-router-travel-h1=["']true["']/.test(tag)
   }) || ''
 }
 
@@ -507,7 +507,7 @@ function hasVisibleTravelSsgH1(html) {
     return false
   }
   const inlineStyle = tag.match(/\bstyle\s*=\s*(["'])(.*?)\1/i)?.[2] || ''
-  const classStyles = [...String(html || '').matchAll(/\.ssg-travel-h1\s*\{([^}]*)\}/gi)]
+  const classStyles = [...String(html || '').matchAll(/(?:\.ssg-travel-h1|\[data-router-travel-h1(?:=["']true["'])?\])\s*\{([^}]*)\}/gi)]
     .map((match) => match[1])
   return !hasHiddenTravelH1Declarations(inlineStyle) &&
     !classStyles.some(hasHiddenTravelH1Declarations)
@@ -539,7 +539,8 @@ function validateTravelHtml(html) {
   const hasArticleJsonLd = extractJsonLdScripts(html).some((script) => {
     try {
       const parsed = JSON.parse(script)
-      return parsed && parsed['@type'] === 'Article'
+      const graph = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.['@graph']) ? parsed['@graph'] : [parsed]
+      return graph.some((node) => node?.['@type'] === 'Article')
     } catch {
       return false
     }

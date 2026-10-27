@@ -29,6 +29,7 @@ import TravelDetailsHeroDeferredColumn, {
   TravelDetailsHeroBlock,
 } from './TravelDetailsHeroDeferredColumn';
 import TravelHeroStickyNavNative from './TravelHeroStickyNavNative';
+import { useTravelLoaderPayload } from './travelLoaderData';
 
 // The travel name is the page's single semantic <h1>. It follows the hero and
 // its metadata, matching the SSG article order without inserting a new block
@@ -143,6 +144,8 @@ export default function TravelDetailsCriticalShell({
   topNotice,
 }: TravelDetailsCriticalShellProps) {
   const colors = useThemedColors();
+  const loaderPayload = useTravelLoaderPayload();
+  const isRouterSsrTravel = Platform.OS === 'web' && Boolean(loaderPayload?.travel);
 
   // Drop legacy sr-only headings once the real React H1 has mounted. The current
   // SSG title is a visible normal-flow H1, so demote it to a same-class div
@@ -180,7 +183,7 @@ export default function TravelDetailsCriticalShell({
   }, [skeletonPhase, travel]);
 
   const showDesktopSidebar = shouldShowTravelDetailsDesktopSidebar(isMobile, screenWidth);
-  const showSkeletonOverlay = shouldShowTravelDetailsSkeletonOverlay(travel);
+  const showSkeletonOverlay = !isRouterSsrTravel && shouldShowTravelDetailsSkeletonOverlay(travel);
 
   const desktopLayoutStyle = useMemo(
     () => getTravelDetailsDesktopLayoutStyle(),
@@ -233,8 +236,8 @@ export default function TravelDetailsCriticalShell({
   );
 
   const mainContainerStyle = useMemo(
-    () => [styles.mainContainer, isMobile && styles.mainContainerMobile],
-    [styles.mainContainer, styles.mainContainerMobile, isMobile]
+    () => [styles.mainContainer, !isRouterSsrTravel && isMobile && styles.mainContainerMobile],
+    [styles.mainContainer, styles.mainContainerMobile, isMobile, isRouterSsrTravel]
   );
 
   const contentWrapperStyle = useMemo(
@@ -257,6 +260,7 @@ export default function TravelDetailsCriticalShell({
   const pageTitle = Platform.OS === 'web' && travel ? (
     <h1
       data-testid="travel-details-title"
+      data-router-travel-h1={isRouterSsrTravel ? 'true' : undefined}
       style={{
         ...WEB_VISIBLE_HEADING_STYLE,
         color: colors.text,
@@ -348,6 +352,7 @@ export default function TravelDetailsCriticalShell({
       role="main"
       aria-label={mainAriaLabel}
       style={wrapperStyle}
+      {...(isRouterSsrTravel ? { dataSet: { routerSsr: 'travel' } } : {})}
     >
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         <View style={mainContainerStyle}>
@@ -380,11 +385,13 @@ export default function TravelDetailsCriticalShell({
                 <View
                   style={contentWrapperStyle}
                   collapsable={false}
+                  {...(isRouterSsrTravel ? { dataSet: { ssrTravelContent: 'true' } } : {})}
                 >
                   {topNotice}
-                  {travel && showDesktopSidebar ? (
+                  {travel && (showDesktopSidebar || isRouterSsrTravel) ? (
                     <View style={desktopLayoutStyle} collapsable={false}>
-                      <View style={desktopSidebarContainerStyle}>
+                      <View style={desktopSidebarContainerStyle} {...(isRouterSsrTravel ? { dataSet: { ssrTravelSidebar: 'true' } } : {})}>
+                        {showDesktopSidebar ? (
                         <Animated.View
                           testID="travel-details-side-menu"
                           style={desktopSidebarAnimatedStyle}
@@ -401,6 +408,7 @@ export default function TravelDetailsCriticalShell({
                             />
                           </Suspense>
                         </Animated.View>
+                        ) : null}
                       </View>
 
                       <View style={desktopContentColumnStyle} collapsable={false}>

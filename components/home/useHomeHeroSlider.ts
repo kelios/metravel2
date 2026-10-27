@@ -117,6 +117,7 @@ const preloadWebImage = (uri: string): PreloadWebImageHandle => {
 type UseHomeHeroSliderParams<TSlide> = {
   slides: readonly TSlide[]
   showSideSlider: boolean
+  resetWhenInactive?: boolean
   sliderMediaWidth: number
   sliderHeight: number
   prefersReducedMotion: boolean
@@ -126,6 +127,7 @@ type UseHomeHeroSliderParams<TSlide> = {
 export const useHomeHeroSlider = <TSlide>({
   slides,
   showSideSlider,
+  resetWhenInactive = false,
   sliderMediaWidth,
   sliderHeight,
   prefersReducedMotion,
@@ -143,6 +145,16 @@ export const useHomeHeroSlider = <TSlide>({
 
   const loadedSlidesRef = useRef(loadedSlides)
   loadedSlidesRef.current = loadedSlides
+
+  useEffect(() => {
+    if (!resetWhenInactive || showSideSlider) return
+    // The narrow layout used the static first featured route before SSR. Keep
+    // that identity when a running desktop book becomes a narrow viewport.
+    setActiveSlide(0)
+    setVisibleSlide(0)
+    setFadingSlide(null)
+    previousVisibleSlideRef.current = 0
+  }, [resetWhenInactive, showSideSlider])
 
   const markSlideAsLoaded = useCallback((slideIndex: number) => {
     setLoadedSlides((prev) => {

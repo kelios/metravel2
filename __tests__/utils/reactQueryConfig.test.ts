@@ -47,6 +47,19 @@ describe('createOptimizedQueryClient', () => {
     expect(client.getDefaultOptions().queries?.refetchOnWindowFocus).toBe(false);
   });
 
+  it('preserves finite browser cache times, including per-query and mutation overrides', () => {
+    const client = createOptimizedQueryClient(undefined, { enableStaticPrefetch: false });
+    const query = client.getQueryCache().build(client, {
+      queryKey: ['browser-cache'], gcTime: 1234,
+    });
+    const mutation = client.getMutationCache().build(client, { gcTime: 2345 });
+
+    expect(client.getDefaultOptions().queries?.gcTime).toBe(600_000);
+    expect(query.gcTime).toBe(1234);
+    expect(mutation.gcTime).toBe(2345);
+    client.clear();
+  });
+
   it('native enables refetchOnWindowFocus', () => {
     Platform.OS = 'android';
     const client = createOptimizedQueryClient(undefined, { enableStaticPrefetch: false });

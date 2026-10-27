@@ -12,6 +12,26 @@ interface QueryClientRuntimeOptions {
   enableStaticPrefetch?: boolean;
 }
 
+// A request owns its entire cache. Finite GC timers keep that cache (and the
+// rendered document captured by queries) alive long after the response ends.
+// Enforce this after TanStack merges defaults: hooks can supply their own gcTime
+// and already-defaulted options, so changing the client defaults alone is unsafe.
+let serverQueryClientClass: typeof QueryClient | undefined;
+function getServerQueryClientClass(): typeof QueryClient {
+  serverQueryClientClass ??= class ServerQueryClient extends QueryClient {
+    override defaultQueryOptions: QueryClient['defaultQueryOptions'] = (options) => ({
+      ...super.defaultQueryOptions(options),
+      gcTime: Infinity,
+    });
+
+    override defaultMutationOptions: QueryClient['defaultMutationOptions'] = (options) => ({
+      ...super.defaultMutationOptions(options),
+      gcTime: Infinity,
+    });
+  };
+  return serverQueryClientClass;
+}
+
 /**
  * Оптимизированные настройки по умолчанию для React Query
  */
@@ -81,10 +101,14 @@ export function createOptimizedQueryClient(
   customOptions?: Partial<DefaultOptions>,
   runtimeOptions?: QueryClientRuntimeOptions
 ): QueryClient {
-  setupQueryOnlineManager();
-  setupQueryFocusManager();
+  const isWebServer = Platform.OS === 'web' && typeof window === 'undefined';
+  if (!isWebServer) {
+    setupQueryOnlineManager();
+    setupQueryFocusManager();
+  }
 
-  const client = new QueryClient({
+  const Client = isWebServer ? getServerQueryClientClass() : QueryClient;
+  const client = new Client({
     defaultOptions: {
       ...defaultQueryOptions,
       queries: {
@@ -97,6 +121,14 @@ export function createOptimizedQueryClient(
       ...customOptions,
     },
   });
+
+  if (isWebServer) {
+    client.setDefaultOptions({
+      ...client.getDefaultOptions(),
+      queries: { ...client.getDefaultOptions().queries, gcTime: Infinity },
+      mutations: { ...client.getDefaultOptions().mutations, gcTime: Infinity },
+    });
+  }
 
   // ✅ НОВОЕ: Настройка для React 19 - автоматический batching
   // React 19 автоматически батчит обновления, но мы можем оптимизировать дальше

@@ -14,6 +14,8 @@ import { useDocumentRouteRegistration } from '@/components/layout/documentView'
 // (`onlyChunk`) ждёт ровно один чанк `[...missing]` для boot-скриптов переводной детали.
 import NotFoundScreen from './[...missing].tsx'
 import { notFoundRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
+import type { ImmutableRequest } from 'expo-server'
+import QuestPublicLoaderScreen from '@/components/quests/runtime/QuestPublicLoaderScreen.web'
 
 // Lazy on purpose (#2389): a static import made the whole quest screen part of
 // this catch-all's module graph, and the shared-chunk split then shipped it as
@@ -64,15 +66,17 @@ export default function QuestLocaleRouteScreen() {
   const [QuestByIdScreen] = useState(() => loadedQuestScreen ?? LazyQuestByIdScreen)
   if (registrationOnly) return null
   if (!route) return <NotFoundScreen />
+  const gameplay = <Suspense fallback={<QuestScreenFallback />}>
+    <QuestByIdScreen key={route.path} route={route} />
+  </Suspense>
 
   // CustomHeader owns the top inset for this root Stack route, as on contact.
   return (
     <FreezeWhenBlurred>
       <View style={styles.root}>
         <CustomHeader />
-        <Suspense fallback={<QuestScreenFallback />}>
-          <QuestByIdScreen key={route.path} route={route} />
-        </Suspense>
+        {process.env.EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR === 'true'
+          ? <QuestPublicLoaderScreen fallback={gameplay} /> : gameplay}
       </View>
     </FreezeWhenBlurred>
   )
@@ -85,6 +89,15 @@ const styles = StyleSheet.create({
 
 // #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
 // generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана
-export function generateMetadata() {
-  return notFoundRouteMetadata()
+export async function loader(request: ImmutableRequest | undefined, params: Record<string, string | string[]>) {
+  const { loadQuestPublicRoute } = await import('@/components/quests/runtime/questRouteLoader')
+  return loadQuestPublicRoute(request, params)
+}
+
+export async function generateMetadata(request: ImmutableRequest | undefined, params: Record<string, string | string[]>) {
+  const { loadQuestPublicRoute } = await import('@/components/quests/runtime/questRouteLoader')
+  const data = await loadQuestPublicRoute(request, params)
+  if (!data) return notFoundRouteMetadata()
+  const { questPublicRouteMetadata } = await import('@/components/quests/runtime/questPublicSeo')
+  return questPublicRouteMetadata(request, params)
 }
