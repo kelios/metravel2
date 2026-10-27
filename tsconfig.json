@@ -13,11 +13,6 @@
     "target": "esnext",
     "module": "esnext",
     "moduleResolution": "bundler",
-    // RN 0.88 включает Strict TypeScript API по умолчанию (типы инстансов вместо компонентов
-    // в ref, запрет deep-imports). Миграция ~120 мест вынесена отдельной карточкой (#2732);
-    // до неё проект читает legacy-типы RN через условие экспорта. RN снимает это условие
-    // после 0.89.
-    "customConditions": ["react-native-legacy-deep-imports"],
     "allowImportingTsExtensions": true,
 
     "moduleSuffixes": [

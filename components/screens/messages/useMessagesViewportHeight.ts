@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, type View } from 'react-native';
+import { Platform, type ViewInstance } from 'react-native';
 
 /**
  * Bounds the mobile web chat to the actually visible browser viewport.
@@ -11,7 +11,7 @@ import { Platform, type View } from 'react-native';
  * composer fixed while the FlatList remains the only scroll container.
  */
 export function useMessagesViewportHeight(enabled: boolean) {
-    const screenRef = useRef<View>(null);
+    const screenRef = useRef<ViewInstance>(null);
     const [viewportHeight, setViewportHeight] = useState<number | null>(null);
 
     const measure = useCallback(() => {

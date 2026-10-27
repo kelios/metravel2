@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Platform, type LayoutChangeEvent, type View } from 'react-native'
+import { Platform, type LayoutChangeEvent, type ViewInstance } from 'react-native'
 import { useBreakpoints } from './useResponsive'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { QUESTS_GRID_MIN_COLUMN_WIDTH, QUESTS_GRID_WEB_GAP, QUESTS_LANDING_PADDING } from '@/constants/questLayout'
@@ -85,7 +85,7 @@ export function useQuestCatalogResponsiveModel(
  */
 export function useQuestGridCardWidth(fallbackWidth: number, enabled: boolean) {
   const isWeb = Platform.OS === 'web'
-  const gridRef = useRef<View>(null)
+  const gridRef = useRef<ViewInstance>(null)
   const gridWidthRef = useRef(0)
   const [gridWidth, setGridWidth] = useState(0)
 

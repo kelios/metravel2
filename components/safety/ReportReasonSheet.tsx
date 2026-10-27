@@ -4,6 +4,7 @@
 
 import { memo, useMemo, useRef, useState } from 'react'
 import {
+  type ScrollViewInstance,
   ActivityIndicator,
   Pressable,
   ScrollView,
@@ -38,7 +39,7 @@ function ReportReasonSheet({ visible, target, onClose, onReported }: Props) {
   const styles = useMemo(() => getStyles(colors), [colors])
   const [reason, setReason] = useState<ReportReasonKey | null>(null)
   const [comment, setComment] = useState('')
-  const bodyRef = useRef<ScrollView>(null)
+  const bodyRef = useRef<ScrollViewInstance>(null)
   const commentFocused = useRef(false)
 
   // KAV/Android window resize shrink the body after focus. Keep the final field

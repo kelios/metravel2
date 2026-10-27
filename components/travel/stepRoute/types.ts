@@ -1,5 +1,5 @@
 import type React from 'react'
-import type { TextInput, View } from 'react-native'
+import type { TextInputInstance, ViewInstance } from 'react-native'
 
 import type { TravelFilters } from '@/hooks/useTravelFilters'
 import type { MarkerData, TravelFormData } from '@/types/types'
@@ -53,8 +53,8 @@ export interface ManualPointPanelProps {
   state: ManualPointState;
   styles: Styles;
   fileInputRef: React.RefObject<any>;
-  panelRef?: React.RefObject<View | null>;
-  coordsInputRef?: React.RefObject<TextInput | null>;
+  panelRef?: React.RefObject<ViewInstance | null>;
+  coordsInputRef?: React.RefObject<TextInputInstance | null>;
   onToggle: () => void;
   onPhotoPick: () => void;
   onPhotoSelected: (event: any) => void;
@@ -81,7 +81,7 @@ export interface RouteMapCardProps {
   markers: MarkerData[];
   styles: Styles;
   isCompactLayout: boolean;
-  anchorRef: React.RefObject<View | null>;
+  anchorRef: React.RefObject<ViewInstance | null>;
   onMarkersChange: (markers: MarkerData[]) => void;
   onCountrySelect: (countryId: string) => void;
   onCountryDeselect: (countryId: string) => void;

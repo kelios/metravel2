@@ -1,5 +1,6 @@
 import React, { memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  type ViewInstance,
   ActivityIndicator,
   Platform,
   Pressable,
@@ -49,7 +50,7 @@ import { translate as i18nT } from '@/i18n'
 import { showToast } from '@/utils/toast'
 
 type SideBarProps = {
-  refs: Record<string, React.RefObject<View>>
+  refs: Record<string, React.RefObject<ViewInstance>>
   travel: Travel
   isMobile: boolean
   onNavigate: (key: string) => void

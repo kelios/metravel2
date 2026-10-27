@@ -190,7 +190,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
               display: 'grid',
               alignItems: 'start',
             } satisfies CSSProperties,
-          )
+          ) as ViewStyle
         : null),
     },
     cardWrap: {

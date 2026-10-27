@@ -4,17 +4,17 @@
 // мобильном списке поднимает страницу к карте через этот контекст:
 // `measureLayout` относительно содержимого ScrollView → `scrollTo`.
 import React, { createContext, useCallback, useContext, useRef } from 'react';
-import { Platform, ScrollView, type ScrollViewProps, type View } from 'react-native';
+import { type ScrollViewInstance, Platform, ScrollView, type ScrollViewProps, type ViewInstance } from 'react-native';
 
-type ScrollToNode = (node: View | null) => void;
+type ScrollToNode = (node: ViewInstance | null) => void;
 
 const PlannerPageScrollContext = createContext<ScrollToNode | null>(null);
 
 export const usePlannerPageScrollTo = (): ScrollToNode | null => useContext(PlannerPageScrollContext);
 
 export default function PlannerPageScrollView({ children, ...props }: ScrollViewProps) {
-  const scrollRef = useRef<ScrollView>(null);
-  const innerRef = useRef<View>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const innerRef = useRef<ViewInstance>(null);
   const scrollToNode = useCallback<ScrollToNode>((node) => {
     const inner = innerRef.current;
     if (!node || !inner) return;
@@ -30,8 +30,7 @@ export default function PlannerPageScrollView({ children, ...props }: ScrollView
       <ScrollView
         ref={scrollRef}
         // RN-Web этот проп не знает и отдал бы его в DOM; web скроллит сам узел.
-        // Тип RN ждёт `RefObject<View>` без `null` — отставание от React 19.
-        {...(Platform.OS === 'web' ? {} : { innerViewRef: innerRef as React.RefObject<View> })}
+        {...(Platform.OS === 'web' ? {} : { innerViewRef: innerRef })}
         // #2072: кнопки оформления под полем описания нажимаются при открытой
         // клавиатуре. С дефолтным 'never' первое касание только прятало
         // клавиатуру, и кнопка срабатывала со второго раза. Пустое место

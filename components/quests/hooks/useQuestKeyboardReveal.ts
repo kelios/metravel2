@@ -5,7 +5,7 @@ import {
   useWindowDimensions,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
-  type ScrollView,
+  type ScrollViewInstance,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -61,7 +61,7 @@ function measureWindowRect(node: MeasurableInput): Promise<WindowRect | null> {
  * native, dock и видимые нижние уведомления на web. Вердикт раскрывается
  * над всей занятой полосой (замер Android, #2271).
  */
-export function useQuestKeyboardReveal(scrollRef: React.RefObject<ScrollView | null>, bottomChromePx = 0, stepKey?: string | null) {
+export function useQuestKeyboardReveal(scrollRef: React.RefObject<ScrollViewInstance | null>, bottomChromePx = 0, stepKey?: string | null) {
   const insets = useSafeAreaInsets()
   const { height: windowHeight } = useWindowDimensions()
   const webKeyboardInset = useWebKeyboardInset()

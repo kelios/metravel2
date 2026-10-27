@@ -339,7 +339,7 @@ export function useSliderCore(options: UseSliderCoreOptions): UseSliderCoreResul
   useEffect(() => {
     if (!handleAppState) return;
     const sub = AppState.addEventListener('change', (s) => {
-      const wasBg = appState.current.match(/inactive|background/);
+      const wasBg = appState.current?.match(/inactive|background/);
       appState.current = s;
       if (s === 'active' && wasBg) {
         pausedByAppState.current = false;

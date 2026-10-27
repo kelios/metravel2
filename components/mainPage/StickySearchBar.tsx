@@ -4,6 +4,7 @@ import { searchInputAccessibilityProps } from '@/utils/webProps'
 
 import { useState, useRef, useEffect, useCallback, memo, type ComponentProps, type ReactNode } from 'react';
 import {
+  type TextInputInstance,
   ActivityIndicator,
   View,
   TextInput,
@@ -81,7 +82,7 @@ function StickySearchBar({
     isPhone,
     width,
   });
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
   const [isFocused, setIsFocused] = useState(false);
   const suppressNextHistoryPressRef = useRef(false);
 

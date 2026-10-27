@@ -4,7 +4,7 @@ import {
   type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
-  type ScrollView,
+  type ScrollViewInstance,
 } from 'react-native'
 
 const IS_WEB = Platform.OS === 'web'
@@ -61,7 +61,7 @@ export type HorizontalScrollEdges = {
  * этого на трёх экранах ряд обрезался вовсе без признака прокрутки (#1672).
  */
 export function useHorizontalScrollEdges(
-  scrollRef: RefObject<ScrollView | null>,
+  scrollRef: RefObject<ScrollViewInstance | null>,
   /** Пересчитать края, когда меняется содержимое ряда. */
   contentKey?: unknown,
 ): HorizontalScrollEdges {

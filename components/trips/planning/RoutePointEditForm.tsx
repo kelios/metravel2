@@ -4,7 +4,7 @@
 // контейнере и приходит сюда пропсами, как у соседней RoutePointAddForm.
 import React, { useEffect, useRef } from 'react';
 import Feather from '@expo/vector-icons/Feather';
-import { Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { type ViewInstance, Platform, Pressable, Text, TextInput, View } from 'react-native';
 
 import type { RoutePointType } from '@/api/plannedTrips';
 import AddressSearch from '@/components/MapPage/AddressSearch';
@@ -97,7 +97,7 @@ export default function RoutePointEditForm({
 }: Props) {
   // #1974: на desktop форма живёт ниже списка точек, не внутри карточки.
   // Мобильный скролл остаётся в RoutePointRow (`compact` + `nearest`).
-  const formRef = useRef<View>(null);
+  const formRef = useRef<ViewInstance>(null);
   // #2072: те же кнопки оформления, что у описания поездки, — описание точки
   // показывается той же разметкой #2070.
   const descriptionFormatting = useTripPlanTextFormatting(editDescription, onDescriptionChange);

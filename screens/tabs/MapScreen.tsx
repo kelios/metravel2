@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Platform, type View } from 'react-native'
+import { Platform, type ViewInstance } from 'react-native'
 import type { MapOnboardingTargetRegistry } from '@/components/MapPage/MapOnboarding'
 import { cancelMapOnboardingRestart } from '@/components/MapPage/mapOnboardingCommands'
 import { translate as i18nT } from '@/i18n'
@@ -67,12 +67,12 @@ if (CAN_PRELOAD_LEAFLET) {
 }
 
 export default function MapScreen() {
-  const filtersTarget = useRef<View>(null)
-  const placesTarget = useRef<View>(null)
-  const routeTarget = useRef<View>(null)
-  const filtersTabTarget = useRef<View>(null)
-  const placesTabTarget = useRef<View>(null)
-  const routeTabTarget = useRef<View>(null)
+  const filtersTarget = useRef<ViewInstance>(null)
+  const placesTarget = useRef<ViewInstance>(null)
+  const routeTarget = useRef<ViewInstance>(null)
+  const filtersTabTarget = useRef<ViewInstance>(null)
+  const placesTabTarget = useRef<ViewInstance>(null)
+  const routeTabTarget = useRef<ViewInstance>(null)
   const targetRegistry = useMemo<MapOnboardingTargetRegistry>(() => ({
     'map-mobile-filters-button': filtersTarget,
     'map-mobile-open-list': placesTarget,

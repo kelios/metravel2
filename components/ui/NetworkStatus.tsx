@@ -4,7 +4,7 @@
 // ✅ УЛУЧШЕНИЕ: Анимированные уведомления о состоянии сети
 
 import React, { useEffect, useState } from 'react';
-import { Text, StyleSheet, Platform } from 'react-native';
+import { Text, StyleSheet, Platform, type ViewStyle } from 'react-native';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -84,9 +84,9 @@ const styles = StyleSheet.create({
     paddingVertical: DESIGN_TOKENS.spacing.sm,
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
     zIndex: 9999,
-    ...Platform.select({
+    ...Platform.select<Partial<ViewStyle>>({
       web: {
-        position: 'fixed' as any,
+        position: 'fixed' as ViewStyle['position'],
       },
     }),
   },

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { type ViewInstance, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 
 import Feather from '@expo/vector-icons/Feather';
@@ -60,7 +60,7 @@ export default function TravelRouteFilesPanel({
   const [error, setError] = useState<string | null>(null);
 
   const webInputRef = useRef<HTMLInputElement | null>(null);
-  const containerRef = useRef<View | null>(null);
+  const containerRef = useRef<ViewInstance | null>(null);
   const lastPreviewRouteIdRef = useRef<number | null>(null);
 
   const canManage = Boolean(allowUpload && travelId);

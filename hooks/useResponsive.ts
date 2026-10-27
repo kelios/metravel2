@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
-import { Dimensions, Platform } from 'react-native';
+import { Dimensions, Platform, type ScaledSize } from 'react-native';
 import { METRICS } from '@/constants/layout';
 import { useHydrationReady, type HydrationReadyOptions } from '@/hooks/useHydrationReady';
 import { readViewportSize } from '@/utils/viewportMetrics';
@@ -106,7 +106,7 @@ const ensureSubscription = () => {
     });
   };
 
-  const dimSub = Dimensions.addEventListener('change', ({ window }) => {
+  const dimSub = Dimensions.addEventListener('change', ({ window }: { window: ScaledSize }) => {
     if (setSnapshotIfChanged({ width: window.width, height: window.height })) {
       notify();
     }

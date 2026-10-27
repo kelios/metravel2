@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect, useLayoutEffect, useMemo } from 'react';
-import { Animated, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { type ScrollViewInstance, Animated, Platform, StyleSheet, View } from 'react-native';
 import type {
   LayoutChangeEvent,
   ScrollViewProps,
@@ -84,7 +84,7 @@ type TravelDetailsCriticalShellProps = {
   styles: any;
   skeletonPhase: 'loading' | 'fading' | 'hidden';
   skeletonFallback: React.ReactNode;
-  scrollRef: React.RefObject<ScrollView | null>;
+  scrollRef: React.RefObject<ScrollViewInstance | null>;
   scrollViewStyle: StyleProp<ViewStyle>;
   scrollEventHandler: ScrollViewProps['onScroll'];
   nativeScrollDepthHandler?: ScrollViewProps['onMomentumScrollEnd'];

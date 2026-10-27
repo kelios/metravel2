@@ -7,6 +7,7 @@ import React, {
     useState,
 } from 'react';
 import {
+    type ScrollViewInstance,
     View,
     ScrollView, Platform,
     KeyboardAvoidingView, Keyboard
@@ -259,7 +260,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
 
     // Каждый шаг (и финал) открываем сверху — иначе на Android контент-ScrollView
     // сохраняет прошлый offset и новый шаг открывается прокрученным вниз.
-    const contentScrollRef = useRef<ScrollView>(null);
+    const contentScrollRef = useRef<ScrollViewInstance>(null);
 
     // Клавиатура не ужимает окно (edge-to-edge Android / visual viewport на mobile
     // web), поэтому поле ответа надо и подпереть отступом, и домотать до него.

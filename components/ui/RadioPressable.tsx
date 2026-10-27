@@ -9,12 +9,12 @@ export type RadioPressableProps = Omit<PressableProps, 'onPress' | 'accessibilit
 export default function RadioPressable({ onSelect, disabled, ...props }: RadioPressableProps) {
   const webKeyboardProps = Platform.OS === 'web' ? {
     'aria-checked': props.accessibilityState?.checked,
-    onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+    onKeyDown: ((event: KeyboardEvent<HTMLElement>) => {
       if (disabled || (event.key !== ' ' && event.key !== 'Spacebar')) return;
       if (event.target !== event.currentTarget || event.currentTarget.ownerDocument.activeElement !== event.currentTarget) return;
       event.preventDefault();
       if (!event.repeat) onSelect();
-    },
+    }) as unknown as NonNullable<PressableProps['onKeyDown']>,
   } : {};
 
   return (

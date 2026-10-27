@@ -4,7 +4,7 @@
  */
 
 import { useMemo, useRef, useCallback } from 'react';
-import { View, ScrollView, Platform } from 'react-native';
+import { type ViewInstance, type ScrollViewInstance, Platform } from 'react-native';
 import React from 'react';
 
 import { resolveSectionScrollOffset } from '@/utils/sectionScrollOffset';
@@ -49,9 +49,9 @@ const asScrollViewRefLike = (value: unknown): ScrollViewRefLike | null =>
   isRecord(value) ? (value as ScrollViewRefLike) : null;
 
 export interface UseScrollNavigationReturn {
-  anchors: Record<string, React.RefObject<View | null>>;
+  anchors: Record<string, React.RefObject<ViewInstance | null>>;
   scrollTo: (key: string) => void;
-  scrollRef: React.RefObject<ScrollView | null>;
+  scrollRef: React.RefObject<ScrollViewInstance | null>;
 }
 
 const SECTION_KEYS = [
@@ -84,14 +84,14 @@ const WEB_LAZY_SECTION_RETRY_DELAYS_MS = [
 ] as const;
 
 export function useScrollNavigation(): UseScrollNavigationReturn {
-  const scrollRef = useRef<ScrollView | null>(null);
+  const scrollRef = useRef<ScrollViewInstance | null>(null);
   const pendingRetriesRef = useRef<Record<string, Array<ReturnType<typeof setTimeout>>>>({});
 
   // ✅ АРХИТЕКТУРА: Создаем anchors объект из списка ключей
   const anchors = useMemo(() => {
-    const result: Record<string, React.RefObject<View | null>> = {};
+    const result: Record<string, React.RefObject<ViewInstance | null>> = {};
     SECTION_KEYS.forEach((key) => {
-      result[key] = React.createRef<View>();
+      result[key] = React.createRef<ViewInstance>();
     });
     return result;
   }, []);
@@ -290,7 +290,7 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
       const tryScrollNative = (k: string, onMeasured: () => boolean): boolean => {
         const anchor = anchors[k];
         const scrollTarget = scrollRef.current as
-          | (ScrollView & { getNativeScrollRef?: () => unknown })
+          | (ScrollViewInstance & { getNativeScrollRef?: () => unknown })
           | null;
         if (!scrollTarget) return false;
         // New Architecture (Fabric): measureLayout требует ref на нативный
@@ -303,7 +303,7 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
             ? scrollTarget.getNativeScrollRef()
             : null) ?? scrollTarget;
         const anchorNode = anchor?.current as
-          | (View & { measureLayout?: (...args: unknown[]) => void })
+          | (ViewInstance & { measureLayout?: (...args: unknown[]) => void })
           | null;
         if (!anchorNode || !relativeRef || typeof anchorNode.measureLayout !== 'function') {
           // Секция ещё не смонтирована (ленивый map/points/excursions) —

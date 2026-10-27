@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native'
-import { Platform } from 'react-native'
+import { AppState, Platform, type AppStateStatus } from 'react-native'
 
 import { useSliderCore } from '@/components/travel/sliderParts/useSliderCore'
 import { prefetchImage } from '@/components/ui/ImageCardMedia'
@@ -74,4 +74,27 @@ describe('useSliderCore native prefetch', () => {
       )
     })
   })
+
+  it('handles a native state change before the initial AppState is available', () => {
+    const initialState = AppState.currentState
+    let onChange: ((state: AppStateStatus) => void) | undefined
+    const remove = jest.fn()
+    const subscription = jest.spyOn(AppState, 'addEventListener').mockImplementation((event, handler) => {
+      if (event === 'change') onChange = handler as (state: AppStateStatus) => void
+      return { remove }
+    })
+    AppState.currentState = null
+    try {
+      const { unmount } = renderHook(() => useSliderCore({ images, autoPlay: false, buildUri: (image) => image.url }))
+      expect(onChange).toBeDefined()
+      expect(() => act(() => onChange?.('background'))).not.toThrow()
+      expect(() => act(() => onChange?.('active'))).not.toThrow()
+      unmount()
+      expect(remove).toHaveBeenCalled()
+    } finally {
+      AppState.currentState = initialState
+      subscription.mockRestore()
+    }
+  })
+
 })

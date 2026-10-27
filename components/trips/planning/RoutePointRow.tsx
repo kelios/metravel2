@@ -23,6 +23,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Feather from '@expo/vector-icons/Feather';
 import {
+  type ViewInstance,
   Platform,
   Pressable,
   Text,
@@ -213,7 +214,7 @@ function RoutePointRow({
   // Точку, добавленную тапом по карте, редактор открывает в конце списка — она
   // оказывается ниже сгиба. Подводим карточку к кадру, когда её редактор
   // раскрылся; `nearest` не двигает страницу, если карточка и так видна.
-  const cardRef = useRef<View | null>(null);
+  const cardRef = useRef<ViewInstance | null>(null);
   useEffect(() => {
     if (!compact || !isEditing || Platform.OS !== 'web') return;
     const node = cardRef.current as unknown as {

@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState, useEffect, useRef, Suspense, lazy } from 'react';
-import { View, ScrollView, Text, TextInput, NativeSyntheticEvent, LayoutChangeEvent, Modal, TouchableOpacity, Platform, useWindowDimensions, KeyboardAvoidingView } from 'react-native';
+import { View, type ScrollViewInstance, Text, TextInput, NativeSyntheticEvent, LayoutChangeEvent, Modal, TouchableOpacity, Platform, useWindowDimensions, KeyboardAvoidingView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -34,7 +34,7 @@ interface ContentUpsertSectionProps {
     onAnchorHandled?: () => void;
     visibleFields?: Array<'name' | 'description' | 'plus' | 'minus' | 'recommendation'>;
     showProgress?: boolean;
-    scrollViewRef?: React.RefObject<ScrollView | null>;
+    scrollViewRef?: React.RefObject<ScrollViewInstance | null>;
 }
 
 const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({

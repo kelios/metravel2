@@ -166,7 +166,7 @@ export function CommentForm({
   );
 }
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create<Record<string, any>>({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     backgroundColor: colors.surface,
     borderRadius: DESIGN_TOKENS.radii.md,

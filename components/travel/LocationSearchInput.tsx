@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
+    type ViewInstance,
+    type ScrollViewInstance,
     View,
     Text,
     TextInput,
@@ -28,7 +30,7 @@ interface LocationSearchInputProps {
     // Native-only: ссылка на родительский ScrollView. На фокусе инпута/появлении
     // результатов подскролливаем его так, чтобы инпут и выпадашка не прятались за
     // софт-клавиатурой (F-13). На web не используется — клавиатуры нет.
-    scrollViewRef?: React.RefObject<ScrollView | null>;
+    scrollViewRef?: React.RefObject<ScrollViewInstance | null>;
     // Native-only: текущее вертикальное смещение того же ScrollView (обновляется
     // родителем через onScroll). Нужно, чтобы из window-координат инпута вычислить
     // абсолютную позицию в контенте для scrollTo.
@@ -53,7 +55,7 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
     const [showResults, setShowResults] = useState(false);
     const debouncedQuery = useDebouncedValue(query, 500);
 
-    const containerRef = useRef<View>(null);
+    const containerRef = useRef<ViewInstance>(null);
     const isFocusedRef = useRef(false);
 
     // Native-only keyboard avoidance: подскролливаем родительский ScrollView так,

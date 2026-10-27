@@ -6,7 +6,7 @@ import { searchInputAccessibilityProps } from '@/utils/webProps'
 import React, { useState, useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import {
   View,
-  TextInput,
+  type TextInputInstance,
   Text,
   Pressable,
   StyleSheet,
@@ -61,7 +61,7 @@ const MapSearchInput: React.FC<MapSearchInputProps> = ({
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [isFocused, setIsFocused] = useState(false);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
 
   const searchFocusNonce = useMapPanelStore((s) => s.searchFocusNonce);
   const pendingSearchFocus = useMapPanelStore((s) => s.pendingSearchFocus);

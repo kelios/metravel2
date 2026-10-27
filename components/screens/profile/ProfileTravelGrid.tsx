@@ -3,7 +3,6 @@ import {
   Platform,
   View,
   type ViewStyle,
-  type DimensionValue,
 } from 'react-native';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import TravelListItemSkeleton from '@/components/listTravel/TravelListItemSkeleton';
@@ -55,7 +54,7 @@ export const resolveProfileGridGeometry = ({
       : Platform.OS === 'web'
         ? `calc((100% - ${(cols - 1) * gapSize}px) / ${cols})`
         : `${100 / cols}%`
-  ) as DimensionValue;
+  );
   const cellStyle: ViewStyle = isCardsSingleColumn
     ? SINGLE_COLUMN_CELL
     : {

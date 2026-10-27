@@ -1,5 +1,6 @@
 import React, { memo, useEffect, useMemo, useRef, useState } from "react";
 import {
+    type ViewInstance,
     ScrollView,
     StyleSheet,
     Text,
@@ -59,7 +60,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
     const isMobileLayout = width < METRICS.breakpoints.tablet;
     const colors = useThemedColors();
     const shouldUseFullWidthLayout = noBox && !isMobileLayout;
-    const descriptionRef = useRef<View | null>(null);
+    const descriptionRef = useRef<ViewInstance | null>(null);
 
     // ✅ ОПТИМИЗАЦИЯ: Адаптивные размеры контейнера
     const pageHeight = useMemo(() => Math.round(height * 0.7), [height]);

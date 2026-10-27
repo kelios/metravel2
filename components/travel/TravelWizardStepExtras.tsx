@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { KeyboardAvoidingView, Platform, View, Text, StyleSheet, ScrollView, findNodeHandle, UIManager } from 'react-native';
+import { type ViewInstance, type ScrollViewInstance, KeyboardAvoidingView, Platform, View, Text, StyleSheet, ScrollView, findNodeHandle, UIManager } from 'react-native';
 
 import FiltersUpsertComponent from '@/components/travel/FiltersUpsertComponent';
 import GroupedFiltersSection from '@/components/travel/GroupedFiltersSection';
@@ -75,8 +75,8 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const scrollRef = useRef<ScrollView | null>(null);
-    const categoriesAnchorRef = useRef<View | null>(null);
+    const scrollRef = useRef<ScrollViewInstance | null>(null);
+    const categoriesAnchorRef = useRef<ViewInstance | null>(null);
 
     useEffect(() => {
         if (!focusAnchorId) return;

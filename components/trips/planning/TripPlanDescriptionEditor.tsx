@@ -1,6 +1,7 @@
 import Feather from '@expo/vector-icons/Feather';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  type TextInputInstance,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -56,9 +57,9 @@ export default function TripPlanDescriptionEditor({
   const { isMobile } = useResponsive();
   const { contentViewportInset } = useSoftKeyboardInset();
   const { t } = useTranslation();
-  const inlineInputRef = useRef<TextInput>(null);
-  const fullscreenInputRef = useRef<TextInput>(null);
-  const linkInputRef = useRef<TextInput>(null);
+  const inlineInputRef = useRef<TextInputInstance>(null);
+  const fullscreenInputRef = useRef<TextInputInstance>(null);
+  const linkInputRef = useRef<TextInputInstance>(null);
   const [fullscreenVisible, setFullscreenVisible] = useState(false);
   const [linkDialogVisible, setLinkDialogVisible] = useState(false);
   const [linkValue, setLinkValue] = useState('');

@@ -1,5 +1,5 @@
 import { memo, useCallback, useState } from 'react'
-import { Platform, Text, TextInput, View, type NativeSyntheticEvent, type TextInputKeyPressEventData } from 'react-native'
+import { Platform, Text, TextInput, View, type TextInputKeyPressEvent } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { MAX_QUESTION_LENGTH } from '@/api/aiAssist/prompt'
@@ -49,9 +49,9 @@ function AssistantComposerComponent({
   // Enter отправляет, Shift+Enter переносит строку — только web, где есть
   // физическая клавиатура; на телефоне «Enter» многострочного поля — перенос.
   const onKeyPress = useCallback(
-    (event: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
+    (event: TextInputKeyPressEvent) => {
       if (Platform.OS !== 'web') return
-      const native = event.nativeEvent as TextInputKeyPressEventData & { shiftKey?: boolean }
+      const native = event.nativeEvent as TextInputKeyPressEvent['nativeEvent'] & { shiftKey?: boolean }
       if (native.key === 'Enter' && !native.shiftKey) {
         event.preventDefault?.()
         send()

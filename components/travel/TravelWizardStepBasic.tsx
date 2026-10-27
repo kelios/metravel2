@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { type ScrollViewInstance, Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Snackbar } from '@/ui/paper';
@@ -129,7 +129,7 @@ function TravelWizardStepBasic({
     fadeIn: true,
     slideIn: true,
   });
-  const contentScrollRef = useRef<ScrollView>(null);
+  const contentScrollRef = useRef<ScrollViewInstance>(null);
 
   const styles = useMemo(() => createStyles(colors), [colors]);
   const isCompactLayout = isHydrated && isMobile;

@@ -1,3 +1,4 @@
+import type { TextStyle } from 'react-native';
 // app/registration.tsx (или соответствующий путь)
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -657,7 +658,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         minHeight: 44,
         ...Platform.select({
             web: {
-                outlineStyle: 'none',
+                outlineStyle: 'none' as TextStyle['outlineStyle'],
             },
         }),
     },

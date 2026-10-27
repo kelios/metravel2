@@ -48,7 +48,7 @@ function describeNetworkState(state: QueryNetworkState): Record<string, unknown>
   };
 }
 
-function readAppState(): AppStateStatus | null {
+function readAppState(): string | null {
   // Test doubles and early native startup may not expose a string yet.
   const current = AppState.currentState;
   return typeof current === 'string' ? current : null;

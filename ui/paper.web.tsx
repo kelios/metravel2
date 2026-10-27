@@ -14,6 +14,7 @@
 import React, { useMemo } from 'react'
 import ReactDOM from 'react-dom'
 import {
+  type ViewInstance,
   ActivityIndicator,
   Image,
   Platform,
@@ -260,7 +261,7 @@ export const Menu: React.FC<MenuProps> & { Item: React.FC<MenuItemProps> } = ({
   accessibilityLabel,
 }) => {
   const [panelPosition, setPanelPosition] = React.useState<{ top: number; left: number; maxHeight: number; width: number } | null>(null)
-  const anchorRef = React.useRef<View>(null)
+  const anchorRef = React.useRef<ViewInstance>(null)
 
   React.useEffect(() => {
     if (!visible) {

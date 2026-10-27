@@ -1,3 +1,4 @@
+import type { TextStyle } from 'react-native';
 import { Platform, StyleSheet } from 'react-native';
 import { useMemo } from 'react';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -357,7 +358,7 @@ export const getAboutStyles = (colors: ThemedColors) => StyleSheet.create({
     color: colors.text,
     minHeight: DESIGN_TOKENS.touchTarget.minHeight,
     ...(Platform.OS === 'web' && {
-      outlineStyle: 'none',
+      outlineStyle: 'none' as TextStyle['outlineStyle'],
       transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
     }),
   },

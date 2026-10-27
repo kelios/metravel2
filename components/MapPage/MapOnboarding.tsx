@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { DeviceEventEmitter, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import { type ViewInstance, DeviceEventEmitter, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import Feather from '@expo/vector-icons/Feather'
 import type { ComponentProps } from 'react'
@@ -170,7 +170,7 @@ export const getPhoneOnboardingSteps = (): OnboardingStep[] => [
 ]
 
 export type MapOnboardingLayout = 'phone' | 'desktop'
-export type MapOnboardingTargetRegistry = Readonly<Record<string, React.RefObject<View | null>>>
+export type MapOnboardingTargetRegistry = Readonly<Record<string, React.RefObject<ViewInstance | null>>>
 
 interface Rect {
   top: number
@@ -290,7 +290,7 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({
   const [visible, setVisible] = useState(false)
   const [consentBannerOpen, setConsentBannerOpen] = useState(isConsentBannerOpen)
   const [targetRect, setTargetRect] = useState<TargetRect | null>(null)
-  const overlayRef = useRef<View>(null)
+  const overlayRef = useRef<ViewInstance>(null)
   const rafRef = useRef(0)
   const measurementGeneration = useRef(0)
   const remeasureRef = useRef<() => void>(() => {})

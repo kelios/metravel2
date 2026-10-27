@@ -8,6 +8,7 @@ import React, {
   memo,
 } from 'react';
 import {
+  type ScrollViewInstance,
   View,
   Text,
   Pressable,
@@ -321,7 +322,7 @@ const RecommendationsTabs = memo(
 
     const tabLayout = useRef<Record<string, { x: number; width: number }>>({}).current;
     const underlineAnim = useRef(new Animated.Value(0)).current;
-    const scrollRef = useRef<ScrollView>(null);
+    const scrollRef = useRef<ScrollViewInstance>(null);
 
     const handleHorizontalWheel = useCallback((e: any) => {
       if (Platform.OS !== 'web') return;

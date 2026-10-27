@@ -1,6 +1,6 @@
 import type { MapOnboardingTargetRegistry } from '@/components/MapPage/MapOnboarding';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, BackHandler, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native'
+import { type ViewInstance, AccessibilityInfo, ActivityIndicator, BackHandler, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native'
 import Animated from 'react-native-reanimated'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -139,8 +139,8 @@ export function MapScreenDesktopChrome({
   // TalkBack fall back to the top of the screen. The target exists only after
   // the state flip, so the event goes out from the commit effect, not from the
   // press handler. Web keeps its DOM focus model (unchanged).
-  const collapseButtonRef = useRef<View>(null)
-  const expandButtonRef = useRef<View>(null)
+  const collapseButtonRef = useRef<ViewInstance>(null)
+  const expandButtonRef = useRef<ViewInstance>(null)
   const pendingFocusRef = useRef<'collapse' | 'expand' | null>(null)
   const handleChevronPress = useCallback(
     (next: 'collapse' | 'expand') => {

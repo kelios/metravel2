@@ -1,5 +1,5 @@
 import type { Ref } from 'react'
-import { Pressable, type StyleProp, Text, type TextStyle, View } from 'react-native'
+import { type ViewInstance, Pressable, type StyleProp, Text, type TextStyle, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import QuestContentText from './QuestContentText'
 import { translate as i18nT } from '@/i18n'
@@ -18,7 +18,7 @@ type NavigationProps = {
   colors: QuestStepVisualColors
   styles: any
   onPress: () => void
-  focusRef?: Ref<View>
+  focusRef?: Ref<ViewInstance>
   active?: boolean
   done?: boolean
   /**

@@ -1,6 +1,6 @@
 import React, { lazy, Suspense, useEffect, useMemo, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { KeyboardAvoidingView, Platform, View, StyleSheet, Text, ScrollView, findNodeHandle, UIManager } from 'react-native';
+import { type ViewInstance, type ScrollViewInstance, KeyboardAvoidingView, Platform, View, StyleSheet, Text, ScrollView, findNodeHandle, UIManager } from 'react-native';
 
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { CollapsibleValidationSummary, ValidationSummary } from '@/components/travel/ValidationFeedback';
@@ -68,8 +68,8 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const scrollRef = useRef<ScrollView | null>(null);
-    const plusAnchorRef = useRef<View | null>(null);
+    const scrollRef = useRef<ScrollViewInstance | null>(null);
+    const plusAnchorRef = useRef<ViewInstance | null>(null);
 
     useEffect(() => {
         if (!focusAnchorId) return;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Platform, Pressable, Text, View } from 'react-native'
+import { type ViewInstance, Platform, Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton'
@@ -205,7 +205,7 @@ export function MapCanvas({
                 // Web: a role-less <div> exposes no name, so the folded icon is
                 // an `img` named by the message; mouse users get it as the title.
                 accessibilityRole={showSearchThisArea && isWeb ? 'image' : undefined}
-                ref={webTitleRef<View>(showSearchThisArea ? locationQualityMessage : null)}
+                ref={webTitleRef<ViewInstance>(showSearchThisArea ? locationQualityMessage : null)}
                 accessibilityLiveRegion="polite"
               >
                 <Feather

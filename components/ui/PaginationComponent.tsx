@@ -7,8 +7,7 @@ import {
     StyleSheet,
     TouchableOpacity,
     Platform,
-    NativeSyntheticEvent,
-    TextInputSubmitEditingEventData,
+    type TextInputSubmitEditingEvent,
 } from "react-native";
 import Feather from '@expo/vector-icons/Feather';
 import { IconButton, Menu } from "@/ui/paper";
@@ -261,7 +260,7 @@ function PaginationComponent({
     }, [currentPage, totalPages, onPageChange]);
 
     const onSubmit = useCallback(
-      (e?: NativeSyntheticEvent<TextInputSubmitEditingEventData>) => {
+      (e?: TextInputSubmitEditingEvent) => {
           e?.preventDefault?.();
           goToPage1Based(pageInput);
       },

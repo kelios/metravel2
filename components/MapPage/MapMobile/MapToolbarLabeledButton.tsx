@@ -1,5 +1,5 @@
 import React from 'react'
-import { Pressable, Text as RNText, View } from 'react-native'
+import { type ViewInstance, Pressable, Text as RNText, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import type { ThemedColors } from '@/hooks/useTheme'
@@ -7,7 +7,7 @@ import type { getMapMobileTopOverlayStyles } from './MapMobileTopOverlay.styles'
 
 type Props = {
   testID: string
-  targetRef?: React.Ref<View>
+  targetRef?: React.Ref<ViewInstance>
   onPress?: () => void
   icon: React.ComponentProps<typeof Feather>['name']
   /** Короткая видимая подпись под иконкой («Сбросить», «Маршрут»). */

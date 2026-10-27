@@ -1,4 +1,4 @@
-// RN объявляет `global.window = global` (react-native/Libraries/Core/setUpGlobals.js:17),
+// RN объявляет `global.window = global` (инициализация globals в React Native),
 // поэтому `typeof window !== 'undefined'` истинно и на телефоне — гардом это НЕ является.
 // Отличает платформы `window.location`: RN его не полифиллит вовсе, и обращение к
 // `.protocol`/`.hostname`/`.origin` на native бросает TypeError.

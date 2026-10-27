@@ -14,7 +14,7 @@ import React, {
   useRef,
   useState,
 } from 'react'
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import { type ViewInstance, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
@@ -111,7 +111,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         ? Math.max(0, windowHeight - fullScreenTopInset - bottomInset)
         : Math.round(windowHeight * (snapRatios[sheetIndex as 0 | 1 | 2] ?? 0.55))
 
-    const webRefCallback = useCallback((node: View | null) => {
+    const webRefCallback = useCallback((node: ViewInstance | null) => {
       webDomRef.current = node as unknown as HTMLElement | null
     }, [])
 

@@ -1,5 +1,6 @@
 import React, { forwardRef, memo, useCallback, useRef } from 'react'
 import {
+  type ScrollViewInstance,
   Platform,
   ScrollView,
   StyleSheet,
@@ -118,7 +119,7 @@ export type EdgeFadeScrollRowProps = Omit<ScrollViewProps, 'horizontal'> & {
  * `style` остаётся на самом `ScrollView` (как у обычного `ScrollView`), обёртка
  * нужна только как система координат для затухания.
  */
-const EdgeFadeScrollRow = forwardRef<ScrollView, EdgeFadeScrollRowProps>(function EdgeFadeScrollRow(
+const EdgeFadeScrollRow = forwardRef<ScrollViewInstance, EdgeFadeScrollRowProps>(function EdgeFadeScrollRow(
   {
     children,
     fadeColor,
@@ -134,17 +135,17 @@ const EdgeFadeScrollRow = forwardRef<ScrollView, EdgeFadeScrollRowProps>(functio
   ref,
 ) {
   const colors = useThemedColors()
-  const innerRef = useRef<ScrollView | null>(null)
+  const innerRef = useRef<ScrollViewInstance | null>(null)
   const { canScrollLeft, canScrollRight, edgeScrollProps } = useHorizontalScrollEdges(
     innerRef,
     contentKey ?? React.Children.count(children),
   )
 
   const setRefs = useCallback(
-    (node: ScrollView | null) => {
+    (node: ScrollViewInstance | null) => {
       innerRef.current = node
       if (typeof ref === 'function') ref(node)
-      else if (ref) (ref as React.MutableRefObject<ScrollView | null>).current = node
+      else if (ref) (ref as React.MutableRefObject<ScrollViewInstance | null>).current = node
     },
     [ref],
   )

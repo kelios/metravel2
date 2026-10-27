@@ -3,7 +3,7 @@
 // (`TripPlanFormatToolbar`). Поле с полноэкранным режимом —
 // `TripPlanDescriptionEditor` — ведёт выделение двух полей сам.
 import { useCallback, useRef, useState } from 'react';
-import type { TextInput, TextInputSelectionChangeEvent } from 'react-native';
+import type { TextInputInstance, TextInputSelectionChangeEvent } from 'react-native';
 
 import {
   applyTripPlanFormat,
@@ -12,7 +12,7 @@ import {
 } from './tripPlanFormatActions';
 
 export function useTripPlanTextFormatting(value: string, onChangeText: (value: string) => void) {
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
   const selectionRef = useRef<TripPlanTextSelection>({ start: value.length, end: value.length });
   // Выделение управляемое только на один кадр после кнопки: иначе при обычном
   // наборе курсор откатывался бы к позиции прошлого рендера.

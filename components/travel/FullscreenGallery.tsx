@@ -9,7 +9,7 @@ import {
   StyleSheet,
   Text,
   View,
-  ViewToken,
+  type ListViewToken,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -113,7 +113,7 @@ export default function FullscreenGallery({
   }, [visible]);
 
   const onViewableItemsChanged = useCallback(
-    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+    ({ viewableItems }: { viewableItems: ListViewToken[] }) => {
       if (viewableItems.length > 0 && viewableItems[0].index != null) {
         setCurrentIndex(toRealIndex(viewableItems[0].index));
       }

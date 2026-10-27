@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native'
+import { type ScrollViewInstance, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native'
 import { usePathname, useIsFocused, useRouter } from 'expo-router'
 
 import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset'
@@ -50,7 +50,7 @@ export default function AssistantScreen() {
   const locale = getActiveLocale()
   const chat = useAssistantChat({ locale })
   const [draft, setDraft] = useState('')
-  const scrollRef = useRef<ScrollView | null>(null)
+  const scrollRef = useRef<ScrollViewInstance | null>(null)
 
   const dockPadding = useScrollBottomPadding(12)
   const bottomInset = Platform.OS === 'web' && !isMobile ? 12 : asBottomDimension(dockPadding)

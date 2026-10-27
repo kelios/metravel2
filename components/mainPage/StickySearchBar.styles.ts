@@ -1,3 +1,4 @@
+import type { TextStyle } from 'react-native';
 import { useMemo } from 'react';
 import { Platform, StyleSheet } from 'react-native';
 
@@ -128,7 +129,7 @@ export const useStickySearchBarStyles = (colors: ReturnType<typeof useThemedColo
     lineHeight: Platform.select({ default: 20, web: 22 }),
     ...Platform.select({
       web: {
-        outlineStyle: 'none',
+        outlineStyle: 'none' as TextStyle['outlineStyle'],
         boxShadow: 'none',
         borderColor: 'transparent',
       },

@@ -7,6 +7,7 @@
 
 import React, { useCallback, useMemo } from 'react'
 import {
+  type ViewInstance,
   PanResponder,
   Platform,
   StyleProp,
@@ -361,7 +362,7 @@ function WorldChoroplethMapComponent({
   // поэтому preventDefault() в React-onWheel игнорируется → страница скроллится
   // ПОВЕРХ зума. На iOS WebKit touch-derived Pointer Events могут отмениться до
   // первого move, поэтому палец ведём через raw touch events с passive:false.
-  const containerRef = React.useRef<View | null>(null)
+  const containerRef = React.useRef<ViewInstance | null>(null)
   const zoomRef = React.useRef(zoom)
   zoomRef.current = zoom
   const isWebZoomEnabled = Platform.OS === 'web' && Boolean(zoom)

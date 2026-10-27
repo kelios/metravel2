@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { isPrintAvailable } from '@/utils/printHtml'
-import { Platform, Pressable, ScrollView, Text, View } from 'react-native'
+import { type ScrollViewInstance, type ViewInstance, Platform, Pressable, ScrollView, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { QuestFinalePill, QuestStepPill } from './questWizardNavigation'
@@ -81,7 +81,7 @@ type QuestCompactSidebarProps = NavigationSharedProps & {
   /** Нужен блоку экскурсий для SubID партнёрских ссылок (`quest-<id>`). */
   questId?: string
   showExcursions?: boolean
-  routeTriggerRef?: React.Ref<View>
+  routeTriggerRef?: React.Ref<ViewInstance>
 }
 
 type QuestHeaderPanelProps = NavigationSharedProps & {
@@ -98,7 +98,7 @@ type QuestHeaderPanelProps = NavigationSharedProps & {
   headerInScreenRow: boolean
   headerInContentFlow?: boolean
   onRouteSheetChange?: (open: boolean) => void
-  routeTriggerRef?: React.Ref<View>
+  routeTriggerRef?: React.Ref<ViewInstance>
   screenW: number
   compactNav: boolean
   onReset: () => void
@@ -145,7 +145,7 @@ function QuestActionButton({
   textStyle,
   iconSize = 15,
 }: QuestActionButtonProps) {
-  const anchorRef = useRef<View>(null)
+  const anchorRef = useRef<ViewInstance>(null)
   const [hovered, setHovered] = useState(false)
   const [focused, setFocused] = useState(false)
   const [dismissed, setDismissed] = useState(false)
@@ -225,7 +225,7 @@ export function ActiveScrollNav({
   contentContainerStyle?: any
   children: React.ReactNode
 }) {
-  const scrollRef = useRef<ScrollView>(null)
+  const scrollRef = useRef<ScrollViewInstance>(null)
   // Раскладка — в ref, а не в state: onLayout каждого элемента приходит отдельно
   // (RNW — своим setTimeout), и состояние перерисовывало бы всю ленту N раз.
   const itemLayouts = useRef(new Map<number, { x: number; width: number }>())
@@ -572,7 +572,7 @@ function QuestStepsNavigation({
   wideDesktop,
   isMobile,
   routeTriggerRef,
-}: NavigationSharedProps & { wideDesktop: boolean; isMobile: boolean; routeTriggerRef?: React.Ref<View> }) {
+}: NavigationSharedProps & { wideDesktop: boolean; isMobile: boolean; routeTriggerRef?: React.Ref<ViewInstance> }) {
   const pointsTotal = countRoutePoints(allSteps)
   const pills = allSteps.map((step, index) => {
     const { active: isActive, done: isDone, pending: isPostponed, unlocked: isUnlocked } = resolveQuestStepNavFlags({

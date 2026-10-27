@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 import {
+  type ViewInstance,
   KeyboardAvoidingView,
   findNodeHandle,
   Platform,
   ScrollView,
   Text,
-  TextInput,
+  type TextInputInstance,
   UIManager,
   View,
 } from 'react-native'
@@ -92,8 +93,8 @@ function TravelWizardStepRoute({
   const isMountedRef = useRef(true)
   const quickDraftTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const addPointSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const manualPanelAnchorRef = useRef<View | null>(null)
-  const manualCoordsInputRef = useRef<TextInput | null>(null)
+  const manualPanelAnchorRef = useRef<ViewInstance | null>(null)
+  const manualCoordsInputRef = useRef<TextInputInstance | null>(null)
   // Текущее вертикальное смещение ScrollView — нужно LocationSearchInput, чтобы
   // из window-координат инпута вычислить абсолютную позицию в контенте и поднять
   // его над клавиатурой (F-13).

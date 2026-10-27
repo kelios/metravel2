@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, useWindowDimensions, type View } from 'react-native';
+import { Platform, useWindowDimensions, type ViewInstance } from 'react-native';
 
 import { useDockReservePx, useNativeBottomChromeOcclusion } from './bottomChromeInset';
 import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe';
@@ -10,7 +10,7 @@ export function useNativeBottomOverlayInset(overDock = true) {
   const insets = useSafeAreaInsetsSafe();
   const { top } = useNativeBottomChromeOcclusion();
   const { width, height } = useWindowDimensions();
-  const layerRef = useRef<View>(null);
+  const layerRef = useRef<ViewInstance>(null);
   const generation = useRef(0);
   const [layerBottom, setLayerBottom] = useState<number | null>(null);
   const measureLayer = useCallback(() => {

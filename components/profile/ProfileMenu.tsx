@@ -1,5 +1,5 @@
 import { useState, useCallback, useLayoutEffect, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, Dimensions } from 'react-native';
+import { type ViewInstance, View, Text, StyleSheet, Pressable, Platform, Dimensions } from 'react-native';
 import MenuOverlay from '@/components/ui/MenuOverlay';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -19,8 +19,8 @@ export function ProfileMenu({ onLogout, onSettings }: ProfileMenuProps) {
   // Default position keeps the menu usable in tests (where measure returns 0)
   // and before measureInWindow resolves.
   const [menuPosition, setMenuPosition] = useState({ top: 60, right: DESIGN_TOKENS.spacing.md });
-  const triggerRef = useRef<View>(null);
-  const firstActionRef = useRef<View>(null);
+  const triggerRef = useRef<ViewInstance>(null);
+  const firstActionRef = useRef<ViewInstance>(null);
   const restoreFocusRef = useRef(true);
   const pendingActionRef = useRef<null | (() => void)>(null);
   const ownerMountedRef = useRef(false);

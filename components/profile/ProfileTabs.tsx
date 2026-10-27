@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, type ScrollViewInstance } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import EdgeFadeScrollRow from '@/components/ui/EdgeFadeScrollRow';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -203,7 +203,7 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
         .filter((tab): tab is (typeof allTabs)[number] => tab != null)
     : allTabs;
   const useCompactMobileRow = isMobile && tabs.length <= 3;
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const scrollViewportWidthRef = useRef(0);
   const tabLayoutsRef = useRef(new Map<ProfileTabKey, { x: number; width: number }>());
 

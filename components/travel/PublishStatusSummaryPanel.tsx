@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { type ViewInstance, Text, View } from 'react-native';
 
 import Feather from '@expo/vector-icons/Feather';
 
@@ -34,7 +34,7 @@ type PublishStatusSummaryPanelProps = {
     };
     onStatusChange: (status: 'draft' | 'moderation') => void;
     onNavigateToIssue?: (issue: ModerationIssue) => void;
-    missingBannerAnchor?: React.Ref<View>;
+    missingBannerAnchor?: React.Ref<ViewInstance>;
 };
 
 export default function PublishStatusSummaryPanel({

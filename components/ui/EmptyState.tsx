@@ -4,7 +4,7 @@
 // экран. Правило — docs/DESIGN_SYSTEM.md «Empty states», страж —
 // __tests__/config/empty-state-governance.test.ts.
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Platform, type StyleProp, type ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, Platform, type StyleProp, type ViewStyle, type TextStyle, type ImageStyle } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -204,7 +204,7 @@ function EmptyState({
 const fullStyleSpec = (
   colors: ReturnType<typeof useThemedColors>,
   isMobile: boolean,
-): StyleSheet.NamedStyles<any> => ({
+): Record<string, ViewStyle | TextStyle | ImageStyle> => ({
   container: {
     flex: 1,
     justifyContent: 'center',

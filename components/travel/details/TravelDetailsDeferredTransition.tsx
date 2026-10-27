@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Platform, StyleSheet, View, type LayoutChangeEvent } from 'react-native'
+import { type ViewInstance, Platform, StyleSheet, View, type LayoutChangeEvent } from 'react-native'
 
 // Shared by every reserved deferred section (footer #1604, sidebar and comments
 // #1642). Resolving a short frame can still move a visible following section
@@ -158,7 +158,7 @@ function findRuntimeReadingAnchor(node: HTMLElement, runtime: HTMLElement | null
   return null
 }
 
-function connectedDOMView(ref: View | null): HTMLElement | null {
+function connectedDOMView(ref: ViewInstance | null): HTMLElement | null {
   const node = ref as unknown as HTMLElement | null
   const view = node?.ownerDocument?.defaultView
   // Native/test-renderer handles and stale/disconnected DOM refs cannot own
@@ -290,7 +290,7 @@ export function TravelDetailsDeferredTransition({
   const [internalRuntimeFrameReady, setInternalRuntimeFrameReady] = useState(false)
   const [runtimeMeasured, setRuntimeMeasured] = useState(false)
   const [optionalFlowFallback, setOptionalFlowFallback] = useState(false)
-  const runtimeRef = useRef<View>(null)
+  const runtimeRef = useRef<ViewInstance>(null)
   const measuredHeightRef = useRef<number | null>(null)
   const measuredWidthRef = useRef<number | null>(null)
   const reserveSlackRef = useRef<MeasuredReserveSlack | null>(null)
@@ -300,7 +300,7 @@ export function TravelDetailsDeferredTransition({
   const observerGenerationRef = useRef(0)
   const revealCorrectionRef = useRef<ReserveReleaseState | null>(null)
   const [reserveReleaseState, setReserveReleaseState] = useState<ReserveReleaseState>('reserved')
-  const transitionRef = useRef<View>(null)
+  const transitionRef = useRef<ViewInstance>(null)
   const releaseAnchorRef = useRef<ReserveReleaseAnchor | null>(null)
 
   useEffect(() => {

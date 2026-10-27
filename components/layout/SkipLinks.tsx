@@ -1,3 +1,4 @@
+import type { PressableProps } from 'react-native';
 import { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -72,11 +73,11 @@ export default function SkipLinks({
               // `onBlur` выше читает `dataset.skipLink` у нового фокуса: переход Tab
               // между ссылками не должен прятать блок. RNW переносит в DOM только `dataSet`.
               dataSet: { skipLink: 'true' },
-              onKeyDown: (event: { key: string; preventDefault: () => void }) => {
+              onKeyDown: ((event: { key: string; preventDefault: () => void }) => {
                 if (event.key !== 'Enter') return;
                 event.preventDefault();
                 handleSkip(link.targetId);
-              },
+              }) as unknown as NonNullable<PressableProps['onKeyDown']>,
             },
           })}
         >

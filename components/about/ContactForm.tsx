@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { type TextInputInstance, ActivityIndicator, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useAboutStyles } from './aboutStyles';
@@ -34,8 +34,8 @@ type ContactFormProps = {
   onFocusMessage: () => void;
   onBlurMessage: () => void;
   onKeyPress: (e: any) => void;
-  emailRef: React.RefObject<TextInput | null>;
-  messageRef: React.RefObject<TextInput | null>;
+  emailRef: React.RefObject<TextInputInstance | null>;
+  messageRef: React.RefObject<TextInputInstance | null>;
   onSubmitEditingEmail: () => void;
   onSubmitEditingMessage: () => void;
 };

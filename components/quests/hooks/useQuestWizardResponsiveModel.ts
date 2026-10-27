@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
-import { Platform, type NativeScrollEvent, type NativeSyntheticEvent, type ScrollView, type View } from 'react-native'
+import { Platform, type NativeScrollEvent, type NativeSyntheticEvent, type ScrollViewInstance, type ViewInstance } from 'react-native'
 import { useResponsive } from '@/hooks/useResponsive'
 import { resolveHeaderContextBarIsMobile } from '@/components/layout/headerContextBarModel'
 import { resolveQuestHeaderPresentation } from '@/components/layout/questHeaderPresentation'
@@ -136,7 +136,7 @@ function measureReadingDepth(
  */
 export function useQuestHeaderPlacement(
   desired: HeaderPlacement,
-  scrollRef: RefObject<ScrollView | null>,
+  scrollRef: RefObject<ScrollViewInstance | null>,
   keyboardInset: number,
   stepKey?: string | null,
 ) {
@@ -151,8 +151,8 @@ export function useQuestHeaderPlacement(
   desiredRef.current = desired
   const keyboardRef = useRef(keyboardInset)
   keyboardRef.current = keyboardInset
-  const mainContentRef = useRef<View>(null)
-  const routeTriggerRef = useRef<View>(null)
+  const mainContentRef = useRef<ViewInstance>(null)
+  const routeTriggerRef = useRef<ViewInstance>(null)
   const restoreRouteFocus = useRef(false)
   const scrollOffset = useRef(0)
   const dragging = useRef(false)

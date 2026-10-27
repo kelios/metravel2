@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, View, Platform, Text, type StyleProp, type ViewStyle } from 'react-native';
+import { type ViewInstance, Pressable, StyleSheet, View, Platform, Text, type StyleProp, type ViewStyle } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -81,7 +81,7 @@ function IconButton({
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [hovered, setHovered] = useState(false);
-  const anchorRef = useRef<View>(null);
+  const anchorRef = useRef<ViewInstance>(null);
   const dismissTooltip = useCallback(() => setHovered(false), []);
   const accessibilityState = active == null ? { disabled } : { disabled, selected: active };
   const dimension = TOUCH_TARGET_BY_SIZE[size];

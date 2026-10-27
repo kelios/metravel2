@@ -195,7 +195,7 @@ export default function TabOneScreen() {
               <ScrollView
                 style={[{ flex: 1, alignSelf: 'stretch' }, webTouchScrollStyle]}
                 refreshControl={
-                  <RefreshControl refreshing={isFetching} onRefresh={() => refetch()} />
+                  <RefreshControl refreshing={isFetching} onRefresh={(() => refetch()) as () => void} />
                 }
               >
                 {articles?.data?.map((item: any, index: number) => (

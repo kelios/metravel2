@@ -1,6 +1,6 @@
 // app/about/index.tsx
 import { useCallback, useMemo, useRef, useState, memo, useEffect } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, type TextInputInstance, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { AboutIntroCard } from '@/components/about/AboutIntroCard';
@@ -67,8 +67,8 @@ function AboutAndContactScreen() {
   const [touched, setTouched] = useState<{ name?: boolean; email?: boolean; message?: boolean; agree?: boolean }>({});
   const [focused, setFocused] = useState<{ name?: boolean; email?: boolean; message?: boolean }>({});
 
-  const emailRef = useRef<TextInput | null>(null);
-  const messageRef = useRef<TextInput | null>(null);
+  const emailRef = useRef<TextInputInstance | null>(null);
+  const messageRef = useRef<TextInputInstance | null>(null);
 
   const isEmailValid = (val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
 

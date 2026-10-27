@@ -1,5 +1,6 @@
 import React, { forwardRef, memo, useMemo } from 'react';
 import {
+  type ViewInstance,
   ActivityIndicator,
   Pressable,
   StyleSheet,
@@ -52,7 +53,7 @@ const getBoxShadows = (colors: ThemedColors) => {
   return themed.boxShadows ?? DESIGN_TOKENS.shadows;
 };
 
-const ButtonComponent = forwardRef<View, ButtonProps>(({
+const ButtonComponent = forwardRef<ViewInstance, ButtonProps>(({
   label,
   onPress,
   variant = 'primary',
@@ -381,7 +382,7 @@ const getVariantPressedStyles = (colors: ThemedColors): Record<ButtonVariant, Vi
   return {
     primary: {
       transform: [{ scale: 0.99 }],
-      ...Platform.select({
+      ...Platform.select<Partial<ViewStyle>>({
         web: {
           // @ts-ignore -- web transform string type conflicts with RN transform array type
           transform: 'translateY(0)',
@@ -391,7 +392,7 @@ const getVariantPressedStyles = (colors: ThemedColors): Record<ButtonVariant, Vi
     },
     secondary: {
       transform: [{ scale: 0.99 }],
-      ...Platform.select({
+      ...Platform.select<Partial<ViewStyle>>({
         web: {
           // @ts-ignore -- web transform string type conflicts with RN transform array type
           transform: 'translateY(0)',
@@ -400,7 +401,7 @@ const getVariantPressedStyles = (colors: ThemedColors): Record<ButtonVariant, Vi
     },
     ghost: {
       transform: [{ scale: 0.99 }],
-      ...Platform.select({
+      ...Platform.select<Partial<ViewStyle>>({
         web: {
           // @ts-ignore -- web transform string type conflicts with RN transform array type
           transform: 'translateY(0)',
@@ -409,7 +410,7 @@ const getVariantPressedStyles = (colors: ThemedColors): Record<ButtonVariant, Vi
     },
     danger: {
       transform: [{ scale: 0.99 }],
-      ...Platform.select({
+      ...Platform.select<Partial<ViewStyle>>({
         web: {
           // @ts-ignore -- web transform string type conflicts with RN transform array type
           transform: 'translateY(0)',
@@ -419,7 +420,7 @@ const getVariantPressedStyles = (colors: ThemedColors): Record<ButtonVariant, Vi
     },
     outline: {
       transform: [{ scale: 0.99 }],
-      ...Platform.select({
+      ...Platform.select<Partial<ViewStyle>>({
         web: {
           // @ts-ignore -- web transform string type conflicts with RN transform array type
           transform: 'translateY(0)',

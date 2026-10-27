@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { type ScrollViewInstance, type ViewInstance, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import ActionListSheet from '@/components/ui/ActionListSheet'
@@ -21,7 +21,7 @@ type Props = {
   /** Пассивная пометка языка, отдельный сосед кнопки маршрута в строке 44 px. */
   contentLocaleSlot?: React.ReactNode
   onSheetOpenChange?: (open: boolean) => void
-  triggerRef?: React.Ref<View>
+  triggerRef?: React.Ref<ViewInstance>
 }
 
 /**
@@ -39,7 +39,7 @@ export default function QuestRouteStrip({ model, onGoToStep, onShowFinale, conte
     onSheetOpenChange?.(open)
   }, [onSheetOpenChange])
   const close = useCallback(() => changeSheetOpen(false), [changeSheetOpen])
-  const sheetScrollRef = useRef<ScrollView>(null)
+  const sheetScrollRef = useRef<ScrollViewInstance>(null)
   // Лист открывается на текущей точке, а не на старте: на 12-й из 14 её строка
   // иначе ниже края листа (≈ 11 строк на 390×844, ≈ 8 на 320×640). Строки
   // монтируются при каждом открытии, поэтому onLayout приходит каждый раз.

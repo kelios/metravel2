@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode, type RefObject } from 'react'
-import { AccessibilityInfo, View } from 'react-native'
+import { type ViewInstance, AccessibilityInfo, View } from 'react-native'
 
-type FocusTarget = RefObject<View | null>
+type FocusTarget = RefObject<ViewInstance | null>
 type Scope = { activeCount: number; register: () => (returnFocusRef?: FocusTarget) => void }
 const NativeMenuAccessibilityContext = createContext<Scope | null>(null)
 

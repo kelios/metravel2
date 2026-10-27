@@ -2,7 +2,7 @@
 // ✅ РЕДИЗАЙН: Универсальный компонент для сворачиваемых блоков
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, Animated, LayoutAnimation } from 'react-native';
+import { type ViewInstance, View, Text, StyleSheet, Pressable, Platform, Animated, LayoutAnimation } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -63,7 +63,7 @@ function CollapsibleBlock({
   const isExpanded = isControlled ? (controlledExpanded ?? defaultExpanded) : internalExpanded;
   const isHidden = isControlled ? (controlledHidden ?? defaultHidden) : internalHidden;
   const [contentHeight, setContentHeight] = useState(0);
-  const contentRef = useRef<View>(null);
+  const contentRef = useRef<ViewInstance>(null);
   // ✅ ИСПРАВЛЕНИЕ: Используем актуальное значение для инициализации анимации
   const initialExpanded = isControlled ? (controlledExpanded ?? defaultExpanded) : defaultExpanded;
   const initialHidden = isControlled ? (controlledHidden ?? defaultHidden) : defaultHidden;

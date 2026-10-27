@@ -4,7 +4,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { ThemedColors } from '@/hooks/useTheme'
 
 export const createCommentsSectionStyles = (colors: ThemedColors) =>
-  StyleSheet.create<Record<string, any>>({
+  StyleSheet.create({
     container: {
       ...Platform.select({ default: { flex: 1 }, web: {} }),
       backgroundColor: colors.surface,

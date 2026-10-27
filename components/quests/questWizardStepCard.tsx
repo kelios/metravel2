@@ -1,5 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  type ViewInstance,
+  type TextInputInstance,
   Animated,
   Keyboard,
   Modal,
@@ -142,10 +144,10 @@ type StepCardProps = {
   /** Попытка ответа для продуктовой воронки: одна на каждое «Проверить» (#1498). */
   onAnswerAttempt?: (attempt: { isCorrect: boolean; attemptNo: number }) => void
   /** Поле ответа получило фокус — родитель доматывает его над клавиатурой. */
-  onAnswerFocus?: (node: TextInput | null) => void
+  onAnswerFocus?: (node: TextInputInstance | null) => void
   onAnswerBlur?: () => void
   /** Обратная связь по ответу (метка её конца; null — нет) — родитель раскрывает её над клавиатурой (#1072). */
-  onAnswerFeedback?: (node: View | null, input?: TextInput | null, fresh?: boolean) => void
+  onAnswerFeedback?: (node: ViewInstance | null, input?: TextInputInstance | null, fresh?: boolean) => void
 }
 
 /** «1,0 км · примерно 12 мин пешком» — расстояние и время через i18n-форматтеры. */
@@ -260,8 +262,8 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
   const [imageModalVisible, setImageModalVisible] = useState(false)
   const [navExpanded, setNavExpanded] = useState(false)
   const shakeAnim = useRef(new Animated.Value(0)).current
-  const answerInputRef = useRef<TextInput>(null)
-  const feedbackEndRef = useRef<View>(null)
+  const answerInputRef = useRef<TextInputInstance>(null)
+  const feedbackEndRef = useRef<ViewInstance>(null)
 
   const handleAnswerFocus = useCallback(() => {
     onAnswerFocus?.(answerInputRef.current)

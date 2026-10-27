@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Platform, View } from 'react-native';
+import { Platform, type ViewInstance } from 'react-native';
 import type { RefObject } from 'react';
 import { isWebAutomationNavigator } from '@/utils/isWebAutomation';
 
@@ -39,11 +39,11 @@ const scheduleObserverCallback = (cb: () => void) => {
 export interface UseActiveSectionReturn {
   activeSection: string;
   setActiveSection: (section: string) => void;
-  registerSection: (key: string, ref: RefObject<View>) => void;
+  registerSection: (key: string, ref: RefObject<ViewInstance>) => void;
 }
 
 export function useActiveSection(
-  anchors: Record<string, RefObject<View>>,
+  anchors: Record<string, RefObject<ViewInstance>>,
   headerOffset: number,
   scrollRoot?: HTMLElement | null
 ): UseActiveSectionReturn {
@@ -314,7 +314,7 @@ export function useActiveSection(
     };
   }, [anchors, headerOffset, scrollRoot]);
 
-  const registerSection = useCallback((key: string, _ref: RefObject<View>) => {
+  const registerSection = useCallback((key: string, _ref: RefObject<ViewInstance>) => {
     // Для native это будет обрабатываться через scroll events
     // Для web уже обрабатывается через Intersection Observer
     registeredSectionsRef.current.add(key);

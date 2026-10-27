@@ -1,6 +1,6 @@
 // ✅ МИГРАЦИЯ: Прогресс-бар чтения с поддержкой useThemedColors
 import React, { useMemo } from 'react';
-import { View, StyleSheet, Animated, Platform } from 'react-native';
+import { View, StyleSheet, Animated, Platform, type ViewStyle } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 
 interface ReadingProgressBarProps {
@@ -54,9 +54,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     // #2118: на native полоска лежит в слое окна поверх ScrollView и закрепленной
     // навигации — касания у верхнего края проходят к ним.
     pointerEvents: 'none',
-    ...Platform.select({
+    ...Platform.select<Partial<ViewStyle>>({
       web: {
-        position: 'fixed',
+        position: 'fixed' as ViewStyle['position'],
       },
     }),
   },

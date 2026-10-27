@@ -11,6 +11,7 @@
 // страничный, а карта остаётся первым элементом вкладки.
 import React, { useEffect, useMemo, useRef } from 'react';
 import {
+  type ViewInstance,
   Platform,
   StyleSheet,
   Text,
@@ -88,7 +89,7 @@ function RouteBuilderMobile({
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { height: windowHeight } = useWindowDimensions();
-  const mapBlockRef = useRef<View>(null);
+  const mapBlockRef = useRef<ViewInstance>(null);
   const scrollPageTo = usePlannerPageScrollTo();
   // Счётчик живёт в RouteBuilder и переживает эту раскладку: смена ширины окна
   // desktop ↔ mobile монтирует её заново с прежним значением — это не `[⌖]`.

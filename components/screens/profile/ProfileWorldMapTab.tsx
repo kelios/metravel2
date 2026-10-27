@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  type ViewInstance,
   Modal,
   Platform,
   Pressable,
@@ -72,7 +73,7 @@ export function ProfileWorldMapTab({
   const { isDark } = useTheme()
   const { height, isMobile } = useResponsive()
   const router = useRouter()
-  const infoCardRef = useRef<View>(null)
+  const infoCardRef = useRef<ViewInstance>(null)
   const insets = useSafeAreaInsetsSafe()
   // Окно карты = отступы ModalSafeArea сверху и снизу + шапка окна (#2120).
   const fullscreenChromeHeight = insets.top + insets.bottom + FULLSCREEN_HEADER_HEIGHT

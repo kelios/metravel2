@@ -18,7 +18,7 @@ export const createSliderNavStyles = (ctx: HeroStyleContext) => {
       justifyContent: 'space-between',
       paddingHorizontal: 2,
       ...Platform.select({
-        web: { transform: 'translateY(-50%)', pointerEvents: 'none' },
+        web: { transform: 'translateY(-50%)', pointerEvents: 'none' as const },
       }),
     },
     // D-010: transparent 44×44 hit-area wrapper (web only). The actual visible circle

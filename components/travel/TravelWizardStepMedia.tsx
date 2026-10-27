@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Feather from '@expo/vector-icons/Feather';
 import {
+    type ViewInstance,
+    type ScrollViewInstance,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -125,8 +127,8 @@ const normalizeGalleryItems = (items: GalleryValueItem[]): GalleryValueForForm =
 };
 
 function useMediaAnchorScroll(focusAnchorId?: string | null, onAnchorHandled?: () => void) {
-    const scrollRef = useRef<ScrollView | null>(null);
-    const coverAnchorRef = useRef<View | null>(null);
+    const scrollRef = useRef<ScrollViewInstance | null>(null);
+    const coverAnchorRef = useRef<ViewInstance | null>(null);
 
     useEffect(() => {
         if (focusAnchorId !== MEDIA_COVER_ANCHOR_ID) return;
@@ -327,7 +329,7 @@ const CoverAdviceCard = React.memo(function CoverAdviceCard({ styles, primaryCol
 
 interface CoverSectionProps {
     styles: MediaStyles;
-    anchorRef: React.RefObject<View | null>;
+    anchorRef: React.RefObject<ViewInstance | null>;
     coverResetKey: string;
     coverUrl: string | null;
     onCoverChange: (url: string | null) => void;

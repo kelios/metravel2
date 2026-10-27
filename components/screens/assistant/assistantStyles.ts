@@ -1,4 +1,4 @@
-import { Platform, StyleSheet } from 'react-native'
+import { Platform, StyleSheet, type TextStyle } from 'react-native'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { ThemedColors } from '@/hooks/useTheme'
@@ -163,7 +163,7 @@ export const createAssistantStyles = (colors: ThemedColors, isMobile: boolean) =
       paddingVertical: spacing.sm,
       fontSize: 16,
       lineHeight: 22,
-      ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as const) : null),
+      ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' as TextStyle['outlineStyle'] } as const) : null),
     },
     inputError: {
       borderColor: colors.danger,

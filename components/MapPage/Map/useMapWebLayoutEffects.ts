@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Platform, type View } from 'react-native'
+import { Platform, type ViewInstance } from 'react-native'
 
 const MAP_LAYOUT_INVALIDATE_EVENT = 'metravel:map-layout-invalidate'
 
 type UseMapWebLayoutEffectsArgs = {
-  wrapperRef: React.MutableRefObject<View | null>
+  wrapperRef: React.MutableRefObject<ViewInstance | null>
   mapRef: React.MutableRefObject<any>
   mapInstance: any
   setMapInstance: (map: any) => void

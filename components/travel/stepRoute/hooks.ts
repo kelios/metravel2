@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { findNodeHandle, Platform, ScrollView, UIManager, View } from 'react-native'
+import { findNodeHandle, Platform, type ScrollViewInstance, UIManager, type ViewInstance } from 'react-native'
 
 import {
   EMPTY_MANUAL_POINT,
@@ -32,9 +32,9 @@ export function useRouteAnchorScroll({
   focusAnchorId?: string | null;
   onAnchorHandled?: () => void;
 }) {
-  const scrollRef = useRef<ScrollView | null>(null)
-  const markersListAnchorRef = useRef<View | null>(null)
-  const countriesAnchorRef = useRef<View | null>(null)
+  const scrollRef = useRef<ScrollViewInstance | null>(null)
+  const markersListAnchorRef = useRef<ViewInstance | null>(null)
+  const countriesAnchorRef = useRef<ViewInstance | null>(null)
 
   useEffect(() => {
     if (!focusAnchorId) return

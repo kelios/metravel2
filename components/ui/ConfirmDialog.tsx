@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useMemo, useState, useCallback } from 'react';
 import { Dialog, Portal } from '@/ui/paper';
-import { Modal, Text, StyleSheet, Platform, ScrollView, View } from 'react-native';
+import { type ViewInstance, Modal, Text, StyleSheet, Platform, ScrollView, View } from 'react-native';
 import type { LayoutChangeEvent, ViewStyle } from 'react-native';
 import Button from '@/components/ui/Button';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
@@ -166,7 +166,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             <View style={styles.webPortalRoot}>
                 <View style={styles.webBackdrop}>
                     <View
-                        ref={dialogRef as unknown as React.Ref<View>}
+                        ref={dialogRef as unknown as React.Ref<ViewInstance>}
                         testID="confirm-dialog"
                         style={[styles.dialog, dialogSizing]}
                     >
@@ -184,7 +184,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
                         <View style={[styles.actionContainer, isMobile && styles.actionContainerMobile]}>
                             <Button
-                                ref={cancelButtonRef as unknown as React.Ref<View>}
+                                ref={cancelButtonRef as unknown as React.Ref<ViewInstance>}
                                 variant="ghost"
                                 label={cancelText}
                                 onPress={onClose}
@@ -256,7 +256,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                 </Dialog.Content>
                 <Dialog.Actions style={[styles.actionContainer, isMobile && styles.actionContainerMobile]}>
                     <Button
-                        ref={cancelButtonRef as unknown as React.Ref<View>}
+                        ref={cancelButtonRef as unknown as React.Ref<ViewInstance>}
                         variant="ghost"
                         label={cancelText}
                         onPress={onClose}

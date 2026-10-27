@@ -1,3 +1,4 @@
+import type { TextStyle } from 'react-native';
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {Image, StyleSheet, TextInput, View, Platform, Text} from 'react-native'
 import Button from '@/components/ui/Button'
@@ -238,7 +239,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         ...Platform.select({
             web: {
                 transition: 'border-color 0.2s ease',
-                outlineStyle: 'none',
+                outlineStyle: 'none' as TextStyle['outlineStyle'],
             },
         }),
     },

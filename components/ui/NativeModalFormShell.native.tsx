@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
+  type ViewInstance,
+  type ScrollViewInstance,
   Keyboard, Platform, ScrollView, StyleSheet, TextInput, View,
   type KeyboardEvent, type LayoutChangeEvent, type StyleProp, type ViewStyle,
 } from 'react-native'
@@ -31,8 +33,8 @@ type Props = {
 export default function NativeModalFormShell({
   active, editing, header, footer, children, backgroundColor, contentContainerStyle, testID = 'native-modal-form',
 }: Props) {
-  const scroll = useRef<ScrollView>(null)
-  const body = useRef<View>(null)
+  const scroll = useRef<ScrollViewInstance>(null)
+  const body = useRef<ViewInstance>(null)
   const restingViewport = useRef<Viewport | null>(null)
   const [viewport, setViewport] = useState<Viewport>({ width: 0, height: 0 })
   const [headerHeight, setHeaderHeight] = useState(0)

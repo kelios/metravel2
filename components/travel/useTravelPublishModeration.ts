@@ -2,8 +2,8 @@ import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Platform,
-    ScrollView,
-    View,
+    type ScrollViewInstance,
+    type ViewInstance,
     findNodeHandle,
     UIManager,
 } from 'react-native';
@@ -93,8 +93,8 @@ export function useTravelPublishModeration({
     const [primaryOverrideLabel, setPrimaryOverrideLabel] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
 
-    const scrollRef = useRef<ScrollView | null>(null);
-    const missingBannerAnchorRef = useRef<View | null>(null);
+    const scrollRef = useRef<ScrollViewInstance | null>(null);
+    const missingBannerAnchorRef = useRef<ViewInstance | null>(null);
     const buttonErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const missingBannerScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 

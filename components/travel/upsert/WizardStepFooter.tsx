@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef } from 'react'
-import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native'
+import { type ViewInstance, Platform, StyleSheet, View, useWindowDimensions } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { useFocusEffect } from 'expo-router'
 
@@ -43,7 +43,7 @@ export const WizardStepFooter = React.memo(function WizardStepFooter({
   const insets = useSafeAreaInsetsSafe()
   const { register, release } = useNativeBottomChromeOcclusion()
   const owner = useId()
-  const footerRef = useRef<View>(null)
+  const footerRef = useRef<ViewInstance>(null)
   const focused = useRef(false)
   const generation = useRef(0)
   const { width, height } = useWindowDimensions()

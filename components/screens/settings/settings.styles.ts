@@ -1,4 +1,4 @@
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, type ViewStyle } from 'react-native';
 import { asBottomDimension, webBottomChromeInset } from '@/components/layout/bottomChromeInset';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import type { useThemedColors } from '@/hooks/useTheme';
@@ -23,7 +23,7 @@ export const createSettingsStyles = (
     pageContainer: {
       width: '100%',
       paddingHorizontal: 16,
-      ...Platform.select({
+      ...Platform.select<Partial<ViewStyle>>({
         web: {
           maxWidth: 760,
           marginLeft: 'auto',

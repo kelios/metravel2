@@ -269,7 +269,7 @@ function ThreadList({
                 refreshing={loading}
                 onRefresh={onRefresh}
                 ListEmptyComponent={
-                    search.trim() ? (
+                    (search.trim() ? (
                         <EmptyState
                             density="compact"
                             variant="search"
@@ -278,7 +278,7 @@ function ThreadList({
                             description={i18nT('messages:components.messages.ThreadList.poprobuyte_izmenit_zapros_dc40a3c8')}
                             testID="thread-list-search-empty"
                         />
-                    ) : null
+                    ) : null) as React.ComponentProps<typeof FlatList>['ListEmptyComponent']
                 }
             />
         );

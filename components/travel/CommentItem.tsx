@@ -253,7 +253,7 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
 
 export const CommentItem = React.memo(CommentItemComponent);
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: boolean) => StyleSheet.create<Record<string, any>>({
+const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: boolean) => StyleSheet.create({
   wrapper: {
     marginBottom: DESIGN_TOKENS.spacing.xs,
   },

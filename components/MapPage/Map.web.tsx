@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Platform, StyleSheet, View } from 'react-native'
+import { type ViewInstance, Platform, StyleSheet, View } from 'react-native'
 
 import { CoordinateConverter } from '@/utils/coordinateConverter'
 import { useTheme, useThemedColors, type ThemedColors } from '@/hooks/useTheme'
@@ -183,7 +183,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
   // zoomend (freeze on zoom). The ref is updated by MapLogicComponent's
   // syncZoomFromMap via the `setMapZoom` prop below.
   const mapZoomRef = useRef<number>(DEFAULT_ZOOM)
-  const wrapperRef = useRef<View | null>(null)
+  const wrapperRef = useRef<ViewInstance | null>(null)
   const setMapZoom = useCallback((zoom: number) => {
     if (!Number.isFinite(zoom)) return
 

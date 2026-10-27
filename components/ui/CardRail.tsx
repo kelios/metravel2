@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useMemo, useRef } from 'react'
-import { Platform, Pressable, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native'
+import { type ScrollViewInstance, Platform, Pressable, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { getScrollableWebNode, useHorizontalScrollEdges } from '@/hooks/useHorizontalScrollEdges'
@@ -86,7 +86,7 @@ function CardRail({
     [contentStyle, styles.content],
   )
 
-  const scrollRef = useRef<ScrollView>(null)
+  const scrollRef = useRef<ScrollViewInstance>(null)
   // Ключ пересчёта здесь намеренно нестабильный (сам массив, а не его длина):
   // карточки рельсы приезжают вместе с данными и картинками, и повторный завод
   // лестницы досчётов на каждый рендер — то поведение, при котором стрелка

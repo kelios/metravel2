@@ -1,3 +1,4 @@
+import type { PressableProps } from 'react-native';
 import React, { useMemo } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
@@ -68,11 +69,11 @@ export default function ConsentCheckbox({
           ? {
               // RNW activates Enter for role=checkbox, but Space only for role=button.
               // Space would scroll the page, so toggle here and cancel that default.
-              onKeyDown: (event: { key: string; repeat?: boolean; preventDefault: () => void }) => {
+              onKeyDown: ((event: { key: string; repeat?: boolean; preventDefault: () => void }) => {
                 if (event.key !== ' ') return
                 event.preventDefault()
                 if (!event.repeat) onToggle(!checked)
-              },
+              }) as unknown as NonNullable<PressableProps['onKeyDown']>,
             }
           : null)}
       >

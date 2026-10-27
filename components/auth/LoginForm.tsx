@@ -1,6 +1,7 @@
 // app/login.tsx (или соответствующий путь)
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+    type TextInputInstance,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -71,7 +72,7 @@ export default function Login() {
     const [googleBusy, setGoogleBusy] = useState(false);
     const [facebookBusy, setFacebookBusy] = useState(false);
     const [appleBusy, setAppleBusy] = useState(false);
-    const passwordRef = useRef<TextInput>(null);
+    const passwordRef = useRef<TextInputInstance>(null);
     const mountedRef = useRef(true);
 
     useEffect(() => {

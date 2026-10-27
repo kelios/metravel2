@@ -344,7 +344,7 @@ export const DESIGN_TOKENS = {
       medium: '500',
       semibold: '600',
       bold: '700',
-    },
+    } as const,
     // Modern type scale — pair size+lineHeight+letterSpacing+weight.
     // Mobile-first: values already optimised for phone screens. Use `display`/`h1` sparingly.
     scale: {

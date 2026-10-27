@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { KeyboardAvoidingView, Platform, ScrollView, TextInput, View } from 'react-native'
+import { KeyboardAvoidingView, Platform, ScrollView, type TextInputInstance, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -65,8 +65,8 @@ function ContactScreen() {
   const [touched, setTouched] = useState<{ name?: boolean; email?: boolean; message?: boolean; agree?: boolean }>({})
   const [focused, setFocused] = useState<{ name?: boolean; email?: boolean; message?: boolean }>({})
 
-  const emailRef = useRef<TextInput | null>(null)
-  const messageRef = useRef<TextInput | null>(null)
+  const emailRef = useRef<TextInputInstance | null>(null)
+  const messageRef = useRef<TextInputInstance | null>(null)
   const sendingRef = useRef(false)
   const mountedRef = useRef(true)
   useEffect(() => {

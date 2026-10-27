@@ -7,7 +7,7 @@ import React, {
   useRef,
   useState,
 } from 'react'
-import { Animated, Dimensions, Platform, View } from 'react-native'
+import { Animated, Dimensions, Platform, type ViewInstance } from 'react-native'
 
 /**
  * Android-only viewport gate for rich-text media (#1035).
@@ -43,7 +43,7 @@ import { Animated, Dimensions, Platform, View } from 'react-native'
  * details and tests keep the current behaviour.
  */
 
-type MeasurableView = View & {
+type MeasurableView = ViewInstance & {
   measureInWindow?: (callback: (x: number, y: number, width: number, height: number) => void) => void
 }
 
