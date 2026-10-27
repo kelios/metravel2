@@ -14,6 +14,7 @@ const {
   findDuplicates,
   findPeopleInCaption,
   findPrivateParams,
+  formatReport,
   hamming,
   questLinks,
   runChecks,
@@ -77,15 +78,28 @@ describe('article-acceptance-check: правила по отдельности',
     ]);
   });
 
-  it('created_at обязан лежать в месяце поездки, month не пуст', () => {
-    expect(checkCreatedAt({ year: 2026, month: [10], created_at: '2026-10-03T12:00:00Z' })).toEqual([]);
-    expect(checkCreatedAt({ year: 2024, month: [5, 6], created_at: '2026-09-01T08:00:00Z' })).toEqual([
-      'created_at 2026-09-01T08:00:00Z вне поездки (year 2024, month 5,6)',
-    ]);
-    expect(checkCreatedAt({ year: 2024, month: [], created_at: '2024-05-01T12:00:00Z' })).toEqual([
-      'month пуст — восстановить по кадрам/тексту',
-    ]);
+  it('принимает старые year/month и точную дату независимо от типа статьи', () => {
+    const now = Date.parse('2026-10-26T12:00:00Z');
+    for (const month of [[], [5, 6], [1, 2, 12]]) {
+      expect(checkCreatedAt({ year: 2024, month, created_at: '2026-10-25T06:00:00Z' }, { now })).toEqual([]);
+    }
+    for (const created_at of [undefined, null, '']) {
+      expect(checkCreatedAt({ year: 2024, month: [5], created_at }, { now })).toEqual([]);
+    }
+    expect(checkCreatedAt({ created_at: '2024-02-29' }, { now })).toEqual([]);
+    expect(checkCreatedAt({ created_at: '2024-02-29T00:30:00+03:00' }, { now })).toEqual([]);
+    expect(checkCreatedAt({ created_at: '2024-02-29T23:59:59.999999-03:00' }, { now })).toEqual([]);
+    expect(checkCreatedAt({ created_at: '2026-10-26T12:00:00Z' }, { now })).toEqual([]);
+    expect(checkCreatedAt({ created_at: '2026-10-26T12:00:01Z' }, { now }))
+      .toEqual(['created_at 2026-10-26T12:00:01Z — дата в будущем']);
   });
+
+  it.each(['2026-10', 'invalid', '2026-02-30T06:00:00Z', '2025-02-29', '2026-13-01', '0000-01-01', '2026-10-25T24:00:00Z', '2026-10-25T25:00:00Z'])(
+    'отклоняет невалидную заданную дату %s, даже при допустимых year/month', (created_at) => {
+      expect(checkCreatedAt({ year: 2024, month: [5], created_at }))
+        .toEqual(['created_at содержит некорректную дату']);
+    },
+  );
 
   it('sid=/checkin= — приватные данные, aid=/label= — партнёрка', () => {
     expect(findPrivateParams([
@@ -223,6 +237,19 @@ describe('article-acceptance-check: прогон по статье', () => {
     });
     expect(fail(report)).toEqual([]);
     expect(report.ok).toBe(true);
+  });
+
+  it('интеграция: legacy-дата, пустой month и отчёт не зависят от жанра и ссылок', async () => {
+    for (const created_at of [null, '2026-09-01T08:00:00Z']) {
+      const report = await runChecks({
+        id: 42,
+        images: false,
+        fetchImpl: stubFetch(routes({ ...baseDetail, month: [], created_at }, {}, [{ id: 5, user: 120 }])),
+      });
+      expect(fail(report)).toEqual([]);
+      expect(formatReport(report)).toContain('✓ created-at: created_at, если задан: корректная дата не в будущем; year/month независимы');
+      expect(formatReport(report)).not.toContain('подборка');
+    }
   });
 
   it('ловит дубль кадра, address-image, людей в alt, пропавший комментарий редакции и sid=', async () => {

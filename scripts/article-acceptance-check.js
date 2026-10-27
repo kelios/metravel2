@@ -15,7 +15,7 @@
  *   - структура: «Что рядом» ровно один, «Квесты по городам рядом» ровно один,
  *     каждая ссылка квеста — пара (city_id, quest_id) из `/api/quests/`;
  *   - комментарий редакции: ровно один верхнеуровневый от user 120;
- *   - `created_at` внутри месяца поездки, `month` не пуст;
+ *   - `created_at`, если задан: корректная дата не в будущем; старые year/month независимы;
  *   - имена точек: без улиц/номеров/кодов в качестве имени и без дублей;
  *   - тексты: запрещённые по Беларуси источники (`scan-content-sources`),
  *     `sid=`/`checkin=` в ссылках (`aid=`/`label=` — партнёрка, норма),
@@ -174,17 +174,20 @@ function checkPointNames(points) {
   return problems;
 }
 
-function checkCreatedAt(detail) {
-  const months = Array.isArray(detail.month) ? detail.month.map(Number) : [];
-  const year = Number(detail.year);
-  const problems = [];
-  if (!months.length) problems.push('month пуст — восстановить по кадрам/тексту');
-  const m = String(detail.created_at || '').match(/^(\d{4})-(\d{2})/);
-  if (!m) problems.push('created_at отсутствует');
-  else if (months.length && (Number(m[1]) !== year || !months.includes(Number(m[2])))) {
-    problems.push(`created_at ${detail.created_at} вне поездки (year ${year}, month ${months.join(',')})`);
+// Старый created_at — время создания записи; точная дата поездки стала
+// доступна позже (#1995). year/month независимы, источник точности API не отдаёт.
+function checkCreatedAt(detail, { now = Date.now() } = {}) {
+  if (detail.created_at == null || detail.created_at === '') return [];
+  const date = String(detail.created_at);
+  const timestamp = Date.parse(date);
+  const iso = /^\d{4}-\d{2}-\d{2}(?:T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2}))?$/;
+  const day = Date.parse(`${date.slice(0, 10)}T00:00:00Z`);
+  if (!iso.test(date) || Number(date.slice(0, 4)) < 1 || !Number.isFinite(timestamp)
+    || !Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== date.slice(0, 10)) {
+    return ['created_at содержит некорректную дату'];
   }
-  return problems;
+  if (timestamp > Number(now)) return [`created_at ${date} — дата в будущем`];
+  return [];
 }
 
 function findPrivateParams(links) {
@@ -411,7 +414,7 @@ async function runChecks({ id, origin = 'https://metravel.by', fetchImpl = fetch
   results.push(check('editorial-comment', 'комментарий редакции ровно один, от user 120',
     editorial.length === 1 ? [] : [`от user 120: ${editorial.length} (всего верхнего уровня ${top.length})`]));
 
-  results.push(check('created-at', 'created_at = дата поездки, month не пуст', checkCreatedAt(detail)));
+  results.push(check('created-at', 'created_at, если задан: корректная дата не в будущем; year/month независимы', checkCreatedAt(detail)));
   results.push(check('point-names', 'имена точек — места, без адресов и дублей', checkPointNames(detail.coordsMeTravel || detail.travelAddress)));
 
   const patterns = loadPatterns();
