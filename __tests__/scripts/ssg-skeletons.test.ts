@@ -20,6 +20,7 @@ const {
 } = require('../../screens/tabs/map.styles');
 const { BOTTOM_DOCK_HEIGHT: WEB_MOBILE_FOOTER_RESERVE_HEIGHT } = require('../../components/layout/bottomDockModel');
 const { buildCriticalCSS } = require('../../utils/criticalCSSBuilder');
+const { seoStaticResources } = require('../../i18n/locales/ru/static/seo_static');
 
 describe('ssg-skeletons', () => {
   describe('height-aware desktop book shell (#2405)', () => {
@@ -829,7 +830,8 @@ describe('ssg-skeletons', () => {
   });
 
   describe('buildSearchSkeletonHtml', () => {
-    const EXPECTED_H1 = 'Поиск путешествий и маршрутов';
+    // Mirrors the search screen H1 (#2821): the skeleton shows it, the screen owns it.
+    const EXPECTED_HEADING = seoStaticResources['search.heading'];
     const EXPECTED_LEAD =
       'Ищите маршруты по странам, категориям и уровню сложности. ' +
       'Подбирайте идеи для поездок на выходные, сохраняйте путешествия ' +
@@ -855,7 +857,7 @@ describe('ssg-skeletons', () => {
       expect(barIndex).toBeGreaterThan(-1);
       expect(gridIndex).toBeGreaterThan(barIndex);
       expect(seoIndex).toBeGreaterThan(gridIndex);
-      expect(html).toContain(`<h1 class="ssg-search-h1">${EXPECTED_H1}</h1>`);
+      expect(html).toContain(`<p class="ssg-search-h1">${EXPECTED_HEADING}</p>`);
       expect(html).toContain(`<p class="ssg-search-lead">${EXPECTED_LEAD}</p>`);
       expect(html).not.toContain('ssg-search-intro');
     });
@@ -971,6 +973,17 @@ describe('ssg-skeletons', () => {
       expect(result).toContain('id="ssg-skeleton"');
       expect(result).toContain('id="ssg-skeleton-css"');
       expect(result).toContain('ssg-home-book');
+    });
+
+    // #2821: on static routes the exported screen or injectHiddenH1 owns the one
+    // semantic H1; a skeleton <h1> makes the raw HTML carry two. Travel pages are
+    // the exception — their skeleton H1 is the only one (see buildTravelSkeletonHtml).
+    it('never adds an H1 to static-route skeletons', () => {
+      for (const route of ['/', '/search', '/map']) {
+        const html = injectSkeletonShell(baseHtml, route);
+        expect(html).toContain('id="ssg-skeleton"');
+        expect(html).not.toMatch(/<h1\b/i);
+      }
     });
 
     it('injects skeleton for /search route', () => {

@@ -447,6 +447,7 @@ async function main() {
     canonicalPath: '/',
     ogType: 'website',
     indexable: true,
+    h1Count: 1,
   });
 
   // --- 2. Search page ---
@@ -456,6 +457,7 @@ async function main() {
     canonicalPath: '/search',
     ogType: 'website',
     indexable: true,
+    h1Count: 1,
   });
 
   // --- 3. Map page ---
@@ -495,6 +497,7 @@ async function main() {
     canonicalPath: '/travelsby',
     ogType: 'website',
     indexable: true,
+    h1Count: 1,
   });
 
   // --- 7. About page ---
@@ -504,6 +507,7 @@ async function main() {
     canonicalPath: '/about',
     ogType: 'website',
     indexable: true,
+    h1Count: 1,
   });
 
   // --- 8. Travel detail pages (the main issue) ---

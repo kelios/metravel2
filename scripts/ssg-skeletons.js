@@ -653,9 +653,15 @@ ${buildRemovalScript()}
 /**
  * Build search page skeleton HTML.
  *
- * Mirrors the catalogue first screen before hydration. The exact crawlable H1
- * and lead stay in normal DOM flow after the cards, so they remain raw SEO text
- * without displacing the search controls and first result card.
+ * Mirrors the catalogue first screen before hydration. The heading and lead
+ * stay in normal DOM flow after the cards, so they remain raw SEO text without
+ * displacing the search controls and first result card.
+ *
+ * The heading is NOT an <h1> (#2821): the single semantic H1 belongs to the
+ * search screen (`seoStatic:search.heading`, app/(tabs)/search.tsx) and is
+ * already in the exported #root, so a skeleton H1 made the raw HTML carry two.
+ * The visible text mirrors that heading, so pre-hydration copy and the crawlable
+ * H1 agree. Same contract as the home and map skeletons.
  */
 function buildSearchSkeletonHtml() {
   const leadText =
@@ -685,7 +691,7 @@ function buildSearchSkeletonHtml() {
 </div>
 <div class="ssg-search-grid">${buildSearchCards(6)}</div>
 <section class="ssg-search-seo">
-<h1 class="ssg-search-h1">Поиск путешествий и маршрутов</h1>
+<p class="ssg-search-h1">Поиск маршрутов и идей путешествий по Беларуси</p>
 <p class="ssg-search-lead">${leadText}</p>
 </section>
 </main>
