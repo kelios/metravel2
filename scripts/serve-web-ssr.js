@@ -37,6 +37,28 @@ function resolveClientFile(clientDir, pathname) {
   }
 }
 
+/**
+ * All server bundles of one export share Metro's global module registry, and
+ * the first definition of an id wins. A loader bundle carries tree-shaken
+ * copies of route modules under the renderer's ids (quests/index.tsx without
+ * generateMetadata): loaded first, it shadows the renderer's full module and
+ * the route fails until restart (#2817: /quests 500 after a client navigation
+ * fetched its loader data first). expo-server's Node adapter loads bundles
+ * lazily and never calls its own preload(), so they are loaded here before the
+ * first request, the renderer first: its route modules are the complete ones
+ * (middleware copies are byte-identical, loader copies are subsets). The paths
+ * equal the adapter's `path.join(build, file)`, so its require() reuses them.
+ */
+function preloadServerModules(serverDir) {
+  const manifest = JSON.parse(fs.readFileSync(containedFile(serverDir, '_expo/routes.json'), 'utf8'))
+  const files = [manifest.rendering?.file, manifest.middleware?.file,
+    ...(manifest.apiRoutes || []).map((route) => route.file),
+    ...(manifest.htmlRoutes || []).map((route) => route.loader)]
+  for (const file of new Set(files.filter(Boolean))) {
+    if (/\.c?js$/.test(file)) require(path.join(serverDir, file))
+  }
+}
+
 function createSsrServer({ buildDir = process.env.SSR_BUILD_DIR || path.join(repoRoot, '.codex-temp/ssr-2766') } = {}) {
   // Pin the immutable generation before loading modules or serving files.
   // A deployment may move the current symlink while this process drains.
@@ -56,6 +78,7 @@ function createSsrServer({ buildDir = process.env.SSR_BUILD_DIR || path.join(rep
   const { serverDir, clientDir } = assertServerExport(generationDir)
   const requestLocales = installRequestLocaleStore(new AsyncLocalStorage())
   installSsrApiTransport()
+  preloadServerModules(serverDir)
   const { createRequestHandler } = require('expo-server/adapter/http')
   const handleExpo = createRequestHandler({ build: serverDir, environment: 'production' }, {
     handleRouteError(error) {
@@ -161,5 +184,5 @@ function main() {
   }
 }
 
-module.exports = { createSsrServer, resolveClientFile, main }
+module.exports = { createSsrServer, preloadServerModules, resolveClientFile, main }
 if (require.main === module) main()
