@@ -3,7 +3,7 @@ const fs = require('fs')
 const http = require('http')
 const path = require('path')
 const { makeTempDir } = require('./cli-test-utils')
-const { preloadServerModules, createSsrServer } = require('@/scripts/serve-web-ssr')
+const { preloadServerModules, createSsrServer, listenWhenPreloaded } = require('@/scripts/serve-web-ssr')
 
 // Metro's registry is global and the first definition of an id wins (#2817): a
 // loader bundle's tree-shaken route module must never be defined before the
@@ -79,6 +79,46 @@ r.order.push(${JSON.stringify(bundle)}); if (!r.modules.has(2479)) r.modules.set
       expect(error).toHaveBeenCalledWith(expect.stringContaining('broken renderer bundle'))
     } finally {
       await new Promise((resolve) => server.close(resolve))
+      error.mockRestore()
+      process.env = env
+    }
+  })
+
+  // While a deploy switches renderers nginx retries a refused connection on the
+  // ready one; a port opened before the preload would hold the request (#2824).
+  it.each([
+    ['opens the port only after the server bundles load', 'module.exports = {}', true],
+    ['never opens the port when the renderer bundle cannot load', 'throw new Error("broken renderer bundle")', false],
+  ])('%s', async (_name, renderer, listens) => {
+    const scratch = path.join(process.cwd(), '.codex-temp')
+    fs.mkdirSync(scratch, { recursive: true })
+    const dir = makeTempDir('ssr-listen-test-', { root: scratch })
+    fixtures.push(dir)
+    const files: Record<string, string> = {
+      'server/_expo/routes.json': JSON.stringify({ rendering: { mode: 'ssr', file: '_expo/server/render.js' },
+        htmlRoutes: [{ file: './about.tsx', page: '/about', namedRegex: '^/about(?:/)?$', loader: null }],
+        notFoundRoutes: [], apiRoutes: [], assets: { js: ['/_expo/static/js/web/entry-a.js'], css: [] } }),
+      'server/_expo/server/render.js': renderer,
+      'client/_expo/static/js/web/entry-a.js': 'void 0',
+    }
+    for (const [name, text] of Object.entries(files)) {
+      fs.mkdirSync(path.dirname(path.join(dir, name)), { recursive: true })
+      fs.writeFileSync(path.join(dir, name), text)
+    }
+    const env = { ...process.env }
+    process.env.METRAVEL_WEB_OUTPUT = 'server'
+    process.env.EXPO_PUBLIC_WEB_RUNTIME_SSR = 'true'
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {})
+    const server = createSsrServer({ buildDir: dir })
+    try {
+      expect(server.listening).toBe(false)
+      const listening = listenWhenPreloaded(server, 0, '127.0.0.1')
+      expect(server.listening).toBe(false)
+      if (listens) await listening
+      else await expect(listening).rejects.toThrow('broken renderer bundle')
+      expect(server.listening).toBe(listens)
+    } finally {
+      if (server.listening) await new Promise((resolve) => server.close(resolve))
       error.mockRestore()
       process.env = env
     }

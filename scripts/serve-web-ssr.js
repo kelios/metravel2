@@ -119,7 +119,7 @@ function createSsrServer({ buildDir = process.env.SSR_BUILD_DIR || path.join(rep
   } else {
     delete process.env[SSR_CRITICAL_CSS_ENV]
   }
-  return http.createServer(async (req, res) => {
+  const server = http.createServer(async (req, res) => {
     try {
       await preloaded
       const pathname = new URL(req.url || '/', 'http://localhost').pathname
@@ -171,6 +171,15 @@ function createSsrServer({ buildDir = process.env.SSR_BUILD_DIR || path.join(rep
       }
     }
   })
+  server.preloaded = preloaded
+  return server
+}
+
+// A deploy runs two renderers under one name while it switches: until the
+// bundles are loaded a refused connection sends nginx to the ready one, where
+// an open port would hold the request until the preload ends (#2824).
+function listenWhenPreloaded(server, port, host) {
+  return server.preloaded.then(() => new Promise((resolve) => server.listen(port, host, resolve)))
 }
 
 function main() {
@@ -183,7 +192,9 @@ function main() {
   }
   if (!Number.isInteger(options.port) || options.port < 0 || options.port > 65535) throw new Error('Invalid SSR port')
   const server = createSsrServer(options)
-  server.listen(options.port, options.host, () => console.log(`[serve-web-ssr] http://${options.host}:${server.address().port}`))
+  listenWhenPreloaded(server, options.port, options.host).then(
+    () => console.log(`[serve-web-ssr] http://${options.host}:${server.address().port}`),
+    () => process.exit(1))
   server.once('error', (error) => { console.error(`[serve-web-ssr] ${error.message}`); process.exitCode = 1 })
   for (const signal of ['SIGINT', 'SIGTERM']) {
     process.once(signal, () => {
@@ -193,5 +204,5 @@ function main() {
   }
 }
 
-module.exports = { createSsrServer, preloadServerModules, resolveClientFile, main }
+module.exports = { createSsrServer, listenWhenPreloaded, preloadServerModules, resolveClientFile, main }
 if (require.main === module) main()
