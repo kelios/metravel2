@@ -60,11 +60,12 @@ test.describe('Travel rich-text Instagram embeds', () => {
     )
     await page.waitForLoadState('networkidle').catch(() => null)
 
+    // Тяжёлое описание раскрывается по приближению к viewport (#1552): без галереи
+    // оно стоит в первом экране и раскрывается сразу, поэтому placeholder до
+    // прокрутки зависит от вёрстки. Сам proximity-gate держит
+    // __tests__/components/travel/TravelDescription.test.tsx.
     const richText = page.locator('.travel-rich-text').first()
-    const descriptionPlaceholder = page.getByTestId('travel-description-fallback')
-    await expect(descriptionPlaceholder).toHaveCount(1)
-    await expect(richText).toHaveCount(0)
-    await descriptionPlaceholder.scrollIntoViewIfNeeded()
+    await page.getByTestId('travel-description').scrollIntoViewIfNeeded()
     await expect(richText).toBeVisible({ timeout: 60_000 })
 
     const instagramFacades = page.locator('.travel-rich-text .ig-lite[data-ig-embed*="instagram.com"]')
