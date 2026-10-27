@@ -28,6 +28,7 @@ import { PER_PAGE } from '@/components/listTravel/utils/listTravelConstants';
 import { translate as i18nT } from '@/i18n'
 import { getActiveLocaleDefinition } from '@/i18n/format'
 import { SECRET_LINK_ROUTE_PATHS } from '@/utils/secretLinkRoutes'
+import { resolveSsrCriticalCssHref } from '@/utils/ssr/criticalCss'
 import { Asset } from 'expo-asset'
 import Feather from '@expo/vector-icons/Feather'
 import { ICON_FONT_FAMILY, buildFontDisplayPolicyScript, buildIconFontLoaderScript } from '@/utils/iconFontShell'
@@ -439,6 +440,7 @@ const getCriticalHeadScript = () => {
 
 export default function Root({ children }: { children: React.ReactNode }) {
   const locale = getActiveLocaleDefinition();
+  const ssrCriticalCssHref = resolveSsrCriticalCssHref();
   // Expo SDK 58 (#2727): статический рендер больше не дописывает ассеты текстом в
   // конец head и body — RNW-стили, шрифты, preload и `<script defer src>` чанков
   // приходят узлами через контекст документа, и шаблон обязан их отрендерить сам.
@@ -641,8 +643,13 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
       <link rel="manifest" href="/manifest.json" />
 
-      {/* Critical CSS; id — для выноса в общий файл при сборке (#2762) */}
-      <style id="metravel-critical-css" dangerouslySetInnerHTML={{ __html: buildCriticalCSS() }} />
+      {/* Critical CSS; id — для выноса в общий файл при сборке (#2762). Серверный
+          ответ сразу ссылается на тот же файл, его имя даёт сборка (#2768). */}
+      {ssrCriticalCssHref ? (
+        <link rel="stylesheet" id="metravel-critical-css" href={ssrCriticalCssHref} />
+      ) : (
+        <style id="metravel-critical-css" dangerouslySetInnerHTML={{ __html: buildCriticalCSS() }} />
+      )}
       <style dangerouslySetInnerHTML={{ __html: '[data-testid="filter-scrollview"]::-webkit-scrollbar{display:none}' }} />
       <script
         dangerouslySetInnerHTML={{ __html: getTravelRouteClassScript() }}
