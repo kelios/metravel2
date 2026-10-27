@@ -13,6 +13,8 @@ import {
   WEB_BOTTOM_CHROME_INSET,
   webBottomChromeInset,
   webDockReserve,
+  webFloatingAnchor,
+  useWebFooterHeightPublisher,
 } from '@/components/layout/bottomChromeInset'
 import { releaseBottomChromeReserve, resetBottomChromeReserve, setBottomChromeReserve } from '@/utils/bottomChromeReserve'
 
@@ -61,6 +63,45 @@ describe('bottomChromeInset', () => {
     )
     expect(renderHook(() => useDockReservePx()).result.current).toBe(0)
     expect(webDockReserve(16)).toBe('calc(var(--mt-dock-h, 0px) + 16px)')
+  })
+
+  it('anchors floating notices above the dock or the desktop footer, never into scroll reserves (#2788)', () => {
+    expect(webFloatingAnchor(8)).toBe('calc(max(var(--mt-dock-h, 0px), var(--mt-footer-h, 0px)) + 8px)')
+    expect(webFloatingAnchor(8, 120)).toBe('calc(max(var(--mt-dock-h, 0px), var(--mt-footer-h, 0px), 120px) + 8px)')
+    expect(webDockReserve(8)).not.toContain('--mt-footer-h')
+    expect(WEB_BOTTOM_CHROME_INSET).not.toContain('--mt-footer-h')
+  })
+
+  it('publishes the rendered desktop footer height and clears it when hidden or unmounted (#2788)', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
+    const observers: Array<() => void> = []
+    const originalObserver = (global as any).ResizeObserver
+    ;(global as any).ResizeObserver = class {
+      constructor(callback: () => void) { observers.push(callback) }
+      observe() {}
+      disconnect() {}
+    }
+    const node = document.createElement('div')
+    let height = 52
+    jest.spyOn(node, 'getBoundingClientRect').mockImplementation(() => ({ height } as DOMRect))
+    const root = document.documentElement
+    try {
+      const hook = renderHook(() => useWebFooterHeightPublisher({ current: node }))
+      expect(root.style.getPropertyValue('--mt-footer-h')).toBe('52px')
+      height = 102 // Narrower desktop wraps the footer to two rows.
+      act(() => observers.forEach((notify) => notify()))
+      expect(root.style.getPropertyValue('--mt-footer-h')).toBe('102px')
+      height = 0 // Below the breakpoint the shell is display:none.
+      act(() => observers.forEach((notify) => notify()))
+      expect(root.style.getPropertyValue('--mt-footer-h')).toBe('')
+      height = 52
+      act(() => observers.forEach((notify) => notify()))
+      hook.unmount()
+      expect(root.style.getPropertyValue('--mt-footer-h')).toBe('')
+    } finally {
+      ;(global as any).ResizeObserver = originalObserver
+      root.style.removeProperty('--mt-footer-h')
+    }
   })
 
   it('includes measured dock and named web notices for numeric reveal consumers, releasing each independently', () => {

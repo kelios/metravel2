@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react'
 import { Platform } from 'react-native'
 
 import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe'
@@ -48,57 +48,101 @@ export function webDockReserve(extra = 0, minimum = 0): string {
   return `calc(var(--mt-dock-h, 0px) + ${extra}px)`
 }
 
-let webDockHeight = 0
-const webDockListeners = new Set<() => void>()
-let stopWebDockMeasurement: (() => void) | null = null
+/**
+ * #2788: постоянная нижняя полоса под плавающими плашками (consent, сеть,
+ * тосты). На телефоне это док (`--mt-dock-h`), на desktop — подвал в потоке
+ * корня (`--mt-footer-h`, публикует `useWebFooterHeightPublisher`). Док
+ * накрывает контент, а подвал нет, поэтому `--mt-footer-h` не входит в
+ * `webDockReserve` и резервы скроллеров — только в якорь плашек.
+ */
+const WEB_FOOTER_HEIGHT_VAR = '--mt-footer-h'
+const WEB_FLOATING_ANCHOR = `max(var(--mt-dock-h, 0px), var(${WEB_FOOTER_HEIGHT_VAR}, 0px))`
 
-const subscribeWebDock = (listener: () => void): (() => void) => {
-  if (Platform.OS !== 'web' || typeof document === 'undefined') return () => {}
-  webDockListeners.add(listener)
-  if (!stopWebDockMeasurement) {
-    // Let the browser resolve calc()/env() rather than duplicating media-query,
-    // route visibility or safe-area rules in JS. One shared probe for all callers.
-    const probe = document.createElement('div')
-    probe.setAttribute('data-mt-dock-measure', '')
-    probe.style.cssText = 'position:fixed;width:0;visibility:hidden;pointer-events:none;'
-    probe.style.height = 'var(--mt-dock-h, 0px)'
-    const measure = () => {
-      const next = Math.max(0, probe.getBoundingClientRect().height)
-      if (next === webDockHeight) return
-      webDockHeight = next
-      webDockListeners.forEach((notify) => notify())
-    }
-    const body = document.body
-    body.appendChild(probe)
-    const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)
-    resizeObserver?.observe(probe)
-    const containsDockMarker = (node: Node) => node instanceof Element &&
-      (node.matches('[data-mt-dock]') || node.querySelector('[data-mt-dock]') !== null)
-    const mutationObserver = new MutationObserver((mutations) => {
-      if (mutations.some((mutation) => mutation.type === 'attributes' ||
-        [...mutation.addedNodes, ...mutation.removedNodes].some(containsDockMarker))) measure()
-    })
-    mutationObserver.observe(body, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-mt-dock'] })
-    window.addEventListener('resize', measure)
-    measure()
-    stopWebDockMeasurement = () => {
-      resizeObserver?.disconnect()
-      mutationObserver.disconnect()
-      window.removeEventListener('resize', measure)
-      probe.remove()
-      webDockHeight = 0
-    }
-  }
-  return () => {
-    webDockListeners.delete(listener)
-    if (webDockListeners.size === 0) {
-      stopWebDockMeasurement?.()
-      stopWebDockMeasurement = null
-    }
-  }
+export function webFloatingAnchor(extra = 0, minimum = 0): string {
+  if (minimum > 0) return `calc(max(var(--mt-dock-h, 0px), var(${WEB_FOOTER_HEIGHT_VAR}, 0px), ${minimum}px) + ${extra}px)`
+  return `calc(${WEB_FLOATING_ANCHOR} + ${extra}px)`
 }
 
-const getWebDockSnapshot = () => webDockHeight
+/** Desktop footer publishes its rendered height; display:none below the breakpoint gives 0. */
+export function useWebFooterHeightPublisher(ref: RefObject<unknown>): void {
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined' || typeof ResizeObserver === 'undefined') return
+    const node = ref.current
+    if (!(node instanceof HTMLElement)) return
+    const root = document.documentElement
+    const publish = () => {
+      const height = Math.round(node.getBoundingClientRect().height)
+      if (height > 0) root.style.setProperty(WEB_FOOTER_HEIGHT_VAR, `${height}px`)
+      else root.style.removeProperty(WEB_FOOTER_HEIGHT_VAR)
+    }
+    const observer = new ResizeObserver(publish)
+    observer.observe(node)
+    publish()
+    return () => {
+      observer.disconnect()
+      root.style.removeProperty(WEB_FOOTER_HEIGHT_VAR)
+    }
+  }, [ref])
+}
+
+type WebHeightStore = { subscribe: (listener: () => void) => () => void; getSnapshot: () => number }
+
+// Let the browser resolve calc()/env()/max() rather than duplicating media-query,
+// route visibility or safe-area rules in JS. One shared probe per expression.
+function createWebHeightStore(cssHeight: string, probeAttribute: string): WebHeightStore {
+  let height = 0
+  const listeners = new Set<() => void>()
+  let stopMeasurement: (() => void) | null = null
+
+  const subscribe = (listener: () => void): (() => void) => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return () => {}
+    listeners.add(listener)
+    if (!stopMeasurement) {
+      const probe = document.createElement('div')
+      probe.setAttribute(probeAttribute, '')
+      probe.style.cssText = 'position:fixed;width:0;visibility:hidden;pointer-events:none;'
+      probe.style.height = cssHeight
+      const measure = () => {
+        const next = Math.max(0, probe.getBoundingClientRect().height)
+        if (next === height) return
+        height = next
+        listeners.forEach((notify) => notify())
+      }
+      const body = document.body
+      body.appendChild(probe)
+      const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)
+      resizeObserver?.observe(probe)
+      const containsDockMarker = (node: Node) => node instanceof Element &&
+        (node.matches('[data-mt-dock]') || node.querySelector('[data-mt-dock]') !== null)
+      const mutationObserver = new MutationObserver((mutations) => {
+        if (mutations.some((mutation) => mutation.type === 'attributes' ||
+          [...mutation.addedNodes, ...mutation.removedNodes].some(containsDockMarker))) measure()
+      })
+      mutationObserver.observe(body, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-mt-dock'] })
+      window.addEventListener('resize', measure)
+      measure()
+      stopMeasurement = () => {
+        resizeObserver?.disconnect()
+        mutationObserver.disconnect()
+        window.removeEventListener('resize', measure)
+        probe.remove()
+        height = 0
+      }
+    }
+    return () => {
+      listeners.delete(listener)
+      if (listeners.size === 0) {
+        stopMeasurement?.()
+        stopMeasurement = null
+      }
+    }
+  }
+
+  return { subscribe, getSnapshot: () => height }
+}
+
+const webDockStore = createWebHeightStore('var(--mt-dock-h, 0px)', 'data-mt-dock-measure')
+const webFloatingAnchorStore = createWebHeightStore(WEB_FLOATING_ANCHOR, 'data-mt-floating-anchor-measure')
 const getServerDockSnapshot = () => 0
 const subscribeNoop = () => () => {}
 
@@ -159,7 +203,7 @@ export function BottomChromeInsetProvider({
 export function useDockReservePx(): number {
   const measuredHeight = useContext(BottomChromeInsetContext)
   const insets = useSafeAreaInsetsSafe()
-  const webHeight = useSyncExternalStore(subscribeWebDock, getWebDockSnapshot, getServerDockSnapshot)
+  const webHeight = useSyncExternalStore(webDockStore.subscribe, webDockStore.getSnapshot, getServerDockSnapshot)
 
   if (Platform.OS === 'web') return webHeight
   if (measuredHeight === 0) return 0
@@ -167,6 +211,16 @@ export function useDockReservePx(): number {
     return BOTTOM_DOCK_HEIGHT + Math.max(0, insets.bottom || 0)
   }
   return measuredHeight
+}
+
+/**
+ * Числовой якорь плавающих плашек: на web — измеренный `webFloatingAnchor()`
+ * (док или desktop-подвал), на native — высота дока.
+ */
+export function useFloatingAnchorPx(): number {
+  const dock = useDockReservePx()
+  const webAnchor = useSyncExternalStore(webFloatingAnchorStore.subscribe, webFloatingAnchorStore.getSnapshot, getServerDockSnapshot)
+  return Platform.OS === 'web' ? webAnchor : dock
 }
 
 /** Content/reveal consumers include all web notices; banner positioning uses dock-only reserves. */

@@ -49,7 +49,7 @@ let mockConsent: typeof DECIDED_CONSENT | null = DECIDED_CONSENT
 jest.mock('@/utils/consent', () => ({ readConsent: () => mockConsent, writeConsent: jest.fn() }))
 jest.mock('@/components/layout/bottomChromeInset', () => ({
   ...jest.requireActual('@/components/layout/bottomChromeInset'),
-  useDockReservePx: () => 56,
+  useFloatingAnchorPx: () => 56,
 }))
 jest.mock('@/hooks/useSafeAreaInsetsSafe', () => ({
   useSafeAreaInsetsSafe: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
@@ -157,7 +157,7 @@ describe('AppInstallBar', () => {
     expect(view.queryByTestId('consent-banner')).toBeNull()
     expect(view.queryByTestId('app-install-bar')).toBeNull()
     expect(document.body.hasAttribute('data-consent-banner-open')).toBe(false)
-    expect(StyleSheet.flatten(view.getByTestId('network-status-banner').props.style).bottom).toBe('calc(var(--mt-dock-h, 0px) + 8px)')
+    expect(StyleSheet.flatten(view.getByTestId('network-status-banner').props.style).bottom).toBe('calc(max(var(--mt-dock-h, 0px), var(--mt-footer-h, 0px)) + 8px)')
     act(() => window.dispatchEvent(new CustomEvent('metravel:footer-more', { detail: { open: true } })))
     expect(getBottomChromeReserve()).toBe(0)
     expect(view.queryByTestId('network-status-banner')).toBeNull()

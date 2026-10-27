@@ -24,7 +24,7 @@ jest.mock('@/utils/offlineRoutePreload.web', () => ({
 
 jest.mock('@/components/layout/bottomChromeInset', () => ({
   ...jest.requireActual('@/components/layout/bottomChromeInset'),
-  useDockReservePx: () => mockDockReserve,
+  useFloatingAnchorPx: () => mockDockReserve,
 }));
 
 describe('NetworkStatus web offline banner', () => {
@@ -94,7 +94,7 @@ describe('NetworkStatus web offline banner', () => {
     setBottomChromeReserve('app-install-bar', 400);
     const view = render(<NetworkStatus position="bottom" />);
     expect(getCriticalBottomChromeOwner()).toBe('network-status');
-    expect(StyleSheet.flatten(view.getByTestId('network-status-banner').props.style).bottom).toBe('calc(var(--mt-dock-h, 0px) + 8px)');
+    expect(StyleSheet.flatten(view.getByTestId('network-status-banner').props.style).bottom).toBe('calc(max(var(--mt-dock-h, 0px), var(--mt-footer-h, 0px)) + 8px)');
     fireEvent(view.getByTestId('network-status-banner'), 'layout', { nativeEvent: { layout: { height: 84 } } });
     expect(getBottomChromeReserve()).toBe(56 + 8 + 84 + 8);
     mockDockReserve = 0;

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * #2097 / MOBILE-INSETS-001: нижний резерв под доком читается только через
- * useBottomChromeInset / useScrollBottomPadding / useDockReservePx.
+ * useBottomChromeInset / useScrollBottomPadding / useDockReservePx; плавающие
+ * плашки якорятся через webFloatingAnchor / useFloatingAnchorPx (#2788).
  * Локальные LAYOUT.tabBarHeight, BOTTOM_DOCK_HEIGHT и «56 рядом с insets»
  * снова прячут последнюю кнопку под док.
  *

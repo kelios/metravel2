@@ -2,7 +2,7 @@ import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Link, usePathname } from 'expo-router';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { asBottomDimension, useDockReservePx, webDockReserve } from '@/components/layout/bottomChromeInset';
+import { asBottomDimension, useFloatingAnchorPx, webFloatingAnchor } from '@/components/layout/bottomChromeInset';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
@@ -28,10 +28,10 @@ function ConsentBanner() {
   const suspendForOverlay = footerOverlayOpen || keyboardInset > 0 || criticalOwner !== null;
   const { isMobile, width } = useResponsive();
   const isNarrowMobile = isMobile && width > 0 && width < 360;
-  const dockReservePx = useDockReservePx();
+  const anchorPx = useFloatingAnchorPx();
   const anchorGap = isMobile ? 8 : DESIGN_TOKENS.spacing.xs;
-  const bottomOffset = dockReservePx + anchorGap;
-  const bottomPosition = isWeb ? webDockReserve(anchorGap) : bottomOffset;
+  const bottomOffset = anchorPx + anchorGap;
+  const bottomPosition = isWeb ? webFloatingAnchor(anchorGap) : bottomOffset;
   const isConsentSettingsRoute = pathname === '/cookies' || pathname === '/privacy';
 
   useEffect(() => {

@@ -25,7 +25,7 @@ describe('ToastHost (web)', () => {
     // sizes to the card and stays at the bottom edge.
     expect(host?.style.minHeight).toBe('0');
     expect(host?.style.position).toBe('fixed');
-    expect(bottomAssignment).toHaveBeenCalledWith('calc(var(--mt-dock-h, 0px) + 16px)');
+    expect(bottomAssignment).toHaveBeenCalledWith('calc(max(var(--mt-dock-h, 0px), var(--mt-footer-h, 0px)) + 16px)');
     bottomAssignment.mockRestore();
   });
 

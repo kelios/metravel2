@@ -43,7 +43,7 @@ describe('guard-bottom-chrome-inset', () => {
   it('rejects an independent dock literal in web toast/consent/install anchors (#2299)', () => {
     expect(findViolationsInSource('components/ui/ToastHost.web.tsx', '...(isBottom ? { bottom: 72 } : { top: 12 }),')).toHaveLength(1)
     expect(findViolationsInSource('components/layout/ConsentBanner.tsx', 'bottom: 56,')).toHaveLength(1)
-    expect(findViolationsInSource('components/layout/AppInstallBar.tsx', 'bottom: webDockReserve(8),')).toEqual([])
+    expect(findViolationsInSource('components/layout/AppInstallBar.tsx', 'bottom: webFloatingAnchor(8),')).toEqual([])
   })
 
   it('негативная проба на дереве: лист с константой дока роняет стража, владельцы дока — нет', () => {

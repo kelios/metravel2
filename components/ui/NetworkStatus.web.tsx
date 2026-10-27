@@ -14,7 +14,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { useFooterOverlayOpen } from '@/hooks/useFooterOverlayOpen'
 import { useWebKeyboardInset } from '@/hooks/useWebKeyboardInset'
-import { asBottomDimension, useDockReservePx, webDockReserve } from '@/components/layout/bottomChromeInset'
+import { asBottomDimension, useFloatingAnchorPx, webFloatingAnchor } from '@/components/layout/bottomChromeInset'
 import { translate as i18nT } from '@/i18n'
 import { webViewStyle } from '@/utils/webProps'
 import { preloadOfflineRoute } from '@/utils/offlineRoutePreload.web'
@@ -45,9 +45,9 @@ export const NetworkStatus: React.FC<NetworkStatusProps> = ({
   const [bannerHeight, setBannerHeight] = useState(44 + 2 * DESIGN_TOKENS.spacing.xs)
   const footerOverlayOpen = useFooterOverlayOpen()
   const keyboardInset = useWebKeyboardInset()
-  const dockReservePx = useDockReservePx()
-  const bottomOffset = dockReservePx + DESIGN_TOKENS.spacing.xs
-  const bottomPosition = webDockReserve(DESIGN_TOKENS.spacing.xs)
+  const anchorPx = useFloatingAnchorPx()
+  const bottomOffset = anchorPx + DESIGN_TOKENS.spacing.xs
+  const bottomPosition = webFloatingAnchor(DESIGN_TOKENS.spacing.xs)
   const suspended = footerOverlayOpen || (position === 'bottom' && keyboardInset > 0)
   const criticalActive = position === 'bottom' && (!isConnected || wasOffline)
   const openingOfflineRouteRef = useRef(false)

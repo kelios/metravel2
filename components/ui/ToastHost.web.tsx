@@ -1,4 +1,4 @@
-import { webDockReserve } from '@/components/layout/bottomChromeInset';
+import { webFloatingAnchor } from '@/components/layout/bottomChromeInset';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Feather from '@expo/vector-icons/Feather';
@@ -101,7 +101,7 @@ export default function ToastHost(_props: { overDock?: boolean } = {}) {
       ? 'translateX(-50%) translateY(0)'
       : `translateX(-50%) translateY(${isBottom ? '20px' : '-20px'})`,
     opacity: visible ? 1 : 0,
-    ...(isBottom ? { bottom: webDockReserve(DESIGN_TOKENS.spacing.md) } : { top: 12 }),
+    ...(isBottom ? { bottom: webFloatingAnchor(DESIGN_TOKENS.spacing.md) } : { top: 12 }),
   }), [visible, isBottom]);
 
   const cardStyle = useMemo((): React.CSSProperties => ({

@@ -61,7 +61,7 @@ jest.mock('@/hooks/useResponsive', () => ({
 jest.mock('@/components/layout/bottomChromeInset', () => ({
   ...jest.requireActual('@/components/layout/bottomChromeInset'),
   __esModule: true,
-  useDockReservePx: () => 0,
+  useFloatingAnchorPx: () => 0,
 }))
 
 jest.mock('@/hooks/useFooterOverlayOpen', () => ({

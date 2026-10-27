@@ -7,7 +7,7 @@ import Button from '@/components/ui/Button'
 import IconButton from '@/components/ui/IconButton'
 import type { AppStorePlatform } from '@/constants/appStore'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { asBottomDimension, useDockReservePx, webDockReserve } from '@/components/layout/bottomChromeInset'
+import { asBottomDimension, useFloatingAnchorPx, webFloatingAnchor } from '@/components/layout/bottomChromeInset'
 import { useFooterOverlayOpen } from '@/hooks/useFooterOverlayOpen'
 import { useWebKeyboardInset } from '@/hooks/useWebKeyboardInset'
 import { useResponsive } from '@/hooks/useResponsive'
@@ -55,10 +55,10 @@ function AppInstallBar() {
   const shownRecorded = useRef(false)
   const [barHeight, setBarHeight] = useState(112)
   const styles = useMemo(() => createStyles(colors), [colors])
-  const dockReservePx = useDockReservePx()
+  const anchorPx = useFloatingAnchorPx()
   const lowerReserve = useSyncExternalStore(subscribeBottomChromeReserve, getLowerReserve, getServerReserve)
-  const bottomOffset = Math.max(dockReservePx, lowerReserve) + DESIGN_TOKENS.spacing.xs
-  const bottomPosition = webDockReserve(DESIGN_TOKENS.spacing.xs, lowerReserve)
+  const bottomOffset = Math.max(anchorPx, lowerReserve) + DESIGN_TOKENS.spacing.xs
+  const bottomPosition = webFloatingAnchor(DESIGN_TOKENS.spacing.xs, lowerReserve)
   const shown = IS_WEB && isMobile && storePlatform !== null && !closed && !footerOverlayOpen &&
     keyboardInset === 0 && !criticalOwner && pathname !== '/app'
 

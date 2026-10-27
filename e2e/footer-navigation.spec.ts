@@ -51,11 +51,30 @@ test.describe('@smoke Footer navigation', () => {
 
       const item = page.getByTestId(action.testId);
       await expect(item).toBeVisible();
+      // #2788: the floating banner anchors above the desktop footer, not over its links.
+      const [itemBox, bannerBox] = await Promise.all([item.boundingBox(), page.getByTestId('consent-banner').boundingBox()]);
+      expect(bannerBox!.y + bannerBox!.height).toBeLessThanOrEqual(itemBox!.y);
       await item.click();
 
       await expect(page).toHaveURL(action.path);
     }
   });
+
+  for (const answer of ['consent-accept', 'consent-decline'] as const) {
+    test(`desktop footer navigation works after ${answer}`, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await navigateWithRetry(page, '/');
+      await waitForConsentBanner(page);
+      await page.getByTestId(answer).click();
+      await expect(page.getByTestId('consent-banner')).toBeHidden({ timeout: 10_000 });
+
+      const footer = page.getByTestId('footer-desktop-bar');
+      await footer.scrollIntoViewIfNeeded();
+      await expect(footer).toBeVisible({ timeout: 10_000 });
+      await page.getByTestId('footer-item-about').click();
+      await expect(page).toHaveURL(/\/about/);
+    });
+  }
 
   test('mobile dock "More" items navigate with banner visible', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
