@@ -52,6 +52,11 @@ export const runNodeCli = (
   } finally { removeDir(homeDir); }
 };
 
+// Без потолка висящий дочерний CLI стоит вечно при 0% CPU, а `--runInBand`
+// замораживает вместе с ним весь test:run: spawnSync блокирует event loop, и
+// jest-таймаут теста сработать не может. Долгие CLI передают свой `timeoutMs`.
+export const DEFAULT_CLI_TIMEOUT_MS = 120_000;
+
 export const runCli = (
   command: string,
   args: string[],
@@ -60,20 +65,45 @@ export const runCli = (
   if (command === process.execPath && !args.includes('--require') && options.env?.METRAVEL_API && /^http:\/\/(?:127\.0\.0\.1|localhost):\d+/.test(options.env.METRAVEL_API)) {
     return runNodeCli(args, options.env, { cwd: options.cwd, input: options.input, timeoutMs: options.timeoutMs });
   }
-  // spawnSync, not execFileSync: a successful run keeps its real stderr, so
-  // tests can assert on progress/summary lines a CLI prints there.
-  const result = spawnSync(command, args, {
-    encoding: 'utf8',
-    cwd: options.cwd,
-    env: { ...process.env, ...(options.env ?? {}) },
-    stdio: 'pipe',
-    input: options.input,
-    timeout: options.timeoutMs,
-  });
+  // stdin — из временного файла, а не `spawnSync({ input })`: на macOS ввод
+  // больше буфера unix-сокета (тест board-compact шлёт ~20 КБ) в ~0,75% запусков
+  // не дописывается — родитель ждёт в kevent, ребёнок в read(), оба при 0% CPU
+  // (#2839, 9 зависаний из 1200; из файла — 0 из 1200).
+  const inputDir = options.input === undefined ? null : makeTempDir('metravel-cli-stdin-');
+  let stdin: number | 'pipe' = 'pipe';
+  if (inputDir) {
+    const inputFile = path.join(inputDir, 'stdin');
+    fs.writeFileSync(inputFile, options.input ?? '', 'utf8');
+    stdin = fs.openSync(inputFile, 'r');
+  }
+  let result: ReturnType<typeof spawnSync>;
+  try {
+    // spawnSync, not execFileSync: a successful run keeps its real stderr, so
+    // tests can assert on progress/summary lines a CLI prints there.
+    result = spawnSync(command, args, {
+      encoding: 'utf8',
+      cwd: options.cwd,
+      env: { ...process.env, ...(options.env ?? {}) },
+      stdio: [stdin, 'pipe', 'pipe'],
+      timeout: options.timeoutMs ?? DEFAULT_CLI_TIMEOUT_MS,
+      // SIGKILL: процесс, перехвативший SIGTERM, иначе пережил бы таймаут.
+      killSignal: 'SIGKILL',
+    });
+  } finally {
+    if (typeof stdin === 'number') fs.closeSync(stdin);
+    if (inputDir) removeDir(inputDir);
+  }
+  const stderr = String(result.stderr ?? '');
+  // Причина падения самого запуска (ETIMEDOUT, ENOENT) — в stderr, иначе тест
+  // видит только status 1 без объяснения.
+  const failure = result.error as NodeJS.ErrnoException | undefined;
+  const reason = failure?.code === 'ETIMEDOUT'
+    ? `runCli: ${command} убит по таймауту ${options.timeoutMs ?? DEFAULT_CLI_TIMEOUT_MS} мс (ETIMEDOUT)`
+    : failure ? `runCli: ${command} не запустился: ${failure.message}` : '';
   return {
     status: result.status ?? 1,
     stdout: String(result.stdout ?? ''),
-    stderr: String(result.stderr ?? ''),
+    stderr: reason ? `${stderr}${stderr && !stderr.endsWith('\n') ? '\n' : ''}${reason}\n` : stderr,
   };
 };
 
