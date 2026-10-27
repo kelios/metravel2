@@ -14,7 +14,7 @@ index 5d2be29..4b27a57 100644
          const renderErrors = [];
          const stream = await _server2().default.renderToReadableStream(/*#__PURE__*/ (0, _jsxruntime().jsx)(_server1().ServerDocument, {
              data: serverDocumentData,
-@@ -238,19 +241,35 @@ async function getStreamingContent(location, options) {
+@@ -238,19 +241,38 @@ async function getStreamingContent(location, options) {
                  if (options.request?.signal.aborted) {
                      return;
                  }
@@ -46,8 +46,11 @@ index 5d2be29..4b27a57 100644
 +            // read the sheet after the render; do the same here.
 +            const styleMarkup = _server2().default.renderToStaticMarkup(getStyleElement());
 +            if (styleMarkup) {
-+                const replaced = output.replace(/<style id="react-native-stylesheet">[\s\S]*?<\/style>/, () => styleMarkup);
-+                output = replaced === output ? output.replace('</head>', `${styleMarkup}</head>`) : replaced;
++                // An unchanged sheet replaces to an identical string: test presence, not equality.
++                const sheetPattern = /<style id="react-native-stylesheet">[\s\S]*?<\/style>/;
++                output = sheetPattern.test(output)
++                    ? output.replace(sheetPattern, () => styleMarkup)
++                    : output.replace('</head>', `${styleMarkup}</head>`);
 +            }
 +            return output;
          }

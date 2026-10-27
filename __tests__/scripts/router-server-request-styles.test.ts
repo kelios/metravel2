@@ -6,7 +6,7 @@ import React from 'react'
 
 const ReactDomServer = require('react-dom/server.node') as typeof import('react-dom/server')
 
-function rendererForRequest() {
+function rendererForRequest({ routeAddsStyles = true } = {}) {
   const source = fs.readFileSync(require.resolve('@expo/router-server/build/server/renderStreamingContent'), 'utf8')
   const start = source.indexOf('async function getStreamingContent(')
   const end = source.lastIndexOf('\n//# sourceMappingURL=')
@@ -15,7 +15,7 @@ function rendererForRequest() {
   const getStyleElement = () => React.createElement('style', { id: 'react-native-stylesheet', key: 'rnw-style-element' },
     routeRendered ? '.cold-route{color:red}' : '.base{display:flex}')
   const LateStyledRoute = () => {
-    routeRendered = true
+    routeRendered = routeAddsStyles
     return React.createElement('article', { className: 'cold-route' }, 'Request body')
   }
   const context = vm.createContext({
@@ -59,5 +59,14 @@ describe('SDK request-rendered style ownership (#2766)', () => {
     expect(html).toContain('<article class="cold-route">Request body</article>')
     expect(html).toContain('<style id="react-native-stylesheet">.cold-route{color:red}</style>')
     expect((String(html).match(/id="react-native-stylesheet"/g) ?? []).length).toBe(1)
+  })
+
+  // The 95eb5c09e static export appended a second sheet to every page whose
+  // render added no classes: the replacement left the string unchanged.
+  it('keeps one sheet when the render adds no styles', async () => {
+    const render = rendererForRequest({ routeAddsStyles: false })
+    const html = await render(new URL('https://metravel.by/'), { assets: {}, output: 'static' })
+    expect((String(html).match(/id="react-native-stylesheet"/g) ?? []).length).toBe(1)
+    expect(html).toContain('<style id="react-native-stylesheet">.base{display:flex}</style>')
   })
 })
