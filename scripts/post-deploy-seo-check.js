@@ -83,16 +83,20 @@ let CONCURRENCY = 12
 const FALLBACK_DESC = 'Найди место для путешествия и поделись своим опытом.'
 const GENERIC_TITLES = new Set(['Metravel', 'MeTravel', 'Статья | Metravel'])
 
-function fetchUrl(url, redirectDepth = 0, originalUrl = url) {
+function fetchUrl(url, redirectDepth = 0, originalUrl = url, retried = false) {
   return new Promise((resolve, reject) => {
     const mod = url.startsWith('https') ? https : http
     const opts = {
       timeout: 30000,
       headers: { 'User-Agent': 'MeTravelPostDeploySEOCheck/1.0' },
+      ...(retried ? { agent: false } : {}),
     }
     if (mod === https) opts.rejectUnauthorized = !INSECURE_TLS
 
+    let responded = false
+    let timedOut = false
     const req = mod.get(url, opts, (res) => {
+      responded = true
       const status = Number(res.statusCode || 0)
       if (status >= 300 && status < 400 && res.headers.location) {
         if (redirectDepth > 5) {
@@ -120,8 +124,20 @@ function fetchUrl(url, redirectDepth = 0, originalUrl = url) {
       })
     })
 
-    req.on('error', reject)
+    req.on('error', (error) => {
+      // nginx closes an idle keep-alive socket; a GET written into it at that
+      // moment fails with "socket hang up" and never reaches the server (#2827).
+      // Retry it once on a new connection; real answers are never repeated.
+      // A timeout destroys the request, which also surfaces as ECONNRESET on a
+      // reused socket; it is already rejected and must not turn into a retry.
+      if (!retried && !responded && !timedOut && req.reusedSocket && ['ECONNRESET', 'EPIPE'].includes(error.code)) {
+        fetchUrl(url, redirectDepth, originalUrl, true).then(resolve, reject)
+        return
+      }
+      reject(error)
+    })
     req.on('timeout', () => {
+      timedOut = true
       req.destroy()
       reject(new Error(`Timeout: ${url}`))
     })
@@ -785,6 +801,7 @@ async function main() {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     CLI_SPEC,
+    fetchUrl,
     FALLBACK_DESC,
     USAGE,
     parseArgs,
