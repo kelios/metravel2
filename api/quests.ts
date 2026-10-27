@@ -161,7 +161,8 @@ export type ApiQuestMeta = {
     lng: ApiQuestCoordinate;
     duration_min: number | null;
     difficulty: 'easy' | 'medium' | 'hard' | '' | null;
-    tags: Record<string, unknown> | null;
+    /** `Quest.tags` is `JSONField(default=list)`: a slug list or a `{tag: true}` map — read via `@/utils/questTags`. */
+    tags: string[] | Record<string, unknown> | null;
     pet_friendly: boolean;
     cover_url: string | null;
     /**
@@ -245,7 +246,7 @@ export type ApiQuestBundle = {
     title: string;
     cover_url?: string | null;
     /** Optional on older detail responses; city metadata supplies classification. */
-    tags?: Record<string, unknown> | null;
+    tags?: string[] | Record<string, unknown> | null;
     steps: ApiQuestStep[] | string;
     finale: ApiQuestFinale;
     intro: ApiQuestStep | string | null;

@@ -40,6 +40,7 @@ import {
     syncCatalogCompletion,
 } from '@/utils/questProgressQueue';
 import { devWarn } from '@/utils/logger';
+import { questTagNames } from '@/utils/questTags';
 import type { QuestMeta, FrontendQuestBundle } from '@/utils/questAdapters';
 import { translate as i18nT } from '@/i18n'
 import { useQuestDiscovery } from '@/components/quests/runtime/QuestDiscoveryContext';
@@ -197,7 +198,7 @@ export function useQuestBundle(questId: string | undefined, routeLocale?: string
         const adapted = adaptBundle(data);
         const meta = classification?.find((item) => item.questId === questId);
         adapted.tags = data.tags !== undefined
-            ? Object.keys(data.tags ?? {})
+            ? questTagNames(data.tags) ?? []
             : meta?.tags ?? ((!classificationPending || classificationFailed || !cityId) ? [] : undefined);
         adapted.coverUrl ||= meta?.cover;
         return adapted;

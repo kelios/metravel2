@@ -712,6 +712,26 @@ describe('questAdapters', () => {
       expect(result.cover).toBe('https://img.com/cover.jpg');
     });
 
+    // Quest.tags is JSONField(default=list): quest 96 on prod carries a slug list,
+    // which Object.keys read as indices '0'..'6' and lost its age and kids collection (#2814).
+    it('reads the model-default list of tag slugs like the edited boolean map', () => {
+      const { isQuestForChildrenOrTeens } = require('@/utils/questAudience');
+      const slugs = ['kids', 'family', 'citywalk', 'sculpture', 'age-8-10', 'adult-required', 'public-walk'];
+      const fromList = adaptMeta(makeQuestMeta({ quest_id: 'minsk-kids-bronze-friends', tags: slugs }));
+      const fromMap = adaptMeta(makeQuestMeta({
+        quest_id: 'minsk-kids-bronze-friends',
+        tags: Object.fromEntries(slugs.map((tag) => [tag, true])),
+      }));
+
+      expect(fromList.tags).toEqual(slugs);
+      expect(fromList.ageCategory?.label).toBe('8-10 лет');
+      expect(isQuestForChildrenOrTeens(fromList.tags)).toBe(true);
+      expect(fromMap.tags).toEqual(fromList.tags);
+      expect(adaptMeta(makeQuestMeta({ tags: [] })).tags).toEqual([]);
+      expect(adaptMeta(makeQuestMeta({ tags: null })).tags).toBeUndefined();
+      expect(adaptMeta(makeQuestMeta({ tags: ['kids', 5] as any })).tags).toEqual([]);
+    });
+
     it('carries the API city alias, so landings built from adapted meta skip the heuristic (#2212)', () => {
       const { buildQuestCityAliasMap, resolveQuestCitySegment } = require('@/utils/questCityAlias');
       // Эвристика по одному квесту читала бы `veliky`; бэкенд публикует полный alias.

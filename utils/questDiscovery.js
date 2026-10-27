@@ -1,5 +1,6 @@
 /* global module, require */
 const { safePublicPath } = require('./questPublicPage');
+const { normalizeQuestTags } = require('./questTags');
 
 const HASH = /^[a-f0-9]{64}$/;
 const SLUG = /^[a-z0-9][a-z0-9_-]{0,159}$/;
@@ -43,20 +44,16 @@ function projectQuestDiscoveryRow(raw) {
       if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return null;
     } catch { return null; }
   } else if (cover === undefined) return null;
-  // Quest.tags defaults to a list of slugs; edited rows carry a boolean map.
-  const rawTags = Array.isArray(raw.tags)
-    ? (raw.tags.every((tag) => typeof tag === 'string') ? Object.fromEntries(raw.tags.map((tag) => [tag, true])) : null)
-    : raw.tags ?? {};
-  if (!rawTags || typeof rawTags !== 'object' || Array.isArray(rawTags) || Object.keys(rawTags).length > 50) return null;
-  const tagNames = Object.keys(rawTags);
-  if (tagNames.some((key) => !/^[a-z0-9_-]{1,80}$/.test(key))) return null;
+  const tags = normalizeQuestTags(raw.tags);
+  const tagNames = tags ? Object.keys(tags) : [];
+  if (!tags || tagNames.length > 50 || tagNames.some((key) => !/^[a-z0-9_-]{1,80}$/.test(key))) return null;
   const locales = raw.available_locales ?? ['ru'];
   if (!Array.isArray(locales) || locales.length > 5 || locales.some((locale) => !['ru', 'be', 'uk', 'pl', 'en'].includes(locale))) return null;
   return { id: raw.id, quest_id: raw.quest_id, title: raw.title, city_id: String(raw.city_id), city_name: raw.city_name,
     ...fields, city_alias: alias, city_legacy_ids: [...legacy], country_code: countryCode,
     lat, lng, points, duration_min: raw.duration_min == null ? null : duration,
     difficulty: ['easy', 'medium', 'hard', ''].includes(raw.difficulty) ? raw.difficulty : null,
-    tags: Object.fromEntries(tagNames.map((key) => [key, Boolean(rawTags[key])])), pet_friendly: raw.pet_friendly === true,
+    tags, pet_friendly: raw.pet_friendly === true,
     cover_url: cover, content_locale: 'ru', available_locales: [...locales], ...stats, rating_avg: rating,
     personal_status_unavailable: true, user_rating: null, is_completed_by_me: false, first_completer: null };
 }

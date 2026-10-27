@@ -18,6 +18,7 @@ import {
 } from '@/api/questContentLocale';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { normalizeQuestCityLegacyIds } from '@/utils/questCityAlias';
+import { questTagNames } from '@/utils/questTags';
 import { isSameWordForm, matchesAnyWordForm } from '@/utils/questAnswerMorphology';
 import {
     normalize,
@@ -713,7 +714,7 @@ export function adaptMeta(apiMeta: ApiQuestMeta): QuestMeta {
     const lat = coordNum(apiMeta.lat);
     const lng = coordNum(apiMeta.lng);
     const normalizedCountryCode = normalizeQuestCountryCode(apiMeta.country_code);
-    const tags = apiMeta.tags ? Object.keys(apiMeta.tags) : undefined;
+    const tags = questTagNames(apiMeta.tags);
     const squareCoverWebResponsiveSource = adaptSquareCoverMedia(apiMeta);
     const contentLocale = readQuestContentLocale(apiMeta.content_locale);
     const localizedCityName = optionalText(apiMeta.city_name_localized);
