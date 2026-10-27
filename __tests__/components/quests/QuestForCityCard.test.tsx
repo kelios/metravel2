@@ -335,3 +335,20 @@ it('#2482 marks the quest card title without changing the accessible navigation 
     expect(tree.getByLabelText('Пройти квест по городу Гомель: Тайны дворца')).toBeTruthy()
   } finally { Platform.OS = originalOS }
 })
+
+it('#2830 gives Pressable one flat style object, so Link asChild keeps the card layout', () => {
+  const { Pressable } = require('react-native')
+  const tree = render(<QuestForCityCard quest={{ id: 'palace', cityId: '3', title: 'Тайны дворца', cityName: 'Гомель', points: 4, lat: 52, lng: 30 }} />)
+  const card = tree.UNSAFE_getByType(Pressable)
+  // Slot у `Link asChild` сливает стиль спредом: функция и массив дают пустую карточку.
+  expect(typeof card.props.style).toBe('object')
+  expect(Array.isArray(card.props.style)).toBe(false)
+  expect(card.props.style).toMatchObject({ flexDirection: 'row', borderWidth: 1, padding: 10 })
+  const idleBorder = card.props.style.borderColor
+
+  fireEvent(card, 'hoverIn')
+  const hoveredBorder = tree.UNSAFE_getByType(Pressable).props.style.borderColor
+  expect(hoveredBorder).not.toBe(idleBorder)
+  fireEvent(tree.UNSAFE_getByType(Pressable), 'hoverOut')
+  expect(tree.UNSAFE_getByType(Pressable).props.style.borderColor).toBe(idleBorder)
+})

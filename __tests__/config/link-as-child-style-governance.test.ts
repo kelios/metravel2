@@ -19,7 +19,9 @@
  * Разрешённые формы: `style` плоским объектом на самом ребёнке ИЛИ `style` на
  * `<Link>` (его `expo-router` прогоняет через `StyleSheet.flatten`,
  * `node_modules/expo-router/build/ui/Slot.js:56`). Состояние нажатия живёт на
- * внутреннем узле через `children`-функцию `Pressable`.
+ * внутреннем узле через `children`-функцию `Pressable` либо в state ребёнка
+ * (`onHoverIn`/`onPressIn` → `StyleSheet.flatten`, #2830). Ребёнок-переменная
+ * `<Link asChild>{card}</Link>` проверяется по JSX, которым объявлено имя.
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -41,6 +43,11 @@ function declaredNotFlat(source: string, name: string): boolean {
   return new RegExp(
     String.raw`\b(?:const|let|var)\s+${name}\s*(?::[^=\n]+)?=\s*(?:[([]|useMemo\(\s*\(\s*\)\s*=>\s*\[)`,
   ).test(source);
+}
+/** Индекс JSX-тега, которым объявлено имя: `const card = (\n  <Pressable …`; -1, если имя не JSX. */
+function declaredJsx(source: string, name: string): number {
+  const match = new RegExp(String.raw`\b(?:const|let|var)\s+${name}\s*(?::[^=\n]+)?=\s*\(?\s*(?=<[A-Za-z])`).exec(source);
+  return match ? match.index + match[0].length : -1;
 }
 /** Начало JSX-тега; тип-аргументы вроде `useState<Item>()` отсекаются проверкой на `asChild`. */
 const TAG_OPEN = /<[A-Za-z][\w.]*/g;
@@ -115,7 +122,15 @@ function scanSource(rawSource: string, relative: string): Scan {
 
     const offset = source.slice(linkTagEnd + 1).search(/\S/);
     if (offset < 0) continue;
-    const childStart = linkTagEnd + 1 + offset;
+    let childStart = linkTagEnd + 1 + offset;
+    // #2830: ребёнок-переменная `<Link asChild>{card}</Link>` — слепая зона, через которую
+    // карточка квеста ушла на прод без вёрстки. Имя разворачиваем до его JSX-объявления.
+    const childName = /^\{\s*([A-Za-z_$][\w$]*)\s*\}/.exec(source.slice(childStart));
+    if (childName) {
+      const declared = declaredJsx(source, childName[1]);
+      if (declared < 0) continue;
+      childStart = declared;
+    }
     // Ребёнком может быть выражение (`{condition ? <A /> : <B />}`) — такой стиль не прочитать.
     if (!/^<[A-Za-z]/.test(source.slice(childStart, childStart + 2))) continue;
     const childTagEnd = findTagEnd(source, childStart);
@@ -158,6 +173,17 @@ describe('Link asChild — стиль прямого ребёнка', () => {
       '</Link>',
     ].join('\n');
     expect(scanSource(hidden, 'fixture.tsx').offenders).toEqual(['fixture.tsx:4', 'fixture.tsx:7']);
+
+    // Ребёнок-переменная (#2830): стиль читается у JSX, которым объявлено имя.
+    const variableChild = [
+      'const card = (',
+      '  <Pressable style={({ pressed }) => [styles.card, pressed && styles.on]}>{null}</Pressable>',
+      ')',
+      'return <Link href="/x" asChild>{card}</Link>',
+    ].join('\n');
+    expect(scanSource(variableChild, 'fixture.tsx').offenders).toEqual(['fixture.tsx:2']);
+    const flatVariableChild = variableChild.replace(/style=\{[^\n]*\]\}/, 'style={cardStyle}');
+    expect(scanSource(flatVariableChild, 'fixture.tsx').offenders).toEqual([]);
 
     // Плоские формы страж не трогает: объект стилей у ребёнка и массив у самой `<Link>`.
     const flat = [

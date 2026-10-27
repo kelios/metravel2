@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { Link, useRouter, type Href } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
@@ -139,6 +139,16 @@ export function QuestForCityCard({
     trackQuestCardClicked(analyticsParams)
     if (!responsiveWeb) router.push(href as any)
   }, [analyticsParams, href, onPressCard, responsiveWeb, router])
+  // #2830: в `responsiveWeb` карточка — прямой ребёнок `Link asChild`, а Slot сливает
+  // стиль спредом: функция `({ pressed, hovered }) => [...]` схлопывалась в `{}`, и на
+  // проде карточка теряла рамку, фон и строчную раскладку. Поэтому стиль — один плоский
+  // объект в обоих режимах, а наведение и нажатие живут в state.
+  const [hovered, setHovered] = useState(false)
+  const [pressed, setPressed] = useState(false)
+  const cardStyle = useMemo(
+    () => StyleSheet.flatten([styles.card, style, (pressed || hovered) && styles.cardHover]),
+    [hovered, pressed, style, styles],
+  )
   const chips: { key: string; icon: NavigationIconName; label: string }[] = []
   // Расстояние первым: в блоке «следующий квест рядом» именно оно отвечает на
   // вопрос «дойду ли я туда сейчас».
@@ -177,11 +187,11 @@ export function QuestForCityCard({
       ref={impression.ref}
       onLayout={impression.onLayout}
       onPress={handlePress}
-      style={({ pressed, hovered }: any) => [
-        styles.card,
-        style,
-        (pressed || hovered) && styles.cardHover,
-      ]}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      style={cardStyle}
       accessibilityRole={href ? 'link' : undefined}
       accessibilityState={href ? undefined : { disabled: true }}
       accessibilityLabel={i18nT('quests:components.quests.QuestForCityCard.proyti_kvest_value1_value2_54986608', { value1: cityLabel, value2: quest.title })}
