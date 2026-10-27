@@ -35,7 +35,7 @@ const MAP_CORNER_DATA_SET = webDataSetProps({ mapPageHeading: 'map-corner' })
 
 /**
  * Drop the static pre-hydration heading injected into the raw HTML by
- * `scripts/generate-seo-pages.js`.
+ * `scripts/postprocess-route-shells.js` (`injectHiddenH1`).
  *
  * Deliberately owned by the runtime heading rather than by the route: the
  * static node must survive until a runtime heading actually exists, not merely

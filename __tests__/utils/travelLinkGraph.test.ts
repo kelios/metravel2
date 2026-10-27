@@ -1,5 +1,6 @@
 import { questPrivateSnapshot } from '../fixtures/questPublicProjection'
-const { buildTravelLinkGraphs, validateTravelLinkGraph } = require('@/utils/travelLinkGraph')
+const { buildTravelLinkGraphs } = require('@/utils/travelLinkGraph')
+const { validateTravelLinkGraph } = require('@/utils/travelLinkGraphContract')
 
 const travels = [
   { id: 9, slug: 'nine', name: 'Nine', countryName: 'Беларусь' },

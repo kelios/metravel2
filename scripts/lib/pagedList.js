@@ -29,7 +29,8 @@
  */
 
 /** The backend clamps a page to 100 records and silently ignores a larger
- *  `perPage` (probe 01.09.2026, see scripts/verify-static-travel-seo.js), so the
+ *  `perPage` (probe 01.09.2026, recorded in the since-retired static travel SEO
+ *  verifier, #2766), so the
  *  request step and the short-page threshold must read the same number. */
 const TRAVELS_PER_PAGE = 100
 

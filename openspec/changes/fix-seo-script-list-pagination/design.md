@@ -9,7 +9,7 @@ short-page heuristic is not merely imprecise — on a count that is an exact mul
 of the page size it is fatal.
 
 The backend also clamps the page to 100 records and ignores a larger `perPage`
-(probe 01.09.2026, recorded in `scripts/verify-static-travel-seo.js`), so 100 is
+(probe 01.09.2026, recorded in the former static travel verifier (removed in #2766)), so 100 is
 not a free parameter.
 
 ## Goals / Non-Goals

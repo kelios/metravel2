@@ -14,7 +14,7 @@
  *   сразу убирает его из адресной строки (#2145: после старта тэгов «Назад» не
  *   должен вернуть секрет в `document.location` — clickmap/Вебвизор Метрики);
  * - governance-тест `__tests__/app/secretLinkRoutes.governance.test.ts`
- *   держит файл роута, запись noindex в `scripts/generate-seo-pages.js`,
+ *   держит файл роута, запись noindex в `utils/seoRoutes/staticRoutes.js`,
  *   `robots="noindex, nofollow"` на экране и чтение секрета через хук.
  */
 

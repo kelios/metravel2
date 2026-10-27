@@ -224,8 +224,9 @@ describe('TravelDetailsContainer SEO focus guard', () => {
     expect(scripts[0].textContent).toContain('helmet')
   })
 
-  // #1622: the SSG build embeds a bootstrap Article payload marked
-  // `data-seo-jsonld="travel-article"` with no `id` (scripts/generate-seo-pages.js).
+  // #1622: the static SSG build (removed in #2766; cached pages may still carry
+  // it) embedded a bootstrap Article payload marked
+  // `data-seo-jsonld="travel-article"` with no `id`.
   // That marker never matched the `#travel-article-jsonld` id selector, so the
   // static copy survived hydration alongside Helmet's managed tag — two
   // Article payloads for one page. The dedupe must also catch this marker.
@@ -233,7 +234,7 @@ describe('TravelDetailsContainer SEO focus guard', () => {
     mockUseIsFocused.mockReturnValue(true)
     // Simulate the full static SSG output for a travel page: Article marker
     // plus its sibling FAQPage marker and a marker-less BreadcrumbList — the
-    // exact three tags scripts/generate-seo-pages.js injects per travel page.
+    // exact three tags the static SSG build injected per travel page.
     document.head.insertAdjacentHTML(
       'beforeend',
       [

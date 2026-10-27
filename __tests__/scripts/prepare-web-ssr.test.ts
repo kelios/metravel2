@@ -1,8 +1,8 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
 const { shellRoute, publicConfig, writePublicConfig, sharedCriticalCss, writeSharedCss } = require('@/scripts/prepare-web-ssr')
 const { externalizeHeadStyles } = require('@/scripts/externalize-head-styles')
+const { makeTempDir } = require('./cli-test-utils')
 
 const CRITICAL = `body{margin:0}${'.x{color:red}'.repeat(300)}`
 const shell = (css: string) => `<html><head><style id="metravel-critical-css">${css}</style><style id="react-native-stylesheet">${'.r{}'.repeat(900)}</style></head><body><div id="root"></div></body></html>`
@@ -39,7 +39,7 @@ describe('one-export SSR transition', () => {
   })
 
   it('writes the public configuration readable by the backend gateway uid', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ssr-env-'))
+    const dir = makeTempDir('ssr-env-')
     const file = writePublicConfig(dir, { EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR: 'true' })
     expect(fs.statSync(file).mode & 0o777).toBe(0o644)
     expect(JSON.parse(fs.readFileSync(file, 'utf8'))).toEqual({ EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR: 'true' })
@@ -57,7 +57,7 @@ describe('one-export SSR transition', () => {
   })
 
   it('writes the shared file once and refuses a same-name file with other content', () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ssr-critical-'))
+    const root = makeTempDir('ssr-critical-')
     try {
       const asset = sharedCriticalCss(shell(CRITICAL))
       writeSharedCss(root, asset)

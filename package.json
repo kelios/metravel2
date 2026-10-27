@@ -97,7 +97,7 @@
     "db:backup:prod": "bash scripts/backup-prod-db.sh",
     "db:backup:prod:check": "bash scripts/backup-prod-db.sh --check",
     "db:backup:prod:verify": "bash scripts/enable-prod-db-backup.sh --verify",
-    "seo:generate-pages": "node scripts/generate-seo-pages.js --dist dist/prod",
+    "seo:postprocess-route-shells": "node scripts/postprocess-route-shells.js --dist dist/prod",
     "stats:login": "node scripts/google-oauth-login.js",
     "stats:gsc": "node scripts/fetch-gsc-stats.js",
     "stats:gsc:json": "node scripts/fetch-gsc-stats.js --json",

@@ -1,7 +1,7 @@
 import { buildSeoTitle, clampDescriptionForAttr, finishTruncatedSnippet, getStoredTravelSeoDescription, htmlToPlainText, normalizeSeoLead } from '@/utils/seoText';
 
-// Общие правила текста выдачи. Заголовок отдельно покрыт в
-// __tests__/scripts/generate-seo-pages.test.ts (buildSeoTitle через SSG-обёртку),
+// Общие правила текста выдачи. Заголовок отдельно покрыт тестами постобработки
+// оболочек (buildSeoTitle через обёртку scripts/postprocess-route-shells.js),
 // здесь фиксируем контракт самого модуля и очистку лида.
 describe('seoText', () => {
   describe('stored travel metadata (#2700)', () => {

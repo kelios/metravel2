@@ -328,13 +328,14 @@ test.describe('кадр до гидратации (#2170)', () => {
  * #2257: на главной (`travel-route`) оболочка приложения видна с первого кадра,
  * а класс `rnw-styles-ready` встаёт только через два кадра. Состояние «между»
  * снимается детерминированно: чанки приложения заблокированы, а сам класс
- * запрещён init-скриптом. SSG-двойник «Городских квестов» вставляется в
- * документ настоящим генератором, даже если локальная сборка шла без каталога.
+ * запрещён init-скриптом.
+ *
+ * До #2766 статическая сборка дописывала рядом с `#root` SSG-двойник «Городских
+ * квестов», и он сжимал оболочку в этом кадре. Теперь квесты главной рендерит
+ * SSR внутри `#root` (loader `questDiscoveryLoader`, вид `home`), а блока вне
+ * `#root` нет ни в одной сборке — тест держит, что он не вернулся и что
+ * оболочка по-прежнему во всю ширину.
  */
-const HOME_SSG_QUESTS = [
-  { quest_id: 'e2e-home-ssg-1', city_id: '990170', title: 'E2E: квест главной', city_name: 'Минск' },
-  { quest_id: 'e2e-home-ssg-2', city_id: '990171', title: 'E2E: второй квест главной', city_name: 'Гродно' },
-]
 
 test.describe('главная до гидратации (#2257)', () => {
   for (const viewport of [
@@ -342,28 +343,12 @@ test.describe('главная до гидратации (#2257)', () => {
     { width: 1280, height: 800 },
     PHONE,
   ]) {
-    test(`${viewport.width}: SSG-блок квестов не сжимает оболочку в первом кадре`, async ({
+    test(`${viewport.width}: оболочка во всю ширину в первом кадре, без блока квестов вне #root`, async ({
       page,
     }) => {
-      const { injectHomeQuestsSection } = require('../scripts/generate-seo-pages.js') as {
-        injectHomeQuestsSection: (html: string, quests: unknown[]) => string
-      }
       await page.setViewportSize(viewport)
       await preacceptCookies(page)
       await page.route(APP_SCRIPTS, (route) => route.abort())
-      await page.route(
-        (url) => url.pathname === '/',
-        async (route) => {
-          const response = await route.fetch()
-          const body = await response.text()
-          await route.fulfill({
-            response,
-            body: body.includes('data-ssg-home-quests')
-              ? body
-              : injectHomeQuestsSection(body, HOME_SSG_QUESTS),
-          })
-        },
-      )
       await page.addInitScript(() => {
         const add = DOMTokenList.prototype.add
         DOMTokenList.prototype.add = function (...tokens: string[]) {
@@ -375,7 +360,6 @@ test.describe('главная до гидратации (#2257)', () => {
 
       const frame = await page.evaluate(() => {
         const main = document.getElementById('main-content')
-        const block = document.querySelector('[data-ssg-home-quests]')
         const rect = main?.getBoundingClientRect()
         return {
           travelRoute: document.documentElement.classList.contains('travel-route'),
@@ -383,18 +367,16 @@ test.describe('главная до гидратации (#2257)', () => {
           mainX: rect?.x ?? -1,
           mainWidth: rect?.width ?? 0,
           rootWidth: document.getElementById('root')?.getBoundingClientRect().width ?? 0,
-          blockDisplay: block ? getComputedStyle(block).display : null,
-          blockInRoot: Boolean(block?.closest('#root')),
-          blockLinks: block ? block.querySelectorAll('a[href^="/quests/"]').length : 0,
+          // Любой блок квестов главной вне `#root` снова встал бы в ряд с ним.
+          outOfRootQuestBlocks: Array.from(
+            document.querySelectorAll('[data-ssg-home-quests]'),
+          ).filter((node) => !node.closest('#root')).length,
         }
       })
 
       expect(frame.travelRoute).toBe(true)
       expect(frame.stylesReady, 'состояние до rnw-styles-ready').toBe(false)
-      // Ссылки для краулера на месте, но блок не в ряду #root и не нарисован.
-      expect(frame.blockLinks).toBeGreaterThanOrEqual(2)
-      expect(frame.blockInRoot).toBe(false)
-      expect(frame.blockDisplay).toBe('none')
+      expect(frame.outOfRootQuestBlocks).toBe(0)
       // Оболочка с первого кадра во всю ширину (было 840,0 425×800 на 1280).
       expect(frame.mainX).toBe(0)
       expect(frame.rootWidth).toBeGreaterThan(0)

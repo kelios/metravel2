@@ -5,7 +5,7 @@ See `proposal.md` for motivation and `specs/quest-locale-seo-routing/spec.md` fo
 Current mechanisms and reuse:
 
 - `utils/questCityAlias.js:35` builds numeric-city detail paths; `questRouteVariants` preserves city alias copies. `app/(tabs)/quests/[city]/[questId].tsx:518` derives its canonical from the bundle's numeric city ID. Existing city landings use aliases, such as `/quests/krakow`.
-- `scripts/generate-seo-pages.js` generates RU detail pages and runs `selectIndexableBuiltQuestPages`; `scripts/lib/questPageDepth.js` owns the ≥300 prose words / ≥30% own five-grams rule. `utils/questSeo.js` already accepts translation/format dependencies but its default resources are RU.
+- the former static SSG generator (removed in #2766) generates RU detail pages and runs `selectIndexableBuiltQuestPages`; `scripts/lib/questPageDepth.js` owns the ≥300 prose words / ≥30% own five-grams rule. `utils/questSeo.js` already accepts translation/format dependencies but its default resources are RU.
 - `api/quests.ts`, `api/questContentLocale.ts`, `hooks/questBundleQuery.ts` and `queryKeys` already pass an explicit locale and isolate locale caches. The route currently follows global interface language. #2193 supplies `lang`, `content_locale`, `available_locales`, `source_locale` and canonical city names; missing language metadata means RU, never proof of a translation.
 - `i18n/bootLocale.web.ts:35` resolves stored preference; `i18n/LocaleProvider.web.tsx` assumes RU SSG and commits preference after boot. Changing only `<html lang>` would retain the wrong boot/request mechanism. `app/+html.tsx` owns static shell/boot metadata; its exact path-dependent locale integration must cooperate with the existing boot gate.
 - `InstantSEO`, quest head patching and quest structured-data helpers need one shared quest URL/eligibility model so hydration cannot restore RU canonical or stale alternates.
@@ -110,7 +110,7 @@ Affected frontend paths/modules (future ownership, not current edits):
 - `app/(tabs)/quests/[city]/[questId].tsx`, a web `[locale]/quests/[city]/[questId]` adapter and extracted shared quest detail route behavior;
 - `app/+html.tsx`, `i18n/bootLocale.web.ts`, `i18n/LocaleProvider.web.tsx`, locale shell helpers and existing shared language control;
 - `utils/questSeo.js`, `utils/questCityAlias.js`, quest structured-data/route helpers, `hooks/questBundleQuery.ts` and `hooks/useQuestsApi.ts` only where explicit route-locale input is needed;
-- `scripts/generate-seo-pages.js`, `scripts/verify-static-quest-seo.js`, shared manifest/eligibility helpers and targeted tests; `scripts/deploy-prod.sh` only under its separately scoped activation handoff card;
+- the former static SSG generator (removed in #2766), the former static quest verifier (removed in #2766), shared manifest/eligibility helpers and targeted tests; `scripts/deploy-prod.sh` only under its separately scoped activation handoff card;
 - all-locale app-owned quest SEO/control resources, `docs/features/quests.md`, narrow localization rule exception and tests. Backend-owned gateway, live revisions, production sitemap and Nginx are separate dependencies, never editable frontend paths. `app.json`, `eas.json`, `entry.js`, `.github/workflows`, frontend Nginx, `public/robots.txt` and `public/sitemap.xml` are not implementation assumptions.
 
 Data/API impact: reuse #2193 public reads; add a separately agreed release/serving manifest and internal live-revision/cache contract. No quest translation-write, answer/progress, review or auth API change. Publication gateway is anonymous, same-origin and excludes user-specific payloads.
@@ -142,7 +142,7 @@ no new UI/editorial text. Public routes, manifest schema and serving API stay v1
 #### Observed mechanism and measurements
 
 The normal SSG writer already atomically creates hardlinked `.html`/`index.html`
-pairs (`scripts/generate-seo-pages.js:3585`, #2227). Normal legacy publication
+pairs (the former static SSG generator (removed in #2766), #2227). Normal legacy publication
 preserves those links. E's `pack()` instead uses `dereference=True`
 (`scripts/quest-seo-transport.py:90`); `unpack()` writes each regular archive
 member into a new inode (`:101`). Thus E loses the existing storage guarantee.
@@ -268,7 +268,7 @@ grew from 216,398,673 to 260,516,274 bytes. Fresh whole-build/deploy timing must
 still satisfy the existing 300-second budget.
 
 Affected implementation paths: E `scripts/quest-seo-transport.py`,
-`scripts/quest-seo-operation.js` and focused transport tests; D storage accounting
+the former quest SEO operation script (removed in #2766) and focused transport tests; D storage accounting
 in `quests/services/seo_activation.py` and focused backend tests; the shared
 private interface/runbooks. Agree the precise private handshake before code.
 
@@ -386,7 +386,7 @@ closed window≤180s. Estimates do not establish live timing.
 ## Migration Plan
 
 E #2366 release implementation (owner authorized 2026-10-11): retain the normal
-`scripts/deploy-prod.sh` entrypoint. Explicit `QUEST_SEO_MODE=ru-only|translations`
+`scripts/deploy-prod.sh` entrypoint. Explicit the former quest SEO mode switch (removed in #2766)
 builds full v1 exports, keeping complete private R1/R2 receipts. Download old
 assets under a release reader pin, apply the existing bounded overlay locally,
 run the full RU verifier, then finalize; no write follows sealing. Stage a new

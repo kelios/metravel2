@@ -6,7 +6,7 @@ Head экспортированного HTML (title, description, robots, canoni
 рождается из `<Head>` react-helmet-async (`expo-router/head`) внутри экранов. В SDK 58 экспорт
 собирает helmet-состояние, но не пишет его в HTML (`@expo/router-server` → `renderStreamingContent`),
 поэтому #2727 держит мост `patches/@expo+router-server+58.0.17.patch`. Поверх этого
-`scripts/generate-seo-pages.js` держит собственную таблицу `STATIC_PAGES` с литералами, которые уже
+SSG-генератор (снят в #2766) держит собственную таблицу `STATIC_PAGES` с литералами, которые уже
 расходятся с рантайм-строками экранов (`/about`, `/search`, `/articles`), а описания по умолчанию из
 `app/+html.tsx` дедупятся постобработкой по маркеру `data-rh`.
 

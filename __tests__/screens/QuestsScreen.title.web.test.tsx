@@ -2,8 +2,9 @@ import { render, waitFor } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 
 // #1618: the unfiltered `/quests` catalog's runtime title (document.title,
-// and og:title) must match
-// scripts/generate-seo-pages.js's static `/quests` <title> byte-for-byte —
+// and og:title) must match the static `/quests` <title> from
+// utils/seoRoutes/staticRoutes.js (the route head and
+// scripts/postprocess-route-shells.js both read it) byte-for-byte —
 // otherwise raw HTML (pre-hydration) and the hydrated head permanently
 // disagree for the bare route. The visible H1 is owned by QuestsContentPanel;
 // QuestsScreen must not add a second hidden raw heading beside it. Heavy

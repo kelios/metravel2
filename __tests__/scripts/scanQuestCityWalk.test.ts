@@ -8,11 +8,10 @@ const path = require('node:path')
 const {
   BASELINE_CONTRACT_VERSION,
   BASELINE_PATH,
-  cityPageOf,
-  detailPageWords,
   findingKeys,
   inspectQuest,
   parseArgs,
+  projectedPageWords,
   scanQuests,
 } = require('@/scripts/scan-quest-city-walk')
 const { loadLocalBundles } = require('@/scripts/lib/questBundles')
@@ -124,22 +123,22 @@ describe('scan-quest-city-walk: замер одного квеста', () => {
     expect(asString.detailWords).toBe(asArray.detailWords)
   })
 
-  it('порог детальной меряется тем же срезом, что пишет сборка: хвост историй в него не входит', () => {
+  it('порог детальной меряется тем же срезом, что публикует SSR-проекция: хвост историй в него не входит', () => {
     // Хвост (предложения 3–4) уходит на страницу города, а не в дайджест, —
     // поэтому детальная с хвостом и без него весит одинаково.
-    const withTail = detailPageWords(bundle(stories(8, DEEP)))
-    const digestOnly = detailPageWords(bundle(stories(8, DIGEST)))
-    expect(withTail).toBe(digestOnly)
+    const quest = { quest_id: 'demo-city-walk', title: 'Демо', city_name: 'Демо', points: 8, duration_min: null }
+    const withTail = projectedPageWords(quest, bundle(stories(8, DEEP)))
+    const digestOnly = projectedPageWords(quest, bundle(stories(8, DIGEST)))
+    expect(withTail.detailWords).toBe(digestOnly.detailWords)
   })
 
   it('посадочная города меряется на заметках: без хвоста остаётся один шаблон', () => {
-    const quest = { quest_id: 'demo-city-walk', title: 'Демо', city_name: 'Демо', points: 8, duration_min: null }
-    const withTail = cityPageOf(quest, bundle(stories(8, DEEP)))
-    const templateOnly = cityPageOf(quest, bundle(stories(8, DIGEST)))
-    expect(withTail.walk.places).toHaveLength(8)
-    expect(withTail.words).toBeGreaterThanOrEqual(MIN_QUEST_PAGE_WORDS)
-    expect(templateOnly.walk.places).toHaveLength(0)
-    expect(templateOnly.words).toBeLessThan(MIN_QUEST_PAGE_WORDS)
+    const withTail = inspectQuest(bundle(stories(8, DEEP)))
+    const templateOnly = inspectQuest(bundle(stories(8, DIGEST)))
+    expect(withTail.places).toBe(8)
+    expect(withTail.cityWords).toBeGreaterThanOrEqual(MIN_QUEST_PAGE_WORDS)
+    expect(templateOnly.places).toBe(0)
+    expect(templateOnly.cityWords).toBeLessThan(MIN_QUEST_PAGE_WORDS)
   })
 
   it('scanQuests оставляет в findings только квесты с находками', () => {

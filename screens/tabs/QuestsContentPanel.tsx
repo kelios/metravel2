@@ -129,9 +129,9 @@ function QuestsContentPanel({
     // #1826: на web сетка каталога не виртуализирована — 177 карточек уходили в
     // первый кадр одним `map`. `FlatList` здесь не годится: он списочный, а
     // каталог — сетка с переносом, и её вёрстка менять нельзя. Поэтому окно
-    // растёт по мере прокрутки. Ссылки на все квесты в статическом HTML это не
-    // задевает: их кладёт отдельный скрытый индекс сборки
-    // (`scripts/generate-seo-pages.js:injectQuestLinksIndex`), а не сама сетка.
+    // растёт по мере прокрутки. Ссылки на все квесты в статическом HTML до #2766
+    // клал отдельный скрытый индекс статической сборки (`injectQuestLinksIndex`),
+    // а не сама сетка; с переходом `/quests` на SSR этот индекс снят.
     const [visibleCount, setVisibleCount] = useState(QUEST_GRID_PAGE_SIZE);
     const gridViewportHeightRef = useRef(0);
     const gridContentHeightRef = useRef(0);

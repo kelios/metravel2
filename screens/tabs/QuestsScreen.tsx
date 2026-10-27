@@ -610,8 +610,8 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
             return i18nT('quests:screens.tabs.QuestsScreen.uncompletedSeoTitle');
         }
         // #1618: the unfiltered catalog (selectedCityId === ALL_QUESTS_ID, the
-        // initial state) must match scripts/generate-seo-pages.js's static
-        // `/quests` <title> byte-for-byte, or raw HTML and the hydrated
+        // initial state) must match the static `/quests` <title> from
+        // utils/seoRoutes/staticRoutes.js byte-for-byte, or raw HTML and the hydrated
         // document.title/og:title permanently disagree for the bare route.
         return selectedCityName
             ? i18nT('quests:screens.tabs.QuestsScreen.kvesty_value1_metravel_f8aef4dd', { value1: selectedCityName })

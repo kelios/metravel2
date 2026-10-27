@@ -522,7 +522,8 @@ Backfill прогнан: выборка 4 статей даёт 100% покры�
 38/38; 642 — 10/10 + 7/7; 300 — 10/10 + 7/7; 500 — 8/8 + 3/3).
 
 Фронт это потребляет: `utils/travelMediaVariants.ts` → `Slide.tsx`,
-`TravelDetailsOptimizedLCPHero.tsx`; SSG-ветка — `scripts/generate-seo-pages.js`.
+`TravelDetailsOptimizedLCPHero.tsx`; серверный HTML статьи рендерит SSR loader
+(статическая SSG-ветка снята в #2766).
 
 > Если ищете эти поля и не находите — смотрите в `media`, а не в полях travel.
 > На этом уже один раз ошиблись и завели лишний тикет (#1162, закрыт как
@@ -570,7 +571,7 @@ Backfill прогнан: выборка 4 статей даёт 100% покры�
 90). В target policy остались q70 для малых, q80 для крупных и q85 для
 мастера/print. Backend proxy-contract уже явно разрешает q85; старое frontend-
 округление «до десятка» ошибочно превращало `q85` в `q90`; исправлено в
-`utils/imageProxy.ts`, `scripts/generate-seo-pages.js` и print URL tests 2026-08-02.
+`utils/imageProxy.ts`, тогдашнем SSG-генераторе (снят в #2766) и print URL tests 2026-08-02.
 
 Обложка квеста остаётся на q60 **как отдельный media-family profile**:
 замер 2026-07-31 на нормализованной обложке дал 1 918 B для `w=320` и 5 390 B

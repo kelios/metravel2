@@ -2,11 +2,11 @@
 import fs from 'fs'
 import path from 'path'
 import { makeTempDir, removeDir, runCli } from './cli-test-utils'
-const { writePairedPage, travelStaticPagePaths, assertTravelStaticPagesComplete } = require('@/scripts/generate-seo-pages')
+const { writePairedPage } = require('@/scripts/postprocess-route-shells')
 
-const pair = (directory: string, family: string) => family === 'travels'
-  ? travelStaticPagePaths(directory, 'example')
-  : [path.join(directory, family, 'example.html'), path.join(directory, family, 'example/index.html')]
+// Both forms nginx serves for one shell: the flat file and the directory index.
+const pair = (directory: string, family: string) =>
+  [path.join(directory, family, 'example.html'), path.join(directory, family, 'example/index.html')]
 const sameAllocation = ([flat, index]: string[], expected: string) => {
   const a = fs.statSync(flat)
   const b = fs.statSync(index)
@@ -18,7 +18,7 @@ const sameAllocation = ([flat, index]: string[], expected: string) => {
 }
 
 describe('paired static HTML storage', () => {
-  it.each(['travels', 'quests/city', 'article'])('%s stores one allocation and atomically replaces both names on rerun', (family) => {
+  it.each(['quests', 'trips', 'article'])('%s stores one allocation and atomically replaces both names on rerun', (family) => {
     const root = makeTempDir('seo-paired-page-')
     try {
       const paths = pair(root, family)
@@ -32,14 +32,13 @@ describe('paired static HTML storage', () => {
       expect(next.ino).not.toBe(previous.ino)
       expect(fs.readFileSync(oldRelease, 'utf8')).toBe('first page')
       expect(fs.readdirSync(path.dirname(paths[1])).filter((name) => name.endsWith('.tmp'))).toEqual([])
-      if (family === 'travels') expect(assertTravelStaticPagesComplete([{ id: 1, slug: 'example' }], root)).toEqual({ expected: 1, missing: 0 })
     } finally { removeDir(root) }
   })
 
   it('fails closed if linking fails, without publishing a changed canonical file or copy fallback', () => {
     const root = makeTempDir('seo-link-failure-')
     try {
-      const paths = pair(root, 'travels')
+      const paths = pair(root, 'article')
       writePairedPage(...paths, 'old page')
       const link = jest.spyOn(fs, 'linkSync').mockImplementationOnce(() => { throw Object.assign(new Error('different filesystem'), { code: 'EXDEV' }) })
       try { expect(() => writePairedPage(...paths, 'new page')).toThrow('different filesystem') }
@@ -58,10 +57,10 @@ describe('paired static HTML storage', () => {
       const normalStage = path.join(root, 'normal-stage')
       const staged = path.join(root, 'recovery-stage')
       const text = '<html>' + 'body'.repeat(65536) + '</html>'
-      writePairedPage(...pair(original, 'travels'), text)
-      const basisPaths = pair(liveBasis, 'travels')
+      writePairedPage(...pair(original, 'article'), text)
+      const basisPaths = pair(liveBasis, 'article')
       fs.mkdirSync(path.dirname(basisPaths[1]), { recursive: true })
-      const sourceTime = fs.statSync(pair(original, 'travels')[0]).mtime
+      const sourceTime = fs.statSync(pair(original, 'article')[0]).mtime
       for (const file of basisPaths) {
         fs.writeFileSync(file, text)
         fs.utimesSync(file, sourceTime, sourceTime)
@@ -69,24 +68,23 @@ describe('paired static HTML storage', () => {
       fs.mkdirSync(incoming)
       const transfer = runCli('rsync', ['-aH', `--copy-dest=${liveBasis}`, `${original}/`, `${incoming}/`])
       expect(transfer.status).toBe(0)
-      const received = sameAllocation(pair(incoming, 'travels'), text)
+      const received = sameAllocation(pair(incoming, 'article'), text)
       expect(received.ino).not.toBe(fs.statSync(basisPaths[0]).ino)
       expect(runCli('mv', [incoming, normalStage]).status).toBe(0)
-      sameAllocation(pair(normalStage, 'travels'), text)
+      sameAllocation(pair(normalStage, 'article'), text)
       fs.mkdirSync(staged)
       expect(runCli('rsync', ['-aH', `${normalStage}/`, `${staged}/`]).status).toBe(0)
-      const inode = sameAllocation(pair(staged, 'travels'), text)
+      const inode = sameAllocation(pair(staged, 'article'), text)
       // Counting unique inodes gives one payload's blocks, while summing each
       // served name double-counts it. The OS reports the actual allocation.
-      const paths = pair(staged, 'travels')
+      const paths = pair(staged, 'article')
       const individualBlocks = paths.reduce((sum: number, file: string) => sum + fs.statSync(file).blocks, 0)
       expect(individualBlocks).toBe(inode.blocks * 2)
       expect(inode.blocks).toBeGreaterThan(0)
     } finally { removeDir(root) }
   })
 
-  it('preserves SSG links through both publication transports', () => {
-    expect(fs.readFileSync(path.resolve('build-prod.sh'), 'utf8')).toContain('rsync -azHhe "ssh"')
+  it('preserves paired-page links through the recovery transport', () => {
     expect(fs.readFileSync(path.resolve('scripts/fix-prod.sh'), 'utf8')).toContain('rsync -avzHhe "ssh"')
   })
 })

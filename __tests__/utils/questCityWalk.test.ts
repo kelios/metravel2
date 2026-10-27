@@ -12,7 +12,9 @@ const {
   questCityWalkHasContent,
   questCityWalkQuestIds,
 } = require('@/utils/questCityWalk')
-const { buildQuestRouteDigest } = require('@/scripts/generate-seo-pages')
+// Дайджест детальной страницы — тот же, что публикует SSR-проекция квеста
+// (`scripts/lib/questWebProjection.js` → `questSpoilerGuard.buildQuestRouteDigest`).
+const { buildQuestRouteDigest } = require('@/scripts/lib/questSpoilerGuard')
 
 const step = (overrides: Record<string, unknown> = {}) => ({
   step_id: 'p1',
@@ -51,7 +53,7 @@ describe('buildQuestCityWalkModel', () => {
     const model = buildQuestCityWalkModel([QUEST], new Map([['minsk-center', questBundle]]))
 
     const published = model.places.flatMap((place: { sentences: string[] }) => place.sentences)
-    const onQuestPage = buildQuestRouteDigest(questBundle).flatMap(
+    const onQuestPage = buildQuestRouteDigest(questBundle, (_kind: string, value: string) => value).flatMap(
       (point: { sentences: string[] }) => point.sentences,
     )
 

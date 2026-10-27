@@ -2,10 +2,10 @@
 // `<meta name="description">` so a route that renders no Helmet description
 // still ships one. Expo Router's static export does not dedupe that shell tag
 // against the page's own Helmet tag (`data-rh="true"`), so every page with a
-// Head description is exported with TWO. scripts/generate-seo-pages.js
-// rewrites the description only for the routes it owns (injectMeta /
-// replaceOrInsert), and every other exported route — /app, the 404 page,
-// localized fallbacks — kept the duplicate.
+// Head description is exported with TWO. scripts/postprocess-route-shells.js
+// (formerly the static SEO generator) rewrites the description only for the
+// routes it owns (injectMeta / replaceOrInsert), and every other exported
+// route — /app, the 404 page, localized fallbacks — kept the duplicate.
 //
 // normalizeMetaDescription() closes the family for every HTML file: it keeps
 // the page-owned (data-rh) description, or the first one when no page owns

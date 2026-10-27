@@ -6,9 +6,11 @@
  *
  * A generated page whose `#root` is not the render the browser will produce
  * must not ask for hydration: React rejects the markup (#418) and renders the
- * screen again. Travel pages keep their `#root` and only switch the flag;
- * translated quest members (#2449) also drop the foreign render (see
- * `memberDocumentIssues` in `questSeoContract.js`).
+ * screen again. Travel pages kept their `#root` and only switched the flag;
+ * translated quest members (#2449) also dropped the foreign render. Both were
+ * static generator pages retired in #2766 (entities are rendered by SSR); the
+ * live consumer is `prepareNotFoundDocumentBoot` of
+ * `scripts/postprocess-route-shells.js`.
  */
 
 const crypto = require('crypto')

@@ -118,9 +118,7 @@ const buildEnv = {
 
 runStep('node', ['scripts/build-web-safe.js', '-p', 'web', '-c', '--output-dir', exportPath], buildEnv)
 runStep('node', ['scripts/prepare-dist-prod.js', '--src', exportPath, '--dest', stagingPath])
-runStep('node', ['scripts/generate-seo-pages.js', '--dist', stagingPath])
-runStep('node', ['scripts/verify-static-travel-seo.js', '--dist', stagingPath])
-runStep('node', ['scripts/verify-static-quest-seo.js', '--dist', stagingPath])
+runStep('node', ['scripts/postprocess-route-shells.js', '--dist', stagingPath])
 runStep('node', ['scripts/guard-site-owner-name.js', '--dist', stagingPath])
 runStep('node', ['scripts/copy-public-files.js', stagingPath])
 runStep('node', ['scripts/add-cache-bust-meta.js', stagingPath])

@@ -3,7 +3,7 @@
  * SSG Skeleton Shells for P3.5 — pre-rendered HTML visible before JS loads.
  *
  * Generates lightweight HTML skeletons for `/` (home) and `/search` pages,
- * injected by generate-seo-pages.js into the static HTML output.
+ * injected by postprocess-route-shells.js into the static HTML output.
  *
  * Colors from MODERN_MATTE_PALETTE / MODERN_MATTE_PALETTE_DARK (hardcoded
  * to avoid importing TS modules at build time).

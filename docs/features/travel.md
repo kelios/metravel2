@@ -87,21 +87,21 @@ SSG размещает три description-тега до ранних head-скр
 с этой меткой даже при совпадении с generic-prefix эвристикой; отмеченное пустое значение
 и непомеченные placeholders сохраняют прежний fallback. Charset остаётся первым.
 
-Поле проходит через `scripts/lib/travelDetail.js` и capture/replay SSG;
-`generate-seo-pages.js` и travel head viewmodel используют один helper для
-description/OG/Twitter. Текущая detail-мета авторитетна: пустое значение не
-заменяется старой метой из списка. Article JSON-LD SSG получает уже выбранное
+Поле проходит через `scripts/lib/travelDetail.js`; SSR loader
+(`components/travel/details/travelRouteLoader.ts`) и travel head viewmodel используют
+один helper (`buildTravelSeoDescription`) для description/OG/Twitter. Текущая detail-мета авторитетна: пустое значение не
+заменяется старой метой из списка. Article JSON-LD серверного HTML получает уже выбранное
 описание; FAQ и клиентские body-derived structured data сохраняют своих владельцев.
 Название, canonical, URL и тело статьи этот выбор не меняет. Editorial content
 не переводится клиентом; app-owned i18n keys не добавляются.
 
-Регрессии: `__tests__/utils/seoText.test.ts`, `__tests__/scripts/generate-seo-pages.test.ts`,
-`__tests__/scripts/seo-inputs-capture.test.ts`,
+Регрессии: `__tests__/utils/seoText.test.ts`,
 `__tests__/components/travel/travelDetailsContainerViewModel.test.ts` и
 `__tests__/app/html.head-fallback.test.ts` (настоящий critical-script и порядок парсинга).
 Для metadata-only редакторской задачи достаточно разрешённого изменения поля
-`meta_description`; правка лида/тела не требуется. Поле в API не подтверждает
-свежесть статики: после записи нужен штатный выкат и сверка raw HTML с гидрацией.
+`meta_description`; правка лида/тела не требуется. Страницу рендерит SSR loader на
+запрос (#2766), поэтому пересборка фронтенда после записи не нужна; приёмка — сверка
+raw HTML прода с гидрацией.
 Google может выбрать собственный сниппет; #2700 подтверждает переданную мету,
 а #2658 отдельно ведёт редактуру и 28-дневный замер CTR.
 

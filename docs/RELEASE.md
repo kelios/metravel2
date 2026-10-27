@@ -366,11 +366,15 @@ See `PRODUCTION_CHECKLIST.md`.
 - macOS Keychain is only a legacy source for creating the bundle. A new
   macOS/Windows/Linux workstation builds from copied `.secrets` without Keychain.
 
-## Quest locale v1 publication
+## Web entity publication (SSR)
 
-For the explicitly coordinated #2363/#2366 release use the existing deploy
-entrypoint with `QUEST_SEO_MODE=ru-only|translations`. Read the
-[quest locale release runbook](ops/quest-locale-release.md) for owner-selected
-inventory budget, initial RU baseline, private evidence and CAS recovery.
-A managed root refuses legacy deploy/recovery/chunk mutation. Initial legacy
-conversion and gateway/exposure remain separate backend-owner operations.
+Since 27.10.2026 travels, quests, city and country landings, `/`, `/quests`
+and `/quests/scenario` are rendered per request by the Expo Router server
+(SSR loaders). The ordinary deploy entrypoint (`scripts/deploy-prod.sh`)
+publishes only the linked SSR release pair: `build-prod.sh prod` with the
+backend SSR capability → `scripts/web-ssr-publication.sh
+stage/publish-code/finalize-code`, with `rollback-code` on a failed live
+check. `build-prod.sh` refuses `DEPLOY=1` without the SSR release. The
+static quest locale v1 package (`ru-only`/`translations` modes) was removed
+in #2766; [the quest locale release runbook](ops/quest-locale-release.md) keeps
+only the history and the still-live recovery helpers.

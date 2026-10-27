@@ -10,8 +10,6 @@ import { GUEST_QUEST_FREE_STEPS as progressLimit } from '@/utils/guestQuestProgr
 
 const { loadSsgCatalogs } = require('@/i18n/babel-inline-plugin')
 const { createSsgTranslator } = require('@/scripts/lib/questLocalePackage')
-const { getQuestsFaqRu } = require('@/utils/questContent')
-const { buildQuestsFaqJsonLd, injectQuestsListingContent, escapeAttr } = require('@/scripts/generate-seo-pages')
 const catalogs = loadSsgCatalogs(process.cwd()).catalogs
 const answerKey = 'screens.tabs.QuestsSeoIntroFaq.a5'
 
@@ -39,40 +37,17 @@ describe('guest quest registration promise', () => {
     expect(answer).toContain(formatInteger(progressLimit, locale))
     expect(answer).toContain(requiredAccountAction[locale])
     expect(answer).not.toContain('{{')
-    expect(answer).toBe(getQuestsFaqRu(ssg)[4].a)
-  })
-
-  it('uses the runtime registration answer in both crawler HTML and FAQPage JSON-LD', () => {
-    const appFaq = getQuestFaqItems()
-    const jsonLd = buildQuestsFaqJsonLd()
-    const html = injectQuestsListingContent('<html><head></head><body><div id="root"></div></body></html>', [{
-      quest_id: 'guest-faq-probe', city_id: '1', city_name: 'Минск', title: 'Проверка FAQ',
-    }])
-
-    // Compare all entries: changing the registration answer must preserve the
-    // seven unrelated FAQ answers and the eight questions.
-    expect(jsonLd.mainEntity.map((item: { name: string; acceptedAnswer: { text: string } }) => ({
-      q: item.name, a: item.acceptedAnswer.text,
-    }))).toEqual(appFaq)
-    expect(html).toContain(escapeAttr(appFaq[4].a))
-    expect(html).not.toContain('Аккаунт нужен только')
+    expect(answer).toBe(ssg.tp(`quests:${answerKey}`, progressLimit, { freeSteps: formatInteger(progressLimit, locale) }))
   })
 
   it.each([
     [1, '1 точку'], [2, '2 точки'], [5, '5 точек'], [21, '21 точку'],
-  ])('derives app/SSG copy and grammar from a changed limit %i', (changedLimit, noun) => {
+  ])('derives app copy and grammar from a changed limit %i', (changedLimit, noun) => {
+    // The SSR-rendered /quests FAQ (visible block and FAQPage JSON-LD in
+    // QuestsScreen) reads the same getQuestFaqItems() as the app (#2766).
     const limits = require('@/utils/guestQuestLimits')
     jest.replaceProperty(limits, 'GUEST_QUEST_FREE_STEPS', changedLimit)
 
-    // A clean Node load uses the changed limit before SSG captures its FAQ.
-    // No runtime mocks or native storage are available to the generator.
-    const leaf = path.resolve(process.cwd(), 'utils/guestQuestLimits.js')
-    const generator = path.resolve(process.cwd(), 'scripts/generate-seo-pages.js')
-    const result = spawnSync(process.execPath, ['-e', 'require(process.argv[1]).GUEST_QUEST_FREE_STEPS = Number(process.argv[3]); process.stdout.write(require(process.argv[2]).buildQuestsFaqJsonLd().mainEntity[4].acceptedAnswer.text)', leaf, generator, String(changedLimit)], { encoding: 'utf8' })
-
-    expect(result.status).toBe(0)
-    expect(result.stderr).toBe('')
-    expect(getQuestFaqItems()[4].a).toBe(result.stdout)
     expect(getQuestFaqItems()[4].a).toContain(`Гость может пройти ${noun} квеста`)
   })
 

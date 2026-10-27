@@ -1,10 +1,11 @@
 /**
  * SSG-only translation resources (#2399).
  *
- * Strings that only the SSG generator (`scripts/generate-seo-pages.js`) prints
- * live in `i18n/locales/<locale>/ssg/*_ssg.ts` under a `…Ssg` namespace.
+ * Strings that only the server-side publication prints (the quest SSR
+ * projection `scripts/lib/questWebProjection.js`; until #2766 the static SEO
+ * generator) live in `i18n/locales/<locale>/ssg/*_ssg.ts` under a `…Ssg` namespace.
  * `i18n/resources.ts` never imports them, so they never reach the client locale
- * chunks or the native bundle; the generator reads them through
+ * chunks or the native bundle; the publication reads them through
  * `loadSsgCatalogs` in `i18n/babel-inline-plugin.js`. This module exists for the
  * type contract and for catalog tests only — application code must not import it
  * (`__tests__/i18n/ssgOnlyResources.test.ts`).

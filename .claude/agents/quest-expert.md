@@ -39,7 +39,7 @@ model: opus
   `utils/questAdapters.ts` (`normalize`, `buildAnswerChecker`, `adaptStep`,
   `adaptBundle`), `hooks/useQuestsApi.ts`, `api/questBundleCache.ts`,
   `components/quests/useQuestWizardProgress.ts`,
-  `utils/questCityAlias.js`, `scripts/generate-seo-pages.js`.
+  `utils/questCityAlias.js`, `scripts/lib/questWebProjection.js` (SSR-проекция страниц квестов).
 
 **Как воспроизвести**
 
@@ -70,7 +70,7 @@ Jest/static guards ниже можно запускать до review; browser/e
   под двумя `city_id` (Гомель 19/92, Гродно 11/91, Могилёв 14/93) — вторая
   запись молча затирает первую, и половина квестов пропадает и со страницы, и из
   канонической группы (`QUEST-ALIAS-001`; контроль —
-  `mergeQuestCityLandingsByAlias` + `scripts/verify-static-quest-seo.js`).
+  `mergeQuestCityLandingsByAlias` + `scripts/verify-live-quest-ssr.js` на живом ответе).
 - Build-time запрос каталога с `catch → exit 0`: сборка проходит зелёной на
   неполном наборе квестов, дефект виден только в проде (`BUILD-CATALOG-001`).
 - Один синхронный импорт `useQuestsApi` из универсального узла (крошки в шапке)

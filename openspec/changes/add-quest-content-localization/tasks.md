@@ -9,7 +9,7 @@
 - [x] 2.2 Расширить типы `ApiQuestMeta`/`ApiQuestBundle`/`ApiQuestCity` полями `content_locale`, `available_locales`, `city_name_canonical`, `name_canonical`; отсутствие полей читать как `ru`
 - [x] 2.3 Добавить локаль в ключи квестов `api/queryKeys.ts` и в офлайн-ключи `api/questBundleCache.ts` (`quest-bundle:{questId}:{locale}`, `quest-list:v2:{locale}`) с чтением старых ключей как `ru` и запасным чтением любой сохранённой копии (отклонение от D5: квест — одна офлайн-запись на все языки, `quest-bundle:{questId}:{locale}` не заводится; см. `docs/features/quests.md` → «Язык контента»)
 - [x] 2.4 Прокинуть `contentLocale`/`availableLocales` через `utils/questAdapters.ts` в модель квеста
-- [x] 2.5 Перевести `utils/questCityAlias.js` и его потребителей (приложение, `generate-seo-pages.js`, `generate-sitemap.js`) на каноническое имя города
+- [x] 2.5 Перевести `utils/questCityAlias.js` и его потребителей (приложение, SSG-генератор (снят в #2766), `generate-sitemap.js`) на каноническое имя города
 - [x] 2.6 Юнит-тесты: ключи различают локаль, переключение не отдаёт чужой язык, алиас не зависит от локализованного имени
 
 ## 3. Проверка ответа

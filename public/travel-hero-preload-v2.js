@@ -389,7 +389,7 @@
         if (width) resolved.searchParams.set('w', String(Math.round(width)));
         // `q`/`fit` понимает только legacy-роут — он один режет в момент запроса.
         // То же условие стоит в `optimizeImageUrl` (`servedFromDurableFamily`,
-        // utils/imageProxy.ts) и в SSG-зеркале (scripts/generate-seo-pages.js).
+        // utils/imageProxy.ts) и стояло в SSG-зеркале статического генератора (до #2766).
         // Без него этот скрипт грел бы `?w=1280&q=82&fit=contain`, а `<img>` того
         // же hero просил `?w=1280` — второй cache-key и вторая загрузка LCP-кадра
         // (#1146). Пока conversion-ключи уходили на `/media-resize/legacy/`,

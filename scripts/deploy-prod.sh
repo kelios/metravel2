@@ -28,14 +28,6 @@ fi
 
 TARGET="${1:-origin/main}"
 DEPLOY="${DEPLOY:-1}"
-# Since 17.10.2026 the production static root is a managed v1 pointer (#2363)
-# and legacy publication refuses it: the ordinary deploy publishes the
-# translated package within the owner-selected physical budget. An explicit
-# operator value (for example ru-only owner maintenance) still wins. DEPLOY=0
-# takes the same v1 path: asset capture and inventory read prod over SSH and
-# need a clean prod checkout; the SSH-free preview is `DEPLOY=0 ./build-prod.sh prod`.
-export QUEST_SEO_MODE="${QUEST_SEO_MODE:-translations}"
-export QUEST_SEO_MANAGED_MAX_BYTES="${QUEST_SEO_MANAGED_MAX_BYTES:-1610612736}"
 # Фиксированный путь: worktree, брошенный прерванным выкатом, находится и
 # снимается следующим, а не копится рядом под новым именем.
 WT="$(dirname "$MT")/worktrees/deploy-prod"
@@ -104,7 +96,6 @@ SHA="$(git -C "$MT" rev-parse --verify "${TARGET}^{commit}")"
 SHORT="${SHA:0:9}"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/prod-$SHORT-$(date -u +%Y%m%dT%H%M%SZ).log"
-export QUEST_SEO_STATE_PATH="$LOG.quest-seo.json"
 
 # Лок у нас, значит оставшийся worktree — след прерванного выката.
 remove_worktree
@@ -121,20 +112,14 @@ done
 echo "🚀 Прод-выкат $SHORT из ${WT} (DEPLOY=$DEPLOY)"
 if [[ "$DEPLOY" == "1" ]]; then
   check_prod_checkout_clean
-  # The committed rollout switch (WEB_SSR_ROLLOUT_ENABLED in webOutput.js) and
-  # the installed backend capability together select the runtime model. A
-  # broken/malformed installed helper must fail closed, never downgrade a live
-  # SSR release to an ordinary static build.
+  # Production publishes only the SSR release pair (#2766). The installed
+  # backend capability must report the quest SSR runtime: a missing, malformed
+  # or disabled capability refuses the deploy (scripts/lib/webOutput.js) instead
+  # of downgrading a live SSR release to a static build.
   SSR_CAPABILITY="$(bash "$WT/scripts/web-ssr-publication.sh" capability)"
-  WEB_OUTPUT="$(node -e 'const {resolveDeployWebOutput}=require(process.argv[1]); process.stdout.write(resolveDeployWebOutput(JSON.parse(process.argv[2])).output)' "$WT/scripts/lib/webOutput.js" "$SSR_CAPABILITY")"
-  QUEST_WEB_RUNTIME="$(node -e 'const {resolveDeployWebOutput}=require(process.argv[1]); process.stdout.write(String(resolveDeployWebOutput(JSON.parse(process.argv[2])).questRuntime))' "$WT/scripts/lib/webOutput.js" "$SSR_CAPABILITY")"
-  export EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR="$QUEST_WEB_RUNTIME"
-  if [[ "$WEB_OUTPUT" == server ]]; then
-    export METRAVEL_WEB_OUTPUT=server EXPO_PUBLIC_WEB_RUNTIME_SSR=true
-    echo '✅ Backend SSR готов: один серверный экспорт и связанная публикация'
-  else
-    export METRAVEL_WEB_OUTPUT=static EXPO_PUBLIC_WEB_RUNTIME_SSR=false
-  fi
+  node -e 'require(process.argv[1]).resolveDeployWebOutput(JSON.parse(process.argv[2]))' "$WT/scripts/lib/webOutput.js" "$SSR_CAPABILITY"
+  export METRAVEL_WEB_OUTPUT=server EXPO_PUBLIC_WEB_RUNTIME_SSR=true EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR=true
+  echo '✅ Backend SSR готов: один серверный экспорт и связанная публикация'
 fi
 set +e
 if [[ "${DEPLOY_QUIET:-0}" == "1" ]]; then

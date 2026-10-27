@@ -5,7 +5,8 @@ import { ssgOnlyResources } from '@/i18n/ssgResources'
 import { resources } from '@/i18n/resources'
 
 /**
- * #2399 (ROUTE-BUNDLE-001): строки, которые печатает только SSG-генератор, живут
+ * #2399 (ROUTE-BUNDLE-001): строки, которые печатает только серверная сторона
+ * публикации (SSR-проекция квестов, постобработка оболочек маршрутов), живут
  * в `i18n/locales/<locale>/ssg/*_ssg.ts` под namespace `…Ssg`. Рантайм-ресурсы
  * их не импортируют, поэтому они не попадают ни в клиентские locale-чанки
  * BE/UK/PL/EN, ни в native-бандл. Гейт держит обе стороны границы: каталог
@@ -54,9 +55,15 @@ const KEY_REFERENCE = new RegExp(`\\b(?:${SSG_NAMESPACES.join('|')}):[\\w.$\\{]`
 const MODULE_REFERENCE = /(?:from\s+|require\(\s*|import\(\s*)['"](?:[^'"]*\/)?(?:ssg(?:\/[^'"]*)?|ssgResources)['"]/
 
 // Исходная утечка #2365: SSG-only ключ лёг в рантайм-namespace (`seoStatic`).
-// Литеральный рантайм-ключ, который печатает генератор, обязан читаться и
-// клиентом; иначе это SSG-only строка, и её место — `ssg/`.
-const SSG_GENERATOR_FILES = ['scripts/generate-seo-pages.js', 'scripts/lib/questLocalePackage.js']
+// Литеральный рантайм-ключ, который печатает серверная сторона публикации,
+// обязан читаться и клиентом; иначе это SSG-only строка, и её место — `ssg/`.
+// С #2766 статический генератор снят: ключи печатают SSR-проекция квестов и
+// постобработка оболочек маршрутов.
+const SSG_GENERATOR_FILES = [
+  'scripts/lib/questWebProjection.js',
+  'scripts/lib/questLocalePackage.js',
+  'scripts/postprocess-route-shells.js',
+]
 const LITERAL_KEY = /['"`]([A-Za-z]\w*):([\w.]+)['"`]/g
 
 const generatorOnlyRuntimeKeys = (runtime: Map<string, string>, clientSource: string) => {
@@ -109,7 +116,7 @@ describe('SSG-only translation resources (#2399)', () => {
     expect(offenders).toEqual([])
   })
 
-  it('every runtime key the SSG generator prints is also read by the client', () => {
+  it('every runtime key the server-side publication prints is also read by the client', () => {
     const runtime = plugin.loadCatalogs(ROOT).catalogs.get('ru')!
     const clientSource = clientSourceFiles()
       .filter((relative) => !relative.startsWith('i18n/locales/'))

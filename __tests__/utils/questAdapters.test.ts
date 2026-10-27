@@ -654,7 +654,7 @@ describe('questAdapters', () => {
     });
 
     // #1938: из этого поля деталь квеста собирает canonical `/quests/<city_id>/<quest_id>`
-    // — тот же адрес, что пишут `generate-seo-pages.js` и `generate-sitemap.js`.
+    // — тот же адрес, что отдаёт SSR-рендер квеста и пишет `generate-sitemap.js`.
     // Непригодное значение обязано остаться пустым: с `id: 0` canonical увёл бы
     // индексацию на несуществующий `/quests/0/...` вместо сегмента из URL.
     it('keeps the numeric city id and drops values unusable as a URL segment', () => {

@@ -1,6 +1,6 @@
 /**
- * #1221: SSG-скрипт вставляет og:image своей CJS-копией таблицы ширин. Копия
- * существует потому, что `scripts/generate-seo-pages.js` не импортирует TS-контракт;
+ * #1221: скрипт постобработки оболочек вставляет og:image своей CJS-копией таблицы ширин. Копия
+ * существует потому, что `scripts/postprocess-route-shells.js` не импортирует TS-контракт;
  * ровно на таких копиях уже расходились лестницы (#1170, #1220), поэтому расхождение
  * ловится тестом, а не комментарием.
  */
@@ -14,11 +14,11 @@ import {
 
 function readScriptMirror(): Map<string, number> {
   const source = readFileSync(
-    resolve(__dirname, '..', '..', 'scripts', 'generate-seo-pages.js'),
+    resolve(__dirname, '..', '..', 'scripts', 'postprocess-route-shells.js'),
     'utf8',
   )
   const block = /const SOCIAL_PREVIEW_WIDTH_BY_ROUTE = new Map\(\[([\s\S]*?)\]\);/.exec(source)
-  if (!block) throw new Error('SOCIAL_PREVIEW_WIDTH_BY_ROUTE не найден в generate-seo-pages.js')
+  if (!block) throw new Error('SOCIAL_PREVIEW_WIDTH_BY_ROUTE не найден в postprocess-route-shells.js')
 
   const mirror = new Map<string, number>()
   for (const match of block[1].matchAll(/\['([a-z-]+)',\s*(\d+)\]/g)) {

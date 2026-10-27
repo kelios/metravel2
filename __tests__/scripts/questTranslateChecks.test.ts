@@ -12,7 +12,6 @@ const path = require('path')
 
 const {
   SCRIPT_RULES,
-  localizedQuestBundle,
   mergeReview,
   missingNumbers,
   runStructuralChecks,
@@ -223,33 +222,6 @@ describe('runStructuralChecks', () => {
     ])
     expect(uploadBlockers(run(leaking), { publish: true })).toContain('spoiler_guard: 1-gate: описание раскрывает ответ')
     expect(uploadBlockers(run(leaking), { publish: false })).toEqual([])
-  })
-
-  it('вердикт guard’а совпадает с вердиктом сборки по той же паре', () => {
-    const gsp = require('@/scripts/generate-seo-pages')
-    const { createSsgTranslator } = require('@/scripts/lib/questLocalePackage')
-    const { loadSsgCatalogs } = require('@/i18n/babel-inline-plugin')
-    const translator = createSsgTranslator(loadSsgCatalogs(path.resolve(__dirname, '..', '..')).catalogs, 'pl')
-    const bundle = makeBundle()
-    const quest = { quest_id: bundle.quest_id, title: bundle.title, city_name: 'Краков', points: 2, duration_min: 60 }
-    const route = { path: '/quests/1/demo-quest', cityId: 1, questId: bundle.quest_id }
-    const buildVerdict = (translation: Json) => {
-      const localized = localizedQuestBundle({ task: makeTask(), translation })
-      const html = gsp.buildQuestDetailPageHtml({
-        baseHtml: '<!DOCTYPE html><html lang="ru"><head><title>Квест</title></head><body><div id="root"></div></body></html>',
-        quest, bundle: localized, route, ssg: translator,
-      })
-      return gsp.findQuestSpoilerLeaks(html, localized, gsp.buildQuestRouteDigest(localized)).errors
-    }
-    const checkVerdict = (translation: Json) =>
-      failures(run(translation)).filter((entry) => entry.check === 'spoiler_guard').map((entry) => entry.detail)
-
-    const leaking = makePolishTranslation()
-    stepOf(leaking, GATE_ID).answer_variants.push('brama Matejki')
-    for (const translation of [makePolishTranslation(), leaking]) {
-      expect(checkVerdict(translation)).toEqual(buildVerdict(translation))
-    }
-    expect(buildVerdict(leaking)).toEqual(['1-gate: описание раскрывает ответ'])
   })
 
   it('пустое поле, непустое в источнике, и потерянный финал — отказы', () => {

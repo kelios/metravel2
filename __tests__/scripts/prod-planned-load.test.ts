@@ -120,7 +120,7 @@ describe('build-prod.sh planned-load wiring', () => {
   it('opens the window right after the source gate, before any prod contact', () => {
     const gate = source.indexOf('assert_deployable_source "$ENV" "$ALLOW_DIRTY" "$DEPLOY"\nopen_planned_load_window')
     expect(gate).toBeGreaterThan(0)
-    for (const firstContact of ['start_prod_media_checks\n', 'start_quest_overlay_capture\n', 'stage "экспорт Metro"']) {
+    for (const firstContact of ['start_prod_media_checks\n', 'stage "экспорт Metro"']) {
       expect(source.indexOf(firstContact, gate)).toBeGreaterThan(gate)
     }
   })

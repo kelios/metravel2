@@ -1,9 +1,13 @@
 /**
- * #1798: витрина квестов на главной и её статический двойник обязаны отбирать
+ * #1798: витрина квестов на главной и её серверный двойник обязаны отбирать
  * квесты одним правилом. Приложение получает порядок от бэкенда (`?sort=popular`),
- * генератор сортирует уже выкачанный каталог локально — значит правило должно
- * жить в одном месте и давать в обоих случаях один и тот же состав.
+ * SSR-проекция квестов (`scripts/lib/questWebProjection.js`, `discovery.preview`)
+ * сортирует уже выкачанный каталог локально — значит правило должно жить в одном
+ * месте и давать в обоих случаях один и тот же состав.
  */
+import fs from 'node:fs'
+import path from 'node:path'
+
 const {
   POPULAR_QUEST_MIN_COMPLETIONS,
   POPULAR_QUEST_MIN_MATCHES,
@@ -13,7 +17,6 @@ const {
   selectPopularQuests,
   sortQuestsByPopularity,
 } = require('@/utils/questPopularity')
-const { injectHomeQuestsSection } = require('../../scripts/generate-seo-pages.js')
 
 type RawQuest = {
   id: number
@@ -48,16 +51,20 @@ const POPULAR_ORDER = ['q32', 'q51', 'q3', 'q13', 'q8', 'q12', 'q5', 'q1', 'q2',
 /** Ровно то, что делает `fetchQuestsPreview` + срез компонента промо-блока. */
 const HOME_PROMO_DESKTOP = 6
 const HOME_PROMO_MOBILE = 4
-/** `HOME_QUESTS_FEATURED_LIMIT` в scripts/generate-seo-pages.js. */
-const SSG_FEATURED = 8
+/**
+ * Размер витрины, которую публикует SSR-проекция: читается из самого исходника,
+ * чтобы правка лимита там не прошла мимо этого теста.
+ */
+const SSR_FEATURED = (() => {
+  const source = fs.readFileSync(path.resolve(process.cwd(), 'scripts/lib/questWebProjection.js'), 'utf8')
+  const match = /preview: selectPopularQuests\(catalog, (\d+)\)/.exec(source)
+  if (!match) throw new Error('discovery.preview в questWebProjection.js больше не строится через selectPopularQuests')
+  return Number(match[1])
+})()
 
-function ssgFeaturedSlugs(quests: RawQuest[]): string[] {
-  const html = injectHomeQuestsSection(
-    '<!DOCTYPE html><html lang="ru"><head></head><body><div id="root"></div></body></html>',
-    quests,
-  )
-  const section = html.match(/<section data-ssg-home-quests="true"[\s\S]*?<\/ul>/)?.[0] ?? ''
-  return [...section.matchAll(/href="\/quests\/\d+\/([^"]+)"/g)].map((match) => match[1])
+/** Ровно то, что публикует SSR-проекция в `discovery.preview`. */
+function ssrFeaturedSlugs(quests: RawQuest[]): string[] {
+  return selectPopularQuests(quests, SSR_FEATURED).map((quest: RawQuest) => quest.quest_id)
 }
 
 describe('quest popularity rule', () => {
@@ -173,17 +180,17 @@ describe('popularity threshold for the catalog sort', () => {
   })
 })
 
-describe('home promo and its SSG twin build one selection', () => {
+describe('home promo and its SSR twin build one selection', () => {
   // Бэкенд отдаёт промо-блоку уже отсортированный срез — здесь это то же
   // правило, применённое к тому же каталогу.
   const serverPreview = selectPopularQuests(CATALOG, HOME_PROMO_DESKTOP)
 
-  it('spells out the same popular quests in static HTML as the app requests', () => {
-    expect(ssgFeaturedSlugs(CATALOG)).toEqual(POPULAR_ORDER.slice(0, SSG_FEATURED))
+  it('spells out the same popular quests in server HTML as the app requests', () => {
+    expect(ssrFeaturedSlugs(CATALOG)).toEqual(POPULAR_ORDER.slice(0, SSR_FEATURED))
   })
 
   it('renders the app grid as a prefix of the static list, not a different set', () => {
-    const featured = ssgFeaturedSlugs(CATALOG)
+    const featured = ssrFeaturedSlugs(CATALOG)
     const desktop = serverPreview.map((quest) => quest.quest_id)
     const mobile = desktop.slice(0, HOME_PROMO_MOBILE)
 
@@ -194,7 +201,7 @@ describe('home promo and its SSG twin build one selection', () => {
   it('no longer leads with the lowest ids', () => {
     // Регресс, ради которого заведена задача: раньше срез был `slice(0, 8)`
     // по каталогу в порядке id.
-    expect(ssgFeaturedSlugs(CATALOG)[0]).not.toBe(
+    expect(ssrFeaturedSlugs(CATALOG)[0]).not.toBe(
       CATALOG.slice().sort((a, b) => a.id - b.id)[0].quest_id,
     )
   })

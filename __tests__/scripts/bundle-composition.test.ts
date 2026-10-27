@@ -162,8 +162,17 @@ const LAZY_ONLY_MODULES: Array<{ file: string; allowedSyncImporters: string[]; t
   // попадают.
   {
     file: 'utils/questStoryText.js',
-    allowedSyncImporters: ['utils/questCityWalk.js'],
+    allowedSyncImporters: ['utils/questCityWalk.js', 'utils/travelLinkGraph.js'],
     ticket: '#2084',
+  },
+  // #2766: сборщик графа ссылок статьи — node-сторона публикации квестовых
+  // данных (`scripts/lib/questWebProjection.js`). Маршрут статьи берёт только
+  // валидатор из `utils/travelLinkGraphContract.js` и типы; синхронный импорт
+  // сборщика вернул бы `questStoryText` в стартовый граф статьи.
+  {
+    file: 'utils/travelLinkGraph.js',
+    allowedSyncImporters: [],
+    ticket: '#2766',
   },
 ]
 

@@ -25,8 +25,8 @@
  * `__tests__/scripts/reader-media-url.test.ts`: тот же набор входов гоняется
  * через `toLegacyResizePath` из `utils/mediaUrl.ts` и сравнивается посимвольно.
  * До этого модуля правило было размножено по трём местам
- * (`post-deploy-media-check.js`, `audit-article-body-media.js`,
- * `generate-seo-pages.js`) и уже разъехалось.
+ * (`post-deploy-media-check.js`, `audit-article-body-media.js` и статический
+ * генератор SEO-страниц, ныне `postprocess-route-shells.js`) и уже разъехалось.
  */
 
 /** Origin по умолчанию — и «свой хост», и база для разбора относительного пути. */

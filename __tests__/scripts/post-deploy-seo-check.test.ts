@@ -211,7 +211,8 @@ describe('post-deploy SEO check helpers', () => {
     const codes = (html: string, pageType: string, url: string) =>
       validateRobots(html, pageType, url).map((issue: any) => issue.code)
 
-    // The articles section is closed end to end by generate-seo-pages.js and is
+    // The articles section is closed end to end by the shared static route table
+    // (utils/seoRoutes/staticRoutes.js, applied by postprocess-route-shells.js) and is
     // absent from the sitemap, but the gate hardcodes /articles into its core
     // queue — so it used to report the intended state as robots.noindex on
     // every deploy.
@@ -249,7 +250,8 @@ describe('post-deploy SEO check helpers', () => {
     // 19 несут `noindex, follow`. Все 32 лежат в sitemap.xml, который этот гейт
     // обходит целиком, поэтому без исключения деплой падал бы девятнадцатью
     // `robots.noindex`. Кто именно из них обязан быть закрыт, здесь неизвестно:
-    // это знает каталог, и сверяет verify-static-quest-seo.js до деплоя.
+    // это знает каталог, и решает гейт глубины SSR-проекции квестов
+    // (scripts/lib/questWebProjection.js).
     it('leaves the quest country family to the build-time gate, in both directions', () => {
       expect(codes(CLOSED, 'page', 'https://metravel.by/quests/country/france')).toEqual([])
       expect(codes(OPEN, 'page', 'https://metravel.by/quests/country/belarus')).toEqual([])
@@ -261,7 +263,7 @@ describe('post-deploy SEO check helpers', () => {
     // #1930 (партия 19.09.2026: 20 городов и 2 детальные), а backend sitemap.xml
     // перечисляет их по-прежнему — без исключения каждый деплой давал бы 22
     // `robots.noindex`. Обязан ли адрес быть закрыт, знает каталог, и это
-    // сверяет verify-static-quest-seo.js до деплоя.
+    // решает гейт глубины SSR-проекции квестов (scripts/lib/questWebProjection.js).
     it('leaves city landings and quest pages to the build-time gate, in both directions', () => {
       expect(hasCatalogDecidedIndexability('https://metravel.by/quests/tartu')).toBe(true)
       expect(codes(CLOSED, 'page', 'https://metravel.by/quests/tartu')).toEqual([])
@@ -319,7 +321,7 @@ describe('post-deploy SEO check helpers', () => {
   // давало `description.length` на каждом деплое, хотя длина описания нужна
   // только сниппету в выдаче, куда закрытая страница не попадает.
   describe('description length on pages closed from search', () => {
-    // Строка маршрута /articles из scripts/generate-seo-pages.js.
+    // Строка маршрута /articles из utils/seoRoutes/staticRoutes.js.
     const ARTICLES_DESC =
       'Читай статьи и заметки путешественников. Полезные советы, маршруты и лайфхаки.'
     const TOO_LONG_DESC = 'Описание длиннее ста семидесяти символов. '.repeat(5)

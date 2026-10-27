@@ -37,16 +37,17 @@ function resolveWebSsrCapability(value) {
   return { output: value.enabled ? 'server' : 'static', questRuntime }
 }
 
-// The production switch to request-time rendering is a reviewed frontend
-// commit, not a side effect of the installed backend helper (it always reports
-// enabled). Committed here, it holds for every later deploy from main. Turn it
-// off only after the backend `rollback-code` has retired the live SSR release:
-// a static build must not be published under a still-active server release.
-const WEB_SSR_ROLLOUT_ENABLED = true
-
-function resolveDeployWebOutput(value, rolloutEnabled = WEB_SSR_ROLLOUT_ENABLED) {
+// Production publishes only the server export (#2766): entity pages are
+// rendered by the SSR loaders, the static entity pipeline is gone, and the
+// backend `rollback-code` returns the previous SSR pair, never a static build.
+// A capability without the quest SSR runtime therefore refuses the deploy
+// instead of downgrading a live SSR release to static output.
+function resolveDeployWebOutput(value) {
   const capability = resolveWebSsrCapability(value)
-  return rolloutEnabled ? capability : { output: 'static', questRuntime: false }
+  if (capability.output !== 'server' || !capability.questRuntime) {
+    throw new Error('Production deploy publishes only SSR: backend quest SSR capability is unavailable')
+  }
+  return capability
 }
 
 function getQuestControlPath(value, { allowUnavailable = false } = {}) {
@@ -61,7 +62,6 @@ function getQuestControlPath(value, { allowUnavailable = false } = {}) {
 }
 
 module.exports = {
-  WEB_SSR_ROLLOUT_ENABLED,
   resolveWebOutput,
   resolveWebSsrCapability,
   resolveDeployWebOutput,

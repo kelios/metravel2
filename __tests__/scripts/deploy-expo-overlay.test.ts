@@ -2,81 +2,9 @@ import fs from 'fs'
 import path from 'path'
 
 import { makeTempDir, removeDir, runCli } from './cli-test-utils'
-import { findFrontendDeployLifecycleViolations } from './frontend-deploy-lifecycle-contract'
-import {
-  extractRemoteDeploy,
-  readCanonicalDeploy,
-  stagingCleanupFailureContract,
-} from './remote-deploy-test-utils'
+import { readCanonicalDeploy } from './remote-deploy-test-utils'
 
 const helperPath = path.resolve(process.cwd(), 'scripts/deploy-expo-overlay.sh')
-
-function deployContractViolations(remoteDeploy: string): string[] {
-  const violations: string[] = []
-  const activationContract = [
-    'activate_nginx() {',
-    '  nginx_validate && nginx_reload',
-    '}',
-  ].join('\n')
-  const swapIndex = remoteDeploy.indexOf(
-    'legacy_token=$(quest_seo_legacy_operation legacy-commit "$legacy_token")',
-  )
-  const deadlineIndex = remoteDeploy.indexOf('readiness_deadline=')
-  const activationIndex = remoteDeploy.indexOf(
-    'if ! activate_nginx; then',
-    remoteDeploy.indexOf('fail_after_swap() {'),
-  )
-  const readinessIndex = remoteDeploy.indexOf(
-    'if ! wait_for_public_health; then',
-  )
-  const finalCleanupIndex = remoteDeploy.indexOf(
-    'quest_seo_legacy_operation legacy-prune "$legacy_token"', swapIndex,
-  )
-  const stagingCleanupIndex = remoteDeploy.indexOf("rroot '/app/dist'")
-  const stagingPostconditionIndex = remoteDeploy.indexOf(
-    stagingCleanupFailureContract,
-  )
-
-  if (findFrontendDeployLifecycleViolations(remoteDeploy).length > 0) {
-    violations.push('frontend deploy changes container lifecycle')
-  }
-  if (!remoteDeploy.includes(activationContract)) {
-    violations.push('Nginx validation does not precede graceful reload')
-  }
-  if (
-    swapIndex === -1 ||
-    deadlineIndex === -1 ||
-    activationIndex === -1 ||
-    readinessIndex === -1 ||
-    !(
-      swapIndex < deadlineIndex &&
-      deadlineIndex < activationIndex &&
-      activationIndex < readinessIndex
-    )
-  ) {
-    violations.push('safe activation ordering is incomplete')
-  }
-  if (
-    readinessIndex === -1 ||
-    finalCleanupIndex === -1 ||
-    readinessIndex >= finalCleanupIndex
-  ) {
-    violations.push('rollback tree is removed before public readiness')
-  }
-  if (
-    finalCleanupIndex === -1 ||
-    stagingCleanupIndex === -1 ||
-    stagingPostconditionIndex === -1 ||
-    !(
-      finalCleanupIndex < stagingCleanupIndex &&
-      stagingCleanupIndex < stagingPostconditionIndex
-    )
-  ) {
-    violations.push('upload staging cleanup is not verified')
-  }
-
-  return violations
-}
 
 function makeFixture(): { root: string; fresh: string; previous: string } {
   const root = makeTempDir('metravel-expo-overlay-')
@@ -304,38 +232,6 @@ describe('normal deploy Expo overlay retention', () => {
     }
   })
 
-  it('wires the tested helper into the canonical deploy before the static swap', () => {
-    const source = readCanonicalDeploy()
-
-    const defaults = fs.readFileSync(path.resolve('scripts/deploy-target.sh'), 'utf8')
-    expect(source).toContain('metravel_deploy_defaults')
-    expect(defaults).toContain(
-      'EXPO_OVERLAY_RETENTION_DAYS="${EXPO_OVERLAY_RETENTION_DAYS:-14}"',
-    )
-    expect(source).toContain(
-      'EXPO_OVERLAY_HELPER="scripts/deploy-expo-overlay.sh"',
-    )
-    // `:-`, not `-`: .env.deploy is exported wholesale, and an empty line in
-    // it must fall back to the default instead of lifting the bound.
-    expect(defaults).toContain(
-      'EXPO_OVERLAY_MAX_MB="${EXPO_OVERLAY_MAX_MB:-256}"',
-    )
-    expect(extractRemoteDeploy(source)).toContain(
-      '  "$EXPO_OVERLAY_RETENTION_DAYS" \\\n  "$EXPO_OVERLAY_MAX_MB"',
-    )
-    // Only dist/$ENV travels, so build-root dot paths never reach the server,
-    // and the live release is the delta basis for the upload (#2013).
-    expect(source).toContain('rsync -azHhe "ssh" --delete --mkpath --stats')
-    expect(source).toContain('--copy-dest="$PROD_REMOTE_DIR/static/dist"')
-    expect(source).toContain(
-      '"./dist/$ENV/" \\\n    "$PROD_SSH_TARGET:$PROD_REMOTE_DIR/dist/$ENV/"',
-    )
-    expect(source).not.toContain('scripts/fix-prod.sh')
-    expect(
-      source.indexOf("printf '%s' \"$EXPO_OVERLAY_HELPER_B64\""),
-    ).toBeLessThan(source.indexOf('quest_seo_legacy_operation legacy-commit'))
-  })
-
   // Web builds inline RU catalog text into the calling modules at transform
   // time (i18n/babel-inline-plugin.js), while Metro keys a transform on the
   // module itself and babel.config.js only: a warm cache would ship stale text
@@ -346,94 +242,25 @@ describe('normal deploy Expo overlay retention', () => {
     )
   })
 
-  it('keeps the canonical remote deploy payload valid bash', () => {
-    const remoteDeploy = extractRemoteDeploy()
-
-    const fixture = makeTempDir('metravel-remote-deploy-script-')
-    const remoteScriptPath = path.join(fixture, 'remote-deploy.sh')
-
-    try {
-      fs.writeFileSync(remoteScriptPath, remoteDeploy, 'utf8')
-      const result = runCli('bash', ['-n', remoteScriptPath])
-
-      expect(result.status).toBe(0)
-      expect(result.stderr).toBe('')
-    } finally {
-      removeDir(fixture)
-    }
-  })
-
-  it('preserves app availability and safe activation ordering', () => {
+  // The canonical deploy publishes only the SSR release pair (#2766); the
+  // overlay of previous chunk generations ships inside the SSR release
+  // (scripts/prepare-web-ssr.js) and runs at the backend `stage` step with the
+  // limits scripts/web-ssr-publication.sh passes, not in a frontend remote payload.
+  it('runs prod media checks during the export and waits for them before post-processing', () => {
     const source = readCanonicalDeploy()
-    const remoteDeploy = extractRemoteDeploy(source)
-    const readinessIndex = source.indexOf(
-      'if ! wait_for_public_health; then',
-    )
-
-    expect(deployContractViolations(remoteDeploy)).toEqual([])
-    expect(readinessIndex).toBeGreaterThan(-1)
-    expect(readinessIndex).toBeLessThan(
-      source.indexOf('node scripts/post-deploy-seo-check.js'),
-    )
     // Prod media checks read the API and media routes, not the released HTML,
-    // so they run in the background during the export (#2013); SEO generation
+    // so they run in the background during the export (#2013); shell post-processing
     // waits for them so paced walks of the prod API never overlap (#1966).
     const mediaStart = source.indexOf('\n  start_prod_media_checks\n')
     expect(mediaStart).toBeGreaterThan(-1)
     expect(mediaStart).toBeLessThan(source.indexOf('\nbuild_env "$ENV"\n'))
     expect(source.indexOf('\n  finish_prod_media_checks\n')).toBeLessThan(
-      source.indexOf('\nnode scripts/generate-seo-pages.js'),
+      source.indexOf('\nnode scripts/postprocess-route-shells.js'),
+    )
+    expect(source.indexOf('node scripts/post-deploy-seo-check.js')).toBeGreaterThan(
+      source.indexOf('deploy_prod "$ENV"'),
     )
     expect(source).not.toContain('Жду перезапуск app/nginx')
-  })
-
-  it('rejects a reintroduced app restart', () => {
-    const unsafeDeploy = `${extractRemoteDeploy()}\n` +
-      'docker compose -f docker-compose-prod.app.yaml restart app nginx'
-
-    expect(deployContractViolations(unsafeDeploy)).toContain(
-      'frontend deploy changes container lifecycle',
-    )
-  })
-
-  it('rejects rollback cleanup before public readiness', () => {
-    const remoteDeploy = extractRemoteDeploy()
-    const unsafeDeploy = remoteDeploy.replace(
-      'if ! wait_for_public_health; then',
-      'quest_seo_legacy_operation legacy-prune "$legacy_token"\nif ! wait_for_public_health; then',
-    )
-
-    expect(deployContractViolations(unsafeDeploy)).toContain(
-      'rollback tree is removed before public readiness',
-    )
-  })
-
-  it('rejects readiness before graceful Nginx activation', () => {
-    const remoteDeploy = extractRemoteDeploy()
-    const unsafeDeploy = remoteDeploy.replace(
-      'if ! activate_nginx; then\n  fail_after_swap "Nginx validation or graceful reload failed"',
-      'if ! wait_for_public_health; then\n  exit 1\nfi\nif ! activate_nginx; then\n  fail_after_swap "Nginx validation or graceful reload failed"',
-    )
-
-    expect(deployContractViolations(unsafeDeploy)).toContain(
-      'safe activation ordering is incomplete',
-    )
-  })
-
-  it('rejects upload staging cleanup without a verified postcondition', () => {
-    const unsafeDeploy = extractRemoteDeploy().replace(
-      stagingCleanupFailureContract,
-      [
-        'if [ -e dist ]; then',
-        '  echo "❌ Failed to remove upload staging directory: dist"',
-        '  echo "warning only"',
-        'fi',
-      ].join('\n'),
-    )
-
-    expect(deployContractViolations(unsafeDeploy)).toContain(
-      'upload staging cleanup is not verified',
-    )
   })
 })
 

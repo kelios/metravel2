@@ -178,15 +178,13 @@ node scripts/seo-audit.js --user-id 1 --limit 50 --min-words 500
   должны уйти.
 - `npx jest __tests__/scripts/seo-audit.test.ts __tests__/scripts/seo-edit.test.ts`
   — зелёные тесты аудита и редактора.
-- После релиза статичные страницы `dist/prod/travels/{slug}.html` обязаны нести
-  свой `<title>`, `meta description`, `og:image` и текст в HTML (генерит
-  `npm run seo:generate-pages`); проверь `npm run test:seo:prod`.
+- Живой SSR-ответ `/travels/{slug}` обязан нести свой `<title>`, `meta description`,
+  `og:image` и текст в HTML (рендер на запрос, #2766); проверь `npm run test:seo:prod`.
 
 ## Важно про прод
 
-Per-page SEO собирается на сборке (`generate-seo-pages.js`) в статические HTML.
-Если прод отдаёт ботам генерик `Путешествие | Metravel` и `og:url=.../[param]` —
-значит статические страницы не передеплоены или новые статьи добавлены после
-последней сборки. Зафиксируй необходимость пересборки и передай её профильному
-оператору: production deploy выполняется только по явной команде владельца
-и `docs/WORKFLOW_OPERATIONS.md`, а не автоматически из SEO-аудита.
+Per-page SEO статей с #2766 рендерит SSR на запрос (loader и `generateMetadata`
+маршрута `/travels/[param]`). Если прод отдаёт ботам генерик `Путешествие | Metravel` и
+`og:url=.../[param]` — ответил fallback-шаблон или SSR сбоит; пересборка тут не лечит.
+Зафиксируй живой ответ (URL, заголовки, `<title>`) и передай разбор профильному агенту
+(`travel-expert`); production deploy не запускается автоматически из SEO-аудита.

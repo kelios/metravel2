@@ -106,7 +106,7 @@ function withSocialPreviewWidth(absoluteUrl: string): string {
  * на legacy-роут, а клиент возвращал family-роут поверх него.
  *
  * ПОРЯДОК НЕ КОММУТИРУЕТ — он тот же, что у `toSocialPreviewUrl` в
- * `scripts/generate-seo-pages.js`. `withSocialPreviewWidth` узнаёт семейство по
+ * `scripts/postprocess-route-shells.js`. `withSocialPreviewWidth` узнаёт семейство по
  * ПЕРВОМУ сегменту пути; после переписывания это `media-resize`, такого
  * семейства в контракте нет, ширина не проставится вовсе, и краулер получит
  * мастер с `no-store` — регресс #1221.

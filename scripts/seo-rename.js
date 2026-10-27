@@ -31,8 +31,8 @@
  *      preserved. On any regression → PUT the original back and skip the entry.
  *   4. Record {from: oldSlug, to: newSlug} into scripts/seo-redirects.json.
  *      Bookkeeping, not the redirect: seo-fix-links.js reads it to rewrite
- *      internal links off the old slug, generate-seo-pages.js emits a
- *      crawl-facing soft-301 stub from it, and report-travel-404.js reads it to
+ *      internal links off the old slug (the static soft-301 stub built from it
+ *      was retired with the static pipeline, #2766), and report-travel-404.js reads it to
  *      tell a known pair from a fresh 404 candidate. The manifest is knowingly
  *      incomplete — seo-alias-backfill.js never writes it and several backend
  *      migrations created aliases directly — so it is not a census of live

@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const ROOT = process.cwd()
-const { STATIC_PAGES } = require('@/scripts/generate-seo-pages')
+const { STATIC_PAGES } = require('@/scripts/postprocess-route-shells')
 
 const ROUTE_FILE_OVERRIDES: Record<string, string[]> = {
   '/article': ['app/(tabs)/article/[id].web.tsx'],

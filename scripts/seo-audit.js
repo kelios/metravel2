@@ -35,12 +35,13 @@ const {
   runCli,
 } = require('./lib/cli-contract');
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
-// The FAQ check asks the generator itself whether a body still yields FAQPage,
-// instead of re-implementing its markup contract here (see analyzeFaqMarkup).
-const { extractFaqEntries, FAQ_SECTION_OPEN_TAG } = require('./generate-seo-pages');
+// The FAQ check asks the shared extractor (the one the SSR travel loader uses)
+// whether a body still yields FAQPage, instead of re-implementing its markup
+// contract here (see analyzeFaqMarkup).
+const { extractFaqEntries, FAQ_SECTION_OPEN_TAG } = require('../utils/travelFaq');
 
 // ---------------------------------------------------------------------------
-// Thresholds (kept in sync with scripts/generate-seo-pages.js SEO rules)
+// Thresholds (kept in sync with utils/seoText.js SEO rules)
 // ---------------------------------------------------------------------------
 const TITLE_MAX = 60; // chars rendered before Google/Yandex clip the SERP title
 const TITLE_MIN = 25; // shorter titles usually lack a searchable keyword phrase
@@ -185,9 +186,10 @@ function analyzeLeadNoise(descriptionHtml) {
 }
 
 /**
- * A FAQ block the SSG silently drops.
+ * A FAQ block the FAQPage builder silently drops.
  *
- * `scripts/generate-seo-pages.js → extractFaqEntries` reads the Q/A pairs only
+ * `utils/travelFaq.js → extractFaqEntries` (used by the SSR travel loader,
+ * `components/travel/details/travelRouteLoader.ts`) reads the Q/A pairs only
  * from `<details>/<summary>` inside the FAQ section. A body that keeps the
  * section but stores the pairs flat (`<strong>Вопрос</strong><div><div><p>…`)
  * still LOOKS right on the page and loses the FAQPage rich result entirely —
@@ -196,8 +198,8 @@ function analyzeLeadNoise(descriptionHtml) {
  * the generator, #1755/#1761 then found two articles (134, 554) still holding
  * the pre-#1138 flat form.
  *
- * The verdict comes from the generator's own extractor, so the two cannot drift:
- * this fires exactly when the SSG would emit no FAQPage for a body that has one.
+ * The verdict comes from the same extractor, so the two cannot drift:
+ * this fires exactly when the page would emit no FAQPage for a body that has one.
  *
  * Both FAQ shapes of the corpus count as "has a FAQ block", because the loss is
  * identical in both: the `<section class="seo-faq">` wrapper the editor writes,

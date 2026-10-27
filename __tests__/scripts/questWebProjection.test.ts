@@ -1,15 +1,10 @@
 const path = require('node:path');
 const { buildQuestWebProjection, publicPageText } = require('@/scripts/lib/questWebProjection');
 const { loadSsgCatalogs } = require('@/i18n/babel-inline-plugin');
-const { createSsgTranslator } = require('@/scripts/lib/questLocalePackage');
-const { questPageFromHtml, scoreQuestPageLevel } = require('@/scripts/lib/questPageDepth');
-const { questRouteKey } = require('@/utils/questCityAlias');
-const generator = require('@/scripts/generate-seo-pages');
-const { parseDocument, DomUtils } = require('htmlparser2');
+const { scoreQuestPageLevel } = require('@/scripts/lib/questPageDepth');
 import { questPrivateSnapshot, questPublicLocales } from '../fixtures/questPublicProjection';
 
 const catalogs = loadSsgCatalogs(path.resolve(__dirname, '../..')).catalogs;
-const BASE = '<html lang="ru"><head><title>Shell</title></head><body><div id="root"></div></body></html>';
 
 describe('immutable public quest projection', () => {
   it('publishes five detail locales plus RU landings without any private gameplay fields', () => {
@@ -24,20 +19,11 @@ describe('immutable public quest projection', () => {
     expect(result.pages.find((page: { kind: string }) => page.kind === 'country').quality.indexable).toBe(false);
   });
 
-  it.each(questPublicLocales)('retains the old %s detail prose and cohort measurement', (locale) => {
+  it.each(questPublicLocales)('measures the %s detail prose with the shared cohort contract', (locale) => {
     const source = questPrivateSnapshot();
-    const quest = source.catalog[0], route = questRouteKey(quest);
     const page = buildQuestWebProjection(source, catalogs).pages.find((entry: { kind: string; locale: string }) => entry.kind === 'detail' && entry.locale === locale);
-    const html = generator.buildQuestDetailPageHtml({ baseHtml: BASE, quest,
-      bundle: source.bundles[locale]['7/fixture-city-walk'], route, ssg: createSsgTranslator(catalogs, locale) });
-    const old = questPageFromHtml(html, page.canonical_path);
-    const withoutLinks = { ...page.page, sections: page.page.sections.filter((part: { heading: string }) =>
-      part.heading === createSsgTranslator(catalogs, locale).t('seoSsg:questDetail.routeHeading')) };
-    expect(publicPageText(withoutLinks)).toBe(old.text);
-    expect(scoreQuestPageLevel([{ ...old, text: publicPageText(withoutLinks) }])[0].words)
-      .toBe(scoreQuestPageLevel([old])[0].words);
-    const titleNode = DomUtils.findOne((node: { name?: string }) => node.name === 'title', parseDocument(html).children, true);
-    expect(DomUtils.textContent(titleNode)).toBe(page.page.meta.title);
+    const text = publicPageText(page.page);
+    expect(page.quality.word_count).toBe(scoreQuestPageLevel([{ path: page.canonical_path, kind: 'quest-detail', text }])[0].words);
     expect(page.source_revision).toBe(source.source_snapshot.quests[0].source_revision);
   });
 

@@ -95,7 +95,7 @@ WebView на native.
 
 ## FAQ — только `<details>/<summary>`
 
-`extractFaqEntries` (`scripts/generate-seo-pages.js`) читает пары только из
+`extractFaqEntries` (`utils/travelFaq.js`, им же пользуется SSR-рендер статьи) читает пары только из
 `<details>`: FAQ на `<h3>`/`<p><strong>` выглядит так же, а `FAQPage` в прод-HTML
 не попадает. 5–6 реальных вопросов («сколько времени», «сколько стоит», «как
 добраться», «можно ли с собакой», «когда ехать»), ответы от первого лица.
@@ -113,10 +113,10 @@ WebView на native.
 ```
 
 Эталоны: `scripts/vitebsk-guide-content.html`, `scripts/grodno-guide-content.html`.
-Проверка на генераторе:
+Проверка тем же билдером, что строит FAQPage в SSR-ответе:
 
 ```bash
-node -e 'const{buildTravelFaqJsonLd}=require("./scripts/generate-seo-pages");
+node -e 'const{buildTravelFaqJsonLd}=require("./utils/travelFaq");
 const h=require("fs").readFileSync(process.argv[1],"utf8");
 const j=buildTravelFaqJsonLd(h);console.log(j?j.mainEntity.length+" вопросов":"FAQPage НЕ БУДЕТ")' <файл>.html
 ```

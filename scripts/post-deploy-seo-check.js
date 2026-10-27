@@ -339,8 +339,9 @@ function validateSocialMeta(html, title, desc, canonical, pageType) {
  * Routes the site deliberately keeps out of the index, where `noindex` is the
  * intended state and not a regression.
  *
- * The articles section is closed end to end: `scripts/generate-seo-pages.js`
- * stamps `noindex, nofollow` on `/articles`, on the id-less `/article` shell and
+ * The articles section is closed end to end: `scripts/postprocess-route-shells.js`
+ * stamps `noindex, nofollow` on `/articles` (robots from
+ * `utils/seoRoutes/staticRoutes.js`), on the id-less `/article` shell and
  * on every generated `/article/<id>` page, while `scripts/generate-sitemap.js`
  * emits none of them. This gate, though, hardcodes `/articles` into its core
  * route queue and treats every `page`/`article` as indexable, so it failed each
@@ -348,7 +349,8 @@ function validateSocialMeta(html, title, desc, canonical, pageType) {
  * `/places` is closed the same way (audit 2026-08-08) and would fail identically
  * the moment it entered the queue.
  *
- * Keep in sync with the `robots` fields in `scripts/generate-seo-pages.js`.
+ * Keep in sync with the `robots` fields in `utils/seoRoutes/staticRoutes.js` and
+ * `scripts/postprocess-route-shells.js`.
  */
 const INTENTIONALLY_NOINDEX_PATHS = new Set(['/articles', '/article', '/places'])
 
@@ -375,9 +377,10 @@ const INTENTIONALLY_NOINDEX_PATHS = new Set(['/articles', '/article', '/places']
  * принадлежат: их robots задаёт шаблон сборки, и здесь он проверяется строго.
  *
  * Инвариант при этом не теряется, он проверяется строже и раньше: текст
- * страницы известен только сборке, поэтому «этот лендинг обязан быть noindex, а
- * тот обязан им не быть» сверяет `scripts/verify-static-quest-seo.js` по живому
- * каталогу на реальном HTML — и делает это в `build-prod.sh` ДО деплоя.
+ * страницы известен только публикации, поэтому «этот лендинг обязан быть noindex, а
+ * тот обязан им не быть» решает SSR-проекция квестов
+ * (`scripts/lib/questWebProjection.js` → `scoreQuestPageLevel`) по всему
+ * каталогу — до того, как страница станет доступна.
  * Здесь же остаются все прочие проверки страницы: title, description, canonical.
  */
 const CATALOG_DECIDED_INDEXABILITY_PREFIXES = ['/quests/country/']

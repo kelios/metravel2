@@ -8,7 +8,7 @@ See `proposal.md` for scope. Source evidence established before implementation:
 | Catalog shares the search list and already has a contribution footer | `app/(tabs)/travelsby.tsx:71`, `components/listTravel/RightColumn.tsx:517` |
 | Catalog mode is already detected | `components/listTravel/ListTravelBase.tsx:69` |
 | Registration and login preserve the same safe post-auth destination | `utils/authNavigation.ts:113`, `components/auth/RegistrationForm.tsx:90`, `components/auth/LoginForm.tsx:103` |
-| Static registry injects metadata and writes both route forms | `scripts/generate-seo-pages.js:3588`, `:4092`, `:4143` |
+| Static registry injects metadata and writes both route forms | the former static SSG generator (removed in #2766), `:4092`, `:4143` |
 | Content-create click-event helper already exists | `utils/growthFunnelAnalytics.ts:301` |
 
 Feature truth: `docs/features/travel.md` (map/wizard/export) and

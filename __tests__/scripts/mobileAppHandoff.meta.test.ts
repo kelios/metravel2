@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { getSmartAppBannerContent } from '@/utils/mobileAppHandoff';
 
-const { injectMeta, escapeAttr } = require('@/scripts/generate-seo-pages');
+const { injectMeta, escapeAttr } = require('@/scripts/postprocess-route-shells');
 
 describe('exported Safari Smart App Banner', () => {
   const metadata = {

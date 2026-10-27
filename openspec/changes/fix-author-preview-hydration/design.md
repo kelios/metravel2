@@ -6,7 +6,7 @@ See `proposal.md` for the observed failure and scope. Source evidence before edi
 - `app/+html.tsx:266–280,504–508` rewrites history to `/travels/<id>` before the app starts. The delivered tree is still the creation route.
 - `LazyUpsertTravelRoute.web.tsx:22–24` emits the same progressbar fallback on the server and initial client render through `useWebHydrationGate`; the early rewrite instead makes the client select a detail route.
 - `app/+html.tsx:165–188` schedules an asynchronous public script from the then-current travel path; `public/travel-hero-preload-v2.js:24–31,411–414` independently reads the current path and fetches anonymously.
-- `hooks/useTravelDetails.ts:162–187,221–240` consumes matching preload data and checks the initial target before waiting. `api/travelDetailsQueries.ts:108–150` also consumes matching direct-API data and can wait on preload globals. `hooks/useBreadcrumbModel.ts:278–285` reads matching preload data without consuming it. `scripts/generate-seo-pages.js:1397–1400` produces public SSG preload globals.
+- `hooks/useTravelDetails.ts:162–187,221–240` consumes matching preload data and checks the initial target before waiting. `api/travelDetailsQueries.ts:108–150` also consumes matching direct-API data and can wait on preload globals. `hooks/useBreadcrumbModel.ts:278–285` reads matching preload data without consuming it. the former static SSG generator (removed in #2766)–1400` produces public SSG preload globals.
 
 ## Goals / Non-Goals
 

@@ -412,8 +412,9 @@ export function buildResponsiveImagePropsPreferringMedia(
   options: Parameters<typeof buildResponsiveImageProps>[1] = {},
 ): { src: string; srcSet?: string; sizes?: string } {
   // `quality` сюда НЕ проксируется намеренно. Через эту обёртку идёт hero
-  // travel-детали, чей preload генерит SSG (`scripts/generate-seo-pages.js`) по
-  // тем же URL манифеста и про `q` не знает: расхождение параметра развело бы
+  // travel-детали, чей preload греет `public/travel-hero-preload-v2.js` (до #2766 —
+  // ещё и статический SSG) по тем же URL манифеста и `q` на family-роут не шлёт:
+  // расхождение параметра развело бы
   // preload и `<img>` на разные файлы, то есть вернуло бы двойную закачку слота
   // (#1213, тест `travelHeroPreloadParity`). Слоты без SSG-preload — карточки —
   // зовут `buildResponsiveImagePropsFromMedia` напрямую и качество передают там.

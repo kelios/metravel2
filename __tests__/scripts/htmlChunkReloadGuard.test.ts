@@ -14,7 +14,7 @@ const {
   ensureHtmlChunkReloadGuard,
   ensureHtmlChunkReloadGuards,
 } = require('@/scripts/lib/htmlChunkReloadGuard');
-const { buildRedirectStubHtml, patchNoindexFallbackTemplate } = require('@/scripts/generate-seo-pages');
+const { patchNoindexFallbackTemplate } = require('@/scripts/postprocess-route-shells');
 
 describe('HTML chunk reload build guard', () => {
   let distDir: string;
@@ -36,7 +36,7 @@ describe('HTML chunk reload build guard', () => {
     removeDir(distDir);
   });
 
-  it('checks every nested HTML variant, including fallback templates and redirects', () => {
+  it('checks every nested HTML variant, including fallback templates and unguarded documents', () => {
     write('index.html', shell());
     write('travels/slug.html', shell());
     write('travels/slug/index.html', shell());
@@ -44,7 +44,8 @@ describe('HTML chunk reload build guard', () => {
       title: 'Missing', description: 'Missing route',
     });
     write('travels/[param].html', fallback);
-    const redirect = buildRedirectStubHtml('new-slug');
+    // A document that does not inherit Expo's shell (no guard, own inline script).
+    const redirect = '<!doctype html><html><head><meta charset="utf-8"/><script>location.replace("/travels/new-slug")</script></head><body></body></html>';
     const redirectFile = write('travels/old-slug/index.html', redirect);
 
     expect(ensureHtmlChunkReloadGuards(distDir)).toEqual({ checked: 5, injected: 1 });

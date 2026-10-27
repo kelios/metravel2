@@ -4,7 +4,7 @@
 //
 // Один источник строк для двух потребителей: `generateMetadata` в файлах
 // маршрутов `app/**` (экспорт Expo SDK 58 пишет head без helmet) и
-// `scripts/generate-seo-pages.js` (SSG дописывает breadcrumb/h1/skeleton поверх
+// `scripts/postprocess-route-shells.js` (дописывает breadcrumb/h1/skeleton поверх
 // того же head). Значения — исторические литералы STATIC_PAGES генератора и
 // RU-ключи `seoStatic:*`, поэтому прод-HTML остаётся байт-в-байт прежним.
 // Расхождения с рантайм-строками экранов (`/about`, `/search`, `/articles`)

@@ -1,7 +1,8 @@
 /* global module */
 
-// Shared quest city-alias logic used by both the SSG scripts (generate-seo-pages,
-// generate-sitemap) and the app city-landing route, so the alias contract stays
+// Shared quest city-alias logic used by the server-side publication (the quest
+// SSR projection scripts/lib/questWebProjection.js, generate-sitemap) and the
+// app city-landing route, so the alias contract stays
 // identical on the server and the client. The alias of a city is the leading
 // token run of its quests' quest_id (e.g. "minsk" for city_id 4).
 

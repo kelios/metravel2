@@ -192,7 +192,8 @@ printf '%s/%s/%s/%s' "$EXPO_OVERLAY_RETENTION_DAYS" "$EXPO_OVERLAY_MAX_MB" "$DEP
     expect(run({ EXPO_OVERLAY_RETENTION_DAYS: '0', EXPO_OVERLAY_MAX_MB: '32', DEPLOY_DISK_RESERVE_MB: '900', DEPLOY_BACKEND_BUILD_MB: '1800' }).stdout).toBe('0/32/900/1536')
     expect(run({ EXPO_OVERLAY_MAX_MB: 'oops' }).status).not.toBe(0)
     expect(source).toContain('metravel_deploy_defaults')
-    expect(fs.readFileSync(path.resolve('build-prod.sh'), 'utf8')).toContain('metravel_deploy_defaults')
+    // The canonical deploy publishes the SSR pair; its stage step shares the defaults (#2766).
+    expect(fs.readFileSync(path.resolve('scripts/web-ssr-publication.sh'), 'utf8')).toContain('metravel_deploy_defaults')
   })
 
   it('has no duplicate/unbounded overlay and isolates every container stdin', () => {

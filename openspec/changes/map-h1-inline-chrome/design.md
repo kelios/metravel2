@@ -249,7 +249,7 @@ is not made worse in kind.
 
 **Explicitly out of bounds even with that authorization:** promoting
 `.ssg-map-panel-title` from `<div>` to `<h1>`. The raw HTML already carries one
-injected `h1[data-ssg-travel-h1]` (`scripts/generate-seo-pages.js:1544`, config
+injected `h1[data-ssg-travel-h1]` (the former static SSG generator (removed in #2766), config
 `:3067`), and a second would fail `page.h1.count` in
 `scripts/post-deploy-seo-check.js:482`. Making the shell heading semantic would
 require replacing the injected node, not adding to it — a separate change.

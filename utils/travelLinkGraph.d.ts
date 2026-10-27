@@ -17,4 +17,3 @@ export function findTravelQuestPromoMatches(travel: unknown, quests: unknown[], 
 export function buildRelatedIndex(travels: unknown[]): unknown;
 export function pickRelatedTravels(travel: unknown, index: unknown, limit?: number): TravelRelatedLink[];
 export function buildTravelLinkGraphs(travels: unknown[], quests: unknown[], bundles: Record<string, unknown>): Record<string, Pick<TravelLinkGraph, 'quests' | 'related'>>;
-export function validateTravelLinkGraph(raw: unknown, travelId: number): TravelLinkGraph | null;

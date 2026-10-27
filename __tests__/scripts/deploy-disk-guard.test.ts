@@ -20,11 +20,6 @@ import fs from 'fs'
 import path from 'path'
 
 import { makeTempDir, removeDir, runCli } from './cli-test-utils'
-import {
-  extractRemoteDeploy,
-  readCanonicalDeploy,
-  stagingCleanupFailureContract,
-} from './remote-deploy-test-utils'
 
 const guardPath = path.resolve(process.cwd(), 'scripts/deploy-disk-guard.sh')
 
@@ -357,74 +352,5 @@ describe('frontend deploy disk guard: report after the deploy', () => {
     } finally {
       removeDir(sandbox.root)
     }
-  })
-})
-
-describe('frontend deploy disk guard: wiring in build-prod.sh', () => {
-  const source = readCanonicalDeploy()
-  const remoteDeploy = extractRemoteDeploy(source)
-
-  it('asks the server for room before the first byte is uploaded', () => {
-    const preflightIndex = source.indexOf(
-      'if ! ssh "$PROD_SSH_TARGET" bash -s -- preflight \\',
-    )
-
-    expect(source).toContain('DISK_GUARD_HELPER="scripts/deploy-disk-guard.sh"')
-    const defaults = fs.readFileSync(path.resolve('scripts/deploy-target.sh'), 'utf8')
-    expect(source).toContain('metravel_deploy_defaults')
-    expect(defaults).toContain(
-      'DEPLOY_DISK_RESERVE_MB="${DEPLOY_DISK_RESERVE_MB:-720}"',
-    )
-    expect(source).toContain('PAYLOAD_KIB="$(du -sk "./dist/$ENV" | awk \'{ print $1 }\')"')
-    expect(preflightIndex).toBeGreaterThan(-1)
-    expect(preflightIndex).toBeLessThan(
-      source.indexOf('rsync -azHhe "ssh" --delete --mkpath --stats'),
-    )
-    // The helper is the program on ssh stdin; a refusal stops the deploy.
-    const preflightCall = source.slice(
-      preflightIndex,
-      source.indexOf('local rsync_started=$SECONDS'),
-    )
-    expect(preflightCall).toContain('"$DEPLOY_BACKEND_BUILD_MB" < "$DISK_GUARD_HELPER"; then')
-    expect(preflightCall).toContain('return 1')
-    // Same floor as the backend's own build preflight
-    // (METRAVEL_BUILD_MIN_FREE_MIB in deploy/prod/app_image_retention.sh).
-    expect(defaults).toContain('DEPLOY_BACKEND_BUILD_MB=1536')
-  })
-
-  it('keeps the success marker in place and appends the new arguments after it', () => {
-    const sshCall = source.slice(
-      source.indexOf('ssh "$PROD_SSH_TARGET" bash -s -- \\\n    "$ENV"'),
-      source.indexOf("<<'REMOTE_DEPLOY_SCRIPT'"),
-    )
-
-    // ssh re-splits the command line on the server, so an empty argument
-    // would vanish and shift the rest: all three are validated numbers or
-    // base64 before the call.
-    expect(sshCall).toContain(
-      [
-        '    "$REMOTE_DONE_MARKER" \\',
-        '    "$CONTAINER_HELPER_B64" \\',
-        '    "$EXPO_OVERLAY_MAX_MB" \\',
-        '    "$DISK_GUARD_HELPER_B64" \\',
-        '    "$DEPLOY_BACKEND_BUILD_MB" ',
-      ].join('\n'),
-    )
-    expect(remoteDeploy).toContain('EXPO_OVERLAY_MAX_MB="$7"')
-    expect(remoteDeploy).toContain('DISK_GUARD_HELPER_B64="$8"')
-    expect(remoteDeploy).toContain('DEPLOY_BACKEND_BUILD_MB="$9"')
-  })
-
-  it('reports the disk after the verified cleanup and cannot fail a published deploy', () => {
-    const reportIndex = remoteDeploy.indexOf(
-      'report "$REMOTE_DIR" static/dist "$DEPLOY_BACKEND_BUILD_MB" ||',
-    )
-
-    expect(reportIndex).toBeGreaterThan(
-      remoteDeploy.indexOf(stagingCleanupFailureContract),
-    )
-    expect(reportIndex).toBeLessThan(
-      remoteDeploy.lastIndexOf('printf \'\\n%s\\n\' "$DEPLOY_SUCCESS_MARKER"'),
-    )
   })
 })

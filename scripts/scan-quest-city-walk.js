@@ -3,7 +3,7 @@
  * Скан глубины историй квеста ДО публикации — класс
  * QUEST-CITY-LANDING-VALUE-001 (`docs/PROBLEM_MEMORY.md`, #1998).
  *
- * Две страницы квеста собираются из одного поля `steps[].story`, и сборка прода
+ * Две страницы квеста собираются из одного поля `steps[].story`, и публикация прода
  * меряет обе тем же кодом, что и этот скан:
  *
  * - детальная `/quests/<город>/<quest_id>` публикует ДАЙДЖЕСТ каждой точки —
@@ -25,23 +25,23 @@
  * скан гоняет `check:fast` (`scripts/run-fast-scope-checks.js`) по каждому
  * изменённому `scripts/*-quest-data.js` с baseline ниже.
  *
- * Что меряется по одному квесту — слова прозы ОБЕИХ страниц, собранных теми же
- * функциями, какими их пишет сборка, для города, где этот квест единственный
- * (ровно случай новой партии; в городе с другими квестами посадочная считается
- * по всем им и порог берёт легче):
- * - `cityWords` — посадочная города (`buildQuestCityLandingModel` →
- *   `buildQuestCityLandingHtml`), где собственный текст города — это заметки о
- *   местах (`places`, они же хвосты историй);
- * - `detailWords` — SSG-срез детальной (`injectQuestIntroSection` →
- *   `questPageFromHtml` → `countWords`).
+ * Что меряется по одному квесту — слова прозы ОБЕИХ страниц, собранных той же
+ * SSR-проекцией публикации (`scripts/lib/questWebProjection.js`), которая
+ * рендерит их на проде, для города, где этот квест единственный (ровно случай
+ * новой партии; в городе с другими квестами посадочная считается по всем им и
+ * порог берёт легче):
+ * - `cityWords` — посадочная города, где собственный текст города — это заметки
+ *   о местах (`places`, они же хвосты историй);
+ * - `detailWords` — детальная страница.
+ * Слова считаются так же, как их считает гейт индексации проекции
+ * (`publicPageText` → `countWords`): подписи ссылок не в счёт.
  *
- * Обе цифры заведомо НИЖЕ сборочных, и это осознанный перекос гейта в сторону
- * «допиши»: до заливки каталога ещё нет, поэтому в замер не входят блок
- * перелинковки детальной (≈20–35 слов), факт «Время: примерно …» (длительность
- * знает карточка каталога, `QuestBundleSerializer` её не отдаёт), название
- * страны, соседние города и статьи путешественников на посадочной (≈15–60
- * слов). Ни одна из этих строк не зависит от `story`, автором квеста не
- * пишется и на проде только прибавляет слов.
+ * Обе цифры заведомо НЕ ВЫШЕ публикационных, и это осознанный перекос гейта в
+ * сторону «допиши»: до заливки каталога ещё нет, поэтому в замер не входят факт
+ * «Время: примерно …» (длительность знает карточка каталога,
+ * `QuestBundleSerializer` её не отдаёт), соседние квесты и города, страна и
+ * статьи путешественников. Ни одна из этих строк не зависит от `story`, автором
+ * квеста не пишется и на проде только прибавляет слов.
  * Чего скан НЕ меряет вовсе: долю собственной лексики уровня (#1930, ≥ 30%) —
  * она относительна набору страниц и считается только по всему каталогу на
  * сборке.
@@ -65,9 +65,9 @@
 const path = require('path')
 
 const { fetchQuestBundles, loadLocalBundles } = require('./lib/questBundles')
-const { MIN_QUEST_PAGE_WORDS, countWords, questPageFromHtml } = require('./lib/questPageDepth')
-const { buildQuestCityAliasMap } = require('../utils/questCityAlias')
+const { MIN_QUEST_PAGE_WORDS, countWords } = require('./lib/questPageDepth')
 const { getQuestSteps } = require('../utils/questStoryText')
+const { buildQuestCityWalkModel } = require('../utils/questCityWalk')
 // Baseline — общий с другими аудит-сканами квестов механизм (#1450, #1488).
 const { loadBaseline, localQuestDataFiles, splitByBaseline, writeBaseline } = require('./lib/scanBaseline')
 const { QUEST_DATA_FILE_PATTERN } = require('./scan-quest-answer-reachability')
@@ -82,29 +82,93 @@ const {
 const DEFAULT_API = process.env.METRAVEL_API_URL || 'https://metravel.by'
 
 /**
- * Генератор SSG тянет за собой весь свой граф модулей, а этот файл читает и
- * `run-fast-scope-checks.js` — ради одного пути к baseline. Поэтому генератор
- * подключается при первом замере, а не при загрузке модуля.
+ * SSR-проекция тянет за собой каталоги i18n и весь свой граф модулей, а этот
+ * файл читает и `run-fast-scope-checks.js` — ради одного пути к baseline.
+ * Поэтому проекция подключается при первом замере, а не при загрузке модуля.
  */
-let ssgGenerator = null
-function generator() {
-  if (!ssgGenerator) ssgGenerator = require('./generate-seo-pages')
-  return ssgGenerator
+let projectionModules = null
+function projection() {
+  if (!projectionModules) {
+    const { buildQuestWebProjection, publicPageText } = require('./lib/questWebProjection')
+    const { loadSsgCatalogs } = require('../i18n/babel-inline-plugin')
+    projectionModules = {
+      buildQuestWebProjection,
+      publicPageText,
+      catalogs: loadSsgCatalogs(path.resolve(__dirname, '..')).catalogs,
+    }
+  }
+  return projectionModules
 }
-
-/**
- * Пустая страница-носитель: меряется только crawlable-секция, которую в неё
- * впишет генератор, поэтому шаблон `dist/` для замера не нужен.
- */
-const EMPTY_PAGE =
-  '<!doctype html><html><head><title>quest</title></head><body><div id="root"></div></body></html>'
 
 /**
  * Числовой `city_id` выдаёт бэкенд при заливке, а группировка каталога без него
  * посадочную не построит вовсе. В текст страницы идентификатор не попадает — он
  * адресует её (`/quests/<id>`), — поэтому для замера берётся заглушка.
  */
-const CITY_ID_PLACEHOLDER = 'city'
+const CITY_ID_PLACEHOLDER = '1'
+
+/**
+ * Проекция публикации fail-closed: уровень (детальные, посадочные городов), где
+ * ни одна страница не берёт порог, она не публикует вовсе, а не меряет. Замер же
+ * нужен именно для тонкого квеста, поэтому рядом с ним в каталоге стоит
+ * заведомо полный квест-компаньон в другом городе, далеко от измеряемого
+ * (соседним городом он не станет) и без страны. На страницы измеряемого квеста он не
+ * попадает, а слова считаются по каждой странице отдельно.
+ */
+const COMPANION_CITY_ID = '2'
+const COMPANION_QUEST_ID = 'scan-quest-city-walk-companion'
+
+function companionProse(seed) {
+  let state = seed
+  return Array.from({ length: 5 }, () => Array.from({ length: 18 }, () => {
+    let word = ''
+    for (let character = 0; character < 8; character += 1) {
+      state = (state * 48271) % 2147483647
+      word += String.fromCharCode(97 + (state % 26))
+    }
+    return word
+  }).join(' ') + '.').join(' ')
+}
+
+function companionBundle() {
+  return {
+    quest_id: COMPANION_QUEST_ID,
+    title: 'Компаньон замера',
+    city: { name: 'Компаньон' },
+    intro: { story: 'Приглашение на прогулку по старому городу.', location: 'Площадь' },
+    steps: Array.from({ length: 10 }, (_, index) => ({
+      id: index + 1,
+      title: `Место ${index + 1}`,
+      location: `Улица ${index + 1}`,
+      story: companionProse(100003 + index * 7103),
+      task: 'Посчитайте необычные резные листья на боковой стороне скамейки.',
+      hint: 'Подсказка скрывается на обратной стороне старого городского знака.',
+      answer_pattern: { type: 'text', value: 'секретная последовательность' },
+      order: index,
+      point_role: 'required',
+    })),
+  }
+}
+
+/** Приватный снимок публикации из одного измеряемого квеста и компаньона, только RU. */
+function scanSnapshot(quest, bundle) {
+  // Координаты нужны строке витрины проекции; компаньон стоит на другом конце
+  // света, дальше радиуса «соседних городов».
+  const companion = { id: 2, quest_id: COMPANION_QUEST_ID, city_id: COMPANION_CITY_ID, city_name: 'Компаньон',
+    title: 'Компаньон замера', points: 10, duration_min: null, lat: -60, lng: 170 }
+  const record = (cityId, questId) => ({ city_id: Number(cityId), quest_slug: questId, source_revision: 'scan',
+    locales: { ru: { content_revision: 'scan', published: true, complete: true } } })
+  return {
+    schema_version: 2,
+    source_snapshot: { quests: [record(quest.city_id, quest.quest_id), record(COMPANION_CITY_ID, COMPANION_QUEST_ID)] },
+    catalog: [quest, companion],
+    bundles: { ru: {
+      [`${quest.city_id}/${quest.quest_id}`]: bundle,
+      [`${COMPANION_CITY_ID}/${COMPANION_QUEST_ID}`]: companionBundle(),
+    } },
+    travel_links: [],
+  }
+}
 
 /**
  * Baseline — квесты, лежавшие в репозитории тоньше порога до появления гейта
@@ -120,7 +184,7 @@ const findingKeys = (finding) => [finding.quest_id]
 
 // ===================== Замер =====================
 
-/** Карточка каталога, какой её видит сборка, — собранная из бандла. */
+/** Карточка каталога, какой её видит публикация, — собранная из бандла. */
 function catalogQuestOf(bundle, steps) {
   return {
     quest_id: String(bundle?.quest_id || '').trim(),
@@ -130,54 +194,30 @@ function catalogQuestOf(bundle, steps) {
     // Длительность живёт в карточке каталога: бандл её не отдаёт ни с прода
     // (`QuestBundleSerializer`), ни из data-файла (`loadLocalBundles` держит
     // форму API), поэтому замер идёт без неё — см. перекос гейта в шапке файла.
-    // Поле читается тем же выражением, что и у сборки: начнёт приходить —
+    // Поле читается тем же выражением, что и у проекции: начнёт приходить —
     // подтянется само, а расходиться двум меркам тут нельзя.
     duration_min: bundle?.duration_min ?? null,
   }
 }
 
 /**
- * Посадочная города — тем же путём, каким её собирает и меряет сборка
- * (`generate-seo-pages.js` → `questPageDepth.js`), для города из одного этого
- * квеста: слова её прозы и та самая модель заметок, из которой они получились.
- * Модель берётся из посадочной, а не считается рядом вторым вызовом, иначе
- * отчёт называл бы заметки, которых на померенной странице может не быть.
+ * Обе страницы квеста — тем же путём, каким их публикует и меряет SSR-проекция
+ * (`scripts/lib/questWebProjection.js` → `questPageDepth.js`), для города из
+ * одного этого квеста: слова прозы посадочной и детальной в той мере, в какой
+ * их считает гейт индексации (подписи ссылок не в счёт).
  */
-function cityPageOf(quest, bundle) {
-  const { buildQuestCityLandingHtml, buildQuestCityLandingModel } = generator()
-  const catalogQuest = { ...quest, city_id: CITY_ID_PLACEHOLDER }
-  const [city] = buildQuestCityLandingModel(
-    [catalogQuest],
-    buildQuestCityAliasMap([catalogQuest]),
-    [],
-    { [catalogQuest.quest_id]: bundle },
-  )
-  if (!city) return { walk: { places: [], otherPlaces: [] }, words: 0 }
-  const html = buildQuestCityLandingHtml(EMPTY_PAGE, city, null)
-  return { walk: city.walk, words: countWords(questPageFromHtml(html, city.landingPath).text) }
-}
-
-/**
- * Слова прозы SSG-среза детальной страницы — тем же путём, каким их пишет и
- * меряет сборка (`generate-seo-pages.js` → `questPageDepth.js`).
- */
-function detailPageWords(bundle, steps = getQuestSteps(bundle)) {
-  const { buildQuestSeoMetadata, injectQuestIntroSection } = generator()
-  const quest = catalogQuestOf(bundle, steps)
-  const { description } = buildQuestSeoMetadata({
-    title: quest.title,
-    cityName: quest.city_name,
-    points: quest.points,
-    durationMin: quest.duration_min,
-  })
-  const html = injectQuestIntroSection(EMPTY_PAGE, {
-    title: quest.title,
-    description,
-    quest,
-    bundle,
-    links: null,
-  })
-  return countWords(questPageFromHtml(html, `/quests/x/${quest.quest_id}`).text)
+function projectedPageWords(quest, bundle) {
+  const { buildQuestWebProjection, publicPageText, catalogs } = projection()
+  const catalogQuest = { ...quest, id: 1, city_id: CITY_ID_PLACEHOLDER, lat: 0, lng: 0 }
+  // Форма API отдаёт шаги строкой JSON; проекция принимает уже разобранный массив.
+  const projectedBundle = { ...bundle, steps: getQuestSteps(bundle) }
+  const { pages } = buildQuestWebProjection(scanSnapshot(catalogQuest, projectedBundle), catalogs)
+  const words = (kind) => {
+    const page = pages.find((entry) => entry.kind === kind && entry.locale === 'ru'
+      && (kind === 'city' ? entry.city_ids.includes(CITY_ID_PLACEHOLDER) : entry.quest_slug === quest.quest_id))
+    return page ? countWords(publicPageText(page.page)) : 0
+  }
+  return { cityWords: words('city'), detailWords: words('detail') }
 }
 
 /** Почему посадочной города не хватило слов — объём лечится только текстом точек. */
@@ -192,11 +232,21 @@ function cityGapReason(places, steps) {
 function inspectQuest(bundle) {
   const steps = getQuestSteps(bundle)
   const quest = catalogQuestOf(bundle, steps)
-  const { walk, words: cityWords } = cityPageOf(quest, bundle)
+  const walk = buildQuestCityWalkModel([{ ...quest, city_id: CITY_ID_PLACEHOLDER }], new Map([[quest.quest_id, bundle]]))
   const walkSentences = walk.places.reduce((sum, place) => sum + place.sentences.length, 0)
-  const detailWords = detailPageWords(bundle, steps)
 
   const issues = []
+  let cityWords = 0
+  let detailWords = 0
+  if (quest.quest_id) {
+    try {
+      ({ cityWords, detailWords } = projectedPageWords(quest, bundle))
+    } catch (error) {
+      // Проекция отказывает целиком (например, раскрытое задание в прозе) —
+      // это дефект квеста, а не тонкая история: называем причину как есть.
+      issues.push(`SSR-проекция отказала: ${error instanceof Error ? error.message : error}`)
+    }
+  }
   if (!quest.quest_id) {
     // Без `quest_id` каталог не строит группу города вовсе (`questRouteKey`), и
     // нулевая посадочная здесь — не про истории: автора нельзя слать
@@ -208,7 +258,7 @@ function inspectQuest(bundle) {
         ` — ${cityGapReason(walk.places.length, steps.length)}`,
     )
   }
-  if (detailWords < MIN_QUEST_PAGE_WORDS) {
+  if (quest.quest_id && detailWords < MIN_QUEST_PAGE_WORDS) {
     issues.push(`${detailWords} слов прозы на детальной странице, порог ${MIN_QUEST_PAGE_WORDS}`)
   }
 
@@ -367,11 +417,9 @@ module.exports = {
   BASELINE_PATH,
   CITY_ID_PLACEHOLDER,
   CLI_SPEC,
-  EMPTY_PAGE,
   USAGE,
   catalogQuestOf,
-  cityPageOf,
-  detailPageWords,
+  projectedPageWords,
   findingKeys,
   inspectQuest,
   parseArgs,

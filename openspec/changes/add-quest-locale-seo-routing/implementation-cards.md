@@ -31,7 +31,7 @@ Verdict: draft-create-linked; перед созданием повторить �
 Canonical task: #2208 — контракт; будущий номер B — генерация/верификация.
 Root-cause delta: SSG сейчас читает только RU и не выпускает проверяемый locale/revision manifest для production serving.
 
-Scope: `scripts/generate-seo-pages.js`, `scripts/verify-static-quest-seo.js`, shared quest manifest/eligibility helpers и tests. Exact-lang опубликованные бандлы, same-locale depth cohorts, immutable HTML/checksum/revision manifest, безопасный abort ошибок, static head parity. Не менять `scripts/generate-sitemap.js` как способ публикации prod sitemap; не менять robots или gameplay.
+Scope: SSG-генератор (снят в #2766), проверка статики квестов (снята в #2766), shared quest manifest/eligibility helpers и tests. Exact-lang опубликованные бандлы, same-locale depth cohorts, immutable HTML/checksum/revision manifest, безопасный abort ошибок, static head parity. Не менять `scripts/generate-sitemap.js` как способ публикации prod sitemap; не менять robots или gameplay.
 User-visible result: робот получает полностью локализованное тело детали без JavaScript по стабильному prefixed адресу.
 Data/API contract: #2193 reads; available membership + content_locale exact + complete publication + ≥300 слов / ≥30% own 5-grams; RU indexable anchor. Agreed private builder receipt C fences content/source revisions without a new #2193 field; changed source/revision во время сборки отвергает candidate. Stored base HTML checksum не checksum final response: head/visible anchors/bootstrap — bounded slots, final projection проверяется отдельно.
 Platform impact: desktop web, mobile web SSG; native none.

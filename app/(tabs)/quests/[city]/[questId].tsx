@@ -598,9 +598,9 @@ export default function QuestByIdScreen({ route, publicProjection }: { route?: Q
     isQuestLoading ||
     (isAuthenticated ? progressLoading : Boolean(questId) && !guestFlow.guestReady);
   // #1938: canonical принадлежит квесту, а не сегменту из адресной строки.
-  // Один квест открывается по числовому city_id и по alias'ам города, а SSG
-  // пишет во все варианты один адрес `/quests/<city_id>/<quest_id>`
-  // (`scripts/generate-seo-pages.js`). Сегмент берём из города бандла и
+  // Один квест открывается по числовому city_id и по alias'ам города, а
+  // серверный рендер отдаёт во все варианты один адрес `/quests/<city_id>/<quest_id>`
+  // (`canonical_path` проекции, `scripts/lib/questWebProjection.js`). Сегмент берём из города бандла и
   // падаем на сырой параметр только до загрузки данных — как городская
   // посадочная (`app/(tabs)/quests/[city]/index.tsx`).
   const canonicalCityId = bundle?.city?.id != null ? String(bundle.city.id) : cityId;

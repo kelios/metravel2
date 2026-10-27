@@ -1,6 +1,6 @@
 import { resources } from '@/i18n/resources'
 
-const { STATIC_PAGES, injectMeta } = require('@/scripts/generate-seo-pages')
+const { STATIC_PAGES, injectMeta } = require('@/scripts/postprocess-route-shells')
 
 describe('become-author static metadata', () => {
   it('registers crawlable, self-canonical metadata with the same RU copy as the screen', () => {

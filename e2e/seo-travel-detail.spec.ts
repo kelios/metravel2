@@ -312,7 +312,8 @@ test.describe('SEO: static pages meta tags', () => {
  * (homepage URL), causing Google to treat every such travel page as a duplicate
  * of the homepage and refuse to index it.
  *
- * Fix: generate-seo-pages.js now strips the canonical from fallback templates.
+ * Fix: the build strips the canonical from fallback templates
+ * (scripts/postprocess-route-shells.js `patchNoindexFallbackTemplate`).
  * The inline JS in +html.tsx sets the correct canonical from window.location.pathname.
  *
  * This test fetches the raw static HTML (JavaScript disabled) to verify that

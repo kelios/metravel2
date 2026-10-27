@@ -89,7 +89,8 @@
   `utils/fileSize.ts`) stay the single entry point for distance, rating, and
   file size.
 - Add every new translation key to all production locales in the same change.
-- Strings printed only by the SSG generator (`scripts/generate-seo-pages.js`)
+- Strings printed only by build-time projections (the SSR quest projection
+  `scripts/lib/questWebProjection.js`, `scripts/lib/questLocalePackage.js`)
   are SSG-only resources (#2399): `i18n/locales/<locale>/ssg/*_ssg.ts`, namespace
   `…Ssg`, typed by `i18n/ssgResources.ts`, read through `loadSsgCatalogs`.
   `i18n/resources.ts` never imports them, so they stay out of client locale
@@ -102,10 +103,10 @@
 - The owner accepted the quest-detail routing contract #2208 on 2026-10-09:
   BE/UK/PL/EN use `/{locale}/quests/{numericCityId}/{slug}`, while RU numeric
   canonicals and aliases keep their existing addresses. Membership and
-  reciprocal alternates come from the validated active v1 package and live
-  backend serving projection; prefix exposure requires the coordinated A–E
-  release gates. See `docs/features/quest-locale-routing.md` and
-  `docs/ops/quest-locale-release.md`. Other route families remain under their
+  reciprocal alternates come from the SSR quest projection
+  (`scripts/lib/questWebProjection.js`) and the live backend serving projection;
+  the static v1 package was retired in #2766. See
+  `docs/features/quest-locale-routing.md` and `docs/ops/quest-locale-release.md`. Other route families remain under their
   separate SEO contracts; site-wide/article localization stays in #1332.
 - Any localization-impacting change must pass `npm run test:i18n` plus the normal
   feature checks. Common/shared copy is checked on the affected web surface;
@@ -601,7 +602,7 @@ npx serve dist/prod -l 3000 -s
   - Page-chrome images drawn by RN-Web `Image` (the header logo) need `defaultSource` on web: without it the URL reaches the markup only after `onLoad`, i.e. after hydration.
   - A skeleton occupies the geometry of the content that replaces it — the same grid, the same height, reserved rows for counters and chips — so the API response does not move the page.
   - Web animation keyframes live in `StyleSheet.create` only. RN-Web does not compile `animationKeyframes` from an inline style object: the key reaches the DOM as the non-existent property `animation-keyframes`, and the animation silently never runs (`SkeletonLoader` stood still on web until #2170). Type the style through `webViewStyle` (`utils/webProps.ts`).
-  - The home crawler block `[data-ssg-home-quests]` is a sibling before `#root`, never a child of its flex row (`scripts/generate-seo-pages.js`, #2257). The synchronous head script assigns `travel-route` for `/`, `/index` and `/travels/<slug>`; `html.travel-route [data-ssg-home-quests]` hides that block from the first frame. Waiting only for the rAF-delayed `rnw-styles-ready` class is too late. Keep the crawler links in static HTML.
+  - Home quest links are server-rendered inside `#root` by the SSR loader (#2766); no crawler block may be injected outside `#root` (the former `[data-ssg-home-quests]` sibling, #2257, was removed with the static generator). The synchronous head script assigns `travel-route` for `/`, `/index` and `/travels/<slug>`; waiting only for the rAF-delayed `rnw-styles-ready` class is too late.
   - Named persisted-state bootstrap: only the `/quests` selection `localStorage.quests_selected_city_v2` uses `getQuestCatalogRestoredSelectionScript/Css` (`utils/questCatalogSelection.ts`, wired synchronously in `app/+html.tsx`, #2320). A saved selection other than `ALL_QUESTS_ID` (`__all__`)/`NEARBY_ID` (`__nearby__`) sets `quests-slice-restored` before first paint and hides `[data-quests-seo-slot]`; the screen releases the class after the restored selection is rendered. A crawler without storage keeps the SEO introduction. This is a concrete existing owner, not permission to add head-script bootstrap for arbitrary persisted state.
   - Guards: `__tests__/app/firstFrameStaticMarkup.dom.web.test.tsx` (a real RN-Web server render, not a props snapshot), `__tests__/utils/iconFontShell.test.ts`, `__tests__/app/html.icon-font.test.ts`, `e2e/first-frame-before-hydration.spec.ts`.
 - Below the fold, a page section starts loading on page load by default: it shows a skeleton placeholder until its data lands, and the page is never blocked.

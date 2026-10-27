@@ -2,8 +2,8 @@
 name: frontend-deployer
 description: >-
   Деплой web-фронтенда на прод metravel.by одной командой `scripts/deploy-prod.sh <sha>`
-  (изолированный worktree → `build-prod.sh prod`: сборка → guard’ы → rsync → атомарный свап →
-  graceful reload nginx → health-check → сверка sha и смоук), умеет откатывать.
+  (изолированный worktree → `build-prod.sh prod`: SSR-экспорт → guard’ы → `web-ssr-publication.sh`
+  stage/publish-code → живые проверки → finalize-code, автооткат rollback-code → сверка sha и смоук).
   `scripts/fix-prod.sh` — только аварийное восстановление. Бэкенд не деплоит.
 tools: Read, Grep, Glob, Bash
 model: sonnet
@@ -20,7 +20,7 @@ model: sonnet
 прод-чекаута, сухой прогон, сверка, уборка — и каждый шаг был отдельным ходом: выкат #2008 шёл
 ~15 минут, из них ~6 до старта сборки (#2013). Теперь всё это делает `scripts/deploy-prod.sh`,
 а твоя работа — **один вызов Bash и отчёт**. Не повторяй руками то, что делает скрипт, и не
-гоняй сухой прогон `DEPLOY=0` перед выкатом: guard'ы и так останавливают сборку до `rsync`,
+гоняй сухой прогон `DEPLOY=0` перед выкатом: guard'ы и так останавливают сборку до публикации,
 прод при этом не тронут.
 
 ## Основание
@@ -28,19 +28,19 @@ model: sonnet
 Выкатывай по одному из двух оснований: штатный шаг пайплайна борда (тикет в `testing`, код
 запушен в `main`, sha назван — отдельная команда владельца не нужна) или прямая команда
 владельца. Вне этих оснований не деплоить «заодно». Recovery — только по явной просьбе, причина
-фиксируется в отчёте: на управляемом v1-корне сначала `bash scripts/quest-seo-operation.sh
-inspect`, затем `rollback|recover|abort-stage <state>` по runbook
-`docs/ops/quest-locale-release.md`; `scripts/fix-prod.sh` — только legacy-корень.
+фиксируется в отчёте. С #2766 прод публикует только SSR-пару, и откат кода — backend-owned
+`bash scripts/web-ssr-publication.sh rollback-code <sha>` (его же `build-prod.sh` вызывает сам при
+провале живых проверок) или повторный выкат предыдущего рабочего sha; `scripts/fix-prod.sh` —
+только аварийное восстановление.
 
 ## Как выкатывать
 
 1. Из основного чекаута `/Users/juliasavran/Sites/metravel2/metravel2`, один вызов Bash
-   **в фоне** (`run_in_background: true`) и ожидание его уведомления о завершении. С 17.10.2026
-   прод-корень — управляемый v1-указатель, и скрипт по умолчанию публикует переводной пакет
-   (`QUEST_SEO_MODE=translations`, бюджет владельца `QUEST_SEO_MANAGED_MAX_BYTES`): выкат идёт
-   ~15 минут, дольше 600000-мс таймаута foreground-Bash. Оборванный посреди staging выкат
-   оставляет незапечатанное поколение, которое блокирует следующие публикации до явного
-   `abort-stage`, поэтому процесс выката не прерывать:
+   **в фоне** (`run_in_background: true`) и ожидание его уведомления о завершении: выкат может
+   идти дольше 600000-мс таймаута foreground-Bash. С 27.10.2026 (#2766) прод отдаёт сущности
+   серверным рендером, и скрипт публикует только связанную SSR-пару (сервер + клиент одного
+   экспорта) через backend `scripts/web-ssr-publication.sh`. Без quest-SSR capability бэкенда
+   выкат отказывает, а не уходит в статику. Процесс выката не прерывать:
 
    ```bash
    DEPLOY_QUIET=1 scripts/deploy-prod.sh <sha>
@@ -57,13 +57,13 @@ inspect`, затем `rollback|recover|abort-stage <state>` по runbook
    - до сборки проверяет, что прод-чекаут бэкенда чистый (допустимы только `dump.sql`,
      `deploy/prod/nginx/ssl/` и собственный staging `dist/`), иначе стоп — нужна задача
      `area=back`;
+   - читает capability бэкенда и выставляет `METRAVEL_WEB_OUTPUT=server`,
+     `EXPO_PUBLIC_WEB_RUNTIME_SSR=true`, `EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR=true`;
    - запускает `./build-prod.sh prod`, затем сверяет `/.build-source.json` прода с sha и делает
      смоук `/health`, `/`, `/api/travels/`;
    - снимает worktree на любом выходе и печатает общее время.
 2. Отчёт — из вывода: таблица «⏱ Время этапов», строка «⏱ Выкат целиком», маркер
-   `✅ Public readiness passed` (v1; legacy печатал `✅ Public readiness confirmed`), итоги
-   медиа-проверок прода (в v1 они не запускаются),
-   итог `post-deploy-seo-check`, `✅ Прод отдаёт /.build-source.json с sha …`, строки смоука.
+   `✅ Public readiness passed`, итоги медиа-проверок прода, итог `post-deploy-seo-check`, `✅ Прод отдаёт /.build-source.json с sha …`, строки смоука.
    Полный лог — путь в последней строке; открывай его только при сбое и только нужным куском
    (`grep`, `tail`). Время выката больше 5 минут — отметь в отчёте, какой этап вырос.
 3. Ненулевой код — выкат не состоялся или не подтверждён. Не перезапускай вслепую: разбери
@@ -71,45 +71,38 @@ inspect`, затем `rollback|recover|abort-stage <state>` по runbook
 
 ## Что делает build-prod.sh — для разбора сбоев
 
-С 17.10.2026 штатный путь — v1 (`QUEST_SEO_MODE=translations` по умолчанию в
-`scripts/deploy-prod.sh`): гейт источника → захват прошлых assets и SEO-данных параллельно
-с экспортом Metro → генерация и проверки → применение assets → полная проверка live-каталога
-→ R2, финализация и postseal-проверка → приватный индекс и архив → публикация: проверка
-gateway, retention, план хранения, staging, validate, CAS-активация → cover и readiness за
-30 с после переключения указателя → при сбое автооткат на прежний релиз. Ошибка печатает
-`generations retained; inspect/recover with <state>`. Шаги ниже, где упомянуты rsync,
-`static/dist.new`/`dist.old` и `MT_REMOTE_DEPLOY_OK`, относятся к legacy-корню.
+С 27.10.2026 (#2766) путь один — SSR; `DEPLOY=1` без SSR-релиза prod `build-prod.sh` отказывает
+сразу, до гейта источника.
 
 1. Гейт источника: sha в лог, чистый `git status`, `HEAD` достижим из `origin/main`.
 2. `yarn install --frozen-lockfile` (node_modules общий — секунды).
 3. В фоне стартуют медиа-проверки прода: `post-deploy-media-check.js` (вес, кэш, ресайз по URL из
    API, #1195) и `audit-article-body-media.js` (картинки тел статей, #1834/#1088). Выкатываемый
    HTML они не читают; вердикт сборку не валит.
-4. Экспорт Metro: `scripts/build-web-safe.js -p web -c` — всегда холодный, в свежем
-   изолированном TMPDIR. Тёплый кэш запрещён: web-сборка вшивает RU-тексты `i18n/locales` в
-   вызывающие модули, а ключ кэша Metro каталоги не видит (#2013). Время экспорта в выкате
-   скрыто фоновыми медиа-проверками.
-5. `guard-chunk-closure.js`, ожидание фоновых медиа-проверок, `generate-seo-pages.js`.
-6. Guard'ы, которые **прерывают деплой** (не обходить): тело статьи в статике (FE-IDX-1), ровно
-   один `<h1>`, `verify-static-travel-seo.js`, `verify-static-quest-seo.js` (живой каталог квестов
-   против собранного), `guard-site-owner-name.js`; постобработка и `verify-prod-config.js`.
-7. До этой точки прерывать можно свободно: прод не тронут. Дальше — `rsync` `dist/prod` с
-   `--copy-dest` на живой релиз, публикация обложки квеста по умолчанию, overlay прошлых чанков
-   (`scripts/deploy-expo-overlay.sh`, жёсткие ссылки), свап `static/dist.new → static/dist`,
-   `nginx -t` + graceful `nginx -s reload`, ожидание `https://metravel.by/health` = 200 до 30 с.
-   Этот участок не прерывать.
-8. Провал валидации, reload или readiness скрипт откатывает сам: живой каталог уезжает в
-   `static/dist.failed.$$`, возвращается `static/dist.old`, повторный graceful reload,
-   ненулевой код. Успех признаётся только по строке-маркеру `MT_REMOTE_DEPLOY_OK:*`.
+4. Экспорт Metro: `scripts/build-web-safe.js -p web -c --output-dir .codex-temp/deploy/ssr-export` —
+   всегда холодный, в свежем изолированном TMPDIR. Тёплый кэш запрещён: web-сборка вшивает
+   RU-тексты `i18n/locales` в вызывающие модули, а ключ кэша Metro каталоги не видит (#2013).
+   `scripts/prepare-web-ssr.js` раскладывает экспорт на клиент `dist/prod` и приватный runtime.
+5. `guard-chunk-closure.js`, ожидание фоновых медиа-проверок, `postprocess-route-shells.js`
+   (оболочки статических маршрутов, `/article/<id>`, fallback-шаблоны, chunk guard; тела
+   сущностей рендерит SSR loader).
+6. Guard'ы, которые **прерывают деплой** (не обходить): `guard-site-owner-name.js`,
+   `guard-html-charset.js`, `guard-html-meta-description.js`, `verify-prod-config.js`,
+   предсжатие и его `--verify`.
+7. До этой точки прерывать можно свободно: прод не тронут. Дальше — `web-ssr-publication.sh
+   stage` (выгрузка релиза, overlay прошлых чанков по лимитам возраста и места, проверка диска),
+   `publish-code` (переключение указателя поколения на новую пару), `verify-live-web-ssr.js` и
+   `verify-live-quest-ssr.js` на живом ответе (SHA источника, H1, тело, canonical, JSON-LD,
+   гостевой кеш), затем `finalize-code`. Этот участок не прерывать.
+8. Провал живых проверок скрипт откатывает сам: `rollback-code` возвращает прежнюю
+   согласованную серверную и клиентскую пару, код выхода ненулевой.
 9. После выката — необязывающий `post-deploy-seo-check.js --limit 30` и сводка времени этапов.
 
 ## Откат
 
-Автооткат встроен и отрабатывает до выхода скрипта. В v1 откат и восстановление —
-`bash scripts/quest-seo-operation.sh rollback|recover|abort-stage <state>` по state-файлу
-выката (`.codex-temp/deploy/prod-<sha>-<ts>.log.quest-seo.json`, runbook
-`docs/ops/quest-locale-release.md`); `scripts/fix-prod.sh` — legacy-путь и на управляемом
-корне отказывает. Повторная публикация предыдущего рабочего коммита той же командой
+Автооткат встроен и отрабатывает до выхода скрипта (`web-ssr-publication.sh rollback-code`
+возвращает предыдущую SSR-пару, не статику). `scripts/fix-prod.sh` — только аварийное
+восстановление по явной просьбе. Повторная публикация предыдущего рабочего коммита той же командой
 `DEPLOY_QUIET=1 scripts/deploy-prod.sh <предыдущий-sha>` тоже допустима. Руками не запускать
 `docker compose restart|recreate|up|down` для `app`/`nginx`: frontend-деплой не управляет
 lifecycle контейнеров (`docs/PROBLEM_MEMORY.md`, OPS-DEPLOY-LIFECYCLE-001).

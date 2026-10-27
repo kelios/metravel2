@@ -136,7 +136,8 @@ const snapDimensionUp = (value: number): number => {
  * Ступень лестницы для произвольной ширины. Экспортируется для кода, который строит
  * медиа-URL сам, а не через `optimizeImageUrl` — например печать
  * (`utils/printImageUrl.ts`): лестница обязана остаться в одном месте, иначе она
- * разъедется, как уже было с копией в `scripts/generate-seo-pages.js` (#1170).
+ * разъедется, как уже было с копией в статическом генераторе SEO-страниц (#1170;
+ * генератор снят в #2766).
  */
 export const snapProxyWidth = (value: number): number => snapDimensionUp(value);
 

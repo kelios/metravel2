@@ -10,6 +10,7 @@ const { resolveWebOutput } = require('./lib/webOutput')
 const { installSsrApiTransport } = require('./lib/ssrApiTransport')
 const { installRequestLocaleStore, resolveRequestLocale } = require('../utils/ssr/requestLocale')
 const { SHARED_CSS_URL_DIR, SSR_CRITICAL_CSS_ENV, isSharedCriticalCssFile } = require('../utils/ssr/criticalCss')
+const { createNodeEnv } = require('expo-server/adapter/environment/node')
 
 const repoRoot = path.resolve(__dirname, '..')
 const CONTENT_TYPES = {
@@ -46,16 +47,19 @@ function resolveClientFile(clientDir, pathname) {
  * fetched its loader data first). expo-server's Node adapter loads bundles
  * lazily and never calls its own preload(), so they are loaded here before the
  * first request, the renderer first: its route modules are the complete ones
- * (middleware copies are byte-identical, loader copies are subsets). The paths
- * equal the adapter's `path.join(build, file)`, so its require() reuses them.
+ * (middleware copies are byte-identical, loader copies are subsets). Its own
+ * preload() would load the middleware first, so the order stays here, while the
+ * loading goes through the adapter's environment loader: the same
+ * `path.join(build, file)` require, so the adapter's later loads hit the cache.
  */
-function preloadServerModules(serverDir) {
+async function preloadServerModules(serverDir) {
   const manifest = JSON.parse(fs.readFileSync(containedFile(serverDir, '_expo/routes.json'), 'utf8'))
   const files = [manifest.rendering?.file, manifest.middleware?.file,
     ...(manifest.apiRoutes || []).map((route) => route.file),
     ...(manifest.htmlRoutes || []).map((route) => route.loader)]
+  const environment = createNodeEnv({ build: serverDir })
   for (const file of new Set(files.filter(Boolean))) {
-    if (/\.c?js$/.test(file)) require(path.join(serverDir, file))
+    if (/\.c?js$/.test(file)) await environment.getApiRoute({ file })
   }
 }
 
@@ -78,7 +82,11 @@ function createSsrServer({ buildDir = process.env.SSR_BUILD_DIR || path.join(rep
   const { serverDir, clientDir } = assertServerExport(generationDir)
   const requestLocales = installRequestLocaleStore(new AsyncLocalStorage())
   installSsrApiTransport()
-  preloadServerModules(serverDir)
+  // Every request, health included, waits for the ordered preload: a failed
+  // preload fails them all, so the container healthcheck never reports a
+  // server that cannot render (the synchronous preload used to crash start).
+  const preloaded = preloadServerModules(serverDir)
+  preloaded.catch((error) => console.error(`[serve-web-ssr] preload failed: ${error?.stack || error}`))
   const { createRequestHandler } = require('expo-server/adapter/http')
   const handleExpo = createRequestHandler({ build: serverDir, environment: 'production' }, {
     handleRouteError(error) {
@@ -113,6 +121,7 @@ function createSsrServer({ buildDir = process.env.SSR_BUILD_DIR || path.join(rep
   }
   return http.createServer(async (req, res) => {
     try {
+      await preloaded
       const pathname = new URL(req.url || '/', 'http://localhost').pathname
       if (pathname === '/_health' || pathname === '/health') {
         res.setHeader('Cache-Control', 'no-store')

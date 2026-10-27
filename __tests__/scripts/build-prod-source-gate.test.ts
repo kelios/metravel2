@@ -52,6 +52,17 @@ function extractEntryPoint(source = readCanonicalDeploy()): string {
   return source.slice(start, end)
 }
 
+const SSR_DEPLOY_ENV = {
+  METRAVEL_WEB_OUTPUT: 'server',
+  EXPO_PUBLIC_WEB_RUNTIME_SSR: 'true',
+  EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR: 'true',
+}
+const STATIC_BUILD_ENV = {
+  METRAVEL_WEB_OUTPUT: '',
+  EXPO_PUBLIC_WEB_RUNTIME_SSR: '',
+  EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR: '',
+}
+
 const PRELUDE = extractGatePrelude()
 const ENTRY_POINT = extractEntryPoint()
 
@@ -80,9 +91,11 @@ function runEntryPoint(cwd: string, args: string[], env: Record<string, string> 
     ENTRY_POINT,
     'echo "GATE-PASSED env=$ENV deploy=$DEPLOY"',
   ].join('\n')
+  // A deploy (DEPLOY=1) publishes only the SSR release (#2766); the default
+  // harness env is what scripts/deploy-prod.sh exports for it.
   return runCli('bash', ['-c', script, 'build-prod.sh', ...args], {
     cwd,
-    env: { DEPLOY: '1', ...GIT_ENV, ...env },
+    env: { DEPLOY: '1', ...SSR_DEPLOY_ENV, ...GIT_ENV, ...env },
   })
 }
 
@@ -281,6 +294,26 @@ describe('build-prod.sh entry point', () => {
     expect(result.stdout).toContain('GATE-PASSED env=prod deploy=0')
   })
 
+  it('refuses a deploy without the SSR release before the source gate (#2766)', () => {
+    for (const args of [['prod'], ['dev']]) {
+      const result = runEntryPoint(work, args, STATIC_BUILD_ENV)
+
+      expect(result.status).not.toBe(0)
+      expect(result.stdout).toContain('Выкат публикует только SSR-релиз prod')
+      expect(result.stdout).not.toContain('достижим из origin/main')
+      expect(result.stdout).not.toContain('GATE-PASSED')
+    }
+  })
+
+  it('still builds a build-only preview of prod and of non-prod environments without SSR', () => {
+    for (const env of ['prod', 'dev', 'preprod']) {
+      const result = runEntryPoint(work, [env], { DEPLOY: '0', ...STATIC_BUILD_ENV })
+
+      expect(result.status).toBe(0)
+      expect(result.stdout).toContain(`GATE-PASSED env=${env} deploy=0`)
+    }
+  })
+
   it('rejects an unknown flag and a second environment name', () => {
     expect(runEntryPoint(work, ['--nope']).status).not.toBe(0)
     expect(runEntryPoint(work, ['prod', 'dev']).status).not.toBe(0)
@@ -290,7 +323,7 @@ describe('build-prod.sh entry point', () => {
     const source = readCanonicalDeploy()
     const cacheBust = source.indexOf('node scripts/add-cache-bust-meta.js "dist/$ENV"')
     const prodGuard = source.indexOf('node scripts/verify-prod-config.js --dist "dist/$ENV"')
-    const deployBranch = source.indexOf('if [[ "$DEPLOY" == "1" ]]; then')
+    const deployBranch = source.indexOf('if [[ "$DEPLOY" == "1" ]]; then\n  stage "выкат')
     const deployCall = source.indexOf('deploy_prod "$ENV"', deployBranch)
 
     expect(cacheBust).toBeGreaterThanOrEqual(0)

@@ -35,7 +35,7 @@ quest-страниц, city-лендингов и travel-промо квесто�
 
 ## Context
 
-Инцидент прод-деплоя 2026-07-28. В `scripts/generate-seo-pages.js` сбой одного
+Инцидент прод-деплоя 2026-07-28. В SSG-генераторе (снят в #2766) сбой одного
 HTTP-запроса к `https://metravel.by/api/quests/?page=N` ронял весь quest-блок
 генератора: `catch` → `console.error('❌ Failed to fetch quests: … Quest pages
 and travel quest promos will not be generated')` → скрипт продолжал работу и
@@ -94,7 +94,7 @@ Feature: Build-time quest catalog completeness
 
   Scenario: Молча деградировавший quest-слой не уезжает на прод
     Given dist собран без части quest-страниц, city-лендингов или travel-промо
-    When выполняется verify-static-quest-seo
+    When выполняется проверка статики квестов (снята в #2766)
     Then гвард перечисляет недостающие артефакты и возвращает код 1
 ```
 
@@ -105,14 +105,14 @@ Scope:
 1. `scripts/lib/fetchJson.js` (новый) — общий fetch-хелпер с ретраями и
    экспоненциальным backoff (3 попытки, 500ms → 1000ms). Ретраятся
    `408/425/429/500/502/503/504`, таймауты и сокет-ошибки; детерминированные
-   ошибки падают сразу. `generate-seo-pages.js` переведён на него, его inline
+   ошибки падают сразу. SSG-генератор (снят в #2766) переведён на него, его inline
    `fetchJson` удалён.
-2. Fail-policy в `scripts/generate-seo-pages.js`: `throw` на недоступном
+2. Fail-policy в SSG-генераторе (снят в #2766): `throw` на недоступном
    quest-каталоге и на частичном travel-каталоге вместо тихого продолжения;
    `main().catch` → `process.exit(1)`. Отдельно: если не разрезолвился ни один
    quest detail bundle (`/api/quests/by-quest-id/` мёртв) — тоже `throw`, иначе
    все quest-страницы уехали бы деградированными.
-3. `scripts/verify-static-quest-seo.js` (новый гвард, по аналогии с FE-IDX-1) —
+3. проверка статики квестов (снята в #2766) (новый гвард, по аналогии с FE-IDX-1) —
    сверяет живой каталог квестов с собранным `dist/$ENV`: каждая quest-страница
    в обеих формах (`quests/<city>/<id>.html` и `quests/<city>/<id>/index.html`)
    для canonical и city-alias маршрутов; каждый city-лендинг + его crawlable
@@ -120,7 +120,7 @@ Scope:
    og/canonical/JSON-LD `TouristTrip`/crawlable intro) — не голый SPA-шелл;
    ненулевое покрытие travel-промо (`data-ssg-travel-quest-promo`).
 4. Гвард подключён в оба build-flow до rsync: `build-prod.sh` (после
-   `verify-static-travel-seo.js`, до `copy-public-files`/`deploy_prod`) и
+   проверка статики travel (снята в #2766), до `copy-public-files`/`deploy_prod`) и
    `scripts/build-web-prod.js`.
 
 Почему промо-гвард «> 0», а не «все travel-страницы»: промо подбирается
@@ -154,7 +154,7 @@ Validation (выполнено):
 - `__tests__/scripts/fetch-json-retry.test.ts` — ретраи на реальном локальном
   HTTP-сервере: 502→502→200 восстанавливается за 3 запроса; постоянный 503
   падает после бюджета; 404 не ретраится; битый JSON на 200 не ретраится.
-- `__tests__/scripts/verify-static-quest-seo.test.ts` — ожидаемые файлы,
+- тест проверки статики квестов (снят в #2766) — ожидаемые файлы,
   city-лендинги, деградировавший SPA-шелл, подсчёт промо, листинг
   travel-страниц. Вместе — 27 тестов, зелёные.
 - Полный `__tests__/scripts/`: 136 suites / 843 теста — зелёные на пиннутом
@@ -174,7 +174,7 @@ Validation (выполнено):
   `process.exit(status)`; `build-prod.sh` под `set -Eeuo pipefail` прерывается
   до `deploy_prod`.
 
-Regression control: `scripts/verify-static-quest-seo.js` в обоих build-flow +
+Regression control: проверка статики квестов (снята в #2766) в обоих build-flow +
 27 юнит-тестов. Инвариант зафиксирован в `docs/PROBLEM_MEMORY.md` как
 `BUILD-CATALOG-001`.
 
@@ -202,11 +202,11 @@ API — подтвердить, что гвард проходит на наст
 
 Сделано:
 
-- `mergeQuestCityLandingsByAlias()` в `scripts/generate-seo-pages.js` — alias-лендинг
+- `mergeQuestCityLandingsByAlias()` в SSG-генераторе (снят в #2766) — alias-лендинг
   собирается из объединения квестов всех `city_id` с этим alias; numeric-лендинги
   остаются пер-городскими. Записей стало 95 numeric + 92 alias = 187 в 187
   различных путей, счётчик в логе больше не врёт.
-- `scripts/verify-static-quest-seo.js` — новый шаг: alias-лендинг обязан
+- проверка статики квестов (снята в #2766) — новый шаг: alias-лендинг обязан
   ссылаться на каждый квест всех своих `city_id`, иначе сборка падает до rsync.
 - Тесты: `mergeQuestCityLandingsByAlias` (5 кейсов) и
   `expectedAliasLandingQuests`/`missingLandingQuestLinks` (6 кейсов).

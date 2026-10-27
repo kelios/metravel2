@@ -159,8 +159,8 @@ const ALLOW_DOMINANT_COLOR_FILES = new Set([
 ]);
 
 /**
- * `scripts/**` намеренно вне правила: SSG-генераторы (`ssg-skeletons.js`,
- * `generate-seo-pages.js`) пишут заливку прямо в HTML шелла на этапе сборки и
+ * `scripts/**` намеренно вне правила: SSG-скрипты (`ssg-skeletons.js`,
+ * `postprocess-route-shells.js`) пишут заливку прямо в HTML шелла на этапе сборки и
  * импортировать TS-индекс не могут — это отдельный, документированный путь.
  */
 const DOMINANT_COLOR_RULE_ROOTS = [

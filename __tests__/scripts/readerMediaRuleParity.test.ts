@@ -4,35 +4,30 @@ import {
 } from '@/constants/imageContract';
 import { toLegacyResizePath as toLegacyResizePathTs } from '@/utils/mediaUrl';
 
-const {
-  buildOptimizedTravelImageUrl,
-  toSocialPreviewUrl,
-} = require('@/scripts/generate-seo-pages');
+const { toSocialPreviewUrl } = require('@/scripts/postprocess-route-shells');
 
 /**
- * #1868: SSG строит адрес кадра по ТОМ ЖЕ правилу, что и разметка читателя.
+ * #1868: постобработчик оболочек строит адрес кадра по ТОМ ЖЕ правилу, что и
+ * разметка читателя.
  *
- * Соседний `travelHeroPreloadParity` держит другой инвариант — preload греет тот
- * же файл, который затем запросит `<img>`, то есть сверяет генератор с разметкой
- * страницы. Расхождение самого ПРАВИЛА он не ловит: до #1868 генератор вёл
- * четвёртую копию `toLegacyResizePath`, и сузься во фронте набор расширений —
- * обе стороны SSG уехали бы согласованно, тест остался бы зелёным, а preload и
- * srcset грелись бы по устаревшему правилу. Ровно так уже разъехались три копии
- * до общего модуля `scripts/lib/readerMediaUrl.js`.
+ * До #1868 генератор SSG вёл четвёртую копию `toLegacyResizePath`, и сузься во
+ * фронте набор расширений — сборка уехала бы по устаревшему правилу. Ровно так
+ * уже разъехались три копии до общего модуля `scripts/lib/readerMediaUrl.js`.
+ * С #2766 генератор тел статей удалён; правило остаётся в соцпревью оболочек
+ * (`toSocialPreviewUrl` в `scripts/postprocess-route-shells.js`).
  *
- * Здесь сверяется наблюдаемый выход генератора (`buildOptimizedTravelImageUrl` —
- * через него идут и preload, и srcset, и варианты манифеста) с TS-источником
+ * Здесь сверяется наблюдаемый выход постобработчика с TS-источником
  * `utils/mediaUrl.ts`. Тест краснеет и когда правило правят только во фронте, и
- * когда в генератор возвращают собственную копию.
+ * когда в скрипт возвращают собственную копию.
  */
 
-// Origin, который генератор считает своим: `--api` по умолчанию (scripts/generate-seo-pages.js).
+// Origin, который постобработчик считает своим: `--api` по умолчанию (scripts/postprocess-route-shells.js).
 const SITE = 'https://metravel.by';
 
 /**
  * По одному входу на ветку `toLegacyResizePath`, какие вообще доходят до SSG.
  *
- * Прямые ссылки на бакет и обёртки weserv сюда не входят намеренно: генератор
+ * Прямые ссылки на бакет и обёртки weserv сюда не входят намеренно: скрипт
  * отсекает чужой origin раньше правила, и его ветка «не наш origin — не трогаем»
  * это отдельный контракт. Классы бакета сверяет `reader-media-url.test.ts`.
  */
@@ -59,9 +54,9 @@ const SSG_MEDIA_INPUTS = [
   `${SITE}/gallery/1/conversions/`,
 ];
 
-/** Путь, который SSG кладёт в preload/`srcset`. Ширина и качество на правило не влияют. */
+/** Путь, который сборка кладёт в соцпревью. Ширина на правило не влияет. */
 const ssgPathname = (rawUrl: string): string =>
-  new URL(String(buildOptimizedTravelImageUrl(rawUrl, { width: 800, quality: 80 }))).pathname;
+  new URL(String(toSocialPreviewUrl(rawUrl))).pathname;
 
 /** Путь, который по тому же адресу запросит браузер читателя (`utils/mediaUrl.ts`). */
 const readerPathname = (rawUrl: string): string =>
@@ -74,7 +69,7 @@ describe('SSG: адрес кадра строится по правилу чит
 
   it('conversion-ключ остаётся на своём family-роуте (#1204)', () => {
     // Временный rewrite снят: family-роут режет по лестнице (#1195/#1201/#1168) и
-    // с #1920 кэшируется nginx, поэтому генератор адресует ключ штатно.
+    // с #1920 кэшируется nginx, поэтому сборка адресует ключ штатно.
     expect(ssgPathname(`${SITE}/gallery/355/conversions/x.webp`)).toBe(
       '/gallery/355/conversions/x.webp',
     );
@@ -86,14 +81,14 @@ describe('SSG: адрес кадра строится по правилу чит
     expect(ssgPathname(`${SITE}/gallery/uploads/a.jpg`)).toBe('/media-resize/uploads/a.jpg');
   });
 
-  it('падает, если генератор разойдётся с фронтом хотя бы на одном входе', () => {
+  it('падает, если постобработчик разойдётся с фронтом хотя бы на одном входе', () => {
     // Сам механизм сверки: без него `it.each` выше молчал бы на пустом наборе.
     const divergent = SSG_MEDIA_INPUTS.filter((input) => ssgPathname(input) !== readerPathname(input));
     expect(divergent).toEqual([]);
 
     // И набор действительно покрывает ветку переписывания, а не только «не трогаем».
     // С #1204 у SSG она осталась ровно одна: conversion-ключ за family-роутом больше
-    // не переписывается, а прямая ссылка в бакет до генератора не доходит — он
+    // не переписывается, а прямая ссылка в бакет до скрипта не доходит — он
     // отсекает чужой origin раньше правила (см. `SSG_MEDIA_INPUTS`). Класс бакета
     // сверяет `reader-media-url.test.ts`.
     const rewritten = SSG_MEDIA_INPUTS.map((input) => ssgPathname(input)).filter((path) =>

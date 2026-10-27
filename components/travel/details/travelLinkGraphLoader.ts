@@ -1,7 +1,8 @@
 import { setResponseHeaders, type ImmutableRequest } from 'expo-server'
 import { fetchPublicRouteJsonResponse } from '@/utils/ssr/fetchPublicRouteJson'
 import { memoizePublicRouteData } from '@/utils/ssr/publicRouteData'
-import { validateTravelLinkGraph, type TravelLinkGraphResult } from '@/utils/travelLinkGraph'
+import type { TravelLinkGraphResult } from '@/utils/travelLinkGraph'
+import { validateTravelLinkGraph } from '@/utils/travelLinkGraphContract'
 
 const PENDING_CODES = new Set(['selection_pending', 'publication_unavailable', 'refresh_pending'])
 const ERROR_CODES = new Set(['refresh_failed', 'refresh_stale', 'publication_corrupt'])

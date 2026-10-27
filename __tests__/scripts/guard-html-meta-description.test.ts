@@ -19,8 +19,8 @@ function exportedPage(...descriptions: string[]) {
   return `<html><head><title data-rh="true">Приложение</title>${descriptions[0] ?? ''}<meta charset="utf-8"/>${descriptions.slice(1).join('')}<meta name="robots" content="index"/></head><body></body></html>`
 }
 
-// #2689: /app shipped two descriptions because only routes owned by
-// generate-seo-pages.js had the shell default replaced.
+// #2689: /app shipped two descriptions because only routes owned by the SEO
+// generator (now scripts/postprocess-route-shells.js) had the shell default replaced.
 describe('htmlMetaDescription', () => {
   it('keeps the page-owned Helmet description and drops the shell default', () => {
     const html = normalizeMetaDescription(exportedPage(PAGE_DESCRIPTION, SHELL_DESCRIPTION))

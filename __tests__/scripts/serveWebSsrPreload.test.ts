@@ -1,8 +1,9 @@
 /** @jest-environment node */
 const fs = require('fs')
+const http = require('http')
 const path = require('path')
 const { makeTempDir } = require('./cli-test-utils')
-const { preloadServerModules } = require('@/scripts/serve-web-ssr')
+const { preloadServerModules, createSsrServer } = require('@/scripts/serve-web-ssr')
 
 // Metro's registry is global and the first definition of an id wins (#2817): a
 // loader bundle's tree-shaken route module must never be defined before the
@@ -33,7 +34,7 @@ r.order.push(${JSON.stringify(bundle)}); if (!r.modules.has(2479)) r.modules.set
       fs.mkdirSync(path.dirname(path.join(dir, name)), { recursive: true })
       fs.writeFileSync(path.join(dir, name), text)
     }
-    preloadServerModules(dir)
+    await preloadServerModules(dir)
     const registry = (globalThis as { __ssrPreloadRegistry?: { order: string[]; modules: Map<number, { full: boolean }> } }).__ssrPreloadRegistry!
     expect(registry.order).toEqual(['renderer', 'middleware', 'loader'])
     expect(registry.modules.get(2479)).toEqual({ full: true })
@@ -43,5 +44,43 @@ r.order.push(${JSON.stringify(bundle)}); if (!r.modules.has(2479)) r.modules.set
     await env.getApiRoute({ file: '_expo/loaders/quests/index.js' })
     await env.getMiddleware({ file: '_expo/functions/+middleware.js' })
     expect(registry.order).toEqual(['renderer', 'middleware', 'loader'])
+  })
+
+  it('keeps health failing when the renderer bundle cannot be loaded', async () => {
+    const scratch = path.join(process.cwd(), '.codex-temp')
+    fs.mkdirSync(scratch, { recursive: true })
+    const dir = makeTempDir('ssr-preload-fail-', { root: scratch })
+    fixtures.push(dir)
+    const files: Record<string, string> = {
+      'server/_expo/routes.json': JSON.stringify({ rendering: { mode: 'ssr', file: '_expo/server/render.js' },
+        htmlRoutes: [{ file: './about.tsx', page: '/about', namedRegex: '^/about(?:/)?$', loader: null }],
+        notFoundRoutes: [], apiRoutes: [], assets: { js: ['/_expo/static/js/web/entry-a.js'], css: [] } }),
+      'server/_expo/server/render.js': 'throw new Error("broken renderer bundle")',
+      'client/_expo/static/js/web/entry-a.js': 'void 0',
+    }
+    for (const [name, text] of Object.entries(files)) {
+      fs.mkdirSync(path.dirname(path.join(dir, name)), { recursive: true })
+      fs.writeFileSync(path.join(dir, name), text)
+    }
+    const env = { ...process.env }
+    process.env.METRAVEL_WEB_OUTPUT = 'server'
+    process.env.EXPO_PUBLIC_WEB_RUNTIME_SSR = 'true'
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {})
+    const server = createSsrServer({ buildDir: dir })
+    try {
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+      const status = await new Promise((resolve, reject) => {
+        http.get(`http://127.0.0.1:${server.address().port}/health`, (response: { statusCode: number; resume(): void }) => {
+          response.resume()
+          resolve(response.statusCode)
+        }).on('error', reject)
+      })
+      expect(status).toBe(500)
+      expect(error).toHaveBeenCalledWith(expect.stringContaining('broken renderer bundle'))
+    } finally {
+      await new Promise((resolve) => server.close(resolve))
+      error.mockRestore()
+      process.env = env
+    }
   })
 })

@@ -83,9 +83,9 @@ runtime-доказательствами под задачу, а не налич
 | `/quests/map` | `app/(tabs)/quests/map.tsx` (314 LOC) | все квесты точками на общей `Map`/`Map.web`; статический сегмент, матчится раньше `[city]` |
 | `/quests/scenario` | `app/(tabs)/quests/scenario.tsx` (9 LOC) → `screens/tabs/QuestScenarioScreen.tsx` (435 LOC) | DIY-лендинг «квест-бук для печати»; тоже статический сегмент перед `[city]` |
 | `/quests/{city}` | `app/(tabs)/quests/[city]/index.tsx` (229 LOC) | лендинг города: сегмент — numeric `city_id` ИЛИ alias (`minsk`); неизвестный сегмент → `router.replace('/quests')` |
-| `/quests/country/{country}` | `app/(tabs)/quests/country/[country]/index.tsx` | web-лендинг страны: валидный ISO alpha-2 из каталога → стабильный alias (`BY → belarus`, `PL → poland`); неизвестный alias → `/quests`. Из сайдбара каталога не открывается (#2011): там страна фильтруется на месте; ссылки на лендинг даёт статический HTML каталога и лендингов городов (`scripts/generate-seo-pages.js`) |
+| `/quests/country/{country}` | `app/(tabs)/quests/country/[country]/index.tsx` | web-лендинг страны: валидный ISO alpha-2 из каталога → стабильный alias (`BY → belarus`, `PL → poland`); неизвестный alias → `/quests`. Из сайдбара каталога не открывается (#2011): там страна фильтруется на месте; ссылки на лендинг даёт серверный HTML каталога и лендингов городов (SSR-проекция `scripts/lib/questWebProjection.js`) |
 | `/quests/{city}/{questId}` | `app/(tabs)/quests/[city]/[questId].tsx` (688 LOC) | деталь и прохождение: bundle, прогресс, гость/consent, SEO+JSON-LD, модалка отзывов |
-| Промо на главной | `components/home/HomeQuestsPromoSection.tsx` | сразу после hero: 6 карточек (desktop) / 4 (mobile) через `useQuestsPreview(6)` + подарочный вход-блок → `/quests/scenario`; отбор — популярные (`?sort=popular`: прохождения, просмотры, id), а не первые по id (#1798); SSG-двойник — `injectHomeQuestsSection` в `scripts/generate-seo-pages.js` (crawlable `data-ssg-home-quests`, те же 8 ссылок тем же правилом) |
+| Промо на главной | `components/home/HomeQuestsPromoSection.tsx` | сразу после hero: 6 карточек (desktop) / 4 (mobile) через `useQuestsPreview(6)` + подарочный вход-блок → `/quests/scenario`; отбор — популярные (`?sort=popular`: прохождения, просмотры, id), а не первые по id (#1798); серверный двойник — `discovery.preview` SSR-проекции (`selectPopularQuests`, те же 8 ссылок тем же правилом), рендерится внутри `#root` (#2766) |
 | Промо в travel-детали | `components/travel/details/sections/QuestForCitySection.tsx` (+ `Deferred*.tsx` / `Deferred*.web.tsx`) | «квест по этому городу» на странице путешествия |
 
 Отдельного city-alias route на уровне Expo Router нет: alias — это тот же
@@ -607,7 +607,7 @@ OpenSpec change `openspec/changes/add-quest-content-localization/`, решени
   `utils/questCityAlias.js`) мерит `city_name_canonical` →
   `cityNameCanonical` → `city.name_canonical`, затем прежнее имя: локализованное
   «Kraków» не должно двигать `/quests/<alias>`. Отображаемое имя группы
-  (`cityName`) остаётся локализованным. SSG-скрипты (`generate-seo-pages.js`,
+  (`cityName`) остаётся локализованным. Сборочные скрипты (SSR-проекция,
   `generate-sitemap.js`) `lang` не передают и отдают алиасу записи API целиком —
   статика остаётся русской, адреса до = после. Контроль — фикстура всех городов
   прода `__tests__/fixtures/questCitiesLocalized.json`.
@@ -1324,30 +1324,30 @@ JSON-LD и видимое тело читают тот же loader result. `requ
 - JSON-LD: деталь — `createQuestDetailStructuredData`; лендинги города и страны
   — `ItemList` + `BreadcrumbList`; каталог — `createQuestCatalogStructuredData`
   + FAQ; `/quests/scenario` — `HowTo`/`ItemList`.
-- SSG: `scripts/generate-seo-pages.js` (лендинги городов/стран, промо-разметка,
-  crawlable-перелинковка). Country SSG fail-closed требует Expo-шаблон
-  `dist/<env>/quests/country/[country].html`, чтобы страница гидратировалась
-  country route bundle, а не fallback-бандлом города. Production `sitemap.xml`
+- SSR (#2766): детали, лендинги городов/стран, промо и crawlable-перелинковку
+  рендерит сервер Expo Router из проекции публикации
+  `scripts/lib/questWebProjection.js`; статические шаблоны маршрутов
+  (`quests/[city]/[questId].html`, `quests/[city].html`,
+  `quests/country/[country].html`) получают только noindex-head «не найдено» в
+  `scripts/postprocess-route-shells.js`. Production `sitemap.xml`
   генерирует и отдаёт Django; фронтовый `scripts/generate-sitemap.js` не входит
   в release-path.
 - Статическая копия интро/FAQ каталога — `utils/questContent.js`; она обязана
   совпадать с RU-значениями ключей `quests:screens.tabs.QuestsSeoIntroFaq.*`,
   иначе краулер видит не то, что читает пользователь после гидрации.
 - Детальная страница ниже порога #1930 (≥300 слов прозы, ≥30% собственных
-  5-грамм) не роняет сборку и не выкладывается индексируемой: генератор пишет
-  страницы квестов вторым проходом (`selectIndexableBuiltQuestPages`, то же
-  правило `scripts/lib/questPageDepth`) и ставит тонкой build-owned
-  `noindex, follow` (партия 19.09.2026: Суботица 297 и Ниш 299 слова —
-  истории точек по одному предложению). `verify-static-quest-seo.js` держит
-  обратное расхождение: детальная под `noindex`, очистившая пороги, — ошибка
-  сборки; ноль индексируемых при непустом каталоге — потерянное тело шаблона,
-  сборка падает. Django-sitemap такие адреса по-прежнему перечисляет —
-  верификатор предупреждает; возврат в выдачу контентный: дописать истории
+  5-грамм) не выкладывается индексируемой: SSR-проекция считает вердикт по когорте
+  своего языка (`scoreCohort` → правило `scripts/lib/questPageDepth`), и
+  страница рендерится с `noindex, follow` (`quality.indexable`,
+  `components/quests/runtime/questPublicSeo.ts`; партия 19.09.2026: Суботица 297
+  и Ниш 299 слова — истории точек по одному предложению). Ноль индексируемых
+  при непустом уровне — потерянное тело, проекция отказывает целиком.
+  Django-sitemap такие адреса по-прежнему перечисляет; возврат в выдачу контентный: дописать истории
   точек.
 - Собственный текст посадочной города — `utils/questCityWalk.js` (`places`
   «что увидите по дороге» + `routes` «как устроены маршруты»). Модель считается
-  из бандлов квестов города и общая для сборки и экрана: SSG зовёт её из
-  `buildQuestCityLandingModel`, приложение — через `hooks/useQuestCityWalk.ts`
+  из бандлов квестов города и общая для публикации и экрана: SSR-проекция зовёт
+  её при сборке посадочной (`buildCity`), приложение — через `hooks/useQuestCityWalk.ts`
   (React Query, максимум `QUEST_CITY_WALK_QUEST_LIMIT = 3` бандла, запрос после
   простоя, web-only). Публикуется ХВОСТ авторского `story` — предложения, которые
   дайджест детальной страницы (#1763) не взял, — поэтому город и его квест не
@@ -1363,13 +1363,11 @@ JSON-LD и видимое тело читают тот же loader result. `requ
   для заметок не оставляют (партия 19.09.2026: 15 городов по 1–2 предложения на
   точку), собирается под build-owned `noindex, follow` — как страна без
   собственного текста (#1929). Индексируемость города решает тот же порог
-  #1930 по всему уровню (`selectIndexableBuiltQuestPages` после сборки всех
-  посадочных): без заметок его не взять по построению, с одной-двумя заметками —
+  #1930 по всему уровню (когорта посадочных в SSR-проекции): без заметок его не взять по построению, с одной-двумя заметками —
   тоже (партия 19.09.2026: Хаапсалу, Клайпеда, Сремски-Карловци, Сигулда,
-  Тракай — 243–280 слов, 20–25% своей лексики); сборка печатает такие города с
-  причиной, а `verify-static-quest-seo.js` требует заметки только от
-  индексируемой посадочной, отвергает `noindex` с меткой Helmet и держит
-  обратное расхождение «очистила пороги, но `noindex`».
+  Тракай — 243–280 слов, 20–25% своей лексики); такие посадочные рендерятся с
+  `noindex, follow`; до публикации тонкий квест ловит
+  `npm run quest:scan-city-walk` (та же проекция).
   Возврат такого города в выдачу — контентный: дописать истории точек хотя бы до
   трёх предложений, чтобы после дайджеста оставался хвост. Порог объёма
   верификатор держит по-прежнему: у `quest-city` больше нет строки в
@@ -1401,22 +1399,18 @@ JSON-LD и видимое тело читают тот же loader result. `requ
   «снять с претензии на поиск» превратилось бы в «выкинуть из сайта».
 - `sitemap.xml` фронт не генерирует: 18 страновых адресов, которые Django
   публикует по своему порогу «городов ≥ 2» (#1771), после этой правки отдают
-  `noindex`. Сборка из-за этого НЕ падает — `warnQuestCountryNoindexInSitemap`
-  пишет предупреждение и называет расхождение, а снять адреса из карты сайта
-  может только backend-задача.
+  `noindex`. Снять адреса из карты сайта может только backend-задача.
 - Правило отбора популярных — `utils/questPopularity.js` (CommonJS, общий для
-  приложения и генератора) и оно обязано совпадать с серверным `?sort=popular`
+  приложения и SSR-проекции) и оно обязано совпадать с серверным `?sort=popular`
   (`-completions_count`, `-views_count`, `id`): приложение берёт порядок у
-  бэкенда одним запросом, `injectHomeQuestsSection` сортирует уже выкачанный
-  каталог локально, иначе краулер и человек видят на главной разные подборки
+  бэкенда одним запросом, SSR-проекция (`discovery.preview`) сортирует уже
+  выкачанный каталог локально, иначе краулер и человек видят на главной разные подборки
   (#1798).
-- Гейт сборки: `node scripts/verify-static-quest-seo.js --dist "dist/$ENV" --api
-  https://metravel.by` в `build-prod.sh` — падает до rsync. Городские HTML
-  проверяются в `dist`, а alias-membership — в живом backend-owned
-  `${API_BASE}/sitemap.xml`. Country HTML проверяется до deploy, но country
-  sitemap membership включается только явным `--verify-country-sitemap` после
-  согласованного релиза backend-задачи `#1606`; HTTP 200 и отсутствие 3xx тоже
-  проверяет post-deploy.
+- Гейт выката: `scripts/verify-live-quest-ssr.js` из `build-prod.sh`
+  (`deploy_prod`) проверяет живой серверный HTML квеста до `finalize-code`;
+  провал — `rollback-code` к предыдущей SSR-паре. Статическая проверка `dist`
+  снята в #2766; sitemap (в том числе country, backend-задача `#1606`) —
+  backend-owned, HTTP 200 и отсутствие 3xx проверяет post-deploy.
 
 ## Внешние зависимости
 
@@ -1466,7 +1460,7 @@ JSON-LD и видимое тело читают тот же loader result. `requ
   `QuestCompletionBadge`, `QuestGuestGate`, `QuestReviewSection`,
   `TravelsForQuestSection`, `guestQuestFlow`,
   `routes/quest-screen-title`;
-- скрипты/гейты — `verify-static-quest-seo`, `scanQuestHintLeak`,
+- скрипты/гейты — `verify-live-quest-ssr`, `scanQuestHintLeak`,
   `questAnswerInsights`, `questBundles`, `quest-finale-video-profile`,
   `helCityQuestAnswers`, `helJurataQuestAnswers`;
 - store — `questFontScaleStore`; печать — `QuestPrintable`.
@@ -1493,7 +1487,7 @@ E2E (Playwright): `e2e/quests-list-detail.spec.ts` (каталог → дета�
   каталоге один город может иметь несколько `city_id` (Гомель 19/92, Гродно
   11/91, Могилёв 14/93). Оба получают один alias, и генерация лендингов в цикле
   по городам молча затирала предыдущую запись. Контроль —
-  `buildQuestCityLandingGroups()` + `verify-static-quest-seo.js`; дубли
+  `buildQuestCityLandingGroups()` + отказ SSR-проекции на дубле identity; дубли
   городов в справочнике остаются задачей бэкенда.
 - **Подсказка выдаёт ответ** (`QUEST-HINT-LEAK-001`). Буквальный класс ловится
   `npm run quest:scan-hint-leak` (порог совпадения 3 символа, exit 1 при

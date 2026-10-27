@@ -1,6 +1,6 @@
 ## Context
 
-See proposal.md for scope. #2700 is the renderer dependency of metadata-only card #2658. The field exists in the public API, but `scripts/lib/travelDetail.js` drops it and both `generate-seo-pages.js` and the travel head viewmodel choose body descriptions. Captured raw inputs replay through the same detail normalizer. The existing `utils/seoText.js` CommonJS module is already shared by SSG and TypeScript consumers.
+See proposal.md for scope. #2700 is the renderer dependency of metadata-only card #2658. The field exists in the public API, but `scripts/lib/travelDetail.js` drops it and both the former static SSG generator (removed in #2766) and the travel head viewmodel choose body descriptions. Captured raw inputs replay through the same detail normalizer. The existing `utils/seoText.js` CommonJS module is already shared by SSG and TypeScript consumers.
 
 ## Goals / Non-Goals
 
@@ -19,7 +19,7 @@ See proposal.md for scope. #2700 is the renderer dependency of metadata-only car
 
 ### Ownership / API and security
 
-Source paths: `utils/seoText.{js,d.ts}`, `scripts/lib/travelDetail.js`, `scripts/generate-seo-pages.js`, `components/travel/details/hooks/travelDetailsContainerViewModel.ts`, `types/types.ts`, `app/+html.tsx`; five existing focused test files cover utility, generator, capture, viewmodel and parser-time head behavior. No backend path is editable. Existing static attribute escaping, bootstrap serialization and DOM head setters remain the only output sinks. No token, URL navigation or media operation is added. SSG Article JSON-LD already consumes the selected description and naturally inherits it; body/FAQ owners remain otherwise unchanged.
+Source paths: `utils/seoText.{js,d.ts}`, `scripts/lib/travelDetail.js`, the former static SSG generator (removed in #2766), `components/travel/details/hooks/travelDetailsContainerViewModel.ts`, `types/types.ts`, `app/+html.tsx`; five existing focused test files cover utility, generator, capture, viewmodel and parser-time head behavior. No backend path is editable. Existing static attribute escaping, bootstrap serialization and DOM head setters remain the only output sinks. No token, URL navigation or media operation is added. SSG Article JSON-LD already consumes the selected description and naturally inherits it; body/FAQ owners remain otherwise unchanged.
 
 ### Other impacts
 

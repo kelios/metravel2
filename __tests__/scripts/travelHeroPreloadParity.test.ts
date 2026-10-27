@@ -1,12 +1,9 @@
 /**
- * #1146: SSG-preload и клиентский hero обязаны запрашивать ОДИН и тот же файл.
- *
- * Две независимые реализации отбора варианта (scripts/generate-seo-pages.js и
- * utils/travelMediaVariants.ts) уже расходились: preload грел один URL, а
- * `<img data-lcp>` просил другой, и hero приезжал дважды. Тест сравнивает обе
- * стороны на реальном манифесте обложки с прода.
- *
- * Плюс два инварианта самого srcset:
+ * #1146: preload hero и сам `<img data-lcp>` обязаны запрашивать ОДИН и тот же
+ * файл. С #2766 вторая (статическая) реализация отбора варианта удалена вместе
+ * с генератором тел статей: статью рендерит SSR, и preload и `<img>` строит
+ * один и тот же `utils/travelMediaVariants.ts`. Здесь остаются инварианты
+ * самого клиентского srcset на реальном манифесте обложки с прода:
  *  - в hero-набор не попадают варианты с другим `fit` (cover обрезает кадр,
  *    contain вписывает — браузер выбирает по DPR, и композиция фото на разных
  *    телефонах получалась разной);
@@ -15,9 +12,6 @@
  *    (210 858 B против 95 182 B, замер прода 2026-07-30).
  */
 
-const { buildTravelHeroPreloadData } = require('@/scripts/generate-seo-pages');
-const { buildTravelSkeletonHtml } = require('@/scripts/ssg-skeletons');
-
 import { Platform } from 'react-native';
 
 import { buildResponsiveImagePropsPreferringMedia } from '@/utils/travelMediaVariants';
@@ -25,7 +19,7 @@ import { buildVersionedImageUrl } from '@/utils/imageOptimization';
 import { createSafeImageUrl } from '@/utils/travelMedia';
 import { PROD_GALLERY_ITEM } from '../fixtures/prodMediaManifest';
 
-// SSG собирает разметку для браузера, поэтому клиентскую сторону сравниваем в web-режиме
+// Hero собирается для браузера, поэтому клиентскую сторону меряем в web-режиме
 // (на native srcSet не строится вовсе).
 const originalOS = Platform.OS;
 beforeAll(() => {
@@ -58,7 +52,6 @@ const MEDIA_ENTRY = {
   },
 };
 
-const TRAVEL = { id: 129, updated_at: null };
 const DETAIL = {
   gallery: [{ id: 100, url: GALLERY_PATH }],
   media: { gallery: [MEDIA_ENTRY] },
@@ -98,32 +91,18 @@ const fitsOf = (srcSet?: string): string[] =>
 const widthsOf = (srcSet?: string): number[] =>
   Array.from(String(srcSet || '').matchAll(/\s(\d+)w/g)).map((m) => Number(m[1]));
 
-describe('hero preload: SSG и клиент сходятся на одном файле', () => {
-  const preload = buildTravelHeroPreloadData(TRAVEL, DETAIL);
-
-  it('SSG отдаёт mobile и desktop варианты', () => {
-    expect(preload?.mobile?.href).toBeTruthy();
-    expect(preload?.desktop?.href).toBeTruthy();
+describe('hero srcset на legacy-манифесте вариантов', () => {
+  // Клиентская сторона считается в web-режиме, который ставит beforeAll, — не на сборе describe.
+  let mobile: ReturnType<typeof buildResponsiveImagePropsPreferringMedia>;
+  let desktop: ReturnType<typeof buildResponsiveImagePropsPreferringMedia>;
+  beforeAll(() => {
+    mobile = buildResponsiveImagePropsPreferringMedia(MEDIA_ENTRY as any, clientBaseSrc(), MOBILE_OPTIONS);
+    desktop = buildResponsiveImagePropsPreferringMedia(MEDIA_ENTRY as any, clientBaseSrc(), DESKTOP_OPTIONS);
   });
 
-  it('mobile: href и srcSet совпадают с клиентскими', () => {
-    const client = buildResponsiveImagePropsPreferringMedia(
-      MEDIA_ENTRY as any,
-      clientBaseSrc(),
-      MOBILE_OPTIONS,
-    );
-    expect(preload.mobile.href).toBe(client.src);
-    expect(preload.mobile.srcSet).toBe(client.srcSet);
-  });
-
-  it('desktop: href и srcSet совпадают с клиентскими', () => {
-    const client = buildResponsiveImagePropsPreferringMedia(
-      MEDIA_ENTRY as any,
-      clientBaseSrc(),
-      DESKTOP_OPTIONS,
-    );
-    expect(preload.desktop.href).toBe(client.src);
-    expect(preload.desktop.srcSet).toBe(client.srcSet);
+  it('отдаёт mobile и desktop варианты', () => {
+    expect(mobile.src).toBeTruthy();
+    expect(desktop.src).toBeTruthy();
   });
 
   it('в hero-srcset нет ни одного cover-варианта', () => {
@@ -131,7 +110,7 @@ describe('hero preload: SSG и клиент сходятся на одном ф�
     // family-роута собираются без `fit` вовсе (его ставит только legacy-роут, см.
     // `servedFromDurableFamily` в `utils/imageProxy.ts`), а вариант манифеста
     // приносит свой `fit` в самом URL. Смешать contain с cover по-прежнему нельзя.
-    for (const srcSet of [preload.mobile.srcSet, preload.desktop.srcSet]) {
+    for (const srcSet of [mobile.srcSet, desktop.srcSet]) {
       const fits = new Set(fitsOf(srcSet));
       expect(fits.has('cover')).toBe(false);
       expect([...fits].every((fit) => fit === 'contain')).toBe(true);
@@ -140,37 +119,8 @@ describe('hero preload: SSG и клиент сходятся на одном ф�
 
   it('мобильный hero не тянет вариант шире слота', () => {
     // 720-слот раньше схлопывался в манифестный hero_1280 (210 858 B).
-    expect(preload.mobile.href).not.toMatch(/[?&]w=1280\b/);
-    expect(Math.max(...widthsOf(preload.mobile.srcSet))).toBeLessThanOrEqual(800);
-  });
-});
-
-describe('#1208: у SSG-hero ровно один растр', () => {
-  const preload = buildTravelHeroPreloadData(TRAVEL, DETAIL);
-  const html: string = buildTravelSkeletonHtml({ heroPreload: preload, name: 'Наш Вьетнам' });
-
-  it('в скелете нет ни одного blur-слоя и ни одного фонового изображения', () => {
-    // Раньше поля letterbox заливали два `<div class="ssg-travel-hero-blur">` с
-    // `background-image` — второй запрос и второй декод на самой тяжёлой странице.
-    expect(html).not.toContain('ssg-travel-hero-blur');
-    expect(html).not.toContain('background-image');
-  });
-
-  it('в скелете ровно одна картинка hero — сам <img>', () => {
-    expect(Array.from(html.matchAll(/<img\b/g))).toHaveLength(1);
-    expect(html).toContain('class="ssg-travel-hero-img"');
-  });
-
-  it('поля заливает dominant_color прямо на контейнере hero', () => {
-    expect(html).toMatch(/class="ssg-travel-hero" style="background-color:#7b7e78"/);
-  });
-
-  it('без dominant_color заливка не выдумывается', () => {
-    const bare = buildTravelHeroPreloadData(TRAVEL, { gallery: [{ id: 100, url: GALLERY_PATH }] });
-    const bareHtml: string = buildTravelSkeletonHtml({ heroPreload: bare, name: 'x' });
-    expect(bareHtml).not.toContain('ssg-travel-hero-blur');
-    expect(bareHtml).not.toContain('background-color:');
-    expect(Array.from(bareHtml.matchAll(/<img\b/g))).toHaveLength(1);
+    expect(mobile.src).not.toMatch(/[?&]w=1280\b/);
+    expect(Math.max(...widthsOf(mobile.srcSet))).toBeLessThanOrEqual(800);
   });
 });
 
@@ -202,20 +152,15 @@ describe('buildResponsiveImagePropsFromMedia: фильтр по fit', () => {
 });
 
 /**
- * #1203: тот же инвариант «preload == запрос `<img>`», но на манифесте, который
- * прод отдаёт СЕЙЧАС — с готовыми `src`/`srcset*` и адресами без `q=`/`fit=`.
- *
- * Блок выше проверяет legacy-формат `variants`, оставшийся фолбэком. Если бы
- * SSG и клиент разошлись именно на новом формате, hero снова качался бы дважды,
- * а старые фикстуры этого не заметили бы.
+ * #1203: те же инварианты на манифесте, который прод отдаёт СЕЙЧАС — с готовыми
+ * `src`/`srcset*` и адресами без `q=`/`fit=`. Блок выше проверяет legacy-формат
+ * `variants`, оставшийся фолбэком.
  */
-describe('#1203 hero preload на готовых источниках манифеста', () => {
+describe('#1203 hero srcset на готовых источниках манифеста', () => {
   const PROD_DETAIL = {
     gallery: [{ id: PROD_GALLERY_ITEM.id, url: String(PROD_GALLERY_ITEM.variants?.original ?? '') }],
     media: { gallery: [PROD_GALLERY_ITEM] },
   };
-
-  const preload = buildTravelHeroPreloadData({ id: 544, updated_at: null }, PROD_DETAIL);
 
   const clientProps = (options: typeof MOBILE_OPTIONS | typeof DESKTOP_OPTIONS) =>
     buildResponsiveImagePropsPreferringMedia(
@@ -223,47 +168,22 @@ describe('#1203 hero preload на готовых источниках маниф
       String(PROD_DETAIL.gallery[0].url),
       options,
     );
-
-  // Манифест отдаёт относительные пути, и каждая сторона резолвит их против
-  // своего origin: SSG — против API-хоста сборки, клиент — против рантайм-origin.
-  // В одном окружении это один и тот же хост, а в тестовой среде — нет, поэтому
-  // сравнивается адрес файла со ступенью. Именно его совпадение решает, приедет
-  // hero одним запросом или двумя.
-  const addressOf = (url: string | undefined): string => {
-    const parsed = new URL(String(url ?? ''));
-    return `${parsed.pathname}${parsed.search}`;
-  };
-  const addressesOf = (srcSet: string | undefined): string[] =>
-    String(srcSet ?? '')
-      .split(',')
-      .map((candidate) => candidate.trim())
-      .filter(Boolean)
-      .map((candidate) => {
-        const [url, descriptor] = candidate.split(/\s+/);
-        return `${addressOf(url)} ${descriptor}`;
-      });
-
-  it('mobile: href и srcSet совпадают с клиентскими', () => {
-    const client = clientProps(MOBILE_OPTIONS);
-    expect(addressOf(preload.mobile.href)).toBe(addressOf(client.src));
-    expect(addressesOf(preload.mobile.srcSet)).toEqual(addressesOf(client.srcSet));
-  });
-
-  it('desktop: href и srcSet совпадают с клиентскими', () => {
-    const client = clientProps(DESKTOP_OPTIONS);
-    expect(addressOf(preload.desktop.href)).toBe(addressOf(client.src));
-    expect(addressesOf(preload.desktop.srcSet)).toEqual(addressesOf(client.srcSet));
+  let mobile: ReturnType<typeof clientProps>;
+  let desktop: ReturnType<typeof clientProps>;
+  beforeAll(() => {
+    mobile = clientProps(MOBILE_OPTIONS);
+    desktop = clientProps(DESKTOP_OPTIONS);
   });
 
   it('мобильный hero остаётся на ступени слота, а не уезжает на contain-набор', () => {
     // `srcset_contain` этой картинки начинается с 720: если бы источником стал
-    // набор одного слота, мобильный preload прыгнул бы на 960.
-    expect(widthsOf(preload.mobile.srcSet)).toEqual([320, 480, 640, 720]);
-    expect(preload.mobile.href).toMatch(/[?&]w=720\b/);
+    // набор одного слота, мобильный hero прыгнул бы на 960.
+    expect(widthsOf(mobile.srcSet)).toEqual([320, 480, 640, 720]);
+    expect(mobile.src).toMatch(/[?&]w=720\b/);
   });
 
   it('адреса идут w-only — ни q=, ни fit= в них не появляется', () => {
-    for (const srcSet of [preload.mobile.srcSet, preload.desktop.srcSet]) {
+    for (const srcSet of [mobile.srcSet, desktop.srcSet]) {
       expect(srcSet).not.toMatch(/[?&]q=/);
       expect(srcSet).not.toMatch(/[?&]fit=/);
     }

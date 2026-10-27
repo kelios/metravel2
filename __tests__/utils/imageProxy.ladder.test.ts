@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
-
 import {
   optimizeImageUrl,
   PROXY_QUALITY_LADDER,
@@ -120,28 +117,6 @@ describe('utils/imageProxy — лестница ширин против конт
     expect(unexpected).toEqual([])
   })
 
-  it('SSG-зеркало лестницы не разошлось с рантайм-лестницей', () => {
-    // `scripts/generate-seo-pages.js` исполняется Node'ом без TS-резолва, поэтому
-    // держит собственную копию лестницы. Расхождение ломает #1146: SSG-preload
-    // греет один вариант hero, а рантайм-слайдер просит другой, и одно и то же фото
-    // приезжает двумя файлами (+211 158 B по замеру из #1143).
-    //
-    // Ровно это и произошло при правке #1170: рантайм получил ступень 720, зеркало
-    // осталось на 800.
-    const source = readFileSync(
-      resolve(__dirname, '..', '..', 'scripts', 'generate-seo-pages.js'),
-      'utf8',
-    )
-    const match = source.match(/const PROXY_DIMENSION_LADDER = \[([\s\S]*?)\]/)
-    expect(match).not.toBeNull()
-    const mirrored = match![1]
-      .split(',')
-      .map((chunk) => chunk.trim())
-      .filter((chunk) => chunk.length > 0)
-      .map(Number)
-    expect(mirrored).toEqual([...BACKEND_CONTRACT_WIDTHS])
-  })
-
   it('quality-лестница включает q85 и совпадает с backend-contract', () => {
     expect(PROXY_QUALITY_LADDER).toEqual(BACKEND_CONTRACT_QUALITIES)
     expect(snapProxyQuality(72)).toBe(80)
@@ -151,19 +126,6 @@ describe('utils/imageProxy — лестница ширин против конт
     expect(snapProxyQuality(88)).toBe(90)
     expect(snapProxyQuality(0)).toBe(85)
     expect(snapProxyQuality(150)).toBe(85)
-
-    const source = readFileSync(
-      resolve(__dirname, '..', '..', 'scripts', 'generate-seo-pages.js'),
-      'utf8',
-    )
-    const match = source.match(/const PROXY_QUALITY_LADDER = \[([\s\S]*?)\]/)
-    expect(match).not.toBeNull()
-    const mirrored = match![1]
-      .split(',')
-      .map((chunk) => chunk.trim())
-      .filter((chunk) => chunk.length > 0)
-      .map(Number)
-    expect(mirrored).toEqual([...BACKEND_CONTRACT_QUALITIES])
   })
 
   it('ступени 720/960/1024/1200 обслуживаются — без них ×1.5-кандидат srcSet схлопывался в 1280', () => {

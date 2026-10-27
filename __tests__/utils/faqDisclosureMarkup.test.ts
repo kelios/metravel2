@@ -51,12 +51,11 @@ describe('countFaqSectionWrappers', () => {
     expect(countFaqSectionWrappers('<p>текст</p>')).toBe(0)
   })
 
-  // Определение секции живёт в генераторе — он единственный решает, что уйдёт в
-  // FAQPage. Копия в приложении существует только потому, что генератор
-  // CJS-скрипт сборки и в бандл не импортируется; разъехаться копиям нельзя.
-  it('совпадает с определением генератора', () => {
-    const generator = require('../../scripts/generate-seo-pages')
-    expect(FAQ_SECTION_OPEN_TAG).toBe(generator.FAQ_SECTION_OPEN_TAG)
+  // Определение секции живёт в `utils/travelFaq.js` — он единственный решает,
+  // что уйдёт в FAQPage (его читает SSR loader статьи). Разъехаться копиям нельзя.
+  it('совпадает с определением FAQPage-разбора', () => {
+    const travelFaq = require('../../utils/travelFaq')
+    expect(FAQ_SECTION_OPEN_TAG).toBe(travelFaq.FAQ_SECTION_OPEN_TAG)
   })
 })
 

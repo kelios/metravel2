@@ -33,13 +33,13 @@ describe('getTravelDetailsSeoViewModel', () => {
     );
   });
 
-  it('uses the same stored metadata as SSG after API normalization without changing canonical or title', () => {
+  it('uses the shared stored-metadata rule after API normalization without changing canonical or title', () => {
     const meta = 'Прогулка по старому городу: замок, набережная и тихие улицы. Советы для самостоятельной поездки.';
     const raw = { id: 116, name: 'Прогулка по Минску', slug: 'minsk-fixture',
       description: '<p>Different body lead</p>', meta_description: meta, gallery: [] };
     const travel = normalizeTravelItem(raw);
     const seo = getTravelDetailsSeoViewModel(travel, raw.slug);
-    const { buildTravelSeoDescription } = require('@/scripts/generate-seo-pages');
+    const { buildTravelSeoDescription } = require('@/utils/travelSeoDescription');
     const { normalizeTravelDetail } = require('@/scripts/lib/travelDetail');
     const detail = normalizeTravelDetail(raw);
     expect(seo.readyDesc).toBe(meta);

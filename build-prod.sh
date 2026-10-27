@@ -30,7 +30,6 @@ source "$(dirname "${BASH_SOURCE[0]}")/scripts/deploy-target.sh"
 # .env до конца цикла бы не дожил. Все временные пути объявлены глобально: trap
 # выполняется на верхнем уровне и `local`-переменные функций там не видны.
 EXPORT_LOG=''
-REMOTE_LOG=''
 ENV_BACKUP=''
 ENV_BACKUP_PRESENT=0
 BUILD_SOURCE_SHA=''
@@ -39,18 +38,6 @@ MEDIA_CHECKS_LOG=''
 STAGE_NAME=''
 STAGE_STARTED_AT=0
 STAGE_REPORT=''
-QUEST_SEO_MODE="${QUEST_SEO_MODE:-legacy}"
-QUEST_SEO_CANDIDATE=''
-QUEST_SEO_ARGS=()
-QUEST_CAPTURE_PID=''
-QUEST_CAPTURE_CONTROL=''
-QUEST_CAPTURE_LOG=''
-QUEST_CAPTURE_NONCE=''
-SEO_INPUT_PID=''
-SEO_INPUT_CONTROL=''
-SEO_INPUT_LOG=''
-SEO_INPUT_NONCE=''
-SEO_INPUT_ARGS=()
 SSR_EXPORT_DIR="$PWD/.codex-temp/deploy/ssr-export"
 SSR_RELEASE_DIR="$PWD/.codex-temp/deploy/ssr-release"
 SSR_CODE_RELEASE=0
@@ -82,21 +69,19 @@ print_stage_report() {
   echo "⏱  Итого: ${SECONDS} с"
 }
 
-# Медиа-проверки прода — в фоне экспорта (legacy) или offline SEO (v1). Обе смотрят
-# не выкатываемый фронтенд, а медиа из прод-API: `post-deploy-media-check.js`
-# сверяет вес, кэш и ресайз по URL из `/api/travels/` и `/api/quests/` (#1195),
+# Медиа-проверки прода — в фоне экспорта. Они смотрят не выкатываемый
+# фронтенд, а медиа из прод-API: `post-deploy-media-check.js` сверяет вес, кэш и
+# ресайз по URL из `/api/travels/` и `/api/quests/` (#1195),
 # `audit-article-body-media.js` щупает картинки тел статей (#1834, #1088).
 # Выкат их результата не меняет, а в хвосте выката они добавляли 75 с. Экспорт
-# грузит локальный CPU, эти проверки — сеть. В v1 они стартуют только после
-# завершения SEO collection и читают её raw details; свои каталоги, anchor IDs
-# и media-пробы сохраняют. Перед API-гвардами ждём их конца (#1966). Вердикт,
-# как и прежде, сборку не валит.
+# грузит локальный CPU, эти проверки — сеть. Перед публикацией ждём их конца
+# (#1966). Вердикт, как и прежде, сборку не валит.
 start_prod_media_checks() {
   MEDIA_CHECKS_LOG="$(mktemp -t metravel-media-checks 2>/dev/null || mktemp /tmp/metravel-media-checks.XXXXXX)"
   (
-    node scripts/post-deploy-media-check.js --url https://metravel.by ${SEO_INPUT_ARGS[@]+"${SEO_INPUT_ARGS[@]}"} \
+    node scripts/post-deploy-media-check.js --url https://metravel.by \
       || echo "⚠️  Проверка медиа-контракта прода нашла замечания — посмотри: npm run test:media:postdeploy:verbose"
-    node scripts/audit-article-body-media.js --url https://metravel.by ${SEO_INPUT_ARGS[@]+"${SEO_INPUT_ARGS[@]}"} \
+    node scripts/audit-article-body-media.js --url https://metravel.by \
       || echo "⚠️  В телах статей есть битые или осиротевшие картинки — посмотри: npm run test:media:body -- --verbose"
   ) >"$MEDIA_CHECKS_LOG" 2>&1 &
   MEDIA_CHECKS_PID=$!
@@ -117,71 +102,6 @@ stop_prod_media_checks() {
   pkill -P "$MEDIA_CHECKS_PID" 2>/dev/null || true
   kill "$MEDIA_CHECKS_PID" 2>/dev/null || true
   MEDIA_CHECKS_PID=''
-}
-
-# FD 9 is the build's private control FIFO, never a signal target. The Node
-# supervisor remains alive after early capture completion until finish/cancel;
-# wait therefore always refers to our child even when Bash has reaped it early.
-start_quest_overlay_capture() {
-  metravel_deploy_defaults
-  export EXPO_OVERLAY_RETENTION_DAYS EXPO_OVERLAY_MAX_MB DEPLOY_DISK_RESERVE_MB
-  mkdir -p "$(dirname "$QUEST_SEO_STATE_PATH")"
-  QUEST_CAPTURE_NONCE="$(node -e "process.stdout.write(require('crypto').randomBytes(24).toString('hex'))")"
-  QUEST_CAPTURE_CONTROL="$(mktemp -d "${QUEST_SEO_STATE_PATH}.control.XXXXXX")"
-  mkfifo -m 600 "$QUEST_CAPTURE_CONTROL/commands"
-  QUEST_CAPTURE_LOG="$QUEST_CAPTURE_CONTROL/capture.log"
-  exec 9<>"$QUEST_CAPTURE_CONTROL/commands"
-  node scripts/quest-seo-operation.js capture "dist/$ENV" "$QUEST_SEO_STATE_PATH" "$QUEST_CAPTURE_NONCE" \
-    <"$QUEST_CAPTURE_CONTROL/commands" >"$QUEST_CAPTURE_LOG" 2>&1 9>&- &
-  QUEST_CAPTURE_PID=$!
-}
-
-close_quest_overlay_capture() {
-  local command="$1" status=0
-  [[ -n "$QUEST_CAPTURE_PID" ]] || return 0
-  printf '%s\n' "$command" >&9
-  # A signal can interrupt this wait and enter on_exit. Keep cancel writable
-  # until the child is reaped so that cleanup can replace a pending finish.
-  wait "$QUEST_CAPTURE_PID" || status=$?
-  exec 9>&-
-  QUEST_CAPTURE_PID=''
-  cat "$QUEST_CAPTURE_LOG"
-  rm -rf "$QUEST_CAPTURE_CONTROL"
-  QUEST_CAPTURE_CONTROL=''
-  QUEST_CAPTURE_LOG=''
-  return "$status"
-}
-
-# FD 8 remains writable until the owned worker has been reaped, including when
-# TERM interrupts a finish wait. Capture files stay private and build-local.
-start_seo_input_collection() {
-  SEO_INPUT_CONTROL="$(mktemp -d "${QUEST_SEO_STATE_PATH}.seo-inputs.XXXXXX")"
-  SEO_INPUT_NONCE="$(node -e "process.stdout.write(require('crypto').randomBytes(24).toString('hex'))")"
-  SEO_INPUT_LOG="$SEO_INPUT_CONTROL/collection.log"
-  mkfifo -m 600 "$SEO_INPUT_CONTROL/commands"
-  exec 8<>"$SEO_INPUT_CONTROL/commands"
-  local command
-  command="$(node -e 'process.stdout.write(JSON.stringify(process.argv.slice(1)))' \
-    "$(command -v node)" "$PWD/scripts/generate-seo-pages.js" --api https://metravel.by \
-    --collect-inputs "$SEO_INPUT_CONTROL/inputs.json" --quest-seo-input-nonce "$SEO_INPUT_NONCE" \
-    --frontend-sha "$BUILD_SOURCE_SHA" "${QUEST_SEO_ARGS[@]}")"
-  node scripts/seo-inputs-supervisor.js supervise "$command" \
-    <"$SEO_INPUT_CONTROL/commands" >"$SEO_INPUT_LOG" 2>&1 8>&- 9>&- &
-  SEO_INPUT_PID=$!
-  SEO_INPUT_ARGS=(--quest-seo-inputs "$SEO_INPUT_CONTROL/inputs.json" \
-    --quest-seo-input-nonce "$SEO_INPUT_NONCE" --frontend-sha "$BUILD_SOURCE_SHA" \
-    --quest-seo-publication-mode "$QUEST_SEO_MODE")
-}
-
-close_seo_input_collection() {
-  local command="$1" status=0
-  [[ -n "$SEO_INPUT_PID" ]] || return 0
-  printf '%s\n' "$command" >&8
-  wait "$SEO_INPUT_PID" || status=$?
-  exec 8>&-
-  SEO_INPUT_PID=''
-  cat "$SEO_INPUT_LOG"
-  return "$status"
 }
 
 # .env общий для всех параллельных сессий в этом чекауте, а apply_env копирует
@@ -242,11 +162,6 @@ on_exit() {
   # restore_env_file, иначе бросил бы общий .env прод-копией — ENV_BACKUP к
   # этому моменту уже обнулён, и повторной попытки не будет.
   trap '' INT TERM HUP
-  # Cancel and reap the private capture group BEFORE restoring .env or releasing
-  # the enclosing build mutex. Never kill a saved background PID.
-  close_seo_input_collection cancel || true
-  close_quest_overlay_capture cancel || true
-  if [[ -n "$SEO_INPUT_CONTROL" ]]; then rm -rf "$SEO_INPUT_CONTROL"; fi
   print_stage_report || true
   stop_prod_media_checks
   close_planned_load_window || true
@@ -255,9 +170,6 @@ on_exit() {
   fi
   if [[ -n "${EXPORT_LOG:-}" ]]; then
     rm -f "$EXPORT_LOG"
-  fi
-  if [[ -n "${REMOTE_LOG:-}" ]]; then
-    rm -f "$REMOTE_LOG"
   fi
   restore_env_file
   exit "$status"
@@ -408,354 +320,25 @@ verify_quest_runtime() {
   node scripts/verify-live-quest-ssr.js "${args[@]}"
 }
 
+# Прод-выкат публикует только связанную пару SSR-релиза (#2766): серверный
+# рендер и клиентскую статику одного экспорта. Статическая публикация поверх
+# живого SSR запрещена (scripts/lib/webOutput.js), а откат SSR возвращает
+# предыдущую SSR-пару, не статику.
 deploy_prod() {
   local ENV="$1"
-  if [[ "${SSR_CODE_RELEASE:-0}" == "1" ]]; then
-    bash scripts/web-ssr-publication.sh stage "$BUILD_SOURCE_SHA" "$SSR_RELEASE_DIR"
-    if ! { bash scripts/web-ssr-publication.sh publish-code "$BUILD_SOURCE_SHA" &&
-           node scripts/verify-live-web-ssr.js "$BUILD_SOURCE_SHA" --readiness-mode deployment &&
-           verify_quest_runtime deployment; }; then
-      echo "❌ Рендер не прошёл проверку — возвращаю связанную серверную и клиентскую версию"
-      bash scripts/web-ssr-publication.sh rollback-code "$BUILD_SOURCE_SHA" || echo "❌ Возврат требует восстановления владельцем"
-      return 1
-    fi
-    bash scripts/web-ssr-publication.sh finalize-code "$BUILD_SOURCE_SHA"
-    return
-  fi
-  if [[ "$QUEST_SEO_MODE" != "legacy" ]]; then
-    if [[ "${METRAVEL_WEB_OUTPUT:-static}" == "server" ]]; then
-      bash scripts/web-ssr-publication.sh stage "$BUILD_SOURCE_SHA" "$SSR_RELEASE_DIR"
-    fi
-    bash scripts/quest-seo-operation.sh publish "dist/$ENV" "$QUEST_SEO_STATE_PATH"
-    if [[ "${METRAVEL_WEB_OUTPUT:-static}" == "server" ]]; then
-      if ! { bash scripts/web-ssr-publication.sh activate "$BUILD_SOURCE_SHA" &&
-             node scripts/verify-live-web-ssr.js "$BUILD_SOURCE_SHA"; }; then
-        echo "❌ SSR не прошёл проверку готовности — возвращаю сервер и статический релиз"
-        bash scripts/web-ssr-publication.sh rollback "$BUILD_SOURCE_SHA" || echo "❌ Возврат SSR требует восстановления владельцем"
-        bash scripts/quest-seo-operation.sh rollback "$QUEST_SEO_STATE_PATH" || echo "❌ Возврат статического релиза требует восстановления владельцем"
-        return 1
-      fi
-      bash scripts/web-ssr-publication.sh finalize "$BUILD_SOURCE_SHA"
-    fi
-    return
-  fi
-  local EXPO_OVERLAY_RETENTION_DAYS EXPO_OVERLAY_MAX_MB
-  local DEPLOY_DISK_RESERVE_MB DEPLOY_BACKEND_BUILD_MB
-  metravel_deploy_defaults || return 1
-  local EXPO_OVERLAY_HELPER="scripts/deploy-expo-overlay.sh"
-  local EXPO_OVERLAY_HELPER_B64
-  local DISK_GUARD_HELPER="scripts/deploy-disk-guard.sh"
-  local DISK_GUARD_HELPER_B64
-  local PAYLOAD_KIB
-  local CONTAINER_HELPER_B64
-  local REMOTE_DONE_MARKER
-  local QUEST_SEO_TRANSPORT_B64 QUEST_SEO_LEGACY_B64
-  QUEST_SEO_TRANSPORT_B64="$(base64 < scripts/quest-seo-transport.py | tr -d '\n')"
-  QUEST_SEO_LEGACY_B64="$(base64 < scripts/quest-seo-legacy-operation.sh | tr -d '\n')"
-
-  if [[ ! -f "$EXPO_OVERLAY_HELPER" ]]; then
-    echo "❌ Expo overlay helper is missing: $EXPO_OVERLAY_HELPER"
+  if [[ "${SSR_CODE_RELEASE:-0}" != "1" || "$ENV" != "prod" ]]; then
+    echo "❌ Выкат публикует только SSR-релиз prod (EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR=true)"
     return 1
   fi
-  if [[ ! -f "$DISK_GUARD_HELPER" ]]; then
-    echo "❌ Disk guard helper is missing: $DISK_GUARD_HELPER"
+  bash scripts/web-ssr-publication.sh stage "$BUILD_SOURCE_SHA" "$SSR_RELEASE_DIR"
+  if ! { bash scripts/web-ssr-publication.sh publish-code "$BUILD_SOURCE_SHA" &&
+         node scripts/verify-live-web-ssr.js "$BUILD_SOURCE_SHA" --readiness-mode deployment &&
+         verify_quest_runtime deployment; }; then
+    echo "❌ Рендер не прошёл проверку — возвращаю связанную серверную и клиентскую версию"
+    bash scripts/web-ssr-publication.sh rollback-code "$BUILD_SOURCE_SHA" || echo "❌ Возврат требует восстановления владельцем"
     return 1
   fi
-  EXPO_OVERLAY_HELPER_B64="$(base64 < "$EXPO_OVERLAY_HELPER" | tr -d '\n')"
-  DISK_GUARD_HELPER_B64="$(base64 < "$DISK_GUARD_HELPER" | tr -d '\n')"
-  # Резолв имени контейнера едет тем же путём, что и overlay-хелпер: heredoc
-  # ниже закавычен, поэтому подставить снипет прямо в текст нельзя. Регулярка
-  # имени живёт только в scripts/deploy-target.sh (#1636, борд #733).
-  CONTAINER_HELPER_B64="$(metravel_container_remote_snippet | base64 | tr -d '\n')"
-
-  require_deploy_target || return 1
-
-  # Only dist/$ENV travels: build_env leaves root-level dot paths (staging
-  # dirs, locks) outside it, while copy-public-files publishes the required
-  # .well-known tree and the source marker inside the environment artifact.
-  #
-  # The upload staging dir is removed after every deploy, so without a basis
-  # rsync re-sent the whole ~370 MB artifact (~100 MB compressed) each time.
-  # `--copy-dest` points it at the live release (#2013): unchanged files are
-  # copied on the server, changed ones travel as deltas against the live copy.
-  #
-  # Copied, not linked: the whole release lands in staging next to the live
-  # one, so the server needs that much free space before the first byte is
-  # sent. The guard refuses here, while nothing has been written yet (#2186).
-  PAYLOAD_KIB="$(du -sk "./dist/$ENV" | awk '{ print $1 }')"
-  if ! ssh "$PROD_SSH_TARGET" bash -s -- preflight \
-    "$PROD_REMOTE_DIR" \
-    "$PAYLOAD_KIB" \
-    "$DEPLOY_DISK_RESERVE_MB" \
-    "$DEPLOY_BACKEND_BUILD_MB" < "$DISK_GUARD_HELPER"; then
-    echo "❌ Проверка места на диске прода не пройдена — заливка не начата"
-    return 1
-  fi
-  local rsync_started=$SECONDS
-  rsync -azHhe "ssh" --delete --mkpath --stats \
-    --copy-dest="$PROD_REMOTE_DIR/static/dist" \
-    "./dist/$ENV/" \
-    "$PROD_SSH_TARGET:$PROD_REMOTE_DIR/dist/$ENV/"
-  echo "⏱  rsync: $((SECONDS - rsync_started)) с"
-  local remote_started=$SECONDS
-
-  # The success marker travels as an argument and comes back only if the
-  # remote program reached its final line. The heredoc is quoted, so the
-  # nonce never appears in the program text: a stdin-consuming command that
-  # echoes the swallowed tail can leak the variable name, never the value.
-  REMOTE_DONE_MARKER="MT_REMOTE_DEPLOY_OK:$(date +%s).$$.$RANDOM"
-  REMOTE_LOG="$(mktemp -t metravel-remote-deploy 2>/dev/null || mktemp /tmp/metravel-remote-deploy.XXXXXX)"
-
-  # Send the remote program as literal stdin. Embedding it in a local
-  # double-quoted argument strips nested quotes and turns punctuation inside
-  # diagnostics into remote shell syntax before bash can parse the program.
-  # The remote directory travels as an argument for the same reason: the
-  # heredoc is quoted, so nothing local expands inside it.
-  # ssh joins the arguments into one command line and the remote shell splits
-  # it again, so an empty argument would vanish and shift the ones behind it:
-  # every argument below is validated as non-empty before this call.
-  ssh "$PROD_SSH_TARGET" bash -s -- \
-    "$ENV" \
-    "$EXPO_OVERLAY_RETENTION_DAYS" \
-    "$EXPO_OVERLAY_HELPER_B64" \
-    "$PROD_REMOTE_DIR" \
-    "$REMOTE_DONE_MARKER" \
-    "$CONTAINER_HELPER_B64" \
-    "$EXPO_OVERLAY_MAX_MB" \
-    "$DISK_GUARD_HELPER_B64" \
-    "$DEPLOY_BACKEND_BUILD_MB" \
-    "$QUEST_SEO_TRANSPORT_B64" \
-    "$QUEST_SEO_LEGACY_B64" <<'REMOTE_DEPLOY_SCRIPT' | tee "$REMOTE_LOG"
-set -e
-
-# The program itself is bash's stdin (ssh ... bash -s), read lazily while it
-# runs. Any command that reads stdin swallows the not-yet-executed remainder,
-# and bash exits 0 at the resulting EOF — readiness and cleanup silently
-# skipped (2026-08-11 incident). 'docker compose exec -T' keeps stdin open
-# (-T only disables the TTY), so every docker invocation below isolates
-# stdin with </dev/null. Never 'exec </dev/null' at the top of this program:
-# the program IS stdin, that would truncate it immediately.
-
-ENV="$1"
-EXPO_OVERLAY_RETENTION_DAYS="$2"
-EXPO_OVERLAY_HELPER_B64="$3"
-REMOTE_DIR="$4"
-DEPLOY_SUCCESS_MARKER="$5"
-CONTAINER_HELPER_B64="$6"
-EXPO_OVERLAY_MAX_MB="$7"
-DISK_GUARD_HELPER_B64="$8"
-DEPLOY_BACKEND_BUILD_MB="$9"
-
-# Общий резолв имени контейнера (scripts/deploy-target.sh). Декодируется из
-# аргумента, а не читается со stdin: stdin здесь — сама эта программа.
-if [ -z "$CONTAINER_HELPER_B64" ]; then
-  echo "❌ Container helper argument is required"
-  exit 1
-fi
-eval "$(printf '%s' "$CONTAINER_HELPER_B64" | base64 -d)"
-
-if [ -z "$DEPLOY_SUCCESS_MARKER" ]; then
-  echo "❌ Deploy success marker argument is required"
-  exit 1
-fi
-
-cd "$REMOTE_DIR"
-mkdir -p static
-eval "$(printf '%s' "${11}" | base64 -d)"
-app_ctr=$(metravel_resolve_container app)
-QUEST_SEO_TRANSPORT_B64="${10}"
-legacy_token=$(quest_seo_legacy_operation legacy-check)
-# static/ is bind-mounted into the app container at /app/static. Swap dirs
-# (dist.new/dist.old) get created by the container user (uid 1984) or an
-# out-of-band op, so they end up owned by a uid the host login cannot
-# unlink — a plain host 'rm -rf' silently fails and stale dist.old(.stale-*)
-# dirs pile up (past manual-recovery need). Route every destructive removal
-# through root inside the container; mv/rename still works on the host
-# (write on static/ is enough for a rename within it).
-app_ctr=$(metravel_resolve_container app 2>/dev/null || true)
-if [ -z "$app_ctr" ]; then
-  echo "⚠️ app container not found; stale-dir cleanup falls back to host rm (may lack permissions)"
-fi
-rroot() { # rm -rf the given paths as root in the container; never abort
-  if [ -n "$app_ctr" ]; then
-    docker exec -u 0 "$app_ctr" sh -c "rm -rf $1" </dev/null || true
-  else
-    rm -rf $1 2>/dev/null || true
-  fi
-}
-
-# Purge leftovers from a prior interrupted/manual deploy before the swap.
-quest_seo_legacy_operation legacy-prune "$legacy_token"
-
-# Nginx serves /static/* from the shared static root, while the web export
-# lives one level deeper in static/dist. Publish the canonical quest
-# fallback at its backend-owned URL before swapping the web build.
-quest_cover_repo_path=static/quests/quest-default-cover.svg
-quest_cover_source=dist/$ENV/static/quests/quest-default-cover.svg
-quest_cover_dir=static/quests
-quest_cover_target=static/quests/quest-default-cover.svg
-if git ls-files --error-unmatch -- "$quest_cover_repo_path" >/dev/null 2>&1; then
-  echo "❌ Refusing to overwrite Git-tracked path: $quest_cover_repo_path"
-  exit 1
-fi
-if [ ! -s "$quest_cover_source" ]; then
-  echo "❌ Quest fallback cover is missing or empty: $quest_cover_source"
-  exit 1
-fi
-if [ -L "$quest_cover_dir" ] || [ -L "$quest_cover_target" ]; then
-  echo "❌ Refusing to publish the quest fallback through a symlink"
-  exit 1
-fi
-if [ -e "$quest_cover_target" ] && [ ! -f "$quest_cover_target" ]; then
-  echo "❌ Refusing to replace a non-file quest fallback target"
-  exit 1
-fi
-mkdir -p "$quest_cover_dir"
-quest_cover_tmp=$(mktemp "$quest_cover_dir/.quest-default-cover.svg.XXXXXX")
-cp "$quest_cover_source" "$quest_cover_tmp"
-mv -f "$quest_cover_tmp" "$quest_cover_target"
-if ! cmp -s "$quest_cover_source" "$quest_cover_target"; then
-  echo "❌ Published quest fallback does not match the deploy artifact"
-  exit 1
-fi
-
-mv dist/$ENV static/dist.new
-
-# Keep previous hashed Expo JS/CSS assets for a bounded overlap window.
-# This prevents "Requiring unknown module" crashes for active browser tabs
-# that still execute older runtime chunks during a fresh deploy.
-# Backfill while the previous release is still live; the new HTML and its
-# static tree are exposed together only by the directory swap below.
-# The window is bounded twice: by age and by a byte budget, because its size
-# follows the number of deploys inside the window, not the days (#2186).
-# The helper stamps the fresh generation even when no previous tree exists.
-printf '%s' "$EXPO_OVERLAY_HELPER_B64" | base64 -d | bash -s -- \
-  static/dist.new/_expo/static \
-  static/dist/_expo/static \
-  "$EXPO_OVERLAY_RETENTION_DAYS" \
-  "$EXPO_OVERLAY_MAX_MB"
-
-legacy_token=$(quest_seo_legacy_operation legacy-commit "$legacy_token")
-readiness_deadline=$(( $(date +%s) + 30 ))
-
-if command -v docker >/dev/null 2>&1 && docker compose version </dev/null >/dev/null 2>&1; then
-  compose_nginx() {
-    docker compose -f docker-compose-prod.app.yaml exec -T nginx "$@" </dev/null
-  }
-else
-  compose_nginx() {
-    docker-compose -f docker-compose-prod.app.yaml exec -T nginx "$@" </dev/null
-  }
-fi
-
-nginx_validate() {
-  compose_nginx /etc/nginx/sbin/nginx -t -c /etc/nginx/conf/nginx.conf
-}
-
-nginx_reload() {
-  compose_nginx /etc/nginx/sbin/nginx -s reload -c /etc/nginx/conf/nginx.conf
-}
-
-activate_nginx() {
-  nginx_validate && nginx_reload
-}
-
-wait_for_public_health() {
-  local attempt=1
-  local last_status=unreachable
-  local now
-  local remaining
-  local request_timeout
-
-  # The deadline starts at the static swap, so validation/reload time cannot
-  # silently extend acceptance past the 30-second contract.
-  while true; do
-    now=$(date +%s)
-    remaining=$((readiness_deadline - now))
-    if [ "$remaining" -le 0 ]; then
-      break
-    fi
-    request_timeout=2
-    if [ "$remaining" -lt "$request_timeout" ]; then
-      request_timeout="$remaining"
-    fi
-    last_status=$(curl -sS -o /dev/null -w '%{http_code}' \
-      --connect-timeout 1 --max-time "$request_timeout" https://metravel.by/health || true)
-    if [ "$last_status" = 200 ]; then
-      echo "✅ Public readiness confirmed on attempt $attempt"
-      return 0
-    fi
-    if [ $((readiness_deadline - $(date +%s))) -gt 1 ]; then
-      sleep 1
-    fi
-    attempt=$((attempt + 1))
-  done
-
-  echo "❌ Public readiness did not return HTTP 200 (last status: $last_status)"
-  return 1
-}
-
-rollback_static() {
-  echo "↩️ Restoring the previous static tree"
-  legacy_token=$(quest_seo_legacy_operation legacy-rollback "$legacy_token") || return 1
-  if ! activate_nginx; then
-    echo "❌ Previous static tree was restored, but Nginx reload failed"
-    return 1
-  fi
-}
-
-fail_after_swap() {
-  local reason="$1"
-  echo "❌ $reason"
-  if ! rollback_static; then
-    echo "❌ Automatic static rollback was incomplete; app process was left untouched"
-  fi
-  exit 1
-}
-
-if ! activate_nginx; then
-  fail_after_swap "Nginx validation or graceful reload failed"
-fi
-if ! wait_for_public_health; then
-  fail_after_swap "Public readiness gate failed"
-fi
-
-# Drop the rollback copy only after graceful activation and public readiness.
-quest_seo_legacy_operation legacy-prune "$legacy_token"
-# The uploaded tree can contain top-level dot paths alongside dist/$ENV.
-# Remove staging through the same root-in-container chokepoint and verify the
-# postcondition so a successful deploy never leaves the backend checkout dirty.
-rroot '/app/dist'
-if [ -e dist ]; then
-  echo "❌ Failed to remove upload staging directory: dist"
-  exit 1
-fi
-# Disk line for the report of every deploy (#2186): the release is published
-# and verified by now, so a failing measurement must not fail the deploy.
-if [ -n "$DISK_GUARD_HELPER_B64" ]; then
-  printf '%s' "$DISK_GUARD_HELPER_B64" | base64 -d | bash -s -- \
-    report "$REMOTE_DIR" static/dist "$DEPLOY_BACKEND_BUILD_MB" ||
-    echo "⚠️ Disk usage report failed; the deploy itself is published"
-fi
-# Last command by contract: the caller refuses success without this line.
-# The leading newline keeps the marker on its own line for the caller's
-# whole-line grep even if earlier output ended without a trailing newline.
-printf '\n%s\n' "$DEPLOY_SUCCESS_MARKER"
-REMOTE_DEPLOY_SCRIPT
-
-  # ssh exit 0 alone is not success: when a stdin-consuming command swallows
-  # the unread remainder of the program, bash hits EOF and still returns 0.
-  # Only the echoed nonce proves the remote program ran through its final
-  # line — readiness, rollback handling and cleanup included.
-  if ! grep -qxF -- "$REMOTE_DONE_MARKER" "$REMOTE_LOG"; then
-    echo "❌ Remote deploy output is missing the success marker — the readiness/cleanup tail did not run"
-    return 1
-  fi
-  echo "⏱  удалённая публикация: $((SECONDS - remote_started)) с"
-  rm -f "$REMOTE_LOG"
-  REMOTE_LOG=''
-
-  rm -rf dist
+  bash scripts/web-ssr-publication.sh finalize-code "$BUILD_SOURCE_SHA"
 }
 
 ENV=''
@@ -786,25 +369,13 @@ if [[ "$SSR_CODE_RELEASE" == "1" && "$ENV" != "prod" ]]; then
   echo "❌ Публикация SSR-кода требует явного prod target"
   exit 1
 fi
-if [[ "${METRAVEL_WEB_OUTPUT:-static}" == "server" && "$DEPLOY" == "1" && "$QUEST_SEO_MODE" == "legacy" && "$SSR_CODE_RELEASE" != "1" ]]; then
-  echo "❌ SSR publication requires the managed quest release and paired rollback"
+# Выкат (DEPLOY=1) — только SSR prod: сущности рендерит сервер, а статического
+# пути публикации больше нет (#2766). Build-only превью (DEPLOY=0) любого
+# окружения собирается как прежде.
+if [[ "$DEPLOY" == "1" && "$SSR_CODE_RELEASE" != "1" ]]; then
+  echo "❌ Выкат публикует только SSR-релиз prod: нужны EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR=true и server output (scripts/deploy-prod.sh выставляет их по capability бэкенда); для сборки без выката — DEPLOY=0"
   exit 1
 fi
-case "$QUEST_SEO_MODE" in
-  legacy | ru-only | translations) ;;
-  *) echo "ERROR: QUEST_SEO_MODE must be legacy, ru-only or translations" >&2; exit 1 ;;
-esac
-if [[ "$QUEST_SEO_MODE" != "legacy" && "$SSR_CODE_RELEASE" != "1" ]]; then
-  [[ "$ENV" == "prod" ]] || { echo "ERROR: v1 release requires explicit prod target" >&2; exit 1; }
-  mkdir -p .codex-temp/deploy
-  QUEST_SEO_CANDIDATE="$PWD/.codex-temp/deploy/quest-candidate-$$.json"
-  QUEST_SEO_STATE_PATH="${QUEST_SEO_STATE_PATH:-$PWD/.codex-temp/deploy/quest-state-$(date -u +%Y%m%dT%H%M%SZ)-$$.json}"
-  export QUEST_SEO_STATE_PATH
-  QUEST_SEO_RECEIPT_COMMAND="bash $(printf '%q' "$PWD/scripts/quest-seo-operation.sh") receipt"
-  export QUEST_SEO_RECEIPT_COMMAND
-  QUEST_SEO_ARGS=(--quest-seo-candidate "$QUEST_SEO_CANDIDATE" --quest-seo-publication-mode "$QUEST_SEO_MODE")
-fi
-
 assert_deployable_source "$ENV" "$ALLOW_DIRTY" "$DEPLOY"
 open_planned_load_window
 
@@ -812,12 +383,8 @@ echo "🔁 Старт сборки..."
 stage "зависимости"
 install_deps
 
-if [[ "$DEPLOY" == "1" && "$ENV" == "prod" && ( "$QUEST_SEO_MODE" == "legacy" || "$SSR_CODE_RELEASE" == "1" ) ]]; then
+if [[ "$DEPLOY" == "1" ]]; then
   start_prod_media_checks
-fi
-if [[ "$QUEST_SEO_MODE" != "legacy" && "$SSR_CODE_RELEASE" != "1" ]]; then
-  start_quest_overlay_capture
-  start_seo_input_collection
 fi
 
 stage "экспорт Metro"
@@ -836,72 +403,12 @@ if [[ -n "$MEDIA_CHECKS_PID" ]]; then
   stage "медиа-проверки прода (фон, ждём конца)"
   finish_prod_media_checks
 fi
-if [[ -n "$QUEST_CAPTURE_PID" ]]; then
-  stage "quest v1: ожидание захвата assets (фон Metro)"
-  close_quest_overlay_capture finish
-fi
-
-if [[ -n "$SEO_INPUT_PID" ]]; then
-  stage "quest v1: ожидание SEO-данных (фон Metro)"
-  close_seo_input_collection finish
-  # The collector is reaped before a media audit can produce API requests.
-  # Audits keep their own full catalogue/mandatory upload anchors. Their network
-  # overlaps only the offline renderer, and is finished before API guards.
-  if [[ "$DEPLOY" == "1" && "$ENV" == "prod" ]]; then start_prod_media_checks; fi
-fi
-stage "генерация SEO-страниц"
-echo "Генерация SEO-страниц..."
-node scripts/generate-seo-pages.js --dist "dist/$ENV" --api https://metravel.by ${QUEST_SEO_ARGS[@]+"${QUEST_SEO_ARGS[@]}"} ${SEO_INPUT_ARGS[@]+"${SEO_INPUT_ARGS[@]}"}
-if [[ -n "$MEDIA_CHECKS_PID" ]]; then
-  stage "медиа-проверки прода (фон offline SEO, ждём конца)"
-  finish_prod_media_checks
-fi
+stage "постобработка оболочек маршрутов"
+# Тела статей, квестов, городов и стран рендерит SSR loader; здесь только
+# head статических маршрутов, /article/<id>, fallback-шаблоны и chunk guard.
+node scripts/postprocess-route-shells.js --dist "dist/$ENV" --api https://metravel.by
 
 stage "проверки статики"
-
-if [[ "$SSR_CODE_RELEASE" != "1" ]]; then
-# FE-IDX-1: убедиться, что тело статьи реально инжектировано в статику.
-# Без этого Googlebot видит пустой скелетон → "просканирована, но не проиндексирована".
-echo "Проверка: тело статей в статике (FE-IDX-1)..."
-BODY_PAGES=$( { grep -rl "ssg-travel-article" "dist/$ENV/travels" 2>/dev/null || true; } | wc -l | tr -d ' ')
-if [[ "${BODY_PAGES:-0}" -lt 1 ]]; then
-  echo "❌ Ни одна travel-страница не содержит тело статьи (ssg-travel-article) — FE-IDX-1 сломан, прерываю деплой."
-  exit 1
-fi
-echo "✅ Тело статьи инжектировано в $BODY_PAGES travel-страниц"
-
-# Инвариант: ровно один <h1> на travel-странице (пост-деплой проверка это требует).
-echo "Проверка: ровно один <h1> на travel-страницу (выборка)..."
-# mapfile отсутствует в bash 3.2 (macOS) — наполняем массив через while-read + process substitution.
-H1_SAMPLE=()
-while IFS= read -r _h1_line; do
-  H1_SAMPLE+=("$_h1_line")
-done < <(find "dist/$ENV/travels" -name "index.html" 2>/dev/null | head -20)
-BAD_H1=0
-for f in "${H1_SAMPLE[@]:-}"; do
-  [[ -f "$f" ]] || continue
-  n=$( { grep -o "<h1[ >]" "$f" 2>/dev/null || true; } | wc -l | tr -d ' ')
-  if [[ "$n" != "1" ]]; then echo "  ✗ $f: <h1> = $n"; BAD_H1=1; fi
-done
-if [[ "$BAD_H1" == "1" ]]; then
-  echo "❌ Нарушен инвариант: на travel-странице должен быть ровно один <h1>. Прерываю деплой."
-  exit 1
-fi
-echo "✅ Ровно один <h1> на странице"
-
-echo "Проверка SEO-артефактов..."
-node scripts/verify-static-travel-seo.js --dist "dist/$ENV" --api https://metravel.by
-else
-  echo "✅ Тела статей и квестов принадлежат loader; проверка живого HTML выполняется перед финализацией"
-fi
-
-# Квесты — отдельный контент-слой со своими страницами и city-лендингами.
-# Транзиентный сбой API однажды молча выкинул их все из билда, а гварды выше
-# смотрят только на travel-страницы. Сверяем живой каталог с тем, что собрано.
-if [[ "$QUEST_SEO_MODE" == "legacy" && "$SSR_CODE_RELEASE" != "1" ]]; then
-  echo "Проверка: quest-страницы и city-лендинги в статике..."
-  node scripts/verify-static-quest-seo.js --dist "dist/$ENV" --api https://metravel.by
-fi
 node scripts/guard-site-owner-name.js --dist "dist/$ENV"
 
 stage "постобработка"
@@ -919,7 +426,7 @@ done
 node scripts/add-cache-bust-meta.js "dist/$ENV"
 
 # #2762: одинаковые на всех страницах <style> (RNW, critical CSS, скелет) —
-# в общие /_expo/static/css/*.css, иначе каждое поколение quest v1 несёт
+# в общие /_expo/static/css/*.css, иначе каждое поколение статики несёт
 # ~250 МБ копий и пик выката упирается в бюджет. До guard'ов HTML и до
 # предсжатия: новые .css получают .br.
 node scripts/externalize-head-styles.js "dist/$ENV"
@@ -945,19 +452,6 @@ fi
 # ниже копирует только *.js/*.css и копий не получает — их nginx сожмёт сам.
 stage "предсжатие статики (brotli q11)"
 node scripts/precompress-static-assets.js "dist/$ENV"
-
-if [[ "$QUEST_SEO_MODE" != "legacy" && "$SSR_CODE_RELEASE" != "1" ]]; then
-  stage "quest v1: проверка и применение захваченных assets"
-  bash scripts/quest-seo-operation.sh apply "dist/$ENV" "$QUEST_SEO_STATE_PATH" "$QUEST_CAPTURE_NONCE"
-  stage "quest v1: полная проверка live-каталога после HTML writers"
-  node scripts/verify-static-quest-seo.js --dist "dist/$ENV" --api https://metravel.by --quest-seo-candidate-pending
-  stage "quest v1: R2 и финализация с preseal-проверкой"
-  node scripts/finalize-quest-seo-package.js --dist "dist/$ENV" --candidate "$QUEST_SEO_CANDIDATE"
-  stage "quest v1: независимая postseal-проверка"
-  node scripts/verify-static-quest-seo.js --dist "dist/$ENV" --quest-seo-package-only
-  stage "quest v1: private index и архив"
-  node scripts/quest-seo-operation.js prepare "dist/$ENV" "$QUEST_SEO_STATE_PATH"
-fi
 
 if [[ "$SSR_CODE_RELEASE" == "1" ]]; then
   # Publish the finished shell metadata, markers and precompressed assets from

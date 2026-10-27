@@ -66,7 +66,7 @@ Before a mutating deploy, also take a read-only baseline for the target, for exa
 
 ## Deploy Commands
 
-Use the existing scripts and documented ops wrapper; do not invent parallel deploy paths. The build scripts run the canonical web export, SEO/static generation, static travel SEO guards, public-file copy, and cache-bust post-processing.
+Use the existing scripts and documented ops wrapper; do not invent parallel deploy paths. The build scripts run the canonical web export, route-shell post-processing (`scripts/postprocess-route-shells.js`), HTML guards, public-file copy, and cache-bust post-processing. Entity pages (travels, quests, cities, countries) are rendered per request by the SSR loaders (#2766).
 
 Build without deploy:
 
@@ -80,9 +80,10 @@ Deploy:
 
 ```bash
 bash build-dev.sh
-./build-prod.sh preprod
-./build-prod.sh prod
+DEPLOY_QUIET=1 scripts/deploy-prod.sh <sha>
 ```
+
+Production publishes only the SSR release pair: `scripts/deploy-prod.sh` reads the backend SSR capability and runs `./build-prod.sh prod` with the server output; `build-prod.sh` refuses `DEPLOY=1` without it (#2766), so `./build-prod.sh preprod` is build-only (`DEPLOY=0`).
 
 Dev server deploy uses the documented `bash build-dev.sh` path: it performs a clean dependency reinstall, builds `dist/dev`, uploads frontend static assets to `192.168.50.36`, swaps `static/dist`, and restarts `app` + `nginx`. Do not use `./build-prod.sh dev` as a substitute for the LAN dev-server deploy unless project docs have been updated to define that target.
 

@@ -6,7 +6,7 @@ import { translate as i18nT } from '@/i18n'
 import { getSeasonalThemeBootScript } from '@/utils/seasonalThemeBootScript'
 import { SECRET_LINK_ROUTE_PATHS } from '@/utils/secretLinkRoutes'
 
-const { injectMeta } = require('@/scripts/generate-seo-pages')
+const { injectMeta } = require('@/scripts/postprocess-route-shells')
 const { normalizeHeadCharset } = require('@/scripts/lib/htmlCharset')
 const { normalizeMetaDescription } = require('@/scripts/lib/htmlMetaDescription')
 const { getStoredTravelSeoDescription } = require('@/utils/seoText')

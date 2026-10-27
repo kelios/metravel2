@@ -5,7 +5,7 @@ import { Platform } from 'react-native'
 // visible hero title (accessibilityRole="header" + aria-level=1, which
 // react-native-web resolves to a real <h1> tag at runtime). The SSG static
 // export separately injects a hidden `<h1 data-ssg-travel-h1>` sibling of
-// #root for no-JS crawlers (scripts/generate-seo-pages.js `injectHiddenH1`);
+// #root for no-JS crawlers (scripts/postprocess-route-shells.js `injectHiddenH1`);
 // hydration never touches that sibling on its own, so HomeScreen must tear
 // it down once the real content mounts — mirroring
 // TravelDetailsCriticalShell's teardown of the same shared marker.

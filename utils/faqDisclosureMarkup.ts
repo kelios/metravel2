@@ -10,17 +10,17 @@
  *    вынул FAQ (#1764).
  *
  * Это намеренно грубая мера «структура на месте», а не вторая копия разбора
- * FAQ: сами пары вопрос-ответ собирает генератор (`extractFaqEntries` в
- * `scripts/generate-seo-pages.js`), и он остаётся единственным, кто решает, что
- * попадёт в FAQPage.
+ * FAQ: сами пары вопрос-ответ собирает `extractFaqEntries` из `utils/travelFaq.js`
+ * (его читает SSR loader статьи, `components/travel/details/travelRouteLoader.ts`),
+ * и он остаётся единственным, кто решает, что попадёт в FAQPage.
  */
 
 /**
  * Открывающий тег секции-обёртки. Зеркалит `FAQ_SECTION_OPEN_TAG` из
- * `scripts/generate-seo-pages.js`: тот файл — CJS-скрипт сборки, из бандла
- * приложения он не импортируется, поэтому строка продублирована. Расхождение
- * двух копий ловит `__tests__/utils/faqDisclosureMarkup.test.ts`, который
- * читает константу у самого генератора.
+ * `utils/travelFaq.js` (до #2766 строка жила в статическом генераторе SEO-страниц,
+ * отсюда копия). Расхождение двух копий ловит
+ * `__tests__/utils/faqDisclosureMarkup.test.ts`, который читает константу у
+ * `utils/travelFaq.js`.
  */
 export const FAQ_SECTION_OPEN_TAG =
   '<section[^>]*(?:class="[^"]*seo-faq[^"]*"|data-faq="metravel-seo")[^>]*>'

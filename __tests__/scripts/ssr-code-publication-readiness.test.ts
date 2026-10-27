@@ -8,8 +8,7 @@ const sha = 'a'.repeat(40);
 const source = fs.readFileSync(path.resolve('build-prod.sh'), 'utf8');
 const shellFunction = (name: string) => {
   const start = source.indexOf(`${name}() {`);
-  const terminator = name === 'deploy_prod' ? source.indexOf('\nREMOTE_DEPLOY_SCRIPT\n', start) : start;
-  const end = source.indexOf('\n}\n', terminator);
+  const end = source.indexOf('\n}\n', start);
   if (start < 0 || end < 0) throw new Error(`Missing real build function ${name}`);
   return source.slice(start, end + 3);
 };
@@ -91,6 +90,25 @@ deploy_prod prod
       expect(result.stdout).toContain('content=pending');
       expect(calls).toContain('finalize-code');
       expect(calls).not.toContain('rollback-code');
+    }
+  });
+
+  it('refuses any publication that is not the prod SSR release (#2766)', () => {
+    const runner = path.join(fixture, 'refuse.sh');
+    fs.writeFileSync(runner, `set -euo pipefail
+${shellFunction('verify_quest_runtime')}
+${shellFunction('deploy_prod')}
+deploy_prod "$1"
+`);
+    const actions = path.join(fixture, 'actions');
+    for (const [release, env] of [['0', 'prod'], ['1', 'dev']]) {
+      const result = runCli('/bin/bash', [runner, env], { cwd: process.cwd(), timeoutMs: 10000, env: {
+        PATH: `${fixture}${path.delimiter}${process.env.PATH}`, SSR_PIPELINE_ACTIONS: actions,
+        SSR_CODE_RELEASE: release, BUILD_SOURCE_SHA: sha, SSR_RELEASE_DIR: fixture,
+      } });
+      expect(result.status).not.toBe(0);
+      expect(result.stdout).toContain('только SSR-релиз prod');
+      expect(fs.existsSync(actions)).toBe(false);
     }
   });
 });

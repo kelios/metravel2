@@ -66,70 +66,33 @@ Runtime: только после review/push и общего B–E выпуск�
 no-JS/head/статусы, desktop/mobile screenshots/console/network, предпочтение
 EN при URL PL, прямой вход/refresh/SPA, withdrawal/retry, один quest view.
 
-## Статический пакет SSG — #2365 (B)
+## Серверный рендер локалей (SSR, #2766)
 
-Сборка пакета включается только явно. Режим `QUEST_SEO_MODE=legacy` в
-`build-prod.sh` выпускает прежний RU-only dist (prefixed-страниц, слотов и
-манифеста нет, раздача и sitemap не меняются). V1-режимы E описаны ниже.
+С 27.10.2026 детальные страницы квестов на всех пяти языках, посадочные
+городов и стран рендерит сервер Expo Router (SSR loaders) из проекции
+публикации `scripts/lib/questWebProjection.js` (бэкенд строит её сборщиком
+`scripts/package-quest-web-builder.js`): деталь каждой опубликованной
+и полной локали, RU-посадочные, вердикт глубины ≥300 слов / ≥30 % своих
+5-грамм в когорте своего языка (`questPageDepth`) и проверка раскрытия
+заданий (`questSpoilerGuard`). Подписи страницы — из каталогов i18n
+(SSG-only `seoSsg:questDetail.*` из `i18n/locales/<locale>/ssg/`, в
+клиентские чанки не попадает, #2399; справка точки, «Квесты в соседних
+городах» и «Все городские квесты» — общие ключи городской страницы
+`quests:app.tabs.quests.city.index.*`).
 
-1. `generate-seo-pages.js --quest-seo-candidate <файл вне dist>
-   --quest-seo-receipt-command "<cmd>"` (или `$QUEST_SEO_RECEIPT_COMMAND`):
-   квитанция C R1 до первого чтения контента, сверка каталога с квитанцией,
-   RU-детали со слотами `QUEST_LOCALE_HEAD_V1`/`LINKS_V1`/`BOOTSTRAP_V1`,
-   точные `?lang=` чтения только опубликованных и полных переводов, отбор по
-   `content_locale` и `available_locales`, глубина ≥300 слов / ≥30 % своих
-   5-грамм в когорте своего языка (`questPageDepth`, пороги прежние), RU-якорь
-   обязан быть индексируемым. Подписи страницы — из каталогов i18n
-   (SSG-only `seoSsg:questDetail.*` из `i18n/locales/<locale>/ssg/`, в клиентские
-   чанки не попадает, #2399; справка точки, «Квесты в соседних городах»
-   и «Все городские квесты» — общие ключи городской страницы
-   `quests:app.tabs.quests.city.index.*`), RU-значения равны прежним литералам.
-   Языковой участник строится из RU-экспорта деталки, но его `#root` пуст и
-   флаг `__EXPO_ROUTER_HYDRATE__` выключен (`scripts/lib/expoStaticShell.js`):
-   RU-рендер `#root` — другой маршрут на другом языке, его гидратация давала
-   React #418 и русскую оболочку до загрузки JS (#2449). Клиент монтирует
-   адаптер `createRoot` на языке URL; crawlable-тело вне `#root` не меняется.
-   `memberDocumentIssues` отвергает переводной участник с флагом или RU-рендером.
-   Переводной участник шлёт до `entry` чанки своего маршрута — `[...missing]`,
-   его shared-зависимости и boot-каталог `locale-<lang>-boot-*.js`
-   (`readQuestLocaleBootChunks` → `writeQuestLocaleBootCatalogs`):
-   загруженные цепочкой после `entry`, они подвешивали маршрут, и React
-   троттлил раскрытие экрана на 300 мс после последнего fallback (#2465);
-   пакет без них не проходит проверку. Boot-каталог (#2484) — только ключи,
-   чьи хеши `{h:…}` есть в чанках head страницы (~21 КБ brotli вместо ~115 КБ
-   полного): полный `locale-<lang>` в head запрещён, он грузится сразу после
-   старта (`i18n/translate.web.ts`), и до его прихода загрузчик держит каждый
-   ленивый чанк. `bootChunkIssues` проверяет покрытие ключей. `QuestWizard`
-   стартует вместе с модулем маршрута и монтируется без приостановки, если
-   уже загружен: иначе его fallback включал тот же троттлинг раскрытия.
-   Блок «Куда дальше» (#2467): имя своего города во фразах — на языке
-   страницы (`city.name_localized`, если это не RU-фолбэк API), иначе русское
-   в `<span lang="ru">`; ссылки на русские страницы (D1) — `lang="ru"` у
-   подписи и `hreflang="ru"`; сосед с опубликованным переводом того же языка
-   ведёт на `/<lang>/quests/…` (решается после вердикта когорты: глубина
-   меряется без текста ссылок). На pl/en кириллица в блоке — только внутри
-   `lang="ru"`; ссылка `/<lang>/quests/…` — только на члена манифеста.
-2. После постобработки HTML: `finalize-quest-seo-package.js --dist <dist>
-   --candidate <файл>` берёт R2, требует R1 ≡ R2, считает checksum хранимых
-   байт, проверяет весь пакет и последним пишет `quest-seo-manifest.v1.json`.
-3. `verify-static-quest-seo.js --quest-seo-package-only` перепроверяет пакет с
-   диска; в обычном режиме prefixed-артефакты без манифеста — ошибка (флаг
-   `--quest-seo-candidate-pending` — только между шагами 1 и 2).
+Выкат публикует только SSR-пару (`scripts/deploy-prod.sh` →
+`build-prod.sh prod` → `scripts/web-ssr-publication.sh
+stage/publish-code/finalize-code`, откат `rollback-code`); живую выдачу
+квеста перед финализацией проверяет `scripts/verify-live-quest-ssr.js`.
 
-Fail-closed: сбой/таймаут квитанции, неполный или неудачный fetch бандла,
-расхождение каталога и квитанции или R1 ≠ R2 отвергают кандидата целиком — нет
-манифеста, прежний активный пакет остаётся. Отсутствие перевода выводится
-только из квитанции и точного ответа API, не из транспортной ошибки.
+## История: статический пакет SSG — #2365 (B) и release integration — E #2366
 
-Активация и exposure — E #2366 / D: публиковать пакет только через
-`quest_seo_activate`; rsync пакета в legacy `static/dist` недопустим —
-закреплённый legacy nginx отдаёт `/{locale}/quests/...` по `try_files $uri.html`.
-
-## Release integration — E #2366
-
-The normal release entrypoint supports full RU-only and translated v1 packages,
-private full R1/R2 fencing, pinned bounded overlay before sealing, immutable
-staging, exact receipts, CAS activation and rollback. Legacy writers refuse
-managed roots. See [release/maintenance/recovery runbook](../ops/quest-locale-release.md).
-Backend C/D owns initial conversion, Nginx and exposure; production acceptance
-remains required for A–E.
+До #2766 переводные страницы квестов собирались статическим пакетом v1:
+бывший SSG-генератор строил RU-детали со слотами
+`QUEST_LOCALE_HEAD_V1`/`LINKS_V1`/`BOOTSTRAP_V1` и языковых участников из
+RU-экспорта под квитанциями R1/R2, манифест `quest-seo-manifest.v1.json`
+финализировался после постобработки HTML, а релиз шёл режимами
+`ru-only`/`translations` с CAS-активацией и откатом. Весь этот конвейер
+(генерация, захват входов, проверка статики, квитанции, режимы релиза) снят в
+#2766; помощники аварийного восстановления статического корня описаны в
+[runbook](../ops/quest-locale-release.md).

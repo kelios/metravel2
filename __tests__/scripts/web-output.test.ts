@@ -23,18 +23,18 @@ describe('backend SSR capability', () => {
       .toEqual({ output: 'server', questRuntime: true })
   })
 
-  it('serves production from the server export only through the committed rollout switch', () => {
-    const { WEB_SSR_ROLLOUT_ENABLED, resolveDeployWebOutput } = require('@/scripts/lib/webOutput')
+  it('publishes production only from the server export and refuses a capability without the quest runtime (#2766)', () => {
+    const { resolveDeployWebOutput } = require('@/scripts/lib/webOutput')
     const capability = { schema_version: 2, available: true, enabled: true, quest_web: quest }
-    // Switched on by the owner on 27.10.2026 (#2768) after local hydration of
-    // the home page, quests and articles at 390/768/1440; on again once the
-    // quest refresher fit its memory limit (#2771).
-    expect(WEB_SSR_ROLLOUT_ENABLED).toBe(true)
     expect(resolveDeployWebOutput(capability)).toEqual({ output: 'server', questRuntime: true })
-    expect(resolveDeployWebOutput(capability, false)).toEqual({ output: 'static', questRuntime: false })
-    expect(resolveDeployWebOutput({ schema_version: 2, available: false, enabled: false, quest_web: quest }))
-      .toEqual({ output: 'static', questRuntime: false })
+    // The static entity pipeline is gone and an SSR rollback returns the previous
+    // SSR pair, so a disabled or article-only backend refuses instead of downgrading.
+    expect(() => resolveDeployWebOutput({ schema_version: 2, available: false, enabled: false, quest_web: quest }))
+      .toThrow('publishes only SSR')
+    expect(() => resolveDeployWebOutput({ schema_version: 1, available: true, enabled: true }))
+      .toThrow('publishes only SSR')
     expect(() => resolveDeployWebOutput({ schema_version: 2, available: true, enabled: true })).toThrow('quest SSR capability')
+    expect(require('@/scripts/lib/webOutput')).not.toHaveProperty('WEB_SSR_ROLLOUT_ENABLED')
   })
 
   it('uses only a canonical public control selected by the activated backend generation', () => {
