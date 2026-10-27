@@ -14,6 +14,8 @@ import { isPhoneLayout } from '@/utils/phoneLayout';
 import { useQuestDiscovery } from '@/components/quests/runtime/QuestDiscoveryContext'
 import { webDataSetProps } from '@/utils/webProps'
 import { buildQuestPath } from '@/utils/routePaths'
+import { buildCanonicalUrl } from '@/utils/seo'
+import { jsonLdScript } from '@/components/seo/jsonLdScript'
 
 
 const IS_WEB = Platform.OS === 'web'
@@ -53,8 +55,25 @@ function HomeQuestsPromoSection({ enabled = true }: { enabled?: boolean }) {
 
   const handleScenario = useCallback(() => {
     sendAnalyticsEvent('HomeClick_QuestScenario', { source: 'home_quests' })
-    router.push(SCENARIO_ROUTE as any)
-  }, [router])
+  }, [])
+
+  // The section's quests as an ItemList, in the server HTML too: Head would not
+  // reach it, so the server-rendered home carries it in the body (#2817).
+  const itemListJsonLd = useMemo(() => {
+    if (!responsiveWeb) return null
+    const itemListElement = previewQuests.flatMap((quest) => {
+      const path = buildQuestPath(quest.cityId, quest.id)
+      return path ? [{ url: buildCanonicalUrl(path), name: quest.title }] : []
+    }).map((entry, index) => ({ '@type': 'ListItem', position: index + 1, ...entry }))
+    // An empty ItemList is invalid structured data: publish none, as the static page did.
+    return itemListElement.length ? {
+      '@context': 'https://schema.org', '@type': 'ItemList',
+      name: i18nT('quests:components.home.HomeQuestsPromoSection.gorodskie_kvesty_6436f91c'),
+      url: buildCanonicalUrl('/'),
+      numberOfItems: itemListElement.length,
+      itemListElement,
+    } : null
+  }, [responsiveWeb, previewQuests])
 
   // Без скелетонов: пока грузится или пусто — секции на главной нет (бережём LCP).
   if (loading || visibleQuests.length === 0) return null
@@ -62,6 +81,7 @@ function HomeQuestsPromoSection({ enabled = true }: { enabled?: boolean }) {
   return (
     <View style={[styles.band, isMobile && styles.bandMobile]}
       {...(responsiveWeb ? webDataSetProps({ homeQuestPromo: true }) : {})}>
+      {itemListJsonLd ? jsonLdScript(itemListJsonLd, { marker: 'home-quests-itemlist' }) : null}
       <ResponsiveContainer maxWidth="xl" padding clientOnly={!responsiveWeb}
         dataSet={responsiveWeb ? { homeQuestContainer: true } : undefined}>
         <View style={styles.header} {...(responsiveWeb ? webDataSetProps({ homeQuestHeader: true }) : {})}>
@@ -101,12 +121,14 @@ function HomeQuestsPromoSection({ enabled = true }: { enabled?: boolean }) {
           </View>
         )}
 
-        {/* Подарочный сценарий-вход: отдельный CTA под подбор «квест в подарок». */}
+        {/* Подарочный сценарий-вход: отдельный CTA под подбор «квест в подарок».
+            Настоящая ссылка, а не только onPress: краулер видит её в HTML (#2817). */}
+        <Link href={SCENARIO_ROUTE as Href} asChild onPress={handleScenario}>
         <Pressable
-          onPress={handleScenario}
           accessibilityRole={IS_WEB ? ('link' as any) : 'button'}
           accessibilityLabel={i18nT('quests:components.home.HomeQuestsPromoSection.scenarioAria')}
-          style={[styles.scenarioCard, scenarioHovered && styles.scenarioCardHover]}
+          // Link asChild сливает стиль спредом: только плоский объект, не массив.
+          style={StyleSheet.flatten([styles.scenarioCard, scenarioHovered && styles.scenarioCardHover])}
           {...(responsiveWeb ? webDataSetProps({ homeQuestScenario: true }) : {})}
           {...(IS_WEB
             ? ({
@@ -141,6 +163,7 @@ function HomeQuestsPromoSection({ enabled = true }: { enabled?: boolean }) {
             </View>
           )}
         </Pressable>
+        </Link>
 
         <View style={styles.ctaRow}>
           <Pressable

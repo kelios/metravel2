@@ -84,6 +84,13 @@ it.each([[390, 844], [768, 1024], [1440, 900], [2048, 900], [2560, 640]])(
     expect([...cardHrefs.slice(0, 4), ...moreLinks.map((link) => link.getAttribute('href'))]).toEqual(expectedHrefs);
     expect([...cardHrefs, ...moreLinks.filter((link) => Number(link.getAttribute('data-home-quest-more-index')) >= 6)
       .map((link) => link.getAttribute('href'))]).toEqual(expectedHrefs);
+    // #2817: the server HTML carries the section's ItemList and a real scenario link.
+    const itemLists = container.querySelectorAll('script[data-seo-jsonld="home-quests-itemlist"]');
+    expect(itemLists).toHaveLength(1);
+    const itemList = JSON.parse(itemLists[0].textContent || '{}');
+    expect(itemList.numberOfItems).toBe(8);
+    expect(itemList.itemListElement.map((entry: { url: string }) => new URL(entry.url).pathname)).toEqual(expectedHrefs);
+    expect(container.querySelectorAll('a[href="/quests/scenario"]')).toHaveLength(1);
     const errors: unknown[] = [];
     let root: ReturnType<typeof hydrateRoot> | undefined;
     try {

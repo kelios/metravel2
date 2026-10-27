@@ -14,6 +14,7 @@ import { useBreakpoints } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import { buildCanonicalUrl, buildOgImageUrl, QUESTS_OG_IMAGE_PATH } from '@/utils/seo'
 import { buildBrandedSeoTitle } from '@/utils/questSeo'
+import { useQuestDiscovery } from '@/components/quests/runtime/QuestDiscoveryContext'
 import { buildQuestCityAliasMap } from '@/utils/questCityAlias'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -127,6 +128,8 @@ export default function QuestScenarioScreen() {
   const navigation = useNavigation()
   const colors = useThemedColors()
   const { quests } = useQuestsList()
+  // Server-rendered: JSON-LD goes in the body, Head never reaches SSR HTML (#2817).
+  const jsonLdInBody = Boolean(useQuestDiscovery())
   const navigationTitle = i18nT('quests:screens.tabs.QuestScenarioScreen.breadcrumb')
 
   // Stack/nav header title — otherwise the raw «scenario» URL segment shows up.
@@ -249,9 +252,10 @@ export default function QuestScenarioScreen() {
           canonical={canonical}
           ogType="website"
           image={buildOgImageUrl(QUESTS_OG_IMAGE_PATH)}
-          additionalTags={structuredData}
+          additionalTags={jsonLdInBody ? undefined : structuredData}
         />
       ) : null}
+      {isFocused && jsonLdInBody ? structuredData : null}
 
       <Link href={QUEST_LIST_ROUTE} asChild>
         <Pressable

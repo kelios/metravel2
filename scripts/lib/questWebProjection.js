@@ -23,6 +23,10 @@ const hash = (value) => createHash('sha256').update(JSON.stringify(value)).diges
 const paragraphList = (text) => String(text || '').split(/\n{2,}/).map((value) => value.replace(/\s+/g, ' ').trim()).filter(Boolean);
 const item = (title, path = null, text = '', facts = '', lang = null) => ({ title: String(title || ''), path, text, facts, lang });
 const section = (heading, paragraphs = [], items = []) => ({ heading, paragraphs, items });
+// The city's quest list and a detail's sibling links read in title order, as the
+// static pages did (#2817); catalog order would pick other siblings for the six slots.
+const questTitle = (quest) => String(quest?.title || 'Городской квест').trim();
+const byTitle = (quests) => [...quests].sort((a, b) => questTitle(a).localeCompare(questTitle(b), 'ru'));
 function absoluteImage(image) {
   const parsed = new URL(image || FALLBACK_IMAGE, ORIGIN);
   if (!safePublicImageUrl(parsed.href)) throw new Error('Invalid quest cover URL');
@@ -68,7 +72,7 @@ function buildDetail(quest, bundle, route, record, locale, city, snapshot, ssg) 
       null, point.sentences.join(' '), point.facts.join(' · ')))));
   if (city) {
     const targetLang = translated ? 'ru' : null;
-    const siblings = city.quests.filter((other) => other.quest_id !== quest.quest_id).slice(0, 6).map((other) => {
+    const siblings = byTitle(city.quests).filter((other) => other.quest_id !== quest.quest_id).slice(0, 6).map((other) => {
       const otherRoute = questRouteKey(other);
       const key = `${otherRoute.cityId}/${otherRoute.questId}`;
       const translatedBundle = snapshot.bundles[locale]?.[key];
@@ -126,13 +130,15 @@ function buildCity(city, bundles, travels, countries, ssg) {
       route.museumCount > 0 && `Музеев по дороге: ${route.museumCount} — часы работы лучше проверить заранее.`,
       route.petFriendly && 'Маршрут отмечен как подходящий для прогулки с собакой.'].filter(Boolean).join(' ');
   }).filter(Boolean)));
-  sections.push(section(`Квесты города: ${name}`, [], city.quests.map((quest) => item(quest.title, questRouteKey(quest).path))));
+  sections.push(section(`Квесты города: ${name}`, [], byTitle(city.quests).map((quest) => item(questTitle(quest), questRouteKey(quest).path))));
   const nearby = findNearbyQuestCityGroups(city, countries.cityGroups, { limit: 4 });
   if (nearby.length) sections.push(section('Квесты в соседних городах', [`${name} уже в плане? Посмотрите другие города с квестами рядом.`], nearby.map((other) =>
     item(other.cityName || other.segment, `/quests/${other.segment}`, '', `${other.quests.length} ${ruPlural(other.quests.length, 'квест', 'квеста', 'квестов')}, ${Math.round(other.distanceKm)} км`))));
   const links = findQuestCityTravelLinks({ name, ...city }, travels, 4);
   if (links.length) sections.push(section(`Путешествия: ${name}`, ['Статьи и готовые маршруты путешественников помогут дополнить прогулку.'], links.map((link) => item(link.title, link.path))));
-  const country = countries.groups.find((group) => group.countryCode === city.countryCode && questCountryLandingIsLinkable(group));
+  // City groups carry the catalog's lower-case code, country groups ISO upper case.
+  const countryCode = String(city.countryCode || '').toUpperCase();
+  const country = countries.groups.find((group) => group.countryCode === countryCode && questCountryLandingIsLinkable(group));
   sections.push(section('', [], [
     ...(country ? [item(`Все квесты страны: ${country.countryName}`, `/quests/country/${country.countryAlias}`)] : []),
     item('Все городские квесты', '/quests'),

@@ -16,9 +16,15 @@ import { getQuestContentLocale } from '@/api/questContentLocale'
 
 const mockPush = jest.fn()
 
-jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: mockPush }),
-}))
+jest.mock('expo-router', () => {
+  const React = require('react')
+  return {
+    useRouter: () => ({ push: mockPush }),
+    // asChild Link: the child keeps its press, then the router follows href.
+    Link: ({ children, href, onPress }: { children: React.ReactElement; href: string; onPress?: () => void }) =>
+      React.cloneElement(React.Children.only(children), { onPress: () => { onPress?.(); mockPush(href) } }),
+  }
+})
 jest.mock('@/utils/analytics', () => ({
   sendAnalyticsEvent: jest.fn(),
   queueAnalyticsEvent: jest.fn(),

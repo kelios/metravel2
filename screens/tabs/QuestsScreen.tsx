@@ -30,6 +30,7 @@ import { useQuestPersonalSlices } from './useQuestPersonalSlices';
 import { getQuestFaqItems } from './QuestsSeoIntroFaq';
 import type { QuestMeta } from './questsShared';
 import { createQuestCatalogStructuredData } from '@/utils/discoverySeo';
+import { useQuestDiscovery } from '@/components/quests/runtime/QuestDiscoveryContext';
 import { getStyles } from './QuestsScreen.styles';
 import {
     STORAGE_SELECTED_CITY,
@@ -126,6 +127,9 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
 
     // API data
     const { quests: ALL_QUESTS, loading: questsLoading, error: questsError } = useQuestsList();
+    // A server-rendered catalogue publishes its JSON-LD in the body: expo-router
+    // Head never reaches the SSR HTML, so via Head crawlers would get none (#2817).
+    const jsonLdInBody = Boolean(useQuestDiscovery());
     // A server-seeded catalogue still waits for hydration: the grid sizes its
     // cards from a measured width, so the first frame keeps the static skeleton
     // (no reflow of seeded cards — CLS 0.14 on /quests@1440 under SSR).
@@ -715,9 +719,10 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
                     canonical={buildCanonicalUrl('/quests')}
                     ogType="website"
                     image={buildOgImageUrl(QUESTS_OG_IMAGE_PATH)}
-                    additionalTags={questsSeoTags}
+                    additionalTags={jsonLdInBody ? undefined : questsSeoTags}
                 />
             )}
+            {isFocused && !route && jsonLdInBody ? questsSeoTags : null}
 
             {/* Mobile: Filter drawer overlay */}
             {isMobile && filterDrawerOpen && (

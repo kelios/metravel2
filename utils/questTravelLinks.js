@@ -90,7 +90,10 @@ function travelProfile(travel) {
     travelCity: normalizeLocationText(travel?.cityName || travel?.city_name || travel?.city?.name),
     travelCountry: normalizeLocationText(travel?.countryName || travel?.country_name),
     travelCode: String(travel?.countryCode || travel?.country_code || '').trim().toLowerCase(),
-    coords: extractTravelCoordsForQuestPromo(travel),
+    // A city's travels are the ones anchored there: the first point, as the
+    // catalog card's lat/lng. A multi-point road trip passing by is not one
+    // (#2817: every point let roundups displace the city's own articles).
+    coords: extractTravelCoordsForQuestPromo(travel).slice(0, 1),
   };
   if (travel && typeof travel === 'object') travelProfiles.set(travel, profile);
   return profile;

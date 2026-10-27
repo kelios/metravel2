@@ -71,3 +71,32 @@ describe('QuestsScreen default catalog head (#1618)', () => {
     expect(UNSAFE_root.findAll((node) => node.type === 'h1')).toHaveLength(0)
   })
 })
+
+describe('QuestsScreen catalog JSON-LD placement (#2817)', () => {
+  type Node = ReturnType<typeof render>['UNSAFE_root']
+  const scriptsIn = (root: Node) => root.findAll((node) => node.type === 'script')
+  const headNodes = (root: Node) =>
+    root.findAll((node) => typeof node.type === 'function' && node.type.name === 'MockHead')
+
+  it('keeps the JSON-LD in Head for the client-only catalog', async () => {
+    const QuestsScreen = loadQuestsScreen()
+    const { UNSAFE_root } = render(<QuestsScreen />)
+    await waitFor(() => expect(headNodes(UNSAFE_root)).toHaveLength(1))
+    expect(scriptsIn(headNodes(UNSAFE_root)[0])).toHaveLength(2)
+    expect(scriptsIn(UNSAFE_root)).toHaveLength(2)
+  })
+
+  it('moves the JSON-LD into the body, once, when the SSR loader seeded the catalog', async () => {
+    const QuestsScreen = loadQuestsScreen()
+    const { QuestDiscoveryContext } = require('@/components/quests/runtime/QuestDiscoveryContext')
+    const { UNSAFE_root } = render(
+      <QuestDiscoveryContext.Provider value={{ view: 'catalog', locale: 'ru', quests: [] }}>
+        <QuestsScreen />
+      </QuestDiscoveryContext.Provider>,
+    )
+    await waitFor(() => expect(document.title).toBe('Городские квесты и маршруты с заданиями | Metravel'))
+    // Head is not mounted at all: its tags never reach the server HTML.
+    expect(headNodes(UNSAFE_root)).toHaveLength(0)
+    expect(scriptsIn(UNSAFE_root)).toHaveLength(2)
+  })
+})
