@@ -194,7 +194,7 @@ tripvenue резолвит по ближайшему городу каталог
 | `screens/tabs/QuestsScreen.helpers.ts` | 431 | каталог городов, фильтры kids/bike/nearby/map-area, geolocation |
 | `components/quests/useQuestWizardProgress.ts` | 422 | вся модель прохождения: сид, слияние, пропуски, пороги, персист |
 | `components/quests/QuestPrintable.tsx` | 354 | генерация печатной HTML-книги (web-only) |
-| `screens/tabs/QuestsSeoIntroFaq.tsx` | 343 | SEO-интро и FAQ каталога (парная копия `utils/questContent.js`) |
+| `screens/tabs/QuestsSeoIntroFaq.tsx` | 343 | SEO-интро и FAQ каталога; на `/quests` его рендерит SSR, он же даёт `FAQPage` JSON-LD |
 | `components/quests/questNativeMapHtml.ts` | 340 | Leaflet-HTML для native-карты квеста |
 | `components/quests/QuestPointNavigator.native.tsx` | 327 | компас/дистанция до точки (native) |
 | `utils/questAnswerTelemetry.ts` | 292 | офлайн-очередь попыток ответа, батчи, бэкофф |
@@ -1332,9 +1332,9 @@ JSON-LD и видимое тело читают тот же loader result. `requ
   `scripts/postprocess-route-shells.js`. Production `sitemap.xml`
   генерирует и отдаёт Django; фронтовый `scripts/generate-sitemap.js` не входит
   в release-path.
-- Статическая копия интро/FAQ каталога — `utils/questContent.js`; она обязана
-  совпадать с RU-значениями ключей `quests:screens.tabs.QuestsSeoIntroFaq.*`,
-  иначе краулер видит не то, что читает пользователь после гидрации.
+- Интро и FAQ каталога у краулера и у пользователя — один источник:
+  `screens/tabs/QuestsSeoIntroFaq.tsx` рендерится сервером на `/quests`
+  (видимый блок и `FAQPage` JSON-LD); статической копии больше нет (#2766).
 - Детальная страница ниже порога #1930 (≥300 слов прозы, ≥30% собственных
   5-грамм) не выкладывается индексируемой: SSR-проекция считает вердикт по когорте
   своего языка (`scoreCohort` → правило `scripts/lib/questPageDepth`), и
