@@ -1139,7 +1139,8 @@ mounted regression short/tall/width/interaction и исходные14cases/56row
   по нему считается unique user), `session_id` (визит), `auth_state`
   (`authenticated`/`guest`), `device` (`mobile`/`tablet`/`desktop`),
   `traffic_source`
-  (`google`/`yandex`/`search`/`social`/`referral`/`campaign`/`internal`/`direct`),
+  (`google`/`yandex`/`search`/`instagram`/`social`/`referral`/`campaign`/`internal`/`direct`;
+  Instagram по `utm_source` и рефереру `instagram.com` — отдельный канал, #2680),
   `platform`, плюс квестовые `quest_id`, `city_id`, `run_id`, `passed_count`,
   `steps_count`, `progress_pct`, `duration_sec`.
   На границе отправки в GA4 (`utils/analytics.ts`, #2659) продуктовые

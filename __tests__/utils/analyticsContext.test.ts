@@ -60,6 +60,19 @@ describe('classifyTrafficSource', () => {
     expect(classifyTrafficSource({ referrer: 'https://example.org/blog', currentHost })).toBe('referral')
   })
 
+  it('Instagram — отдельный канал, остальные соцсети остаются social', () => {
+    expect(classifyTrafficSource({ referrer: 'https://www.instagram.com/', currentHost })).toBe('instagram')
+    expect(classifyTrafficSource({ referrer: 'https://l.instagram.com/?u=https%3A%2F%2Fmetravel.by%2F', currentHost })).toBe('instagram')
+    expect(classifyTrafficSource({ utmSource: 'instagram', currentHost })).toBe('instagram')
+    expect(classifyTrafficSource({ utmSource: 'Instagram', referrer: 'https://m.facebook.com/', currentHost })).toBe('instagram')
+    expect(classifyTrafficSource({ utmSource: 'facebook', currentHost })).toBe('social')
+    expect(classifyTrafficSource({ referrer: 'https://l.facebook.com/', currentHost })).toBe('social')
+    // Похожее имя без точки после `instagram` — не Instagram.
+    expect(classifyTrafficSource({ utmSource: 'instagramfan', currentHost })).toBe('campaign')
+    expect(classifyTrafficSource({ referrer: 'https://notinstagram.org/', currentHost })).toBe('referral')
+    expect(classifyTrafficSource({ utmSource: '  ', currentHost })).toBe('direct')
+  })
+
   it('utm_source важнее реферера', () => {
     expect(
       classifyTrafficSource({ referrer: 'https://metravel.by/', utmSource: 'google', currentHost }),

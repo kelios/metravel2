@@ -35,6 +35,7 @@ export type AnalyticsTrafficSource =
   | 'google'
   | 'yandex'
   | 'search'
+  | 'instagram'
   | 'social'
   | 'referral'
   | 'direct'
@@ -45,6 +46,7 @@ const ANALYTICS_TRAFFIC_SOURCES = [
   'google',
   'yandex',
   'search',
+  'instagram',
   'social',
   'referral',
   'direct',
@@ -68,8 +70,13 @@ const SEARCH_HOSTS: Array<[RegExp, AnalyticsTrafficSource]> = [
   [/(^|\.)(bing|duckduckgo|yahoo|ecosia|mail\.ru|rambler)\./i, 'search'],
 ]
 
+// Instagram — отдельный канал, а не часть `social`: по нему оценивается
+// привлечение авторов (#2680). Проверяется раньше SOCIAL_HOSTS; `l.instagram.com`
+// — редирект-обёртка внешних ссылок из приложения Instagram.
+const INSTAGRAM_HOST = /(^|\.)instagram\./i
+
 const SOCIAL_HOSTS =
-  /(^|\.)(facebook|fb|instagram|vk|vkontakte|t\.me|telegram|twitter|x|pinterest|ok|youtube|tiktok|reddit|linkedin)\./i
+  /(^|\.)(facebook|fb|vk|vkontakte|t\.me|telegram|twitter|x|pinterest|ok|youtube|tiktok|reddit|linkedin)\./i
 
 const isAnalyticsAllowed = () => readConsent()?.analytics === true
 
@@ -135,6 +142,7 @@ export const classifyTrafficSource = ({
   if (utm) {
     if (/google/.test(utm)) return 'google'
     if (/yandex/.test(utm)) return 'yandex'
+    if (INSTAGRAM_HOST.test(`${utm}.`)) return 'instagram'
     if (SOCIAL_HOSTS.test(`${utm}.`)) return 'social'
     return 'campaign'
   }
@@ -150,6 +158,7 @@ export const classifyTrafficSource = ({
   for (const [pattern, source] of SEARCH_HOSTS) {
     if (pattern.test(terminated)) return source
   }
+  if (INSTAGRAM_HOST.test(terminated)) return 'instagram'
   if (SOCIAL_HOSTS.test(terminated)) return 'social'
 
   return 'referral'
