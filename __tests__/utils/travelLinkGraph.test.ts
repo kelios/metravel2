@@ -41,3 +41,15 @@ it('whitelists bounded anonymous metadata and rejects foreign identities, bad li
     expect(validateTravelLinkGraph({ ...response, related: [{ path, name: 'x' }] }, 1)).toBeNull()
   }
 })
+
+it('groups a multi-country travel by its set of countries, whatever order the source joined them in (#2820)', () => {
+  const joined = [
+    { id: 3, slug: 'pl-sk', name: 'PL SK', countryName: 'Польша, Словакия' },
+    { id: 2, slug: 'sk-pl', name: 'SK PL', countryName: 'Словакия, Польша' },
+    { id: 1, slug: 'by', name: 'BY', countryName: 'Беларусь' },
+  ]
+  const reversed = joined.map((travel) => ({ ...travel, countryName: travel.countryName.split(', ').reverse().join(', ') }))
+  const related = (rows: typeof joined) => buildTravelLinkGraphs(rows, [], {})['3'].related.map((link: { path: string }) => link.path)
+  expect(related(joined)).toEqual(['/travels/sk-pl', '/travels/by'])
+  expect(related(reversed)).toEqual(related(joined))
+})

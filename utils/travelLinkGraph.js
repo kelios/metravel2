@@ -65,12 +65,18 @@ function travelPublicPath(travel) {
   return key ? `/travels/${key}` : '';
 }
 
+/** A multi-country travel groups by its set of countries: the joined name's order is unspecified upstream (#2820). */
+function relatedCountryKey(travel) {
+  const names = String(travel?.countryName || '').split(',').map((name) => name.trim()).filter(Boolean);
+  return [...new Set(names)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)).join(', ');
+}
+
 function buildRelatedIndex(travels) {
   const byCountry = new Map(), all = [];
   for (const travel of travels) {
     const path = travelPublicPath(travel), name = String(travel.name || '').trim();
     if (!path || !name) continue;
-    const country = String(travel.countryName || '').trim(), entry = { path, name, country };
+    const country = relatedCountryKey(travel), entry = { path, name, country };
     all.push(entry);
     if (!byCountry.has(country)) byCountry.set(country, []);
     byCountry.get(country).push(entry);
@@ -79,7 +85,7 @@ function buildRelatedIndex(travels) {
 }
 
 function pickRelatedTravels(travel, index, limit = 6) {
-  const selfPath = travelPublicPath(travel), country = String(travel?.countryName || '').trim();
+  const selfPath = travelPublicPath(travel), country = relatedCountryKey(travel);
   const seen = new Set([selfPath]), out = [];
   const add = (entry) => {
     if (out.length >= limit || !entry || seen.has(entry.path)) return;
