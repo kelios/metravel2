@@ -1,10 +1,10 @@
+// Keep the accepted rule policy versioned separately from the ESLint engine (#2733).
 const js = require("@eslint/js");
 const prettier = require("eslint-config-prettier");
 const globals = require("globals");
 const tsParser = require("@typescript-eslint/parser");
 const tsPlugin = require("@typescript-eslint/eslint-plugin");
 const reactHooks = require("eslint-plugin-react-hooks");
-const reactPlugin = require("eslint-plugin-react");
 
 const linkingOpenUrlRule = {
   selector:
@@ -167,8 +167,7 @@ module.exports = [
       }
     },
     plugins: {
-      "react-hooks": reactHooks,
-      react: reactPlugin
+      "react-hooks": reactHooks
     },
     rules: {
       "no-unused-vars": "warn",
