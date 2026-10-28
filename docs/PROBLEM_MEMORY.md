@@ -7458,3 +7458,12 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   данным 26.10.2026; нехватка отдельных URL-замеров включает origin fallback.
   Этот профиль не доказывает, что focus trap объясняет полевые 213 мс. Зелёный
   CWV подтверждается новыми данными Google, отдельно от инженерного pass.
+
+### SPAWNSYNC-INPUT-MACOS-HANG-001 — синхронный stdin через pipe зависает на macOS
+
+- **Каноническая задача:** #2844; связанная #2839 закрыла тот же механизм в тестовом `runCli` и добавила его таймаут 120 секунд.
+- **Surface/owner:** Node-тулинг `scripts/**` и `__tests__/scripts/cli-test-utils.ts`; frontend. Platform impact: none (код не входит в web/app bundle). Localization impact: none.
+- **Подтверждённая причина:** стресс #2839 на macOS: 8×150 запусков с 200 КБ через `input` дал 9 зависаний Node-reader и 2 зависания `wc`; те же данные из файла — 0/1200. Родитель ждёт в kevent, ребёнок — недописанный stdin. Точный внутренний дефект libuv остаётся гипотезой; проблема пути pipe и файловый обход подтверждены сравнением.
+- **Инвариант:** синхронные child_process в `scripts/**` не получают опцию `input` напрямую. `scripts/lib/runSyncWithStdin.js` передаёт fd приватного временного файла, сохраняет контракты spawn/exec, закрывает fd и удаляет каталог при успехе, ошибке запуска, timeout и исключении подготовки.
+- **Постоянный контроль:** `__tests__/scripts/runSyncWithStdin.test.ts`, `sync-stdin-policy.test.ts` (AST всего scripts, aliases/shorthand/spread), `ios-native-parity-stdin.test.ts` и существующие CLI-тесты. `git check-ignore` имеет timeout 20 секунд, SIGKILL и явную обработку ошибки.
+- **Приёмка:** unit/policy + существующие потребители; стресс 8 воркеров × 150 запусков × 200 КБ на macOS в #2844. Перепроверять при изменении helper, Node, stdio или этих потребителей. SIGKILL самого родителя не позволяет выполнить finally; это предел очистки временного файла.

@@ -8,6 +8,7 @@
 // tracked-проекта или правку конфига без перегенерации `ios/`.
 
 const { spawnSync } = require('child_process');
+const { spawnSyncWithStdin } = require('./lib/runSyncWithStdin');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -49,11 +50,17 @@ function isDotenvFile(name) {
 }
 
 function ignoredFiles(files) {
-  const result = spawnSync('git', ['check-ignore', '--stdin'], {
+  const result = spawnSyncWithStdin('git', ['check-ignore', '--stdin'], {
     cwd: ROOT,
     encoding: 'utf8',
     input: files.join('\n'),
+    timeout: 20000,
+    killSignal: 'SIGKILL',
   });
+  if (result.error) throw result.error;
+  if (result.status !== 0 && result.status !== 1) {
+    throw new Error(`git check-ignore failed: ${result.stderr || result.signal}`);
+  }
   return new Set(result.stdout.split('\n').filter(Boolean));
 }
 
@@ -237,4 +244,4 @@ if (require.main === module) {
   console.log('iOS native project matches expo prebuild output.');
 }
 
-module.exports = { checkIosParity, compareProjects };
+module.exports = { checkIosParity, compareProjects, ignoredFiles };

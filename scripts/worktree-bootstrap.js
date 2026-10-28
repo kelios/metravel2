@@ -4,7 +4,7 @@
 const fs = require('node:fs')
 const path = require('node:path')
 const { randomBytes } = require('node:crypto')
-const { spawnSync } = require('node:child_process')
+const { spawnSyncWithStdin } = require('./lib/runSyncWithStdin')
 const { verifiedFontBundle } = require('./prepare-book-renderer-fonts')
 
 const ROOT = path.resolve(__dirname, '..')
@@ -24,7 +24,7 @@ const fail = (message) => { throw new BootstrapError(message) }
 const hasControlCharacters = (value) => Array.from(value).some((character) => character.charCodeAt(0) < 32)
 
 function runGit(cwd, args, input) {
-  return spawnSync('git', args, {
+  return spawnSyncWithStdin('git', args, {
     cwd, input, encoding: 'utf8', stdio: [input === undefined ? 'ignore' : 'pipe', 'pipe', 'ignore'],
     env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' },
   })

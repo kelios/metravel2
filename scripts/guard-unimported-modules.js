@@ -5,6 +5,7 @@
 const fs = require('node:fs')
 const path = require('node:path')
 const { execFileSync } = require('node:child_process')
+const { execFileSyncWithStdin } = require('./lib/runSyncWithStdin')
 const ts = require('typescript')
 const crypto = require('node:crypto')
 
@@ -583,7 +584,7 @@ function assertSubset(current, previous, label) {
 }
 
 function batchGit(root, args, input, encoding = 'utf8') {
-  try { return execFileSync('git', ['-C', root, ...args], { input, encoding, maxBuffer: 32 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] }) }
+  try { return execFileSyncWithStdin('git', ['-C', root, ...args], { input, encoding, maxBuffer: 32 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] }) }
   catch { throw new Error('missing-history: batched committed ledger lookup failed; restore full history') }
 }
 

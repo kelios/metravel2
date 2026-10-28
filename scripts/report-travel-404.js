@@ -54,6 +54,7 @@ const fs = require('fs')
 const path = require('path')
 const https = require('https')
 const { execFileSync } = require('child_process')
+const { execFileSyncWithStdin } = require('./lib/runSyncWithStdin')
 
 const DEFAULT_ORIGIN = 'https://metravel.by'
 // 'auto' = резолвить имя на проде. Compose v2 при пересоздании переименовал
@@ -651,7 +652,7 @@ docker logs ${sinceArg} "$ctr" 2>/dev/null | awk '
     'exec ssh -o ConnectTimeout=20 -o BatchMode=yes "$PROD_SSH_TARGET" bash -s',
   ].join('; ')
 
-  return execFileSync('bash', ['-c', local], {
+  return execFileSyncWithStdin('bash', ['-c', local], {
     input: remote,
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,

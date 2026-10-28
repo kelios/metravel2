@@ -54,7 +54,7 @@
 //     npm run quest:funnel -- --quest vitebsk-kids-skazki --days 60 --json
 
 const path = require('path')
-const { spawnSync } = require('child_process')
+const { spawnSyncWithStdin } = require('./lib/runSyncWithStdin')
 
 const {
   ExpectedFailureError,
@@ -325,7 +325,7 @@ ${SQL_HEREDOC}
 
 /** Выполняет SQL на проде и возвращает разобранный JSON-документ. */
 function runProdQuery(sql) {
-  const result = spawnSync(
+  const result = spawnSyncWithStdin(
     'bash',
     [
       '-c',

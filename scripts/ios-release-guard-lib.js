@@ -1,4 +1,5 @@
 const { execFileSync } = require('child_process');
+const { execFileSyncWithStdin } = require('./lib/runSyncWithStdin');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -350,7 +351,7 @@ function runAppleAasaRouteMatcher(components, urls, options = {}) {
       ],
       { encoding: 'utf8', stdio: 'pipe', timeout: 20000 }
     );
-    const raw = execFileSync(executable, [], {
+    const raw = execFileSyncWithStdin(executable, [], {
       encoding: 'utf8',
       input: JSON.stringify({ components, urls }),
       stdio: ['pipe', 'pipe', 'pipe'],
