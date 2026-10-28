@@ -365,6 +365,7 @@ export default function QuestScenarioScreen() {
             <View
               key={occasion}
               style={{
+                maxWidth: '100%',
                 borderRadius: DESIGN_TOKENS.radii.full,
                 backgroundColor: colors.backgroundSecondary,
                 borderWidth: 1,
@@ -389,6 +390,7 @@ export default function QuestScenarioScreen() {
                   accessibilityRole="link"
                   accessibilityLabel={city.name}
                   style={{
+                    maxWidth: '100%',
                     borderRadius: DESIGN_TOKENS.radii.full,
                     backgroundColor: colors.primarySoft,
                     borderWidth: 1,
@@ -408,6 +410,7 @@ export default function QuestScenarioScreen() {
                 accessibilityRole="link"
                 accessibilityLabel={i18nT('quests:app.tabs.quests.city.index.back')}
                 style={{
+                  maxWidth: '100%',
                   borderRadius: DESIGN_TOKENS.radii.full,
                   borderWidth: 1,
                   borderColor: colors.borderLight,
