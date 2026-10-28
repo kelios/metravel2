@@ -92,6 +92,29 @@ function installAnimationFrameQueue() {
   }
 }
 
+function LargeFocusTrapHarness({ preferredIndex }: { preferredIndex?: number }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const initialRef = useRef<HTMLButtonElement>(null)
+  useFocusTrap(containerRef, { initialFocus: initialRef })
+
+  return (
+    <div ref={containerRef} data-testid="large-trap">
+      <div data-testid="control-group">
+        {Array.from({ length: 60 }, (_, index) => (
+          <button
+            key={index}
+            ref={index === preferredIndex ? initialRef : undefined}
+            data-testid={`control-${index}`}
+          >
+            Control {index}
+          </button>
+        ))}
+      </div>
+      <button data-testid="outside-group">Outside group</button>
+    </div>
+  )
+}
+
 describe('useFocusTrap', () => {
   beforeAll(() => {
     ;(Platform as any).OS = 'web'
@@ -103,6 +126,58 @@ describe('useFocusTrap', () => {
 
   afterAll(() => {
     ;(Platform as any).OS = originalPlatform
+  })
+
+  it.each([undefined, 40])('bounds initial style reads for a large dialog (preferred: %s)', (preferredIndex) => {
+    const frames = installAnimationFrameQueue()
+    const styleReads = jest.spyOn(window, 'getComputedStyle')
+    const view = render(<LargeFocusTrapHarness preferredIndex={preferredIndex} />)
+    const target = view.getByTestId(`control-${preferredIndex ?? 0}`)
+
+    expect(document.activeElement).toBe(target)
+    frames.runNextFrame()
+    expect(document.activeElement).toBe(target)
+    // Opening and RNW's focus-recovery frame must not inspect every control.
+    expect(styleReads.mock.calls.filter(([element]) => element.tagName === 'BUTTON').length).toBeLessThanOrEqual(2)
+
+    view.unmount()
+  })
+
+  it.each(['hidden', 'disabled', 'detached'])('falls back when the preferred target becomes %s before the recovery frame', (state) => {
+    const frames = installAnimationFrameQueue()
+    const view = render(<LargeFocusTrapHarness preferredIndex={40} />)
+    const preferred = view.getByTestId('control-40') as HTMLButtonElement
+    expect(document.activeElement).toBe(preferred)
+
+    if (state === 'hidden') preferred.style.display = 'none'
+    if (state === 'disabled') preferred.disabled = true
+    if (state === 'detached') preferred.remove()
+
+    frames.runNextFrame()
+
+    expect(document.activeElement).toBe(view.getByTestId('control-0'))
+    view.unmount()
+  })
+
+  it('reads shared ancestor styles once per Tab and refreshes visibility on the next event', () => {
+    installAnimationFrameQueue()
+    const view = render(<LargeFocusTrapHarness />)
+    const group = view.getByTestId('control-group')
+    const styleReads = jest.spyOn(window, 'getComputedStyle')
+
+    fireEvent.keyDown(document.activeElement!, { key: 'Tab' })
+    expect(document.activeElement).toBe(view.getByTestId('control-1'))
+    expect(styleReads.mock.calls.filter(([element]) => element === group)).toHaveLength(1)
+
+    group.style.display = 'none'
+    fireEvent.keyDown(document.activeElement!, { key: 'Tab' })
+    expect(document.activeElement).toBe(view.getByTestId('outside-group'))
+
+    group.style.display = ''
+    fireEvent.keyDown(document.activeElement!, { key: 'Tab' })
+    expect(document.activeElement).toBe(view.getByTestId('control-0'))
+
+    view.unmount()
   })
 
   it('cycles focus with Tab and Shift+Tab and restores focus on cleanup', async () => {

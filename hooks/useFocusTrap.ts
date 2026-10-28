@@ -37,38 +37,48 @@ export function useFocusTrap(
 
     activeFocusTraps.push(container);
 
+    // Keep style reads local to one scan: controls share ancestors, but their
+    // visibility can change between opening, the next frame and a Tab event.
+    const createFocusablePredicate = () => {
+      const visibility = new Map<HTMLElement, boolean>();
+      return (element: HTMLElement) => {
+        if (
+          element.tabIndex < 0 ||
+          element.closest('[hidden], [inert], [aria-hidden="true"]')
+        ) {
+          return false;
+        }
+
+        if (
+          element.tagName === 'INPUT' &&
+          element.getAttribute('type')?.toLowerCase() === 'hidden'
+        ) {
+          return false;
+        }
+
+        const view = element.ownerDocument.defaultView;
+        for (
+          let current: HTMLElement | null = element;
+          current;
+          current = current.parentElement
+        ) {
+          let isVisible = visibility.get(current);
+          if (isVisible === undefined) {
+            const styles = view?.getComputedStyle(current);
+            isVisible = styles?.display !== 'none' && styles?.visibility !== 'hidden';
+            visibility.set(current, isVisible);
+          }
+          if (!isVisible) return false;
+          if (current === container) break;
+        }
+
+        return true;
+      };
+    };
+
     const getFocusableElements = () =>
       Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
-        (element) => {
-          if (
-            element.tabIndex < 0 ||
-            element.closest('[hidden], [inert], [aria-hidden="true"]')
-          ) {
-            return false;
-          }
-
-          if (
-            element.tagName === 'INPUT' &&
-            element.getAttribute('type')?.toLowerCase() === 'hidden'
-          ) {
-            return false;
-          }
-
-          const view = element.ownerDocument.defaultView;
-          for (
-            let current: HTMLElement | null = element;
-            current;
-            current = current.parentElement
-          ) {
-            const styles = view?.getComputedStyle(current);
-            if (styles?.display === 'none' || styles?.visibility === 'hidden') {
-              return false;
-            }
-            if (current === container) break;
-          }
-
-          return true;
-        }
+        createFocusablePredicate()
       );
 
     // Сохраняем текущий активный элемент для возврата фокуса
@@ -82,11 +92,12 @@ export function useFocusTrap(
       // modal may mount before this callback runs; the stale lower frame must
       // not pull focus back underneath it.
       if (activeFocusTraps.at(-1) !== container) return;
-      const focusableElements = getFocusableElements();
+      const candidates = Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+      const isFocusable = createFocusablePredicate();
       const initialTarget = initialFocus?.current;
-      const focusTarget = initialTarget && focusableElements.includes(initialTarget)
+      const focusTarget = initialTarget && candidates.includes(initialTarget) && isFocusable(initialTarget)
         ? initialTarget
-        : focusableElements[0];
+        : candidates.find(isFocusable);
       focusTarget?.focus();
     };
     focusInitialElement();
