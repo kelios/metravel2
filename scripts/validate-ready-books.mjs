@@ -56,6 +56,7 @@ async function verifyAssets(book) {
 
 let failed = false;
 const ids = new Set();
+const slugs = new Set();
 const countries = new Set();
 for (const file of files) {
   try {
@@ -67,8 +68,9 @@ for (const file of files) {
       continue;
     }
     const book = result.data;
-    if (ids.has(book.id) || countries.has(book.country)) throw new Error('Duplicate edition ID or country in collection');
+    if (ids.has(book.id) || slugs.has(book.slug) || countries.has(book.country)) throw new Error('Duplicate edition ID, slug or country in collection');
     ids.add(book.id);
+    slugs.add(book.slug);
     countries.add(book.country);
     if (assetsRoot) await verifyAssets(book);
     const plan = buildReadyBookPagePlan(book);

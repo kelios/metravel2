@@ -18,12 +18,13 @@ from reportlab.pdfgen.canvas import Canvas
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
-REVISION = '2026-10-27.1'
+REVISION = '2026-10-28.1'
 INK, MUTED, LINE, PAPER = '#29352F', '#59675F', '#BDC7BE', '#FFFEFA'
 PROFILES = {
     'pocket-150x100': dict(width=150, height=100, body=9, title=14, photo=[100, 70], qr=18),
     'album-a5': dict(width=148, height=210, body=10.5, title=22, photo=[108, 158], qr=20),
 }
+COORDINATE_LABELS = {'entrance': 'вход', 'approach': 'ориентир подхода', 'site-center': 'центр объекта'}
 COUNTRIES = {
     'by': dict(title='Беларусь', subtitle='Замки, города и природа', accent='#355F48', photo='mir-castle-2023.jpg',
                art='belarus-cover-art-v1.png', credit='Mike1979 Russia / CC BY-SA 3.0', license='https://creativecommons.org/licenses/by-sa/3.0/',
@@ -35,17 +36,18 @@ COUNTRIES = {
 
 
 def lines_for(text, width, font, size):
-    lines, line = [], ''
-    for word in str(text).split():
-        if pdfmetrics.stringWidth(word, font, size) > width * mm:
-            raise ValueError(f'Unbreakable word exceeds frame: {word}')
-        trial = f'{line} {word}'.strip()
-        if pdfmetrics.stringWidth(trial, font, size) > width * mm:
-            lines.append(line)
-            line = word
-        else:
-            line = trial
-    if line:
+    lines = []
+    for paragraph in str(text).split('\n'):
+        line = ''
+        for word in paragraph.split():
+            if pdfmetrics.stringWidth(word, font, size) > width * mm:
+                raise ValueError(f'Unbreakable word exceeds frame: {word}')
+            trial = f'{line} {word}'.strip()
+            if pdfmetrics.stringWidth(trial, font, size) > width * mm:
+                lines.append(line)
+                line = word
+            else:
+                line = trial
         lines.append(line)
     return lines
 
@@ -72,7 +74,8 @@ class Reference:
 
     def text(self, text, x, top, width, size=9, font='Sans', color=INK, max_height=None, max_lines=None):
         lines = lines_for(text, width, font, size)
-        leading = size * 1.3
+        leading_ratio = 1.35 if self.meta.get('component') == 'body' and self.meta.get('profileId') == 'album-a5' and size >= 10.5 and font == 'Sans' else 1.3
+        leading = size * leading_ratio
         height = len(lines) * leading / mm
         if max_height is not None and height > max_height + 0.01:
             raise ValueError(f'Overflow page {self.meta}: {height:.2f} > {max_height}: {text}')
@@ -84,7 +87,7 @@ class Reference:
         self.canvas.setFont(font, size)
         for i, line in enumerate(lines):
             self.canvas.drawString(x * mm, self.h * mm - top * mm - size - i * leading, line)
-        self.frames.append(dict(type='text', x=x, top=top, width=width, height=round(height, 3), font=font, sizePt=size))
+        self.frames.append(dict(type='text', x=x, top=top, width=width, height=round(height, 3), font=font, sizePt=size, leadingRatio=leading_ratio))
         return height
 
     def rect(self, x, top, width, height, fill=None, stroke=LINE, dash=None):
@@ -94,6 +97,7 @@ class Reference:
         self.canvas.setDash(dash or [])
         self.canvas.rect(x * mm, (self.h - top - height) * mm, width * mm, height * mm, stroke=1, fill=bool(fill))
         self.canvas.setDash([])
+        self.frames.append(dict(type='rectangle', x=x, top=top, width=width, height=height))
 
     def image(self, filename, x, top, width, height):
         image = Image.open(HERE / 'assets' / filename)
@@ -124,11 +128,12 @@ class Reference:
         p = PROFILES[profile]
         c = COUNTRIES[country]
         self.page(p['width'], p['height'], kind, profileId=profile, country=country.upper(),
-                  revision=REVISION, component='body', logicalPage=logical_page, stopId=stop['id'])
+                  revision=REVISION, bookId=self.active_book['id'], editorialRevision=self.active_book['revision'],
+                  component='body', logicalPage=logical_page, stopId=stop['id'])
         left = logical_page % 2 == 0
         self.x, self.cw = (5 if left else 15), p['width'] - 20
         self.text(title, self.x, 5, self.cw, 9, color=c['accent'])
-        self.text(str(logical_page), self.x, p['height'] - 9, self.cw, 9, color=MUTED)
+        self.text(str(logical_page), self.x, p['height'] - 9.2, self.cw, 9, color=MUTED)
         self.meta.update(safeMm=5, bindingMm=15, bindingSide='right' if left else 'left')
         self.frames.append(dict(type='binding-exclusion', x=p['width'] - 15 if left else 0,
                                 top=0, width=15, height=p['height']))
@@ -167,7 +172,7 @@ class Reference:
 
     def destination(self, profile, country, stop, stress=False):
         p, c = self.body_base(profile, country, 6, 'destination-stress' if stress else 'destination',
-                             ('Тест вместимости / ' if stress else '01 / ') + stop['localName'], stop)
+                             'Проверка сетки / не маршрут' if stress else '01 / ' + stop['localName'], stop)
         self.text(stop['title'], self.x, 12, self.cw, p['title'], 'SerifBold', max_lines=2)
         compact = profile.startswith('pocket')
         self.image(c['photo'], self.x, 28 if compact else 34, 56 if compact else 118, 48 if compact else 68)
@@ -175,34 +180,36 @@ class Reference:
         story = stop['text']['compact' if compact else 'album']
         if compact:
             lines = lines_for(story, 70, 'Sans', size)
-            count = math.floor(49 * mm / (size * 1.3))
+            count = math.floor(50 * mm / (size * 1.3))
             shown, remainder = lines[:count], ' '.join(lines[count:])
-            self.text(' '.join(shown), self.x + 60, 27, 70, size, max_height=49)
+            self.text(' '.join(shown), self.x + 60, 27, 70, size, max_height=50)
             self.text(c['credit'], self.x, 79, self.cw, 9, max_height=9)
-            self.text(f"{stop['lat']:.5f}, {stop['lng']:.5f} / точность: {stop['coordinateAccuracy']}",
-                      self.x, 87, self.cw, 9, max_height=8)
+            self.text(f"{stop['lat']:.5f}, {stop['lng']:.5f} / {COORDINATE_LABELS[stop['coordinateAccuracy']]}",
+                      self.x, 86, self.cw, 9, max_height=8)
         else:
             lines = lines_for(story, self.cw, 'Sans', size)
-            count = math.floor(62 * mm / (size * 1.3))
+            count = math.floor(62 * mm / (size * 1.35))
             shown, remainder = lines[:count], ' '.join(lines[count:])
             self.text(' '.join(shown), self.x, 107, self.cw, size, max_height=62)
             qr_total = self.qr(stop['source']['url'], self.x, 174, p['qr'])
             self.text('Официальный источник', self.x + qr_total + 4, 174, self.cw - qr_total - 4, 10.5)
             self.text(f"{stop['lat']:.5f}, {stop['lng']:.5f}", self.x + qr_total + 4, 183, self.cw - qr_total - 4, 10.5)
-            self.text('Точка подхода уточняется по указателям музея.', self.x + qr_total + 4, 191, self.cw - qr_total - 4, 10.5, max_height=13)
+            self.text('На карте: ' + COORDINATE_LABELS[stop['coordinateAccuracy']] + '. Вход уточните по указателям.', self.x + qr_total + 4, 190.5, self.cw - qr_total - 4, 10.5, max_height=13)
         self.meta['continuationOnPage8'] = bool(remainder)
+        self.meta['storyChars'] = len(story)
+        self.meta['syntheticStressSample'] = stress
         self.finish()
         return remainder
 
     def memory(self, profile, country, stop):
         p, _ = self.body_base(profile, country, 7, 'memory', 'Дата: __________    С кем: __________', stop)
         pw, ph = p['photo']
-        x, top = self.x + (self.cw - pw) / 2, 16 if p['height'] == 100 else 28
+        x, top = self.x + (self.cw - pw) / 2, 14 if p['height'] == 100 else 28
         self.rect(x, top, pw, ph, dash=[2, 2])
         self.text('Мой кадр\n' + ('до 100 × 70 мм' if ph == 70 else 'рамка 108 × 158 мм\nфото до 102 × 152 мм'),
                   x + 8, top + ph / 2 - 7, pw - 16, 9 if ph == 70 else 10.5, color=MUTED)
         self.frames.append(dict(type='photo-slot', x=x, top=top, width=pw, height=ph, maxPhotoMm=[100, 70] if ph == 70 else [102, 152]))
-        self.text('Хочу запомнить: ____________________', self.x, top + ph + 3, self.cw, 9 if ph == 70 else 10.5, max_height=8)
+        self.text('Хочу запомнить: ____________________', self.x, top + ph + (2 if ph == 70 else 3), self.cw, 9 if ph == 70 else 10.5, max_height=8)
         self.finish()
 
     def notes(self, profile, country, stop, remainder):
@@ -217,8 +224,8 @@ class Reference:
         top_text += self.text('Факт. ' + stop['fact'], tx, top_text, tw, p['body'], max_height=22 if compact else 35) + 2
         top_text += self.text('Присмотритесь. ' + stop['observation'], tx, top_text, tw, p['body'], max_height=25 if compact else 45)
         top = max(top + qr_width, top_text) + 4
+        top += self.text('Подход: ' + stop['entrance'], self.x, top, self.cw, p['body'], max_height=22 if compact else 38) + 4
         if not compact:
-            top += self.text('Подход: ' + stop['entrance'], self.x, top, self.cw, p['body'], max_height=38) + 4
             top += self.text('Фото: ' + c['credit'], self.x, top, self.cw, p['body']) + 3
         self.text('Что удивило / что посоветую / хочу вернуться', self.x, top, self.cw, 9 if compact else 10.5)
         for y in range(math.ceil(top + 10), p['height'] - 12, 6):
@@ -250,8 +257,13 @@ class Reference:
 
     def save(self, output):
         self.canvas.save()
+        source_books = {}
+        for country in COUNTRIES:
+            source = ROOT / 'data' / 'travelBooks' / country / 'editorial.json'
+            book = json.loads(source.read_text())
+            source_books[country] = dict(id=book['id'], revision=book['revision'], sha256=hashlib.sha256(source.read_bytes()).hexdigest())
         manifest = dict(revision=REVISION, status='design-reference', notReadyBook=True, pages=self.pages,
-                        profiles=PROFILES, fontFiles=FONT_HASHES)
+                        profiles=PROFILES, fontFiles=FONT_HASHES, sourceBooks=source_books)
         (output / 'geometry-v1.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n')
 
     def credits(self):
@@ -266,7 +278,7 @@ class Reference:
             self.text(c['license'], 15, top + 32, 180, 10.5)
             self.canvas.linkURL(c['license'], (15 * mm, (297 - top - 39) * mm, 195 * mm, (297 - top - 31) * mm))
             top += 55
-        self.text('Обложки: авторские AI-иллюстрации серии, OpenAI imagegen, 27.10.2026. Это декоративные пейзажи, без утверждения о конкретном месте или тропе. Промпты и SHA-256 сохранены в assets/provenance.json.',
+        self.text('Обложки: авторские AI-иллюстрации серии, OpenAI imagegen, 27.10.2026. Декоративные пейзажи не показывают конкретное место или тропу. Происхождение и SHA-256: assets/provenance.json. Точные промпты прежней сессии не сохранены.',
                   15, top, 180, 10.5, max_height=30)
         self.text('Шрифты: Noto Sans Regular/Bold и Noto Serif Bold. SIL Open Font License 1.1. Кириллица встроена в PDF; контрольные суммы исходных шрифтов сохранены в geometry-v1.json.',
                   15, top + 38, 180, 10.5, max_height=30)
@@ -299,19 +311,29 @@ def screen_mocks(output):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--font-dir', type=Path, required=True, help='Directory containing NotoSans-{Regular,Bold}.ttf and NotoSerif-Bold.ttf')
+    parser.add_argument('--font-dir', type=Path, default=HERE / 'assets' / 'fonts', help='Directory containing the three licensed Noto TTF files')
     parser.add_argument('--output', type=Path, default=HERE)
     args = parser.parse_args()
+    provenance = json.loads((HERE / 'assets' / 'provenance.json').read_text())
+    for record in [*provenance['assets'], *provenance['fonts'], provenance['fontLicense']]:
+        source = HERE / 'assets' / record['file']
+        if hashlib.sha256(source.read_bytes()).hexdigest() != record['sha256']:
+            raise ValueError(f"Source asset differs from provenance: {record['file']}")
     global FONT_HASHES
     FONT_HASHES = {}
+    expected_fonts = {Path(record['file']).name: record['sha256'] for record in provenance['fonts']}
     for name, file in [('Sans', 'NotoSans-Regular.ttf'), ('SansBold', 'NotoSans-Bold.ttf'), ('SerifBold', 'NotoSerif-Bold.ttf')]:
         path = args.font_dir / file
+        selected_hash = hashlib.sha256(path.read_bytes()).hexdigest()
+        if selected_hash != expected_fonts[file]:
+            raise ValueError(f'Selected font differs from provenance: {file}')
         pdfmetrics.registerFont(TTFont(name, str(path)))
-        FONT_HASHES[file] = hashlib.sha256(path.read_bytes()).hexdigest()
+        FONT_HASHES[file] = selected_hash
     args.output.mkdir(parents=True, exist_ok=True)
     reference = Reference(args.output)
     books = {country: json.loads((ROOT / 'data' / 'travelBooks' / country / 'editorial.json').read_text()) for country in COUNTRIES}
     for country, book in books.items():
+        reference.active_book = book
         stop = book['stops'][0]
         for profile in PROFILES:
             for side in ['front', 'inside-front', 'inside-back', 'back']:
@@ -323,6 +345,7 @@ def main():
     reference.control()
     reference.control(verso=True)
     for profile, chars in [('pocket-150x100', 550), ('album-a5', 900)]:
+        reference.active_book = books['by']
         stop = json.loads(json.dumps(books['by']['stops'][0]))
         stop['title'] = 'Гомельский дворцово-парковый ансамбль'
         key = 'compact' if chars == 550 else 'album'

@@ -16,8 +16,11 @@ export const printProfileSchema = z.strictObject({
   if (profile.widthMm !== expected.widthMm || profile.heightMm !== expected.heightMm) {
     ctx.addIssue({code: 'custom', path: ['widthMm'], message: `Trim must be ${expected.widthMm}×${expected.heightMm} mm`});
   }
-  if (profile.safeMm + profile.bindingMm >= profile.widthMm || 2 * profile.safeMm >= profile.heightMm) {
-    ctx.addIssue({code: 'custom', path: ['safeMm'], message: 'Margins leave no printable area'});
+  if (profile.widthMm - profile.bindingMm - profile.safeMm < expected.photoMm.width) {
+    ctx.addIssue({code: 'custom', path: ['bindingMm'], message: 'Margins must preserve the supported photo-frame width'});
+  }
+  if (profile.heightMm - 2 * profile.safeMm < expected.photoMm.height) {
+    ctx.addIssue({code: 'custom', path: ['safeMm'], message: 'Margins must preserve the supported photo-frame height'});
   }
   if (profile.id === 'pocket-150x100' && profile.binding === 'sewn') {
     ctx.addIssue({code: 'custom', path: ['binding'], message: 'Pocket has no sewn profile'});

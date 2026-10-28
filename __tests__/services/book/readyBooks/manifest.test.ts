@@ -1,6 +1,6 @@
-import {mkdirSync, mkdtempSync, rmSync, writeFileSync} from 'node:fs';
+import {mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync} from 'node:fs';
 import path from 'node:path';
-import {spawnSync} from 'node:child_process';
+import {runCli} from '../../../scripts/cli-test-utils';
 import {buildReadyBookPagePlan, validateEditorialBookDraft, validateReadyBook} from '../../../../services/book/readyBooks/validation';
 import type {ReadyBook} from '../../../../types/readyBook';
 import {fixturePdf, makeEditorialDraft, makeReadyBook} from './fixtures';
@@ -35,13 +35,19 @@ describe('ready-book publication contract', () => {
     ['bad SHA-256', b => {b.artifacts[0].sha256 = 'bad';}, 'artifacts.0.sha256'],
     ['wrong trim', b => {b.artifacts[0].printProfile.widthMm = 210;}, 'artifacts.0.printProfile.widthMm'],
     ['unsafe binding margin', b => {b.artifacts[0].printProfile.bindingMm = 5;}, 'artifacts.0.printProfile.bindingMm'],
+    ['binding margin hides the supported photo', b => {b.artifacts[0].printProfile.bindingMm = 50;}, 'artifacts.0.printProfile.bindingMm'],
+    ['safe margin hides the supported photo', b => {b.artifacts[0].printProfile.safeMm = 20;}, 'artifacts.0.printProfile.safeMm'],
     ['wrong output size', b => {b.artifacts[0].outputPageMm.width = 210;}, 'artifacts.0.outputPageMm'],
     ['wrong body count', b => {b.artifacts[0].pageCount = 60;}, 'artifacts.0.pageCount'],
     ['wrong revision', b => {b.artifacts[0].revision = 'old';}, 'artifacts.0.revision'],
     ['mutable asset URL', b => {b.artifacts[0].uri = '/books/latest.pdf';}, 'artifacts.0.uri'],
     ['path traversal', b => {b.artifacts[0].uri = `/books/${b.revision}/../latest.pdf`;}, 'artifacts.0.uri'],
+    ['malformed absolute asset URL', b => {b.artifacts[0].uri = 'https://[invalid';}, 'artifacts.0.uri'],
     ['preview revision mismatch', b => {b.preview[0].revision = 'old';}, 'preview.0.revision'],
     ['preview checksum mismatch', b => {b.preview[0].sourceSha256 = 'a'.repeat(64);}, 'preview.0.sourceSha256'],
+    ['same URI with conflicting artifact metadata', b => {b.artifacts[1].uri = b.artifacts[0].uri;}, 'artifacts.1.uri'],
+    ['same URI with conflicting image checksum', b => {b.stops[1].image.uri = b.stops[0].image.uri; b.stops[1].image.sha256 = 'a'.repeat(64);}, 'stops.1.image.uri'],
+    ['same URI with conflicting preview bytes', b => {b.preview[0].pages[1].uri = b.preview[0].pages[0].uri; b.preview[0].pages[1].bytes++;}, 'preview.0.pages.1.uri'],
     ['incomplete preview', b => {b.preview[0].pages.pop();}, 'preview.0.pages'],
     ['unordered preview', b => {b.preview[0].pages[1].number = 1;}, 'preview.0.pages'],
     ['duplicate preview profile', b => {b.preview[1] = b.preview[0];}, 'preview.1'],
@@ -66,7 +72,7 @@ describe('ready-book CLI integrity gate', () => {
     root = mkdtempSync(path.join(process.cwd(), '.codex-temp', 'ready-book-test-'));
   });
   afterEach(() => rmSync(root, {recursive: true, force: true}));
-  const cli = (...args: string[]) => spawnSync(process.execPath, ['scripts/validate-ready-books.mjs', ...args], {encoding: 'utf8'});
+  const cli = (...args: string[]) => runCli(process.execPath, ['scripts/validate-ready-books.mjs', ...args]);
 
   it('checks actual bytes and catches file corruption after a valid manifest', () => {
     const book = makeReadyBook();
@@ -95,6 +101,36 @@ describe('ready-book CLI integrity gate', () => {
     expect(result.stdout).toContain('METADATA ONLY');
     expect(result.stdout).not.toContain('ASSETS VERIFIED');
     expect(cli(manifest).status).toBe(1);
+  });
+
+  it('rejects a symlink escaping the declared assets root', () => {
+    const book = makeReadyBook();
+    const assetsRoot = path.join(root, 'public');
+    const outside = path.join(root, 'outside.pdf');
+    const link = path.join(assetsRoot, book.artifacts[0].uri);
+    mkdirSync(path.dirname(link), {recursive: true});
+    writeFileSync(outside, fixturePdf);
+    symlinkSync(outside, link);
+    const manifest = path.join(root, 'manifest.json');
+    writeFileSync(manifest, JSON.stringify(book));
+    const result = cli('--assets-root', assetsRoot, manifest);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('Asset escapes root');
+  });
+
+  it.each(['id', 'slug', 'country'] as const)('rejects collection collision on %s', field => {
+    const first = makeReadyBook();
+    const second = {...makeReadyBook(), id: 'poland-memory', slug: 'poland', country: 'PL'};
+    const firstFile = path.join(root, 'first.json');
+    const secondFile = path.join(root, 'second.json');
+    writeFileSync(firstFile, JSON.stringify(first));
+    writeFileSync(secondFile, JSON.stringify(second));
+    expect(cli('--metadata-only', firstFile, secondFile).status).toBe(0);
+    second[field] = first[field];
+    writeFileSync(secondFile, JSON.stringify(second));
+    const result = cli('--metadata-only', firstFile, secondFile);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('Duplicate edition ID, slug or country');
   });
 
   it('reports malformed editorial JSON and accepts an explicit draft', () => {

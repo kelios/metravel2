@@ -1,5 +1,5 @@
 {
-  "revision": "2026-10-27.1",
+  "revision": "2026-10-28.1",
   "status": "design-reference",
   "notReadyBook": true,
   "pages": [
@@ -11,7 +11,7 @@
       "profileId": "pocket-150x100",
       "country": "BY",
       "component": "cover",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
       "bookId": "belarus-memory",
       "frames": [
         {
@@ -25,13 +25,21 @@
           "crop": false
         },
         {
+          "type": "rectangle",
+          "x": 5,
+          "top": 5,
+          "width": 140,
+          "height": 28
+        },
+        {
           "type": "text",
           "x": 9,
           "top": 8,
           "width": 132,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -40,7 +48,8 @@
           "width": 132,
           "height": 10.548,
           "font": "SerifBold",
-          "sizePt": 23
+          "sizePt": 23,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -49,7 +58,15 @@
           "width": 132,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 82,
+          "width": 140,
+          "height": 13
         },
         {
           "type": "text",
@@ -58,7 +75,8 @@
           "width": 132,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -67,7 +85,8 @@
           "width": 132,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -79,7 +98,7 @@
       "profileId": "pocket-150x100",
       "country": "BY",
       "component": "cover",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
       "bookId": "belarus-memory",
       "frames": [
         {
@@ -89,7 +108,8 @@
           "width": 120,
           "height": 6.421,
           "font": "SerifBold",
-          "sizePt": 14
+          "sizePt": 14,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -98,7 +118,15 @@
           "width": 120,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "rectangle",
+          "x": 15,
+          "top": 36,
+          "width": 120,
+          "height": 0
         },
         {
           "type": "text",
@@ -107,7 +135,15 @@
           "width": 120,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "rectangle",
+          "x": 15,
+          "top": 56,
+          "width": 120,
+          "height": 0
         },
         {
           "type": "text",
@@ -116,7 +152,8 @@
           "width": 120,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -128,7 +165,7 @@
       "profileId": "pocket-150x100",
       "country": "BY",
       "component": "cover",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
       "bookId": "belarus-memory",
       "frames": [
         {
@@ -138,7 +175,8 @@
           "width": 120,
           "height": 6.421,
           "font": "SerifBold",
-          "sizePt": 14
+          "sizePt": 14,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -147,7 +185,8 @@
           "width": 120,
           "height": 12.382,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -159,7 +198,7 @@
       "profileId": "pocket-150x100",
       "country": "BY",
       "component": "cover",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
       "bookId": "belarus-memory",
       "frames": [
         {
@@ -169,16 +208,18 @@
           "width": 120,
           "height": 9.172,
           "font": "SerifBold",
-          "sizePt": 20
+          "sizePt": 20,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 15,
           "top": 30,
           "width": 120,
-          "height": 8.255,
+          "height": 16.51,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -187,7 +228,8 @@
           "width": 120,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -198,14 +240,18 @@
       "heightMm": 100,
       "profileId": "pocket-150x100",
       "country": "BY",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
+      "bookId": "belarus-memory",
+      "editorialRevision": "2026-10-27.1",
       "component": "body",
       "logicalPage": 6,
       "stopId": "mir-castle",
       "safeMm": 5,
       "bindingMm": 15,
       "bindingSide": "right",
-      "continuationOnPage8": true,
+      "continuationOnPage8": false,
+      "storyChars": 401,
+      "syntheticStressSample": false,
       "frames": [
         {
           "type": "text",
@@ -214,16 +260,18 @@
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 5,
-          "top": 91,
+          "top": 90.8,
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "binding-exclusion",
@@ -239,7 +287,8 @@
           "width": 130,
           "height": 6.421,
           "font": "SerifBold",
-          "sizePt": 14
+          "sizePt": 14,
+          "leadingRatio": 1.3
         },
         {
           "type": "image",
@@ -256,9 +305,10 @@
           "x": 65,
           "top": 27,
           "width": 70,
-          "height": 45.403,
+          "height": 49.53,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -267,16 +317,18 @@
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 5,
-          "top": 87,
+          "top": 86,
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -287,7 +339,9 @@
       "heightMm": 100,
       "profileId": "pocket-150x100",
       "country": "BY",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
+      "bookId": "belarus-memory",
+      "editorialRevision": "2026-10-27.1",
       "component": "body",
       "logicalPage": 7,
       "stopId": "mir-castle",
@@ -302,16 +356,18 @@
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 15,
-          "top": 91,
+          "top": 90.8,
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "binding-exclusion",
@@ -321,18 +377,26 @@
           "height": 100
         },
         {
+          "type": "rectangle",
+          "x": 30.0,
+          "top": 14,
+          "width": 100,
+          "height": 70
+        },
+        {
           "type": "text",
           "x": 38.0,
-          "top": 44.0,
+          "top": 42.0,
           "width": 84,
-          "height": 4.128,
+          "height": 8.255,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "photo-slot",
           "x": 30.0,
-          "top": 16,
+          "top": 14,
           "width": 100,
           "height": 70,
           "maxPhotoMm": [
@@ -343,11 +407,12 @@
         {
           "type": "text",
           "x": 15,
-          "top": 89,
+          "top": 86,
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -358,7 +423,9 @@
       "heightMm": 100,
       "profileId": "pocket-150x100",
       "country": "BY",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
+      "bookId": "belarus-memory",
+      "editorialRevision": "2026-10-27.1",
       "component": "body",
       "logicalPage": 8,
       "stopId": "mir-castle",
@@ -373,16 +440,18 @@
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 5,
-          "top": 91,
+          "top": 90.8,
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "binding-exclusion",
@@ -392,18 +461,9 @@
           "height": 100
         },
         {
-          "type": "text",
-          "x": 5,
-          "top": 14,
-          "width": 130,
-          "height": 4.128,
-          "font": "Sans",
-          "sizePt": 9
-        },
-        {
           "type": "qr",
           "x": 5,
-          "top": 21.1275,
+          "top": 14,
           "width": 23.76,
           "height": 23.76,
           "dataMm": 18,
@@ -414,29 +474,70 @@
         {
           "type": "text",
           "x": 32.760000000000005,
-          "top": 21.1275,
+          "top": 14,
           "width": 102.24,
           "height": 8.255,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 32.760000000000005,
-          "top": 31.3825,
+          "top": 24.255000000000003,
           "width": 102.24,
           "height": 8.255,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 5,
-          "top": 48.8875,
+          "top": 41.760000000000005,
+          "width": 130,
+          "height": 8.255,
+          "font": "Sans",
+          "sizePt": 9,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 54.01500000000001,
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 65,
+          "width": 130,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 71,
+          "width": 130,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 77,
+          "width": 130,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 83,
+          "width": 130,
+          "height": 0
         }
       ]
     },
@@ -447,7 +548,9 @@
       "heightMm": 100,
       "profileId": "pocket-150x100",
       "country": "BY",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
+      "bookId": "belarus-memory",
+      "editorialRevision": "2026-10-27.1",
       "component": "body",
       "logicalPage": 9,
       "stopId": "mir-castle",
@@ -462,16 +565,18 @@
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 15,
-          "top": 91,
+          "top": 90.8,
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "binding-exclusion",
@@ -481,13 +586,21 @@
           "height": 100
         },
         {
+          "type": "rectangle",
+          "x": 15,
+          "top": 18,
+          "width": 130,
+          "height": 58
+        },
+        {
           "type": "text",
           "x": 21,
           "top": 78,
           "width": 118,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -499,7 +612,7 @@
       "profileId": "album-a5",
       "country": "BY",
       "component": "cover",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
       "bookId": "belarus-memory",
       "frames": [
         {
@@ -513,13 +626,21 @@
           "crop": false
         },
         {
+          "type": "rectangle",
+          "x": 5,
+          "top": 5,
+          "width": 138,
+          "height": 48
+        },
+        {
           "type": "text",
           "x": 9,
           "top": 8,
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -528,7 +649,8 @@
           "width": 130,
           "height": 14.676,
           "font": "SerifBold",
-          "sizePt": 32
+          "sizePt": 32,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -537,7 +659,15 @@
           "width": 130,
           "height": 5.045,
           "font": "Sans",
-          "sizePt": 11
+          "sizePt": 11,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 192,
+          "width": 138,
+          "height": 13
         },
         {
           "type": "text",
@@ -546,7 +676,8 @@
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -555,7 +686,8 @@
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -567,7 +699,7 @@
       "profileId": "album-a5",
       "country": "BY",
       "component": "cover",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
       "bookId": "belarus-memory",
       "frames": [
         {
@@ -577,7 +709,8 @@
           "width": 118,
           "height": 10.089,
           "font": "SerifBold",
-          "sizePt": 22
+          "sizePt": 22,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -586,7 +719,15 @@
           "width": 118,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "rectangle",
+          "x": 15,
+          "top": 36,
+          "width": 118,
+          "height": 0
         },
         {
           "type": "text",
@@ -595,7 +736,15 @@
           "width": 118,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "rectangle",
+          "x": 15,
+          "top": 56,
+          "width": 118,
+          "height": 0
         },
         {
           "type": "text",
@@ -604,7 +753,8 @@
           "width": 118,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -616,7 +766,7 @@
       "profileId": "album-a5",
       "country": "BY",
       "component": "cover",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
       "bookId": "belarus-memory",
       "frames": [
         {
@@ -626,7 +776,8 @@
           "width": 118,
           "height": 10.089,
           "font": "SerifBold",
-          "sizePt": 22
+          "sizePt": 22,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -635,7 +786,8 @@
           "width": 118,
           "height": 14.446,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -647,7 +799,7 @@
       "profileId": "album-a5",
       "country": "BY",
       "component": "cover",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
       "bookId": "belarus-memory",
       "frames": [
         {
@@ -657,16 +809,18 @@
           "width": 118,
           "height": 12.841,
           "font": "SerifBold",
-          "sizePt": 28
+          "sizePt": 28,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 15,
           "top": 45,
           "width": 118,
-          "height": 15.134,
+          "height": 20.179,
           "font": "Sans",
-          "sizePt": 11
+          "sizePt": 11,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -675,7 +829,8 @@
           "width": 118,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -686,7 +841,9 @@
       "heightMm": 210,
       "profileId": "album-a5",
       "country": "BY",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
+      "bookId": "belarus-memory",
+      "editorialRevision": "2026-10-27.1",
       "component": "body",
       "logicalPage": 6,
       "stopId": "mir-castle",
@@ -694,6 +851,8 @@
       "bindingMm": 15,
       "bindingSide": "right",
       "continuationOnPage8": false,
+      "storyChars": 695,
+      "syntheticStressSample": false,
       "frames": [
         {
           "type": "text",
@@ -702,16 +861,18 @@
           "width": 128,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 5,
-          "top": 201,
+          "top": 200.8,
           "width": 128,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "binding-exclusion",
@@ -727,7 +888,8 @@
           "width": 128,
           "height": 10.089,
           "font": "SerifBold",
-          "sizePt": 22
+          "sizePt": 22,
+          "leadingRatio": 1.3
         },
         {
           "type": "image",
@@ -744,9 +906,10 @@
           "x": 5,
           "top": 107,
           "width": 128,
-          "height": 57.785,
+          "height": 60.008,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         },
         {
           "type": "qr",
@@ -764,27 +927,30 @@
           "x": 35.4,
           "top": 174,
           "width": 97.6,
-          "height": 4.815,
+          "height": 5.001,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         },
         {
           "type": "text",
           "x": 35.4,
           "top": 183,
           "width": 97.6,
-          "height": 4.815,
+          "height": 5.001,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         },
         {
           "type": "text",
           "x": 35.4,
-          "top": 191,
+          "top": 190.5,
           "width": 97.6,
-          "height": 4.815,
+          "height": 10.001,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         }
       ]
     },
@@ -795,7 +961,9 @@
       "heightMm": 210,
       "profileId": "album-a5",
       "country": "BY",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
+      "bookId": "belarus-memory",
+      "editorialRevision": "2026-10-27.1",
       "component": "body",
       "logicalPage": 7,
       "stopId": "mir-castle",
@@ -810,16 +978,18 @@
           "width": 128,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 15,
-          "top": 201,
+          "top": 200.8,
           "width": 128,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "binding-exclusion",
@@ -829,13 +999,21 @@
           "height": 210
         },
         {
+          "type": "rectangle",
+          "x": 25.0,
+          "top": 28,
+          "width": 108,
+          "height": 158
+        },
+        {
           "type": "text",
           "x": 33.0,
           "top": 100.0,
           "width": 92,
-          "height": 9.631,
+          "height": 15.002,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         },
         {
           "type": "photo-slot",
@@ -853,9 +1031,10 @@
           "x": 15,
           "top": 189,
           "width": 128,
-          "height": 4.815,
+          "height": 5.001,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         }
       ]
     },
@@ -866,7 +1045,9 @@
       "heightMm": 210,
       "profileId": "album-a5",
       "country": "BY",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
+      "bookId": "belarus-memory",
+      "editorialRevision": "2026-10-27.1",
       "component": "body",
       "logicalPage": 8,
       "stopId": "mir-castle",
@@ -881,16 +1062,18 @@
           "width": 128,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 5,
-          "top": 201,
+          "top": 200.8,
           "width": 128,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "binding-exclusion",
@@ -915,45 +1098,190 @@
           "x": 35.4,
           "top": 14,
           "width": 97.6,
-          "height": 9.631,
+          "height": 10.001,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         },
         {
           "type": "text",
           "x": 35.4,
-          "top": 25.630833333333335,
+          "top": 26.00125,
           "width": 97.6,
-          "height": 14.446,
+          "height": 15.002,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         },
         {
           "type": "text",
           "x": 5,
-          "top": 44.4,
+          "top": 45.003125,
           "width": 128,
-          "height": 14.446,
+          "height": 15.002,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         },
         {
           "type": "text",
           "x": 5,
-          "top": 62.84625,
+          "top": 64.005,
           "width": 128,
-          "height": 4.815,
+          "height": 5.001,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         },
         {
           "type": "text",
           "x": 5,
-          "top": 70.66166666666666,
+          "top": 72.005625,
           "width": 128,
-          "height": 4.815,
+          "height": 5.001,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 83,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 89,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 95,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 101,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 107,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 113,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 119,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 125,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 131,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 137,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 143,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 149,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 155,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 161,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 167,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 173,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 179,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 185,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 191,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 197,
+          "width": 128,
+          "height": 0
         }
       ]
     },
@@ -964,7 +1292,9 @@
       "heightMm": 210,
       "profileId": "album-a5",
       "country": "BY",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
+      "bookId": "belarus-memory",
+      "editorialRevision": "2026-10-27.1",
       "component": "body",
       "logicalPage": 9,
       "stopId": "mir-castle",
@@ -979,16 +1309,18 @@
           "width": 128,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 15,
-          "top": 201,
+          "top": 200.8,
           "width": 128,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "binding-exclusion",
@@ -998,13 +1330,21 @@
           "height": 210
         },
         {
+          "type": "rectangle",
+          "x": 15,
+          "top": 18,
+          "width": 128,
+          "height": 168
+        },
+        {
           "type": "text",
           "x": 21,
           "top": 188,
           "width": 116,
-          "height": 9.631,
+          "height": 10.001,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         }
       ]
     },
@@ -1016,7 +1356,7 @@
       "profileId": "pocket-150x100",
       "country": "PL",
       "component": "cover",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
       "bookId": "poland-memory",
       "frames": [
         {
@@ -1030,13 +1370,21 @@
           "crop": false
         },
         {
+          "type": "rectangle",
+          "x": 5,
+          "top": 5,
+          "width": 140,
+          "height": 28
+        },
+        {
           "type": "text",
           "x": 9,
           "top": 8,
           "width": 132,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -1045,7 +1393,8 @@
           "width": 132,
           "height": 10.548,
           "font": "SerifBold",
-          "sizePt": 23
+          "sizePt": 23,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -1054,7 +1403,15 @@
           "width": 132,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 82,
+          "width": 140,
+          "height": 13
         },
         {
           "type": "text",
@@ -1063,7 +1420,8 @@
           "width": 132,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -1072,7 +1430,8 @@
           "width": 132,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -1084,7 +1443,7 @@
       "profileId": "pocket-150x100",
       "country": "PL",
       "component": "cover",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
       "bookId": "poland-memory",
       "frames": [
         {
@@ -1094,7 +1453,8 @@
           "width": 120,
           "height": 6.421,
           "font": "SerifBold",
-          "sizePt": 14
+          "sizePt": 14,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -1103,7 +1463,15 @@
           "width": 120,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "rectangle",
+          "x": 15,
+          "top": 36,
+          "width": 120,
+          "height": 0
         },
         {
           "type": "text",
@@ -1112,7 +1480,15 @@
           "width": 120,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "rectangle",
+          "x": 15,
+          "top": 56,
+          "width": 120,
+          "height": 0
         },
         {
           "type": "text",
@@ -1121,7 +1497,8 @@
           "width": 120,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -1133,7 +1510,7 @@
       "profileId": "pocket-150x100",
       "country": "PL",
       "component": "cover",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
       "bookId": "poland-memory",
       "frames": [
         {
@@ -1143,7 +1520,8 @@
           "width": 120,
           "height": 6.421,
           "font": "SerifBold",
-          "sizePt": 14
+          "sizePt": 14,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -1152,7 +1530,8 @@
           "width": 120,
           "height": 12.382,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -1164,7 +1543,7 @@
       "profileId": "pocket-150x100",
       "country": "PL",
       "component": "cover",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
       "bookId": "poland-memory",
       "frames": [
         {
@@ -1174,16 +1553,18 @@
           "width": 120,
           "height": 9.172,
           "font": "SerifBold",
-          "sizePt": 20
+          "sizePt": 20,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 15,
           "top": 30,
           "width": 120,
-          "height": 8.255,
+          "height": 16.51,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -1192,7 +1573,8 @@
           "width": 120,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -1203,7 +1585,9 @@
       "heightMm": 100,
       "profileId": "pocket-150x100",
       "country": "PL",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
+      "bookId": "poland-memory",
+      "editorialRevision": "2026-10-27.1",
       "component": "body",
       "logicalPage": 6,
       "stopId": "malbork",
@@ -1211,6 +1595,8 @@
       "bindingMm": 15,
       "bindingSide": "right",
       "continuationOnPage8": false,
+      "storyChars": 427,
+      "syntheticStressSample": false,
       "frames": [
         {
           "type": "text",
@@ -1219,16 +1605,18 @@
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 5,
-          "top": 91,
+          "top": 90.8,
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "binding-exclusion",
@@ -1244,7 +1632,8 @@
           "width": 130,
           "height": 6.421,
           "font": "SerifBold",
-          "sizePt": 14
+          "sizePt": 14,
+          "leadingRatio": 1.3
         },
         {
           "type": "image",
@@ -1261,9 +1650,10 @@
           "x": 65,
           "top": 27,
           "width": 70,
-          "height": 45.403,
+          "height": 49.53,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -1272,16 +1662,18 @@
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 5,
-          "top": 87,
+          "top": 86,
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -1292,7 +1684,9 @@
       "heightMm": 100,
       "profileId": "pocket-150x100",
       "country": "PL",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
+      "bookId": "poland-memory",
+      "editorialRevision": "2026-10-27.1",
       "component": "body",
       "logicalPage": 7,
       "stopId": "malbork",
@@ -1307,16 +1701,18 @@
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 15,
-          "top": 91,
+          "top": 90.8,
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "binding-exclusion",
@@ -1326,18 +1722,26 @@
           "height": 100
         },
         {
+          "type": "rectangle",
+          "x": 30.0,
+          "top": 14,
+          "width": 100,
+          "height": 70
+        },
+        {
           "type": "text",
           "x": 38.0,
-          "top": 44.0,
+          "top": 42.0,
           "width": 84,
-          "height": 4.128,
+          "height": 8.255,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "photo-slot",
           "x": 30.0,
-          "top": 16,
+          "top": 14,
           "width": 100,
           "height": 70,
           "maxPhotoMm": [
@@ -1348,11 +1752,12 @@
         {
           "type": "text",
           "x": 15,
-          "top": 89,
+          "top": 86,
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -1363,7 +1768,9 @@
       "heightMm": 100,
       "profileId": "pocket-150x100",
       "country": "PL",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
+      "bookId": "poland-memory",
+      "editorialRevision": "2026-10-27.1",
       "component": "body",
       "logicalPage": 8,
       "stopId": "malbork",
@@ -1378,16 +1785,18 @@
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 5,
-          "top": 91,
+          "top": 90.8,
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "binding-exclusion",
@@ -1414,7 +1823,8 @@
           "width": 103.63636363636364,
           "height": 8.255,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -1423,16 +1833,63 @@
           "width": 103.63636363636364,
           "height": 8.255,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 5,
           "top": 40.36363636363636,
           "width": 130,
+          "height": 8.255,
+          "font": "Sans",
+          "sizePt": 9,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 52.61863636363636,
+          "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 63,
+          "width": 130,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 69,
+          "width": 130,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 75,
+          "width": 130,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 81,
+          "width": 130,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 87,
+          "width": 130,
+          "height": 0
         }
       ]
     },
@@ -1443,7 +1900,9 @@
       "heightMm": 100,
       "profileId": "pocket-150x100",
       "country": "PL",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
+      "bookId": "poland-memory",
+      "editorialRevision": "2026-10-27.1",
       "component": "body",
       "logicalPage": 9,
       "stopId": "malbork",
@@ -1458,16 +1917,18 @@
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 15,
-          "top": 91,
+          "top": 90.8,
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "binding-exclusion",
@@ -1477,13 +1938,21 @@
           "height": 100
         },
         {
+          "type": "rectangle",
+          "x": 15,
+          "top": 18,
+          "width": 130,
+          "height": 58
+        },
+        {
           "type": "text",
           "x": 21,
           "top": 78,
           "width": 118,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -1495,7 +1964,7 @@
       "profileId": "album-a5",
       "country": "PL",
       "component": "cover",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
       "bookId": "poland-memory",
       "frames": [
         {
@@ -1509,13 +1978,21 @@
           "crop": false
         },
         {
+          "type": "rectangle",
+          "x": 5,
+          "top": 5,
+          "width": 138,
+          "height": 48
+        },
+        {
           "type": "text",
           "x": 9,
           "top": 8,
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -1524,7 +2001,8 @@
           "width": 130,
           "height": 14.676,
           "font": "SerifBold",
-          "sizePt": 32
+          "sizePt": 32,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -1533,7 +2011,15 @@
           "width": 130,
           "height": 5.045,
           "font": "Sans",
-          "sizePt": 11
+          "sizePt": 11,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 192,
+          "width": 138,
+          "height": 13
         },
         {
           "type": "text",
@@ -1542,7 +2028,8 @@
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -1551,7 +2038,8 @@
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -1563,7 +2051,7 @@
       "profileId": "album-a5",
       "country": "PL",
       "component": "cover",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
       "bookId": "poland-memory",
       "frames": [
         {
@@ -1573,7 +2061,8 @@
           "width": 118,
           "height": 10.089,
           "font": "SerifBold",
-          "sizePt": 22
+          "sizePt": 22,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -1582,7 +2071,15 @@
           "width": 118,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "rectangle",
+          "x": 15,
+          "top": 36,
+          "width": 118,
+          "height": 0
         },
         {
           "type": "text",
@@ -1591,7 +2088,15 @@
           "width": 118,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "rectangle",
+          "x": 15,
+          "top": 56,
+          "width": 118,
+          "height": 0
         },
         {
           "type": "text",
@@ -1600,7 +2105,8 @@
           "width": 118,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -1612,7 +2118,7 @@
       "profileId": "album-a5",
       "country": "PL",
       "component": "cover",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
       "bookId": "poland-memory",
       "frames": [
         {
@@ -1622,7 +2128,8 @@
           "width": 118,
           "height": 10.089,
           "font": "SerifBold",
-          "sizePt": 22
+          "sizePt": 22,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -1631,7 +2138,8 @@
           "width": 118,
           "height": 14.446,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -1643,7 +2151,7 @@
       "profileId": "album-a5",
       "country": "PL",
       "component": "cover",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
       "bookId": "poland-memory",
       "frames": [
         {
@@ -1653,16 +2161,18 @@
           "width": 118,
           "height": 12.841,
           "font": "SerifBold",
-          "sizePt": 28
+          "sizePt": 28,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 15,
           "top": 45,
           "width": 118,
-          "height": 15.134,
+          "height": 20.179,
           "font": "Sans",
-          "sizePt": 11
+          "sizePt": 11,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -1671,7 +2181,8 @@
           "width": 118,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -1682,7 +2193,9 @@
       "heightMm": 210,
       "profileId": "album-a5",
       "country": "PL",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
+      "bookId": "poland-memory",
+      "editorialRevision": "2026-10-27.1",
       "component": "body",
       "logicalPage": 6,
       "stopId": "malbork",
@@ -1690,6 +2203,8 @@
       "bindingMm": 15,
       "bindingSide": "right",
       "continuationOnPage8": false,
+      "storyChars": 664,
+      "syntheticStressSample": false,
       "frames": [
         {
           "type": "text",
@@ -1698,16 +2213,18 @@
           "width": 128,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 5,
-          "top": 201,
+          "top": 200.8,
           "width": 128,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "binding-exclusion",
@@ -1723,7 +2240,8 @@
           "width": 128,
           "height": 10.089,
           "font": "SerifBold",
-          "sizePt": 22
+          "sizePt": 22,
+          "leadingRatio": 1.3
         },
         {
           "type": "image",
@@ -1740,9 +2258,10 @@
           "x": 5,
           "top": 107,
           "width": 128,
-          "height": 52.97,
+          "height": 55.007,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         },
         {
           "type": "qr",
@@ -1760,27 +2279,30 @@
           "x": 33.848484848484844,
           "top": 174,
           "width": 99.15151515151516,
-          "height": 4.815,
+          "height": 5.001,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         },
         {
           "type": "text",
           "x": 33.848484848484844,
           "top": 183,
           "width": 99.15151515151516,
-          "height": 4.815,
+          "height": 5.001,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         },
         {
           "type": "text",
           "x": 33.848484848484844,
-          "top": 191,
+          "top": 190.5,
           "width": 99.15151515151516,
-          "height": 4.815,
+          "height": 10.001,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         }
       ]
     },
@@ -1791,7 +2313,9 @@
       "heightMm": 210,
       "profileId": "album-a5",
       "country": "PL",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
+      "bookId": "poland-memory",
+      "editorialRevision": "2026-10-27.1",
       "component": "body",
       "logicalPage": 7,
       "stopId": "malbork",
@@ -1806,16 +2330,18 @@
           "width": 128,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 15,
-          "top": 201,
+          "top": 200.8,
           "width": 128,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "binding-exclusion",
@@ -1825,13 +2351,21 @@
           "height": 210
         },
         {
+          "type": "rectangle",
+          "x": 25.0,
+          "top": 28,
+          "width": 108,
+          "height": 158
+        },
+        {
           "type": "text",
           "x": 33.0,
           "top": 100.0,
           "width": 92,
-          "height": 9.631,
+          "height": 15.002,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         },
         {
           "type": "photo-slot",
@@ -1849,9 +2383,10 @@
           "x": 15,
           "top": 189,
           "width": 128,
-          "height": 4.815,
+          "height": 5.001,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         }
       ]
     },
@@ -1862,7 +2397,9 @@
       "heightMm": 210,
       "profileId": "album-a5",
       "country": "PL",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
+      "bookId": "poland-memory",
+      "editorialRevision": "2026-10-27.1",
       "component": "body",
       "logicalPage": 8,
       "stopId": "malbork",
@@ -1877,16 +2414,18 @@
           "width": 128,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 5,
-          "top": 201,
+          "top": 200.8,
           "width": 128,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "binding-exclusion",
@@ -1911,45 +2450,190 @@
           "x": 33.848484848484844,
           "top": 14,
           "width": 99.15151515151516,
-          "height": 9.631,
+          "height": 10.001,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         },
         {
           "type": "text",
           "x": 33.848484848484844,
-          "top": 25.630833333333335,
+          "top": 26.00125,
           "width": 99.15151515151516,
-          "height": 14.446,
+          "height": 15.002,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         },
         {
           "type": "text",
           "x": 5,
-          "top": 44.077083333333334,
+          "top": 45.003125,
           "width": 128,
-          "height": 14.446,
+          "height": 15.002,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         },
         {
           "type": "text",
           "x": 5,
-          "top": 62.52333333333333,
+          "top": 64.005,
           "width": 128,
-          "height": 4.815,
+          "height": 5.001,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         },
         {
           "type": "text",
           "x": 5,
-          "top": 70.33875,
+          "top": 72.005625,
           "width": 128,
-          "height": 4.815,
+          "height": 5.001,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 83,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 89,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 95,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 101,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 107,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 113,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 119,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 125,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 131,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 137,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 143,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 149,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 155,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 161,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 167,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 173,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 179,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 185,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 191,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 197,
+          "width": 128,
+          "height": 0
         }
       ]
     },
@@ -1960,7 +2644,9 @@
       "heightMm": 210,
       "profileId": "album-a5",
       "country": "PL",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
+      "bookId": "poland-memory",
+      "editorialRevision": "2026-10-27.1",
       "component": "body",
       "logicalPage": 9,
       "stopId": "malbork",
@@ -1975,16 +2661,18 @@
           "width": 128,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 15,
-          "top": 201,
+          "top": 200.8,
           "width": 128,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "binding-exclusion",
@@ -1994,13 +2682,21 @@
           "height": 210
         },
         {
+          "type": "rectangle",
+          "x": 15,
+          "top": 18,
+          "width": 128,
+          "height": 168
+        },
+        {
           "type": "text",
           "x": 21,
           "top": 188,
           "width": 116,
-          "height": 9.631,
+          "height": 10.001,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         }
       ]
     },
@@ -2010,7 +2706,7 @@
       "widthMm": 210,
       "heightMm": 297,
       "component": "control",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
       "rulerMm": 50,
       "physicalAcceptance": "H1 required; digital geometry is not a paper pass",
       "frames": [
@@ -2021,7 +2717,8 @@
           "width": 180,
           "height": 9.172,
           "font": "SerifBold",
-          "sizePt": 20
+          "sizePt": 20,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -2030,7 +2727,372 @@
           "width": 180,
           "height": 5.045,
           "font": "Sans",
-          "sizePt": 11
+          "sizePt": 11,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "rectangle",
+          "x": 20,
+          "top": 50,
+          "width": 50,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 20,
+          "top": 47,
+          "width": 0,
+          "height": 3
+        },
+        {
+          "type": "rectangle",
+          "x": 21,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 22,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 23,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 24,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 25,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 26,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 27,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 28,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 29,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 30,
+          "top": 47,
+          "width": 0,
+          "height": 3
+        },
+        {
+          "type": "rectangle",
+          "x": 31,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 32,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 33,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 34,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 35,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 36,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 37,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 38,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 39,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 40,
+          "top": 47,
+          "width": 0,
+          "height": 3
+        },
+        {
+          "type": "rectangle",
+          "x": 41,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 42,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 43,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 44,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 45,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 46,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 47,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 48,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 49,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 50,
+          "top": 47,
+          "width": 0,
+          "height": 3
+        },
+        {
+          "type": "rectangle",
+          "x": 51,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 52,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 53,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 54,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 55,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 56,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 57,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 58,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 59,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 60,
+          "top": 47,
+          "width": 0,
+          "height": 3
+        },
+        {
+          "type": "rectangle",
+          "x": 61,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 62,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 63,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 64,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 65,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 66,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 67,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 68,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 69,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 70,
+          "top": 47,
+          "width": 0,
+          "height": 3
         },
         {
           "type": "text",
@@ -2039,7 +3101,15 @@
           "width": 165,
           "height": 5.045,
           "font": "Sans",
-          "sizePt": 11
+          "sizePt": 11,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "rectangle",
+          "x": 30,
+          "top": 76,
+          "width": 150,
+          "height": 100
         },
         {
           "type": "text",
@@ -2048,7 +3118,8 @@
           "width": 134,
           "height": 5.962,
           "font": "SansBold",
-          "sizePt": 13
+          "sizePt": 13,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -2057,7 +3128,15 @@
           "width": 134,
           "height": 10.089,
           "font": "Sans",
-          "sizePt": 11
+          "sizePt": 11,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "rectangle",
+          "x": 30,
+          "top": 183,
+          "width": 150,
+          "height": 100
         },
         {
           "type": "text",
@@ -2066,7 +3145,8 @@
           "width": 134,
           "height": 5.962,
           "font": "SansBold",
-          "sizePt": 13
+          "sizePt": 13,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -2075,7 +3155,8 @@
           "width": 134,
           "height": 10.089,
           "font": "Sans",
-          "sizePt": 11
+          "sizePt": 11,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -2085,7 +3166,7 @@
       "widthMm": 210,
       "heightMm": 297,
       "component": "control",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
       "rulerMm": 50,
       "physicalAcceptance": "H1 required; digital geometry is not a paper pass",
       "frames": [
@@ -2096,7 +3177,8 @@
           "width": 180,
           "height": 9.172,
           "font": "SerifBold",
-          "sizePt": 20
+          "sizePt": 20,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -2105,7 +3187,372 @@
           "width": 180,
           "height": 5.045,
           "font": "Sans",
-          "sizePt": 11
+          "sizePt": 11,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "rectangle",
+          "x": 20,
+          "top": 50,
+          "width": 50,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 20,
+          "top": 47,
+          "width": 0,
+          "height": 3
+        },
+        {
+          "type": "rectangle",
+          "x": 21,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 22,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 23,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 24,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 25,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 26,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 27,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 28,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 29,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 30,
+          "top": 47,
+          "width": 0,
+          "height": 3
+        },
+        {
+          "type": "rectangle",
+          "x": 31,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 32,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 33,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 34,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 35,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 36,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 37,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 38,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 39,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 40,
+          "top": 47,
+          "width": 0,
+          "height": 3
+        },
+        {
+          "type": "rectangle",
+          "x": 41,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 42,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 43,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 44,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 45,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 46,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 47,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 48,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 49,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 50,
+          "top": 47,
+          "width": 0,
+          "height": 3
+        },
+        {
+          "type": "rectangle",
+          "x": 51,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 52,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 53,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 54,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 55,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 56,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 57,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 58,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 59,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 60,
+          "top": 47,
+          "width": 0,
+          "height": 3
+        },
+        {
+          "type": "rectangle",
+          "x": 61,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 62,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 63,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 64,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 65,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 66,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 67,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 68,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 69,
+          "top": 48.5,
+          "width": 0,
+          "height": 1.5
+        },
+        {
+          "type": "rectangle",
+          "x": 70,
+          "top": 47,
+          "width": 0,
+          "height": 3
         },
         {
           "type": "text",
@@ -2114,7 +3561,15 @@
           "width": 165,
           "height": 5.045,
           "font": "Sans",
-          "sizePt": 11
+          "sizePt": 11,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "rectangle",
+          "x": 30,
+          "top": 76,
+          "width": 150,
+          "height": 100
         },
         {
           "type": "text",
@@ -2123,7 +3578,8 @@
           "width": 134,
           "height": 5.962,
           "font": "SansBold",
-          "sizePt": 13
+          "sizePt": 13,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -2132,7 +3588,15 @@
           "width": 134,
           "height": 10.089,
           "font": "Sans",
-          "sizePt": 11
+          "sizePt": 11,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "rectangle",
+          "x": 30,
+          "top": 183,
+          "width": 150,
+          "height": 100
         },
         {
           "type": "text",
@@ -2141,7 +3605,8 @@
           "width": 134,
           "height": 5.962,
           "font": "SansBold",
-          "sizePt": 13
+          "sizePt": 13,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -2150,7 +3615,8 @@
           "width": 134,
           "height": 10.089,
           "font": "Sans",
-          "sizePt": 11
+          "sizePt": 11,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -2161,7 +3627,9 @@
       "heightMm": 100,
       "profileId": "pocket-150x100",
       "country": "BY",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
+      "bookId": "belarus-memory",
+      "editorialRevision": "2026-10-27.1",
       "component": "body",
       "logicalPage": 6,
       "stopId": "mir-castle",
@@ -2169,6 +3637,8 @@
       "bindingMm": 15,
       "bindingSide": "right",
       "continuationOnPage8": true,
+      "storyChars": 550,
+      "syntheticStressSample": true,
       "frames": [
         {
           "type": "text",
@@ -2177,16 +3647,18 @@
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 5,
-          "top": 91,
+          "top": 90.8,
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "binding-exclusion",
@@ -2202,7 +3674,8 @@
           "width": 130,
           "height": 6.421,
           "font": "SerifBold",
-          "sizePt": 14
+          "sizePt": 14,
+          "leadingRatio": 1.3
         },
         {
           "type": "image",
@@ -2219,9 +3692,10 @@
           "x": 65,
           "top": 27,
           "width": 70,
-          "height": 45.403,
+          "height": 49.53,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
@@ -2230,16 +3704,18 @@
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 5,
-          "top": 87,
+          "top": 86,
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         }
       ]
     },
@@ -2250,7 +3726,9 @@
       "heightMm": 100,
       "profileId": "pocket-150x100",
       "country": "BY",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
+      "bookId": "belarus-memory",
+      "editorialRevision": "2026-10-27.1",
       "component": "body",
       "logicalPage": 8,
       "stopId": "mir-castle",
@@ -2265,16 +3743,18 @@
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 5,
-          "top": 91,
+          "top": 90.8,
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "binding-exclusion",
@@ -2288,14 +3768,15 @@
           "x": 5,
           "top": 14,
           "width": 130,
-          "height": 12.382,
+          "height": 8.255,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "qr",
           "x": 5,
-          "top": 29.3825,
+          "top": 25.255000000000003,
           "width": 23.76,
           "height": 23.76,
           "dataMm": 18,
@@ -2306,29 +3787,56 @@
         {
           "type": "text",
           "x": 32.760000000000005,
-          "top": 29.3825,
+          "top": 25.255000000000003,
           "width": 102.24,
           "height": 8.255,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 32.760000000000005,
-          "top": 39.6375,
+          "top": 35.510000000000005,
           "width": 102.24,
           "height": 8.255,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 5,
-          "top": 57.1425,
+          "top": 53.015,
+          "width": 130,
+          "height": 8.255,
+          "font": "Sans",
+          "sizePt": 9,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 65.27,
           "width": 130,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 76,
+          "width": 130,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 82,
+          "width": 130,
+          "height": 0
         }
       ]
     },
@@ -2339,7 +3847,9 @@
       "heightMm": 210,
       "profileId": "album-a5",
       "country": "BY",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
+      "bookId": "belarus-memory",
+      "editorialRevision": "2026-10-27.1",
       "component": "body",
       "logicalPage": 6,
       "stopId": "mir-castle",
@@ -2347,6 +3857,8 @@
       "bindingMm": 15,
       "bindingSide": "right",
       "continuationOnPage8": true,
+      "storyChars": 900,
+      "syntheticStressSample": true,
       "frames": [
         {
           "type": "text",
@@ -2355,16 +3867,18 @@
           "width": 128,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 5,
-          "top": 201,
+          "top": 200.8,
           "width": 128,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "binding-exclusion",
@@ -2380,7 +3894,8 @@
           "width": 128,
           "height": 20.179,
           "font": "SerifBold",
-          "sizePt": 22
+          "sizePt": 22,
+          "leadingRatio": 1.3
         },
         {
           "type": "image",
@@ -2397,9 +3912,10 @@
           "x": 5,
           "top": 107,
           "width": 128,
-          "height": 57.785,
+          "height": 60.008,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         },
         {
           "type": "qr",
@@ -2417,27 +3933,30 @@
           "x": 35.4,
           "top": 174,
           "width": 97.6,
-          "height": 4.815,
+          "height": 5.001,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         },
         {
           "type": "text",
           "x": 35.4,
           "top": 183,
           "width": 97.6,
-          "height": 4.815,
+          "height": 5.001,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         },
         {
           "type": "text",
           "x": 35.4,
-          "top": 191,
+          "top": 190.5,
           "width": 97.6,
-          "height": 4.815,
+          "height": 10.001,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         }
       ]
     },
@@ -2448,7 +3967,9 @@
       "heightMm": 210,
       "profileId": "album-a5",
       "country": "BY",
-      "revision": "2026-10-27.1",
+      "revision": "2026-10-28.1",
+      "bookId": "belarus-memory",
+      "editorialRevision": "2026-10-27.1",
       "component": "body",
       "logicalPage": 8,
       "stopId": "mir-castle",
@@ -2463,16 +3984,18 @@
           "width": 128,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
           "x": 5,
-          "top": 201,
+          "top": 200.8,
           "width": 128,
           "height": 4.128,
           "font": "Sans",
-          "sizePt": 9
+          "sizePt": 9,
+          "leadingRatio": 1.3
         },
         {
           "type": "binding-exclusion",
@@ -2486,14 +4009,15 @@
           "x": 5,
           "top": 14,
           "width": 128,
-          "height": 19.262,
+          "height": 20.002,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         },
         {
           "type": "qr",
           "x": 5,
-          "top": 36.26166666666667,
+          "top": 37.0025,
           "width": 26.4,
           "height": 26.4,
           "dataMm": 20,
@@ -2504,47 +4028,304 @@
         {
           "type": "text",
           "x": 35.4,
-          "top": 36.26166666666667,
+          "top": 37.0025,
           "width": 97.6,
-          "height": 9.631,
+          "height": 10.001,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         },
         {
           "type": "text",
           "x": 35.4,
-          "top": 47.892500000000005,
+          "top": 49.00375,
           "width": 97.6,
-          "height": 14.446,
+          "height": 15.002,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         },
         {
           "type": "text",
           "x": 5,
-          "top": 66.66166666666666,
+          "top": 68.005625,
           "width": 128,
-          "height": 14.446,
+          "height": 15.002,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
         },
         {
           "type": "text",
           "x": 5,
-          "top": 85.10791666666665,
+          "top": 87.0075,
           "width": 128,
+          "height": 5.001,
+          "font": "Sans",
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
+        },
+        {
+          "type": "text",
+          "x": 5,
+          "top": 95.00812499999999,
+          "width": 128,
+          "height": 5.001,
+          "font": "Sans",
+          "sizePt": 10.5,
+          "leadingRatio": 1.35
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 106,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 112,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 118,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 124,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 130,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 136,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 142,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 148,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 154,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 160,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 166,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 172,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 178,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 184,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 190,
+          "width": 128,
+          "height": 0
+        },
+        {
+          "type": "rectangle",
+          "x": 5,
+          "top": 196,
+          "width": 128,
+          "height": 0
+        }
+      ]
+    },
+    {
+      "pdfPage": 39,
+      "kind": "credits",
+      "widthMm": 210,
+      "heightMm": 297,
+      "component": "credits",
+      "revision": "2026-10-28.1",
+      "frames": [
+        {
+          "type": "text",
+          "x": 15,
+          "top": 15,
+          "width": 180,
+          "height": 10.089,
+          "font": "SerifBold",
+          "sizePt": 22,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 38,
+          "width": 180,
+          "height": 5.503,
+          "font": "SansBold",
+          "sizePt": 12,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 48,
+          "width": 180,
           "height": 4.815,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.3
         },
         {
           "type": "text",
-          "x": 5,
-          "top": 92.92333333333332,
-          "width": 128,
+          "x": 15,
+          "top": 60,
+          "width": 180,
           "height": 4.815,
           "font": "Sans",
-          "sizePt": 10.5
+          "sizePt": 10.5,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 70,
+          "width": 180,
+          "height": 4.815,
+          "font": "Sans",
+          "sizePt": 10.5,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 93,
+          "width": 180,
+          "height": 5.503,
+          "font": "SansBold",
+          "sizePt": 12,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 103,
+          "width": 180,
+          "height": 4.815,
+          "font": "Sans",
+          "sizePt": 10.5,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 115,
+          "width": 180,
+          "height": 4.815,
+          "font": "Sans",
+          "sizePt": 10.5,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 125,
+          "width": 180,
+          "height": 4.815,
+          "font": "Sans",
+          "sizePt": 10.5,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 148,
+          "width": 180,
+          "height": 14.446,
+          "font": "Sans",
+          "sizePt": 10.5,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 186,
+          "width": 180,
+          "height": 9.631,
+          "font": "Sans",
+          "sizePt": 10.5,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 218,
+          "width": 180,
+          "height": 4.815,
+          "font": "Sans",
+          "sizePt": 10.5,
+          "leadingRatio": 1.3
+        },
+        {
+          "type": "text",
+          "x": 15,
+          "top": 238,
+          "width": 180,
+          "height": 14.446,
+          "font": "Sans",
+          "sizePt": 10.5,
+          "leadingRatio": 1.3
         }
       ]
     }
@@ -2574,8 +4355,20 @@
     }
   },
   "fontFiles": {
-    "NotoSans-Regular.ttf": "f5f552c8c5edb61fe6efb824baf4d4de47b1a8689ab4925ff43f7bd6a4ebece5",
-    "NotoSans-Bold.ttf": "3a08a47daa00cade516425c15c57615aef2fd418ec9811a7b9f465088f92cc05",
-    "NotoSerif-Bold.ttf": "96656aa5cec8f1d6fd0e804c1fad397e1a1cfa082e6642124e0bda68cd8363ce"
+    "NotoSans-Regular.ttf": "b85c38ecea8a7cfb39c24e395a4007474fa5a4fc864f6ee33309eb4948d232d5",
+    "NotoSans-Bold.ttf": "c976e4b1b99edc88775377fcc21692ca4bfa46b6d6ca6522bfda505b28ff9d6a",
+    "NotoSerif-Bold.ttf": "3b2086a869bcded2aeb4416fc281ceec9d6ce3c06756cda19f8f763636204e7d"
+  },
+  "sourceBooks": {
+    "by": {
+      "id": "belarus-memory",
+      "revision": "2026-10-27.1",
+      "sha256": "71dff30b7f9828e57b8314478a51dc49ca62a8c718a0211d867c5ae52b92f2e1"
+    },
+    "pl": {
+      "id": "poland-memory",
+      "revision": "2026-10-27.1",
+      "sha256": "977ccb324a5c470c62dd1e9e1af5e14bccd128293d5193acc73c45a7c5ce2c6d"
+    }
   }
 }

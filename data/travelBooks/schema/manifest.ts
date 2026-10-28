@@ -53,9 +53,27 @@ export const readyBookSchema = z.strictObject({
   });
   const ids = new Set<string>();
   const combinations = new Set<string>();
+  const resources = new Map<string, Record<string, string | number>>();
+  const checkResource = (uri: string, metadata: Record<string, string | number>, path: (string | number)[]) => {
+    let key: string;
+    try { key = new URL(uri, 'https://assets.invalid').href; }
+    catch { return; } // assetUri already reports malformed URLs; do not turn validation into a throw.
+    const prior = resources.get(key);
+    if (prior && Object.entries(metadata).some(([field, value]) => prior[field] !== undefined && prior[field] !== value)) {
+      fail(path, 'The same asset URI has contradictory metadata');
+    }
+    resources.set(key, {...prior, ...metadata});
+  };
+  book.stops.forEach((stop, index) => {
+    checkResource(stop.image.uri, {kind: 'image', sha256: stop.image.sha256}, ['stops', index, 'image', 'uri']);
+  });
   const revisionPath = `/${book.revision}/`;
   book.artifacts.forEach((file, index) => {
     const path = ['artifacts', index];
+    checkResource(file.uri, {
+      kind: 'pdf', sha256: file.sha256, bytes: file.bytes, pageCount: file.pageCount,
+      width: file.outputPageMm.width, height: file.outputPageMm.height,
+    }, [...path, 'uri']);
     if (ids.has(file.id)) fail([...path, 'id'], 'Duplicate artifact ID');
     ids.add(file.id);
     const key = `${file.profileId}:${file.purpose}:${file.component}:${file.providerProfileId ?? ''}`;
@@ -114,6 +132,7 @@ export const readyBookSchema = z.strictObject({
     const count = preview.component === 'body' ? 56 : 4;
     if (preview.pages.length !== count || preview.pages.some((page, pageIndex) => page.number !== pageIndex + 1)) fail([...path, 'pages'], `Expected ordered pages 1–${count}`);
     preview.pages.forEach((page, pageIndex) => {
+      checkResource(page.uri, {kind: 'image', sha256: page.sha256, bytes: page.bytes}, [...path, 'pages', pageIndex, 'uri']);
       if (!page.uri.includes(revisionPath)) fail([...path, 'pages', pageIndex, 'uri'], 'Preview path must contain the immutable revision');
     });
   });

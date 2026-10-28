@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-10-28",
+  "sourceUrl": "https://piepn.gov.pl/uploads/files/6582f46408513278286142.gpx",
+  "sourcePageUrl": "https://piepn.gov.pl/szlaki-turystyczne/sokolica-pieninki-z-kroscienka-nad-dunajcem-petla",
+  "sourceOperator": "Pieniński Park Narodowy",
+  "sourceSha256": "5b12ad01a6fbe7e5faeab98dc9a09943ff21a4ab577f0eb8d98c56bfa0832047",
+  "pointCount": 412,
+  "sourceBytes": 49348,
+  "method": {
+    "distance": "Sum horizontal haversine distances between consecutive GPX trkpt coordinates; Earth radius6371000m",
+    "elevationGain": "sum(max(0,ele[i]-ele[i-1])); no smoothing; preserve repeated points",
+    "duration": "90+110minutes, published average up/down values in the official route card",
+    "rounding": "distance to two decimals in kilometres; elevation to integer metres"
+  },
+  "result": {
+    "distanceKmRaw": 8.475544501322407,
+    "distanceKm": 8.48,
+    "elevationGainM": 692,
+    "durationMinutes": 200
+  },
+  "coordinateControl": {
+    "firstLatLng": [
+      49.440575,
+      20.427915
+    ],
+    "lastLatLng": [
+      49.440575,
+      20.427915
+    ],
+    "westernmostLatLng": [
+      49.426469,
+      20.413328
+    ],
+    "southernmostLatLng": [
+      49.417657,
+      20.440483
+    ],
+    "bounds": {
+      "south": 49.417657,
+      "north": 49.440744,
+      "west": 20.413328,
+      "east": 20.443963
+    },
+    "excludedPass": {
+      "name": "Przełęcz Szopka",
+      "latLng": [
+        49.419014,
+        20.407984
+      ],
+      "sourceUrl": "https://visitmalopolska.pl/obiekt/-/poi/przelecz-szopka-pieniny",
+      "nearestTrackPointDistanceM": 915
+    },
+    "closureNoticeUrl": "https://piepn.gov.pl/komunikat-turystyczny",
+    "closureNoticeCheckedAt": "2026-10-28",
+    "comparisonNote": "The selected loop visits Sokolica/Pieninki east of the Szopka approach. The westernmost point lies north-east of Szopka; no detour to Trzy Korony is included. This geographic comparison does not certify future route availability.",
+    "closedSectionComparison": {
+      "sourceUrl": "https://piepn.gov.pl/uploads/files/6582cc4f94075107232058.gpx",
+      "sourcePageUrl": "https://piepn.gov.pl/szlaki-turystyczne/trzy-korony-ze-sromowiec-niznych-petla",
+      "sourceSha256": "e8f4127808f5b89582c66f9ba801be5ebe9d4db76a01353bb1d64bc545486f83",
+      "pointCount": 330,
+      "closedSectionStartIndex": 100,
+      "closedSectionStartLatLng": [
+        49.419001,
+        20.40807
+      ],
+      "closedSectionEndIndex": 144,
+      "closedSectionEndLatLng": [
+        49.41472,
+        20.414582
+      ],
+      "selection": "GPX point nearest official Szopka coordinate through highest GPX point on Trzy Korony loop",
+      "minimumSelectedTrackVertexToClosedSectionSegmentDistanceM": 882,
+      "method": "Minimum equirectangular point-to-segment distance at reference latitude49.42N. Geographic separation check, not live trail-access approval."
+    }
+  },
+  "limitations": [
+    "Derived metrics describe this exact published track, not a ground survey. Unsmoothed cumulative ascent depends on GPX sampling and altitude data.",
+    "The full GPX is not redistributed here: its publication does not by itself establish a reuse license. Reproduce from the operator URL and verify SHA-256 before comparing.",
+    "The 200-minute sum excludes breaks, queues and weather delays; no universal fitness or seasonal-access claim."
+  ]
+}

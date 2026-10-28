@@ -1,0 +1,151 @@
+{
+  "checkedAt": "2026-10-28",
+  "osmAttribution": "© OpenStreetMap contributors; ODbL1.0; https://www.openstreetmap.org/copyright",
+  "method": "Compare original Nominatim query result with independent OSM0.6 full-object API: name/address and stored point within object bounds. Bounds test confirms object association, not exact entrance or accessibility.",
+  "stops": [
+    {
+      "stopId": "malbork",
+      "url": "https://api.openstreetmap.org/api/0.6/relation/6436433/full.json",
+      "osmName": "Zamek w Malborku",
+      "bounds": {
+        "south": 54.0389485,
+        "north": 54.0410846,
+        "west": 19.0257033,
+        "east": 19.0298749
+      },
+      "storedPointInsideObjectBounds": true,
+      "checkedAt": "2026-10-28"
+    },
+    {
+      "stopId": "warsaw-old-town",
+      "url": "https://api.openstreetmap.org/api/0.6/relation/6458642/full.json",
+      "osmName": "Rynek Starego Miasta",
+      "bounds": {
+        "south": 52.2492062,
+        "north": 52.2503214,
+        "west": 21.0113891,
+        "east": 21.0129842
+      },
+      "storedPointInsideObjectBounds": true,
+      "checkedAt": "2026-10-28"
+    },
+    {
+      "stopId": "gdansk",
+      "url": "https://api.openstreetmap.org/api/0.6/way/240120228/full.json",
+      "osmName": "Fontanna Neptuna",
+      "bounds": {
+        "south": 54.3485189,
+        "north": 54.348575,
+        "west": 18.6531788,
+        "east": 18.6532785
+      },
+      "storedPointInsideObjectBounds": true,
+      "checkedAt": "2026-10-28"
+    },
+    {
+      "stopId": "torun",
+      "url": "https://api.openstreetmap.org/api/0.6/relation/1431890/full.json",
+      "osmName": "Ratusz Staromiejski",
+      "bounds": {
+        "south": 53.0102326,
+        "north": 53.0108132,
+        "west": 18.603924,
+        "east": 18.6048133
+      },
+      "storedPointInsideObjectBounds": true,
+      "checkedAt": "2026-10-28"
+    },
+    {
+      "stopId": "poznan",
+      "url": "https://api.openstreetmap.org/api/0.6/way/30611684/full.json",
+      "osmName": "Ratusz",
+      "bounds": {
+        "south": 52.408428,
+        "north": 52.4086965,
+        "west": 16.9337256,
+        "east": 16.9343003
+      },
+      "storedPointInsideObjectBounds": true,
+      "checkedAt": "2026-10-28"
+    },
+    {
+      "stopId": "wroclaw",
+      "url": "https://api.openstreetmap.org/api/0.6/way/859819576/full.json",
+      "osmName": "Ratusz",
+      "bounds": {
+        "south": 51.1093589,
+        "north": 51.109804,
+        "west": 17.031665,
+        "east": 17.0324914
+      },
+      "storedPointInsideObjectBounds": true,
+      "checkedAt": "2026-10-28"
+    },
+    {
+      "stopId": "ksiaz",
+      "url": "https://api.openstreetmap.org/api/0.6/relation/9821066/full.json",
+      "osmName": "Zamek Książ",
+      "bounds": {
+        "south": 50.8419208,
+        "north": 50.8424935,
+        "west": 16.2907719,
+        "east": 16.29232
+      },
+      "storedPointInsideObjectBounds": true,
+      "checkedAt": "2026-10-28"
+    },
+    {
+      "stopId": "wawel",
+      "url": "https://api.openstreetmap.org/api/0.6/relation/2270819/full.json",
+      "osmName": "Zamek Królewski na Wawelu",
+      "bounds": {
+        "south": 50.0538207,
+        "north": 50.0550047,
+        "west": 19.9356345,
+        "east": 19.9374935
+      },
+      "storedPointInsideObjectBounds": true,
+      "checkedAt": "2026-10-28"
+    },
+    {
+      "stopId": "ojcow",
+      "url": "https://api.openstreetmap.org/api/0.6/way/120331996/full.json",
+      "osmName": "Zamek w Ojcowie",
+      "bounds": {
+        "south": 50.2114046,
+        "north": 50.2125183,
+        "west": 19.8297343,
+        "east": 19.8316452
+      },
+      "storedPointInsideObjectBounds": true,
+      "checkedAt": "2026-10-28"
+    },
+    {
+      "stopId": "wieliczka",
+      "url": "https://www.kopalnia.pl/turysta-indywidualny/informacje-praktyczne/mapa-i-dojazd",
+      "lat": 49.98348,
+      "lng": 20.05477,
+      "accuracy": "approach",
+      "checkedAt": "2026-10-28",
+      "method": "Published operator GPS"
+    },
+    {
+      "stopId": "pieniny",
+      "url": "https://piepn.gov.pl/uploads/files/6582f46408513278286142.gpx",
+      "lat": 49.440575,
+      "lng": 20.427915,
+      "accuracy": "approach",
+      "checkedAt": "2026-10-28",
+      "method": "First point of operator GPX"
+    },
+    {
+      "stopId": "tatry-strazyska",
+      "url": "https://mapa-turystyczna.pl/node/dolina-strazyska-parking",
+      "lat": 49.278708,
+      "lng": 19.93862,
+      "accuracy": "approach",
+      "checkedAt": "2026-10-28",
+      "method": "Start node of the map linked by the official Zakopane route page"
+    }
+  ]
+}

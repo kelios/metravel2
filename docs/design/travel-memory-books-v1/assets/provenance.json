@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "scope": "A2 design reference only; not the B1 full edition media registry",
+  "checkedAt": "2026-10-28",
+  "assets": [
+    {
+      "file": "mir-castle-2023.jpg",
+      "country": "BY",
+      "kind": "photo",
+      "author": "Mike1979 Russia",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Mir_Castle_2023-07-02_5836.jpg",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "rightsBasis": "licensed",
+      "printAllowed": true,
+      "checkedAt": "2026-10-28",
+      "changes": "Wikimedia 1280-pixel thumbnail; proportional scaling only, no crop, no retouching. This derivative retains its source CC BY-SA license.",
+      "pixelSize": [
+        1280,
+        853
+      ],
+      "sha256": "bce775e2e3f53c118884d8ce64bd7ea4b1f4935555ebf2003a099f6b7ec415eb"
+    },
+    {
+      "file": "malbork-castle-2019.jpg",
+      "country": "PL",
+      "kind": "photo",
+      "author": "Jakub T. Jankiewicz",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Malbork_Castle_Front.jpg",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "rightsBasis": "licensed",
+      "printAllowed": true,
+      "checkedAt": "2026-10-28",
+      "changes": "Wikimedia 1280-pixel thumbnail; proportional scaling only, no crop, no retouching. This derivative retains its source CC BY-SA license.",
+      "pixelSize": [
+        1280,
+        856
+      ],
+      "sha256": "5aa88e9452f92013144cc50e9034fb0d2f884a62e72106758ebfe1d3020cfab6"
+    },
+    {
+      "file": "belarus-cover-art-v1.png",
+      "country": "BY",
+      "kind": "illustration",
+      "author": "MeTravel / OpenAI imagegen",
+      "source": "Generated for A2 in the authorised project session on 2026-10-27",
+      "rightsBasis": "ai-generated",
+      "printAllowed": true,
+      "illustrated": true,
+      "createdAt": "2026-10-27",
+      "generationIntent": "Декоративная акварель: спокойный лес и озеро, зелёная палитра, без узнаваемых сооружений.",
+      "exactPrompt": null,
+      "promptStatus": "Exact prompt was not persisted before the original session interrupted; generationIntent is a description, not a recovered prompt.",
+      "restrictions": "Decorative series art only; not evidence of a real location, current architecture, or a safe hiking route.",
+      "pixelSize": [
+        1536,
+        1024
+      ],
+      "sha256": "9c877f373a167c156f756e8b5761401d8c60c1178cf8c74524ea6408d7b1ee95"
+    },
+    {
+      "file": "poland-cover-art-v1.png",
+      "country": "PL",
+      "kind": "illustration",
+      "author": "MeTravel / OpenAI imagegen",
+      "source": "Generated for A2 in the authorised project session on 2026-10-27",
+      "rightsBasis": "ai-generated",
+      "printAllowed": true,
+      "illustrated": true,
+      "createdAt": "2026-10-27",
+      "generationIntent": "Декоративная акварель: предгорья и долина, тёплая терракотовая палитра, без конкретной тропы.",
+      "exactPrompt": null,
+      "promptStatus": "Exact prompt was not persisted before the original session interrupted; generationIntent is a description, not a recovered prompt.",
+      "restrictions": "Decorative series art only; not evidence of a real location, current architecture, or a safe hiking route.",
+      "pixelSize": [
+        1536,
+        1024
+      ],
+      "sha256": "0f6f8b76013443bc3c147a99089ffc16582ee31cad05b1b96f641f258fb1a093"
+    }
+  ],
+  "fonts": [
+    {
+      "file": "fonts/NotoSans-Regular.ttf",
+      "author": "The Noto Project Authors",
+      "sourceUrl": "https://raw.githubusercontent.com/notofonts/noto-fonts/ffebf8c1ee449e544955a7e813c54f9b73848eac/hinted/ttf/NotoSans/NotoSans-Regular.ttf",
+      "license": "SIL Open Font License 1.1",
+      "licenseFile": "fonts/LICENSE.txt",
+      "checkedAt": "2026-10-28",
+      "sha256": "b85c38ecea8a7cfb39c24e395a4007474fa5a4fc864f6ee33309eb4948d232d5"
+    },
+    {
+      "file": "fonts/NotoSans-Bold.ttf",
+      "author": "The Noto Project Authors",
+      "sourceUrl": "https://raw.githubusercontent.com/notofonts/noto-fonts/ffebf8c1ee449e544955a7e813c54f9b73848eac/hinted/ttf/NotoSans/NotoSans-Bold.ttf",
+      "license": "SIL Open Font License 1.1",
+      "licenseFile": "fonts/LICENSE.txt",
+      "checkedAt": "2026-10-28",
+      "sha256": "c976e4b1b99edc88775377fcc21692ca4bfa46b6d6ca6522bfda505b28ff9d6a"
+    },
+    {
+      "file": "fonts/NotoSerif-Bold.ttf",
+      "author": "The Noto Project Authors",
+      "sourceUrl": "https://raw.githubusercontent.com/notofonts/noto-fonts/ffebf8c1ee449e544955a7e813c54f9b73848eac/hinted/ttf/NotoSerif/NotoSerif-Bold.ttf",
+      "license": "SIL Open Font License 1.1",
+      "licenseFile": "fonts/LICENSE.txt",
+      "checkedAt": "2026-10-28",
+      "sha256": "3b2086a869bcded2aeb4416fc281ceec9d6ce3c06756cda19f8f763636204e7d"
+    }
+  ],
+  "fontLicense": {
+    "file": "fonts/LICENSE.txt",
+    "sourceUrl": "https://raw.githubusercontent.com/notofonts/noto-fonts/ffebf8c1ee449e544955a7e813c54f9b73848eac/LICENSE",
+    "sha256": "0dab92d0544f7b233403f14b84a663bdbfa746982eda629e7f4f9ffe1b036feb"
+  }
+}
