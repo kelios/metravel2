@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Platform } from 'react-native'
-import * as FileSystem from 'expo-file-system/legacy'
-import * as Sharing from 'expo-sharing'
 
 import { METRICS } from '@/constants/layout'
 import type { TravelRouteFile } from '@/types/travelRoutes'
 import type { Travel } from '@/types/types'
 import { downloadTravelRouteFileBlob } from '@/api/travelRoutes'
 import { downloadBlobOnWeb } from '@/utils/downloadUrlOnWeb'
+import {
+  isShareAvailable,
+  resolveCacheDirectory,
+  shareAsync,
+  writeAsStringAsync,
+} from '@/utils/fileTransfer'
 import { useTravelDetailsMapSectionHintsModel } from './useTravelDetailsMapSectionHintsModel'
 import { translate as i18nT } from '@/i18n'
 import { showToast } from '@/utils/toast'
@@ -132,9 +136,7 @@ export function useTravelDetailsMapSectionModel({
 
       const response = await downloadTravelRouteFileBlob(travel.id, file.id)
 
-      const cacheDir =
-        (FileSystem as { cacheDirectory?: string }).cacheDirectory ??
-        String((FileSystem as any).Paths?.cache?.uri ?? '')
+      const cacheDir = resolveCacheDirectory(true)
 
       if (!cacheDir) {
         notifyDownloadUnavailable()
@@ -142,10 +144,10 @@ export function useTravelDetailsMapSectionModel({
       }
 
       const uri = `${cacheDir}${response.filename || filename}`
-      await FileSystem.writeAsStringAsync(uri, response.text)
+      await writeAsStringAsync(uri, response.text)
 
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, {
+      if (await isShareAvailable()) {
+        await shareAsync(uri, {
           mimeType: response.contentType || 'application/octet-stream',
           dialogTitle: i18nT('travel:components.travel.details.hooks.useTravelDetailsMapSectionModel.sohranit_fayl_marshruta_cdda8b31'),
         })

@@ -1,10 +1,14 @@
 import { Platform } from 'react-native'
-import * as FileSystem from 'expo-file-system/legacy'
-import * as Sharing from 'expo-sharing'
 
 import { downloadPlannedTripRouteFileBlob } from '@/api/plannedTripRoutes'
 import { downloadTravelRouteFileBlob } from '@/api/travelRoutes'
 import { downloadBlobOnWeb } from '@/utils/downloadUrlOnWeb'
+import {
+  isShareAvailable,
+  resolveCacheDirectory,
+  shareAsync,
+  writeAsStringAsync,
+} from '@/utils/fileTransfer'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -44,9 +48,7 @@ async function saveRouteFileResponse(
     return downloadBlobOnWeb(blob, filename)
   }
 
-  const cacheDir =
-    (FileSystem as { cacheDirectory?: string }).cacheDirectory ??
-    String((FileSystem as any).Paths?.cache?.uri ?? '')
+  const cacheDir = resolveCacheDirectory(true)
   if (!cacheDir) return false
 
   const uri = `${cacheDir}${filename}`
@@ -60,16 +62,14 @@ async function saveRouteFileResponse(
       for (const byte of chunk) binary += String.fromCharCode(byte)
       base64 += btoa(binary)
     }
-    await FileSystem.writeAsStringAsync(uri, base64, {
-      encoding: FileSystem.EncodingType.Base64,
-    })
+    await writeAsStringAsync(uri, base64, { encoding: 'base64' })
   } else {
-    await FileSystem.writeAsStringAsync(uri, response.text)
+    await writeAsStringAsync(uri, response.text)
   }
 
-  if (!(await Sharing.isAvailableAsync())) return false
+  if (!(await isShareAvailable())) return false
 
-  await Sharing.shareAsync(uri, {
+  await shareAsync(uri, {
     mimeType,
     dialogTitle: i18nT('shared:utils.travelRouteDownload.sohranit_fayl_marshruta_7edbd35d'),
   })

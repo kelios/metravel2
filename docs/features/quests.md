@@ -201,7 +201,7 @@ tripvenue резолвит по ближайшему городу каталог
 | `components/quests/QuestForCityCard.tsx` | 292 | карточка «квест по этому городу» |
 | `utils/questProgressMerge.ts` | 289 | монотонное слияние снапшотов прогресса |
 | `utils/questForLocation.ts` | 247 | клиентский подбор квестов по городу/стране/координатам |
-| `components/quests/questNativeMapPng.ts` | 234 | снимок native-карты в PNG и шаринг |
+| `components/quests/questNativeMapPng.native.ts` | 234 | снимок native-карты в PNG и шаринг |
 | `components/quests/QuestReviewsModal.tsx` | 233 | читалка чужих отзывов |
 | `components/quests/QuestReviewSection.tsx` | 223 | форма отзыва после прохождения |
 | `components/quests/questOfflineMapExport.ts` | 222 | GPX/GeoJSON маршрута, «открыть в приложении» |

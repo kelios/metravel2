@@ -8,41 +8,19 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { isTileCacheEntryFresh } from './mapTileCachePolicy';
+import type { OfflineBBox, OfflineRegion, TileCoord } from './mapTileCache.types';
+
+export type { OfflineBBox, OfflineRegion, TileCoord } from './mapTileCache.types';
+export { isTileCacheEntryFresh } from './mapTileCachePolicy';
+
 const TILE_ROOT = `${FileSystem.documentDirectory ?? ''}map-tiles/`;
 const REGIONS_KEY = 'map-offline-regions';
 const PNG_DATA_URL_PREFIX = 'data:image/png;base64,';
-const TILE_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 // Средний вес одного тайла используется как fallback, если файловая система не
 // вернула размер после обычной интерактивной загрузки.
 const AVG_TILE_BYTES = 15 * 1024;
-
-export interface OfflineBBox {
-  south: number;
-  west: number;
-  north: number;
-  east: number;
-}
-
-export interface OfflineRegion {
-  id: string;
-  name: string;
-  bbox: OfflineBBox;
-  minZ: number;
-  maxZ: number;
-  tileCount: number;
-  bytes: number;
-  savedAt: number;
-}
-
-export const isTileCacheEntryFresh = (
-  modificationTimeSeconds: number | undefined,
-  nowMs = Date.now(),
-): boolean => {
-  if (!Number.isFinite(modificationTimeSeconds)) return false;
-  const ageMs = nowMs - Number(modificationTimeSeconds) * 1000;
-  return ageMs >= 0 && ageMs <= TILE_CACHE_MAX_AGE_MS;
-};
 
 // Тайл-математика нужна только для точечного удаления старых регионов.
 const lngToTileX = (lng: number, z: number): number =>
@@ -58,12 +36,6 @@ const clampTile = (value: number, z: number): number => {
   if (!Number.isFinite(value)) return 0;
   return Math.min(max, Math.max(0, Math.floor(value)));
 };
-
-export interface TileCoord {
-  z: number;
-  x: number;
-  y: number;
-}
 
 /**
  * Перечисляет тайлы, покрывающие bbox на всех зумах [minZ, maxZ].

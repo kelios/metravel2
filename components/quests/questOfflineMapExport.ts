@@ -1,8 +1,12 @@
 import { Platform } from 'react-native';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
 
 import { buildGpx, downloadTextFileWeb } from '@/utils/routeExport';
+import {
+  isShareAvailable,
+  resolveCacheDirectory,
+  shareAsync,
+  writeAsStringAsync,
+} from '@/utils/fileTransfer';
 import { transliterate } from '@/utils/routeExport/normalize';
 import type { LngLat } from '@/utils/routeExport';
 
@@ -184,12 +188,12 @@ export async function exportQuestOfflineMap(options: QuestOfflineMapExportOption
     return true;
   }
 
-  const cacheDir = FileSystem.cacheDirectory;
-  if (!cacheDir || !(await Sharing.isAvailableAsync())) return false;
+  const cacheDir = resolveCacheDirectory(false);
+  if (!cacheDir || !(await isShareAvailable())) return false;
 
   const fileUri = `${cacheDir}${file.filename}`;
-  await FileSystem.writeAsStringAsync(fileUri, file.content);
-  await Sharing.shareAsync(fileUri, {
+  await writeAsStringAsync(fileUri, file.content);
+  await shareAsync(fileUri, {
     mimeType: file.mimeType,
     dialogTitle: i18nT('quests:components.quests.questOfflineMapExport.otkryt_tochki_kvesta_gpx_v_oflayn_kartah_10507e0d'),
     UTI: 'com.topografix.gpx',

@@ -11,9 +11,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import {
+    isShareAvailable,
+    resolveCacheDirectory,
+    shareAsync,
+    writeAsStringAsync,
+} from '@/utils/fileTransfer';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { buildQuestOfflineMapGeoJSON, buildQuestOfflineMapGpx } from './questOfflineMapExport';
 import { buildQuestRouteGeometry, closeQuestRouteLoop, type QuestRouteMode } from './questRouteGeometry';
@@ -328,13 +332,13 @@ function QuestFullMap({
             }
 
             const gpxFile = buildQuestOfflineMapGpx({ title, steps: points, routeTrack: routedTrack, routeSource: 'routed', routeMode });
-            const cacheDir = FileSystem.cacheDirectory ?? '';
+            const cacheDir = resolveCacheDirectory(false);
             const fileUri = `${cacheDir}${gpxFile.filename}`;
 
-            await FileSystem.writeAsStringAsync(fileUri, gpxFile.content);
+            await writeAsStringAsync(fileUri, gpxFile.content);
 
-            if (await Sharing.isAvailableAsync()) {
-                await Sharing.shareAsync(fileUri, {
+            if (await isShareAvailable()) {
+                await shareAsync(fileUri, {
                     mimeType: gpxFile.mimeType,
                     dialogTitle: i18nT('quests:components.quests.QuestFullMap.podelitsya_marshrutom_d39de8d4'),
                 });
@@ -365,13 +369,13 @@ function QuestFullMap({
             }
 
             const geoJsonContent = buildQuestOfflineMapGeoJSON({ title, steps: points, routeTrack: routedTrack, routeSource: 'routed', routeMode });
-            const cacheDir = FileSystem.cacheDirectory ?? '';
+            const cacheDir = resolveCacheDirectory(false);
             const fileUri = `${cacheDir}${title.replace(/\s+/g, '_')}.geojson`;
 
-            await FileSystem.writeAsStringAsync(fileUri, geoJsonContent);
+            await writeAsStringAsync(fileUri, geoJsonContent);
 
-            if (await Sharing.isAvailableAsync()) {
-                await Sharing.shareAsync(fileUri, {
+            if (await isShareAvailable()) {
+                await shareAsync(fileUri, {
                     mimeType: 'application/geo+json',
                     dialogTitle: i18nT('quests:components.quests.QuestFullMap.podelitsya_marshrutom_d39de8d4'),
                 });

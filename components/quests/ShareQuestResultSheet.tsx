@@ -34,7 +34,7 @@ import {
 } from '@/utils/questResultShare';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { downloadUrlOnWeb } from '@/utils/downloadUrlOnWeb';
-import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
+import { shareRemoteImageOnNative } from '@/utils/fileTransfer';
 import { trackQuestShareClick } from '@/utils/gamificationAnalytics';
 import { showToast } from '@/utils/toast';
 import ModalToastHost from '@/components/ui/ModalToastHost';
@@ -62,31 +62,6 @@ interface Props {
 
 type CardStatus = 'idle' | 'loading' | 'ready' | 'unavailable';
 type ShareChannelKey = 'copy' | 'telegram' | 'native' | 'download' | 'instagram';
-
-async function shareRemoteImageOnNative(
-  rawUrl: string,
-  fileName: string,
-  dialogTitle: string,
-): Promise<boolean> {
-  const imageUrl = getSafeExternalUrl(rawUrl, { allowRelative: false });
-  if (!imageUrl) return false;
-
-  const [FileSystem, Sharing] = await Promise.all([
-    import('expo-file-system/legacy'),
-    import('expo-sharing'),
-  ]);
-  const cacheDirectory = FileSystem.cacheDirectory;
-  if (!cacheDirectory || !(await Sharing.isAvailableAsync())) return false;
-
-  const fileUri = `${cacheDirectory}${fileName}`;
-  await FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => undefined);
-  const downloaded = await FileSystem.downloadAsync(imageUrl, fileUri);
-  await Sharing.shareAsync(downloaded.uri, {
-    mimeType: 'image/png',
-    dialogTitle,
-  });
-  return true;
-}
 
 function ShareQuestResultSheet({ visible, onClose, subject }: Props) {
   const colors = useThemedColors();

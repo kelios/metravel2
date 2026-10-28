@@ -1,9 +1,14 @@
 import { useCallback, useState } from 'react';
 import { Platform } from 'react-native';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
 
 import { userPointsApi } from '@/api/userPoints';
+import { downloadBlobOnWeb } from '@/utils/downloadUrlOnWeb';
+import {
+  isShareAvailable,
+  resolveCacheDirectory,
+  shareAsync,
+  writeAsStringAsync,
+} from '@/utils/fileTransfer';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -23,25 +28,17 @@ export const usePointsExportKml = () => {
       const contentType = String(payload.contentType ?? '').trim() || 'application/vnd.google-earth.kml+xml';
 
       if (Platform.OS === 'web') {
-        const blob = payload.blob as Blob;
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
+        downloadBlobOnWeb(payload.blob as Blob, filename);
         return;
       }
 
       const blob = payload.blob as Blob;
       const text = await blob.text();
-      const cacheDir = (FileSystem as { cacheDirectory?: string }).cacheDirectory ?? String((FileSystem as any).Paths?.cache?.uri ?? '');
+      const cacheDir = resolveCacheDirectory(true);
       const uri = `${cacheDir}${filename}`;
-      await FileSystem.writeAsStringAsync(uri, text);
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, { mimeType: contentType, dialogTitle: i18nT('map:components.UserPoints.usePointsExportKml.eksport_tochek_51ae90a3') });
+      await writeAsStringAsync(uri, text);
+      if (await isShareAvailable()) {
+        await shareAsync(uri, { mimeType: contentType, dialogTitle: i18nT('map:components.UserPoints.usePointsExportKml.eksport_tochek_51ae90a3') });
       }
     } catch (error) {
       setExportError(error instanceof Error ? error.message : i18nT('map:components.UserPoints.usePointsExportKml.oshibka_eksporta_62cbb480'));

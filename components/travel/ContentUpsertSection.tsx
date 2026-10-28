@@ -2,8 +2,8 @@ import React, { useCallback, useMemo, useState, useEffect, useRef, Suspense, laz
 import { View, type ScrollViewInstance, Text, TextInput, NativeSyntheticEvent, LayoutChangeEvent, Modal, TouchableOpacity, Platform, useWindowDimensions, KeyboardAvoidingView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system/legacy';
 import * as Clipboard from 'expo-clipboard';
+import { readUriAsText, resolveCacheDirectory, writeAsStringAsync } from '@/utils/fileTransfer';
 import { TravelFormData } from '@/types/types';
 import TextInputComponent from '@/components/forms/TextInputComponent';
 import ModalSafeArea from '@/components/ui/ModalSafeArea';
@@ -182,20 +182,6 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
         [handleChange]
     );
 
-    const readUriAsText = useCallback(async (uri: string): Promise<string> => {
-        const safeUri = String(uri ?? '');
-        if (!safeUri) return '';
-
-        // Web: blob/data/http urls can be read via fetch()
-        if (Platform.OS === 'web' && /^(blob:|data:|https?:)/i.test(safeUri)) {
-            const res = await fetch(safeUri);
-            return await res.text();
-        }
-
-        // Native: file:// (and in some cases content://) via expo-file-system
-        return await FileSystem.readAsStringAsync(safeUri, { encoding: FileSystem.EncodingType.UTF8 });
-    }, []);
-
     const importDescriptionText = useCallback(async () => {
         setIsImportingDescriptionText(true);
         try {
@@ -244,7 +230,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
         } finally {
             setIsImportingDescriptionText(false);
         }
-    }, [appendToDescription, readUriAsText]);
+    }, [appendToDescription]);
 
     const insertPastedImage = useCallback(async (
         fileForForm: Blob | { uri: string; name: string; type: string },
@@ -303,8 +289,8 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                         const dataUri = img?.data ?? '';
                         if (dataUri) {
                             const base64 = dataUri.includes(',') ? dataUri.split(',')[1] : dataUri;
-                            const fileUri = `${FileSystem.cacheDirectory ?? ''}pasted-${Date.now()}.png`;
-                            await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+                            const fileUri = `${resolveCacheDirectory(false)}pasted-${Date.now()}.png`;
+                            await writeAsStringAsync(fileUri, base64, { encoding: 'base64' });
                             await insertPastedImage({ uri: fileUri, name: 'pasted.png', type: 'image/png' });
                             return;
                         }

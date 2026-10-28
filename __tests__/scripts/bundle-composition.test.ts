@@ -711,6 +711,83 @@ describe('состав eager-бандла (#1148)', () => {
     expect([...imports.sync, ...imports.dynamic]).toContain(pkg)
   })
 
+  const fileTransferSdk = (specifier: string): boolean =>
+    specifier === 'expo-file-system' || specifier.startsWith('expo-file-system/')
+    || specifier === 'expo-sharing' || specifier.startsWith('expo-sharing/')
+
+  const fileTransferOffenders = (graph: Map<string, ValueImports>): string[] => [...graph]
+    .filter(([, imports]) => [...imports.sync, ...imports.dynamic].some(fileTransferSdk))
+    .map(([file]) => relative(ROOT, file))
+
+  it.each(['expo-file-system', 'expo-sharing'])(
+    'keeps native file transfer %s outside every web value edge (#2848)',
+    (pkg) => {
+      const offenders = [...vendorWebGraph]
+        .filter(([, imports]) => [...imports.sync, ...imports.dynamic]
+          .some((specifier) => specifier === pkg || specifier.startsWith(`${pkg}/`)))
+        .map(([file]) => relative(ROOT, file))
+      expect(offenders).toEqual([])
+    },
+  )
+
+  it('resolves file transfer per platform and hides the native SDK owner (#2848)', () => {
+    const web = join(ROOT, 'utils/fileTransfer.web.ts')
+    const native = join(ROOT, 'utils/fileTransfer.native.ts')
+    expect(resolveImport('@/utils/fileTransfer', ROOT)).toBe(web)
+    expect(resolveImport('@/utils/fileTransfer', ROOT, 'ios')).toBe(native)
+    expect(resolveImport('@/utils/fileTransfer', ROOT, 'android')).toBe(native)
+    expect(vendorWebGraph.has(web)).toBe(true)
+    expect(vendorWebGraph.has(native)).toBe(false)
+    expect(fileTransferOffenders(vendorWebGraph)).toEqual([])
+  })
+
+  it.each([
+    "import * as FileSystem from 'expo-file-system/legacy'",
+    "import * as Sharing from 'expo-sharing'",
+    "const FileSystem = require('expo-file-system/legacy')",
+    "const Sharing = require('expo-sharing')",
+    "export * from 'expo-file-system/legacy'",
+    "export { shareAsync } from 'expo-sharing'",
+    "const load = () => import('expo-file-system/legacy')",
+    "const load = () => import('expo-sharing')",
+    "import { writeAsStringAsync } from '@/utils/fileTransfer.native'",
+    "import { shareAsync } from './fileTransfer.native'",
+    "export * from '@/utils/fileTransfer.native'",
+    "export { shareAsync } from './fileTransfer.native'",
+    "const transfer = require('@/utils/fileTransfer.native')",
+    "const transfer = require('./fileTransfer.native')",
+    "const load = () => import('@/utils/fileTransfer.native')",
+    "const load = () => import('./fileTransfer.native')",
+  ])('web file-transfer detector catches direct SDK edges: %s', (content) => {
+    const root = join(ROOT, 'utils/fileTransfer.web.ts')
+    const read = (file: string) => file === root ? content : readFileSync(file, 'utf8')
+    expect(fileTransferOffenders(webValueGraph([root], read)).length).toBeGreaterThan(0)
+  })
+
+  it('web file-transfer detector catches a transitive re-export of the native owner', () => {
+    const root = join(ROOT, 'utils/routeExport/save.ts')
+    const bridge = join(ROOT, 'utils/fileTransfer.web.ts')
+    const read = (file: string) => {
+      if (file === root) return "import { writeAsStringAsync } from '@/utils/fileTransfer'\n"
+      if (file === bridge) return "export * from './fileTransfer.native'\n"
+      return readFileSync(file, 'utf8')
+    }
+    expect(fileTransferOffenders(webValueGraph([root], read))).toEqual([
+      'utils/fileTransfer.native.ts',
+    ])
+  })
+
+  it.each([
+    "import type * as FileSystem from 'expo-file-system/legacy'",
+    "import type * as Sharing from 'expo-sharing'",
+    "export type { CacheShareOptions } from './fileTransfer.types'",
+    "type Transfer = typeof import('expo-file-system/legacy')",
+  ])('web file-transfer detector ignores erased type edges: %s', (content) => {
+    const root = join(ROOT, 'utils/fileTransfer.web.ts')
+    const read = (file: string) => file === root ? content : readFileSync(file, 'utf8')
+    expect(fileTransferOffenders(webValueGraph([root], read))).toEqual([])
+  })
+
   it('keeps server metadata dependencies outside the client quest projection renderer (#2738)', () => {
     const screen = join(ROOT, 'components/quests/runtime/QuestPublicLoaderScreen.web.tsx')
     const presentation = join(ROOT, 'components/quests/runtime/questPublicStructuredData.ts')

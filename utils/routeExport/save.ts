@@ -1,9 +1,13 @@
 import { Platform } from 'react-native';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
 
 import type { RouteExportResult } from './types';
 import { downloadTextFileWeb } from './download';
+import {
+  isShareAvailable,
+  resolveCacheDirectory,
+  shareAsync,
+  writeAsStringAsync,
+} from '@/utils/fileTransfer';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -15,17 +19,15 @@ export async function saveRouteExportFile(
     return downloadTextFileWeb(file);
   }
 
-  const cacheDir =
-    (FileSystem as { cacheDirectory?: string }).cacheDirectory ??
-    String((FileSystem as any).Paths?.cache?.uri ?? '');
+  const cacheDir = resolveCacheDirectory(true);
   if (!cacheDir) return false;
 
   const uri = `${cacheDir}${file.filename}`;
-  await FileSystem.writeAsStringAsync(uri, file.content);
+  await writeAsStringAsync(uri, file.content);
 
-  if (!(await Sharing.isAvailableAsync())) return false;
+  if (!(await isShareAvailable())) return false;
 
-  await Sharing.shareAsync(uri, {
+  await shareAsync(uri, {
     mimeType: file.mimeType,
     dialogTitle,
   });

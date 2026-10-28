@@ -1,4 +1,4 @@
-// components/quests/questNativeMapPng.ts
+// components/quests/questNativeMapPng.native.ts
 // Native PNG-экспорт карты квеста (Android/iOS) — паритет с web/printable.
 //
 // Web снимает живой Leaflet-DOM через dom-to-image (QuestFullMap.tsx). На native
@@ -10,8 +10,8 @@
 // не tainted → toDataURL работает. Маркеры — пронумерованные кружки как на
 // видимой native-карте (iconFor) и как web numberIcon.
 //
-// Модуль импортируется ТОЛЬКО из QuestFullMap.native.tsx (expo-file-system/legacy,
-// expo-sharing — blessed native-модули, web-бандла не касаются).
+// Суффикс .native.ts не даёт web-резолву увидеть expo-file-system/legacy и
+// expo-sharing. Импорт — из QuestFullMap.native.tsx и questNativeMapHtml.ts.
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { translate as i18nT } from '@/i18n'
