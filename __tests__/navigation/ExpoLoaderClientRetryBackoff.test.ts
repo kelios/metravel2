@@ -1,4 +1,4 @@
-// #2822: patches/expo-router+58.0.26.patch — a failing loader path is refetched only after an
+// #2822: patches/expo-router+58.0.28.patch — a failing loader path is refetched only after an
 // exponential backoff, and after two automatic retries its error stays readable for the error
 // boundary. Without it readLoaderData's cleared error made every retry render fetch again
 // (1660 requests in 15 s for one visitor on a 503).

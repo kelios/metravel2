@@ -20,7 +20,7 @@ import { makeTempDir, runNodeCli } from './cli-test-utils'
 const ROOT = path.resolve(__dirname, '..', '..')
 const STUB_REL = 'metro-stubs/react-native-gesture-handler.js'
 const ROUTE_CONTEXT_STUB_REL = 'metro-stubs/expo-router-context.web.js'
-const EXPO_CHUNK_PATCH_REL = 'patches/@expo+metro-config+58.0.17.patch'
+const EXPO_CHUNK_PATCH_REL = 'patches/@expo+metro-config+58.0.19.patch'
 const EXPO_CHUNK_SERIALIZER_REL =
   'node_modules/@expo/metro-config/build/serializer/serializeChunks.js'
 const EXPO_GRANULAR_STRATEGY_REL =

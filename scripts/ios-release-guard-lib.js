@@ -620,7 +620,7 @@ function validateIosRelease(root = process.cwd(), options = {}) {
     fail('IOS_NEW_ARCH_EXPO', 'newArchEnabled is obsolete since Expo SDK 55 (New Architecture is always on)');
   }
   const releaseDependencies = {
-    expo: '~58.0.19',
+    expo: '~58.0.21',
     'react-native': '0.88.0',
     react: '19.3.0',
     'react-dom': '19.3.0',
@@ -636,7 +636,7 @@ function validateIosRelease(root = process.cwd(), options = {}) {
   if (packageJson.resolutions?.['react-native'] !== '0.88.0' ||
       packageJson.overrides?.['react-native'] !== '0.88.0' ||
       packageJson.devDependencies?.['@react-native/jest-preset'] !== '0.88.0' ||
-      packageJson.devDependencies?.['jest-expo'] !== '~58.0.12' ||
+      packageJson.devDependencies?.['jest-expo'] !== '~58.0.13' ||
       packageJson.expo?.install?.exclude?.some(name => ['expo', 'react', 'react-dom', 'react-native'].includes(name))) {
     fail('IOS_SDK_DEPENDENCY_PARITY', 'runtime, Jest preset and install checks must agree');
   }
