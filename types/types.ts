@@ -153,6 +153,9 @@ export type Travel = TravelModerationMetadata & {
     year: string
     monthName: string
     number_days: number
+    /** Опорная точка списка (#2783). На старом payload и на детальной странице может не быть. */
+    lat?: number | null
+    lng?: number | null
     companions: string[]
     coordsMeTravel?: Array<{
         lat: number

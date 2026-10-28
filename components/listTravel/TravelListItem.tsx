@@ -22,6 +22,8 @@ import { makeContentRef } from '@/types/contentSafety'
 import { useThemedColors } from '@/hooks/useTheme'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import { formatViewCount, shouldShowViewCount } from '@/components/travel/utils/travelHelpers'
+import { buildTravelCardDecisionMeta } from '@/components/listTravel/travelCardDecisionMeta'
+import { useTravelCardDistanceOrigin } from '@/components/listTravel/useTravelCardDistanceOrigin'
 import { hasAnyTravelEngagementStats } from '@/utils/travelEngagementStats'
 import { appendReturnToParam } from '@/utils/navigationReturnPath'
 import { isTravelDraft, resolveTravelModerationFeedback } from '@/utils/travelPublicationStatus'
@@ -43,7 +45,6 @@ import {
   extractOwnerIds,
   CARD_MEDIA_SLOT_RATIO,
   resolveCoverSlotGeometry,
-  resolveDisplayTravelYear,
   resolveTravelAuthorDisplayName,
   resolveTravelAuthorName,
 } from './travelListItemHelpers'
@@ -173,7 +174,6 @@ function TravelListItem({
   cardWidth,
   imageHeight,
   viewportWidth,
-  gridColumns,
   hideAuthor = false,
   visualVariant = 'default',
   webTouchAction,
@@ -433,11 +433,13 @@ function TravelListItem({
     [isNavigable, handlePress],
   )
 
-  // Year is shown when the card spans the full row (single-column native grid)
-  // or on web (including multi-column grid). Compact native multi-column grids
-  // omit it so the meta row stays readable. Invalid/empty year is dropped.
-  const showYearContext = IS_WEB || gridColumns === 1
-  const displayYear = showYearContext ? resolveDisplayTravelYear(travel.year) : null
+  const distanceOrigin = useTravelCardDistanceOrigin()
+  const decisionMeta = buildTravelCardDecisionMeta({
+    numberDays: travel.number_days,
+    lat: travel.lat,
+    lng: travel.lng,
+    origin: distanceOrigin,
+  })
 
   const a11yLabel =
     i18nT('travel:components.listTravel.TravelListItem.a11yTitle', { value1: title }) +
@@ -445,7 +447,8 @@ function TravelListItem({
       ? i18nT('travel:components.listTravel.TravelListItem.status_value1', { value1: i18nT(travelDisplayStatusLabelKey(authorStatus)) })
       : isDraft ? i18nT('travel:components.listTravel.TravelListItem.status_chernovik_a0df151f') : '') +
     (countries.length ? i18nT('travel:components.listTravel.TravelListItem.strany_value1_755975ff', { value1: countries.join(', ') }) : '') +
-    (displayYear ? i18nT('travel:components.listTravel.TravelListItem.god_value1_e70dda0d', { value1: displayYear }) : '') +
+    (decisionMeta.duration ? i18nT('travel:components.listTravel.TravelListItem.dlitelnost_value1', { value1: decisionMeta.duration }) : '') +
+    (decisionMeta.distance ? i18nT('travel:components.listTravel.TravelListItem.rasstoyanie_value1', { value1: decisionMeta.distance }) : '') +
     (showViews ? i18nT('travel:components.listTravel.TravelListItem.prosmotrov_value1_aadc926b', { value1: viewsFormatted }) : '')
 
   const hasAuthorMeta = !hideAuthor && authorDisplayName !== ''
@@ -675,8 +678,7 @@ function TravelListItem({
     isDraft ||
     authorStatus !== undefined ||
     hasEngagementStats ||
-    hasRating ||
-    displayYear != null
+    hasRating
 
   const secondaryMetaSlot = hasSecondaryMeta ? (
     <View style={styles.metaRow}>
@@ -685,12 +687,7 @@ function TravelListItem({
         {authorStatus !== undefined
           ? <TravelPublicationStatusChip status={authorStatus} iconOnly testID="publication-status-icon" />
           : isDraft ? <TravelPublicationStatusChip status="draft" compact testID="draft-status-badge" /> : null}
-        {displayYear != null && (
-          <View style={styles.metaYear} testID="year-meta">
-            <Feather name="calendar" size={VIEW_ICON_SIZE} color={colors.textMuted} />
-            <Text style={styles.metaYearText}>{displayYear}</Text>
-          </View>
-        )}
+
         {hasEngagementStats && (
           <TravelListItemEngagementMetrics
             engagementStats={engagementStats}
@@ -713,6 +710,11 @@ function TravelListItem({
       <Text style={styles.titleInline} numberOfLines={2} ellipsizeMode="tail">
         {title}
       </Text>
+      {decisionMeta.line ? (
+        <Text style={styles.decisionMeta} numberOfLines={1} testID="decision-meta">
+          {decisionMeta.line}
+        </Text>
+      ) : null}
       {secondaryMetaSlot}
     </View>
   )

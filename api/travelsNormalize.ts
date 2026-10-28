@@ -274,6 +274,16 @@ export const normalizeTravelItem = (input: unknown): Travel => {
         out.user_rating = Number.isFinite(userRatingVal) && userRatingVal > 0 ? userRatingVal : null;
     }
 
+    // #2780: опорная точка списка приходит числом. Строку из старого клиента
+    // приводим здесь, чтобы карточка не считала расстояние от мусора.
+    const finiteCoord = (value: unknown): number | null => {
+        if (value == null || value === '') return null;
+        const parsed = typeof value === 'number' ? value : Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+    };
+    if ('lat' in t) out.lat = finiteCoord(t.lat);
+    if ('lng' in t) out.lng = finiteCoord(t.lng);
+
     // Нормализация URL изображений (относительные -> абсолютные)
     const normalizeImageUrl = (url: string | undefined): string => {
         if (!url) return '';

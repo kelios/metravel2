@@ -246,6 +246,18 @@ describe('normalizeTravelItem', () => {
     });
   });
 
+  describe('card decision coordinates', () => {
+    it('coerces string lat/lng and drops a non-numeric anchor', () => {
+      const out = normalizeTravelItem({ lat: '53.9', lng: '27.56', number_days: 1 });
+      expect(out.lat).toBe(53.9);
+      expect(out.lng).toBe(27.56);
+
+      const broken = normalizeTravelItem({ lat: 'north', lng: null });
+      expect(broken.lat).toBeNull();
+      expect(broken.lng).toBeNull();
+    });
+  });
+
   describe('robustness', () => {
     it('returns an object for non-object input', () => {
       expect(normalizeTravelItem(null)).toEqual({});

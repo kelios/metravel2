@@ -207,22 +207,30 @@ describe('TravelListItem content & metadata', () => {
     expect(getByText('Long Author Name')).toBeTruthy();
   });
 
-  it('renders the year on web travel cards', async () => {
-    const { getByTestId, getByText } = await renderItem({ year: '2024' } as any);
+  it('shows duration and distance from Minsk instead of the year', async () => {
+    const { getByTestId, queryByText, queryByTestId } = await renderItem({
+      year: '2020',
+      number_days: 1,
+      lat: 54.1,
+      lng: 27.56,
+    } as any);
 
-    expect(getByTestId('year-meta')).toBeTruthy();
-    expect(getByText('2024')).toBeTruthy();
+    expect(queryByTestId('year-meta')).toBeNull();
+    expect(queryByText('2020')).toBeNull();
+    expect(getByTestId('decision-meta').props.children).toMatch(/1 день · .+ от Минска/);
   });
 
-  it('omits the year when it is empty or invalid', async () => {
-    const empty = await renderItem({ year: '' } as any);
-    expect(empty.queryByTestId('year-meta')).toBeNull();
+  it('omits the decision line when duration and coordinates are missing', async () => {
+    const { queryByTestId, queryByText } = await renderItem({
+      year: '2024',
+      number_days: 0,
+      lat: null,
+      lng: null,
+    } as any);
 
-    const invalid = await renderItem({ year: 'not-a-year' } as any);
-    expect(invalid.queryByTestId('year-meta')).toBeNull();
-
-    const outOfRange = await renderItem({ year: '1200' } as any);
-    expect(outOfRange.queryByTestId('year-meta')).toBeNull();
+    expect(queryByTestId('year-meta')).toBeNull();
+    expect(queryByTestId('decision-meta')).toBeNull();
+    expect(queryByText('2024')).toBeNull();
   });
 
   it('renders engagement metrics on the travel card when stats exist', async () => {
