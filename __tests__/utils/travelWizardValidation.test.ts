@@ -207,6 +207,34 @@ describe('travelWizardValidation', () => {
       expect(getStepProgress(3, formData as TravelFormData)).toBe(50);
     });
 
+    it.each(['note', 'full'] as const)('does not count a gallery fallback as a cover for %s', (publication_format) => {
+      const formData = {
+        publication_format,
+        travel_image_thumb_small_url: '/gallery/photo.webp?w=320',
+        travel_image_thumb_url: 'https://metravel.by/gallery/photo.webp',
+        travelImageThumbUrlArr: [],
+        travelImageThumbUrArr: [],
+        gallery: [],
+      } as unknown as TravelFormData;
+
+      expect(validateStep(3, formData).warnings.some(w => w.field === 'coverImage')).toBe(true);
+      expect(getStepProgress(3, formData)).toBe(0);
+      expect(getQualityScore(formData).suggestions).toContain('Добавьте главное изображение');
+      expect(getQualityScore(formData).score).toBe(0);
+    });
+
+    it.each(['note', 'full'] as const)('counts a full-size own cover with an empty thumbnail for %s', (publication_format) => {
+      const formData = {
+        publication_format,
+        travel_image_thumb_small_url: '',
+        travel_image_thumb_url: '/travel-image/42/cover.webp',
+        gallery: [],
+      } as unknown as TravelFormData;
+
+      expect(validateStep(3, formData).warnings.some(w => w.field === 'coverImage')).toBe(false);
+      expect(getQualityScore(formData).score).toBe(10);
+    });
+
     it('should validate step 6 (publish) with all required fields', () => {
       const formDataInvalid: Partial<TravelFormData> = {
         name: 'Test',

@@ -6,6 +6,7 @@
 import { TravelFormData } from '@/types/types';
 import { translate as i18nT, translatePlural } from '@/i18n'
 import { getNoteModerationIssues, resolveTravelPublicationFormat } from '@/utils/travelNote'
+import { getTravelWizardCoverUrl } from '@/utils/travelWizardCover';
 
 
 type UnknownRecord = Record<string, unknown>;
@@ -229,12 +230,11 @@ function getValidationFieldValue(formData: TravelFormData, fieldName: string): u
   const data = formData as unknown as UnknownRecord;
 
   if (fieldName === 'coverImage') {
-    return (
-      data.travel_image_thumb_small_url ??
-      data.travel_image_thumb_url ??
-      data.travelImageThumbUrlArr ??
-      data.travelImageThumbUrArr ??
-      null
+    return getTravelWizardCoverUrl(
+      data.travel_image_thumb_small_url,
+      data.travel_image_thumb_url,
+      data.travelImageThumbUrlArr,
+      data.travelImageThumbUrArr,
     );
   }
 
@@ -458,8 +458,7 @@ export function getQualityScore(formData: TravelFormData): {
   else if (formData.coordsMeTravel && formData.coordsMeTravel.length >= 1) score += 10;
 
   // Медиа (30 баллов)
-  const hasCover = (formData.travel_image_thumb_small_url && String(formData.travel_image_thumb_small_url).trim().length > 0) ||
-    (formData.travelImageThumbUrlArr && formData.travelImageThumbUrlArr.length > 0);
+  const hasCover = getValidationFieldValue(formData, 'coverImage');
   const hasGallery = formData.gallery && formData.gallery.length >= 3;
   const hasVideo = formData.youtube_link && formData.youtube_link.length > 0;
 

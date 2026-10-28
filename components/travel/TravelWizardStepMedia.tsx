@@ -28,6 +28,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import type { Travel, TravelFormData } from '@/types/types';
 import { showToastMessage } from '@/utils/toast';
 import { validateStep } from '@/utils/travelWizardValidation';
+import { getTravelWizardCoverUrl } from '@/utils/travelWizardCover';
 import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard';
 import WizardStepFooter from '@/components/travel/upsert/WizardStepFooter';
 import GallerySection from '@/components/travel/GallerySection';
@@ -73,14 +74,6 @@ type MediaStyles = ReturnType<typeof createStyles>;
 const hasUrl = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0;
 
 const normalizeUrl = (value: unknown) => (hasUrl(value) ? value.trim() : null);
-
-const getFirstUrl = (...values: unknown[]) => {
-    for (const value of values) {
-        const url = normalizeUrl(value);
-        if (url) return url;
-    }
-    return null;
-};
 
 const getProgressPercent = (progress: number) => {
     const safeProgress = Number.isFinite(progress) ? progress : 0;
@@ -470,13 +463,13 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
     } = useCoverDeletion(travelId, setFormData);
 
     useEffect(() => {
-        if (hasUrl(coverSmallUrl) || hasUrl(coverFullUrl)) {
+        if (getTravelWizardCoverUrl(coverSmallUrl, coverFullUrl)) {
             syncCoverAvailability();
         }
     }, [coverFullUrl, coverSmallUrl, syncCoverAvailability]);
 
     const coverUrl = useMemo(
-        () => (isCoverDeleted ? null : getFirstUrl(coverSmallUrl, coverFullUrl, oldCoverSmallUrl, oldCoverFullUrl)),
+        () => (isCoverDeleted ? null : getTravelWizardCoverUrl(coverSmallUrl, coverFullUrl, oldCoverSmallUrl, oldCoverFullUrl)),
         [coverFullUrl, coverSmallUrl, isCoverDeleted, oldCoverFullUrl, oldCoverSmallUrl],
     );
 
