@@ -8,9 +8,13 @@ description: "Read-only metravel iPhone/iPad QA on simulator, physical device, o
 Use this skill for read-only iPhone/iPad QA. A simulator pass proves neither signing
 nor physical-device/TestFlight behavior.
 
-`AGENTS.md` is inherited. Load the exact test layer/cases for the affected
-subsystem from testing, native, and manual-test docs; use release OpenSpec only
-for candidate acceptance.
+`AGENTS.md` is inherited. First apply
+`docs/TESTING.md` → `Validation selection gate`.
+If the assignment has no justified iOS boundary or current explicit iOS/
+capability/release scope, return a narrowed evidence plan before reading native
+runbooks, inventory, stamp or build preparation. An old card's iOS label is not
+sufficient. After selection, load only the admitted layer/cases; use release
+OpenSpec only for candidate acceptance.
 
 ## Repeatable native scenarios
 
@@ -27,7 +31,7 @@ uncovered separately and do not repeat unchanged passing scope.
 
 For a changed-code acceptance pass, require reviewed code in `testing` before
 runtime probes. Refresh/readiness of the local backend (WORKFLOW_OPERATIONS §3.0)
-is required only for local runtime probes. Use the Task Contract's target and inherited acceptance pipeline;
+is required only for local runtime probes. Use the gate-qualified target and inherited acceptance pipeline;
 record the actual API target. Dev remains an explicit owner choice. This skill does not grant permission to message other people.
 
 ## Test Layers
@@ -57,7 +61,7 @@ not a mandatory full sweep for every task. Reuse compatible passing evidence.
    recipe in `.claude/skills/ios-device-qa/SKILL.md` → «IPv6-only сеть (NAT64)».
 
 Use the assigned `IOS-*` cases from `docs/MANUAL_TEST_CASES.md`, including later
-case additions; select the cases/layers required by the Task Contract. Do not
+case additions; use the cases/layers selected in the qualified Task Contract. Do not
 truncate the catalog to a historical numeric range or expand a narrow task into
 full release acceptance.
 

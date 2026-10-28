@@ -15,6 +15,10 @@ repro и проверки остаются в нашем проекте, без 
 
 ## Разбор задачи (обязательно до вердикта)
 
+До выбора проверок, назначения tester или подготовки окружения примени
+`docs/TESTING.md` → `Validation selection gate`. Учитывай весь ещё не принятый
+task-owned change и совместимое evidence, а не только текущий dirty diff.
+
 **Протокол.** Работай по `docs/AGENT_ANALYSIS_PROTOCOL.md`: уровень глубины по §1 (точечная
 правка — S, баг в модуле — M, изменение контракта, перф и безопасность — L), причинная цепочка
 до `path:line` по §4, план с отвергнутой альтернативой по §5, отчёт по §6, стоп-слова §7
@@ -23,29 +27,31 @@ repro и проверки остаются в нашем проекте, без 
 
 **Что уточнить в постановке.** До первой правки зафиксируй письменно:
 
-1. Scope — незакоммиченный diff (`git status --short`, `git diff --stat`), конкретный каталог
-   или тикет борда. Отдели task-owned файлы от чужой параллельной работы в том же дереве:
+1. Scope — всё ещё не принятое task-owned изменение: незакоммиченный diff
+   (`git status --short`, `git diff --stat`) и относящиеся к задаче committed части.
+   Отдели task-owned файлы от чужой параллельной работы в том же дереве:
    чужие правки не чинишь, в свой diff не затягиваешь, `git add -A` не делаешь.
-2. Target-окружение — по умолчанию локальный стек (Expo web + локальный бэкенд
-   `http://localhost:8000`); дев-стенд `192.168.50.36` и прод `metravel.by` подключаются только
-   по явному запросу владельца. Идёшь против локального бэка — сначала обнови его до
-   `origin/master` (`git -C ../metravel-backend fetch origin master && git -C ../metravel-backend
-   reset --hard origin/master`, `migrate`, рестарт `run-backend.sh`; `docs/WORKFLOW_OPERATIONS.md`
-   → «3.0 Локальный стек»): отставший бэк даёт ложные дефекты фронта. Зелёный локальный прогон
-   не доказывает поведение на проде.
+2. Target-окружение — для выбранной будущей runtime-проверки и её handoff по
+   `docs/WORKFLOW_OPERATIONS.md`. Ради code-level scope стек не поднимай;
+   runtime начинается только после review в `testing`. Если выбран локальный
+   backend, его обязательный sync/readiness выполняется перед первой такой
+   пробой по «3.0 Локальный стек»; это предусловие выбранного target.
 3. Затронутые поверхности — desktop web, mobile web, Android, iPhone: где правка видна и где
    есть отдельный проверяемый риск. Общий файл сохраняет оба бандла; runtime scope
    выбирается по `docs/TESTING.md` → «Risk-based validation and evidence reuse».
 4. Done gate — чем задача считается закрытой в формулировке, проверяемой командой или пробой.
-   Взял тикет с борда — Done gate берётся из его `Task Contract`, а не придумывается заново.
+   Сверь старый `Task Contract` с изменённым контрактом и evidence по selection gate;
+   избыточную матрицу уточни с причиной. Действующий явный full-QA/release запрос
+   пользователя не сужай.
 5. Локализация — появляется ли app-owned текст (`@/i18n`) или locale-sensitive форматирование
    (`i18n/format.ts`) для RU/BE/UK/PL/EN.
 
 **Как проверяю по-настоящему.** Падающий unit-тест до фикса — не формальность, а доказательство,
 что дефект существует и что фикс его снял: тест, который зелёный и до правки, не доказывает
-ничего. Дальше — `npm run check:fast` на изменённом scope, релевантные гейты
+ничего. Дальше — выбранная code-level проверка task scope (`npm run check:fast`,
+если нужен этот набор) и релевантные гейты
 (`npm run guard:external-links`, `npm run check:image-architecture`, `npm run guard:query-keys`,
-`npm run guard:touch-targets`). Для web-UI и Android подготовь browser/device
+`npm run guard:touch-targets`). Для выбранных runtime targets подготовь точный
 handoff; runtime запускается только после code review в `testing`. **Чтением кода и зелёным typecheck НЕ доказываются**:
 вёрстка и обрезание текста, поведение в native-рантайме, реальный ответ API, LCP/вес бандла и
 наличие правки на проде.
@@ -80,8 +86,8 @@ handoff; runtime запускается только после code review в `
 
 **Чем доказывается результат по стадиям.** До review каждый пункт отчёта
 держится на code-level команде и фактическом выводе: имя Jest-теста, статус
-`check:fast` и имена guards. Web screenshots/console и Android adb evidence
-опиши exact handoff'ом; tester собирает их только после review в `testing`.
+`check:fast` и имена guards. Выбранное runtime evidence опиши exact handoff'ом;
+tester собирает его только после review в `testing`.
 
 ## Инварианты (стоп при нарушении)
 
@@ -104,7 +110,7 @@ handoff; runtime запускается только после code review в `
 2. **Выбери одну проблему** в порядке: красный `check:fast` → подтверждённый баг → недоведённый diff → гигиена scope (dead imports, guard-нарушения, broken UI).
 3. **Тест-контракт.** Для бага/фичи сначала падающий unit-тест в `__tests__/`, затем фикс.
 4. **Минимальный фикс** root cause.
-5. **Проверка.** `npm run check:fast`. Упало → почини, повтори. Guard-нарушения → `npm run guard:external-links`, `npm run check:image-architecture`. Для Web UI подготовь screenshot/console browser handoff стадии `testing`.
+5. **Проверка.** Выполни выбранные code-level checks и релевантные guards. Упало → почини и повтори инвалидированные проверки. Для выбранного Web UI runtime подготовь screenshot/console browser handoff стадии `testing`.
 6. **Регрессии.** Соседние тесты в scope не должны краснеть.
 7. Нет открытой работы и проверки зелёные → заверши.
 
@@ -133,9 +139,9 @@ handoff; runtime запускается только после code review в `
   симптому запрещена.
 - **Тест-контракт** — имя добавленного/изменённого теста и подтверждение, что он падал до фикса
   и зелёный после; если теста нет — почему и чем он заменён.
-- **Проверки** — точные команды и их фактический вывод, отдельно помеченные `SKIPPED` под чужим
-  lock'ом как `validation delegated`/`validation skipped` с PID, а не как pass.
-- **Platform impact** — targets и reused evidence по `docs/TESTING.md` →
-  «Risk-based validation and evidence reuse», с причиной каждого нового прогона.
+- **Проверки** — выбранные targets, reused evidence и причина каждого нового прогона,
+  точные команды и фактический вывод. `SKIPPED` под чужим lock'ом помечай как
+  `validation delegated`/`validation skipped` с PID, а не как pass.
+- **Platform impact** — затронутые продуктовые поверхности, отдельно от выбранных проверок.
 - **Остаток** — незакрытые блокеры и попутные находки, которые уходят отдельной карточкой через
   `ticket-board`, а не тянутся в текущий diff.

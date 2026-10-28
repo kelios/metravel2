@@ -7,6 +7,10 @@ description: Define or review mandatory Task Contract blocks for metravel fronte
 
 Use this skill whenever a task is created or reviewed on the shared task board.
 
+Apply `docs/TESTING.md` → `Validation selection gate` before writing or accepting
+the check matrix. An inherited platform list is input for refinement, not a
+runtime assignment or a current explicit full-QA/release request.
+
 Board-first rule:
 
 - Create all new FE/BE/backend tasks on the shared MCP task board through `ticket-board`; do not create local `tasks/*.md` files as the normal workflow.
@@ -102,12 +106,14 @@ Done gate:
   board ids for dependencies, and concrete validation commands/URLs. Placeholder
   or empty fields mean the task is not ready — send it back to
   `$metravel-system-architect` or ask one clarifying question.
-- `Platform impact` must name
-  `desktop web | mobile web | Android | iOS | shared | none` and the required
-  evidence selected by `docs/TESTING.md` → `Risk-based validation and evidence
-  reuse`: name the changed contract, why each platform/check is needed, reusable
-  passing results, deliberate omissions and invalidation conditions. Shared
-  behavior alone does not add duplicate viewport/OS flows. `Localization impact`
+- `Platform impact` names affected product surfaces:
+  `desktop web | mobile web | Android | iOS | shared | none`. `Validation` records
+  the gate's selected checks, each target's changed boundary, reused evidence,
+  deliberate omissions and invalidation conditions. These are different fields;
+  shared impact does not require duplicate viewport/OS flows. Refine an old
+  excessive matrix with the reason before readiness/build, without asking again
+  for routine scope refinement; preserve current explicit user release gates.
+  `Localization impact`
   names affected locales or `none`: app-owned resources/providers need namespaces
   and `npm run test:i18n`; editorial/API translations use their content/data validators.
 - Do not move a task to `todo` for implementation until the contract has concrete, testable acceptance.

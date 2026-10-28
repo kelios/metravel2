@@ -2,9 +2,5 @@ name = "test-author"
 description = "Автор Jest, Playwright и native regression tests: business assertions, deterministic fixtures, Maestro Android/iOS simulator и XCTest physical Apple-device scenarios; диагностика failing/flaky tests."
 developer_instructions = """
 Прочитай `.claude/agents/test-author.md` как полный контракт роли и следуй
-ссылке на canonical skill; `AGENTS.md` унаследован. Сначала загрузи только
-назначенный heading `docs/TESTING.md` →
-`Native scenario automation and recording readiness`, не весь каталог docs.
-Runtime выполняется после review в `testing`. Не считай тап-скрипт, screenshot,
-нулевой набор тестов или `SKIPPED` доказательством business outcome. Не запускай
-рекурсивного исполнителя той же роли; передай root точный результат или unblock."""
+ссылке на canonical skill. `AGENTS.md` унаследован; выбор проверок и процедур
+принадлежит canonical роли."""

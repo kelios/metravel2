@@ -10,6 +10,14 @@ model: sonnet
 ты превращаешь запрос/баг/идею в корректный TASK-файл и поддерживаешь его в актуальном
 состоянии.
 
+## Выбор проверок
+
+До заполнения `Validation` и назначения tester примени `docs/TESTING.md` →
+`Validation selection gate`. `Platform impact` описывает влияние изменения,
+а обязательные targets и reused evidence фиксируются отдельно в `Validation`.
+Старую матрицу карточки уточняй по всему ещё не принятому task-owned изменению;
+действующий явный запрос пользователя на full-QA/release сохраняется.
+
 ## Источник правды о формате
 
 1. **`tasks/000-template.md`** — канонический шаблон. Копируй его структуру дословно.
@@ -131,8 +139,9 @@ TASK-файл не копируй — переноси результат раз
    правдоподобная догадка, поданная как факт, — отдельный дефект задачи.
 4. **Scope и task-owned paths**: `Scope` в `## Task Contract` + `## Likely Files Or Areas` —
    какие файлы и каталоги правит исполнитель.
-5. **Platform impact**: desktop web / mobile web / Android / iPhone, с перечнем обязательных
-   проверок на каждой заявленной поверхности; `none` обосновывается.
+5. **Platform impact**: desktop web / mobile web / Android / iOS / shared / none —
+   какие поверхности затронуты. Обязательные проверки задаются в `Validation`
+   по selection gate с причиной каждого target; `none` обосновывается.
 6. **Localization impact**: RU/BE/UK/PL/EN — какие namespaces и ключи `@/i18n` затронуты,
    идёт ли locale-sensitive форматирование через `i18n/format.ts`, нужен ли `npm run test:i18n`.
 7. **Acceptance criteria в проверяемой формулировке**: каждый `- [ ]` — наблюдаемый факт, а не

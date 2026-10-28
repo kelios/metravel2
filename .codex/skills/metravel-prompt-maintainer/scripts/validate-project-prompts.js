@@ -4,6 +4,7 @@
 const fs = require('fs')
 const path = require('path')
 const { auditSkillFamily, descriptionErrors, skillMetadataErrors, auditCodexAgentFamily } = require('./skill-catalog-validation')
+const { auditValidationSelectionPolicy } = require('./validation-selection-policy')
 
 const repoRoot = path.resolve(__dirname, '../../../..')
 const skillsRoot = path.join(repoRoot, '.codex', 'skills')
@@ -113,6 +114,9 @@ for (const file of walk(claudeAgentsRoot, (target) => /\.md$/i.test(target))) {
 const codexAgents = auditCodexAgentFamily(path.join(repoRoot, '.codex', 'agents'), repoRoot)
 for (const { file, message } of codexAgents.errors) fail(file, message)
 
+const validationSelection = auditValidationSelectionPolicy(repoRoot)
+for (const { file, message } of validationSelection.errors) fail(file, message)
+
 const promptFiles = [
   ...walk(path.join(repoRoot, 'docs'), (file) => /PROMPTS\.md$/i.test(file)),
   ...walk(path.join(repoRoot, 'assets'), (file) => path.basename(file).toUpperCase() === 'PROMPT.MD'),
@@ -142,5 +146,5 @@ if (errors.length > 0) {
   for (const error of errors) console.error(`- ${error}`)
   process.exitCode = 1
 } else {
-  console.info(`prompt-audit: passed (${skillCount} .codex skills; ${sharedSkills.count} .agents skills (${sharedSkills.vendorCount} vendor, ${sharedSkills.mirrorCount} mirrors checked); ${claudeSkills.count} .claude skills (${claudeSkills.vendorCount} vendor); ${copilotSkills.count} .github skills (${copilotSkills.vendorCount} vendor, ${copilotSkills.mirrorCount} mirrors checked); ${claudeAgentCount} Claude agents; ${codexAgents.count} Codex adapters; ${promptCount} prompt artifacts)`)
+  console.info(`prompt-audit: passed (${skillCount} .codex skills; ${sharedSkills.count} .agents skills (${sharedSkills.vendorCount} vendor, ${sharedSkills.mirrorCount} mirrors checked); ${claudeSkills.count} .claude skills (${claudeSkills.vendorCount} vendor); ${copilotSkills.count} .github skills (${copilotSkills.vendorCount} vendor, ${copilotSkills.mirrorCount} mirrors checked); ${claudeAgentCount} Claude agents; ${codexAgents.count} Codex adapters; ${validationSelection.count} validation-selection sources; ${promptCount} prompt artifacts)`)
 }

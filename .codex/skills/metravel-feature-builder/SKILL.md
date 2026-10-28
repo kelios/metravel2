@@ -9,7 +9,8 @@ description: "Implement, refactor, or debug metravel app, component, hook, servi
 that match the task:
 
 - Read `docs/DEVELOPMENT.md` for local workflow, selective checks, route-point-from-photo flow, and SEO utility usage.
-- Read `docs/TESTING.md` when choosing targeted validation.
+- Apply `docs/TESTING.md` → `Validation selection gate` before selecting checks
+  or dispatching QA; this precedes target-specific runbooks and readiness.
 - Read `docs/features/travel.md`, `docs/features/map.md`, or `docs/features/places.md` for feature-specific work.
 - Read `docs/RELEASE.md` only when the task touches release or deployment flow.
 - Use `$metravel-domain-router` first when the change is in travel, map, profile, achievements, quests, PDF/export, new pages, or design-system drift.
@@ -18,14 +19,17 @@ that match the task:
 
 Implement the smallest change that solves the task.
 
-Record the preflight block from `AGENTS.md` before editing, and treat shared
-Expo/React Native code as cross-platform until the platform boundary proves
-otherwise.
+Record the preflight block from `AGENTS.md` before editing. Trace the consumers
+of shared Expo/React Native code for impact; shared ownership alone does not
+require runtime checks on every OS.
 
 - Verify repository targets against `docs/RULES.md` → «Owned repositories only
   (mandatory)» before Git/GitHub mutations. Upstream is read-only; dependency
   fixes and reproductions stay in our project even when a card proposes a PR.
 - If the work comes from a FE/BE board task, read its `Task Contract` first. If the contract is missing or does not define scope, Data/API contract, platform/localization impact, dependencies, validation, and Done gate, stop implementation and send it back to refinement.
+- Reconcile an inherited validation matrix with the whole still-unaccepted
+  task change and compatible evidence before preparing targets. Record a
+  justified refinement; retain the user's current explicit full-QA/release scope.
 - Do not edit backend/Django/API/server repositories, files, migrations, tests, or settings from this frontend workspace. If FE is blocked by backend behavior, diagnose read-only and create/update an `area=back` board task instead.
 - Fix every real issue found in the touched area or code-level validation output
   before review: failing focused tests, invalid external-link usage, dead imports,
@@ -80,10 +84,8 @@ before code review:
 - If the change affects visible web UI, write the exact browser flow, screenshot
   viewport, and console/network expectations for the `testing` handoff; do not
   open a browser during implementation or review.
-- Select testing targets and reusable evidence with `docs/TESTING.md` →
-  `Risk-based validation and evidence reuse`; responsive changes use mobile web
-  first and desktop, identical shared logic is checked once, and a separate
-  native implementation uses the affected emulator/simulator after review.
+- Hand QA the selected assertions, targets, reused evidence and invalidation
+  conditions from the selection gate; platform impact is not a second test matrix.
 - If localization is affected, run `npm run test:i18n` and verify the changed
   locale resources statically. Hand affected observable locale and native
   cold-restart/lifecycle scenarios to `testing` only when that platform's

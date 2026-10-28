@@ -662,9 +662,10 @@ id зависимостей, конкретные команды/URL валид�
 - `Data/API contract` — для BE: endpoint, method, auth, request/response shape, migrations/seed;
   для FE: какие endpoints/fields/events потребляются и какие UI states должны появиться.
 - `Platform impact` — `desktop web | mobile web | Android | iOS | shared | none`,
-  с точным перечнем обязательных checks; `shared` означает common code или
-  несколько поверхностей, а не автоматический all-device gate; `none` должен
-  быть обоснован.
+  описывает влияние на реализации и продуктовые поверхности. Обязательные
+  checks выбираются отдельно в `Validation` через `docs/TESTING.md` →
+  «Validation selection gate»; ни перечисление платформ, ни `shared` не создают
+  all-device gate. `none` должен быть обоснован.
 - `Localization impact` — RU/BE/UK/PL/EN, выбранные locales или `none`;
   для app-owned UI copy укажи translation namespaces/keys и `npm run test:i18n`.
 - `Dependencies` — board id связанных FE/BE задач; если FE ждёт BE, укажи конкретный BE id и
@@ -681,12 +682,15 @@ id зависимостей, конкретные команды/URL валид�
   операция, исследование); для bug и для консолидации `none` запрещён.
   Это поле — прямое следствие замера в `docs/PROBLEM_MEMORY.md`: семейства, у которых
   после фикса не осталось постоянного контроля, воспроизводились неограниченно.
-- `Validation` выбирается по `docs/TESTING.md` → «Risk-based validation and evidence
-  reuse»: назови изменённый контракт, distinct risk каждого target, reused evidence,
-  deliberate omissions и условие retest. Shared-файл не создаёт дублирующие
-  web/native-прогоны; responsive/UI-геометрия требует mobile web first + desktop.
-  Localization evidence различает resource/data checks и отдельные runtime-риски.
-- `Done gate` — условия закрытия: код + тесты + runtime evidence. Для BE, который разблокирует
+- `Validation` — результат «Validation selection gate», записанный до назначения
+  tester/readiness/build: изменённый контракт, assertion, обязательные checks и
+  targets, совместимое evidence, обоснованные пропуски и trigger повторной
+  проверки. Старую избыточную матрицу уточняй по всему ещё не принятому task-owned
+  изменению с записью причины; текущий явный full-QA/release запрос владельца
+  сохраняет силу. Команда закончить карточку сама не является таким запросом.
+- `Done gate` — условия закрытия: реализация и выбранное обязательное evidence;
+  runtime требуется для соответствующего наблюдаемого/интеграционного контракта,
+  а не автоматически для любой frontend/docs задачи. Для BE, который разблокирует
   FE, `done` требует доступную релевантную smoke-пробу deploy target (`dev`/`prod`)
   по контрактным endpoints; client/device evidence остаётся в связанной FE-задаче. Для FE,
   зависящего от BE, `done` требует browser/API evidence против того же target; зелёные unit-тесты

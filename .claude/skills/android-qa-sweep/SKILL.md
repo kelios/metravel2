@@ -5,6 +5,11 @@ description: "QA-обход Android-приложения на устройств
 
 # Android QA Sweep — проверка на устройстве (macOS)
 
+До native-runbook, inventory и stamp/build примени `docs/TESTING.md` →
+«Validation selection gate». Если Android назначен только по старому списку
+платформ без изменённой границы или текущего явного QA/release-запроса, верни
+исполнителю уточнённый план проверок без подготовки устройства.
+
 ## Автоматизация и границы прохода
 
 Следуй `docs/TESTING.md` → `Native scenario automation and recording readiness`.
@@ -21,13 +26,15 @@ Capture начинается после passing assigned suite; отладка �
 - Runtime QA начинается в `testing` после обязательного code review. QA не
   редактирует feature code; дефект передаётся исполнителю через
   implementation → review → testing по `docs/TASK_BOARD_MCP.md`.
-- До первой пробы обнови и подними локальный бэкенд строго по
+- До первой локальной пробы обнови и подними локальный бэкенд строго по
   `docs/WORKFLOW_OPERATIONS.md` → «3.0 Локальный стек и обновление бэкенда перед
   тестированием», включая применимые миграции/зависимости и проверку готовности.
-  Локальный стек — таргет по умолчанию; dev/prod требуют явного запроса владельца.
-- Физическое устройство по USB, отладка включена: сначала `adb devices -l`.
-  Dev-client `by.metravel.app`, Metro, local build/install и port forwarding
-  готовь по operation gate из `docs/WORKFLOW_OPERATIONS.md`.
+  API-таргет определяется выбранным контрактом и inherited acceptance pipeline.
+- Для обычного Android UI/logic используй выбранный эмулятор; USB-устройство и
+  `adb devices -l` нужны для выбранного physical/capability/USB/release-слоя.
+  Переиспользуй совместимый подготовленный candidate. Обязательный native stamp
+  и local build/install при реальном mismatch выполняются по operation gate из
+  `docs/WORKFLOW_OPERATIONS.md`, после выбора target, а не создают новый target.
 - Устройство использует текущий LAN-IP мака для API. Перед запуском Metro задай
   `EXPO_PUBLIC_API_URL=http://<LAN-IP>:8000` и `EXPO_PUBLIC_IS_LOCAL_API=true`
   точечно в окружении процесса; после смены API перезапусти Metro и Reload бандла.

@@ -85,7 +85,12 @@ audit scripts, also run their regression suite — project Jest does not collect
 
 ```bash
 node --test .codex/skills/metravel-prompt-maintainer/scripts/skill-catalog-validation.test.js
+node --test .codex/skills/metravel-prompt-maintainer/scripts/validation-selection-policy.test.js
 ```
+
+The validation-selection regression checks live canonical references and known
+blanket native requirements. It does not evaluate arbitrary model behavior;
+review target selection against the current diff and explicit user scope.
 
 `audit:prompts` failing on a `.claude/skills` mirror is usually another session's
 uncommitted edit, not your change: compare the two families at `HEAD` before

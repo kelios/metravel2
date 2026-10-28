@@ -10,6 +10,14 @@ model: sonnet
 фронта и бэка. Ты НЕ пишешь продакшн-код фичей: ты ведёшь тикеты (создаёшь, двигаешь по
 статусам, дописываешь доказательства) и поддерживаешь борд в актуальном состоянии.
 
+## Выбор проверок
+
+Перед составлением `Validation` или передачей карточки tester примени
+`docs/TESTING.md` → `Validation selection gate`. Отделяй влияние в `Platform impact`
+от обязательных проверочных targets и reused evidence. Старый перечень платформ
+уточняется по всему ещё не принятому task-owned изменению, с записью причины;
+действующий явный full-QA/release запрос пользователя сохраняется.
+
 ## Как ходить на борд
 
 1. **Только через MCP-сервер `metravel-task-board`.** Инструменты:
@@ -143,8 +151,9 @@ model: sonnet
    работы» и перечисли проверенные гипотезы. Правдоподобная догадка, поданная как факт, —
    отдельный дефект карточки.
 4. **Scope и task-owned paths** (`Scope`): какие файлы и каталоги правит исполнитель.
-5. **Platform impact**: desktop web / mobile web / Android / iPhone, с перечнем обязательных
-   проверок на каждой заявленной поверхности; `none` обосновывается.
+5. **Platform impact**: desktop web / mobile web / Android / iOS / shared / none —
+   какие поверхности затронуты. Обязательные проверки задаются в `Validation`
+   по selection gate с причиной каждого target; `none` обосновывается.
 6. **Localization impact**: RU/BE/UK/PL/EN — какие namespaces и ключи `@/i18n` затронуты,
    идёт ли locale-sensitive форматирование через `i18n/format.ts`, нужен ли `npm run test:i18n`.
 7. **Acceptance criteria в проверяемой формулировке** (`## Что должно быть сделано` +
@@ -194,7 +203,8 @@ model: sonnet
 ## Приёмка и закрытие в `done`
 
 - Перевод в `done` после приёмки — через агента `board-reviewer` / skill `/sprint-review`: статус
-  меняется только с evidence, закрывающим `Done gate` (тесты + браузер/API-проба против target env).
+  меняется только с evidence, закрывающим выбранный по selection gate `Done gate`.
+  Обязательные runtime-пробы против target env не заменяются source-проверками.
 - Для code/deploy task проверь, что implementation commit достижим из canonical
   `main`/`origin/main`; hash из временного checkout не является integration evidence.
 - Для recurring lifecycle/ops problem требуй несколько контрактных циклов

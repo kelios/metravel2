@@ -4,10 +4,49 @@ Canonical policy reference: see [docs/RULES.md](./RULES.md) for mandatory projec
 
 ## Risk-based validation and evidence reuse
 
-Choose checks for the changed observable contract, not for every platform that
-imports a file. Before a run, record the changed behavior and expected assertion,
-the smallest reliable test layer, relevant prior evidence, required targets and
-locales, and why each additional run can reveal a different failure.
+### Validation selection gate
+
+Apply this gate before dispatching a platform tester or opening its runbook,
+checking devices/binaries/stamps, building/installing, or running runtime probes.
+Product `Platform impact` and the list of supported surfaces are not a test plan.
+
+1. Inspect the whole still-unaccepted task-owned change, including committed
+   work and fixes since the last accepted evidence. Trace the actual changed
+   implementation/branch and its consumers; separate web/native components do
+   not imply that changing one changes the others.
+2. Name the changed observable contract and assertion. Choose the nearest
+   sufficient layer using the matrix below. Every additional target/locale must
+   expose a distinct changed boundary or satisfy an explicit current QA gate.
+   Shared imports, product parity and a platform name in an old card are not
+   such a boundary.
+3. Reuse compatible passing evidence and record its invalidation condition.
+   Reconcile an inherited Task Contract/Done gate with this decision before
+   execution: refine an unjustified old matrix with a reason and the remaining
+   required checks. A request to finish a card does not turn its historical
+   platform list into a current explicit full-QA/release instruction. Routine
+   refinement needs no new owner approval; preserve actual user requirements.
+4. Only then dispatch testers and prepare the selected target. A native tester
+   receiving no justified native target returns the missing selection to the
+   caller before device inventory, stamp or build. An absent/stale binary cannot
+   add a target; native stamp/capability/store gates remain mandatory once that
+   target is legitimately selected.
+
+A short record is enough:
+
+`Changed contract → assertion → required checks/targets → reused evidence →
+omitted targets/reason → retest trigger`.
+
+A current explicit request for full QA, a particular native surface, release
+matrix or exact candidate remains in scope even without a source diff. Do not
+use this gate to weaken that request or replace required native/capability
+evidence with web evidence. Current means still applicable, including an explicit
+human request from an earlier turn that has not been cancelled or superseded;
+it does not mean only the latest message. An old agent-authored platform list or
+inherited handoff alone is not such a human request.
+If setup fails, keep the required result `NOT TESTED`, preserve the first state
+and fix only the selected target's concrete prerequisite within the existing
+retry/operation limits. A web environment failure does not authorize device QA,
+another platform's rebuild or an unrelated full sweep.
 
 | Changed contract | Required verification |
 | --- | --- |
@@ -18,9 +57,8 @@ locales, and why each additional run can reveal a different failure.
 | Hardware, OS/provider integration or a failure that a simulator cannot establish | The relevant physical device and capability; do not expand to unrelated devices or flows |
 | Explicit full QA, store/release candidate or exact TestFlight gate | The assigned release matrix and exact evidence layer; a narrow task does not silently acquire this matrix |
 
-Source ownership alone (`shared`, `.native`, an import or a dependency) does not
-prove an additional runtime is needed: name the affected boundary. Preserve
-cross-platform product parity even when only one representative test is needed.
+Preserve cross-platform product parity even when only one representative test
+is needed; select evidence through the gate above.
 For localization/content, validate all affected resources, structure and answer
 contracts at the data/code layer. Add runtime locales for distinct risks such as
 long text, plurals, formatting, fallback, RTL or platform-specific persistence;

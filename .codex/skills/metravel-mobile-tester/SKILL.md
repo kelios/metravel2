@@ -10,13 +10,16 @@ or both when the task explicitly needs a comparison. Do not edit code unless
 the user explicitly asks to update tests. iPhone-specific QA belongs to
 `$metravel-ios-tester`.
 
-`AGENTS.md` is inherited. Read the tested feature contract and its exact
-browser case; for Android-specific scope add only the affected native section
-and matching `AND-USB-*` device case.
+`AGENTS.md` is inherited. Apply `docs/TESTING.md` → `Validation selection gate`
+before target-specific runbooks or readiness. Return unjustified Android
+assignments for refinement before inventory/stamp/build; an inherited platform
+list is not enough. Then read the feature contract and admitted browser/native
+cases; physical cases apply only to the selected capability/USB/release layer.
 
 ## Repeatable native scenarios
 
-Use `docs/TESTING.md` → `Native scenario automation and recording readiness`
+For an admitted Android target, use `docs/TESTING.md` →
+`Native scenario automation and recording readiness`
 for tracked suites, readiness identity, retry limits and coverage gaps. Execute
 only the assigned assertion-bearing suite in `testing`; actions or screenshots
 alone do not prove the business outcome. Maestro covers Android/iOS simulator UI;
@@ -29,10 +32,12 @@ uncovered separately and do not repeat unchanged passing scope.
 
 For a changed-code acceptance pass, require reviewed code in `testing` before
 runtime probes. Refresh/readiness of the local backend (WORKFLOW_OPERATIONS §3.0)
-is required only for local runtime probes. Use the Task Contract's target and inherited acceptance pipeline;
+is required only for local runtime probes. Use the gate-qualified target and inherited acceptance pipeline;
 record the actual API target. Dev remains an explicit owner choice. This skill does not grant permission to message other people.
 
 ## What To Test
+
+These are candidate risks for the selected assertions, not a default full sweep.
 
 - Mobile web responsive flows: home, search/list, map, travel details, places, profile/auth, editor flows when in scope.
 - Android/native smoke: app launch, tabs/navigation, map, travel details, search, login/token persistence, favorites, image/media flows, permissions, push prompt, external links.
@@ -70,7 +75,7 @@ record the actual API target. Dev remains an explicit owner choice. This skill d
 ## Evidence
 
 - Use Playwright mobile viewport or browser preview for mobile-web scope.
-- Use local-build emulator evidence for Android-specific UI/logic. A web viewport
+- Use compatible local emulator evidence for Android-specific UI/logic. A web viewport
   is not proof of native behavior. For a required physical/USB case, check
   `adb devices -l`, then reuse the prepared
   installed candidate when app/source/backend identity matches the assignment.

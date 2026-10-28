@@ -11,6 +11,11 @@ Feature code не меняй, не деплой, не печатай secrets. `A
 читай только ticket contract и нужные headings `docs/TASK_BOARD_MCP.md`/
 `docs/WORKFLOW_OPERATIONS.md`.
 
+До подготовки окружения или runtime-проб примени `docs/TESTING.md` →
+`Validation selection gate`. Сверяй старую матрицу со всем ещё не принятым
+task-owned изменением и совместимым evidence; избыточные targets уточняй с
+причиной. Действующая явная full-QA/release-матрица пользователя сохраняется.
+
 ## Вход и очередь
 
 Вход: sprint id, `active` или один ticket id. По умолчанию — active sprint.
@@ -34,8 +39,15 @@ backend route и только relevant source/API/production probes.
    висящий незакоммиченным в общем рабочем дереве, означает нарушение гейта
    `review → testing` (`docs/TASK_BOARD_MCP.md`): верни тикет в `in_progress` с
    этим finding и не начинай QA.
-4. Убедись, что changed build доступен на target. Дефолтный target для
-   web-задач — ПРОД после выката задачи: `curl -s https://metravel.by/.build-source.json`
+4. Зафиксируй выбранный gate: action/input, ожидаемое поле/state/число, нужная
+   negative probe, environment и required platform layer. Назови reused evidence
+   и отдельный риск каждого нового прогона. Необоснованное native-назначение
+   верни исполнителю на уточнение до inventory/stamp/build; старый список
+   платформ сам по себе не задаёт release-матрицу. Выкат не требует повторения
+   всего совместимого локального flow.
+5. Только для выбранной runtime-приёмки убедись, что changed build доступен на target.
+   Дефолтный target для web-задач — ПРОД после выката задачи:
+   `curl -s https://metravel.by/.build-source.json`
    → `sha`, затем `git merge-base --is-ancestor <sha коммита тикета> <sha>`.
    Сборки с коммитом тикета на проде нет → не проверяй старую сборку и не
    выдавай финальный status: верни оркестратору точный запрос на выкат
@@ -50,11 +62,6 @@ backend route и только relevant source/API/production probes.
    не содержит неприменённых: отставший бэк отвечает `200` и даёт ложный
    `fail`. Процедура — `docs/WORKFLOW_OPERATIONS.md` → «3.0 Локальный стек».
    Дев-стенд — только по явному запросу владельца.
-5. Выпиши проверяемый gate: action/input, ожидаемое поле/state/число, negative
-   probe, environment и required platform layer.
-   По `docs/TESTING.md` → «Risk-based validation and evidence reuse» укажи,
-   какие результаты переиспользованы и какой отдельный риск доказывает каждый
-   новый прогон. Не требуй повторения всего локального flow только из-за выката.
 
 ## Evidence
 

@@ -10,14 +10,15 @@ runtime role. It starts only after code review passes and the reviewed commit is
 in `testing`. It never participates in the `review` verdict and never edits
 feature code.
 
-`AGENTS.md` is inherited. Load the matching feature contract, the exact
-UI/media/link headings implicated by the diff, and only the browser/operation
-section needed from `docs/TESTING.md` or `docs/WORKFLOW_OPERATIONS.md`.
+`AGENTS.md` is inherited. Apply `docs/TESTING.md` → `Validation selection gate`
+before browser readiness or dispatching another platform. Qualify inherited
+checks against the whole still-unaccepted task change and compatible evidence,
+then load only the matching feature and browser/operation headings.
 
 ## Runtime entry
 
 For a changed-code acceptance pass, require reviewed code in `testing` before
-runtime probes. Use the Task Contract's target and inherited acceptance pipeline;
+runtime probes. Use the gate-qualified target and inherited acceptance pipeline;
 record the actual API target. Refresh the local backend only for a local runtime
 probe, using WORKFLOW_OPERATIONS §3.0. Dev remains an explicit owner choice.
 This skill does not grant permission to message other people.
@@ -26,8 +27,8 @@ This skill does not grant permission to message other people.
 
 1. Confirm the board ticket is in `testing` and identify the reviewed commit,
    target environment, and exact user-visible scenarios from the handoff.
-   Select checks and reusable evidence through `docs/TESTING.md` →
-   `Risk-based validation and evidence reuse`; explain each target's distinct risk.
+   Confirm the selection record before preview preparation; refine an excessive
+   old matrix with the reason, preserving current explicit user QA/release scope.
 2. If the ticket is still in `review`, stop and route it to
    `$metravel-code-reviewer`; do not open a browser.
 3. Start or reuse a local preview only after checking the operation gate for
@@ -41,8 +42,9 @@ This skill does not grant permission to message other people.
 5. If the runtime behavior fails, capture the route, input, actual result,
    console/network evidence, and screenshot. Return the ticket to the owning
    implementation flow; do not patch source while acting as tester.
-6. Rerun only after the fix has completed a fresh code review and returned to
-   `testing`.
+6. Product fixes require fresh code review and a return to `testing` before the
+   affected retest. An environment-only retry needs a confirmed changed
+   precondition and the bounded retry policy, not another platform or a full sweep.
 
 ## Verdicts
 

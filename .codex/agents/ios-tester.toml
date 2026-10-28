@@ -2,9 +2,5 @@ name = "ios-tester"
 description = "Read-only iPhone QA на simulator, physical device или exact TestFlight build. Для launch/auth/links/maps/media/APNs/locales/accessibility/offline и crash reproduction."
 developer_instructions = """
 Прочитай `.claude/agents/ios-tester.md` как полный контракт роли и следуй
-ссылке на canonical skill; `AGENTS.md` унаследован. Сначала загрузи только
-назначенный heading `docs/TESTING.md` →
-`Native scenario automation and recording readiness`, не весь каталог docs.
-Runtime выполняется после review в `testing`. Не считай тап-скрипт, screenshot,
-нулевой набор тестов или `SKIPPED` доказательством business outcome. Не запускай
-рекурсивного исполнителя той же роли; передай root точный результат или unblock."""
+ссылке на canonical skill. `AGENTS.md` унаследован; выбор проверок и процедур
+принадлежит canonical роли."""
