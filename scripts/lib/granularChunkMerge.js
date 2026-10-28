@@ -21,6 +21,7 @@ const path = require('path')
 // route; 0.35 gave 31 requests, worse than 0.4 (#1721, measured 2026-08).
 const MIN_ROUTE_SIMILARITY = 0.4
 const LAYOUT_FILE = /^_layout(\.[^/]+)?\.[jt]sx?$/
+const webFallbackPath = (entryPath) => entryPath.replace(/\.web(\.[jt]sx?)$/, '$1')
 
 function popcount32(value) {
   let v = value - ((value >>> 1) & 0x55555555)
@@ -58,7 +59,9 @@ function* ownerIndices(bits) {
 function createRouteCoverage(entryPaths, appDir) {
   const prefix = appDir.endsWith(path.sep) ? appDir : appDir + path.sep
   const inApp = entryPaths.filter((entryPath) => entryPath.startsWith(prefix))
-  const routes = inApp.filter((entryPath) => !LAYOUT_FILE.test(path.basename(entryPath)))
+  // Expo keeps the fallback context key beside its .web override. They are
+  // two async entries, but the browser can visit only one delivery route.
+  const routes = [...new Set(inApp.filter((entryPath) => !LAYOUT_FILE.test(path.basename(entryPath))).map(webFallbackPath))]
   const routeIndex = new Map(routes.map((route, index) => [route, index]))
   const words = Math.max(1, Math.ceil(routes.length / 32))
   const coverage = new Map()
@@ -67,7 +70,7 @@ function createRouteCoverage(entryPaths, appDir) {
     if (entryPath.startsWith(prefix)) {
       const covered = LAYOUT_FILE.test(path.basename(entryPath))
         ? routes.filter((route) => route.startsWith(path.dirname(entryPath) + path.sep))
-        : [entryPath]
+        : [webFallbackPath(entryPath)]
       for (const route of covered) {
         const index = routeIndex.get(route)
         bits[index >>> 5] |= 1 << (index & 31)
@@ -95,10 +98,17 @@ const byOwners = (a, b) => (a.ownerEntries < b.ownerEntries ? -1 : a.ownerEntrie
  * the quests catalog) whose budgets pin feature code (#2741), and the
  * route-set merge below already folds such groups into few files.
  */
-function placeAtoms(rawAtoms, initialOwners) {
+function placeAtoms(rawAtoms, initialOwners, webAliases) {
   const modulesByOwners = new Map()
   for (const atom of rawAtoms) {
-    const owners = (atom.ownerEntries & initialOwners) !== 0n ? atom.ownerEntries & initialOwners : atom.ownerEntries
+    let owners = (atom.ownerEntries & initialOwners) !== 0n ? atom.ownerEntries & initialOwners : atom.ownerEntries
+    // An SSR .web route synchronously imports its fallback implementation.
+    // Keeping both context keys as owners hoists that implementation out of
+    // the route facade into shared code. Prefer the web facade only for atoms
+    // reached by BOTH aliases; fallback-only and unrelated owners stay intact.
+    for (const { fallback, web } of webAliases) {
+      if ((owners & fallback) !== 0n && (owners & web) !== 0n) owners &= ~fallback
+    }
     const modules = modulesByOwners.get(owners) ?? []
     modules.push(...atom.modules)
     modulesByOwners.set(owners, modules)
@@ -118,14 +128,22 @@ function mergeGranularChunkPlan(plan, context, { minRouteSimilarity = MIN_ROUTE_
   const root = context?.options?.serverRoot ?? context?.options?.projectRoot ?? process.cwd()
   const entryPaths = entryPoints.map((entry) => entry.module.path)
   const entryPathSet = new Set(entryPaths)
-  const { coverage, words } = createRouteCoverage(entryPaths, appDir ?? path.join(root, 'app'))
+  const applicationDir = appDir ?? path.join(root, 'app')
+  const { coverage, words } = createRouteCoverage(entryPaths, applicationDir)
+  const entryIndex = new Map(entryPaths.map((entryPath, index) => [entryPath, index]))
+  const webAliases = entryPaths.flatMap((entryPath, index) => {
+    const fallbackIndex = entryIndex.get(webFallbackPath(entryPath))
+    return entryPath.startsWith(applicationDir + path.sep) && fallbackIndex != null && fallbackIndex !== index
+      ? [{ fallback: 1n << BigInt(fallbackIndex), web: 1n << BigInt(index) }]
+      : []
+  })
 
   let initialOwners = 0n
   entryPoints.forEach((entry, index) => {
     if (entry.kind === 'initial') initialOwners |= 1n << BigInt(index)
   })
 
-  const atoms = placeAtoms(rawAtoms, initialOwners)
+  const atoms = placeAtoms(rawAtoms, initialOwners, webAliases)
   const chunks = []
   const groups = []
   for (const atom of atoms) {

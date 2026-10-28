@@ -188,6 +188,19 @@ const validateCommittedBudget = (configPath: string, pinSourcePath = contractTes
 }
 
 describe('bundle budget release contract', () => {
+  it('checks the completed production client before compression and publication', () => {
+    const source = fs.readFileSync(path.join(ROOT, 'build-prod.sh'), 'utf8')
+    const invocation = 'node scripts/guard-bundle-budget.js --fail'
+    const guard = source.indexOf(invocation)
+    expect(guard).toBeGreaterThan(source.indexOf('node scripts/postprocess-route-shells.js --dist'))
+    expect(guard).toBeLessThan(source.indexOf('node scripts/precompress-static-assets.js "dist/$ENV"'))
+    expect(guard).toBeLessThan(source.indexOf('stage "выкат (загрузка + публикация)"'))
+    const productionBlock = source.lastIndexOf('if [[ "$ENV" == "prod" ]]; then', guard)
+    expect(productionBlock).toBeGreaterThan(0)
+    expect(source.slice(productionBlock, guard)).not.toMatch(/^fi\s*$/m)
+    expect(source).toContain('BUNDLE_BUDGET_JS_DIR="$PWD/dist/$ENV/_expo/static/js/web" \\\n    BUNDLE_BUDGET_HTML_DIR="$PWD/dist/$ENV" \\\n    ' + invocation)
+  })
+
   it('keeps release:check wired fail-closed after the production web build', () => {
     const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
     const releaseCheck = packageJson?.scripts?.['release:check']
@@ -431,6 +444,34 @@ describe('bundle budget release contract', () => {
         label: 'EAGER budgeted route missing from build: search.html',
         missing: true,
       })
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('applies grouped route pins to server export public paths using the stricter alias limit', () => {
+    const tmpDir = makeTempDir('metravel-bundle-budget-server-routes-')
+    try {
+      const jsDir = path.join(tmpDir, 'js')
+      const htmlDir = path.join(tmpDir, 'html')
+      const testBudgetPath = path.join(tmpDir, 'budget.json')
+      fs.mkdirSync(jsDir, { recursive: true })
+      fs.mkdirSync(htmlDir, { recursive: true })
+      fs.writeFileSync(path.join(jsDir, 'chunk0-abcdef.js'), 'globalThis.x = 1;')
+      fs.writeFileSync(path.join(htmlDir, 'profile.html'), '<script src="/_expo/static/js/web/chunk0-abcdef.js"></script>')
+      const budget = { eager: { htmlRoutes: true, maxRequests: 10, maxRequestsByRoute: {
+        '(tabs)/profile.html': 1, 'profile.html': 2,
+      } } }
+      fs.writeFileSync(testBudgetPath, JSON.stringify(budget))
+      const run = () => runNodeCli([guardScriptPath, '--fail', '--json'], {
+        BUNDLE_BUDGET_JS_DIR: jsDir, BUNDLE_BUDGET_HTML_DIR: htmlDir, BUNDLE_BUDGET_CONFIG: testBudgetPath,
+      })
+      expect(run().status).toBe(0)
+      fs.writeFileSync(path.join(jsDir, 'chunk1-abcdef.js'), 'globalThis.y = 1;')
+      fs.appendFileSync(path.join(htmlDir, 'profile.html'), '<script src="/_expo/static/js/web/chunk1-abcdef.js"></script>')
+      expect(JSON.parse(run().stdout).breaches).toContainEqual({ label: 'EAGER (requests, profile.html)', actual: 2, max: 1 })
+      fs.renameSync(path.join(htmlDir, 'profile.html'), path.join(htmlDir, 'other.html'))
+      expect(JSON.parse(run().stdout).breaches).toContainEqual({ label: 'EAGER budgeted route missing from build: profile.html', missing: true })
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true })
     }
@@ -721,6 +762,23 @@ describe('bundle budget release contract', () => {
       )
       return testBudgetPath
     }
+
+    it('keeps grouped payload exclusions active on server export public paths', () => {
+      const tmpDir = makeTempDir('metravel-bundle-budget-payload-server-')
+      try {
+        const marker = '4155,4241,-5,23,-8,10'
+        const { jsDir, htmlDir } = buildFixture(tmpDir, ['quests.html'], ['profile.html'], marker)
+        const testBudgetPath = writeBudget(tmpDir, { marker, maxRoutes: 1, mustNotLoad: ['(tabs)/profile.html'] })
+        const run = () => runNodeCli([guardScriptPath, '--fail', '--json'], {
+          BUNDLE_BUDGET_JS_DIR: jsDir, BUNDLE_BUDGET_HTML_DIR: htmlDir, BUNDLE_BUDGET_CONFIG: testBudgetPath,
+        })
+        expect(run().status).toBe(0)
+        fs.copyFileSync(path.join(htmlDir, 'quests.html'), path.join(htmlDir, 'profile.html'))
+        expect(JSON.parse(run().stdout).breaches).toContainEqual({ label: 'EAGER payload on forbidden route: geoCountryOutlines on profile.html', forbidden: true })
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true })
+      }
+    })
 
     it('pins the committed payload attribution so it cannot be quietly dropped', () => {
       const budget = JSON.parse(fs.readFileSync(budgetPath, 'utf8'))

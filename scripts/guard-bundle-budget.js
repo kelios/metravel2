@@ -592,7 +592,14 @@ function checkCount(label, actual, max) {
 // `search/index.html` и `search.html` — одна и та же страница; ключ маршрута
 // должен быть один, иначе бюджет пришлось бы дублировать.
 function toRouteKey(relativePath) {
-  return relativePath.replace(/\/index\.html$/, '.html')
+  // Static Expo exports also wrote route-group aliases; server output keeps
+  // only the public path. A pin for either spelling still guards that path.
+  return relativePath.split('/').filter((part) => !/^\([^/]+\)$/.test(part)).join('/').replace(/\/index\.html$/, '.html')
+}
+const eagerRequestLimits = new Map()
+for (const [route, limit] of Object.entries(budget?.eager?.maxRequestsByRoute || {})) {
+  const key = toRouteKey(route)
+  eagerRequestLimits.set(key, Math.min(limit, eagerRequestLimits.get(key) ?? Infinity))
 }
 
 for (const [name, b] of Object.entries(budget.chunks || {})) {
@@ -694,7 +701,7 @@ if (budget?.eager?.htmlRoutes === true) {
         const routeKey = toRouteKey(
           path.relative(htmlDir, candidate.file) || path.basename(candidate.file),
         )
-        const routeMax = budget?.eager?.maxRequestsByRoute?.[routeKey]
+        const routeMax = eagerRequestLimits.get(routeKey)
         if (routeMax == null) continue
         eagerRequestRoutes.add(routeKey)
         if (candidate.requests > routeMax) {
@@ -747,7 +754,7 @@ if (budget?.eager?.htmlRoutes === true) {
         // Односторонний рэтчет `maxRoutes` не защищает конкретный маршрут:
         // освободить главную и одновременно нагрузить карту он разрешает.
         // `mustNotLoad` закрепляет уже освобождённые маршруты поимённо.
-        const forbidden = new Set(Array.isArray(spec.mustNotLoad) ? spec.mustNotLoad : [])
+        const forbidden = new Set((Array.isArray(spec.mustNotLoad) ? spec.mustNotLoad : []).map(toRouteKey))
         for (const routeKey of forbidden) {
           if (!totalRoutes.has(routeKey)) {
             // Переименованная или исчезнувшая страница молча снимала бы пин —
@@ -802,7 +809,7 @@ if (budget.eager) {
     eagerRequests,
     budget.eager.maxRequests,
   )
-  for (const routeKey of Object.keys(budget.eager.maxRequestsByRoute || {})) {
+  for (const routeKey of eagerRequestLimits.keys()) {
     if (!eagerRequestRoutes.has(routeKey)) {
       breaches.push({ label: `EAGER budgeted route missing from build: ${routeKey}`, missing: true })
     }

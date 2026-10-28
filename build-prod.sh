@@ -445,6 +445,12 @@ fi
 if [[ "$ENV" == "prod" ]]; then
   echo "Проверка prod-конфига перед деплоем..."
   node scripts/verify-prod-config.js --dist "dist/$ENV"
+  # Measure the finished client from this export before any server publication.
+  # release:check alone did not protect ordinary deployments (#2738).
+  stage "бюджет JavaScript"
+  BUNDLE_BUDGET_JS_DIR="$PWD/dist/$ENV/_expo/static/js/web" \
+    BUNDLE_BUDGET_HTML_DIR="$PWD/dist/$ENV" \
+    node scripts/guard-bundle-budget.js --fail
 fi
 
 # #2484: nginx отдаёт `<file>.br` (brotli_static on) вместо сжатия на лету в q6.

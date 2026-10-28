@@ -38,6 +38,7 @@ import RootDocumentStack from '@/components/layout/RootDocumentStack';
 import { setActiveQueryClient } from "@/api/activeQueryClient";
 import { patchWebShadowStyles } from "@/utils/patchWebShadowStyles";
 import { installChunkErrorReloadHandler } from "@/utils/chunkReload";
+import { installCrashReporting } from "@/utils/crashReporting";
 import { ThemeProvider, useThemedColors, useTheme } from "@/hooks/useTheme";
 import { useLaunchReadinessStore } from '@/stores/launchReadinessStore';
 import { navigationThemeColors } from "@/components/layout/navigationTheme";
@@ -91,6 +92,9 @@ const useAppFonts: any = isWeb
 if (!isWeb) {
     SplashScreen.preventAutoHideAsync().catch(() => {});
 }
+
+/** Сбор падений в наш бэкенд — как можно раньше, до первого рендера (#2840). */
+installCrashReporting();
 
 export default function RootLayout() {
     // Web-only: снимает фокус с элементов, попавших под aria-hidden (см. хук).

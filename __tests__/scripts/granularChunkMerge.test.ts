@@ -25,6 +25,42 @@ const names = (atom: Atom) => [...atom.modules].map((m) => path.relative(ROOT, m
 const chunkOf = (merged: { chunks: Atom[] }, file: string) => merged.chunks.find((atom) => names(atom).includes(file))
 
 describe('granularChunkMerge', () => {
+  it('counts fallback and web route/layout entries as the same delivery routes', () => {
+    const entries = ['app/_layout.tsx', 'app/_layout.web.tsx', 'app/index.tsx', 'app/index.web.tsx', 'app/map.tsx'].map(at)
+    const { coverage } = createRouteCoverage(entries, APP)
+    expect(coverage.get(at('app/index.web.tsx'))).toEqual(coverage.get(at('app/index.tsx')))
+    expect(coverage.get(at('app/_layout.web.tsx'))).toEqual(coverage.get(at('app/_layout.tsx')))
+    expect(coverage.get(at('app/_layout.tsx'))).toEqual(new Uint32Array([3]))
+  })
+
+  it('keeps an SSR wrapper and its fallback in the web facade with closed requirements for both context keys', () => {
+    const plan = makePlan(
+      [['entry.js', 'initial'], ['app/index.tsx', 'dynamic'], ['app/index.web.tsx', 'dynamic'], ['app/map.tsx', 'dynamic']],
+      [
+        [[0], ['entry.js']],
+        [[2], ['app/index.web.tsx']],
+        [[1, 2], ['app/index.tsx', 'components/Home.tsx']],
+        [[1], ['fallback-only.ts']],
+        [[1, 2, 3], ['shared.ts']],
+      ],
+    )
+    const merged = mergeGranularChunkPlan(plan, context, { minRouteSimilarity: 1 })
+    const facade = chunkOf(merged, 'app/index.web.tsx')
+    expect(facade.ownerEntries).toBe(0b100n)
+    expect(names(facade)).toEqual(['app/index.tsx', 'app/index.web.tsx', 'components/Home.tsx'])
+    expect(chunkOf(merged, 'fallback-only.ts').ownerEntries).toBe(0b10n)
+    expect(chunkOf(merged, 'shared.ts').ownerEntries).toBe(0b1100n)
+    expect(merged.requiredChunksByEntryPath.get(at('app/index.tsx'))).toEqual(expect.arrayContaining([
+      facade, chunkOf(merged, 'fallback-only.ts'), chunkOf(merged, 'shared.ts'),
+    ]))
+    expect(merged.requiredChunksByEntryPath.get(at('app/index.web.tsx'))).toEqual(expect.arrayContaining([
+      facade, chunkOf(merged, 'shared.ts'),
+    ]))
+    expect(merged.requiredChunksByEntryPath.get(at('app/map.tsx'))).toEqual([chunkOf(merged, 'shared.ts')])
+    expect(merged.entryPoints).toBe(plan.entryPoints)
+    expect(merged.dependentEntriesByModule).toBe(plan.dependentEntriesByModule)
+  })
+
   it('route coverage: layout covers routes below it, route itself, non-app entry nothing', () => {
     const entryPaths = ['app/_layout.tsx', 'app/(tabs)/_layout.tsx', 'app/(tabs)/index.tsx', 'app/(tabs)/map.tsx', 'app/about.tsx', 'components/Editor.tsx'].map(at)
     const { coverage } = createRouteCoverage(entryPaths, APP)

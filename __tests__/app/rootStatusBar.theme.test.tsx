@@ -50,7 +50,10 @@ jest.mock('@/utils/patchWebShadowStyles', () => ({ patchWebShadowStyles: () => {
 jest.mock('@/utils/chunkReload', () => ({ installChunkErrorReloadHandler: () => {} }))
 jest.mock('@/utils/reactQueryConfig', () => ({ createOptimizedQueryClient: () => ({}) }))
 jest.mock('@/api/activeQueryClient', () => ({ setActiveQueryClient: () => {} }))
-jest.mock('@/components/layout/bottomChromeInset', () => ({ BottomChromeInsetProvider: ({ children }: any) => children }))
+jest.mock('@/components/layout/bottomChromeInset', () => ({
+  BottomChromeInsetProvider: ({ children }: any) => children,
+  useWebFooterHeightPublisher: () => {},
+}))
 jest.mock('expo-font', () => ({ useFonts: () => [true, null] }))
 jest.mock('@expo/vector-icons/Feather', () => ({ __esModule: true, default: () => null }))
 

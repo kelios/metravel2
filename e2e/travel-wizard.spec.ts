@@ -1142,9 +1142,22 @@ test.describe('Создание путешествия - Полный flow', () 
       }
     });
 
-    await page.goto('/travel/new?mode=note', { waitUntil: 'domcontentloaded' });
-    await dismissConsentBanner(page);
+    // #2829: переиспользованный экран должен сменить режим после настоящего
+    // перехода через меню; прямой page.goto(mode=note) скрывает этот регресс.
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
+    await ensureCanCreateTravel(page);
+    const fullWizardDocument = await page.evaluate(() => performance.timeOrigin);
+    await page.locator('[data-testid="account-menu-anchor"]:visible')
+      .or(page.getByRole('button', { name: /Открыть меню аккаунта/i })).first().click();
+    const menu = page.getByTestId('web-menu-panel');
+    await expect(menu).toBeVisible();
+    await menu.getByRole('button', { name: 'Путешествия', exact: true }).click();
+    await menu.getByRole('link', { name: 'Короткая заметка', exact: true }).click();
+    await expect(page).toHaveURL(/\/travel\/new\?mode=note(?:&|$)/);
     await expect(page.getByTestId('travel-note.root')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByPlaceholder('Например: Неделя в Грузии')).toHaveCount(0);
+    expect(await page.evaluate(() => performance.timeOrigin)).toBe(fullWizardDocument);
     await expect(page.getByText('Фото с поездки', { exact: true })).toBeVisible();
 
     // Черновик создаётся по первому выбранному фото, не при открытии страницы.
