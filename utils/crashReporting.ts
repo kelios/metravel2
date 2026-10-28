@@ -69,12 +69,17 @@ const describeError = (error: unknown): { message: string; stack: string; finger
   }
   // Произвольный message может содержать пароль, текст статьи или ответ API.
   // Regex-очистка не гарантирует приватность: передаём класс и координаты
-  // JS-кадров, без текста, аргументов функций, URL query и личных путей.
+  // JS-кадров с именами функций по строгой грамматике идентификаторов,
+  // без текста, аргументов функций, URL query и личных путей.
   const name = ERROR_NAMES.has(error.name) ? error.name : 'Error'
   const sourceFrames = String(error.stack ?? '').split('\n').slice(1).filter((line) => /^\s*at\s|^[^\s@]*@/.test(line))
   const frames = sourceFrames.flatMap((line) => {
     const location = line.match(/(?:^|[\s(/\\@])([A-Za-z0-9_.-]+\.(?:js|jsx|ts|tsx|mjs|cjs|bundle|hbc))(?:\?[^()\r\n]*)?:(\d+):(\d+)\)?\s*$/)
-    return location ? [`at ${location[1]}:${location[2]}:${location[3]}`] : []
+    if (!location) return []
+    const functionName = line.match(/^\s*at\s+(?:async\s+)?([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)\s+\(/)?.[1]
+      ?? line.match(/^([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)@/)?.[1]
+    const coordinates = `${location[1]}:${location[2]}:${location[3]}`
+    return [`at ${functionName ? `${functionName} (${coordinates})` : coordinates}`]
   })
   return {
     message: name,
@@ -119,6 +124,7 @@ const readPreviousMarker = async (): Promise<SessionMarker | null> => {
 
 /** Кладёт отчёт в очередь. Возвращает промис записи в хранилище. */
 export async function captureAppCrash(input: CaptureInput): Promise<boolean> {
+  let reservedKey: string | undefined
   try {
     const { message, stack, fingerprint } = describeError(input.error)
     const dedupeKey = `${input.kind}:${input.fatal}:${fingerprint}`
@@ -128,6 +134,7 @@ export async function captureAppCrash(input: CaptureInput): Promise<boolean> {
     // падение не попадёт в отчёты вовсе.
     if (!input.fatal && reportsThisSession >= CRASH_REPORTS_PER_SESSION) return false
     seenThisSession.add(dedupeKey)
+    reservedKey = dedupeKey
     if (!input.fatal) reportsThisSession += 1
 
     const component = input.component && /^(?:in |at )?[A-Za-z_$][\w.$]*$/.test(input.component)
@@ -150,6 +157,12 @@ export async function captureAppCrash(input: CaptureInput): Promise<boolean> {
     if (!input.fatal) void flushAppCrashReports()
     return durable
   } catch {
+    // Enqueue мог не прочитать хранилище: отчёт не попал даже в память.
+    // Повтор той же ошибки после восстановления должен снова попробовать запись.
+    if (reservedKey) {
+      seenThisSession.delete(reservedKey)
+      if (!input.fatal) reportsThisSession -= 1
+    }
     // Сбор падений никогда не должен сам ронять приложение.
     return false
   }

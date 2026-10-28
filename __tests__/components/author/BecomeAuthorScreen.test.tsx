@@ -83,7 +83,7 @@ describe('BecomeAuthorScreen', () => {
     expect(url.searchParams.get('redirect')).toBe('/travel/new')
     expect(url.searchParams.get('intent')).toBe('create-travel')
     expect(mockQueue.mock.calls.filter(([event]) => event === 'content_create_cta_click')).toEqual([
-      ['content_create_cta_click', { content_type: 'route', source: 'become_author_page', auth_state: 'guest', intent: 'create-travel', action: 'register' }],
+      ['content_create_cta_click', { content_type: 'route', source: 'become_author_page', auth_state: 'guest', intent: 'create-travel', action: 'register', mode: 'full' }],
     ])
     expect(mockQueue).toHaveBeenCalledWith('cta_register_click', {
       source: 'become_author_page', auth_state: 'guest', intent: 'create-travel',
@@ -97,7 +97,7 @@ describe('BecomeAuthorScreen', () => {
     expect(mockPush).toHaveBeenCalledWith('/travel/new')
     expect(mockQueue).toHaveBeenCalledTimes(1)
     expect(mockQueue).toHaveBeenCalledWith('content_create_cta_click', {
-      content_type: 'route', source: 'become_author_page', auth_state: 'authenticated', intent: 'create-travel', action: 'create',
+      content_type: 'route', source: 'become_author_page', auth_state: 'authenticated', intent: 'create-travel', action: 'create', mode: 'full',
     })
   })
 

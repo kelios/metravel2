@@ -80,6 +80,8 @@ const UNSAFE_HTTP_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const isUnsafeHttpMethod = (method: RequestInit['method']): boolean =>
     UNSAFE_HTTP_METHODS.has(String(method ?? 'GET').toUpperCase());
 
+type ApiRequestOptions = RequestInit & { skipAuth?: boolean; expectedStatus?: number };
+
 class ApiClient {
     private baseURL: string;
     private defaultHeaders: HeadersInit;
@@ -327,10 +329,16 @@ class ApiClient {
      */
     async request<T>(
         endpoint: string,
-        options: RequestInit & { skipAuth?: boolean } = {},
+        options: ApiRequestOptions = {},
         timeout: number = DEFAULT_TIMEOUT
     ): Promise<T> {
-        const { skipAuth = false } = options;
+        const { skipAuth = false, expectedStatus, ...fetchOptions } = options;
+        const parseResponse = (response: Response): Promise<T> => {
+            if (expectedStatus !== undefined && response.status !== expectedStatus) {
+                throw new ApiError(response.status, `Expected HTTP ${expectedStatus}, received ${response.status}`);
+            }
+            return parseSuccessResponse<T>(response);
+        };
         // ✅ FIX: Проверяем rate limit перед запросом
         const rateLimitSlot = this.checkRateLimit(endpoint);
         if (!rateLimitSlot) {
@@ -385,7 +393,7 @@ class ApiClient {
         try {
             const response = await fetchWithTimeout(
                 `${this.baseURL}${endpoint}`,
-                { ...options, ...getApiRequestCredentials(skipAuth), headers },
+                { ...fetchOptions, ...getApiRequestCredentials(skipAuth), headers },
                 timeout
             );
 
@@ -426,6 +434,7 @@ class ApiClient {
                 }
                 let rotationSuperseded = false;
                 if (backendHasRefreshEndpoint) {
+                    let successfulRetry: Response | undefined;
                     try {
                         const newToken = await this.refreshAccessToken();
                         // Повторяем запрос с новым токеном
@@ -437,7 +446,7 @@ class ApiClient {
 
                         const retryResponse = await fetchWithTimeout(
                             `${this.baseURL}${endpoint}`,
-                            { ...options, ...getApiRequestCredentials(), headers: retryHeaders },
+                            { ...fetchOptions, ...getApiRequestCredentials(), headers: retryHeaders },
                             timeout
                         );
 
@@ -449,11 +458,14 @@ class ApiClient {
                             );
                         }
 
-                        return await parseSuccessResponse<T>(retryResponse);
+                        successfulRetry = retryResponse;
                     } catch (error) {
                         // Refresh не сработал — падаем в общий путь пробы+fallback ниже.
                         rotationSuperseded = isSessionSupersededError(error);
                     }
+                    // Ротация уже сохранила новую пару: ошибка контракта ответа
+                    // не должна запускать пробу старого токена и стирать новую сессию.
+                    if (successfulRetry) return await parseResponse(successfulRetry);
                 }
 
                 // Refresh пропущен (бэк без /user/refresh/) или не сработал, поэтому сюда
@@ -485,7 +497,7 @@ class ApiClient {
                 });
                 const fallbackResponse = await fetchWithTimeout(
                     `${this.baseURL}${endpoint}`,
-                    { ...options, ...getApiRequestCredentials(true), headers: fallbackHeaders },
+                    { ...fetchOptions, ...getApiRequestCredentials(true), headers: fallbackHeaders },
                     timeout
                 );
 
@@ -493,19 +505,14 @@ class ApiClient {
                     await throwDetailedError(fallbackResponse);
                 }
 
-                return await parseSuccessResponse<T>(fallbackResponse);
+                return await parseResponse(fallbackResponse);
             }
 
             if (!response.ok) {
                 await throwDetailedError(response);
             }
 
-            // Если ответ пустой (204 No Content), возвращаем null
-            if (response.status === 204) {
-                return null as T;
-            }
-
-            return await parseSuccessResponse<T>(response);
+            return await parseResponse(response);
         } catch (error) {
             const errorName = error instanceof Error ? error.name : '';
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -701,12 +708,18 @@ class ApiClient {
         return this.request<T>(endpoint, { method: 'GET', ...(options ?? {}) }, timeout);
     }
 
-    async post<T>(endpoint: string, data?: unknown, timeout?: number): Promise<T> {
+    async post<T>(
+        endpoint: string,
+        data?: unknown,
+        timeout?: number,
+        options?: Pick<ApiRequestOptions, 'expectedStatus'>
+    ): Promise<T> {
         return this.request<T>(
             endpoint,
             {
                 method: 'POST',
                 body: data ? JSON.stringify(data) : undefined,
+                ...options,
             },
             timeout
         );

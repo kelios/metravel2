@@ -55,7 +55,9 @@ export async function getAppInstallId(): Promise<string> {
         const stored = await AsyncStorage.getItem(APP_INSTALL_ID_KEY)
         if (stored) return stored
       } catch {
-        // Недоступное хранилище: id живёт до перезапуска.
+        // Сбой чтения не равен отсутствующему ключу. Не затираем возможный
+        // сохранённый id: временный живёт только до перезапуска процесса.
+        return createUuidV4()
       }
       const created = createUuidV4()
       try {
@@ -127,10 +129,9 @@ const crashQueue = createPersistentDeliveryQueue<AppCrashReport>({
   idOf: (report) => report.id,
   isValid: isCrashReport,
   send: async ([report]) => {
-    const acknowledgement = await apiClient.post<unknown>('/app-telemetry/crashes/', report)
-    // API-клиент возвращает тело ответа без статуса. Удалять отчёт можно
-    // только после явного подтверждения одного принятого/дублирующего id;
-    // пустой или неожиданный успешный ответ оставляет его для повтора.
+    const acknowledgement = await apiClient.post<unknown>('/app-telemetry/crashes/', report, undefined, { expectedStatus: 202 })
+    // Удаляем отчёт только после HTTP 202 и явного подтверждения одного
+    // принятого/дублирующего id; неожиданный ответ оставляем для повтора.
     const ack = acknowledgement as { accepted?: unknown; duplicates?: unknown } | null
     if (
       !ack || typeof ack !== 'object' ||

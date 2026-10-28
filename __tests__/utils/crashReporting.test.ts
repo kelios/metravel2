@@ -26,11 +26,13 @@ jest.mock('@/api/client', () => {
 import { ApiError } from '@/api/clientErrors'
 import {
   APP_CRASH_QUEUE_KEY,
+  APP_INSTALL_ID_KEY,
   CRASH_STACK_MAX,
   __resetAppTelemetry,
   enqueueAppCrashReport,
   flushAppCrashReports,
   getAppTelemetryEnvironment,
+  getAppInstallId,
   type AppCrashReport,
 } from '@/utils/appTelemetry'
 import {
@@ -150,6 +152,7 @@ describe('crash reporting', () => {
     expect(mockPost).toHaveBeenCalledWith(
       '/app-telemetry/crashes/',
       expect.objectContaining({ kind: 'abnormal_exit', session_id: 'prev-session', app_version: '1.0.4' }),
+      undefined, { expectedStatus: 202 },
     )
     const marker = JSON.parse((await AsyncStorage.getItem(APP_SESSION_MARKER_KEY)) as string)
     expect(marker.session_id).not.toBe('prev-session')
@@ -203,13 +206,13 @@ describe('crash reporting', () => {
       await flushPromises()
       expect(mockPost).toHaveBeenCalledWith('/app-telemetry/crashes/', expect.objectContaining({
         kind: 'unhandled_rejection', fatal: false,
-      }))
+      }), undefined, { expectedStatus: 202 })
     } finally {
       ;(globalThis as any).HermesInternal = previousHermes
     }
   })
 
-  it('keeps only the error class and frame coordinates, without private values', async () => {
+  it('keeps the error class and safe frame identifiers, without private values', async () => {
     const secret = 'person@example.test token=secret123 private travel diary'
     const error = new Error(secret)
     error.stack = `Error: ${secret}\n    at save (/Users/private-owner/app/index.android.bundle:12:34)\n    at send (https://example.test/index.js?token=secret123:2:3)\n    at render (address at index.android.bundle:1:9021)`
@@ -218,7 +221,7 @@ describe('crash reporting', () => {
     const [, report] = mockPost.mock.calls[0]
     expect(report).toMatchObject({
       message: 'Error',
-      stack: 'at index.android.bundle:12:34\nat index.js:2:3\nat index.android.bundle:1:9021',
+      stack: 'at save (index.android.bundle:12:34)\nat send (index.js:2:3)\nat render (index.android.bundle:1:9021)',
     })
     expect(JSON.stringify(report)).not.toMatch(/person@|secret123|private travel diary|private-owner/)
 
@@ -226,6 +229,16 @@ describe('crash reporting', () => {
     await captureAppCrash({ kind: 'unhandled_rejection', fatal: false, error: secret })
     await flushAppCrashReports()
     expect(JSON.stringify(mockPost.mock.calls[0])).not.toContain(secret)
+  })
+
+  it('preserves distinct production callsites and rejects arbitrary frame descriptions', async () => {
+    const error = new Error('private text')
+    error.stack = 'Error: private text\n    at TravelStore.save (address at index.android.bundle:1:123)\nrender@https://example.test/index.android.bundle?token=secret:1:456\n    at private travel diary (index.android.bundle:1:789)'
+    await captureAppCrash({ kind: 'js_exception', fatal: false, error })
+    await flushAppCrashReports()
+    const [, report] = mockPost.mock.calls[0]
+    expect(report.stack).toBe('at TravelStore.save (index.android.bundle:1:123)\nat render (index.android.bundle:1:456)\nat index.android.bundle:1:789')
+    expect(report.stack).not.toMatch(/private|https|secret|token/)
   })
 
   it('limits stack size after removing raw messages and paths', async () => {
@@ -254,7 +267,7 @@ describe('crash reporting', () => {
     mockPost.mockClear()
     mockPost.mockResolvedValue({ accepted: 1, duplicates: 0 })
     await flushAppCrashReports()
-    expect(mockPost).toHaveBeenCalledWith('/app-telemetry/crashes/', expect.objectContaining({ id: report.id }))
+    expect(mockPost).toHaveBeenCalledWith('/app-telemetry/crashes/', expect.objectContaining({ id: report.id }), undefined, { expectedStatus: 202 })
     expect(await readQueue()).toEqual([])
   })
 
@@ -280,7 +293,7 @@ describe('crash reporting', () => {
     getMonitoringService()?.captureMessage('a private article', 'error', { token: 'private' })
     await flushPromises()
     await flushAppCrashReports()
-    expect(mockPost).toHaveBeenCalledWith('/app-telemetry/crashes/', expect.objectContaining({ message: 'Error' }))
+    expect(mockPost).toHaveBeenCalledWith('/app-telemetry/crashes/', expect.objectContaining({ message: 'Error' }), undefined, { expectedStatus: 202 })
     expect(JSON.stringify(mockPost.mock.calls)).not.toMatch(/private article|"token"/)
   })
 
@@ -343,6 +356,7 @@ describe('crash reporting', () => {
     expect(mockPost).toHaveBeenCalledWith(
       '/app-telemetry/crashes/',
       expect.objectContaining({ kind: 'render_error', fatal: false, component: 'in TravelDetails' }),
+      undefined, { expectedStatus: 202 },
     )
 
     mockPost.mockClear()
@@ -378,6 +392,42 @@ describe('crash reporting', () => {
     mockPost.mockRejectedValueOnce(new ApiError(400, 'bad payload'))
     await flushAppCrashReports()
     expect(await readQueue()).toHaveLength(0)
+  })
+
+  it('retries the same error after a temporary queue read failure', async () => {
+    const originalGetItem = jest.mocked(AsyncStorage.getItem).getMockImplementation()!
+    const error = new Error('same crash after storage recovers')
+    jest.mocked(AsyncStorage.getItem).mockImplementation((key) =>
+      key === APP_CRASH_QUEUE_KEY ? Promise.reject(new Error('storage unavailable')) : originalGetItem(key),
+    )
+    try {
+      expect(await captureAppCrash({ kind: 'js_exception', fatal: false, error })).toBe(false)
+      expect(mockPost).not.toHaveBeenCalled()
+    } finally {
+      jest.mocked(AsyncStorage.getItem).mockImplementation(originalGetItem)
+    }
+    expect(await captureAppCrash({ kind: 'js_exception', fatal: false, error })).toBe(true)
+    await flushAppCrashReports()
+    expect(mockPost).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not replace a saved install id after a temporary read failure', async () => {
+    const savedId = '11111111-1111-4111-8111-111111111111'
+    await AsyncStorage.setItem(APP_INSTALL_ID_KEY, savedId)
+    const originalGetItem = jest.mocked(AsyncStorage.getItem).getMockImplementation()!
+    jest.mocked(AsyncStorage.getItem).mockImplementation((key) =>
+      key === APP_INSTALL_ID_KEY ? Promise.reject(new Error('storage unavailable')) : originalGetItem(key),
+    )
+    try {
+      const temporaryId = await getAppInstallId()
+      expect(temporaryId).not.toBe(savedId)
+      expect(await getAppInstallId()).toBe(temporaryId)
+      expect(await originalGetItem(APP_INSTALL_ID_KEY)).toBe(savedId)
+    } finally {
+      jest.mocked(AsyncStorage.getItem).mockImplementation(originalGetItem)
+    }
+    __resetAppTelemetry()
+    expect(await getAppInstallId()).toBe(savedId)
   })
 
   it('stays off on web and in dev without the explicit flag', () => {
